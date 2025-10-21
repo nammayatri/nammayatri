@@ -35,7 +35,6 @@ where
 
 -- import qualified Lib.Yudhishthira.Types as LYT
 
-import Control.Monad.Extra (maybeM)
 import Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
@@ -469,33 +468,21 @@ buildPenaltyCheckContext ::
   ) =>
   SRB.Booking ->
   DRide.Ride ->
+  LatLong ->
   m TY.PenaltyCheckTagData
-buildPenaltyCheckContext booking ride = do
+buildPenaltyCheckContext booking ride point = do
   now <- getCurrentTime
   numberOfCallAttempts <- QCallStatus.countCallsByEntityId ride.id
 
-  driverLocations <- try @_ @SomeException $ LF.driversLocation [ride.driverId]
-  mbDriverLocation <- case driverLocations of
-    Left err -> do
-      logError ("PenaltyCheckError: Failed to fetch Driver Location with error : " <> show err)
-      return Nothing
-    Right locations -> do
-      return $ listToMaybe locations
-
-  driverDistanceFromPickupNow <-
-    maybeM
-      (return Nothing)
-      ( \location -> do
-          distRes <- try @_ @SomeException $ driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
-          either
-            ( \err -> do
-                logError ("PenaltyCheckError: Failed to calculate Driver Distance to Pickup with error : " <> show err)
-                return Nothing
-            )
-            (\d -> return $ Just d)
-            distRes
+  driverDistanceFromPickupNow <- do
+    distRes <- try @_ @SomeException $ driverDistanceToPickup booking (getCoordinates point) (getCoordinates booking.fromLocation)
+    either
+      ( \err -> do
+          logError ("PenaltyCheckError: Failed to calculate Driver Distance to Pickup with error : " <> show err)
+          return Nothing
       )
-      (pure mbDriverLocation)
+      (\d -> return $ Just d)
+      distRes
 
   let driverDistanceFromPickupAtAcceptance = booking.distanceToPickup
 

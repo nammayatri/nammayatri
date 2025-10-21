@@ -3,6 +3,7 @@
 module Domain.Action.UI.Penalty (postPenaltyCheck) where
 
 import qualified API.Types.UI.Penalty
+import Data.Either.Extra (eitherToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CancelRideInternal
 import qualified Domain.Types.Booking as SRB
@@ -12,6 +13,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.Ride as DRide
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -47,9 +49,10 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
 
   (isApplicable, penaltyAmount) <- case booking.fareParams.driverCancellationPenaltyAmount of
     Just penaltyAmount -> do
-      tagData <- CancelRideInternal.buildPenaltyCheckContext booking ride
-      tags <- Yudhishthira.computeNammaTags YA.PenaltyCheck tagData
-      let isPenaltyApplicable = validCancellationPenaltyApplicable `elem` tags
+      tagData <- CancelRideInternal.buildPenaltyCheckContext booking ride req.point
+      tagsE <- try @_ @SomeException $ Yudhishthira.computeNammaTags YA.PenaltyCheck tagData
+      let tags = fromMaybe [] $ eitherToMaybe tagsE
+          isPenaltyApplicable = validCancellationPenaltyApplicable `elem` tags
           existingTags = fromMaybe [] ride.rideTags
           updatedTags = if isPenaltyApplicable && validCancellationPenaltyApplicable `notElem` existingTags then validCancellationPenaltyApplicable : existingTags else if not isPenaltyApplicable then filter (/= validCancellationPenaltyApplicable) existingTags else existingTags
       QRide.updateRideTags (Just updatedTags) ride.id

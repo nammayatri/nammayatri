@@ -407,6 +407,10 @@ newtype TicketRideListRes = TicketRideListRes {rides :: [RideInfo]}
   deriving stock (Show, Generic)
   deriving anyclass (ToSchema)
 
+data WaiverRideCancellationPenaltyReq = WaiverRideCancellationPenaltyReq {reason :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 type API = ("ride" :> (GetRideList :<|> GetRideListV2 :<|> PostRideEndMultiple :<|> PostRideCancelMultiple :<|> GetRideInfo :<|> PostRideSync :<|> PostRideSyncMultiple :<|> PostRideRoute :<|> GetRideKaptureList :<|> GetRideFareBreakUp :<|> PostRideWaiverRideCancellationPenalty))
 
 type GetRideList =
@@ -480,7 +484,13 @@ type GetRideKaptureList =
 
 type GetRideFareBreakUp = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "fareBreakUp" :> Get '[JSON] FareBreakUpRes)
 
-type PostRideWaiverRideCancellationPenalty = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "waiverRideCancellationPenalty" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostRideWaiverRideCancellationPenalty =
+  ( Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "waiverRideCancellationPenalty"
+      :> ReqBody
+           '[JSON]
+           WaiverRideCancellationPenaltyReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
 
 data RideAPIs = RideAPIs
   { getRideList :: Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient RideListRes,
@@ -493,7 +503,7 @@ data RideAPIs = RideAPIs
     postRideRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideRouteRes,
     getRideKaptureList :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient TicketRideListRes,
     getRideFareBreakUp :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient FareBreakUpRes,
-    postRideWaiverRideCancellationPenalty :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postRideWaiverRideCancellationPenalty :: Kernel.Types.Id.Id Dashboard.Common.Ride -> WaiverRideCancellationPenaltyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)

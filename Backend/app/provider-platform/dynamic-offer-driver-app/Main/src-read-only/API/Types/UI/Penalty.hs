@@ -4,12 +4,13 @@ module API.Types.UI.Penalty where
 
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Servant
 import Tools.Auth
 
-data PenaltyCheckReq = PenaltyCheckReq {rideId :: Kernel.Prelude.Text, bookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data PenaltyCheckReq = PenaltyCheckReq {rideId :: Kernel.Prelude.Text, point :: Kernel.External.Maps.Types.LatLong}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

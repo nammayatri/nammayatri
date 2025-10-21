@@ -134,7 +134,7 @@ getRideListV2 merchantShortId opCity apiTokenInfo currency customerPhoneNo drive
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideListV2) currency customerPhoneNo driverPhoneNo from limit offset rideShortId rideStatus to
 
-postRideWaiverRideCancellationPenalty :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.Ride -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postRideWaiverRideCancellationPenalty merchantShortId opCity apiTokenInfo rideId = do
+postRideWaiverRideCancellationPenalty :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.Ride -> Common.WaiverRideCancellationPenaltyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postRideWaiverRideCancellationPenalty merchantShortId opCity apiTokenInfo rideId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.postRideWaiverRideCancellationPenalty) rideId
+  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.postRideWaiverRideCancellationPenalty) rideId req

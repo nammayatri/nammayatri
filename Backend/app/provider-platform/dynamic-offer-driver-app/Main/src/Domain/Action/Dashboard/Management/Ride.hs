@@ -39,6 +39,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -139,18 +140,22 @@ castRideStatus s = case s of
   Common.RIDE_COMPLETED -> DRide.COMPLETED
   Common.RIDE_CANCELLED -> DRide.CANCELLED
 
-postRideWaiverRideCancellationPenalty :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow APISuccess
-postRideWaiverRideCancellationPenalty _merchantShortId _opCity rideId = do
+postRideWaiverRideCancellationPenalty :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Common.WaiverRideCancellationPenaltyReq -> Flow APISuccess
+postRideWaiverRideCancellationPenalty _merchantShortId _opCity rideId req = do
   ride <- QRide.findById (cast @Common.Ride @DRide.Ride rideId) >>= fromMaybeM (InvalidRequest $ "Ride does not exist: " <> rideId.getId)
   when (ride.status /= DRide.CANCELLED) $ throwError (InvalidRequest "Ride is not cancelled")
   case (ride.driverCancellationPenaltyFeeId, ride.driverCancellationPenaltyAmount) of
     (Just driverCancellationPenaltyFeeId, Just driverCancellationPenaltyAmount) -> do
-      when (driverCancellationPenaltyAmount == 0) $ throwError (InvalidRequest "Driver cancellation penalty amount already waived")
-      driverFee <- QDriverFee.findById (Id driverCancellationPenaltyFeeId) >>= fromMaybeM (InvalidRequest $ "Driver cancellation penalty fee does not exist: " <> driverCancellationPenaltyFeeId)
-      when (driverFee.status `notElem` [DF.ONGOING, DF.IN_DISPUTE_WINDOW]) $ throwError (InvalidRequest "Driver cancellation penalty fee is not ongoing or in dispute window")
-      let newCancellationPenaltyAmount = max 0 $ fromMaybe 0 driverFee.cancellationPenaltyAmount - driverCancellationPenaltyAmount
-      now <- getCurrentTime
-      QDriverFee.updateCancellationPenaltyAmount (Id driverCancellationPenaltyFeeId) newCancellationPenaltyAmount now
-      QRide.updateDriverCancellationPenalty Nothing (Just 0) (cast rideId)
+      when (isJust ride.driverCancellationPenaltyWaivedReason) $ throwError (InvalidRequest "Driver cancellation penalty amount already waived")
+      Redis.whenWithLockRedis (cancellationPenaltyLockKey driverCancellationPenaltyFeeId) 10 $ do
+        driverFee <- QDriverFee.findById (Id driverCancellationPenaltyFeeId) >>= fromMaybeM (InvalidRequest $ "Driver cancellation penalty fee does not exist: " <> driverCancellationPenaltyFeeId)
+        when (driverFee.status `notElem` [DF.ONGOING, DF.IN_DISPUTE_WINDOW]) $ throwError (InvalidRequest "Driver cancellation penalty fee is not ongoing or in dispute window")
+        let newCancellationPenaltyAmount = max 0 $ fromMaybe 0 driverFee.cancellationPenaltyAmount - driverCancellationPenaltyAmount
+        now <- getCurrentTime
+        QDriverFee.updateCancellationPenaltyAmount (Id driverCancellationPenaltyFeeId) newCancellationPenaltyAmount now
+        QRide.updateDriverCancellationPenaltyWaivedReasonAndAmount (Just req.reason) (Just driverCancellationPenaltyAmount) (cast rideId)
     _ -> throwError (InvalidRequest "Driver cancellation penalty fee id or amount is not set")
   pure Success
+  where
+    cancellationPenaltyLockKey :: Text -> Text
+    cancellationPenaltyLockKey id = "Driver:Cancellation:Penalty:DriverFeeId-" <> id

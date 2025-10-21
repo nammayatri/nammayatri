@@ -55,5 +55,5 @@ getRideKaptureList a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Acti
 getRideFareBreakUp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Ride.FareBreakUpRes)
 getRideFareBreakUp a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Ride.getRideFareBreakUp a3 a2 a1
 
-postRideWaiverRideCancellationPenalty :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postRideWaiverRideCancellationPenalty a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Ride.postRideWaiverRideCancellationPenalty a3 a2 a1
+postRideWaiverRideCancellationPenalty :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> API.Types.ProviderPlatform.Management.Ride.WaiverRideCancellationPenaltyReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postRideWaiverRideCancellationPenalty a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Ride.postRideWaiverRideCancellationPenalty a4 a3 a2 a1

@@ -123,6 +123,7 @@ Ride:
     insuredAmount: Maybe Text
     driverCancellationPenaltyFeeId: Maybe Text
     driverCancellationPenaltyAmount: Maybe HighPrecMoney
+    driverCancellationPenaltyWaivedReason: Maybe Text
 
   sqlType:
     id: character(36)
@@ -300,6 +301,10 @@ Ride:
     updateDriverCancellationPenalty:
       kvFunction: updateOneWithKV
       params: [driverCancellationPenaltyFeeId, driverCancellationPenaltyAmount]
+      where: id
+    updateDriverCancellationPenaltyWaivedReasonAndAmount:
+      kvFunction: updateOneWithKV
+      params: [driverCancellationPenaltyWaivedReason, driverCancellationPenaltyAmount]
       where: id
 
   excludedDefaultQueries:

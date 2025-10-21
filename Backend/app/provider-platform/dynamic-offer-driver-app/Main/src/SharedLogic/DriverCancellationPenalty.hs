@@ -47,7 +47,6 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.DriverFee as QDF
-import qualified Storage.Queries.Ride as QRide
 import Tools.Constants
 import Tools.Metrics as Metrics
 import TransactionLogs.Types
@@ -72,7 +71,7 @@ mkCancellationPenaltyFee now merchantId merchantOpCityId driverId penaltyAmount 
       endTime = addUTCTime cycleDuration startTime
       disputeWindowSeconds = secondsToNominalDiffTime $ fromMaybe 0 transporterConfig.cancellationFeeDisputeWindow
       disputeWindowEndTime = addUTCTime disputeWindowSeconds endTime
-      payByWindow = secondsToNominalDiffTime (Seconds 25200) -- adding 7 days buffer for payby window .. dont know why i am doing this .. sad life
+      payByWindow = secondsToNominalDiffTime (Seconds 604800) -- adding 7 days buffer for payby window .. dont know why i am doing this .. sad life
       payBy = addUTCTime (disputeWindowSeconds + payByWindow) endTime
   return $
     ( disputeWindowEndTime,
@@ -171,13 +170,14 @@ accumulateCancellationPenalty booking ride rideTags transporterConfig = do
             DPlan.YATRI_SUBSCRIPTION
             booking.merchantOperatingCityId
             False
-        driverFeeId <- case existingCancellationFee of
+            now
+        case existingCancellationFee of
           Just existingFee -> do
-            let currentAmount = fromMaybe 0 existingFee.cancellationPenaltyAmount
-                newAmount = currentAmount + penaltyAmount
-                newNumRides = existingFee.numRides + 1
-            QDF.updateCancellationPenaltyAmountAndNumRides existingFee.id newAmount newNumRides now
-            pure existingFee.id
+            Redis.whenWithLockRedis (cancellationPenaltyLockKey existingFee.id.getId) 10 $ do
+              let currentAmount = fromMaybe 0 existingFee.cancellationPenaltyAmount
+                  newAmount = currentAmount + penaltyAmount
+                  newNumRides = existingFee.numRides + 1
+              QDF.updateCancellationPenaltyAmountAndNumRides existingFee.id newAmount newNumRides now
           Nothing -> do
             (disputeEndTime, newFee) <-
               mkCancellationPenaltyFee
@@ -194,12 +194,13 @@ accumulateCancellationPenalty booking ride rideTags transporterConfig = do
                 <> " for ₹"
                 <> show penaltyAmount
             scheduleStatusTransitionJobs newFee disputeEndTime booking.providerId booking.merchantOperatingCityId
-            pure newFee.id
-        QRide.updateDriverCancellationPenalty (Just driverFeeId.getId) (Just penaltyAmount) ride.id
       Nothing ->
         logError $
           "Penalty tag present but driverCancellationPenaltyAmount is Nothing for ride "
             <> ride.id.getId
+
+cancellationPenaltyLockKey :: Text -> Text
+cancellationPenaltyLockKey id' = "Driver:Cancellation:Penalty:DriverFeeId-" <> id'
 
 scheduleStatusTransitionJobs ::
   ( MonadFlow m,
@@ -235,21 +236,12 @@ scheduleStatusTransitionJobs ::
   Id DMOC.MerchantOperatingCity ->
   m ()
 scheduleStatusTransitionJobs newFee disputeEndTime merchantId mocId = do
-  -- Job 1: ONGOING -> IN_DISPUTE_WINDOW (at cycle end)
   now <- getCurrentTime
-
   createJobIn @_ @'ProcessCancellationPenaltyStatus (Just merchantId) (Just mocId) (diffUTCTime newFee.endTime now) $
     ProcessCancellationPenaltyStatusJobData
       { merchantId = merchantId,
         merchantOperatingCityId = Just mocId,
         driverFeeId = newFee.id.getId,
+        disputeEndTime = disputeEndTime,
         targetStatus = "IN_DISPUTE_WINDOW"
-      }
-  -- Job 2: IN_DISPUTE_WINDOW -> PAYMENT_PENDING (after dispute window)
-  createJobIn @_ @'ProcessCancellationPenaltyStatus (Just merchantId) (Just mocId) (diffUTCTime disputeEndTime now) $
-    ProcessCancellationPenaltyStatusJobData
-      { merchantId = merchantId,
-        merchantOperatingCityId = Just mocId,
-        driverFeeId = newFee.id.getId,
-        targetStatus = "PAYMENT_PENDING"
       }

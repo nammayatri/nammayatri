@@ -39,6 +39,7 @@ data RideT f = RideT
     driverArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverCancellationPenaltyAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     driverCancellationPenaltyFeeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    driverCancellationPenaltyWaivedReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverDeviatedFromRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     driverDeviatedToTollRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     driverGoHomeRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

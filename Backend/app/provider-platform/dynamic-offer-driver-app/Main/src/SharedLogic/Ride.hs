@@ -282,7 +282,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         insuredAmount = booking.insuredAmount,
         reactBundleVersion = driver.reactBundleVersion,
         driverCancellationPenaltyFeeId = Nothing,
-        driverCancellationPenaltyAmount = Nothing
+        driverCancellationPenaltyAmount = Nothing,
+        driverCancellationPenaltyWaivedReason = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

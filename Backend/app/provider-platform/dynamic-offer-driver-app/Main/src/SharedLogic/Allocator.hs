@@ -286,6 +286,7 @@ data ProcessCancellationPenaltyStatusJobData = ProcessCancellationPenaltyStatusJ
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     driverFeeId :: Text,
+    disputeEndTime :: UTCTime,
     targetStatus :: Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)

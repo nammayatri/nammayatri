@@ -140,6 +140,8 @@ apis:
   - POST: # WaiverRideCancellationPenaltyAPI
       endpoint: /{rideId}/waiverRideCancellationPenalty
       auth: ApiAuthV2
+      request:
+        type: WaiverRideCancellationPenaltyReq
       params:
         rideId: Id Ride
       response:
@@ -175,6 +177,8 @@ types:
     - driverPhoneNo: Maybe Text
     - rideStatus: RideStatus
     - rideCreatedAt: UTCTime
+  WaiverRideCancellationPenaltyReq:
+    - reason: Text
 
   DeprecatedTripCategory: # TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`
     - enum: "OneWay, Rental, RideShare, InterCity, CrossCity, Ambulance"

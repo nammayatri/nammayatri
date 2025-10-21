@@ -175,7 +175,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             let paymentMode = maybe MANUAL (.planType) mbDriverPlan
             let nonEmptyDriverId = NE.fromList [driverFee.driverId]
             ------------- process driver fee based on payment mode ----------------
-            unless (totalFee == 0) $ do
+            unless (totalFee == 0 && totalCancellationPenalty == 0) $ do
               -- driverFeeUpdateWithPlanAndOffer <- QDF.findById driverFee.id >>= fromMaybeM (InternalError $ "driverFee not found with driverFee id : " <> driverFee.id.getId)
               if coinCashLeft >= totalFee
                 then do
@@ -207,7 +207,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                   updateSubscription False (cast driverFee.driverId)
                   SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "BlockedDrivers") nonEmptyDriverId
               else do
-                unless (totalFee == 0 || coinCashLeft >= totalFee) $ processDriverFee paymentMode driverFeeWithPenalties subscriptionConfigs transporterConfig
+                unless ((totalFee == 0 || coinCashLeft >= totalFee) && totalCancellationPenalty == 0) $ processDriverFee paymentMode driverFeeWithPenalties subscriptionConfigs transporterConfig
             updateSerialOrderForInvoicesInWindow driverFee.id merchantOpCityId startTime endTime serviceName
 
     case listToMaybe driverFees of
@@ -240,6 +240,7 @@ splitCancellationPenaltyIntoDriverFees parentDriverFee subscriptionConfig transp
     mandate <- maybe (pure Nothing) QMD.findById (mbDriverPlan >>= (.mandateId))
     case mandate <&> (.maxAmount) of
       Nothing -> do
+        logError $ "No mandate max amount found for driver plan " <> maybe "[No Plan]" (.getId) parentDriverFee.planId
         createCancellationPenaltyDriverFee parentDriverFee totalCancellationAmount (Just parentDriverFee.id) subscriptionConfig transporterConfig.cancellationFeeVendor now
       Just maxAmt -> do
         if totalCancellationAmount <= maxAmt || maxAmt == 0

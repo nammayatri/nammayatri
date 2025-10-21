@@ -23,6 +23,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.DriverFee as QDF
@@ -47,18 +48,26 @@ processCancellationPenaltyStatus Job {id, jobInfo} = withLogTag ("JobId-" <> id.
   case mbDriverFee of
     Nothing -> do
       logError $ "ProcessCancellationPenaltyStatus: DriverFee not found: " <> jobData.driverFeeId
-      return Complete
+      return Retry
     Just driverFee -> do
       now <- getCurrentTime
       case targetStatusText of
-        "IN_DISPUTE_WINDOW" -> do
-          when (driverFee.status == DF.ONGOING) $ do
-            logInfo $ "ProcessCancellationPenaltyStatus: Transitioning to IN_DISPUTE_WINDOW for driverFeeId: " <> jobData.driverFeeId
-            QDF.updateStatus DF.IN_DISPUTE_WINDOW driverFeeId now
+        "IN_DISPUTE_WINDOW" ->
+          if driverFee.status == DF.ONGOING
+            then do
+              logInfo $ "ProcessCancellationPenaltyStatus: Transitioning to IN_DISPUTE_WINDOW for driverFeeId: " <> jobData.driverFeeId
+              QDF.updateStatus DF.IN_DISPUTE_WINDOW driverFeeId now
+              let disputeWindowEndTime = max (diffUTCTime jobData.disputeEndTime now) (secondsToNominalDiffTime (Seconds 172800)) -- 2 days
+              createJobIn @_ @'ProcessCancellationPenaltyStatus (Just jobData.merchantId) (jobData.merchantOperatingCityId) disputeWindowEndTime $ jobData {targetStatus = "PAYMENT_PENDING"}
+              return Complete
+            else return $ Terminate $ "DriverFee not in ONGOING status " <> jobData.driverFeeId
         "PAYMENT_PENDING" -> do
-          when (driverFee.status == DF.IN_DISPUTE_WINDOW) $ do
-            logInfo $ "ProcessCancellationPenaltyStatus: Transitioning to PAYMENT_PENDING for driverFeeId: " <> jobData.driverFeeId
-            QDF.updateStatus DF.PAYMENT_PENDING driverFeeId now
+          if driverFee.status == DF.IN_DISPUTE_WINDOW
+            then do
+              logInfo $ "ProcessCancellationPenaltyStatus: Transitioning to PAYMENT_PENDING for driverFeeId: " <> jobData.driverFeeId
+              QDF.updateStatus DF.PAYMENT_PENDING driverFeeId now
+              return Complete
+            else return $ Terminate $ "DriverFee not in IN_DISPUTE_WINDOW status " <> jobData.driverFeeId
         _ -> do
           logWarning $ "ProcessCancellationPenaltyStatus: Unknown target status: " <> targetStatusText
-      return Complete
+          return (Terminate $ "Unknown target status: " <> targetStatusText)

@@ -1,4 +1,5 @@
-imports: {}
+imports:
+  LatLong: Kernel.External.Maps.Types
 
 
 module: Penalty
@@ -15,7 +16,7 @@ apis:
 types:
   PenaltyCheckReq:
     - rideId: Text
-    - bookingId: Maybe Text
+    - point: LatLong
   PenaltyCheckRes:
     - isCancellationPenaltyApplicable: Maybe Bool
     - cancellationPenaltyAmount: Maybe HighPrecMoney

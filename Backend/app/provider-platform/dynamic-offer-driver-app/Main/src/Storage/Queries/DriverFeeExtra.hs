@@ -374,14 +374,17 @@ findOngoingCancellationPenaltyFeeByDriverIdAndServiceName ::
   ServiceNames ->
   Id MerchantOperatingCity ->
   Bool ->
+  UTCTime ->
   m (Maybe DriverFee)
-findOngoingCancellationPenaltyFeeByDriverIdAndServiceName (Id driverId) serviceName merchantOperatingCityId enableCityBasedFeeSwitch = do
+findOngoingCancellationPenaltyFeeByDriverIdAndServiceName (Id driverId) serviceName merchantOperatingCityId enableCityBasedFeeSwitch now = do
   findAllWithOptionsKV
     [ Se.And
         ( [ Se.Is BeamDF.driverId (Se.Eq driverId),
             Se.Is BeamDF.feeType (Se.Eq CANCELLATION_PENALTY),
             Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-            Se.Is BeamDF.status (Se.Eq ONGOING)
+            Se.Is BeamDF.status (Se.Eq ONGOING),
+            Se.Is BeamDF.startTime $ Se.LessThanOrEq now,
+            Se.Is BeamDF.endTime $ Se.GreaterThanOrEq now
           ]
             <> [Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId) | enableCityBasedFeeSwitch]
         )
