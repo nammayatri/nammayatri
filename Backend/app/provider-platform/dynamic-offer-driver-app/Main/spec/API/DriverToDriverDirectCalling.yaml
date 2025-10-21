@@ -6,6 +6,9 @@ apis:
         rcNumber: Text
       auth: TokenAuth PROVIDER_TYPE
       response:
-        type: Text
+        type: DriverGetnumberResp
 
-types: {}
+types:
+  DriverGetnumberResp:
+    name: Text
+    mobileNumber: Text
