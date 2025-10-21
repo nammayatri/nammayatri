@@ -7,6 +7,7 @@ import qualified "dynamic-offer-driver-app" API.Dashboard
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.Driver
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.DriverSubscription
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.Overlay
+import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.Payment
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.Subscription
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.ServerName
@@ -20,6 +21,7 @@ data AppManagementAPIs = AppManagementAPIs
   { driverDSL :: API.Types.Dashboard.AppManagement.Driver.DriverAPIs,
     driverSubscriptionDSL :: API.Types.Dashboard.AppManagement.DriverSubscription.DriverSubscriptionAPIs,
     overlayDSL :: API.Types.Dashboard.AppManagement.Overlay.OverlayAPIs,
+    paymentDSL :: API.Types.Dashboard.AppManagement.Payment.PaymentAPIs,
     subscriptionDSL :: API.Types.Dashboard.AppManagement.Subscription.SubscriptionAPIs
   }
 
@@ -28,10 +30,11 @@ mkAppManagementAPIs merchantId city token = do
   let driverDSL = API.Types.Dashboard.AppManagement.Driver.mkDriverAPIs driverClientDSL
   let driverSubscriptionDSL = API.Types.Dashboard.AppManagement.DriverSubscription.mkDriverSubscriptionAPIs driverSubscriptionClientDSL
   let overlayDSL = API.Types.Dashboard.AppManagement.Overlay.mkOverlayAPIs overlayClientDSL
+  let paymentDSL = API.Types.Dashboard.AppManagement.Payment.mkPaymentAPIs paymentClientDSL
   let subscriptionDSL = API.Types.Dashboard.AppManagement.Subscription.mkSubscriptionAPIs subscriptionClientDSL
   (AppManagementAPIs {..})
   where
-    driverClientDSL :<|> driverSubscriptionClientDSL :<|> overlayClientDSL :<|> subscriptionClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
+    driverClientDSL :<|> driverSubscriptionClientDSL :<|> overlayClientDSL :<|> paymentClientDSL :<|> subscriptionClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
 
 callAppManagementAPI ::
   forall m r b c.
