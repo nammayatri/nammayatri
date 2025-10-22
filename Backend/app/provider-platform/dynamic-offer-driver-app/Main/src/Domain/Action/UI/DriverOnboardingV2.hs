@@ -6,7 +6,8 @@ import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
 import Data.Maybe
 import qualified Data.Text as T
-import Data.Time (defaultTimeLocale, formatTime)
+import qualified Data.Text.Lazy as TL
+import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
 import qualified Data.Time as DT
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.AadhaarCard
@@ -18,6 +19,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverBankAccount as DDBA
 import qualified Domain.Types.DriverGstin as DGST
+import qualified Domain.Types.DriverLicense
 import qualified Domain.Types.DriverPanCard as DPC
 import Domain.Types.DriverSSN
 import Domain.Types.FarePolicy
@@ -80,6 +82,8 @@ import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCE
+import qualified Text.XML as XML
+import qualified Text.XML.Cursor as XML
 import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
 import qualified Tools.Payment as TPayment
@@ -1101,6 +1105,15 @@ type DigiLockerTokenAPI =
 digiLockerTokenAPI :: Servant.Proxy DigiLockerTokenAPI
 digiLockerTokenAPI = Servant.Proxy
 
+-- Servant API type for DigiLocker file/xml fetch endpoint
+-- DigiLocker returns raw binary data (PDF) or XML text
+type DigiLockerFileAPI =
+  Servant.Header "Authorization" Text
+    Servant.:> Servant.Get '[Servant.PlainText] Text
+
+digiLockerFileAPI :: Servant.Proxy DigiLockerFileAPI
+digiLockerFileAPI = Servant.Proxy
+
 -- Redis key for DigiLocker state
 mkDigiLockerStateKey :: Text -> Text
 mkDigiLockerStateKey stateId = "digilocker:state:" <> stateId
@@ -1554,18 +1567,39 @@ processDigiLockerPullDocument driverId merchantId merchantOpCityId accessToken r
 
   logInfo $ "DigiLocker pull processing - Constructed URI: " <> docUri <> ", DriverId: " <> driverId.getId
 
+  -- Determine image/document type for validateImage
+  let documentType = case req.docParams of
+        APITypes.PanParams _ -> DTO.PanCard
+        APITypes.DLParams _ -> DTO.DriverLicense
+        APITypes.AadhaarParams _ -> DTO.AadhaarCard
+
+  -- Fetch PDF/image from DigiLocker and upload using existing validateImage logic
+  let pdfUrl = "https://digilocker.meripehchaan.gov.in/public/oauth2/1/file/" <> docUri
+  pdfDataBase64 <- fetchDigiLockerDocument pdfUrl accessToken
+
+  logInfo $ "DigiLocker pull processing - Fetched PDF successfully. DriverId: " <> driverId.getId
+
+  -- Use existing validateImage function to upload to S3 and create Image record
+  let imageValidateReq =
+        Image.ImageValidateRequest
+          { image = pdfDataBase64,
+            imageType = documentType,
+            rcNumber = Nothing,
+            validationStatus = Just APITypes.AUTO_APPROVED, -- DigiLocker docs are pre-validated
+            workflowTransactionId = Nothing,
+            vehicleCategory = Nothing,
+            sdkFailureReason = Nothing
+          }
+
+  Image.ImageValidateResponse {imageId} <- Image.validateImage False (driverId, merchantId, merchantOpCityId) imageValidateReq
+
+  logInfo $ "DigiLocker pull processing - Uploaded to S3 via validateImage, ImageId: " <> imageId.getId <> ", DriverId: " <> driverId.getId
+
   -- Fetch XML document from DigiLocker
   let xmlUrl = "https://digilocker.meripehchaan.gov.in/public/oauth2/1/xml/" <> docUri
   xmlData <- fetchDigiLockerDocument xmlUrl accessToken
 
   logInfo $ "DigiLocker pull processing - Fetched XML successfully. DriverId: " <> driverId.getId
-
-  -- Fetch PDF/image and upload to S3
-  let pdfUrl = "https://digilocker.meripehchaan.gov.in/public/oauth2/1/file/" <> docUri
-  pdfData <- fetchDigiLockerDocument pdfUrl accessToken
-  imageId <- uploadDocumentToS3 driverId merchantId merchantOpCityId req.docType pdfData
-
-  logInfo $ "DigiLocker pull processing - Uploaded to S3, ImageId: " <> imageId.getId <> ", DriverId: " <> driverId.getId
 
   -- Parse XML and store in DB based on document type
   case req.docParams of
@@ -1582,53 +1616,75 @@ processDigiLockerPullDocument driverId merchantId merchantOpCityId accessToken r
   logInfo $ "DigiLocker pull processing - Completed successfully for DocType: " <> req.docType <> ", DriverId: " <> driverId.getId
 
 -- Helper: Fetch document from DigiLocker
+-- Returns base64-encoded document data
 fetchDigiLockerDocument :: Text -> Text -> Flow Text
-fetchDigiLockerDocument _url _accessToken = do
-  -- TODO: Implement actual HTTP call with Bearer token authorization
-  -- For now, throwing an error as this needs HTTP client implementation
-  throwError $ InternalError "DigiLocker document fetch not yet implemented - needs HTTP client"
+fetchDigiLockerDocument url accessToken = do
+  logInfo $ "Fetching document from DigiLocker: " <> url
 
--- Helper: Upload document to S3 and create Image record
-uploadDocumentToS3 :: Id Domain.Types.Person.Person -> Id Domain.Types.Merchant.Merchant -> Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Text -> Text -> Flow (Id Image.Image)
-uploadDocumentToS3 driverId merchantId merchantOpCityId docType pdfData = do
-  imageId <- generateGUID
-  now <- getCurrentTime
+  -- Parse the URL to extract base URL and path
+  baseUrl <- Kernel.Prelude.parseBaseUrl url
 
-  -- Determine image type based on document type
-  let imageType = case T.toUpper docType of
-        "PAN" -> DTO.PanCard
-        "DL" -> DTO.DriverLicense
-        "AADHAAR" -> DTO.AadhaarCard
-        _ -> DTO.PanCard -- fallback
+  -- Prepare authorization header with Bearer token
+  let authHeader = "Bearer " <> accessToken
+      eulerClient = Euler.client digiLockerFileAPI (Just authHeader)
 
-  -- Create S3 path
-  s3Path <- S3.createFilePath "/digilocker-documents/" ("driver-" <> driverId.getId <> "-" <> T.toLower docType) S3.Image ".pdf"
+  -- Make HTTP call to DigiLocker
+  response <-
+    try @_ @SomeException (callAPI baseUrl eulerClient "digilocker-fetch-document" digiLockerFileAPI)
+      >>= \case
+        Left err -> do
+          logError $ "DigiLocker fetch failed for URL: " <> url <> ", Error: " <> show err
+          throwError $ InternalError $ "Failed to fetch document from DigiLocker: " <> T.pack (show err)
+        Right eitherResp -> case eitherResp of
+          Left clientErr -> do
+            logError $ "DigiLocker API error for URL: " <> url <> ", Error: " <> show clientErr
+            throwError $ InternalError $ "DigiLocker API returned error: " <> T.pack (show clientErr)
+          Right rawData -> do
+            logInfo $ "Successfully fetched document from DigiLocker: " <> url
+            -- If data is already base64, return as-is; otherwise encode it
+            -- DigiLocker file endpoint returns base64-encoded PDF data
+            return rawData
 
-  -- Upload to S3
-  _ <- S3.put (T.unpack s3Path) pdfData
+  return response
 
-  -- Create Image record
-  let imageEntity =
-        Image.Image
-          { id = imageId,
-            personId = driverId,
-            merchantId = merchantId,
-            merchantOperatingCityId = Just merchantOpCityId,
-            s3Path = s3Path,
-            imageType = imageType,
-            verificationStatus = Just Documents.VALID,
-            failureReason = Nothing,
-            workflowTransactionId = Nothing,
-            reviewerEmail = Nothing,
-            rcId = Nothing,
-            documentExpiry = Nothing,
-            createdAt = now,
-            updatedAt = now
+-- Helper: Parse PAN date format (DD-MM-YYYY) to UTCTime
+parsePanDate :: Text -> Maybe UTCTime
+parsePanDate dateStr = do
+  parsed <- parseTimeM True defaultTimeLocale "%d-%m-%Y" (T.unpack dateStr) :: Maybe DT.Day
+  return $ DT.UTCTime parsed 0
+
+-- Helper: Extract PAN details from DigiLocker XML
+data PanXmlData = PanXmlData
+  { panNumber :: Text,
+    holderName :: Maybe Text,
+    dateOfBirth :: Maybe UTCTime
+  }
+
+parsePanXml :: Text -> Either Text PanXmlData
+parsePanXml xmlText = do
+  -- Parse XML document
+  doc <- case XML.parseText XML.def (TL.fromStrict xmlText) of
+    Left err -> Left $ "Failed to parse XML: " <> T.pack (show err)
+    Right d -> Right d
+
+  let cursor = XML.fromDocument doc
+      -- Extract PAN number from Certificate/@number attribute
+      panNum = listToMaybe $ cursor XML.$| XML.laxElement "Certificate" XML.>=> XML.attribute "number"
+      -- Extract name from IssuedTo/Person/@name
+      name = listToMaybe $ cursor XML.$// XML.laxElement "IssuedTo" XML.&/ XML.laxElement "Person" XML.>=> XML.attribute "name"
+      -- Extract DOB from IssuedTo/Person/@dob
+      dobStr = listToMaybe $ cursor XML.$// XML.laxElement "IssuedTo" XML.&/ XML.laxElement "Person" XML.>=> XML.attribute "dob"
+
+  -- Validate and return
+  case panNum of
+    Nothing -> Left "PAN number not found in XML"
+    Just pan ->
+      Right $
+        PanXmlData
+          { panNumber = pan,
+            holderName = name,
+            dateOfBirth = dobStr >>= parsePanDate
           }
-
-  ImageQuery.create imageEntity
-
-  return imageId
 
 -- Helper: Store PAN document in DB
 storePanDocument ::
@@ -1639,13 +1695,22 @@ storePanDocument ::
   Id Image.Image ->
   APITypes.PanDocParams ->
   Flow ()
-storePanDocument driverId merchantId merchantOpCityId _xmlData imageId (APITypes.PanDocParams {APITypes.panNumber = panNum}) = do
-  -- TODO: Parse XML to extract PAN details
-  -- For now, using the parameters provided by user
+storePanDocument driverId merchantId merchantOpCityId xmlData imageId (APITypes.PanDocParams {APITypes.panNumber = panNum}) = do
+  -- Parse XML to extract PAN details
+  panXmlData <- case parsePanXml xmlData of
+    Left err -> do
+      logError $ "Failed to parse PAN XML: " <> err
+      throwError $ InvalidRequest $ "Failed to parse PAN document: " <> err
+    Right parsed -> return parsed
+
+  -- Validate that the PAN number from XML matches the one provided by user
+  unless (panXmlData.panNumber == panNum) $ do
+    logWarning $ "PAN number mismatch. XML: " <> panXmlData.panNumber <> ", Provided: " <> panNum
+    throwError $ InvalidRequest "PAN number in document does not match the provided PAN number"
 
   person <- PersonQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
 
-  -- Build PAN card entity
+  -- Build PAN card entity with parsed XML data
   now <- getCurrentTime
   uuid <- generateGUID
   encryptedPan <- encrypt panNum
@@ -1657,9 +1722,9 @@ storePanDocument driverId merchantId merchantOpCityId _xmlData imageId (APITypes
             panCardNumber = encryptedPan,
             documentImageId1 = imageId,
             documentImageId2 = Nothing,
-            driverDob = Nothing, -- TODO: Extract from XML if available
-            driverName = Just person.firstName, -- TODO: Extract from XML
-            driverNameOnGovtDB = Nothing, -- TODO: Extract from XML
+            driverDob = panXmlData.dateOfBirth,
+            driverName = Just person.firstName,
+            driverNameOnGovtDB = panXmlData.holderName,
             verificationStatus = Documents.VALID,
             verifiedBy = Just DPC.DIGILOCKER,
             consent = True,
@@ -1674,7 +1739,98 @@ storePanDocument driverId merchantId merchantOpCityId _xmlData imageId (APITypes
 
   QDPC.upsertPanRecord panCard
 
-  logInfo $ "DigiLocker pull - PAN card stored. DriverId: " <> driverId.getId
+  logInfo $ "DigiLocker pull - PAN card stored successfully. DriverId: " <> driverId.getId <> ", PAN: " <> panNum <> ", Name: " <> show panXmlData.holderName
+
+-- Helper: Extract DL details from DigiLocker XML
+data DLXmlData = DLXmlData
+  { dlNumber :: Text,
+    driverName :: Maybe Text,
+    dateOfBirth :: Maybe UTCTime,
+    licenseExpiry :: UTCTime,
+    dateOfIssue :: Maybe UTCTime,
+    categories :: [Text], -- List of vehicle category abbreviations (e.g., ["MCWOG", "MCWG", "LMV"])
+    address :: Maybe Text
+  }
+
+parseDLXml :: Text -> Either Text DLXmlData
+parseDLXml xmlText = do
+  -- Parse XML document
+  doc <- case XML.parseText XML.def (TL.fromStrict xmlText) of
+    Left err -> Left $ "Failed to parse XML: " <> T.pack (show err)
+    Right d -> Right d
+
+  let cursor = XML.fromDocument doc
+      -- Extract DL number from Certificate/@number attribute
+      dlNum = listToMaybe $ cursor XML.$| XML.laxElement "Certificate" XML.>=> XML.attribute "number"
+      -- Extract issue date from Certificate/@issueDate
+      issueDateStr = listToMaybe $ cursor XML.$| XML.laxElement "Certificate" XML.>=> XML.attribute "issueDate"
+      -- Extract expiry date from Certificate/@expiryDate
+      expiryDateStr = listToMaybe $ cursor XML.$| XML.laxElement "Certificate" XML.>=> XML.attribute "expiryDate"
+      -- Extract name from IssuedTo/Person/@dlNatName or @dlConcateName
+      natName = listToMaybe $ cursor XML.$// XML.laxElement "IssuedTo" XML.&/ XML.laxElement "Person" XML.>=> XML.attribute "dlNatName"
+      concateName = listToMaybe $ cursor XML.$// XML.laxElement "IssuedTo" XML.&/ XML.laxElement "Person" XML.>=> XML.attribute "dlConcateName"
+      name_ = listToMaybe $ cursor XML.$// XML.laxElement "IssuedTo" XML.&/ XML.laxElement "Person" XML.>=> XML.attribute "name"
+      -- Extract DOB from IssuedTo/Person/@dob
+      dobStr = listToMaybe $ cursor XML.$// XML.laxElement "IssuedTo" XML.&/ XML.laxElement "Person" XML.>=> XML.attribute "dob"
+      -- Extract address from IssuedTo/Person/Address/@line1
+      addressLine1 = listToMaybe $ cursor XML.$// XML.laxElement "IssuedTo" XML.&/ XML.laxElement "Person" XML.&/ XML.laxElement "Address" XML.>=> XML.attribute "line1"
+      -- Extract vehicle categories from CertificateData/DrivingLicense/Categories/Category/@abbreviation
+      categoryAbbrs =
+        cursor XML.$// XML.laxElement "CertificateData"
+          XML.&/ XML.laxElement "DrivingLicense"
+          XML.&/ XML.laxElement "Categories"
+          XML.&/ XML.laxElement "Category"
+          XML.>=> XML.attribute "abbreviation"
+
+  -- Parse and validate
+  case (dlNum, expiryDateStr) of
+    (Nothing, _) -> Left "DL number not found in XML"
+    (_, Nothing) -> Left "DL expiry date not found in XML"
+    (Just dl, Just expiryStr) -> do
+      expiry <- case parseDLDate expiryStr of
+        Nothing -> Left $ "Failed to parse expiry date: " <> expiryStr
+        Just d -> Right d
+
+      let dob = dobStr >>= parseDLDate
+          issueDate = issueDateStr >>= parseDLDate
+          driverName = natName <|> concateName <|> name_
+          categories = if null categoryAbbrs then [] else categoryAbbrs
+
+      Right $
+        DLXmlData
+          { dlNumber = T.strip dl, -- Remove trailing spaces from DL number
+            driverName = T.strip <$> driverName,
+            dateOfBirth = dob,
+            licenseExpiry = expiry,
+            dateOfIssue = issueDate,
+            categories = map T.toUpper categories, -- Normalize to uppercase
+            address = T.strip <$> addressLine1
+          }
+
+-- Helper: Parse DL date format (DD-MM-YYYY) to UTCTime
+parseDLDate :: Text -> Maybe UTCTime
+parseDLDate dateStr = do
+  parsed <- parseTimeM True defaultTimeLocale "%d-%m-%Y" (T.unpack dateStr) :: Maybe DT.Day
+  return $ DT.UTCTime parsed 0
+
+-- Helper: Validate DL status from DigiLocker data
+-- Reuses the same validation logic as the existing verifyDL flow
+validateDLStatusFromDigiLocker :: DTO.DocumentVerificationConfig -> UTCTime -> [Text] -> UTCTime -> Documents.VerificationStatus
+validateDLStatusFromDigiLocker configs expiry categories now =
+  case configs.supportedVehicleClasses of
+    DTO.DLValidClasses [] -> Documents.INVALID
+    DTO.DLValidClasses validCOVs -> do
+      let validCOVsCheck = configs.vehicleClassCheckType
+      let isCOVValid = foldr' (\x acc -> isValidCOV validCOVs validCOVsCheck x || acc) False categories
+      if ((not configs.checkExpiry) || now < expiry) && isCOVValid
+        then Documents.VALID
+        else Documents.INVALID
+    _ -> Documents.INVALID
+  where
+    -- Reuse the classCheckFunction from SharedLogic.DriverOnboarding
+    isValidCOV :: [Text] -> DTO.VehicleClassCheckType -> Text -> Bool
+    isValidCOV validCOVs validCOVsCheck cov =
+      foldr' (\x acc -> classCheckFunction validCOVsCheck (T.toUpper x) (T.toUpper cov) || acc) False validCOVs
 
 -- Helper: Store DL document in DB
 storeDLDocument ::
@@ -1685,10 +1841,75 @@ storeDLDocument ::
   Id Image.Image ->
   APITypes.DLDocParams ->
   Flow ()
-storeDLDocument _driverId _merchantId _merchantOpCityId _xmlData _imageId _params = do
-  -- TODO: Parse XML to extract DL details
-  -- For now, throwing error as implementation is pending
-  throwError $ InternalError "DL document storage from DigiLocker not yet implemented"
+storeDLDocument driverId merchantId merchantOpCityId xmlData imageId (APITypes.DLDocParams {APITypes.dlNumber = dlNum, APITypes.dateOfBirth = dobStr}) = do
+  -- Parse XML to extract DL details
+  dlXmlData <- case parseDLXml xmlData of
+    Left err -> do
+      logError $ "Failed to parse DL XML: " <> err
+      throwError $ InvalidRequest $ "Failed to parse DL document: " <> err
+    Right parsed -> return parsed
+
+  -- Validate that the DL number from XML matches the one provided by user (ignoring spaces and case)
+  let normalizeDL = T.toUpper . T.filter (/= ' ')
+  unless (normalizeDL dlXmlData.dlNumber == normalizeDL dlNum) $ do
+    logWarning $ "DL number mismatch. XML: " <> dlXmlData.dlNumber <> ", Provided: " <> dlNum
+    throwError $ InvalidRequest "DL number in document does not match the provided DL number"
+
+  -- Validate DOB if provided
+  whenJust dobStr $ \providedDob -> do
+    whenJust dlXmlData.dateOfBirth $ \xmlDob -> do
+      let normalizeDate dt = formatTime defaultTimeLocale "%d-%m-%Y" dt
+      unless (T.pack (normalizeDate xmlDob) == providedDob) $ do
+        logWarning $ "DOB mismatch. XML: " <> T.pack (normalizeDate xmlDob) <> ", Provided: " <> providedDob
+        throwError $ InvalidRequest "Date of birth in document does not match"
+
+  person <- PersonQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+
+  -- Get document verification config for validation
+  documentVerificationConfig <-
+    CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory
+      merchantOpCityId
+      DTO.DriverLicense
+      DVC.CAR -- Default to CAR, TODO: determine from categories
+      Nothing
+      >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
+
+  -- Build DL entity with parsed XML data
+  now <- getCurrentTime
+  uuid <- generateGUID
+  encryptedDL <- encrypt dlNum
+
+  -- Determine verification status based on config and expiry
+  let verificationStatus =
+        if documentVerificationConfig.doStrictVerifcation
+          then validateDLStatusFromDigiLocker documentVerificationConfig dlXmlData.licenseExpiry dlXmlData.categories now
+          else Documents.VALID -- DigiLocker verified documents are valid by default
+  let driverLicense =
+        Domain.Types.DriverLicense.DriverLicense
+          { id = uuid,
+            driverId = driverId,
+            documentImageId1 = imageId,
+            documentImageId2 = Nothing,
+            licenseNumber = encryptedDL,
+            licenseExpiry = dlXmlData.licenseExpiry,
+            classOfVehicles = dlXmlData.categories, -- List of category abbreviations
+            driverDob = dlXmlData.dateOfBirth,
+            driverName = dlXmlData.driverName <|> Just person.firstName,
+            verificationStatus = verificationStatus,
+            failedRules = [],
+            dateOfIssue = dlXmlData.dateOfIssue,
+            rejectReason = Nothing,
+            vehicleCategory = Nothing, -- Will be determined by system
+            consent = True,
+            consentTimestamp = now,
+            merchantId = Just merchantId,
+            createdAt = now,
+            updatedAt = now
+          }
+
+  QDL.upsert driverLicense
+
+  logInfo $ "DigiLocker pull - DL stored successfully. DriverId: " <> driverId.getId <> ", DL: " <> dlNum <> ", Name: " <> show dlXmlData.driverName
 
 -- Helper: Store Aadhaar document in DB
 storeAadhaarDocument ::
