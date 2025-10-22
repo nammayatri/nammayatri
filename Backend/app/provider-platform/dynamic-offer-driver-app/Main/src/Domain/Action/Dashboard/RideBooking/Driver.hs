@@ -30,6 +30,7 @@ where
 
 import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified Data.Map as M
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.Driver as Driver
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
@@ -37,11 +38,13 @@ import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverFee as DDF
 import Domain.Types.DriverLicense
 import Domain.Types.DriverRCAssociation
+import qualified Domain.Types.Feedback as DFeedback
 import Domain.Types.Image (Image)
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
+import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -76,10 +79,12 @@ import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FeedbackExtra as QFeedback
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.RCValidationRules
+import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Tools.Error
@@ -381,7 +386,9 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let isACAllowedForDriver = checkIfACAllowedForDriver info (catMaybes serviceTierACThresholds)
   let isVehicleACWorking = maybe False (\v -> v.airConditioned /= Just False) vehicle
   cancellationData <- SCR.getCancellationRateData person.merchantOperatingCityId person.id
-
+  feedbacks <- QFeedback.findOtherFeedbacks [] person.id Nothing
+  ratings <- QRating.findAllRatingsForPerson person.id
+  let combinedFeedbacks = buildDriverFeedbackAPIEntity feedbacks ratings
   pure
     Common.DriverInfoRes
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -434,8 +441,29 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         lastActivityDate = Just info.updatedAt,
         createdAt = Just info.createdAt,
         reactVersion = person.reactBundleVersion,
+        driverMode = info.mode,
+        feedbacks = combinedFeedbacks,
+        lastOfflineTime = info.lastOfflineTime,
         drunkAndDriveViolationCount
       }
+
+buildDriverFeedbackAPIEntity :: [DFeedback.Feedback] -> [DRating.Rating] -> [Common.DriverFeedbackAPIEntity]
+buildDriverFeedbackAPIEntity feedbacks ratings =
+  let ratingMap = M.fromList [(DRating.rideId rating, rating) | rating <- ratings]
+      combinedList =
+        mapMaybe
+          ( \(DFeedback.Feedback {..}) -> do
+              let mbRating = M.lookup rideId ratingMap
+              pure $
+                Common.DriverFeedbackAPIEntity
+                  { rideId = cast rideId,
+                    createdAt = createdAt,
+                    feedbackText = Just badge,
+                    feedbackDetails = mbRating >>= DRating.feedbackDetails
+                  }
+          )
+          feedbacks
+   in combinedList
 
 buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity
 buildDriverLicenseAPIEntity DriverLicense {..} = do

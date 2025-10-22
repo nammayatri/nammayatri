@@ -8,6 +8,8 @@ import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
+import qualified Domain.Types.Common
+import qualified Domain.Types.Ride
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -31,6 +33,15 @@ data DriverBlockTransactions = DriverBlockTransactions
     blockedBy :: Kernel.Prelude.Text,
     requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DriverFeedbackAPIEntity = DriverFeedbackAPIEntity
+  { rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
+    createdAt :: Kernel.Prelude.UTCTime,
+    feedbackText :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    feedbackDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -86,7 +97,10 @@ data DriverInfoRes = DriverInfoRes
     blockedInfo :: [DriverBlockTransactions],
     softBlockStiers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     softBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverMode :: Kernel.Prelude.Maybe Domain.Types.Common.DriverMode,
+    lastOfflineTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    feedbacks :: [DriverFeedbackAPIEntity]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

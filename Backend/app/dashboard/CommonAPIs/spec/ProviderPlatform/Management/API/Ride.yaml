@@ -267,6 +267,7 @@ types:
     - roundTrip: Maybe Bool
     - deliveryParcelImageId: Maybe Text
     - estimatedReservedDuration: Maybe Minutes
+    - isPetRide: Maybe Bool
   LocationAPIEntity:
     - lat: Double
     - lon: Double

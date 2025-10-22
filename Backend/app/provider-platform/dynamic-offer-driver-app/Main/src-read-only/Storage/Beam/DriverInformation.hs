@@ -68,6 +68,7 @@ data DriverInformationT f = DriverInformationT
     issueBreachCooldownTimes :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     lastACStatusCheckedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     lastEnabledOn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    lastOfflineTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     latestScheduledBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     latestScheduledPickupLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     latestScheduledPickupLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
@@ -123,6 +124,6 @@ instance B.Table DriverInformationT where
 
 type DriverInformation = DriverInformationT Identity
 
-$(enableKVPG ''DriverInformationT ['driverId] [])
+$(enableKVPG (''DriverInformationT) [('driverId)] [])
 
-$(mkTableInstances ''DriverInformationT "driver_information")
+$(mkTableInstances (''DriverInformationT) "driver_information")
