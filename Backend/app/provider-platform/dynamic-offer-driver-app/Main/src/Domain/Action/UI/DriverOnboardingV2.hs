@@ -4,11 +4,17 @@ import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
 import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
+import qualified Crypto.Hash as Hash
+import Crypto.Random (getRandomBytes)
+import qualified Data.ByteArray as BA
+import qualified Data.ByteString.Base64 as B64
 import Data.Maybe
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
 import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
 import qualified Data.Time as DT
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
@@ -51,6 +57,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Network.HTTP.Types.URI as URI
 import qualified Servant
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
@@ -1953,3 +1960,100 @@ updateDocumentStatus detailsKey docType status availability pullFields errorCode
               APITypes.errorDescription = errorDesc
              }
         else doc
+
+----------- DigiLocker Initiate API -----------
+
+postDriverDigilockerInitiate ::
+  ( Maybe (Id Domain.Types.Person.Person),
+    Id Domain.Types.Merchant.Merchant,
+    Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  Environment.Flow APITypes.DigiLockerInitiateResp
+postDriverDigilockerInitiate (mbDriverId, _merchantId, _merchantOpCityId) = do
+  driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
+  logInfo $ "DigiLocker initiate - Starting authorization flow for DriverId: " <> driverId.getId
+
+  -- Step 1: Generate code_verifier (cryptographically secure random string, 43-128 characters for PKCE)
+  -- Mix 24 random bytes with current timestamp for guaranteed uniqueness and debugging
+  randomBytes <- liftIO $ getRandomBytes 24
+  now <- getCurrentTime
+  let timestampMillis = T.pack $ show $ (floor (utcTimeToPOSIXSeconds now * 1000) :: Integer)
+  let timestampBytes = TE.encodeUtf8 timestampMillis
+  let combinedBytes = randomBytes <> timestampBytes
+  let codeVerifier = base64UrlEncodeNoPadding combinedBytes
+
+  logDebug $ "DigiLocker initiate - Generated code_verifier (length: " <> show (T.length codeVerifier) <> ") with timestamp-based entropy"
+
+  -- Step 2: Generate code_challenge = BASE64URL(SHA256(code_verifier))
+  let codeChallenge = generateCodeChallenge codeVerifier
+
+  logDebug $ "DigiLocker initiate - Generated code_challenge: " <> codeChallenge
+
+  -- Step 3: Generate random state (UUID for simplicity and tracking)
+  stateUUID <- generateGUID
+  let digiLockerState = T.replace "-" "" stateUUID -- Remove hyphens from UUID for cleaner state
+  logDebug $ "DigiLocker initiate - Generated state: " <> digiLockerState
+
+  -- Step 4: Store code_verifier and driver_id in Redis with state as key
+  let stateKey = mkDigiLockerStateKey digiLockerState
+  let stateData =
+        APITypes.DigiLockerStateData
+          { driverId = driverId,
+            codeVerifier = codeVerifier
+          }
+
+  Redis.setExp stateKey stateData 3600 -- 1 hour TTL
+  logInfo $ "DigiLocker initiate - Stored state data in Redis with key: " <> stateKey <> ", TTL: 3600s"
+
+  -- Step 5: Construct DigiLocker authorization URL
+  let authorizationUrl = constructDigiLockerAuthUrl digiLockerState codeChallenge
+
+  logInfo $ "DigiLocker initiate - Authorization URL generated for DriverId: " <> driverId.getId
+
+  return $
+    APITypes.DigiLockerInitiateResp
+      { authorizationUrl = authorizationUrl
+      }
+
+-- Helper: Base64URL encode without padding (as per RFC 7636)
+-- Implements: base64url_encode_without_padding
+base64UrlEncodeNoPadding :: ByteString -> Text
+base64UrlEncodeNoPadding bytes =
+  let base64Encoded = B64.encode bytes
+      base64Text = TE.decodeUtf8 base64Encoded
+      -- Convert Base64 to Base64URL: replace + with -, / with _, and remove padding =
+      base64UrlText = T.replace "+" "-" $ T.replace "/" "_" $ T.replace "=" "" base64Text
+   in base64UrlText
+
+-- Helper: Generate code_challenge from code_verifier using SHA256 and Base64URL encoding
+-- Implements: code_challenge = base64_url_encode_without_padding(sha256(code_verifier))
+generateCodeChallenge :: Text -> Text
+generateCodeChallenge codeVerifier =
+  let verifierBytes = TE.encodeUtf8 codeVerifier
+      digest = Hash.hashWith Hash.SHA256 verifierBytes
+      hashBytes = BA.convert digest :: ByteString
+   in base64UrlEncodeNoPadding hashBytes
+
+-- Helper: Construct DigiLocker authorization URL with all required parameters
+constructDigiLockerAuthUrl :: Text -> Text -> Text
+constructDigiLockerAuthUrl digiLockerState codeChallenge =
+  let baseUrl = "https://digilocker.meripehchaan.gov.in/public/oauth2/1/authorize"
+      params =
+        [ ("response_type", "code"),
+          ("client_id", digiLockerClientId),
+          ("redirect_uri", digiLockerRedirectUri),
+          ("state", digiLockerState),
+          ("code_challenge", codeChallenge),
+          ("code_challenge_method", "S256"),
+          ("pla", "Y"),
+          ("plsignup", "Y"),
+          ("ulsignup", "Y"),
+          ("purpose", "verification")
+        ]
+      queryString = T.intercalate "&" $ map (\(k, v) -> k <> "=" <> encodeURIComponent v) params
+   in baseUrl <> "?" <> queryString
+  where
+    -- URL encode text for query parameters
+    encodeURIComponent :: Text -> Text
+    encodeURIComponent txt =
+      TE.decodeUtf8 $ URI.urlEncode True $ TE.encodeUtf8 txt

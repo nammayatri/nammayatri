@@ -209,6 +209,8 @@ types:
     dateOfBirth: Maybe Text
   AadhaarDocParams:
     aadhaarNumber: Text
+  DigiLockerInitiateResp:
+    authorizationUrl: Text
 
 apis:
   - GET:
@@ -351,3 +353,8 @@ apis:
         type: DigiLockerPullDocRequest
       response:
         type: APISuccess
+  - POST:
+      endpoint: /driver/digilocker/initiate
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: DigiLockerInitiateResp

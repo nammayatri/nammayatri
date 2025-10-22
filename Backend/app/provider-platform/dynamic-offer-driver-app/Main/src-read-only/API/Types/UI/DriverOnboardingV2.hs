@@ -90,6 +90,10 @@ data DigiLockerDocumentStatus = DigiLockerDocumentStatus
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DigiLockerInitiateResp = DigiLockerInitiateResp {authorizationUrl :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DigiLockerPullDocRequest = DigiLockerPullDocRequest {docParams :: DocParams, docType :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
