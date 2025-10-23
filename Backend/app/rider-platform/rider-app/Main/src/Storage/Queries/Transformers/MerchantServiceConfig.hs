@@ -39,6 +39,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.SmsService Sms.GupShup -> Domain.SmsServiceConfig . Sms.GupShupConfig <$> valueToMaybe configJSON
     Domain.SmsService Sms.TwillioSms -> Domain.SmsServiceConfig . Sms.TwillioSmsConfig <$> valueToMaybe configJSON
     Domain.SmsService Sms.DigoEngage -> Domain.SmsServiceConfig . Sms.DigoEngageSmsConfig <$> valueToMaybe configJSON
+    Domain.SmsService Sms.KarixSms -> Domain.SmsServiceConfig . Sms.KarixSmsConfig <$> valueToMaybe configJSON
     Domain.SmsService Sms.VonageSms -> Domain.SmsServiceConfig . Sms.VonageSmsConfig <$> valueToMaybe configJSON
     Domain.SmsService Sms.KarixSms -> Domain.SmsServiceConfig . Sms.KarixSmsConfig <$> valueToMaybe configJSON
     Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> valueToMaybe configJSON
