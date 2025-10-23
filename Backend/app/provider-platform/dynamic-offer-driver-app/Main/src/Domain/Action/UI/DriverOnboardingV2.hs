@@ -6,9 +6,11 @@ import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
 import qualified Crypto.Hash as Hash
 import Crypto.Random (getRandomBytes)
+import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Base64 as B64
 import Data.Maybe
+import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
@@ -26,6 +28,7 @@ import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverBankAccount as DDBA
 import qualified Domain.Types.DriverGstin as DGST
 import qualified Domain.Types.DriverLicense
+import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPC
 import Domain.Types.DriverSSN
 import Domain.Types.FarePolicy
@@ -96,6 +99,14 @@ import Tools.Error
 import qualified Tools.Payment as TPayment
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
+
+-- DigiLockerPullDocResponse matching DigiLocker API response
+data DigiLockerPullDocResponse = DigiLockerPullDocResponse
+  { uri :: Maybe Text,
+    error :: Maybe Text,
+    error_description :: Maybe Text
+  }
+  deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 
 stringToPrice :: Currency -> Text -> Maybe Price
 stringToPrice currency value = do
@@ -1121,6 +1132,16 @@ type DigiLockerFileAPI =
 digiLockerFileAPI :: Servant.Proxy DigiLockerFileAPI
 digiLockerFileAPI = Servant.Proxy
 
+-- Servant API type for DigiLocker pull document endpoint
+type DigiLockerPullDocAPI =
+  Servant.Header "Authorization" Text
+    Servant.:> Servant.Header "Content-Type" Text
+    Servant.:> Servant.ReqBody '[Servant.FormUrlEncoded] [(Text, Text)]
+    Servant.:> Servant.Post '[Servant.JSON] DigiLockerPullDocResponse
+
+digiLockerPullDocAPI :: Servant.Proxy DigiLockerPullDocAPI
+digiLockerPullDocAPI = Servant.Proxy
+
 -- Redis key for DigiLocker state
 mkDigiLockerStateKey :: Text -> Text
 mkDigiLockerStateKey stateId = "digilocker:state:" <> stateId
@@ -1512,7 +1533,7 @@ postDobppVerifyCallbackDigiLocker mbError mbErrorDescription code stateParam = d
 
   return Success
 
------------ DigiLocker Pull Documents API -----------
+----------- DigiLocker Fetch Documents API -----------
 
 postDriverDocumentsVerifyDigilocker ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -2057,3 +2078,201 @@ constructDigiLockerAuthUrl digiLockerState codeChallenge =
     encodeURIComponent :: Text -> Text
     encodeURIComponent txt =
       TE.decodeUtf8 $ URI.urlEncode True $ TE.encodeUtf8 txt
+
+----------- DigiLocker Pull Driving License API -----------
+
+postDriverPull_documentDriving_license ::
+  ( Maybe (Id Domain.Types.Person.Person),
+    Id Domain.Types.Merchant.Merchant,
+    Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  APITypes.PullDrivingLicenseReq ->
+  Environment.Flow APISuccess
+postDriverPull_documentDriving_license (mbDriverId, merchantId, merchantOpCityId) req = do
+  driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
+  logInfo $ "DigiLocker pull DL - Starting for DriverId: " <> driverId.getId <> ", DL: " <> req.dlno
+
+  -- Fetch DigiLocker access token from Redis
+  let detailsKey = mkDigiLockerDetailsKey driverId
+  mbDetailsData <- Redis.get detailsKey :: Flow (Maybe APITypes.DigiLockerDetailsData)
+  detailsData <- mbDetailsData & fromMaybeM (InvalidRequest "DigiLocker session not found. Please authenticate with DigiLocker first.")
+
+  -- Extract access token
+  let mbAccessToken = APITypes.accessToken (APITypes.digilocker detailsData)
+  accessToken <- mbAccessToken & fromMaybeM (InvalidRequest "DigiLocker access token not found. Please re-authenticate.")
+
+  logInfo $ "DigiLocker pull DL - Access token found. DriverId: " <> driverId.getId
+
+  -- Return success immediately and process in background
+  fork "digilocker-pull-driving-license" $ do
+    processPullDrivingLicense driverId merchantId merchantOpCityId accessToken req detailsKey
+      `catchAny` \err -> do
+        logError $ "DigiLocker pull DL failed - Error: " <> show err <> ", DriverId: " <> driverId.getId
+        -- Update DB with error status
+        handleDrivingLicenseError driverId merchantId merchantOpCityId (T.pack $ show err) "PROCESSING_FAILED"
+
+  return Success
+
+-- Process pull driving license in background
+processPullDrivingLicense ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Text -> -- access token
+  APITypes.PullDrivingLicenseReq ->
+  Text -> -- details Redis key
+  Flow ()
+processPullDrivingLicense driverId merchantId merchantOpCityId accessToken req detailsKey = do
+  logInfo $ "DigiLocker pull DL processing - Starting for DriverId: " <> driverId.getId <> ", DL: " <> req.dlno
+
+  -- Update DL status to PENDING in DB
+  updateDLStatusInDB driverId "PENDING" []
+
+  -- Step 1: Call DigiLocker pull document API to get URI
+  pullResult <- callDigiLockerPullDocumentAPI accessToken "DRVLC" req.dlno
+
+  case pullResult of
+    Left errorInfo -> do
+      -- Handle DigiLocker API errors
+      logError $ "DigiLocker pull DL - API error: " <> errorInfo.errorCode <> " - " <> errorInfo.errorMsg
+      handleDrivingLicenseError driverId merchantId merchantOpCityId errorInfo.errorMsg errorInfo.errorCode
+    Right _docUri -> do
+      logInfo $ "DigiLocker pull DL - URI received, using existing verification flow. DriverId: " <> driverId.getId
+
+      -- Step 2: Use existing processDigiLockerPullDocument function
+      let pullDocRequest =
+            APITypes.DigiLockerPullDocRequest
+              { docType = "DRVLC",
+                docParams = APITypes.DLParams $ APITypes.DLDocParams {APITypes.dlNumber = req.dlno, APITypes.dateOfBirth = Nothing}
+              }
+
+      processDigiLockerPullDocument driverId merchantId merchantOpCityId accessToken pullDocRequest detailsKey
+        `catchAny` \err -> do
+          logError $ "DigiLocker pull DL - Verification failed: " <> show err <> ", DriverId: " <> driverId.getId
+          handleDrivingLicenseError driverId merchantId merchantOpCityId (T.pack $ show err) "unexpected_error"
+
+-- Call DigiLocker pull document API
+data PullDocErrorInfo = PullDocErrorInfo
+  { errorCode :: Text,
+    errorMsg :: Text
+  }
+
+callDigiLockerPullDocumentAPI ::
+  Text -> -- access token
+  Text -> -- doctype (e.g., "DRVLC")
+  Text -> -- document number (e.g., DL number)
+  Flow (Either PullDocErrorInfo Text) -- Either error or URI
+callDigiLockerPullDocumentAPI accessToken doctype docNumber = do
+  let pullUrl = "https://digilocker.meripehchaan.gov.in/public/oauth2/1/pull/pulldocument"
+
+  logInfo $ "DigiLocker pull API - Calling for doctype: " <> doctype <> ", docNumber: " <> docNumber
+
+  -- Prepare request body (form-urlencoded)
+  let formData =
+        [ ("orgid", "000048"),
+          ("doctype", doctype),
+          ("consent", "Y"),
+          ("dlno", docNumber)
+        ]
+
+  -- Prepare authorization header
+  let authHeader = "Bearer " <> accessToken
+      contentTypeHeader = "application/x-www-form-urlencoded"
+
+  -- Parse URL
+  baseUrl <- Kernel.Prelude.parseBaseUrl pullUrl
+
+  -- Make HTTP call
+  let eulerClient = Euler.client digiLockerPullDocAPI (Just authHeader) (Just contentTypeHeader) formData
+
+  result <- try @_ @SomeException (callAPI baseUrl eulerClient "digilocker-pull-document" digiLockerPullDocAPI)
+
+  case result of
+    Left err -> do
+      logError $ "DigiLocker pull API - HTTP error: " <> show err
+      return $ Left $ PullDocErrorInfo "unexpected_error" (T.pack $ show err)
+    Right eitherResp -> case eitherResp of
+      Left clientErr -> do
+        logError $ "DigiLocker pull API - Client error: " <> show clientErr
+        -- Try to extract error code from response
+        let errMsg = T.pack $ show clientErr
+        let errCode = extractErrorCodeFromResponse errMsg
+        return $ Left $ PullDocErrorInfo errCode errMsg
+      Right pullResp -> do
+        case pullResp.uri of
+          Just docUri -> do
+            logInfo $ "DigiLocker pull API - Success, URI: " <> docUri
+            return $ Right docUri
+          Nothing -> do
+            let errCode = fromMaybe "uri_missing" pullResp.error
+            let errMsg = fromMaybe "URI not found in response" pullResp.error_description
+            logError $ "DigiLocker pull API - Error: " <> errCode <> " - " <> errMsg
+            return $ Left $ PullDocErrorInfo errCode errMsg
+
+-- Extract error code from DigiLocker API error response
+extractErrorCodeFromResponse :: Text -> Text
+extractErrorCodeFromResponse responseText
+  | T.isInfixOf "401" responseText || T.isInfixOf "invalid_token" responseText = "invalid_token"
+  | T.isInfixOf "403" responseText || T.isInfixOf "insufficient_scope" responseText = "insufficient_scope"
+  | T.isInfixOf "400" responseText && T.isInfixOf "invalid_orgid" responseText = "invalid_orgid"
+  | T.isInfixOf "400" responseText && T.isInfixOf "invalid_doctype" responseText = "invalid_doctype"
+  | T.isInfixOf "500" responseText && T.isInfixOf "repository_service" responseText = "repository_service_configerror"
+  | T.isInfixOf "400" responseText && T.isInfixOf "pull_response_pending" responseText = "pull_response_pending"
+  | T.isInfixOf "400" responseText && T.isInfixOf "uri_exists" responseText = "uri_exists"
+  | T.isInfixOf "404" responseText && T.isInfixOf "record_not_found" responseText = "record_not_found"
+  | T.isInfixOf "400" responseText && T.isInfixOf "aadhaar_not_linked" responseText = "aadhaar_not_linked"
+  | T.isInfixOf "500" responseText = "unexpected_error"
+  | otherwise = "unknown_error"
+
+-- Update DL status in DB
+updateDLStatusInDB :: Id Domain.Types.Person.Person -> Text -> [Text] -> Flow ()
+updateDLStatusInDB driverId status failedRules = do
+  mbDL <- QDL.findByDriverId driverId
+  whenJust mbDL $ \dl -> do
+    now <- getCurrentTime
+    let verificationStatus = case status of
+          "PENDING" -> Documents.PENDING
+          "VALID" -> Documents.VALID
+          "INVALID" -> Documents.INVALID
+          "MANUAL_VERIFICATION_REQUIRED" -> Documents.MANUAL_VERIFICATION_REQUIRED
+          "UNAUTHORIZED" -> Documents.UNAUTHORIZED
+          "PULL_REQUIRED" -> Documents.PULL_REQUIRED
+          _ -> Documents.INVALID
+
+    let updatedDL =
+          dl
+            { DDL.verificationStatus = verificationStatus,
+              DDL.failedRules = failedRules,
+              DDL.updatedAt = now
+            }
+    QDL.upsert updatedDL
+
+-- Handle driving license error
+handleDrivingLicenseError ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Text -> -- error message
+  Text -> -- error code from DigiLocker
+  Flow ()
+handleDrivingLicenseError driverId merchantId merchantOpCityId errorMsg errorCode = do
+  logError $ "Handling DL error - Code: " <> errorCode <> ", Message: " <> errorMsg <> ", DriverId: " <> driverId.getId
+
+  -- Map DigiLocker error codes to verification status and failedRules
+  -- Add digilocker_ prefix when storing in DB for consistency
+  let (verificationStatus, failedRulesList) = case errorCode of
+        "invalid_token" -> ("UNAUTHORIZED", ["digilocker_invalid_token"])
+        "insufficient_scope" -> ("UNAUTHORIZED", ["digilocker_insufficient_scope"])
+        "invalid_orgid" -> ("INVALID", ["digilocker_invalid_orgid"])
+        "invalid_doctype" -> ("INVALID", ["digilocker_invalid_doctype"])
+        "repository_service_configerror" -> ("INVALID", ["digilocker_repository_service_configerror"])
+        "pull_response_pending" -> ("MANUAL_VERIFICATION_REQUIRED", ["digilocker_pull_response_pending"])
+        "uri_exists" -> ("INVALID", ["digilocker_uri_exists"])
+        "record_not_found" -> ("INVALID", ["digilocker_record_not_found"])
+        "aadhaar_not_linked" -> ("INVALID", ["digilocker_aadhaar_not_linked"])
+        "unexpected_error" -> ("INVALID", ["digilocker_unexpected_error"])
+        "uri_missing" -> ("INVALID", ["digilocker_uri_missing"])
+        _ -> ("INVALID", ["digilocker_" <> errorCode])
+
+  -- Update DB with error
+  updateDLStatusInDB driverId verificationStatus failedRulesList

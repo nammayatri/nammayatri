@@ -211,6 +211,13 @@ types:
     aadhaarNumber: Text
   DigiLockerInitiateResp:
     authorizationUrl: Text
+  PullDrivingLicenseReq:
+    dlno: Text
+  # DigiLockerPullDocResponse is defined manually in Domain.Action.UI.DriverOnboardingV2
+  # DigiLockerPullDocResponse:
+  #   uri: Maybe Text
+  #   _error: Maybe Text
+  #   error_description: Maybe Text
 
 apis:
   - GET:
@@ -358,3 +365,10 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: DigiLockerInitiateResp
+  - POST:
+      endpoint: /driver/pull_document/driving_license
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: PullDrivingLicenseReq
+      response:
+        type: APISuccess

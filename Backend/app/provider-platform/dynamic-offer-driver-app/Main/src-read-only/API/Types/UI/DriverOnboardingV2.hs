@@ -250,6 +250,10 @@ data PanDocParams = PanDocParams {dateOfBirth :: Kernel.Prelude.Maybe Kernel.Pre
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PullDrivingLicenseReq = PullDrivingLicenseReq {dlno :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RateCardItem = RateCardItem {price :: Kernel.Types.Common.Money, priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity, title :: Kernel.Prelude.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
