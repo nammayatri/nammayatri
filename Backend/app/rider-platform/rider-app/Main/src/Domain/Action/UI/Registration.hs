@@ -19,7 +19,7 @@ module Domain.Action.UI.Registration
     ResendAuthRes,
     AuthVerifyReq (..),
     AuthVerifyRes (..),
-    OTPChannel (..),
+    SOTP.OTPChannel (..),
     PasswordAuthReq (..),
     GetTokenReq (..),
     TempCodeRes (..),
@@ -60,7 +60,6 @@ import qualified Domain.Types.PersonStats as DPS
 import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.Yudhishthira as Y
-import qualified Email.AWS.Flow as Email
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
@@ -73,7 +72,7 @@ import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
-import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess as AP
 import qualified Kernel.Types.Beckn.Context as Context
@@ -90,7 +89,7 @@ import Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.MerchantConfig as SMC
-import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.OTP as SOTP
 import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -107,10 +106,8 @@ import Storage.Queries.SafetySettings as QSafety
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
 import qualified Tools.Notifications as Notify
-import qualified Tools.SMS as Sms
 import Tools.SignatureResponseBody (SignatureResponseConfig (..), SignedResponse, wrapWithSignature)
 import Tools.Whatsapp
-import qualified Tools.Whatsapp as Whatsapp
 
 data AuthReq = AuthReq
   { mobileNumber :: Maybe Text,
@@ -126,7 +123,7 @@ data AuthReq = AuthReq
     email :: Maybe Text,
     language :: Maybe Maps.Language,
     gender :: Maybe SP.Gender,
-    otpChannel :: Maybe OTPChannel,
+    otpChannel :: Maybe SOTP.OTPChannel,
     registrationLat :: Maybe Double,
     registrationLon :: Maybe Double,
     enableOtpLessRide :: Maybe Bool,
@@ -210,13 +207,6 @@ data AuthRes = AuthRes
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
--- Need to have discussion around this
-data OTPChannel = SMS | WHATSAPP | EMAIL
-  deriving (Generic, Show, Enum, Eq, FromJSON, ToJSON, ToSchema)
-
-defaultOTPChannel :: OTPChannel
-defaultOTPChannel = SMS
-
 type ResendAuthRes = AuthRes
 
 ---------- Verify Login --------
@@ -244,7 +234,7 @@ authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCount"
 
 auth ::
-  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
+  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "kafkaProducerTools" ::: KafkaProducerTools],
     CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
     ClickhouseFlow m r,
@@ -292,7 +282,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
         mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
         let notificationToken = req.notificationToken
-            otpChannel = fromMaybe defaultOTPChannel req.otpChannel
+            otpChannel = fromMaybe SOTP.defaultOTPChannel req.otpChannel
         mobileNumberHash <- getDbHash mobileNumber
         person <-
           Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
@@ -303,7 +293,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         person <-
           Person.findByEmailAndMerchantId merchant.id email
             >>= maybe (createPerson req SP.EMAIL Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing) return
-        return (person, EMAIL)
+        return (person, SOTP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar auth is not supported"
 
   when (fromMaybe False person.authBlocked && maybe False (now <) person.blockedUntil) $ throwError IpHitsLimitExceeded
@@ -334,40 +324,24 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       RegistrationToken.create regToken
       when (isNothing useFakeOtpM) $ do
         let otpCode = SR.authValueHash regToken
-        let otpHash = fromMaybe smsCfg.credConfig.otpHash mbSenderHash
-        case otpChannel of
-          SMS -> do
-            countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for SMS OTP channel")
-            mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for SMS OTP channel")
-            let phoneNumber = countryCode <> mobileNumber
-            withLogTag ("personId_" <> getId person.id) $ do
-              buildSmsReq <-
-                MessageBuilder.buildSendOTPMessage merchantOperatingCityId $
-                  MessageBuilder.BuildSendOTPMessageReq
-                    { otp = otpCode,
-                      hash = otpHash
-                    }
-              Sms.sendSMS person.merchantId merchantOperatingCityId (buildSmsReq phoneNumber)
-                >>= Sms.checkSmsResult
-          WHATSAPP -> do
-            countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for WHATSAPP OTP channel")
-            mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for WHATSAPP OTP channel")
-            let phoneNumber = countryCode <> mobileNumber
-            withLogTag ("personId_" <> getId person.id) $ do
-              void $ callWhatsappOptApi phoneNumber person.id merchant.id (Just Whatsapp.OPT_IN)
-              result <- Whatsapp.whatsAppOtpApi person.merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
-              when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
-          EMAIL -> withLogTag ("personId_" <> getId person.id) $ do
-            receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
-            emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-            L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
+        SOTP.sendOTP
+          otpChannel
+          otpCode
+          person.id
+          person.merchantId
+          merchantOperatingCityId
+          req.mobileCountryCode
+          req.mobileNumber
+          req.email
+          riderConfig.emailOtpConfig
+          mbSenderHash
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
   return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
   where
-    castChannelToMedium :: OTPChannel -> SR.Medium
-    castChannelToMedium SMS = SR.SMS
-    castChannelToMedium WHATSAPP = SR.WHATSAPP
-    castChannelToMedium EMAIL = SR.EMAIL
+    castChannelToMedium :: SOTP.OTPChannel -> SR.Medium
+    castChannelToMedium SOTP.SMS = SR.SMS
+    castChannelToMedium SOTP.WHATSAPP = SR.WHATSAPP
+    castChannelToMedium SOTP.EMAIL = SR.EMAIL
 
 signatureAuth ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
@@ -867,7 +841,7 @@ checkPersonExists entityId =
   Person.findById (Id entityId) >>= fromMaybeM (PersonDoesNotExist entityId)
 
 resend ::
-  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
+  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
@@ -880,37 +854,25 @@ resend tokenId mbSenderHash = do
   SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
   person <- checkPersonExists entityId
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
-  smsCfg <- asks (.smsCfg)
   let merchantOperatingCityId = person.merchantOperatingCityId
   let otpCode = authValueHash
-  let otpHash = fromMaybe smsCfg.credConfig.otpHash mbSenderHash
   otpChannel <- getPersonOTPChannel person.id
-  case otpChannel of
-    SMS -> do
-      mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-      countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
-      let phoneNumber = countryCode <> mobileNumber
-      withLogTag ("personId_" <> getId person.id) $ do
-        buildSmsReq <-
-          MessageBuilder.buildSendOTPMessage merchantOperatingCityId $
-            MessageBuilder.BuildSendOTPMessageReq
-              { otp = otpCode,
-                hash = otpHash
-              }
-        Sms.sendSMS person.merchantId merchantOperatingCityId (buildSmsReq phoneNumber)
-          >>= Sms.checkSmsResult
-    WHATSAPP -> do
-      mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-      countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
-      let phoneNumber = countryCode <> mobileNumber
-      withLogTag ("personId_" <> getId person.id) $ do
-        result <- Whatsapp.whatsAppOtpApi person.merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
-        when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
-    EMAIL -> withLogTag ("personId_" <> getId person.id) $ do
-      receiverEmail <- mapM decrypt person.email >>= fromMaybeM (PersonFieldNotPresent "email")
-      riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-      emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-      L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+
+  mobileNumber <- mapM decrypt person.mobileNumber
+  receiverEmail <- mapM decrypt person.email
+
+  SOTP.sendOTP
+    otpChannel
+    otpCode
+    person.id
+    person.merchantId
+    merchantOperatingCityId
+    person.mobileCountryCode
+    mobileNumber
+    receiverEmail
+    riderConfig.emailOtpConfig
+    mbSenderHash
 
   void $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing person.blocked
@@ -938,16 +900,16 @@ logout personId = do
 authHitOTPChannel :: Id SP.Person -> Text
 authHitOTPChannel personId = "BAP:Registration:auth" <> getId personId <> ":OtpChannel"
 
-cachePersonOTPChannel :: (CacheFlow m r, MonadFlow m) => Id SP.Person -> OTPChannel -> m ()
+cachePersonOTPChannel :: (CacheFlow m r, MonadFlow m) => Id SP.Person -> SOTP.OTPChannel -> m ()
 cachePersonOTPChannel personId otpChannel = do
   Hedis.setExp (authHitOTPChannel personId) otpChannel 1800 -- 30 min
 
-getPersonOTPChannel :: (CacheFlow m r, MonadFlow m) => Id SP.Person -> m OTPChannel
+getPersonOTPChannel :: (CacheFlow m r, MonadFlow m) => Id SP.Person -> m SOTP.OTPChannel
 getPersonOTPChannel personId = do
   Hedis.get (authHitOTPChannel personId) >>= \case
     Just a -> pure a
     Nothing -> do
-      pure SMS -- default otpChannel is SMS (for resend)
+      pure SOTP.SMS
 
 updatePersonIdForEmergencyContacts :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBFlow m r) => Id SP.Person -> Text -> Id DMerchant.Merchant -> m ()
 updatePersonIdForEmergencyContacts personId mobileNumber merchantId = do
