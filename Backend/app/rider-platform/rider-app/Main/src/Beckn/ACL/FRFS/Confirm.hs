@@ -15,6 +15,7 @@
 
 module Beckn.ACL.FRFS.Confirm (buildConfirmReq) where
 
+import Beckn.ACL.FRFS.Utils
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
@@ -75,7 +76,7 @@ tfOrder rider booking txnId mPaymentParams mSettlementType categories =
       orderFulfillments = Nothing,
       orderId = Nothing,
       orderItems = tfItems booking categories,
-      orderPayments = tfPayments booking txnId mPaymentParams mSettlementType,
+      orderPayments = tfPayments booking categories txnId mPaymentParams mSettlementType,
       orderProvider = tfProvider booking,
       orderQuote = Nothing,
       orderStatus = Nothing,
@@ -95,15 +96,16 @@ tfBilling (mRiderName, mRiderNumber) =
 tfItems :: DBooking.FRFSTicketBooking -> [DCategorySelect] -> Maybe [Spec.Item]
 tfItems booking categories =
   case categories of
+    -- TODO :: This is deprecated, should be removed post `quoteCategories` unification
     [] ->
-      Just
+      booking.quantity <&> \quantity ->
         [ Spec.Item
             { itemCategoryIds = Nothing,
               itemDescriptor = Nothing,
               itemFulfillmentIds = Nothing,
               itemId = Just booking.bppItemId,
               itemPrice = Nothing,
-              itemQuantity = tfQuantity booking.quantity,
+              itemQuantity = tfQuantity quantity,
               itemTime = Nothing
             }
         ]
@@ -136,12 +138,12 @@ tfQuantity quantity =
               }
       }
 
-tfPayments :: DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> Maybe [Spec.Payment]
-tfPayments booking txnId mPaymentParams mSettlementType = do
-  let mCurrency = Just booking.price.currency
+tfPayments :: DBooking.FRFSTicketBooking -> [DCategorySelect] -> Text -> Maybe BknPaymentParams -> Maybe Text -> Maybe [Spec.Payment]
+tfPayments booking categories txnId mPaymentParams mSettlementType = do
+  let price = getTotalCategoryPrice categories booking.finalPrice
   Just $
     singleton $
-      Utils.mkPaymentForConfirmReq Spec.PAID (Just $ encodeToText booking.price.amount) (Just txnId) mPaymentParams mSettlementType mCurrency Nothing
+      Utils.mkPaymentForConfirmReq Spec.PAID (Just $ encodeToText price.amount) (Just txnId) mPaymentParams mSettlementType (Just price.currency) Nothing
 
 tfProvider :: DBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider booking =

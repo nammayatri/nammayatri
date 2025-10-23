@@ -5,6 +5,7 @@
 module Storage.Queries.FRFSTicketCategoryMetadataConfig where
 
 import qualified BecknV2.FRFS.Enums
+import qualified Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSTicketCategoryMetadataConfig
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
@@ -24,7 +25,7 @@ createMany = traverse_ create
 
 findByCategoryVehicleAndCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSQuoteCategoryType -> BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig))
+  (Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType -> BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig))
 findByCategoryVehicleAndCity category vehicleCategory merchantOperatingCityId = do
   findOneWithKV
     [ Se.And

@@ -150,8 +150,8 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
               Just $ FRFSRouteDetails {routeCode = Just routeCode, ..}
             _ -> Nothing
 
-confirm :: JL.ConfirmFlow m r c => Bool -> Maybe Int -> Maybe Int -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> Maybe [FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> m ()
-confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode mbEnableOffer =
+confirm :: JL.ConfirmFlow m r c => Bool -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> [FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> m ()
+confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode mbEnableOffer =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -197,10 +197,9 @@ confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..
               personId,
               merchantId,
               merchantOperatingCityId,
-              quantity = ticketQuantity,
-              childTicketQuantity,
               isSingleMode,
-              mbEnableOffer
+              mbEnableOffer,
+              categorySelectionReq
             }
     mkSubwayLegConfirmReq :: JL.ConfirmFlow m r c => m SubwayLegRequest
     mkSubwayLegConfirmReq = do
@@ -215,10 +214,9 @@ confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..
               merchantId,
               merchantOperatingCityId,
               crisSdkResponse,
-              quantity = ticketQuantity,
-              childTicketQuantity,
               isSingleMode,
-              mbEnableOffer
+              mbEnableOffer,
+              categorySelectionReq
             }
     mkBusLegConfirmReq :: JL.ConfirmFlow m r c => m BusLegRequest
     mkBusLegConfirmReq = do
@@ -232,8 +230,6 @@ confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..
               personId,
               merchantId,
               merchantOperatingCityId,
-              quantity = ticketQuantity,
-              childTicketQuantity,
               categorySelectionReq,
               isSingleMode,
               mbEnableOffer

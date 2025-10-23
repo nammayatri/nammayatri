@@ -15,6 +15,7 @@ import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.FRFS.OnStatus as DOnStatus
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSQuote as DQuote
+import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch as DSearch
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
@@ -42,8 +43,6 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.Queries.FRFSQuote as QFRFSQuote
-import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import Tools.Error
@@ -144,57 +143,56 @@ select ::
   MerchantOperatingCity ->
   BecknConfig ->
   DQuote.FRFSQuote ->
-  Maybe Int ->
-  Maybe Int ->
-  Maybe [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] ->
+  [DFRFSQuoteCategory.FRFSQuoteCategory] ->
   Maybe Bool ->
   Maybe Bool ->
   m ()
-select processOnSelectHandler merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq isSingleMode mbEnableOffer = do
+select processOnSelectHandler merchant merchantOperatingCity bapConfig quote quoteCategories isSingleMode mbEnableOffer = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       fork ("FRFS ONDC SelectReq for " <> show bapConfig.vehicleCategory) $ do
-        void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity
-        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
-        updatedQuoteCategories <- FRFSUtils.updateQuoteCategoriesWithSelections (fromMaybe [] categorySelectionReq) quoteCategories
-        let updatedQuantity = fromMaybe quote.quantity ticketQuantity
-        let updatedQuote = quote {DQuote.quantity = updatedQuantity, DQuote.childTicketQuantity = childTicketQuantity}
         let categories =
               mapMaybe
                 ( \category -> do
                     selectedQuantity <- category.selectedQuantity
-                    return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity}
+                    return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity, category = category.category, price = category.price}
                 )
-                updatedQuoteCategories
-
+                quoteCategories
         providerUrl <- quote.bppSubscriberUrl & parseBaseUrl
-        bknSelectReq <- ACL.buildSelectReq updatedQuote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} merchantOperatingCity.city categories
+        bknSelectReq <- ACL.buildSelectReq quote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} merchantOperatingCity.city categories
         logDebug $ "FRFS SelectReq " <> encodeToText bknSelectReq
         Metrics.startMetrics Metrics.SELECT_FRFS merchant.name quote.searchId.getId merchantOperatingCity.id.getId
         void $ CallFRFSBPP.select providerUrl bknSelectReq merchant.id
     _ -> do
-      onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq -- mbEnableOffer
+      onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote quoteCategories
       processOnSelectHandler onSelectReq isSingleMode mbEnableOffer
 
-init :: (FRFSConfirmFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DCategorySelect] -> Maybe Bool -> m ()
-init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking categories mbEnableOffer = do
+init :: (FRFSConfirmFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> Maybe Bool -> m ()
+init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbEnableOffer = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
+      let categories =
+            mapMaybe
+              ( \category -> do
+                  selectedQuantity <- category.selectedQuantity
+                  return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity, category = category.category, price = category.offeredPrice}
+              )
+              quoteCategories
       bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} merchantOperatingCity.city categories
       logDebug $ "FRFS InitReq " <> encodeToText bknInitReq
       Metrics.startMetrics Metrics.INIT_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
       void $ CallFRFSBPP.init providerUrl bknInitReq merchant.id
     _ -> do
-      onInitReq <- Flow.init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking
+      onInitReq <- Flow.init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories
       processOnInit onInitReq
   where
     processOnInit :: (FRFSConfirmFlow m r) => DOnInit.DOnInit -> m ()
     processOnInit onInitReq = do
-      (merchant', booking') <- DOnInit.validateRequest onInitReq
-      DOnInit.onInit onInitReq merchant' booking' mbEnableOffer
+      (merchant', booking', quoteCategories') <- DOnInit.validateRequest onInitReq
+      DOnInit.onInit onInitReq merchant' booking' quoteCategories' mbEnableOffer
 
 cancel :: Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.CancellationType -> DBooking.FRFSTicketBooking -> Flow ()
 cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
@@ -217,21 +215,20 @@ cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
         void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
     _ -> return ()
 
-confirm :: (DOrder -> Flow ()) -> Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> Flow ()
-confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
+confirm :: (DOrder -> Flow ()) -> Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> Flow ()
+confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking quoteCategories = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       fork "FRFS ONDC Confirm Req" $ do
         providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-        categories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
         let filteredDCategories :: [DCategorySelect] =
               mapMaybe
                 ( \category -> do
                     selectedQuantity <- category.selectedQuantity
-                    return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity}
+                    return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity, category = category.category, price = fromMaybe category.offeredPrice category.finalPrice}
                 )
-                categories
+                quoteCategories
         bknConfirmReq <- ACL.buildConfirmReq (mRiderName, mRiderNumber) booking bapConfig booking.searchId.getId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} merchantOperatingCity.city filteredDCategories
         logDebug $ "FRFS ConfirmReq " <> encodeToText bknConfirmReq
         Metrics.startMetrics Metrics.CONFIRM_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
@@ -242,7 +239,7 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
           frfsConfig <-
             CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
               >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
-          onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking
+          onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories
           onConfirmHandler onConfirmReq
         case result of
           Left err -> do

@@ -6,6 +6,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
 import qualified Domain.Types.FRFSQuote as Quote
+import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.MerchantOperatingCity
 import EulerHS.Prelude hiding (concatMap, find, null, readMaybe, whenJust)
 import qualified EulerHS.Types as ET
@@ -127,20 +128,48 @@ getCachedFaresAndRecache config merchantOperatingCityId request = do
             serviceTier <- serviceTiers & listToMaybe & fromMaybeM (CRISError $ "Failed to find service tier: " <> show classCode)
             return $
               FRFSUtils.FRFSFare
-                { price =
-                    Price
-                      { amountInt = round fareAmount,
-                        amount = fareAmount,
-                        currency = INR
-                      },
-                  childPrice =
-                    Just $
-                      Price
-                        { amountInt = round childFareAmount,
-                          amount = childFareAmount,
-                          currency = INR
+                { categories =
+                    [ FRFSUtils.FRFSTicketCategory
+                        { category = ADULT,
+                          code = "ADULT",
+                          title = "Adult General Ticket",
+                          description = "Adult General Ticket",
+                          tnc = "Terms and conditions apply for adult general ticket",
+                          price =
+                            Price
+                              { amountInt = round fareAmount,
+                                amount = fareAmount,
+                                currency = INR
+                              },
+                          offeredPrice =
+                            Price
+                              { amountInt = round fareAmount,
+                                amount = fareAmount,
+                                currency = INR
+                              },
+                          eligibility = True
                         },
-                  categories = [],
+                      FRFSUtils.FRFSTicketCategory
+                        { category = CHILD,
+                          code = "CHILD",
+                          title = "Child General Ticket",
+                          description = "Child General Ticket",
+                          tnc = "Terms and conditions apply for child general ticket",
+                          price =
+                            Price
+                              { amountInt = round childFareAmount,
+                                amount = childFareAmount,
+                                currency = INR
+                              },
+                          offeredPrice =
+                            Price
+                              { amountInt = round childFareAmount,
+                                amount = childFareAmount,
+                                currency = INR
+                              },
+                          eligibility = True
+                        }
+                    ],
                   farePolicyId = Nothing,
                   fareDetails =
                     Just

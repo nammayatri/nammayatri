@@ -8,6 +8,7 @@ imports:
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
+  FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
   TimeBound: Kernel.Types.TimeBound
   FRFSTicketStatus: Domain.Types.FRFSTicketStatus
   HighPrecMoney: Kernel.Types.Common
@@ -49,7 +50,6 @@ types:
     _type: FRFSQuoteType
     vehicleType: VehicleCategory
     quantity: Int
-    discounts: Maybe [FRFSDiscountRes]
     price: HighPrecMoney
     priceWithCurrency: PriceAPIEntity
     stations: [FRFSStationAPI]
@@ -90,22 +90,38 @@ types:
     ticketQuantity: Maybe Int # TODO: To Be Deprecated
     childTicketQuantity: Maybe Int # TODO: To Be Deprecated
 
+  FRFSTicketCategoryMetadataAPIEntity:
+    title: Text
+    description: Text
+    tnc: Text
+    category: FRFSQuoteCategoryType
+    derive: "Show"
+
+  FRFSQuoteCategoryAPIEntity:
+    bppItemId: Text
+    categoryMetadata: Maybe FRFSTicketCategoryMetadataAPIEntity
+    price: PriceAPIEntity # Single Item Quantity Price without any passes or offers determined in OnSearch.
+    offeredPrice: PriceAPIEntity # Single Item Quantity Discounted Price determined in OnSearch that would be less than or equal to `price`.
+    finalPrice: Maybe PriceAPIEntity # Single Item Quantity Final Price determined in OnInit that the customer would actually pay.
+    selectedQuantity: Maybe Int
+    derive: "Show"
+
   FRFSTicketBookingStatusAPIRes:
     bookingId: Id FRFSTicketBooking
     status: FRFSTicketBookingStatus
     city: City
     updatedAt: UTCTime
     _type: FRFSQuoteType
-    quantity: Int
+    quoteCategories: [FRFSQuoteCategoryAPIEntity]
+    quantity: Maybe Int # TODO: To Be Deprecated, use `quoteCategories` instead.
     vehicleType: VehicleCategory
-    price: HighPrecMoney
-    priceWithCurrency: PriceAPIEntity
+    price: Maybe HighPrecMoney # TODO: To Be Deprecated, use `quoteCategories` instead.
+    priceWithCurrency: Maybe PriceAPIEntity # TODO: To Be Deprecated, use `quoteCategories` instead.
     validTill: UTCTime
     payment: Maybe FRFSBookingPaymentAPI
     tickets: [FRFSTicketAPI]
     stations: [FRFSStationAPI]
     routeStations: "Maybe [FRFSRouteStationsAPI]"
-    discounts: Maybe [FRFSDiscountRes]
     createdAt: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney

@@ -29,6 +29,7 @@ import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FRFSQuote as FQ
+import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
@@ -64,7 +65,7 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Person as CQP
-import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QTicket
@@ -82,10 +83,11 @@ import qualified Utils.Common.JWT.TransitClaim as TC
 import qualified Utils.QRCode.Scanner as QRScanner
 import Web.JWT hiding (claims)
 
-validateRequest :: DOrder -> Flow (Merchant, Booking.FRFSTicketBooking)
+validateRequest :: DOrder -> Flow (Merchant, Booking.FRFSTicketBooking, [DFRFSQuoteCategory.FRFSQuoteCategory])
 validateRequest DOrder {..} = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QTBooking.findById (Id messageId) >>= fromMaybeM (BookingDoesNotExist messageId)
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   bookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
@@ -104,7 +106,7 @@ validateRequest DOrder {..} = do
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
       void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking
       throwM $ InvalidRequest "Booking expired, initated cancel request"
-    else return (merchant, booking)
+    else return (merchant, booking, quoteCategories)
 
 onConfirmFailure :: BecknConfig -> Booking.FRFSTicketBooking -> Flow ()
 onConfirmFailure bapConfig ticketBooking = do
@@ -119,8 +121,8 @@ onConfirmFailure bapConfig ticketBooking = do
     FRFSUtils.markAllRefundBookings ticketBooking ticketBooking.riderId
   void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking
 
-onConfirm :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
-onConfirm merchant booking' dOrder = do
+onConfirm :: Merchant -> Booking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> DOrder -> Flow ()
+onConfirm merchant booking' quoteCategories dOrder = do
   Metrics.finishMetrics Metrics.CONFIRM_FRFS merchant.name dOrder.transactionId booking'.merchantOperatingCityId.getId
   let booking = booking' {Booking.bppOrderId = Just dOrder.bppOrderId}
   let discountedTickets = fromMaybe 0 booking.discountedTickets
@@ -134,9 +136,10 @@ onConfirm merchant booking' dOrder = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-  buildReconTable merchant booking dOrder tickets mRiderNumber integratedBPPConfig
-  void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode
-  void $ QPS.incrementTicketsBookedInEvent booking.riderId booking.quantity
+  let fareParameters = calculateFareParametersWithBookingFallback quoteCategories booking
+  buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
+  void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
+  void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
   void $ CQP.clearPSCache booking.riderId
   whenJust booking.partnerOrgId $ \pOrgId -> do
     walletPOCfg <- do
@@ -154,8 +157,8 @@ onConfirm merchant booking' dOrder = do
         void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
   return ()
   where
-    sendTicketBookedSMS :: Maybe Text -> Maybe Text -> Flow ()
-    sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode =
+    sendTicketBookedSMS :: Maybe Text -> Maybe Text -> FRFSFareParameters -> Flow ()
+    sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode fareParameters =
       whenJust booking'.partnerOrgId $ \pOrgId -> do
         fork "send ticket booked sms" $
           withLogTag ("SMS:FRFSBookingId:" <> booking'.id.getId) $ do
@@ -166,7 +169,7 @@ onConfirm merchant booking' dOrder = do
             mbBuildSmsReq <-
               MessageBuilder.buildFRFSTicketBookedMessage mocId pOrgId $
                 MessageBuilder.BuildFRFSTicketBookedMessageReq
-                  { countOfTickets = booking'.quantity,
+                  { countOfTickets = fareParameters.totalQuantity,
                     bookingId = booking'.id
                   }
             maybe
@@ -178,10 +181,9 @@ onConfirm merchant booking' dOrder = do
               )
               mbBuildSmsReq
 
-buildReconTable :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> [Ticket.FRFSTicket] -> Maybe Text -> DIBC.IntegratedBPPConfig -> Flow ()
-buildReconTable merchant booking _dOrder tickets mRiderNumber integratedBPPConfig = do
+buildReconTable :: Merchant -> Booking.FRFSTicketBooking -> FRFSFareParameters -> DOrder -> [Ticket.FRFSTicket] -> Maybe Text -> DIBC.IntegratedBPPConfig -> Flow ()
+buildReconTable merchant booking fareParameters _dOrder tickets mRiderNumber integratedBPPConfig = do
   bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
-  quote <- runInReplica $ QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   transactionRefNumber <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Txn Id not found in booking")
@@ -191,9 +193,9 @@ buildReconTable merchant booking _dOrder tickets mRiderNumber integratedBPPConfi
   now <- getCurrentTime
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id not found in booking")
   let finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee -- FIXME
-      finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / toRational (booking.quantity + fromMaybe 0 booking.childTicketQuantity)
+      finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / toRational fareParameters.totalQuantity
   tOrderPrice <- FRFSUtils.totalOrderValue paymentBookingStatus booking
-  let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / toRational (booking.quantity + fromMaybe 0 booking.childTicketQuantity)
+  let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / toRational fareParameters.totalQuantity
   settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
   let reconEntry =
         Recon.FRFSRecon
@@ -206,7 +208,7 @@ buildReconTable merchant booking _dOrder tickets mRiderNumber integratedBPPConfi
             Recon.date = show now,
             Recon.destinationStationCode = toStation.code,
             Recon.differenceAmount = Nothing,
-            Recon.fare = quote.price,
+            Recon.fare = fareParameters.totalUnitPrice,
             Recon.frfsTicketBookingId = booking.id,
             Recon.message = Nothing,
             Recon.mobileNumber = mRiderNumber,
@@ -218,7 +220,7 @@ buildReconTable merchant booking _dOrder tickets mRiderNumber integratedBPPConfi
             Recon.sourceStationCode = fromStation.code,
             Recon.transactionUUID = txn.txnUUID,
             Recon.ticketNumber = "",
-            Recon.ticketQty = booking.quantity,
+            Recon.ticketQty = fareParameters.totalQuantity,
             Recon.time = show now,
             Recon.txnId = txn.txnId,
             Recon.totalOrderValue = tOrderValue,

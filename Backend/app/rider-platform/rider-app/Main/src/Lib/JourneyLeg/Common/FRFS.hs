@@ -16,6 +16,7 @@ import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.OnSelect as DOnSelect
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Domain.Types.FRFSQuote
+import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -325,7 +326,9 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
                   logDebug $ "all fares: " <> show fares <> "min fare: " <> show mbMinFarePerRoute <> "max fare: " <> show mbMaxFarePerRoute <> "possible service tiers: " <> show possibleServiceTiers <> "available fares: " <> show availableFares
                   case (mbMinFarePerRoute, mbMaxFarePerRoute) of
                     (Just minFare, Just maxFare) -> do
-                      return (isFareMandatory, Just $ JT.GetFareResponse {liveVehicleAvailableServiceTypes = possibleServiceTiers, estimatedMinFare = minFare.price.amount, estimatedMaxFare = maxFare.price.amount, possibleRoutes = mbPossibleRoutes})
+                      let minAdultFare = maybe (HighPrecMoney 0.0) (.price.amount) (find (\category -> category.category == ADULT) minFare.categories)
+                          maxAdultFare = maybe (HighPrecMoney 0.0) (.price.amount) (find (\category -> category.category == ADULT) maxFare.categories)
+                      return (isFareMandatory, Just $ JT.GetFareResponse {liveVehicleAvailableServiceTypes = possibleServiceTiers, estimatedMinFare = minAdultFare, estimatedMaxFare = maxAdultFare, possibleRoutes = mbPossibleRoutes})
                     _ -> do
                       logError $ "No Fare Found for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
                       return (isFareMandatory, Nothing)
@@ -353,11 +356,27 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
 
     selectMinFare :: [FRFSFare] -> Maybe FRFSFare
     selectMinFare [] = Nothing
-    selectMinFare fares = Just $ minimumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) fares
+    selectMinFare fares =
+      Just $
+        minimumBy
+          ( \fare1 fare2 ->
+              let fare1Amt = maybe 0.0 (.price.amount.getHighPrecMoney) (find (\category -> category.category == ADULT) fare1.categories)
+                  fare2Amt = maybe 0.0 (.price.amount.getHighPrecMoney) (find (\category -> category.category == ADULT) fare2.categories)
+               in compare fare1Amt fare2Amt
+          )
+          fares
 
     selectMaxFare :: [FRFSFare] -> Maybe FRFSFare
     selectMaxFare [] = Nothing
-    selectMaxFare fares = Just $ maximumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) fares
+    selectMaxFare fares =
+      Just $
+        maximumBy
+          ( \fare1 fare2 ->
+              let fare1Amt = maybe 0.0 (.price.amount.getHighPrecMoney) (find (\category -> category.category == ADULT) fare1.categories)
+                  fare2Amt = maybe 0.0 (.price.amount.getHighPrecMoney) (find (\category -> category.category == ADULT) fare2.categories)
+               in compare fare1Amt fare2Amt
+          )
+          fares
 
 getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Id FRFSSearch -> DJourneyLeg.JourneyLeg -> m (Maybe JT.LegInfo)
 getInfo searchId journeyLeg = do
@@ -399,8 +418,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
         )
         routeDetails
 
-confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Maybe (Id FRFSQuote) -> Maybe Int -> Maybe Int -> Bool -> Bool -> Maybe APITypes.CrisSdkResponse -> Spec.VehicleCategory -> Maybe [API.FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> m ()
-confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity bookLater bookingAllowed crisSdkResponse vehicleType categorySelectionReq isSingleMode mbEnableOffer = do
+confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Maybe (Id FRFSQuote) -> Bool -> Bool -> Maybe APITypes.CrisSdkResponse -> Spec.VehicleCategory -> [API.FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> m ()
+confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse vehicleType categorySelectionReq isSingleMode mbEnableOffer = do
   when (not bookLater && bookingAllowed) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
     quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
@@ -409,9 +428,9 @@ confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity bookLat
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
         merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
         bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
-        void $ CallExternalBPP.select processOnSelect merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq isSingleMode mbEnableOffer
+        FRFSTicketService.select processOnSelect merchant merchantOperatingCity bapConfig quote categorySelectionReq isSingleMode mbEnableOffer
       else do
-        void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId (API.FRFSQuoteConfirmReq {offered = categorySelectionReq, ticketQuantity = ticketQuantity, childTicketQuantity = childTicketQuantity}) crisSdkResponse isSingleMode mbEnableOffer
+        void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer
   where
     processOnSelect :: (FRFSConfirmFlow m r) => DOnSelect -> Maybe Bool -> Maybe Bool -> m ()
     processOnSelect onSelectReq mbSingleMode enableOffer = do

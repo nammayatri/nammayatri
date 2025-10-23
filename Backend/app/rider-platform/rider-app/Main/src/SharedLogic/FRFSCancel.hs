@@ -29,6 +29,7 @@ import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Person as CQP
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
@@ -56,6 +57,8 @@ cancelJourney booking = do
 handleCancelledStatus :: Merchant.Merchant -> DFRFSTicketBooking.FRFSTicketBooking -> HighPrecMoney -> HighPrecMoney -> Text -> Bool -> Flow ()
 handleCancelledStatus merchant booking refundAmount cancellationCharges messageId counterCancellationPossible = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+  let fareParameters = FRFSUtils.calculateFareParametersWithBookingFallback quoteCategories booking
   mRiderNumber <- mapM decrypt person.mobileNumber
   val :: Maybe Text <- Redis.get (FRFSUtils.makecancelledTtlKey booking.id)
   if val /= Just messageId && counterCancellationPossible
@@ -76,14 +79,14 @@ handleCancelledStatus merchant booking refundAmount cancellationCharges messageI
       riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
       when riderConfig.enableAutoJourneyRefund $
         FRFSUtils.markAllRefundBookings booking booking.riderId
-  void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (booking.quantity))
+  void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId
-  void $ sendTicketCancelSMS mRiderNumber person.mobileCountryCode booking
+  void $ sendTicketCancelSMS mRiderNumber person.mobileCountryCode booking fareParameters
   handleGoogleWalletStatusUpdate booking
   bapConfig <-
     CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId merchant.id (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)
       >>= fromMaybeM (InternalError "Beckn Config not found")
-  updateTotalOrderValueAndSettlementAmount booking bapConfig
+  updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
 
 checkRefundAndCancellationCharges :: Id DFRFSTicketBooking.FRFSTicketBooking -> HighPrecMoney -> HighPrecMoney -> Flow ()
 checkRefundAndCancellationCharges bookingId refundAmount cancellationCharges = do
@@ -96,8 +99,8 @@ checkRefundAndCancellationCharges bookingId refundAmount cancellationCharges = d
         throwError $ InternalError $ "Cancellation Charges mismatch in onCancel Req " <> "cancellationCharges: " <> show cancellationCharges <> " charges: " <> show charges
     _ -> throwError $ InternalError "Refund Amount or Cancellation Charges not found in booking"
 
-sendTicketCancelSMS :: Maybe Text -> Maybe Text -> DFRFSTicketBooking.FRFSTicketBooking -> Flow ()
-sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode booking =
+sendTicketCancelSMS :: Maybe Text -> Maybe Text -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSUtils.FRFSFareParameters -> Flow ()
+sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode booking fareParameters =
   whenJust booking.partnerOrgId $ \pOrgId -> do
     fork "send ticket cancel sms" $
       withLogTag ("SMS:FRFSBookingId:" <> booking.id.getId) $ do
@@ -109,7 +112,7 @@ sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode booking =
         mbBuildSmsReq <-
           MessageBuilder.buildFRFSTicketCancelMessage mocId pOrgId $
             MessageBuilder.BuildFRFSTicketCancelMessageReq
-              { countOfTickets = booking.quantity,
+              { countOfTickets = fareParameters.totalQuantity,
                 bookingId = booking.id
               }
         maybe

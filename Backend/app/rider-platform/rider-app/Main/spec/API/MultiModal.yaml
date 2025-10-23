@@ -42,6 +42,7 @@ imports:
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
   SourceType: Domain.Types.RouteStopTimeTable
   FRFSCategorySelectionReq: API.Types.UI.FRFSTicketService
+  FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
 
 module: MultimodalConfirm
 
@@ -150,6 +151,7 @@ types:
 
   PaymentFareUpdate:
     journeyLegOrder: Int
+    category: FRFSQuoteCategoryType
     oldFare: PriceAPIEntity
     newFare: PriceAPIEntity
 

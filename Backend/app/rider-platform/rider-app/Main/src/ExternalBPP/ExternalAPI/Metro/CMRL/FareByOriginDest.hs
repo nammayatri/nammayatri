@@ -7,6 +7,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Text as T
+import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.Auth
@@ -66,14 +67,28 @@ getFareByOriginDest config fareReq = do
       let fares = case ((fareByODRes.result >>= (.ticketDiscountFare)) <|> (fareByODRes.result >>= (.ticketTotalFare))) of
             Just amount ->
               [ FRFSUtils.FRFSFare
-                  { price =
-                      Price
-                        { amountInt = round amount,
-                          amount = amount,
-                          currency = INR
-                        },
-                    childPrice = Nothing,
-                    categories = [],
+                  { categories =
+                      [ FRFSUtils.FRFSTicketCategory
+                          { category = ADULT,
+                            code = "ADULT",
+                            title = "Adult General Ticket",
+                            description = "Adult General Ticket",
+                            tnc = "Terms and conditions apply for adult general ticket",
+                            price =
+                              Price
+                                { amountInt = round amount,
+                                  amount = amount,
+                                  currency = INR
+                                },
+                            offeredPrice =
+                              Price
+                                { amountInt = round amount,
+                                  amount = amount,
+                                  currency = INR
+                                },
+                            eligibility = True
+                          }
+                      ],
                     fareDetails = Nothing,
                     farePolicyId = Nothing,
                     vehicleServiceTier =

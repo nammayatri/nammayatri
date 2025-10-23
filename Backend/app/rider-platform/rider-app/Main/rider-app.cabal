@@ -565,6 +565,7 @@ library
       Storage.Queries.Transformers.BookingCancellationReason
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.Estimate
+      Storage.Queries.Transformers.FRFSQuoteCategory
       Storage.Queries.Transformers.IntegratedBPPConfig
       Storage.Queries.Transformers.Journey
       Storage.Queries.Transformers.JourneyLeg
