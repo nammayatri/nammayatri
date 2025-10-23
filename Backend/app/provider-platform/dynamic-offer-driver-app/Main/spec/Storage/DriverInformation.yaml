@@ -71,6 +71,7 @@ DriverInformation:
     referredByOperatorId: Maybe Text
     totalReferred: Maybe Int
     lastEnabledOn: Maybe UTCTime
+    lastOfflineTime: Maybe UTCTime
     canDowngradeToSedan: Bool
     canDowngradeToHatchback: Bool
     isPetModeEnabled: Bool

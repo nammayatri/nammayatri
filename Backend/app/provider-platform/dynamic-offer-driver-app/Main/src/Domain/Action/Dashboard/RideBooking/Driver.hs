@@ -386,7 +386,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let isACAllowedForDriver = checkIfACAllowedForDriver info (catMaybes serviceTierACThresholds)
   let isVehicleACWorking = maybe False (\v -> v.airConditioned /= Just False) vehicle
   cancellationData <- SCR.getCancellationRateData person.merchantOperatingCityId person.id
-  feedbacks <- QFeedback.findOtherFeedbacks [] person.id Nothing
+  feedbacks <- QFeedback.findOtherFeedbacks [] person.id (Just 500)
   ratings <- QRating.findAllRatingsForPerson person.id
   let combinedFeedbacks = buildDriverFeedbackAPIEntity feedbacks ratings
   pure
@@ -449,21 +449,39 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
 
 buildDriverFeedbackAPIEntity :: [DFeedback.Feedback] -> [DRating.Rating] -> [Common.DriverFeedbackAPIEntity]
 buildDriverFeedbackAPIEntity feedbacks ratings =
-  let ratingMap = M.fromList [(DRating.rideId rating, rating) | rating <- ratings]
-      combinedList =
-        mapMaybe
-          ( \(DFeedback.Feedback {..}) -> do
-              let mbRating = M.lookup rideId ratingMap
-              pure $
-                Common.DriverFeedbackAPIEntity
-                  { rideId = cast rideId,
-                    createdAt = createdAt,
-                    feedbackText = Just badge,
-                    feedbackDetails = mbRating >>= DRating.feedbackDetails
-                  }
+  let feedbackMap = M.fromList [(DFeedback.rideId fb, fb) | fb <- feedbacks]
+      ratingMap = M.fromList [(DRating.rideId rating, rating) | rating <- ratings]
+
+      -- From feedbacks (with optional rating)
+      fromFeedbacks =
+        map
+          ( \(DFeedback.Feedback {..}) ->
+              Common.DriverFeedbackAPIEntity
+                { rideId = cast rideId,
+                  createdAt = createdAt,
+                  feedbackText = Just badge,
+                  feedbackDetails = M.lookup rideId ratingMap >>= DRating.feedbackDetails
+                }
           )
           feedbacks
-   in combinedList
+
+      -- From ratings without feedback badge
+      fromRatingsOnly =
+        mapMaybe
+          ( \rating ->
+              case M.lookup (DRating.rideId rating) feedbackMap of
+                Nothing ->
+                  Just $
+                    Common.DriverFeedbackAPIEntity
+                      { rideId = cast (DRating.rideId rating),
+                        createdAt = DRating.createdAt rating,
+                        feedbackText = Nothing,
+                        feedbackDetails = DRating.feedbackDetails rating
+                      }
+                Just _ -> Nothing -- Already included in fromFeedbacks
+          )
+          ratings
+   in fromFeedbacks ++ fromRatingsOnly
 
 buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity
 buildDriverLicenseAPIEntity DriverLicense {..} = do
