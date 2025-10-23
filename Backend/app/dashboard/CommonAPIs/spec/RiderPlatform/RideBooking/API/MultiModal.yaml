@@ -1,0 +1,37 @@
+imports:
+  BookingStatus: Domain.Types.BookingStatus
+  Person: Domain.Types.Person
+  BookingListResV2: Domain.Action.UI.Booking
+  Integer: EulerHS.Prelude
+  JourneyStatus: Domain.Types.Journey
+  BookingRequestType: Domain.Types.Booking.API
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Types.Booking.API: "rider-app"
+  Domain.Action.UI.Booking: "rider-app"
+  Domain.Types.Journey: "rider-app"
+  Domain.Types.BookingStatus: "beckn-spec"
+
+module: MultiModal
+
+apis:
+  - GET:
+      endpoint: /list/{customerId}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      query:
+        - limit: Integer
+        - offset: Integer
+        - bookingOffset: Integer
+        - journeyOffset: Integer
+        - fromDate: Integer
+        - toDate: Integer
+        - rideStatus: [BookingStatus]
+        - journeyStatus: [JourneyStatus]
+        - isPaymentSuccess: Bool
+        - bookingRequestType: BookingRequestType
+      response:
+        type: BookingListResV2
+types: {}

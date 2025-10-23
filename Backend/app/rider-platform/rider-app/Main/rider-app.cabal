@@ -182,6 +182,7 @@ library
       Domain.Action.Dashboard.RideBooking.Confirm
       Domain.Action.Dashboard.RideBooking.Frontend
       Domain.Action.Dashboard.RideBooking.Maps
+      Domain.Action.Dashboard.RideBooking.MultiModal
       Domain.Action.Dashboard.RideBooking.NotifyRideInfo
       Domain.Action.Dashboard.RideBooking.Profile
       Domain.Action.Dashboard.RideBooking.Quote
@@ -637,6 +638,7 @@ library
       API.Action.Dashboard.RideBooking.Confirm
       API.Action.Dashboard.RideBooking.Frontend
       API.Action.Dashboard.RideBooking.Maps
+      API.Action.Dashboard.RideBooking.MultiModal
       API.Action.Dashboard.RideBooking.NotifyRideInfo
       API.Action.Dashboard.RideBooking.Profile
       API.Action.Dashboard.RideBooking.Quote
@@ -696,6 +698,7 @@ library
       API.Types.Dashboard.RideBooking.Endpoints.Confirm
       API.Types.Dashboard.RideBooking.Endpoints.Frontend
       API.Types.Dashboard.RideBooking.Endpoints.Maps
+      API.Types.Dashboard.RideBooking.Endpoints.MultiModal
       API.Types.Dashboard.RideBooking.Endpoints.NotifyRideInfo
       API.Types.Dashboard.RideBooking.Endpoints.Profile
       API.Types.Dashboard.RideBooking.Endpoints.Quote
@@ -704,6 +707,7 @@ library
       API.Types.Dashboard.RideBooking.Endpoints.Select
       API.Types.Dashboard.RideBooking.Frontend
       API.Types.Dashboard.RideBooking.Maps
+      API.Types.Dashboard.RideBooking.MultiModal
       API.Types.Dashboard.RideBooking.NotifyRideInfo
       API.Types.Dashboard.RideBooking.Profile
       API.Types.Dashboard.RideBooking.Quote
