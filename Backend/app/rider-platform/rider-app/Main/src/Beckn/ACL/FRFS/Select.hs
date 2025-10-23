@@ -2,7 +2,6 @@
 
 module Beckn.ACL.FRFS.Select (buildSelectReq) where
 
-import Beckn.ACL.FRFS.Utils
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
@@ -14,6 +13,7 @@ import qualified Domain.Types.FRFSQuote as DQuote
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
+import SharedLogic.FRFSUtils
 
 buildSelectReq ::
   (MonadFlow m) =>
@@ -110,10 +110,10 @@ tfQuantity quantity =
 
 tfPayments :: DQuote.FRFSQuote -> [DCategorySelect] -> Maybe Text -> Maybe [Spec.Payment]
 tfPayments quote categories mSettlementType = do
-  let price = getTotalCategoryPrice categories quote.price
+  let fareParameters = calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromDCategorySelect categories) quote
   Just $
     singleton $
-      Utils.mkPaymentForSelectReq Spec.NOT_PAID (Just $ encodeToText price.amount) Nothing Nothing mSettlementType (Just price.currency) (show <$> quote.bppDelayedInterest)
+      Utils.mkPaymentForSelectReq Spec.NOT_PAID (Just $ encodeToText fareParameters.totalPrice.amount) Nothing Nothing mSettlementType (Just fareParameters.currency) (show <$> quote.bppDelayedInterest)
 
 tfProvider :: DQuote.FRFSQuote -> Maybe Spec.Provider
 tfProvider quote =

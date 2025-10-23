@@ -62,7 +62,7 @@ onSelect onSelectReq merchant quote isSingleMode mbEnableOffer = do
   whenJust (onSelectReq.validTill) (\validity -> void $ Qquote.updateValidTillById quote.id validity)
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
   updatedQuoteCategories <- FRFSUtils.updateQuoteCategoriesWithQuantitySelections (mapMaybe (\category -> (find (\category' -> category'.category == category.category) quoteCategories) <&> (\category' -> (category'.id, category.quantity))) onSelectReq.categories) quoteCategories
-  let fareParameters = FRFSUtils.calculateFareParametersWithQuoteFallback updatedQuoteCategories quote
+  let fareParameters = FRFSUtils.calculateFareParametersWithQuoteFallback (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories) quote
       adultPrice = fareParameters.adultItem <&> (.unitPrice)
   whenJust adultPrice $ \price -> do
     Qquote.updatePriceAndEstimatedPriceById quote.id price (Just price)

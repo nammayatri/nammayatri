@@ -416,18 +416,3 @@ mkDCategorySelect orderItem = do
           _ -> ADULT
       price = fromMaybe (Price (Money 0) (HighPrecMoney 0.0) INR) (orderItem.itemPrice >>= Utils.parsePrice)
   return $ DCategorySelect {bppItemId = bppItemId', quantity = quantity', category = category, price = price}
-
-getTotalCategoryPrice :: [Domain.DCategorySelect] -> Maybe Price -> Price
-getTotalCategoryPrice categories fallbackPrice =
-  let categoryPrices = map (.price) categories
-      mCurrency = (listToMaybe categoryPrices <&> (.currency)) <|> (fallbackPrice <&> (.currency))
-      amount = sum $ ((.amount) <$> categoryPrices)
-      fallbackAmount =
-        if amount > 0
-          then amount
-          else fromMaybe 0.0 $ fallbackPrice <&> (.amount)
-   in Price
-        { currency = fromMaybe INR mCurrency,
-          amount = fallbackAmount,
-          amountInt = round fallbackAmount
-        }

@@ -837,7 +837,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
 
   -- Fetch the FRFSQuote to get accurate pricing information
   quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
-  let fareParameters = calculateFareParametersWithQuoteFallback frfsQuoteCategories quote
+  let fareParameters = calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromQuoteCategories frfsQuoteCategories) quote
       estimatedPrice = fareParameters.adultItem <&> (.unitPrice)
       childPrice = fareParameters.childItem <&> (.unitPrice)
 
@@ -1061,7 +1061,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
         mbQuote <- QFRFSQuote.findById (Id quoteId)
         frfsQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId (Id quoteId)
         let categories = map mkCategoryInfoResponse frfsQuoteCategories
-            fareParameters = (calculateFareParametersWithQuoteFallback frfsQuoteCategories) <$> mbQuote
+            fareParameters = (calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromQuoteCategories frfsQuoteCategories)) <$> mbQuote
             estimatedPrice = fareParameters >>= (.adultItem) <&> (.unitPrice)
             estimatedChildPrice = fareParameters >>= (.childItem) <&> (.unitPrice)
         return (mkPriceAPIEntity <$> estimatedPrice, mkPriceAPIEntity <$> estimatedChildPrice, mbQuote, fareParameters, frfsQuoteCategories, categories)

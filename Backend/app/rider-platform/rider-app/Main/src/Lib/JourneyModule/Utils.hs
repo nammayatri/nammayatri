@@ -1426,7 +1426,7 @@ getServiceTierFromQuote :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> DFRFSQuote.
 getServiceTierFromQuote quoteCategories quote = do
   let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
       mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
-      fareParameters = calculateFareParametersWithQuoteFallback quoteCategories quote
+      fareParameters = calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) quote
   mbServiceTier <&> \serviceTier -> do
     LegServiceTier
       { fare = mkPriceAPIEntity <$> (fareParameters.adultItem <&> (.unitPrice)),
@@ -1471,7 +1471,7 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
               oldQuoteCategories
           )
           newQuoteCategories
-      let fareParameters = calculateFareParametersWithQuoteFallback quantitySyncedQuoteCategories quote
+      let fareParameters = calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromQuoteCategories quantitySyncedQuoteCategories) quote
           totalPriceForSwitchLeg =
             Price
               { amount = fareParameters.totalPrice.amount,

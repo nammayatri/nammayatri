@@ -62,7 +62,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
           Redis.setExp otpKey otpCode endOfDayDiffInSeconds.getSeconds
           return otpCode
   let ticketDescription = "ROUTE: " <> route.shortName <> " | FROM: " <> fromStation.name <> " | TO: " <> toStation.name
-      fareParameters = calculateFareParametersWithBookingFallback quoteCategories booking
+      fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
       singleTicketPrice = fareParameters.totalUnitPrice.amountInt
       adultQuantity = maybe 0 (.quantity) fareParameters.adultItem
       childQuantity = maybe 0 (.quantity) fareParameters.childItem

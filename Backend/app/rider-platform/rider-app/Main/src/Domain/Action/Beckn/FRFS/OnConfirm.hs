@@ -136,7 +136,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-  let fareParameters = calculateFareParametersWithBookingFallback quoteCategories booking
+  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
   buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
   void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
   void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity

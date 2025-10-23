@@ -138,7 +138,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
     uuid <- UU.fromText id & fromMaybeM (InternalError "Not being able to parse into UUID")
     return $ show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) :: Integer)
   let qrValidityIST = addUTCTime (secondsToNominalDiffTime 19800) qrValidity
-      fareParameters = calculateFareParametersWithBookingFallback quoteCategories booking
+      fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
       singleAdultTicketPrice = fareParameters.adultItem <&> (.totalPrice.amount)
       adultQuantity = maybe 0 (.quantity) fareParameters.adultItem
       childQuantity = maybe 0 (.quantity) fareParameters.childItem

@@ -32,7 +32,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
   paymentTxnId <- booking.paymentTxnId & fromMaybeM (InternalError $ "Payment Transaction Id Missing")
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  let fareParameters = calculateFareParametersWithBookingFallback quoteCategories booking
+  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
       totalFare = fareParameters.totalUnitPrice.amountInt.getMoney
       totalTicketQuantity = fareParameters.totalQuantity
   ticketsData <-

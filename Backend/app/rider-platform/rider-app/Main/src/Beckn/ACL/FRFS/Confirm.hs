@@ -15,7 +15,6 @@
 
 module Beckn.ACL.FRFS.Confirm (buildConfirmReq) where
 
-import Beckn.ACL.FRFS.Utils
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
@@ -28,6 +27,7 @@ import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 
 type RiderName = Text
 
@@ -140,10 +140,10 @@ tfQuantity quantity =
 
 tfPayments :: DBooking.FRFSTicketBooking -> [DCategorySelect] -> Text -> Maybe BknPaymentParams -> Maybe Text -> Maybe [Spec.Payment]
 tfPayments booking categories txnId mPaymentParams mSettlementType = do
-  let price = getTotalCategoryPrice categories booking.finalPrice
+  let fareParameters = FRFSUtils.calculateFareParametersWithBookingFallback (FRFSUtils.mkCategoryPriceItemFromDCategorySelect categories) booking
   Just $
     singleton $
-      Utils.mkPaymentForConfirmReq Spec.PAID (Just $ encodeToText price.amount) (Just txnId) mPaymentParams mSettlementType (Just price.currency) Nothing
+      Utils.mkPaymentForConfirmReq Spec.PAID (Just $ encodeToText fareParameters.totalPrice.amount) (Just txnId) mPaymentParams mSettlementType (Just fareParameters.currency) Nothing
 
 tfProvider :: DBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider booking =

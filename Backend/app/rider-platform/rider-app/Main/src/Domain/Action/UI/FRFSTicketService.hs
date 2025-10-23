@@ -580,7 +580,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
         (stations :: [FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
         quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
         let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-            fareParameters = FRFSUtils.calculateFareParametersWithQuoteFallback quoteCategories quote
+            fareParameters = FRFSUtils.calculateFareParametersWithQuoteFallback (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories) quote
         return $
           FRFSTicketService.FRFSQuoteAPIRes
             { quoteId = quote.id,
@@ -640,7 +640,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCatego
     if isMultiInitAllowed
       then FRFSUtils.updateQuoteCategoriesWithQuantitySelections (selectedQuoteCategories <&> (\category -> (category.quoteCategoryId, category.quantity))) quoteCategories
       else return quoteCategories
-  let fareParameters = FRFSUtils.calculateFareParametersWithQuoteFallback quoteCategories quote
+  let fareParameters = FRFSUtils.calculateFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)
   (rider, dConfirmRes) <- confirm isMultiInitAllowed quote fareParameters mbBooking
   merchantOperatingCity <- getMerchantOperatingCityFromBooking dConfirmRes
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
@@ -669,17 +669,17 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCatego
       rider <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       now <- getCurrentTime
       unless (quote.validTill > now) $ throwError $ FRFSQuoteExpired quote.id.getId
+      unless (personId == quote.riderId) $ throwError AccessDenied
+      -- TODO :: Kept for Backward Compatibility, (ticketQuantity, childQuantity, updatedQuote) can be removed post Category Release is done 100%.
       let ticketQuantity = fareParameters.adultItem <&> (.quantity)
           childTicketQuantity = fareParameters.childItem <&> (.quantity)
           totalPrice = fareParameters.totalPrice
-      -- TODO :: Kept for Backward Compatibility, (ticketQuantity, childQuantity, updatedQuote) can be removed post Category Release is done 100%.
       updatedQuote <-
         if isMultiInitAllowed
           then do
-            void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quoteId ticketQuantity childTicketQuantity
+            void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity
             return $ quote {DFRFSQuote.quantity = ticketQuantity, DFRFSQuote.childTicketQuantity = childTicketQuantity}
           else return quote
-      unless (personId == quote.riderId) $ throwError AccessDenied
       maybeM
         (buildAndCreateBooking rider updatedQuote fareParameters)
         ( \booking -> do
@@ -692,7 +692,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCatego
                   -- TODO :: Update the status of the old payment booking to REATTEMPTED, Uncomment post release.
                   -- void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REATTEMPTED booking.id
                   void $ QFRFSTicketBooking.updateTotalPriceAndQuantityById totalPrice ticketQuantity childTicketQuantity Nothing booking.id
-                  return $ booking {DFRFSTicketBooking.quoteId = quoteId, DFRFSTicketBooking.bppItemId = updatedQuote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode}
+                  return $ booking {DFRFSTicketBooking.quoteId = quoteId, DFRFSTicketBooking.bppItemId = quote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.totalPrice = totalPrice, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
                 else return booking
             pure (rider, updatedBooking)
         )
@@ -1129,7 +1129,7 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
               FRFSTicketService.FRFSTicketAPI {..}
           )
           tickets'
-      fareParameters = FRFSUtils.calculateFareParametersWithBookingFallback quoteCategories booking
+      fareParameters = FRFSUtils.calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
       quantity = fareParameters.adultItem <&> (.quantity)
   return $
     FRFSTicketService.FRFSTicketBookingStatusAPIRes
@@ -1520,7 +1520,7 @@ select :: CallExternalBPP.FRFSSelectFlow m r c => (FRFSCommon.DOnSelect -> Maybe
 select processOnSelectHandler merchant merchantOperatingCity bapConfig quote selectedQuoteCategories isSingleMode mbEnableOffer = do
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
   updatedQuoteCategories <- updateQuoteCategoriesWithQuantitySelections (selectedQuoteCategories <&> (\category -> (category.quoteCategoryId, category.quantity))) quoteCategories
-  let fareParameters = FRFSUtils.calculateFareParametersWithQuoteFallback updatedQuoteCategories quote
+  let fareParameters = FRFSUtils.calculateFareParametersWithQuoteFallback (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories) quote
       ticketQuantity = fareParameters.adultItem <&> (.quantity)
       childTicketQuantity = fareParameters.childItem <&> (.quantity)
   void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity

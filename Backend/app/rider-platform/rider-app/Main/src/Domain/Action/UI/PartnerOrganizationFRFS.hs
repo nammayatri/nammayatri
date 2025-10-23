@@ -546,7 +546,7 @@ mkQuoteRes :: (MonadFlow m) => (DFRFSQuote.FRFSQuote, [FRFSQuoteCategory.FRFSQuo
 mkQuoteRes (quote, quoteCategories) = do
   (stations :: [FRFSTypes.FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InvalidStationJson $ show quote.stationsJson)
   let routeStations :: Maybe [FRFSTypes.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-  let fareParameters = Utils.calculateFareParametersWithQuoteFallback quoteCategories quote
+  let fareParameters = Utils.calculateFareParametersWithQuoteFallback (Utils.mkCategoryPriceItemFromQuoteCategories quoteCategories) quote
   return $
     FRFSTypes.FRFSQuoteAPIRes
       { quoteId = quote.id,
@@ -746,7 +746,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
       let isEventOngoing = fromMaybe False frfsConfig.isEventOngoing
       stats <- B.runInMasterDbAndRedis $ QPStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
       let ticketsBookedInEvent = fromMaybe 0 stats.ticketsBookedInEvent
-          fareParameters = Utils.calculateFareParametersWithQuoteFallback quoteCategories quote
+          fareParameters = Utils.calculateFareParametersWithQuoteFallback (Utils.mkCategoryPriceItemFromQuoteCategories quoteCategories) quote
           (discountedTickets, eventDiscountAmount) =
             case fareParameters.adultItem <&> (.unitPrice) of
               Just adultPrice -> Utils.getDiscountInfo isEventOngoing frfsConfig.freeTicketInterval frfsConfig.maxFreeTicketCashback adultPrice req.numberOfPassengers ticketsBookedInEvent

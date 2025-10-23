@@ -15,7 +15,6 @@
 
 module Beckn.ACL.FRFS.Init (buildInitReq) where
 
-import Beckn.ACL.FRFS.Utils
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
@@ -27,6 +26,7 @@ import qualified Domain.Types.FRFSTicketBooking as DTBooking
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
+import SharedLogic.FRFSUtils
 
 type RiderName = Text
 
@@ -137,10 +137,10 @@ tfQuantity quantity =
 
 tfPayments :: DTBooking.FRFSTicketBooking -> [DCategorySelect] -> Maybe Text -> Maybe [Spec.Payment]
 tfPayments booking categories mSettlementType = do
-  let price = getTotalCategoryPrice categories booking.finalPrice
+  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromDCategorySelect categories) booking
   Just $
     singleton $
-      Utils.mkPaymentForInitReq Spec.NOT_PAID (Just $ encodeToText price.amount) Nothing Nothing mSettlementType (Just price.currency) (show <$> booking.bppDelayedInterest)
+      Utils.mkPaymentForInitReq Spec.NOT_PAID (Just $ encodeToText fareParameters.totalPrice.amount) Nothing Nothing mSettlementType (Just fareParameters.currency) (show <$> booking.bppDelayedInterest)
 
 tfProvider :: DTBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider tBooking =

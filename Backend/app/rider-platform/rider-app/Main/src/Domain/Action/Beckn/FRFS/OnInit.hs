@@ -96,7 +96,7 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
           onInitReq.categories
       )
       quoteCategories
-  let fareParameters = calculateFareParametersWithBookingFallback updatedQuoteCategories oldBooking
+  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories) oldBooking
       adultTicketQuantity = fareParameters.adultItem <&> (.quantity)
       childTicketQuantity = fareParameters.childItem <&> (.quantity)
 

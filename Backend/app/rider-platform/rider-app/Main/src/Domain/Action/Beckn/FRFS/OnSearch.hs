@@ -406,7 +406,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             merchantId = search.merchantId,
             merchantOperatingCityId = search.merchantOperatingCityId,
             ticketCategoryMetadataConfigId = ticketCategoryMetadataConfig' <&> (.id.getId),
-            selectedQuantity = Just search.quantity,
+            selectedQuantity = Nothing,
             createdAt = now,
             updatedAt = now
           }

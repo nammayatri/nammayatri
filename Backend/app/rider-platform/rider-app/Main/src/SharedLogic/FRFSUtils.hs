@@ -25,6 +25,7 @@ import Data.List (groupBy, nub, sortBy)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Domain.Action.Beckn.FRFS.Common
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Extra.VendorSplitDetails as VendorSplitDetails
@@ -1018,7 +1019,7 @@ totalOrderValue paymentBookingStatus booking =
 updateTotalOrderValueAndSettlementAmount :: DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> BecknConfig -> Flow ()
 updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig = do
   paymentBooking <- runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
-  let fareParameters = calculateFareParametersWithBookingFallback quoteCategories booking
+  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
       finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee
       finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational fareParameters.totalQuantity)
   tOrderPrice <- totalOrderValue paymentBooking.status booking
@@ -1142,7 +1143,7 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
           quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
           quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
           mbOfferSKUProductId <- Payment.fetchOfferSKUConfig merchantId merchantOperatingCityId Nothing paymentServiceType
-          let fareParameters = calculateFareParametersWithQuoteFallback quoteCategories quote
+          let fareParameters = calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) quote
               adultQuantity = fareParameters.adultItem <&> (.quantity)
               childQuantity = fareParameters.childItem <&> (.quantity)
               adultUnitPrice = fareParameters.adultItem <&> (.unitPrice.amount)
@@ -1161,6 +1162,14 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
                 else return dummyBasket
             _ -> return dummyBasket
         _ -> return dummyBasket
+
+data CategoryPriceItem = CategoryPriceItem
+  { quantity :: Int,
+    unitPrice :: Price,
+    totalPrice :: Price,
+    categoryType :: FRFSQuoteCategoryType
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
 
 data PriceItem = PriceItem
   { quantity :: Int,
@@ -1188,10 +1197,47 @@ getUnitPriceFromPriceItem = maybe (HighPrecMoney 0.0) ((.amount) . (.unitPrice))
 getAmountFromPriceItem :: Maybe PriceItem -> HighPrecMoney
 getAmountFromPriceItem = maybe (HighPrecMoney 0.0) ((.amount) . (.totalPrice))
 
-calculateFareParameters :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> FRFSFareParameters
-calculateFareParameters quoteCategories =
-  let adultItem = find (\category -> category.category == ADULT) quoteCategories >>= mkPriceItem
-      childItem = find (\category -> category.category == CHILD) quoteCategories >>= mkPriceItem
+mkCategoryPriceItemFromQuoteCategories :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> [CategoryPriceItem]
+mkCategoryPriceItemFromQuoteCategories quoteCategories = mapMaybe mkPriceItem quoteCategories
+  where
+    mkPriceItem :: DFRFSQuoteCategory.FRFSQuoteCategory -> Maybe CategoryPriceItem
+    mkPriceItem category = do
+      quantity <- category.selectedQuantity
+      nonZeroQuantity <-
+        if quantity > 0
+          then Just quantity
+          else Nothing
+      let unitPrice = fromMaybe category.offeredPrice category.finalPrice
+      return $
+        CategoryPriceItem
+          { quantity = nonZeroQuantity,
+            unitPrice,
+            totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational nonZeroQuantity),
+            categoryType = category.category
+          }
+
+mkCategoryPriceItemFromDCategorySelect :: [DCategorySelect] -> [CategoryPriceItem]
+mkCategoryPriceItemFromDCategorySelect quoteCategories = mapMaybe mkPriceItem quoteCategories
+  where
+    mkPriceItem :: DCategorySelect -> Maybe CategoryPriceItem
+    mkPriceItem category = do
+      nonZeroQuantity <-
+        if category.quantity > 0
+          then Just category.quantity
+          else Nothing
+      let unitPrice = category.price
+      return $
+        CategoryPriceItem
+          { quantity = nonZeroQuantity,
+            unitPrice,
+            totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational nonZeroQuantity),
+            categoryType = category.category
+          }
+
+calculateFareParameters :: [CategoryPriceItem] -> FRFSFareParameters
+calculateFareParameters priceItems =
+  let adultItem = find (\category -> category.categoryType == ADULT) priceItems <&> mkPriceItem
+      childItem = find (\category -> category.categoryType == CHILD) priceItems <&> mkPriceItem
       currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem)
       totalPrice =
         Price
@@ -1216,24 +1262,12 @@ calculateFareParameters quoteCategories =
           currency
         }
   where
-    mkPriceItem category = do
-      quantity <- category.selectedQuantity
-      nonZeroQuantity <-
-        if quantity > 0
-          then Just quantity
-          else Nothing
-      let unitPrice = fromMaybe category.offeredPrice category.finalPrice
-      return $
-        PriceItem
-          { quantity = nonZeroQuantity,
-            unitPrice,
-            totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational nonZeroQuantity)
-          }
+    mkPriceItem CategoryPriceItem {..} = PriceItem {..}
 
 -- This is temporary function to handle the fallback case when the quote categories are not found in the database.
-calculateFareParametersWithQuoteFallback :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> Quote.FRFSQuote -> FRFSFareParameters
-calculateFareParametersWithQuoteFallback quoteCategories quote =
-  let fareParameters = calculateFareParameters quoteCategories
+calculateFareParametersWithQuoteFallback :: [CategoryPriceItem] -> Quote.FRFSQuote -> FRFSFareParameters
+calculateFareParametersWithQuoteFallback categories quote =
+  let fareParameters = calculateFareParameters categories
       adultItem =
         fareParameters.adultItem
           <|> ( ((,) <$> quote.quantity <*> quote.price) <&> \(quantity, unitPrice) ->
@@ -1276,9 +1310,9 @@ calculateFareParametersWithQuoteFallback quoteCategories quote =
           currency = currency
         }
 
-calculateFareParametersWithBookingFallback :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> FTBooking.FRFSTicketBooking -> FRFSFareParameters
-calculateFareParametersWithBookingFallback quoteCategories booking =
-  let fareParameters = calculateFareParameters quoteCategories
+calculateFareParametersWithBookingFallback :: [CategoryPriceItem] -> FTBooking.FRFSTicketBooking -> FRFSFareParameters
+calculateFareParametersWithBookingFallback categories booking =
+  let fareParameters = calculateFareParameters categories
       adultQuantity = fromMaybe 0 ((fareParameters.adultItem <&> (.quantity)) <|> booking.quantity)
       childQuantity = fromMaybe 0 ((fareParameters.childItem <&> (.quantity)) <|> booking.childTicketQuantity)
       mbRouteStations :: Maybe [APITypes.FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson

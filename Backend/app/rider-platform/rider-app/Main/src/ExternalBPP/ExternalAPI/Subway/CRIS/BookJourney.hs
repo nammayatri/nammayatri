@@ -270,7 +270,7 @@ createOrder config integratedBPPConfig booking quoteCategories = do
   startTime <- fromMaybeM (CRISError "Start time not found") booking.startTime
   let tpBookType = if booking.isSingleMode == Just True then 1 else 0
 
-  let fareParameters = calculateFareParametersWithBookingFallback quoteCategories booking
+  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
       adultQuantity = fareParameters.adultItem <&> (.quantity)
       childQuantity = fareParameters.childItem <&> (.quantity)
       chargeableAmount = fareParameters.totalPrice.amountInt.getMoney
