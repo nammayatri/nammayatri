@@ -22,10 +22,14 @@ module API.UI.Profile
     DProfile.PersonDefaultEmergencyNumber (..),
     DProfile.UpdateProfileDefaultEmergencyNumbersResp,
     DProfile.GetProfileDefaultEmergencyNumbersResp (..),
+    DProfile.TriggerUpdateAuthOTPReq (..),
+    DProfile.VerifyUpdateAuthOTPReq (..),
     API,
     getPersonDetails',
     updatePerson',
     handler,
+    triggerOTP',
+    verifyOTP',
   )
 where
 
@@ -83,6 +87,16 @@ type API =
                     :> ReqBody '[JSON] DProfile.MarketEventReq
                     :> Post '[JSON] APISuccess.APISuccess
                 )
+           :<|> "updateAuthData"
+             :> ( "triggerOTP"
+                    :> TokenAuth
+                    :> ReqBody '[JSON] DProfile.TriggerUpdateAuthOTPReq
+                    :> Post '[JSON] APISuccess.APISuccess
+                    :<|> "verifyOTP"
+                      :> TokenAuth
+                      :> ReqBody '[JSON] DProfile.VerifyUpdateAuthOTPReq
+                      :> Post '[JSON] APISuccess.APISuccess
+                )
        )
 
 handler :: FlowServer API
@@ -93,6 +107,7 @@ handler =
     :<|> getEmergencySettings
     :<|> (updateDefaultEmergencyNumbers :<|> getDefaultEmergencyNumbers)
     :<|> marketingEvents
+    :<|> (triggerOTP :<|> verifyOTP)
 
 getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler DProfile.ProfileRes
 getPersonDetails (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . getPersonDetails' (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion
@@ -123,3 +138,15 @@ marketingEvents' req = DProfile.marketingEvents req
 
 marketingEvents :: DProfile.MarketEventReq -> FlowHandler APISuccess.APISuccess
 marketingEvents req = withFlowHandlerAPI $ marketingEvents' req
+
+triggerOTP' :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.TriggerUpdateAuthOTPReq -> Flow APISuccess.APISuccess
+triggerOTP' (personId, merchantId) = DProfile.triggerUpdateAuthDataOtp (personId, merchantId)
+
+triggerOTP :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.TriggerUpdateAuthOTPReq -> FlowHandler APISuccess.APISuccess
+triggerOTP (personId, merchantId) req = withFlowHandlerAPI $ triggerOTP' (personId, merchantId) req
+
+verifyOTP' :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.VerifyUpdateAuthOTPReq -> Flow APISuccess.APISuccess
+verifyOTP' (personId, merchantId) = DProfile.verifyUpdateAuthDataOtp (personId, merchantId)
+
+verifyOTP :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.VerifyUpdateAuthOTPReq -> FlowHandler APISuccess.APISuccess
+verifyOTP (personId, merchantId) req = withFlowHandlerAPI $ verifyOTP' (personId, merchantId) req
