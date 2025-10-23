@@ -297,6 +297,7 @@ FRFSTicketBooking:
     bppOrderId: Maybe Text
     quoteId: Id FRFSQuote
     status: FRFSTicketBookingStatus|NoRelation
+    confirmedPaymentBookingId: Maybe Text # Maybe (Id FRFSTicketBookingPayment)
     riderId: Id Person
     stationsJson: Text
     routeStationsJson: Maybe Text
@@ -482,6 +483,10 @@ FRFSTicketBooking:
     updateFailureReasonById:
       kvFunction: updateOneWithKV
       params: [failureReason]
+      where: id
+    updateConfirmedPaymentBookingIdById:
+      kvFunction: updateOneWithKV
+      params: [confirmedPaymentBookingId]
       where: id
 
   extraOperations:

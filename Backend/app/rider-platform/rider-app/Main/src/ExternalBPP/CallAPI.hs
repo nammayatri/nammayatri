@@ -20,7 +20,6 @@ import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch as DSearch
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DBooking
-import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DBooking
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -246,12 +245,11 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
             case fromException err :: Maybe CRISError of
               Just crisError -> void $ QFRFSTicketBooking.updateFailureReasonById (Just crisError.errorMessage) booking.id
               Nothing -> logError $ "FRFS External Confirm failed with error: " <> show err
-            paymentBooking <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
+            bookingPayment <- QFRFSTicketBookingPayment.findTBPForConfirmBooking booking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
             void $ QFRFSTicketBooking.updateStatusById DBooking.FAILED booking.id
-            void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING paymentBooking.id
             riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
             when riderConfig.enableAutoJourneyRefund $
-              FRFSUtils.markAllRefundBookings booking booking.riderId
+              FRFSUtils.markAllRefundBookings booking bookingPayment booking.riderId
             throwM err
           Right _ -> return ()
 
