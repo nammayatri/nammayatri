@@ -243,7 +243,6 @@ let AllocatorJobType =
       | ScheduledFCMS
       | CheckDashCamInstallationStatus
       | MediaFileDocumentComplete
-      | ProcessCancellationPenaltyStatus
       >
 
 let jobInfoMapx =
@@ -295,9 +294,6 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.MediaFileDocumentComplete, mapValue = True }
-      , { mapKey = AllocatorJobType.ProcessCancellationPenaltyStatus
-        , mapValue = True
-        }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }

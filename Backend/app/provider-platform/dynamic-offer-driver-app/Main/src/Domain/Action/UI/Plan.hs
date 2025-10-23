@@ -15,7 +15,7 @@
 
 module Domain.Action.UI.Plan where
 
-import Data.List (intersect, nubBy)
+import Data.List (intersect, nub, nubBy)
 import qualified Data.List as DL
 import qualified Data.Map as M
 import Data.Maybe (listToMaybe)
@@ -105,7 +105,8 @@ data PlanEntity = PlanEntity
     dueBoothChargesWithCurrency :: PriceAPIEntity,
     dues :: [DriverDuesEntity],
     coinEntity :: Maybe CoinEntity,
-    bankErrors :: [ErrorEntity]
+    bankErrors :: [ErrorEntity],
+    cancellationPenalties :: [CancellationPenaltyInformation]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -215,6 +216,18 @@ data ServicesEntity = ServicesEntity
 data SafetyPlusData = SafetyPlusData
   { safetyPlusTrips :: Int,
     safetyPlusEarnings :: PriceAPIEntity
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data CancellationPenaltyInformation = CancellationPenaltyInformation
+  { id :: Text,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    paymentMode :: Maybe PaymentMode,
+    numRideCancelled :: Int,
+    amount :: HighPrecMoney,
+    gst :: HighPrecMoney,
+    isBilled :: Bool
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
@@ -951,7 +964,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
   let currentDues = sum $ map (.driverFeeAmount) dues
   let autopayDues = sum $ map (.driverFeeAmount) $ filter (\due -> due.feeType == DF.RECURRING_EXECUTION_INVOICE) dues
   let dueBoothCharges = roundToHalf currency $ sum $ map (.specialZoneAmount) (nubBy (\x y -> (x.startTime == y.startTime) && (x.endTime == y.endTime)) dueDriverFees)
-
+  cancellationPenalties <- getCancellationPenalties (cast driverId) serviceNameParam
   return
     PlanEntity
       { id = plan.id.getId,
@@ -1224,3 +1237,30 @@ updateWaiveOffByDriver merchantOpCityId waiveOffEntities = do
   if (length waiveOffEntities) > transporterConfig.bulkWaiveOffLimit
     then throwError $ InvalidRequest "Length entities exceeds bulk update limit"
     else QDPlan.updateAllWithWaiveOffPercantageAndType waiveOffEntities
+
+getCancellationPenalties :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Driver -> ServiceNames -> m [CancellationPenaltyInformation]
+getCancellationPenalties driverId serviceName = do
+  unbilledDriverFees <- QDF.findUnbilledCancellationPenaltiesForDriver driverId serviceName
+  let unbilledPenalties = map (mkCancellationPenaltyInfo False Nothing) unbilledDriverFees
+  billedDriverFees <- QDF.findSubscriptionFeesWithCancellationPenalties driverId serviceName
+  let rPenalties = filter (\billedDriverFee -> billedDriverFee.feeType == DF.RECURRING_INVOICE) billedDriverFees
+      rEPenaltiesSplitOfDriverFeeIds = mapMaybe (.splitOfDriverFeeId) $ filter (\billedDriverFee -> billedDriverFee.feeType == DF.RECURRING_EXECUTION_INVOICE && billedDriverFee.splitOfDriverFeeId /= Nothing) billedDriverFees
+  parentRecurringExecution <- QDF.findParentRecurringExecutionBySplitOfDriverFeeIds rEPenaltiesSplitOfDriverFeeIds
+  let allManualFeeIds = nub $ (.id) <$> rPenalties
+      allExecutionFeeIds = nub $ (.id) <$> parentRecurringExecution
+  let allSubscriptionFeeIds = allManualFeeIds <> allExecutionFeeIds
+  originalPenalties <- nub <$> QDF.findOriginalCancellationPenaltiesForSubscriptionFee allSubscriptionFeeIds
+  let billedPenalties = map (\penalty -> let payType = penalty.addedToFeeId >>= \feeId -> if feeId `elem` allManualFeeIds then Just MANUAL else if feeId `elem` allExecutionFeeIds then Just AUTOPAY else Nothing in mkCancellationPenaltyInfo True payType penalty) originalPenalties
+  return $ nubBy (\a b -> a.id == b.id) $ filter (\p -> p.amount > 0) $ unbilledPenalties <> billedPenalties
+  where
+    mkCancellationPenaltyInfo isBilled payType driverFee =
+      CancellationPenaltyInformation
+        { id = driverFee.id.getId,
+          startTime = driverFee.startTime,
+          endTime = driverFee.endTime,
+          paymentMode = payType,
+          numRideCancelled = driverFee.numRides,
+          amount = fromMaybe 0.0 driverFee.cancellationPenaltyAmount,
+          gst = if isBilled then (fromMaybe 0.0 driverFee.cancellationPenaltyAmount) * 0.18 / 1.18 else 0.0,
+          ..
+        }
