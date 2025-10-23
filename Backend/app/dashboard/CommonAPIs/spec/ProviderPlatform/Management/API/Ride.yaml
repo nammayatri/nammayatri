@@ -214,6 +214,7 @@ types:
     - customerPickupLocation: LocationAPIEntity
     - customerDropLocation: Maybe LocationAPIEntity
     - actualDropLocation: Maybe LatLong
+    - isDestinationEdited: Maybe Bool
     - driverId: Id Driver
     - driverName: Text
     - driverPhoneNo: Maybe Text
