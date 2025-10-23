@@ -282,21 +282,10 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN failure_reason text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_single_mode boolean ;
 
 
-
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
+ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN quantity SET DEFAULT 0;
+ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN quantity DROP NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN estimated_price SET DEFAULT 0;
+ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN estimated_price DROP NOT NULL;
 

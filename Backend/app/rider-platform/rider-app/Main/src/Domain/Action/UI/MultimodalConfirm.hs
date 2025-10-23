@@ -114,6 +114,7 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.Journey as QJourney
@@ -235,31 +236,40 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
                     }
               )
       allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyFrfsBookings
-  let paymentFareUpdate =
-        catMaybes $
-          map
-            ( \booking -> do
-                let leg = find (\l -> l.legSearchId == Just booking.searchId.getId) legs
-                if fromMaybe False booking.isFareChanged
-                  then case leg <&> (.sequenceNumber) of
-                    Just journeyLegOrder ->
-                      Just $
+  paymentFareUpdate <-
+    mapMaybeM
+      ( \booking -> do
+          let leg = find (\l -> l.legSearchId == Just booking.searchId.getId) legs
+          -- TODO :: This is not being used so not handling, when being used handle it properly using `price` as oldFare and `finalPrice` as newFare.
+          if fromMaybe False booking.isFareChanged
+            then case leg <&> (.sequenceNumber) of
+              Just journeyLegOrder -> do
+                quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+                let fareUpdatedCategories =
+                      filter
+                        (\(_, price, finalPrice) -> price /= finalPrice)
+                        $ mapMaybe (\quoteCategory -> quoteCategory.finalPrice <&> \finalPrice -> (quoteCategory.category, quoteCategory.price, finalPrice)) quoteCategories
+                return $
+                  Just
+                    ( fareUpdatedCategories <&> \(category, price, finalPrice) ->
                         ApiTypes.PaymentFareUpdate
                           { journeyLegOrder,
-                            oldFare = mkPriceAPIEntity booking.estimatedPrice,
-                            newFare = mkPriceAPIEntity booking.price
+                            category = category,
+                            oldFare = mkPriceAPIEntity price,
+                            newFare = mkPriceAPIEntity finalPrice
                           }
-                    Nothing -> Nothing
-                  else Nothing
-            )
-            allJourneyFrfsBookings
+                    )
+              Nothing -> return Nothing
+            else return Nothing
+      )
+      allJourneyFrfsBookings
   if allLegsOnInitDone
     then do
       return $
         ApiTypes.JourneyBookingPaymentStatus
           { journeyId,
             paymentOrder,
-            paymentFareUpdate = Just paymentFareUpdate,
+            paymentFareUpdate = Just $ concat paymentFareUpdate,
             gatewayReferenceId = paymentGateWayId
           }
     else do
@@ -1498,20 +1508,26 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
   -- Get rider config to check source of service tier
   mbSourceOfServiceTier <- fmap (.sourceOfServiceTier) <$> QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId
 
-  frfsQuotes <-
+  frfsQuotesAndCategories <-
     case (req.journeyId, req.legOrder) of
       (Just journeyId, Just legOrder) -> do
         journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
         quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLeg.legSearchId
-        return quotes
+        mapM
+          ( \quote -> do
+              quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+              return (quote, quoteCategories)
+          )
+          quotes
       _ -> pure []
+  let frfsQuotes = fst <$> frfsQuotesAndCategories
 
   case mbSourceOfServiceTier of
     Just DRC.QUOTES -> do
       let availableRoutes = mapMaybe convertFRFSQuoteToAvailableRoute frfsQuotes
       return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
     _ -> do
-      let availableServiceTiers = if null frfsQuotes then Nothing else Just (mapMaybe JMU.getServiceTierFromQuote frfsQuotes)
+      let availableServiceTiers = if null frfsQuotes then Nothing else Just (mapMaybe (\(quote, quoteCategories) -> JMU.getServiceTierFromQuote quoteCategories quote) frfsQuotesAndCategories)
       case integratedBPPConfigs of
         [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = []}
         (integratedBPPConfig : _) -> do

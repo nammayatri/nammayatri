@@ -7,6 +7,7 @@ import qualified Data.Text as T
 import Domain.Action.Beckn.FRFS.OnSearch
 import Domain.Types hiding (ONDC)
 import Domain.Types.BecknConfig
+import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
@@ -152,15 +153,15 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
       let endStopCode = lastFareRouteDetail.endStopCode
       (routeCode, startStopCode, endStopCode)
 
-createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
-createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking = do
+createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
+createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quoteCategories = do
   Metrics.startMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
   resp <-
     case integrationBPPConfig.providerConfig of
-      CMRL config' -> CMRLOrder.createOrder config' integrationBPPConfig booking mRiderNumber
-      EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking
-      DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking
-      CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking
+      CMRL config' -> CMRLOrder.createOrder config' integrationBPPConfig booking quoteCategories mRiderNumber
+      EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
+      DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
+      CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking quoteCategories
       _ -> throwError $ InternalError "Unimplemented!"
   Metrics.finishMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
   return resp

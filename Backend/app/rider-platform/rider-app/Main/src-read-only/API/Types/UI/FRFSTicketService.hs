@@ -8,6 +8,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory
+import qualified Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus
@@ -121,7 +122,6 @@ data FRFSPossibleStopsReq = FRFSPossibleStopsReq {stationCodes :: [Data.Text.Tex
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
-    discounts :: Data.Maybe.Maybe [FRFSDiscountRes],
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     price :: Kernel.Types.Common.HighPrecMoney,
@@ -132,6 +132,17 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     stations :: [FRFSStationAPI],
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSQuoteCategoryAPIEntity = FRFSQuoteCategoryAPIEntity
+  { bppItemId :: Data.Text.Text,
+    categoryMetadata :: Data.Maybe.Maybe FRFSTicketCategoryMetadataAPIEntity,
+    finalPrice :: Data.Maybe.Maybe Kernel.Types.Common.PriceAPIEntity,
+    offeredPrice :: Kernel.Types.Common.PriceAPIEntity,
+    price :: Kernel.Types.Common.PriceAPIEntity,
+    selectedQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -223,15 +234,15 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     city :: Kernel.Types.Beckn.Context.City,
     createdAt :: Kernel.Prelude.UTCTime,
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
-    discounts :: Data.Maybe.Maybe [FRFSDiscountRes],
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     googleWalletJWTUrl :: Data.Maybe.Maybe Data.Text.Text,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isFareChanged :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     payment :: Data.Maybe.Maybe FRFSBookingPaymentAPI,
-    price :: Kernel.Types.Common.HighPrecMoney,
-    priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
-    quantity :: Kernel.Prelude.Int,
+    price :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    priceWithCurrency :: Data.Maybe.Maybe Kernel.Types.Common.PriceAPIEntity,
+    quantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    quoteCategories :: [FRFSQuoteCategoryAPIEntity],
     routeStations :: Data.Maybe.Maybe [FRFSRouteStationsAPI],
     stations :: [FRFSStationAPI],
     status :: Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus,
@@ -240,6 +251,10 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSTicketCategoryMetadataAPIEntity = FRFSTicketCategoryMetadataAPIEntity {category :: Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType, description :: Data.Text.Text, title :: Data.Text.Text, tnc :: Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

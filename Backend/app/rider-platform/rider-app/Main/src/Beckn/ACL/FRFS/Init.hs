@@ -15,6 +15,7 @@
 
 module Beckn.ACL.FRFS.Init (buildInitReq) where
 
+import Beckn.ACL.FRFS.Utils
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
@@ -72,7 +73,7 @@ tfOrder rider tBooking mSettlementType categories =
       orderFulfillments = Nothing,
       orderId = Nothing,
       orderItems = tfItems tBooking categories,
-      orderPayments = tfPayments tBooking mSettlementType,
+      orderPayments = tfPayments tBooking categories mSettlementType,
       orderProvider = tfProvider tBooking,
       orderQuote = Nothing,
       orderStatus = Nothing,
@@ -92,15 +93,16 @@ tfBilling (mRiderName, mRiderNumber) =
 tfItems :: DTBooking.FRFSTicketBooking -> [DCategorySelect] -> Maybe [Spec.Item]
 tfItems tBooking categories =
   case categories of
+    -- TODO :: This is deprecated, should be removed post `quoteCategories` unification
     [] ->
-      Just
+      tBooking.quantity <&> \quantity ->
         [ Spec.Item
             { itemCategoryIds = Nothing,
               itemDescriptor = Nothing,
               itemFulfillmentIds = Nothing,
               itemId = Just tBooking.bppItemId,
               itemPrice = Nothing,
-              itemQuantity = tfQuantity tBooking.quantity,
+              itemQuantity = tfQuantity quantity,
               itemTime = Nothing
             }
         ]
@@ -133,12 +135,12 @@ tfQuantity quantity =
               }
       }
 
-tfPayments :: DTBooking.FRFSTicketBooking -> Maybe Text -> Maybe [Spec.Payment]
-tfPayments booking mSettlementType = do
-  let mCurrency = Just booking.price.currency
+tfPayments :: DTBooking.FRFSTicketBooking -> [DCategorySelect] -> Maybe Text -> Maybe [Spec.Payment]
+tfPayments booking categories mSettlementType = do
+  let price = getTotalCategoryPrice categories booking.finalPrice
   Just $
     singleton $
-      Utils.mkPaymentForInitReq Spec.NOT_PAID (Just $ encodeToText booking.price.amount) Nothing Nothing mSettlementType mCurrency (show <$> booking.bppDelayedInterest)
+      Utils.mkPaymentForInitReq Spec.NOT_PAID (Just $ encodeToText price.amount) Nothing Nothing mSettlementType (Just price.currency) (show <$> booking.bppDelayedInterest)
 
 tfProvider :: DTBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider tBooking =

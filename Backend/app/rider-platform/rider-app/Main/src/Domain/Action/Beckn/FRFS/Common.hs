@@ -15,23 +15,24 @@
 module Domain.Action.Beckn.FRFS.Common where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Domain.Types.FRFSQuoteCategoryType
 import Kernel.Prelude
 import Kernel.Utils.Common
 
 data DCategorySelect = DCategorySelect
   { bppItemId :: Text,
-    quantity :: Int
+    quantity :: Int,
+    category :: FRFSQuoteCategoryType,
+    price :: Price
   }
 
 data DOnSelect = DOnSelect
   { providerId :: Text,
-    totalPrice :: Price,
     fareBreakUp :: [DFareBreakUp],
-    bppItemId :: Text,
     validTill :: Maybe UTCTime,
     transactionId :: Text,
     messageId :: Text,
-    category :: [DCategorySelect]
+    categories :: [DCategorySelect]
   }
 
 data DFareBreakUp = DFareBreakUp

@@ -17,6 +17,8 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Data.Time.LocalTime as LocalTime
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
+import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
@@ -54,7 +56,6 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
-import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -68,6 +69,7 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
@@ -157,7 +159,7 @@ data LegServiceTier = LegServiceTier
     serviceTierDescription :: Text,
     via :: Maybe Text,
     trainTypeCode :: Maybe Text,
-    fare :: PriceAPIEntity,
+    fare :: Maybe PriceAPIEntity,
     quoteId :: Id DFRFSQuote.FRFSQuote
   }
   deriving stock (Show, Generic)
@@ -550,7 +552,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
                     serviceTierDescription = availableServiceTier <&> (.serviceTierDescription)
                     via = availableServiceTier >>= (.via)
                     trainTypeCode = availableServiceTier >>= (.trainTypeCode)
-                    mbFare = availableServiceTier <&> (.fare)
+                    mbFare = availableServiceTier >>= (.fare)
                 return (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode)
               Nothing -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
@@ -1103,7 +1105,14 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
           let redisKey = CRISRouteFare.mkRouteFareKey originStopCode destinationStopCode searchReqId
           unless (null fares) $ Hedis.setExp redisKey fares 1800
           let sortedFares = case crisConfig.routeSortingCriteria of
-                Just DIntegratedBPPConfig.FARE -> sortBy (comparing (\fare -> fare.price.amount)) fares
+                Just DIntegratedBPPConfig.FARE ->
+                  sortBy
+                    ( comparing
+                        ( \fare ->
+                            fromMaybe (HighPrecMoney 0.0) ((find ((== ADULT) . (.category)) fare.categories) <&> (.price.amount))
+                        )
+                    )
+                    fares
                 Just DIntegratedBPPConfig.DISTANCE ->
                   sortBy
                     ( comparing
@@ -1198,11 +1207,11 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
     CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
   frfsBookingsPayments <- mapMaybeM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
-  (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
+  (vendorSplitDetails, amountUpdated) <- createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
   isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing paymentType -- TODO :: You can be moved inside :)
   isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId merchantOperatingCityId Nothing paymentType
   splitDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails isPercentageSplitEnabled
-  baskets <- SMMFRFS.createBasketFromBookings bookings merchantId merchantOperatingCityId paymentType mbEnableOffer
+  baskets <- createBasketFromBookings bookings merchantId merchantOperatingCityId paymentType mbEnableOffer
   let splitDetailsAmount = TPayment.extractSplitSettlementDetailsAmount splitDetails
   if frfsConfig.canUpdateExistingPaymentOrder
     then do
@@ -1413,13 +1422,14 @@ secondsToTime seconds =
       secs = fromIntegral $ totalSeconds `mod` 60
    in LocalTime.TimeOfDay hours minutes secs
 
-getServiceTierFromQuote :: DFRFSQuote.FRFSQuote -> Maybe LegServiceTier
-getServiceTierFromQuote quote = do
+getServiceTierFromQuote :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> DFRFSQuote.FRFSQuote -> Maybe LegServiceTier
+getServiceTierFromQuote quoteCategories quote = do
   let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-  let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
+      mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
+      fareParameters = calculateFareParametersWithQuoteFallback quoteCategories quote
   mbServiceTier <&> \serviceTier -> do
     LegServiceTier
-      { fare = mkPriceAPIEntity quote.price,
+      { fare = mkPriceAPIEntity <$> (fareParameters.adultItem <&> (.unitPrice)),
         quoteId = quote.id,
         serviceTierName = serviceTier.shortName,
         serviceTierType = serviceTier._type,
@@ -1449,24 +1459,32 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
     mbBooking <- QFRFSTicketBooking.findBySearchId searchId
     whenJust mbBooking $ \booking -> do
       quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Quote not found")
-      let quantity = booking.quantity
-          childTicketQuantity = fromMaybe 0 booking.childTicketQuantity
-          quantityRational = fromIntegral quantity :: Rational
-          childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
-          childPrice = fromMaybe quote.price quote.childPrice
+      oldQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+      newQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
+      quantitySyncedQuoteCategories <-
+        mergeQuoteCategoriesWithQuantitySelections
+          ( mapMaybe
+              ( \category -> do
+                  selectedQuantity <- category.selectedQuantity
+                  return (category.category, selectedQuantity)
+              )
+              oldQuoteCategories
+          )
+          newQuoteCategories
+      let fareParameters = calculateFareParametersWithQuoteFallback quantitySyncedQuoteCategories quote
           totalPriceForSwitchLeg =
             Price
-              { amount = HighPrecMoney $ (quote.price.amount.getHighPrecMoney * quantityRational) + (childPrice.amount.getHighPrecMoney * childTicketQuantityRational),
-                amountInt = Money $ (quote.price.amountInt.getMoney * quantity) + (childPrice.amountInt.getMoney * childTicketQuantity),
-                currency = quote.price.currency
+              { amount = fareParameters.totalPrice.amount,
+                amountInt = fareParameters.totalPrice.amountInt,
+                currency = fareParameters.currency
               }
           updatedBooking =
             booking
               { DFRFSTicketBooking.quoteId = quoteId,
                 DFRFSTicketBooking.stationsJson = quote.stationsJson,
                 DFRFSTicketBooking.routeStationsJson = quote.routeStationsJson,
-                DFRFSTicketBooking.price = totalPriceForSwitchLeg,
-                DFRFSTicketBooking.estimatedPrice = totalPriceForSwitchLeg
+                DFRFSTicketBooking.totalPrice = totalPriceForSwitchLeg,
+                DFRFSTicketBooking.estimatedPrice = Just totalPriceForSwitchLeg
               }
       void $ QFRFSTicketBooking.updateByPrimaryKey updatedBooking
     whenJust mbAlternateShortNames $ \(alternateShortNames, alternateRouteIds) -> do
@@ -1488,6 +1506,24 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
       let mbSelectedOption = find (\option -> option.quoteId == Just quoteId) options
       return $ mbSelectedOption <&> (\option -> unzip $ map (\a -> (a.shortName, a.routeCode)) option.availableRoutesInfo)
 
+    mergeQuoteCategoriesWithQuantitySelections ::
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      [(FRFSQuoteCategoryType, Int)] ->
+      [DFRFSQuoteCategory.FRFSQuoteCategory] ->
+      m [DFRFSQuoteCategory.FRFSQuoteCategory]
+    mergeQuoteCategoriesWithQuantitySelections categories quoteCategories = do
+      updatedQuoteCategories <- mapM updateCategory quoteCategories
+      return updatedQuoteCategories
+      where
+        updateCategory category =
+          case find (\(categoryType, _) -> categoryType == category.category) categories of
+            Just (_, quantity) -> do
+              QFRFSQuoteCategory.updateQuantityByQuoteCategoryId (Just quantity) category.id
+              return category {DFRFSQuoteCategory.selectedQuantity = Just quantity}
+            Nothing -> do
+              QFRFSQuoteCategory.updateQuantityByQuoteCategoryId Nothing category.id
+              return category {DFRFSQuoteCategory.selectedQuantity = Nothing}
+
 getLegTierOptionsUtil ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -1505,7 +1541,13 @@ getLegTierOptionsUtil journeyLeg = do
   let mbAgencyId = journeyLeg.agency >>= (.gtfsId)
   let vehicleCategory = castTravelModeToVehicleCategory journeyLeg.mode
   quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLeg.legSearchId
-  let availableServiceTiers = mapMaybe getServiceTierFromQuote quotes
+  availableServiceTiers <-
+    mapMaybeM
+      ( \quote -> do
+          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+          return $ getServiceTierFromQuote quoteCategories quote
+      )
+      quotes
   mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId journeyLeg.merchantOperatingCityId vehicleCategory DIntegratedBPPConfig.MULTIMODAL
   let mbRouteDetail = journeyLeg.routeDetails & listToMaybe
   let mbFomStopCode = mbRouteDetail >>= (.fromStopCode)

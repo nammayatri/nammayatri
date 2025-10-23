@@ -1011,6 +1011,8 @@ data MultimodalError
   | PublicTransportDataUnavailable Text -- reason
   | StopNotFound Text
   | StopDoesNotHaveLocation Text
+  | CategoriesAndTotalPriceMismatch Text Text
+  | NoSelectedCategoryFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''MultimodalError
@@ -1033,6 +1035,8 @@ instance IsBaseError MultimodalError where
     PublicTransportDataUnavailable reason -> Just $ "Public transport data unavailable: " <> reason
     StopNotFound reason -> Just $ "Stop not found: " <> reason
     StopDoesNotHaveLocation reason -> Just $ "Stop does not have location: " <> reason
+    CategoriesAndTotalPriceMismatch categoriesTotalPrice totalPrice -> Just $ "Categories and total price mismatch: " <> categoriesTotalPrice <> " and " <> totalPrice
+    NoSelectedCategoryFound quoteId -> Just $ "No selected category found in quote categories, quoteId : " <> quoteId
 
 instance IsHTTPError MultimodalError where
   toErrorCode = \case
@@ -1052,6 +1056,9 @@ instance IsHTTPError MultimodalError where
     PublicTransportDataUnavailable _ -> "PUBLIC_TRANSPORT_DATA_UNAVAILABLE"
     StopNotFound _ -> "STOP_NOT_FOUND"
     StopDoesNotHaveLocation _ -> "STOP_DOES_NOT_HAVE_LOCATION"
+    CategoriesAndTotalPriceMismatch _ _ -> "CATEGORIES_AND_TOTAL_PRICE_MISMATCH"
+    NoSelectedCategoryFound _ -> "NO_SELECTED_CATEGORY_FOUND"
+
   toHttpCode = \case
     InvalidStationChange _ _ -> E400
     NoValidMetroRoute _ _ -> E400
@@ -1069,5 +1076,7 @@ instance IsHTTPError MultimodalError where
     PublicTransportDataUnavailable _ -> E500
     StopNotFound _ -> E400
     StopDoesNotHaveLocation _ -> E400
+    CategoriesAndTotalPriceMismatch _ _ -> E500
+    NoSelectedCategoryFound _ -> E500
 
 instance IsAPIError MultimodalError

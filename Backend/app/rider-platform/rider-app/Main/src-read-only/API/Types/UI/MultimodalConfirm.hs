@@ -9,6 +9,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.FRFSQuote
+import qualified Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSTicketBookingStatus
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Journey
@@ -214,7 +215,12 @@ data OnboardedVehicleDetailsReq = OnboardedVehicleDetailsReq {vehicleNumber :: K
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PaymentFareUpdate = PaymentFareUpdate {journeyLegOrder :: Kernel.Prelude.Int, newFare :: Kernel.Types.Common.PriceAPIEntity, oldFare :: Kernel.Types.Common.PriceAPIEntity}
+data PaymentFareUpdate = PaymentFareUpdate
+  { category :: Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType,
+    journeyLegOrder :: Kernel.Prelude.Int,
+    newFare :: Kernel.Types.Common.PriceAPIEntity,
+    oldFare :: Kernel.Types.Common.PriceAPIEntity
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

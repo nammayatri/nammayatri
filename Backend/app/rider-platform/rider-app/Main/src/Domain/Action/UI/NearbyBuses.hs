@@ -6,6 +6,7 @@ import qualified BecknV2.OnDemand.Enums
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as M
 import qualified Data.Set as Set
+import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -154,7 +155,7 @@ getRecentRides person req = do
                           snd <$> Flow.getFares person.id merchant merchantOperatingCity integratedBPPConfig becknConfig fareRouteDetails req.vehicleType Nothing Nothing
                       )
               return $
-                mbFare <&> \fare -> do
+                (mbFare >>= (\fare -> find (\category -> category.category == ADULT) fare.categories)) <&> \fare ->
                   API.Types.UI.NearbyBuses.RecentRide
                     { fare = fare.price,
                       fromStopCode = fromStopCode,

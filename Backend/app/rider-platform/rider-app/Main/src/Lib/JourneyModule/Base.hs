@@ -1,13 +1,10 @@
 module Lib.JourneyModule.Base where
 
+import qualified API.Types.UI.FRFSTicketService as APITypes
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
-import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
-import Data.List (sortBy)
-import Data.List.NonEmpty (nonEmpty)
-import Data.Ord (comparing)
 import Domain.Action.UI.EditLocation as DEditLocation
 import qualified Domain.Action.UI.Location as DLoc
 import Domain.Action.UI.Ride as DRide
@@ -20,6 +17,7 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DTaxiEstimate
 import Domain.Types.Extra.Ride as DRide
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
@@ -38,12 +36,12 @@ import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.RouteDetails as DRouteDetails
 import qualified Domain.Types.Trip as DTrip
 import Environment
-import EulerHS.Prelude (safeHead)
+import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
-import Kernel.Prelude
+import qualified Kernel.Prelude as KP
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Hedis
@@ -75,6 +73,7 @@ import qualified Lib.JourneyModule.Types as JL
 import Lib.JourneyModule.Utils
 import Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfo as GD
+import SharedLogic.FRFSUtils
 import SharedLogic.Search
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
@@ -82,6 +81,7 @@ import Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyExtra as QJourneyExtra
@@ -139,7 +139,7 @@ init journeyReq userPreferences = do
   searchReq <- QSearchRequest.findById journeyReq.parentSearchId >>= fromMaybeM (SearchRequestNotFound journeyReq.parentSearchId.getId)
   let fromLocation = searchReq.fromLocation
   let toLocation = searchReq.toLocation
-  let legsWithContext = zip3 (Nothing : map Just journeyReq.legs) journeyReq.legs (map Just (tail journeyReq.legs) ++ [Nothing])
+  let legsWithContext = zip3 (Nothing : map Just journeyReq.legs) journeyReq.legs (map Just (KP.tail journeyReq.legs) ++ [Nothing])
   legsAndFares <-
     mapWithIndex
       ( \idx (mbPrev, leg, mbNext) -> do
@@ -287,7 +287,7 @@ checkAndMarkTerminalJourneyStatus ::
   m ()
 checkAndMarkTerminalJourneyStatus journey allLegStates = do
   let flattenedLegStates = concatLegStates allLegStates
-      isSingleTaxiJourneyLeg = length flattenedLegStates == 1 && ((listToMaybe flattenedLegStates) <&> (.mode)) == Just DTrip.Taxi -- This Would Be A Single Leg Journey With Only A Taxi Leg.
+      isSingleTaxiJourneyLeg = length flattenedLegStates == 1 && ((KP.listToMaybe flattenedLegStates) <&> (.mode)) == Just DTrip.Taxi -- This Would Be A Single Leg Journey With Only A Taxi Leg.
   go flattenedLegStates isSingleTaxiJourneyLeg
   where
     concatLegStates =
@@ -330,7 +330,7 @@ getAllLegsStatus journey = do
   riderConfig <- getRiderConfig journey
   let busTrackingConfig = fromMaybe defaultBusTrackingConfig riderConfig.busTrackingConfig
   let movementDetected = hasSignificantMovement (map (.latLong) riderLastPoints) busTrackingConfig
-  let legsWithNext = zip allLegsRawData $ map Just (tail allLegsRawData) ++ [Nothing]
+  let legsWithNext = zip allLegsRawData $ map Just (KP.tail allLegsRawData) ++ [Nothing]
   logDebug $ "getAllLegsStatus: legsWithNext: " <> show legsWithNext
   (_, legPairs) <- foldlM (processLeg riderLastPoints movementDetected) (Nothing, []) legsWithNext
   let allLegsState = map snd legPairs
@@ -470,8 +470,35 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
             bookLater = fromMaybe False (mElement <&> (.skipBooking))
         let forcedBooking = Just leg.order == forcedBookedLegOrder
         let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
-        let categorySelectionReq = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.categorySelectionReq)
-        JLI.confirm forcedBooking ticketQuantity childTicketQuantity bookLater leg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer
+        quoteCategories <-
+          case leg.pricingId of
+            Just pricingId -> do
+              QFRFSQuoteCategory.findAllByQuoteId (Id pricingId)
+            Nothing -> do
+              return []
+        let categorySelectionReq =
+              fromMaybe [] $
+                find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.categorySelectionReq)
+        moreCategorySelectionReq <-
+          catMaybes
+            <$> sequence
+              [ case find (\category -> category.category == ADULT) quoteCategories of
+                  Just category ->
+                    return $
+                      case find (\category' -> category'.quoteCategoryId == category.id) categorySelectionReq of
+                        Just _ -> Nothing
+                        Nothing -> ticketQuantity <&> \ticketQuantity' -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.id, quantity = ticketQuantity'}
+                  Nothing -> join <$> mapM (\pricingId -> createFRFSQuoteCategory (Id pricingId) ticketQuantity ADULT) leg.pricingId,
+                case find (\category -> category.category == CHILD) quoteCategories of
+                  Just category ->
+                    return $
+                      case find (\category' -> category'.quoteCategoryId == category.id) categorySelectionReq of
+                        Just _ -> Nothing
+                        Nothing -> childTicketQuantity <&> \childTicketQuantity' -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.id, quantity = childTicketQuantity'}
+                  Nothing -> join <$> mapM (\pricingId -> createFRFSQuoteCategory (Id pricingId) childTicketQuantity CHILD) leg.pricingId
+              ]
+        let updatedCategorySelectionReq = categorySelectionReq <> moreCategorySelectionReq
+        JLI.confirm forcedBooking bookLater leg crisSdkResponse updatedCategorySelectionReq journey.isSingleMode mbEnableOffer
     )
     allLegs
 
@@ -492,7 +519,18 @@ startJourneyLeg legInfo isSingleMode = do
       _ -> return (Nothing, Nothing, Nothing)
   when (legInfo.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]) $ do
     QTBooking.updateOnInitDoneBySearchId (Just False) (Id legInfo.searchId)
-  JLI.confirm True adultTicketQuantity childTicketQuantity False legInfo crisSdkResponse Nothing isSingleMode Nothing -- TODO :: Add category selection req
+  quoteCategories <-
+    case legInfo.pricingId of
+      Just pricingId -> do
+        QFRFSQuoteCategory.findAllByQuoteId (Id pricingId)
+      Nothing -> do
+        return []
+  let updatedCategorySelectionReq =
+        catMaybes
+          [ adultTicketQuantity >>= \adultTicketQuantity' -> find (\category -> category.category == ADULT) quoteCategories <&> (\category -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.id, quantity = adultTicketQuantity'}),
+            childTicketQuantity >>= \childTicketQuantity' -> find (\category -> category.category == CHILD) quoteCategories <&> (\category -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.id, quantity = childTicketQuantity'})
+          ]
+  JLI.confirm True False legInfo crisSdkResponse updatedCategorySelectionReq isSingleMode Nothing
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c,
@@ -633,7 +671,7 @@ snapJourneyLegToNearestGate journeyLeg = do
                   sourceDestinationMapping = Nothing,
                   distanceUnit = Meter
                 }
-          let nearestResp = minimumBy (compare `on` (.distance)) (toList distanceResponses)
+          let nearestResp = minimumBy (compare `on` (.distance)) distanceResponses
           let nearestGateLocation =
                 fromMaybe destLocation $
                   fmap (\g -> LatLngV2 (g.point.lat) (g.point.lon)) $
@@ -1304,7 +1342,7 @@ generateJourneyInfoResponse journey legs = do
   let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
   let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
   let unifiedQR = getUnifiedQR journey legs
-  let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
+  let mbCurrency = KP.listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId
   let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
   let unifiedQRV2 = getUnifiedQRV2 unifiedQR

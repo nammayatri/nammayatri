@@ -6,6 +6,7 @@ module Domain.Types.FRFSTicketCategoryMetadataConfig where
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.FRFSQuoteCategorySpec
+import qualified Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
@@ -13,7 +14,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data FRFSTicketCategoryMetadataConfig = FRFSTicketCategoryMetadataConfig
-  { category :: Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSQuoteCategoryType,
+  { category :: Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType,
     code :: Kernel.Prelude.Text,
     description :: Kernel.Prelude.Text,
     domainCategoryValue :: Domain.Types.FRFSQuoteCategorySpec.OfferedValue,
@@ -27,7 +28,3 @@ data FRFSTicketCategoryMetadataConfig = FRFSTicketCategoryMetadataConfig
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data FRFSQuoteCategoryType = ADULT | CHILD | SENIOR_CITIZEN | STUDENT | FEMALE | MALE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSQuoteCategoryType)

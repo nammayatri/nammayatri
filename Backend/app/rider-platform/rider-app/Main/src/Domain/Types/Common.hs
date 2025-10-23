@@ -10,6 +10,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Domain.Types
 import qualified Domain.Types.BookingStatus as DTBS
 import qualified Domain.Types.EstimateStatus as DTES
+import qualified Domain.Types.FRFSQuoteCategoryType as DTFRFSQuoteCategoryType
 import qualified Domain.Types.FRFSTicketBookingStatus as DTFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DTFRFSTicketStatus
 import qualified Domain.Types.ParcelType as DTPT
@@ -38,5 +39,6 @@ $(mkBeamInstancesForEnum ''DTBS.BookingStatus)
 $(mkBeamInstancesForEnumAndList ''DTRS.RideStatus)
 $(mkBeamInstancesForEnum ''DTFRFSTicketStatus.FRFSTicketStatus)
 $(mkBeamInstancesForEnumAndList ''DTES.EstimateStatus)
+$(mkBeamInstancesForEnumAndList ''DTFRFSQuoteCategoryType.FRFSQuoteCategoryType)
 
 instance CH.ClickhouseValue DTBS.BookingStatus

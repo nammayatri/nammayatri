@@ -22,6 +22,8 @@ import Data.List (groupBy, sortBy)
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import qualified Domain.Types.Extra.IntegratedBPPConfig as DIBCExtra
 import qualified Domain.Types.FRFSQuote as DQuote
+import Domain.Types.FRFSQuoteCategory
+import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.StationType
 import Kernel.External.Maps.Types
@@ -150,15 +152,13 @@ parseFulfillments item fulfillments fulfillmentId = do
       Just _ -> pure $ fromMaybe [] (mkDRouteStations fulfillment stations price fulfillmentId)
       Nothing -> return []
 
-  let category = createDiscount price offerPrice itemCode itemId
+  let category = createCategory price offerPrice itemCode itemId
       categories = [category]
   logDebug $ "Categories from OnSearch: " <> show categories
   return $
     Domain.DQuote
       { bppItemId = itemId,
         routeCode = fulfillmentId,
-        price,
-        childPrice = Nothing,
         vehicleType,
         routeStations,
         stations,
@@ -243,18 +243,23 @@ castQuoteType "RJT" = return DQuote.ReturnJourney
 castQuoteType "PASS" = return DQuote.Pass
 castQuoteType _ = throwError $ InvalidRequest "Invalid quote type"
 
-createDiscount :: Price -> Maybe Price -> Text -> Text -> Domain.DCategory
-createDiscount price offerPrice itemCode itemId = do
+createCategory :: Price -> Maybe Price -> Text -> Text -> Domain.DCategory
+createCategory price offerPrice itemCode itemId = do
   let op = fromMaybe price offerPrice
-  let (code, title, description, tnc) = case itemCode of
-        "SJT" -> ("ADULT", "Adult Discount", "Special discount for adult passengers", "Terms and conditions apply for adult discount")
-        "SFSJT" -> ("FEMALE", "Female Discount", "Special discount for female passengers", "Terms and conditions apply for female discount")
-        _ -> ("ADULT", "Adult Discount", "Special discount for adult passengers", "Terms and conditions apply for adult discount")
+  let (category, code, title, description, tnc) = case itemCode of
+        "SJT" -> (ADULT, "ADULT", "Adult Discount", "Special discount for adult passengers", "Terms and conditions apply for adult discount")
+        "SFSJT" -> (FEMALE, "FEMALE", "Female Discount", "Special discount for female passengers", "Terms and conditions apply for female discount")
+        _ -> (ADULT, "ADULT", "Adult Discount", "Special discount for adult passengers", "Terms and conditions apply for adult discount")
    in Domain.DCategory
-        { code = code,
-          title = title,
-          description = description,
-          tnc = tnc,
+        { category = category,
+          categoryMeta =
+            Just $
+              QuoteCategoryMetadata
+                { code = code,
+                  title = title,
+                  description = description,
+                  tnc = tnc
+                },
           price = price,
           offeredPrice = op,
           bppItemId = itemId,

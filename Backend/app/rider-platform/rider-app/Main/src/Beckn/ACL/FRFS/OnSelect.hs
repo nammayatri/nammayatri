@@ -1,5 +1,6 @@
 module Beckn.ACL.FRFS.OnSelect where
 
+import Beckn.ACL.FRFS.Utils (mkDCategorySelect)
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
@@ -27,32 +28,20 @@ buildOnSelectReq onSelectReq = do
 
   providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "Provider not found")
 
-  item <- order.orderItems >>= listToMaybe & fromMaybeM (InvalidRequest "Item not found")
   let orderItems = fromMaybe [] order.orderItems
-  category <-
-    mapM
-      ( \orderItem -> do
-          bppItemId' <- orderItem.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
-          quantity' <- orderItem.itemQuantity >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybeM (InvalidRequest "Item Quantity not found")
-          return $ DCategorySelect {bppItemId = bppItemId', quantity = quantity'}
-      )
-      orderItems
-  bppItemId <- item.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
+  selectedCategories <- mapM mkDCategorySelect orderItems
 
   quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
   quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
-  totalPrice <- quotation.quotationPrice >>= Utils.parsePrice & fromMaybeM (InvalidRequest "Invalid quotationPrice")
 
   fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
 
   pure $
     DOnSelect
       { providerId = providerId,
-        totalPrice,
         fareBreakUp = fareBreakUp,
-        bppItemId,
         transactionId,
         messageId,
         validTill = ttl,
-        category
+        categories = selectedCategories
       }

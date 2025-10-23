@@ -7,14 +7,14 @@ import qualified BecknV2.FRFS.Enums
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.FRFSQuoteCategorySpec
-import qualified Domain.Types.FRFSTicketCategoryMetadataConfig
+import qualified Domain.Types.FRFSQuoteCategoryType
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FRFSTicketCategoryMetadataConfigT f = FRFSTicketCategoryMetadataConfigT
-  { category :: B.C f Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSQuoteCategoryType,
+  { category :: B.C f Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType,
     code :: B.C f Kernel.Prelude.Text,
     description :: B.C f Kernel.Prelude.Text,
     domainCategoryValue :: B.C f Domain.Types.FRFSQuoteCategorySpec.OfferedValue,
