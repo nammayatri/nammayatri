@@ -26,7 +26,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
 
-findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
 findByBppOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
@@ -57,6 +57,13 @@ updateBppBankDetailsById ::
 updateBppBankDetailsById bppBankAccountNumber bppBankCode id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.bppBankAccountNumber bppBankAccountNumber, Se.Set Beam.bppBankCode bppBankCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateConfirmedPaymentBookingIdById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateConfirmedPaymentBookingIdById confirmedPaymentBookingId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.confirmedPaymentBookingId confirmedPaymentBookingId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateCustomerCancelledByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateCustomerCancelledByBookingId customerCancelled id = do
@@ -159,7 +166,7 @@ updateTotalPriceAndQuantityById ::
 updateTotalPriceAndQuantityById totalPrice quantity childTicketQuantity isFareChanged id = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) totalPrice),
+    [ Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
       Se.Set Beam.price ((.amount) totalPrice),
       Se.Set Beam.quantity quantity,
       Se.Set Beam.childTicketQuantity childTicketQuantity,
@@ -191,6 +198,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.cashbackPayoutOrderId cashbackPayoutOrderId,
       Se.Set Beam.cashbackStatus cashbackStatus,
       Se.Set Beam.childTicketQuantity childTicketQuantity,
+      Se.Set Beam.confirmedPaymentBookingId confirmedPaymentBookingId,
       Se.Set Beam.customerCancelled customerCancelled,
       Se.Set Beam.discountedTickets discountedTickets,
       Se.Set Beam.estimatedPrice (Kernel.Prelude.fmap (.amount) estimatedPrice),
@@ -227,7 +235,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.stationsJson stationsJson,
       Se.Set Beam.status status,
       Se.Set Beam.toStationId toStationCode,
-      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) totalPrice),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
       Se.Set Beam.price ((.amount) totalPrice),
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleType vehicleType,

@@ -5,6 +5,7 @@ import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import Control.Applicative ((<|>))
+import Control.Monad.Extra (mapMaybeM)
 import Data.Aeson (object, withObject, (.:), (.=))
 import qualified Data.HashMap.Strict as HM
 import Data.List (nub)
@@ -361,6 +362,7 @@ data MetroLegExtraInfo = MetroLegExtraInfo
     adultTicketQuantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
     refund :: Maybe LegSplitInfo,
+    refunds :: [LegSplitInfo],
     categories :: [CategoryInfoResponse],
     categoryBookingDetails :: Maybe [CategoryBookingDetails]
   }
@@ -383,6 +385,7 @@ data SubwayLegExtraInfo = SubwayLegExtraInfo
     adultTicketQuantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
     refund :: Maybe LegSplitInfo,
+    refunds :: [LegSplitInfo],
     categories :: [CategoryInfoResponse],
     categoryBookingDetails :: Maybe [CategoryBookingDetails]
   }
@@ -426,6 +429,7 @@ data BusLegExtraInfo = BusLegExtraInfo
     adultTicketQuantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
     refund :: Maybe LegSplitInfo,
+    refunds :: [LegSplitInfo],
     trackingStatus :: JMState.TrackingStatus,
     trackingStatusLastUpdatedAt :: UTCTime,
     fleetNo :: Maybe Text,
@@ -874,32 +878,9 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
       }
   where
     mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters = do
-      mbBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
-      refundBloc <- case mbBookingPayment of
-        Just bookingPayment -> do
-          mbPaymentOrder <- QPaymentOrder.findById bookingPayment.paymentOrderId
-          case mbPaymentOrder of
-            Just paymentOrder -> do
-              refundEntries <- QRefunds.findAllByOrderId paymentOrder.shortId
-              let matchingRefundEntry =
-                    find
-                      ( \refundEntry ->
-                          case refundEntry.split of
-                            Just splits -> any (\split -> split.frfsBookingId == booking.id.getId) splits
-                            Nothing -> False
-                      )
-                      refundEntries
-              case matchingRefundEntry of
-                Just refundEntry -> do
-                  let amount = case refundEntry.split of
-                        Just splits -> find (\split -> split.frfsBookingId == booking.id.getId) splits <&> (.splitAmount)
-                        Nothing -> Just refundEntry.refundAmount
-                  case amount of
-                    Just amount' -> return $ Just $ LegSplitInfo {amount = amount', status = refundEntry.status}
-                    Nothing -> return Nothing
-                Nothing -> return Nothing
-            Nothing -> return Nothing
-        Nothing -> return Nothing
+      bookingPayments <- QFRFSTicketBookingPayment.findAllTBPByBookingId booking.id
+      refunds <- mapMaybeM mkRefundsBlock bookingPayments
+      let refund = listToMaybe refunds
       case booking.vehicleType of
         Spec.METRO -> do
           return $
@@ -914,7 +895,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   ticketNo = Just ticketNo,
                   adultTicketQuantity = fareParameters.adultItem <&> (.quantity),
                   childTicketQuantity = fareParameters.childItem <&> (.quantity),
-                  refund = refundBloc,
+                  refund = refund,
+                  refunds = refunds,
                   categories = categories,
                   categoryBookingDetails = Just categoryBookingDetails
                 }
@@ -947,7 +929,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   ticketNo = Just ticketNo,
                   adultTicketQuantity = fareParameters.adultItem <&> (.quantity),
                   childTicketQuantity = fareParameters.childItem <&> (.quantity),
-                  refund = refundBloc,
+                  refund,
+                  refunds,
                   trackingStatus = journeyLegDetail.trackingStatus,
                   trackingStatusLastUpdatedAt = journeyLegDetail.trackingStatusLastUpdatedAt,
                   fleetNo = journeyLeg.finalBoardedBusNumber,
@@ -990,10 +973,35 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   ticketNo = Just ticketNo,
                   adultTicketQuantity = fareParameters.adultItem <&> (.quantity),
                   childTicketQuantity = fareParameters.childItem <&> (.quantity),
-                  refund = refundBloc,
+                  refund,
+                  refunds,
                   categories = categories,
                   categoryBookingDetails = Just categoryBookingDetails
                 }
+
+    mkRefundsBlock bookingPayment = do
+      mbPaymentOrder <- QPaymentOrder.findById bookingPayment.paymentOrderId
+      case mbPaymentOrder of
+        Just paymentOrder -> do
+          refundEntries <- QRefunds.findAllByOrderId paymentOrder.shortId
+          let matchingRefundEntry =
+                find
+                  ( \refundEntry ->
+                      case refundEntry.split of
+                        Just splits -> any (\split -> split.frfsBookingId == booking.id.getId) splits
+                        Nothing -> False
+                  )
+                  refundEntries
+          case matchingRefundEntry of
+            Just refundEntry -> do
+              let amount = case refundEntry.split of
+                    Just splits -> find (\split -> split.frfsBookingId == booking.id.getId) splits <&> (.splitAmount)
+                    Nothing -> Just refundEntry.refundAmount
+              case amount of
+                Just amount' -> return $ Just $ LegSplitInfo {amount = amount', status = refundEntry.status}
+                Nothing -> return Nothing
+            Nothing -> return Nothing
+        Nothing -> return Nothing
 
 -- safeDiv :: (Eq a, Fractional a) => a -> a -> a
 -- safeDiv x 0 = x
@@ -1118,6 +1126,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
                   adultTicketQuantity = mbFareParameters >>= (.adultItem) <&> (.quantity),
                   childTicketQuantity = mbFareParameters >>= (.childItem) <&> (.quantity),
                   refund = Nothing,
+                  refunds = [],
                   categories = categories,
                   categoryBookingDetails = Nothing
                 }
@@ -1148,6 +1157,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
                   adultTicketQuantity = mbFareParameters >>= (.adultItem) <&> (.quantity),
                   childTicketQuantity = mbFareParameters >>= (.childItem) <&> (.quantity),
                   refund = Nothing,
+                  refunds = [],
                   trackingStatus = journeyLegDetail.trackingStatus,
                   trackingStatusLastUpdatedAt = journeyLegDetail.trackingStatusLastUpdatedAt,
                   fleetNo = journeyLeg.finalBoardedBusNumber,
@@ -1187,6 +1197,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
                   adultTicketQuantity = mbFareParameters >>= (.adultItem) <&> (.quantity),
                   childTicketQuantity = mbFareParameters >>= (.childItem) <&> (.quantity),
                   refund = Nothing,
+                  refunds = [],
                   categories = categories,
                   categoryBookingDetails = Nothing
                 }

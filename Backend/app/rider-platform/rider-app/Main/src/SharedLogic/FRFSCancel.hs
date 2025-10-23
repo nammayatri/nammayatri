@@ -7,7 +7,6 @@ import qualified Domain.Action.Beckn.FRFS.GWLink as GWLink
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
-import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
@@ -26,7 +25,6 @@ import qualified Lib.JourneyModule.State.Types as JMState
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.BecknConfig as CQBC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -71,14 +69,12 @@ handleCancelledStatus merchant booking refundAmount cancellationCharges messageI
       void $ QTBooking.updateStatusById DFRFSTicketBooking.CANCELLED booking.id
       void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
-      void $ QTBP.updateStatusByTicketBookingId DTBP.REFUND_PENDING booking.id
       void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
       void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
       void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
       cancelJourney booking
-      riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-      when riderConfig.enableAutoJourneyRefund $
-        FRFSUtils.markAllRefundBookings booking booking.riderId
+      bookingPayment <- QTBP.findTBPForConfirmBooking booking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
+      FRFSUtils.markAllRefundBookings booking bookingPayment booking.riderId
   void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId
   void $ sendTicketCancelSMS mRiderNumber person.mobileCountryCode booking fareParameters

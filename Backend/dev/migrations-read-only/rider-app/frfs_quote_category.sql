@@ -37,3 +37,8 @@ ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN ticket_category_metadata_
 ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN ticket_category_metadata_config_id DROP NOT NULL;
 
 
+
+
+
+------- SQL updates -------
+

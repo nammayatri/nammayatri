@@ -5,7 +5,7 @@ import qualified Beckn.OnDemand.Utils.Common as UCommon
 import BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
-import Control.Monad.Extra (mapMaybeM)
+import Control.Monad.Extra (concatMapM, mapMaybeM)
 import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, nub, sort, sortBy)
@@ -1206,7 +1206,7 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
   frfsConfig <-
     CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
-  frfsBookingsPayments <- mapMaybeM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
+  frfsBookingsPayments <- concatMapM (QFRFSTicketBookingPayment.findAllTBPByBookingId . (.id)) bookings
   (vendorSplitDetails, amountUpdated) <- createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
   isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing paymentType -- TODO :: You can be moved inside :)
   isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId merchantOperatingCityId Nothing paymentType

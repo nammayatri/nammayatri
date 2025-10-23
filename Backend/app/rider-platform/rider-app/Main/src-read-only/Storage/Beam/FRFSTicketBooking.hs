@@ -29,6 +29,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     cashbackPayoutOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cashbackStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.CashbackStatus),
     childTicketQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    confirmedPaymentBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     customerCancelled :: B.C f Kernel.Prelude.Bool,
     discountedTickets :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     estimatedPrice :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

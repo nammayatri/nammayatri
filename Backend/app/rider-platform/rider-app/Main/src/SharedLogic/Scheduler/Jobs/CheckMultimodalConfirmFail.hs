@@ -25,11 +25,9 @@ import Lib.Scheduler
 import SharedLogic.FRFSUtils as FRFSUtils
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
-import Tools.Error
 
 checkMultimodalConfirmFailJob ::
   ( EncFlow m r,
@@ -48,16 +46,17 @@ checkMultimodalConfirmFailJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest $ "booking not found for id: " <> show bookingId)
   frfsTickets <- QFRFSTicket.findAllByTicketBookingId bookingId
 
-  paymentBooking <- QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId
+  bookingPayments <- QFRFSTicketBookingPayment.findAllTBPByBookingId bookingId
 
-  let isPaymentInTerminalState = case paymentBooking of
-        Just pb -> pb.status == DFRFSTicketBookingPayment.SUCCESS || pb.status == DFRFSTicketBookingPayment.REFUND_PENDING
-        Nothing -> False
+  mapM_
+    ( \bookingPayment -> do
+        when ((booking.status == DFRFSTicketBooking.FAILED || null frfsTickets) && isBookingPaymentInTerminalState bookingPayment) $ do
+          FRFSUtils.markAllRefundBookings booking bookingPayment booking.riderId
+    )
+    bookingPayments
 
-  if ((booking.status == DFRFSTicketBooking.FAILED || null frfsTickets) && isPaymentInTerminalState)
-    then do
-      riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-      when riderConfig.enableAutoJourneyRefund $
-        FRFSUtils.markAllRefundBookings booking booking.riderId
-      return Complete
-    else return Complete
+  if all isBookingPaymentInTerminalState bookingPayments
+    then return Complete
+    else return Complete -- TODO :: We should do some retry in this case till payment booking is made terminal.
+  where
+    isBookingPaymentInTerminalState bookingPayment = bookingPayment.status `elem` [DFRFSTicketBookingPayment.SUCCESS, DFRFSTicketBookingPayment.REFUND_PENDING]

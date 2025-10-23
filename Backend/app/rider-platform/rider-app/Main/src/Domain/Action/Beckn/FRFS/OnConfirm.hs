@@ -33,7 +33,6 @@ import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
-import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as Booking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -45,7 +44,6 @@ import Environment
 import EulerHS.Prelude ((+||), (||+))
 import ExternalBPP.CallAPI
 import Kernel.Beam.Functions
-import Kernel.Beam.Functions as B
 import Kernel.External.Encryption as ENC
 import Kernel.Prelude as Prelude hiding (lookup)
 import Kernel.Types.Error
@@ -60,7 +58,6 @@ import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
@@ -90,7 +87,7 @@ validateRequest DOrder {..} = do
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  bookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
+  bookingPayment <- QFRFSTicketBookingPayment.findTBPForConfirmBooking booking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
   now <- getCurrentTime
   if booking.validTill < now
     then do
@@ -99,10 +96,7 @@ validateRequest DOrder {..} = do
       merchantOperatingCity <- QMerchOpCity.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
       bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:- " <> merchantId.getId)
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
-      void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING bookingPayment.id
-      riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-      when riderConfig.enableAutoJourneyRefund $
-        FRFSUtils.markAllRefundBookings booking booking.riderId
+      FRFSUtils.markAllRefundBookings booking bookingPayment booking.riderId
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
       void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking
       throwM $ InvalidRequest "Booking expired, initated cancel request"
@@ -113,12 +107,9 @@ onConfirmFailure bapConfig ticketBooking = do
   logInfo $ "onConfirmFailure: " <> show ticketBooking
   merchant <- QMerch.findById ticketBooking.merchantId >>= fromMaybeM (MerchantNotFound ticketBooking.merchantId.getId)
   merchantOperatingCity <- QMerchOpCity.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound ticketBooking.merchantOperatingCityId.getId)
-  bookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId ticketBooking.id >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBooking.id.getId)
+  bookingPayment <- QFRFSTicketBookingPayment.findTBPForConfirmBooking ticketBooking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBooking.id.getId)
   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED ticketBooking.id
-  void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING bookingPayment.id
-  riderConfig <- QRC.findByMerchantOperatingCityId ticketBooking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist ticketBooking.merchantOperatingCityId.getId)
-  when riderConfig.enableAutoJourneyRefund $
-    FRFSUtils.markAllRefundBookings ticketBooking ticketBooking.riderId
+  FRFSUtils.markAllRefundBookings ticketBooking bookingPayment ticketBooking.riderId
   void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking
 
 onConfirm :: Merchant -> Booking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> DOrder -> Flow ()
@@ -188,8 +179,8 @@ buildReconTable merchant booking fareParameters _dOrder tickets mRiderNumber int
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   transactionRefNumber <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Txn Id not found in booking")
   txn <- runInReplica $ QPaymentTransaction.findById (Id transactionRefNumber) >>= fromMaybeM (InvalidRequest "Payment Transaction not found for approved TicketBookingId")
-  paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
-  let paymentBookingStatus = paymentBooking.status
+  bookingPayment <- QFRFSTicketBookingPayment.findTBPForConfirmBooking booking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
+  let paymentBookingStatus = bookingPayment.status
   now <- getCurrentTime
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id not found in booking")
   let finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee -- FIXME
