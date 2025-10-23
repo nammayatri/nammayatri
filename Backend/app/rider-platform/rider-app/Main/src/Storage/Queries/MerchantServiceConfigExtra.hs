@@ -98,6 +98,7 @@ getServiceNameConfigJSON = \case
     Sms.GupShupConfig cfg -> (Domain.SmsService Sms.GupShup, toJSON cfg)
     Sms.TwillioSmsConfig cfg -> (Domain.SmsService Sms.TwillioSms, toJSON cfg)
     Sms.DigoEngageSmsConfig cfg -> (Domain.SmsService Sms.DigoEngage, toJSON cfg)
+    Sms.KarixSmsConfig cfg -> (Domain.SmsService Sms.KarixSms, toJSON cfg)
     Sms.VonageSmsConfig cfg -> (Domain.SmsService Sms.VonageSms, toJSON cfg)
     Sms.KarixSmsConfig cfg -> (Domain.SmsService Sms.KarixSms, toJSON cfg)
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
