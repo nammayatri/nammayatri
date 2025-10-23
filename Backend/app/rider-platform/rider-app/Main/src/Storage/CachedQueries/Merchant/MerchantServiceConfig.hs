@@ -93,6 +93,7 @@ cacheMerchantServiceConfig merchantServiceConfig = do
         Sms.GupShupConfig _ -> SmsService Sms.GupShup
         Sms.TwillioSmsConfig _ -> SmsService Sms.TwillioSms
         Sms.DigoEngageSmsConfig _ -> SmsService Sms.DigoEngage
+        Sms.KarixSmsConfig _ -> SmsService Sms.KarixSms
         Sms.VonageSmsConfig _ -> SmsService Sms.VonageSms
       WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
         Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
