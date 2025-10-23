@@ -608,7 +608,7 @@ cancellationChargesWaiveOff merchantShortId _ reqRideId = do
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (merchant.id == booking.merchantId) $
     throwError (RideDoesNotExist rideId.getId)
-  fareBreakup <- B.runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE
+  fareBreakup <- B.runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
   let cancellationCharges = filter (\fareBreakup' -> fareBreakup'.description == "CANCELLATION_CHARGES") fareBreakup
   case listToMaybe cancellationCharges of
     Just entity -> do
@@ -627,7 +627,7 @@ cancellationChargesWaiveOff merchantShortId _ reqRideId = do
                   logError $ "CancellationChargesWaiveOff: Failed to waive off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges <> " with error: " <> show err
                   return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
             else do
-              logInfo $ "CancellationChargesWaiveOff: No cancellation charges found for rideId: " <> rideId.getId
+              logInfo $ "CancellationChargesWaiveOff: No non-zero cancellation charges found for rideId: " <> rideId.getId
               return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
         _ -> do
           logInfo $ "CancellationChargesWaiveOff: No bppBookingId found for rideId: " <> rideId.getId
