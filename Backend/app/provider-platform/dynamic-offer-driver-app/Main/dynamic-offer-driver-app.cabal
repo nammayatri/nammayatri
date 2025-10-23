@@ -145,6 +145,7 @@ library
       Domain.Action.Dashboard.AppManagement.Driver
       Domain.Action.Dashboard.AppManagement.DriverSubscription
       Domain.Action.Dashboard.AppManagement.Overlay
+      Domain.Action.Dashboard.AppManagement.Penalty
       Domain.Action.Dashboard.AppManagement.Subscription
       Domain.Action.Dashboard.Common
       Domain.Action.Dashboard.Driver.Notification
@@ -371,7 +372,6 @@ library
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
-      SharedLogic.Allocator.Jobs.ProcessCancellationPenaltyStatus
       SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver
@@ -754,6 +754,7 @@ library
       API.Action.Dashboard.AppManagement.Driver
       API.Action.Dashboard.AppManagement.DriverSubscription
       API.Action.Dashboard.AppManagement.Overlay
+      API.Action.Dashboard.AppManagement.Penalty
       API.Action.Dashboard.AppManagement.Subscription
       API.Action.Dashboard.Fleet
       API.Action.Dashboard.Fleet.Driver
@@ -828,8 +829,10 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.Driver
       API.Types.Dashboard.AppManagement.Endpoints.DriverSubscription
       API.Types.Dashboard.AppManagement.Endpoints.Overlay
+      API.Types.Dashboard.AppManagement.Endpoints.Penalty
       API.Types.Dashboard.AppManagement.Endpoints.Subscription
       API.Types.Dashboard.AppManagement.Overlay
+      API.Types.Dashboard.AppManagement.Penalty
       API.Types.Dashboard.AppManagement.Subscription
       API.Types.Dashboard.RideBooking
       API.Types.Dashboard.RideBooking.Driver

@@ -15,13 +15,11 @@
 module SharedLogic.DriverCancellationPenalty
   ( mkCancellationPenaltyFee,
     accumulateCancellationPenalty,
-    scheduleStatusTransitionJobs,
   )
 where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
-import qualified Data.Map as M
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Merchant as DMerc
@@ -38,11 +36,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Scheduler
-import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
-import SharedLogic.Allocator
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.Beam.SchedulerJob ()
@@ -133,10 +128,6 @@ accumulateCancellationPenalty ::
     CacheFlow m r,
     EsqDBFlow m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime,
-    HasField "jobInfoMap" r (M.Map Text Bool),
-    HasField "maxShards" r Int,
-    HasField "schedulerSetName" r Text,
-    HasField "schedulerType" r SchedulerType,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasHttpClientOptions r c,
@@ -168,8 +159,8 @@ accumulateCancellationPenalty booking ride rideTags transporterConfig = do
           QDF.findOngoingCancellationPenaltyFeeByDriverIdAndServiceName
             (cast ride.driverId)
             DPlan.YATRI_SUBSCRIPTION
+            booking.providerId
             booking.merchantOperatingCityId
-            False
             now
         case existingCancellationFee of
           Just existingFee -> do
@@ -179,7 +170,7 @@ accumulateCancellationPenalty booking ride rideTags transporterConfig = do
                   newNumRides = existingFee.numRides + 1
               QDF.updateCancellationPenaltyAmountAndNumRides existingFee.id newAmount newNumRides now
           Nothing -> do
-            (disputeEndTime, newFee) <-
+            (_, newFee) <-
               mkCancellationPenaltyFee
                 now
                 booking.providerId
@@ -193,7 +184,6 @@ accumulateCancellationPenalty booking ride rideTags transporterConfig = do
               "Created new CANCELLATION_PENALTY DriverFee " <> newFee.id.getId
                 <> " for ₹"
                 <> show penaltyAmount
-            scheduleStatusTransitionJobs newFee disputeEndTime booking.providerId booking.merchantOperatingCityId
       Nothing ->
         logError $
           "Penalty tag present but driverCancellationPenaltyAmount is Nothing for ride "
@@ -201,47 +191,3 @@ accumulateCancellationPenalty booking ride rideTags transporterConfig = do
 
 cancellationPenaltyLockKey :: Text -> Text
 cancellationPenaltyLockKey id' = "Driver:Cancellation:Penalty:DriverFeeId-" <> id'
-
-scheduleStatusTransitionJobs ::
-  ( MonadFlow m,
-    EncFlow m r,
-    EsqDBReplicaFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    HasField "searchRequestExpirationSeconds" r NominalDiffTime,
-    HasField "jobInfoMap" r (M.Map Text Bool),
-    HasField "maxShards" r Int,
-    HasField "schedulerSetName" r Text,
-    HasField "schedulerType" r SchedulerType,
-    Metrics.HasSendSearchRequestToDriverMetrics m r,
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasHttpClientOptions r c,
-    HasLongDurationRetryCfg r c,
-    HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    TranslateFlow m r,
-    LT.HasLocationService m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    HasShortDurationRetryCfg r c,
-    Redis.HedisFlow m r,
-    EventStreamFlow m r,
-    Metrics.HasCoreMetrics r,
-    HasShortDurationRetryCfg r c
-  ) =>
-  DF.DriverFee ->
-  UTCTime ->
-  Id DMerc.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  m ()
-scheduleStatusTransitionJobs newFee disputeEndTime merchantId mocId = do
-  now <- getCurrentTime
-  createJobIn @_ @'ProcessCancellationPenaltyStatus (Just merchantId) (Just mocId) (diffUTCTime newFee.endTime now) $
-    ProcessCancellationPenaltyStatusJobData
-      { merchantId = merchantId,
-        merchantOperatingCityId = Just mocId,
-        driverFeeId = newFee.id.getId,
-        disputeEndTime = disputeEndTime,
-        targetStatus = "IN_DISPUTE_WINDOW"
-      }

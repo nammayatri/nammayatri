@@ -16,6 +16,7 @@ module SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
   ( calculateDriverFeeForDrivers,
     sendManualPaymentLink,
     getsetManualLinkErrorTrackingKey,
+    updateCancellationPenaltyAccumulationFees,
   )
 where
 
@@ -108,6 +109,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
     driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig recalculateManualReview subscriptionConfigs
+    updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchant.id merchantOpCityId
     let threshold = transporterConfig.driverFeeRetryThresholdConfig
     driverFeesToProccess <-
       mapMaybeM
@@ -145,7 +147,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             let numRidesForPlanCharges = calcNumRides driverFee transporterConfig - plan.freeRideCount
 
             --------- find all payment pending cancellation penalties ------------
-            cancellationPenalties <- QDF.findPendingCancellationPenaltiesForDriver (cast driverFee.driverId) serviceName
+            cancellationPenalties <- QDF.findPendingCancellationPenaltiesForDriver (cast driverFee.driverId) serviceName merchant.id merchantOpCityId
             let totalCancellationPenalty = sum $ map (\cp -> roundToHalf cp.currency $ fromMaybe 0 cp.cancellationPenaltyAmount) cancellationPenalties
             driverFeeWithPenalties <-
               if totalCancellationPenalty > 0
@@ -907,3 +909,17 @@ makeVendorFeeForCancellationPenalty driverFee subscriptionConfig transporterConf
             updatedAt = driverFee.updatedAt
           }
   QVF.create vendorFee
+
+updateCancellationPenaltyAccumulationFees :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) => ServiceNames -> TransporterConfig -> Id Merchant -> Id MerchantOperatingCity -> m ()
+updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchantId merchantOperatingCityId = do
+  now <- getCurrentTime
+  QDF.moveCancellationPenaltiesToIndisputeWindow serviceName merchantId merchantOperatingCityId
+  let disputeWindowSeconds = secondsToNominalDiffTime $ fromMaybe (Seconds 172800) transporterConfig.cancellationFeeDisputeWindow
+  disputePenalties <- QDF.findAllCancellationPenaltiesInDisputeWindow serviceName merchantId merchantOperatingCityId
+  forM_ disputePenalties $ \penalty -> do
+    let disputeEndTime = addUTCTime disputeWindowSeconds penalty.endTime
+    when (now >= disputeEndTime) $ do
+      let penaltyAmount = fromMaybe 0.0 penalty.cancellationPenaltyAmount
+          amountWithGst = penaltyAmount * 1.18
+      QDF.moveCancellationPenaltyToPaymentPending penalty.id amountWithGst
+  logInfo $ "updateCancellationPenaltyAccumulationFees: Processed cancellation penalty status changes for service: " <> show serviceName <> " merchant: " <> merchantId.getId <> " operatingCity: " <> merchantOperatingCityId.getId
