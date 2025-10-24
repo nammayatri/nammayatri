@@ -689,6 +689,6 @@ customerCancellationDuesWaiveOff ::
   Text ->
   HighPrecMoney ->
   m APISuccess
-customerCancellationDuesWaiveOff apiKey internalUrl merchantId bookingId rideId waivedOffAmount = do
+customerCancellationDuesWaiveOff apiKey internalUrl merchantId bookingId rideId waiveOffAmount = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (customerCancellationDuesWaiveOffClient merchantId (Just apiKey) (CustomerCancellationDuesWaiveOffReq bookingId rideId waivedOffAmount)) "CustomerCancellationDuesWaiveOff" customerCancellationDuesWaiveOffApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (customerCancellationDuesWaiveOffClient merchantId (Just apiKey) (CustomerCancellationDuesWaiveOffReq rideId bookingId waiveOffAmount)) "CustomerCancellationDuesWaiveOff" customerCancellationDuesWaiveOffApi

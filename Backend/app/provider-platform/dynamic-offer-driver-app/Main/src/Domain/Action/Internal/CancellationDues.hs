@@ -23,7 +23,7 @@ import Tools.Error
 data CustomerCancellationDuesWaiveOffReq = CustomerCancellationDuesWaiveOffReq
   { rideId :: Text,
     bookingId :: Text,
-    waivedOffAmount :: HighPrecMoney
+    waiveOffAmount :: HighPrecMoney
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -40,11 +40,11 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
   riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
-  logInfo $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waivedOffAmount " <> show req.waivedOffAmount <> " cancellationDues " <> show booking.fareParams.customerCancellationDues
-  unless (booking.fareParams.customerCancellationDues == Just req.waivedOffAmount) $ do
-    logWarning $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waivedOffAmount " <> show req.waivedOffAmount <> " cancellationDues " <> show booking.fareParams.customerCancellationDues
-    throwError $ InvalidRequest $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waivedOffAmount " <> show req.waivedOffAmount <> " cancellationDues " <> show booking.fareParams.customerCancellationDues <> " and riderDetails.cancellationDues " <> show riderDetails.cancellationDues
-  when (riderDetails.cancellationDues < req.waivedOffAmount) $
+  logInfo $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show booking.fareParams.customerCancellationDues
+  unless (booking.fareParams.customerCancellationDues == Just req.waiveOffAmount) $ do
+    logWarning $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show booking.fareParams.customerCancellationDues
+    throwError $ InvalidRequest $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show booking.fareParams.customerCancellationDues <> " and riderDetails.cancellationDues " <> show riderDetails.cancellationDues
+  when (riderDetails.cancellationDues < req.waiveOffAmount) $
     throwError $ InvalidRequest $ "Cancellation Due Amount is less than the waived off amount for riderId " <> riderDetails.id.getId
   let logicInput =
         UserCancellationDues.UserCancellationDuesWaiveOffData
@@ -58,7 +58,7 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
             noOfTimesWaiveOffUsed = riderDetails.noOfTimesWaiveOffUsed,
             noOfTimesCanellationDuesPaid = riderDetails.noOfTimesCanellationDuesPaid,
             waivedOffAmount = riderDetails.waivedOffAmount,
-            currentWaivingOffAmount = req.waivedOffAmount
+            currentWaivingOffAmount = req.waiveOffAmount
           }
   canWaiveOffResult <-
     if transporterConfig.canAddCancellationFee
@@ -81,8 +81,8 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
       else return False
 
   when canWaiveOffResult $ do
-    QRD.updateWaivedOffAmount req.waivedOffAmount riderDetails.id.getId
+    QRD.updateWaivedOffAmount req.waiveOffAmount riderDetails.id.getId
     QRD.updateNoOfTimesWaiveOffUsed riderDetails.id.getId
-    QRD.updateCancellationDues (riderDetails.cancellationDues - req.waivedOffAmount) riderDetails.id
-  when (not canWaiveOffResult) $ throwError $ InvalidRequest $ "Failed to waive off cancellation dues for riderId from jsonLogic - " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waivedOffAmount " <> show req.waivedOffAmount
+    QRD.updateCancellationDues (riderDetails.cancellationDues - req.waiveOffAmount) riderDetails.id
+  when (not canWaiveOffResult) $ throwError $ InvalidRequest $ "Failed to waive off cancellation dues for riderId from jsonLogic - " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount
   return $ Success
