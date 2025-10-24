@@ -42,10 +42,10 @@ tfFulfillment SLS.SearchRes {..} = do
       fulfillmentId_ = Nothing
       fulfillmentState_ = Nothing
       fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops origin stops startTime
-      fulfillmentTags_ = Tags.convertToTagGroup . (.fulfillmentTags) =<< taggings
+      fulfillmentTags_ = Nothing
       fulfillmentType_ = Nothing
       fulfillmentVehicle_ = Nothing
-      fulfillmentCustomer_ = tfCustomer taggings
+      fulfillmentCustomer_ = Nothing
       returnData = BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing

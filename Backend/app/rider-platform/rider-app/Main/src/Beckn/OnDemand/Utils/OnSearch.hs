@@ -39,13 +39,14 @@ import Kernel.Utils.Common
 import Tools.Error
 
 getProviderName :: MonadFlow m => Spec.OnSearchReq -> m Text
-getProviderName req =
-  req.onSearchReqMessage
-    >>= (.onSearchReqMessageCatalog.catalogProviders)
-    >>= safeHead
-    >>= (.providerDescriptor)
-    >>= (.descriptorName)
-    & fromMaybeM (InvalidRequest "Missing Provider Name")
+getProviderName req = do
+  pure $
+    fromMaybe "Unknown Provider" $
+      req.onSearchReqMessage
+        >>= (.onSearchReqMessageCatalog.catalogProviders)
+        >>= safeHead
+        >>= (.providerDescriptor)
+        >>= (.descriptorName)
 
 getQuoteFulfillmentId :: MonadFlow m => Spec.Item -> m Text
 getQuoteFulfillmentId item =

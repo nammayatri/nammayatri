@@ -75,22 +75,15 @@ mkPayment' ::
   Maybe TxnId ->
   Maybe BknPaymentParams ->
   Spec.Payment
-mkPayment' allPaymentTags collectedBy paymentStatus mPrice mTxnId mPaymentParams = do
-  let mAmount = show . (.amount) <$> mPrice
-  let mCurrency = show . (.currency) <$> mPrice
+mkPayment' allPaymentTags collectedBy _paymentStatus _mPrice mTxnId _mPaymentParams =
   Spec.Payment
-    { paymentCollectedBy = Just collectedBy,
+    { paymentCollectedBy = Just collectedBy, -- Mandatory per ONDC spec
       paymentId = mTxnId,
-      paymentParams =
-        if anyTrue [isJust mTxnId, isJust mAmount, isJust mPaymentParams]
-          then Just $ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency
-          else Nothing,
-      paymentStatus = encodeToText' paymentStatus,
+      paymentParams = Nothing, -- Not sent in search requests
+      paymentStatus = Nothing, -- Not allowed in search requests per ONDC validation
       paymentTags = Tag.convertToTagGroup allPaymentTags,
-      paymentType = encodeToText' Spec.ON_FULFILLMENT
+      paymentType = Nothing -- Not sent in search requests
     }
-  where
-    anyTrue = or
 
 mkPaymentParams :: Maybe BknPaymentParams -> Maybe TxnId -> Maybe Text -> Maybe Text -> Spec.PaymentParams
 mkPaymentParams mPaymentParams _mTxnId mAmount mCurrency = do
@@ -121,7 +114,7 @@ mkBuyerFinderFeeTagGroup mbff =
               descriptorName = Nothing,
               descriptorShortDesc = Nothing
             },
-      tagGroupDisplay = Just False,
+      tagGroupDisplay = Nothing,
       tagGroupList = Just [feePercentage]
     }
   where
@@ -135,7 +128,7 @@ mkBuyerFinderFeeTagGroup mbff =
                   descriptorShortDesc = Nothing
                 },
           tagValue = Just $ fromMaybe "0" mbff,
-          tagDisplay = Just False
+          tagDisplay = Nothing
         }
 
 mkSettlementTagGroup :: City -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Spec.TagGroup
@@ -148,7 +141,7 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
               descriptorName = Nothing,
               descriptorShortDesc = Nothing
             },
-      tagGroupDisplay = Just False,
+      tagGroupDisplay = Nothing,
       tagGroupList = Just settlementTags
     }
   where
@@ -164,7 +157,7 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
                         descriptorShortDesc = Nothing
                       },
                 tagValue = Just samount,
-                tagDisplay = Just False
+                tagDisplay = Nothing
               },
           Just $
             Spec.Tag
@@ -176,7 +169,7 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
                         descriptorShortDesc = Nothing
                       },
                 tagValue = Just $ fromMaybe "PT1D" mSettlementWindow,
-                tagDisplay = Just False
+                tagDisplay = Nothing
               },
           Just $
             Spec.Tag
@@ -188,7 +181,7 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
                         descriptorShortDesc = Nothing
                       },
                 tagValue = Just "0",
-                tagDisplay = Just False
+                tagDisplay = Nothing
               },
           Just $
             Spec.Tag
@@ -200,7 +193,7 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
                         descriptorShortDesc = Nothing
                       },
                 tagValue = Just "INVOICE_RECIEPT",
-                tagDisplay = Just False
+                tagDisplay = Nothing
               },
           Just $
             Spec.Tag
@@ -212,7 +205,7 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
                         descriptorShortDesc = Nothing
                       },
                 tagValue = Just "TRUE",
-                tagDisplay = Just False
+                tagDisplay = Nothing
               },
           Just $
             Spec.Tag
@@ -224,7 +217,7 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
                         descriptorShortDesc = Nothing
                       },
                 tagValue = Just txnCity,
-                tagDisplay = Just False
+                tagDisplay = Nothing
               },
           Just $
             Spec.Tag
@@ -236,7 +229,7 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
                         descriptorShortDesc = Nothing
                       },
                 tagValue = Just $ maybe "https://api.example-bap.com/booking/terms" showBaseUrl mSettlementTermsUrl,
-                tagDisplay = Just False
+                tagDisplay = Nothing
               }
         ]
 
@@ -252,7 +245,7 @@ mkSettlementDetailsTagGroup mSettlementType = do
                 descriptorName = Nothing,
                 descriptorShortDesc = Nothing
               },
-        tagGroupDisplay = Just False,
+        tagGroupDisplay = Nothing,
         tagGroupList = Just [stTag st]
       }
   where
@@ -266,7 +259,7 @@ mkSettlementDetailsTagGroup mSettlementType = do
                   descriptorShortDesc = Nothing
                 },
           tagValue = Just st,
-          tagDisplay = Just False
+          tagDisplay = Nothing
         }
 
 encodeToText' :: (ToJSON a) => a -> Maybe Text

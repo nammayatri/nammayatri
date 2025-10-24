@@ -99,7 +99,7 @@ data BecknTagGroup
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
-  getFullTagGroup tagGroup tags = Spec.TagGroup (Just $ getTagGroupDescriptor tagGroup) (Just $ getTagGroupDisplay tagGroup) (if null tags then Nothing else Just tags)
+  getFullTagGroup tagGroup tags = Spec.TagGroup (Just $ getTagGroupDescriptor tagGroup) Nothing (if null tags then Nothing else Just tags)
 
   getTagGroupDisplay = \case
     _ -> False -- All tags are display False by default
@@ -527,7 +527,7 @@ instance CompleteTag BecknTag where
     NYREGULAR_SUBSCRIPTION_CHARGE -> (Just "NYRegular subscription charge", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
-  getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
+  getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) Nothing
 
   getTagGroup = \case
     DISTANCE_INFO_IN_M -> ROUTE_INFO

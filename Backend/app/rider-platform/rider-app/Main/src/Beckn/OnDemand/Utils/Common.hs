@@ -50,7 +50,7 @@ mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m K
 mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId.getId)
 
 mkStops :: SLS.SearchReqLocation -> [SLS.SearchReqLocation] -> UTCTime -> Maybe [Spec.Stop]
-mkStops origin stops startTime =
+mkStops origin stops _startTime =
   let originGps = Gps.Gps {lat = origin.gps.lat, lon = origin.gps.lon}
       destinationGps dest = Gps.Gps {lat = dest.gps.lat, lon = dest.gps.lon}
       destination = [KP.last stops | not (null stops)]
@@ -60,20 +60,20 @@ mkStops origin stops startTime =
               { stopLocation =
                   Just $
                     Spec.Location
-                      { locationAddress = Just $ mkAddress origin.address,
-                        locationAreaCode = origin.address.areaCode,
-                        locationCity = Just $ Spec.City Nothing origin.address.city,
-                        locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                      { locationAddress = Nothing,
+                        locationAreaCode = Nothing,
+                        locationCity = Nothing,
+                        locationCountry = Nothing,
                         locationGps = Utils.gpsToText originGps,
-                        locationState = Just $ Spec.State origin.address.state,
+                        locationState = Nothing,
                         locationUpdatedAt = Nothing,
                         locationId = Nothing
                       },
                 stopType = Just $ show Enums.START,
                 stopAuthorization = Nothing,
-                stopId = Just "0",
+                stopId = Nothing,
                 stopParentStopId = Nothing,
-                stopTime = Just Spec.Time {timeTimestamp = Just startTime, timeDuration = Nothing}
+                stopTime = Nothing
               }
           ]
             <> ( ( \stop ->
@@ -81,20 +81,20 @@ mkStops origin stops startTime =
                        { stopLocation =
                            Just $
                              Spec.Location
-                               { locationAddress = Just $ mkAddress stop.address,
-                                 locationAreaCode = stop.address.areaCode,
-                                 locationCity = Just $ Spec.City Nothing stop.address.city,
-                                 locationCountry = Just $ Spec.Country Nothing stop.address.country,
+                               { locationAddress = Nothing,
+                                 locationAreaCode = Nothing,
+                                 locationCity = Nothing,
+                                 locationCountry = Nothing,
                                  locationGps = Utils.gpsToText $ destinationGps stop,
-                                 locationState = Just $ Spec.State stop.address.state,
+                                 locationState = Nothing,
                                  locationId = Nothing,
                                  locationUpdatedAt = Nothing
                                },
                          stopType = Just $ show Enums.END,
                          stopAuthorization = Nothing,
                          stopTime = Nothing,
-                         stopId = Just $ show (length intermediateStops + 1),
-                         stopParentStopId = Just $ show (length intermediateStops)
+                         stopId = Nothing,
+                         stopParentStopId = Nothing
                        }
                  )
                    <$> destination

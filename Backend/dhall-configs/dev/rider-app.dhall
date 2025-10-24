@@ -351,7 +351,8 @@ in  { esqDBCfg
     , port = +8013
     , metricsPort = +9999
     , hostName = "localhost"
-    , nwAddress = "http://localhost:8013/beckn/cab/v1"
+    , nwAddress =
+        "https://semiautomatically-proscientific-pete.ngrok-free.dev/beckn/cab/v1"
     , selfUIUrl = "http://localhost:8013/v2/"
     , selfBaseUrl = "http://localhost:8013/"
     , signingKey = sec.signingKey
