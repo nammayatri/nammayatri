@@ -470,35 +470,12 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
             bookLater = fromMaybe False (mElement <&> (.skipBooking))
         let forcedBooking = Just leg.order == forcedBookedLegOrder
         let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
-        quoteCategories <-
-          case leg.pricingId of
-            Just pricingId -> do
-              QFRFSQuoteCategory.findAllByQuoteId (Id pricingId)
-            Nothing -> do
-              return []
-        let categorySelectionReq =
-              fromMaybe [] $
-                find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.categorySelectionReq)
-        moreCategorySelectionReq <-
-          catMaybes
-            <$> sequence
-              [ case find (\category -> category.category == ADULT) quoteCategories of
-                  Just category ->
-                    return $
-                      case find (\category' -> category'.quoteCategoryId == category.id) categorySelectionReq of
-                        Just _ -> Nothing
-                        Nothing -> ticketQuantity <&> \ticketQuantity' -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.id, quantity = ticketQuantity'}
-                  Nothing -> join <$> mapM (\pricingId -> createFRFSQuoteCategory (Id pricingId) ticketQuantity ADULT) leg.pricingId,
-                case find (\category -> category.category == CHILD) quoteCategories of
-                  Just category ->
-                    return $
-                      case find (\category' -> category'.quoteCategoryId == category.id) categorySelectionReq of
-                        Just _ -> Nothing
-                        Nothing -> childTicketQuantity <&> \childTicketQuantity' -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.id, quantity = childTicketQuantity'}
-                  Nothing -> join <$> mapM (\pricingId -> createFRFSQuoteCategory (Id pricingId) childTicketQuantity CHILD) leg.pricingId
-              ]
-        let updatedCategorySelectionReq = categorySelectionReq <> moreCategorySelectionReq
-        JLI.confirm forcedBooking bookLater leg crisSdkResponse updatedCategorySelectionReq journey.isSingleMode mbEnableOffer
+        categorySelectionReq <- do
+          let categorySelectionReq' = fromMaybe [] $ find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.categorySelectionReq)
+          if leg.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]
+            then maybe (pure categorySelectionReq') (\pricingId -> backfillFRFSQuoteCategory (Id pricingId) ticketQuantity childTicketQuantity categorySelectionReq') leg.pricingId
+            else return categorySelectionReq'
+        JLI.confirm forcedBooking bookLater leg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer
     )
     allLegs
 
@@ -519,18 +496,35 @@ startJourneyLeg legInfo isSingleMode = do
       _ -> return (Nothing, Nothing, Nothing)
   when (legInfo.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]) $ do
     QTBooking.updateOnInitDoneBySearchId (Just False) (Id legInfo.searchId)
-  quoteCategories <-
-    case legInfo.pricingId of
-      Just pricingId -> do
-        QFRFSQuoteCategory.findAllByQuoteId (Id pricingId)
-      Nothing -> do
-        return []
-  let updatedCategorySelectionReq =
-        catMaybes
-          [ adultTicketQuantity >>= \adultTicketQuantity' -> find (\category -> category.category == ADULT) quoteCategories <&> (\category -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.id, quantity = adultTicketQuantity'}),
-            childTicketQuantity >>= \childTicketQuantity' -> find (\category -> category.category == CHILD) quoteCategories <&> (\category -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.id, quantity = childTicketQuantity'})
-          ]
-  JLI.confirm True False legInfo crisSdkResponse updatedCategorySelectionReq isSingleMode Nothing
+  categorySelectionReq <- do
+    let categorySelectionReq' = []
+    if legInfo.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]
+      then maybe (pure categorySelectionReq') (\pricingId -> backfillFRFSQuoteCategory (Id pricingId) adultTicketQuantity childTicketQuantity categorySelectionReq') legInfo.pricingId
+      else return categorySelectionReq'
+  JLI.confirm True False legInfo crisSdkResponse categorySelectionReq isSingleMode Nothing
+
+backfillFRFSQuoteCategory :: Id DFRFSQuote.FRFSQuote -> Maybe Int -> Maybe Int -> [APITypes.FRFSCategorySelectionReq] -> Flow [APITypes.FRFSCategorySelectionReq]
+backfillFRFSQuoteCategory quoteId adultTicketQuantity childTicketQuantity categorySelectionReq = do
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
+  moreCategorySelectionReq <-
+    catMaybes
+      <$> sequence
+        [ case find (\category -> category.category == ADULT) quoteCategories of
+            Just category ->
+              return $
+                case find (\category' -> category'.quoteCategoryId == category.id) categorySelectionReq of
+                  Just _ -> Nothing
+                  Nothing -> adultTicketQuantity <&> \adultTicketQuantity' -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.id, quantity = adultTicketQuantity'}
+            Nothing -> createFRFSQuoteCategory quoteId adultTicketQuantity ADULT,
+          case find (\category -> category.category == CHILD) quoteCategories of
+            Just category ->
+              return $
+                case find (\category' -> category'.quoteCategoryId == category.id) categorySelectionReq of
+                  Just _ -> Nothing
+                  Nothing -> childTicketQuantity <&> \childTicketQuantity' -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.id, quantity = childTicketQuantity'}
+            Nothing -> createFRFSQuoteCategory quoteId childTicketQuantity CHILD
+        ]
+  return $ categorySelectionReq <> moreCategorySelectionReq
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c,
