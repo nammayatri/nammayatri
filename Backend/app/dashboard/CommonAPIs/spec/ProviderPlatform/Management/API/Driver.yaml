@@ -720,6 +720,7 @@ types:
     - securityDepositStatus: DriverFeeStatus
     - securityDepositAmountWithCurrency: Maybe PriceAPIEntity
     - driverFeeId: Text
+    - refundedAmount: Maybe HighPrecMoney
     - createdAt: UTCTime
   RefundByPayoutReq:
     - serviceName: ServiceNames

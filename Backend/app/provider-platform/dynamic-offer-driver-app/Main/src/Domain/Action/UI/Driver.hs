@@ -2399,6 +2399,7 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
 data SecurityDepositDfStatusRes = SecurityDepositDfStatusRes
   { securityDepositStatus :: DDF.DriverFeeStatus,
     securityDepositAmountWithCurrency :: Maybe PriceAPIEntity,
+    refundedAmount :: Maybe HighPrecMoney,
     driverFeeId :: Text,
     createdAt :: UTCTime
   }
@@ -2911,7 +2912,7 @@ getSecurityDepositDfStatus ::
   ServiceNames ->
   m [SecurityDepositDfStatusRes]
 getSecurityDepositDfStatus (personId, _, _) serviceName = do
-  driverFees <- runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [DDF.ONE_TIME_SECURITY_DEPOSIT] [DDF.PAYMENT_PENDING, DDF.CLEARED, DDF.PAYMENT_OVERDUE, DDF.EXEMPTED, DDF.COLLECTED_CASH]
+  driverFees <- runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [DDF.ONE_TIME_SECURITY_DEPOSIT] [DDF.PAYMENT_PENDING, DDF.CLEARED, DDF.PAYMENT_OVERDUE, DDF.EXEMPTED, DDF.COLLECTED_CASH, DDF.REFUND_FAILED]
   mapM buildSecurityDepositDfStatus $ sortOn (.createdAt) driverFees
   where
     buildSecurityDepositDfStatus dfee = do
@@ -2922,6 +2923,7 @@ getSecurityDepositDfStatus (personId, _, _) serviceName = do
           { securityDepositStatus = dfee.status,
             driverFeeId = dfee.id.getId,
             createdAt = dfee.createdAt,
+            refundedAmount = dfee.refundedAmount,
             ..
           }
 
@@ -2940,6 +2942,7 @@ mkPayoutLockKeyByDriverAndService person serviceName = "POUT:REF:DRIVER:ID:" <> 
 refundByPayoutDriverFee :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> RefundByPayoutReq -> Flow APISuccess
 refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
   let serviceName = refundByPayoutReq.serviceName
+  when (refundByPayoutReq.refundAmountDeduction < 0.0) $ throwError (InternalError "Repair charge is less than 0")
   Redis.whenWithLockRedis (mkPayoutLockKeyByDriverAndService personId serviceName) 60 $ do
     let driverFeeType = refundByPayoutReq.driverFeeType
         refundAmountDeduction = refundByPayoutReq.refundAmountDeduction
