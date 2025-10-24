@@ -306,7 +306,8 @@ buildPassAPIEntity personId pass = do
             "customerNammaTags" A..= person.customerNammaTags,
             "aadhaarVerified" A..= (person.aadhaarVerified :: Bool),
             "enabled" A..= (person.enabled :: Bool),
-            "blocked" A..= (person.blocked :: Bool)
+            "blocked" A..= (person.blocked :: Bool),
+            "hasProfilePicture" A..= (isJust person.profilePicture :: Bool)
           ]
 
   -- Check purchase eligibility using JSON logic
