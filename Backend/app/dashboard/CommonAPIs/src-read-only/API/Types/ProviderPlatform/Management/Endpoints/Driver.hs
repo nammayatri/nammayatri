@@ -247,6 +247,7 @@ data SecurityDepositDfStatusRes = SecurityDepositDfStatusRes
   { securityDepositStatus :: Dashboard.Common.Driver.DriverFeeStatus,
     securityDepositAmountWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     driverFeeId :: Kernel.Prelude.Text,
+    refundedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
