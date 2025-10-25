@@ -17,21 +17,23 @@ module: MultiModal
 
 apis:
   - GET:
-      endpoint: /list/{customerId}
+      endpoint: /list/
       auth: ApiAuthV2
-      params:
-        customerId: Id Person
       query:
         - limit: Integer
         - offset: Integer
         - bookingOffset: Integer
         - journeyOffset: Integer
+        - customerPhoneNo: Text
+        - countryCode: Text
+        - email: Text
         - fromDate: Integer
         - toDate: Integer
         - rideStatus: [BookingStatus]
         - journeyStatus: [JourneyStatus]
         - isPaymentSuccess: Bool
         - bookingRequestType: BookingRequestType
+        - customerId: Text
       response:
         type: BookingListResV2
 types: {}
