@@ -15,7 +15,6 @@ import qualified "rider-app" Domain.Types.Booking.API
 import qualified "beckn-spec" Domain.Types.BookingStatus
 import qualified "rider-app" Domain.Types.Journey
 import qualified "lib-dashboard" Domain.Types.Merchant
-import qualified "rider-app" Domain.Types.Person
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified EulerHS.Prelude
@@ -34,11 +33,11 @@ handler merchantId city = getMultiModalList merchantId city
 
 type GetMultiModalList =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MULTI_MODAL) / ('API.Types.Dashboard.RideBooking.MultiModal.GET_MULTI_MODAL_LIST))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MULTI_MODAL / 'API.Types.Dashboard.RideBooking.MultiModal.GET_MULTI_MODAL_LIST)
       :> API.Types.Dashboard.RideBooking.MultiModal.GetMultiModalList
   )
 
-getMultiModalList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe ([Domain.Types.BookingStatus.BookingStatus]) -> Kernel.Prelude.Maybe ([Domain.Types.Journey.JourneyStatus]) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Domain.Types.Booking.API.BookingRequestType) -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListResV2)
-getMultiModalList merchantShortId opCity apiTokenInfo customerId limit offset bookingOffset journeyOffset fromDate toDate rideStatus journeyStatus isPaymentSuccess bookingRequestType = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.MultiModal.getMultiModalList merchantShortId opCity apiTokenInfo customerId limit offset bookingOffset journeyOffset fromDate toDate rideStatus journeyStatus isPaymentSuccess bookingRequestType
+getMultiModalList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe [Domain.Types.BookingStatus.BookingStatus] -> Kernel.Prelude.Maybe [Domain.Types.Journey.JourneyStatus] -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Booking.API.BookingRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListResV2)
+getMultiModalList merchantShortId opCity apiTokenInfo limit offset bookingOffset journeyOffset customerPhoneNo countryCode email fromDate toDate rideStatus journeyStatus isPaymentSuccess bookingRequestType customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.MultiModal.getMultiModalList merchantShortId opCity apiTokenInfo limit offset bookingOffset journeyOffset customerPhoneNo countryCode email fromDate toDate rideStatus journeyStatus isPaymentSuccess bookingRequestType customerId
