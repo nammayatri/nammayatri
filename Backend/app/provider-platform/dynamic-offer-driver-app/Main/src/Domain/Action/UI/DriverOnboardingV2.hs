@@ -6,7 +6,7 @@ import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
 import qualified Crypto.Hash as Hash
 import Crypto.Random (getRandomBytes)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson ()
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Base64 as B64
 import Data.Maybe
@@ -60,6 +60,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import qualified Network.HTTP.Types.URI as URI
 import qualified Servant
 import SharedLogic.DriverOnboarding
@@ -100,13 +101,20 @@ import qualified Tools.Payment as TPayment
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
 
--- DigiLockerPullDocResponse matching DigiLocker API response
+-- DigiLockerPullDocResponse with custom JSON handling
+-- The DigiLocker API returns "error" (without underscore) in JSON
 data DigiLockerPullDocResponse = DigiLockerPullDocResponse
   { uri :: Maybe Text,
-    error :: Maybe Text,
+    _error :: Maybe Text,
     error_description :: Maybe Text
   }
-  deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
+  deriving (Generic, Show, ToSchema)
+
+instance FromJSON DigiLockerPullDocResponse where
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+
+instance ToJSON DigiLockerPullDocResponse where
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 stringToPrice :: Currency -> Text -> Maybe Price
 stringToPrice currency value = do
@@ -2204,7 +2212,7 @@ callDigiLockerPullDocumentAPI accessToken doctype docNumber = do
             logInfo $ "DigiLocker pull API - Success, URI: " <> docUri
             return $ Right docUri
           Nothing -> do
-            let errCode = fromMaybe "uri_missing" pullResp.error
+            let errCode = fromMaybe "uri_missing" pullResp._error
             let errMsg = fromMaybe "URI not found in response" pullResp.error_description
             logError $ "DigiLocker pull API - Error: " <> errCode <> " - " <> errMsg
             return $ Left $ PullDocErrorInfo errCode errMsg
@@ -2255,7 +2263,7 @@ handleDrivingLicenseError ::
   Text -> -- error message
   Text -> -- error code from DigiLocker
   Flow ()
-handleDrivingLicenseError driverId merchantId merchantOpCityId errorMsg errorCode = do
+handleDrivingLicenseError driverId _merchantId _merchantOpCityId errorMsg errorCode = do
   logError $ "Handling DL error - Code: " <> errorCode <> ", Message: " <> errorMsg <> ", DriverId: " <> driverId.getId
 
   -- Map DigiLocker error codes to verification status and failedRules
