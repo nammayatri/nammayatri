@@ -884,6 +884,7 @@ library
       Domain.Types.CommonDriverOnboardingDocuments
       Domain.Types.ConditionalCharges
       Domain.Types.DailyStats
+      Domain.Types.DigiLockerLogs
       Domain.Types.DocumentVerificationConfig
       Domain.Types.DriverBankAccount
       Domain.Types.DriverBlockReason
@@ -1037,6 +1038,7 @@ library
       Storage.Beam.CommonDriverOnboardingDocuments
       Storage.Beam.ConditionalCharges
       Storage.Beam.DailyStats
+      Storage.Beam.DigiLockerLogs
       Storage.Beam.DocumentVerificationConfig
       Storage.Beam.DriverBankAccount
       Storage.Beam.DriverBlockReason
@@ -1194,6 +1196,7 @@ library
       Storage.Queries.CommonDriverOnboardingDocuments
       Storage.Queries.ConditionalCharges
       Storage.Queries.DailyStats
+      Storage.Queries.DigiLockerLogs
       Storage.Queries.DocumentVerificationConfig
       Storage.Queries.DriverBankAccount
       Storage.Queries.DriverBlockReason

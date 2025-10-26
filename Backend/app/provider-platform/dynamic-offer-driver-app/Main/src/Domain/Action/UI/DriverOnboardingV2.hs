@@ -6,9 +6,10 @@ import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
 import qualified Crypto.Hash as Hash
 import Crypto.Random (getRandomBytes)
-import Data.Aeson ()
+import Data.Aeson (encode, object, (.=))
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Base64 as B64
+import qualified Data.ByteString.Lazy as BSL
 import Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
@@ -22,6 +23,7 @@ import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
 import Domain.Types.Common
 import qualified Domain.Types.CommonDriverOnboardingDocuments
+import qualified Domain.Types.DigiLockerLogs as DomainDLLogs
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as Domain
@@ -79,6 +81,7 @@ import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
+import qualified Storage.Queries.DigiLockerLogs as QDigiLockerLogs
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
@@ -1107,6 +1110,43 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
             updatedAt = now
           }
 
+-- Helper function to create DigiLocker logs
+createDigiLockerLog ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Text -> -- flowType
+  Maybe Text -> -- digiLockerState
+  Maybe Text -> -- digiLockerUri
+  Text -> -- status
+  Maybe Text -> -- errorCode
+  Maybe Text -> -- errorDescription
+  Text -> -- requestPayload (JSON string)
+  Text -> -- responsePayload (JSON string)
+  Flow ()
+createDigiLockerLog driverId merchantId merchantOperatingCityId flowType mbState mbUri status mbErrorCode mbErrorDesc reqPayload respPayload = do
+  logId <- generateGUID
+  now <- getCurrentTime
+  let digiLockerLog =
+        DomainDLLogs.DigiLockerLogs
+          { id = logId,
+            driverId = driverId,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId,
+            flowType = flowType,
+            docType = Nothing, -- Storing doc type info in requestPayload instead
+            digiLockerState = mbState,
+            digiLockerUri = mbUri,
+            status = status,
+            errorCode = mbErrorCode,
+            errorDescription = mbErrorDesc,
+            requestPayload = reqPayload,
+            responsePayload = respPayload,
+            createdAt = now,
+            updatedAt = now
+          }
+  QDigiLockerLogs.create digiLockerLog
+
 ----------- DigiLocker Integration Configuration and Helpers -----------
 
 -- TODO: Move these to environment variables in AppCfg/AppEnv
@@ -1415,6 +1455,21 @@ postDobppVerifyCallbackDigiLocker mbError mbErrorDescription code stateParam = d
     let errorMsg = fromMaybe "Unknown DigiLocker error" mbErrorDescription
     logError $ "DigiLocker callback - Error from DigiLocker. Code: " <> errorCode <> ", Description: " <> errorMsg <> ", DriverId: " <> driverId.getId
 
+    -- Log CALLBACK flow (error case)
+    person <- runInReplica $ PersonQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    createDigiLockerLog
+      driverId
+      person.merchantId
+      person.merchantOperatingCityId
+      "CALLBACK"
+      (Just stateParam)
+      Nothing
+      "FAILED"
+      (Just errorCode)
+      mbErrorDescription
+      (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["code" .= code, "state" .= stateParam, "error" .= errorCode])
+      (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["error_description" .= fromMaybe "" mbErrorDescription])
+
     -- Store error in details Redis key
     let errorDetailsData =
           APITypes.DigiLockerDetailsData
@@ -1490,6 +1545,20 @@ postDobppVerifyCallbackDigiLocker mbError mbErrorDescription code stateParam = d
 
   logInfo $ "DigiLocker callback - Token API success. DriverId: " <> driverId.getId
 
+  -- Log TOKEN_EXCHANGE flow
+  createDigiLockerLog
+    driverId
+    person.merchantId
+    person.merchantOperatingCityId
+    "TOKEN_EXCHANGE"
+    (Just stateParam)
+    Nothing
+    "SUCCESS"
+    Nothing
+    Nothing
+    (TE.decodeUtf8 $ BSL.toStrict $ encode tokenRequest)
+    (TE.decodeUtf8 $ BSL.toStrict $ encode tokenResponse)
+
   -- Step 6: Parse scope to identify documents and mark all as PENDING initially
   let scopeText = case tokenResponse of
         APITypes.DigiLockerTokenResponse {APITypes.scope = s} -> fromMaybe "" s
@@ -1535,7 +1604,7 @@ postDobppVerifyCallbackDigiLocker mbError mbErrorDescription code stateParam = d
         mbCurrentData <- Redis.get detailsKey
         whenJust mbCurrentData $ \currentData -> do
           let currentDigiLocker = APITypes.digilocker currentData
-          let updatedDigiLocker = currentDigiLocker {APITypes.errorCode = Just "PROCESSING_FAILED", APITypes.errorDescription = Just $ T.pack $ show err} :: APITypes.DigiLockerAuthData
+          let updatedDigiLocker = (currentDigiLocker :: APITypes.DigiLockerAuthData) {APITypes.errorCode = Just "PROCESSING_FAILED", APITypes.errorDescription = Just $ T.pack $ show err}
           let errorData = currentData {APITypes.digilocker = updatedDigiLocker}
           Redis.setExp detailsKey errorData 3600
 
@@ -1611,7 +1680,7 @@ processDigiLockerPullDocument driverId merchantId merchantOpCityId accessToken r
 
   -- Fetch PDF/image from DigiLocker and upload using existing validateImage logic
   let pdfUrl = "https://digilocker.meripehchaan.gov.in/public/oauth2/1/file/" <> docUri
-  pdfDataBase64 <- fetchDigiLockerDocument pdfUrl accessToken
+  pdfDataBase64 <- fetchDigiLockerDocument driverId merchantId merchantOpCityId pdfUrl accessToken
 
   logInfo $ "DigiLocker pull processing - Fetched PDF successfully. DriverId: " <> driverId.getId
 
@@ -1633,7 +1702,7 @@ processDigiLockerPullDocument driverId merchantId merchantOpCityId accessToken r
 
   -- Fetch XML document from DigiLocker
   let xmlUrl = "https://digilocker.meripehchaan.gov.in/public/oauth2/1/xml/" <> docUri
-  xmlData <- fetchDigiLockerDocument xmlUrl accessToken
+  xmlData <- fetchDigiLockerDocument driverId merchantId merchantOpCityId xmlUrl accessToken
 
   logInfo $ "DigiLocker pull processing - Fetched XML successfully. DriverId: " <> driverId.getId
 
@@ -1653,8 +1722,14 @@ processDigiLockerPullDocument driverId merchantId merchantOpCityId accessToken r
 
 -- Helper: Fetch document from DigiLocker
 -- Returns base64-encoded document data
-fetchDigiLockerDocument :: Text -> Text -> Flow Text
-fetchDigiLockerDocument url accessToken = do
+fetchDigiLockerDocument ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Text ->
+  Text ->
+  Flow Text
+fetchDigiLockerDocument driverId merchantId merchantOpCityId url accessToken = do
   logInfo $ "Fetching document from DigiLocker: " <> url
 
   -- Parse the URL to extract base URL and path
@@ -1670,13 +1745,52 @@ fetchDigiLockerDocument url accessToken = do
       >>= \case
         Left err -> do
           logError $ "DigiLocker fetch failed for URL: " <> url <> ", Error: " <> show err
+          -- Log FETCH_DOCUMENT flow (error)
+          createDigiLockerLog
+            driverId
+            merchantId
+            merchantOpCityId
+            "FETCH_DOCUMENT"
+            Nothing
+            (Just url)
+            "FAILED"
+            (Just "HTTP_ERROR")
+            (Just $ T.pack $ show err)
+            (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["url" .= url])
+            (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["error" .= (T.pack $ show err :: Text)])
           throwError $ InternalError $ "Failed to fetch document from DigiLocker: " <> T.pack (show err)
         Right eitherResp -> case eitherResp of
           Left clientErr -> do
             logError $ "DigiLocker API error for URL: " <> url <> ", Error: " <> show clientErr
+            -- Log FETCH_DOCUMENT flow (API error)
+            createDigiLockerLog
+              driverId
+              merchantId
+              merchantOpCityId
+              "FETCH_DOCUMENT"
+              Nothing
+              (Just url)
+              "FAILED"
+              (Just "API_ERROR")
+              (Just $ T.pack $ show clientErr)
+              (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["url" .= url])
+              (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["error" .= (T.pack $ show clientErr :: Text)])
             throwError $ InternalError $ "DigiLocker API returned error: " <> T.pack (show clientErr)
           Right rawData -> do
             logInfo $ "Successfully fetched document from DigiLocker: " <> url
+            -- Log FETCH_DOCUMENT flow (success)
+            createDigiLockerLog
+              driverId
+              merchantId
+              merchantOpCityId
+              "FETCH_DOCUMENT"
+              Nothing
+              (Just url)
+              "SUCCESS"
+              Nothing
+              Nothing
+              (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["url" .= url])
+              (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["data_length" .= T.length rawData])
             -- If data is already base64, return as-is; otherwise encode it
             -- DigiLocker file endpoint returns base64-encoded PDF data
             return rawData
@@ -1998,7 +2112,7 @@ postDriverDigilockerInitiate ::
     Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
   ) ->
   Environment.Flow APITypes.DigiLockerInitiateResp
-postDriverDigilockerInitiate (mbDriverId, _merchantId, _merchantOpCityId) = do
+postDriverDigilockerInitiate (mbDriverId, merchantId, merchantOpCityId) = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   logInfo $ "DigiLocker initiate - Starting authorization flow for DriverId: " <> driverId.getId
 
@@ -2038,6 +2152,20 @@ postDriverDigilockerInitiate (mbDriverId, _merchantId, _merchantOpCityId) = do
   let authorizationUrl = constructDigiLockerAuthUrl digiLockerState codeChallenge
 
   logInfo $ "DigiLocker initiate - Authorization URL generated for DriverId: " <> driverId.getId
+
+  -- Log INITIATE flow
+  createDigiLockerLog
+    driverId
+    merchantId
+    merchantOpCityId
+    "INITIATE"
+    (Just digiLockerState)
+    Nothing
+    "SUCCESS"
+    Nothing
+    Nothing
+    (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["code_verifier" .= codeVerifier, "code_challenge" .= codeChallenge, "state" .= digiLockerState])
+    (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["authorization_url" .= authorizationUrl])
 
   return $
     APITypes.DigiLockerInitiateResp
@@ -2137,7 +2265,7 @@ processPullDrivingLicense driverId merchantId merchantOpCityId accessToken req d
   updateDLStatusInDB driverId "PENDING" []
 
   -- Step 1: Call DigiLocker pull document API to get URI
-  pullResult <- callDigiLockerPullDocumentAPI accessToken "DRVLC" req.dlno
+  pullResult <- callDigiLockerPullDocumentAPI driverId merchantId merchantOpCityId accessToken "DRVLC" req.dlno
 
   case pullResult of
     Left errorInfo -> do
@@ -2166,11 +2294,14 @@ data PullDocErrorInfo = PullDocErrorInfo
   }
 
 callDigiLockerPullDocumentAPI ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
   Text -> -- access token
   Text -> -- doctype (e.g., "DRVLC")
   Text -> -- document number (e.g., DL number)
   Flow (Either PullDocErrorInfo Text) -- Either error or URI
-callDigiLockerPullDocumentAPI accessToken doctype docNumber = do
+callDigiLockerPullDocumentAPI driverId merchantId merchantOpCityId accessToken doctype docNumber = do
   let pullUrl = "https://digilocker.meripehchaan.gov.in/public/oauth2/1/pull/pulldocument"
 
   logInfo $ "DigiLocker pull API - Calling for doctype: " <> doctype <> ", docNumber: " <> docNumber
@@ -2198,6 +2329,19 @@ callDigiLockerPullDocumentAPI accessToken doctype docNumber = do
   case result of
     Left err -> do
       logError $ "DigiLocker pull API - HTTP error: " <> show err
+      -- Log PULL_DOCUMENT flow (HTTP error)
+      createDigiLockerLog
+        driverId
+        merchantId
+        merchantOpCityId
+        "PULL_DOCUMENT"
+        Nothing
+        Nothing
+        "FAILED"
+        (Just "HTTP_ERROR")
+        (Just $ T.pack $ show err)
+        (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["orgid" .= ("000048" :: Text), "doctype" .= doctype, "dlno" .= docNumber])
+        (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["error" .= (T.pack $ show err :: Text)])
       return $ Left $ PullDocErrorInfo "unexpected_error" (T.pack $ show err)
     Right eitherResp -> case eitherResp of
       Left clientErr -> do
@@ -2205,16 +2349,55 @@ callDigiLockerPullDocumentAPI accessToken doctype docNumber = do
         -- Try to extract error code from response
         let errMsg = T.pack $ show clientErr
         let errCode = extractErrorCodeFromResponse errMsg
+        -- Log PULL_DOCUMENT flow (client error)
+        createDigiLockerLog
+          driverId
+          merchantId
+          merchantOpCityId
+          "PULL_DOCUMENT"
+          Nothing
+          Nothing
+          "FAILED"
+          (Just errCode)
+          (Just errMsg)
+          (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["orgid" .= ("000048" :: Text), "doctype" .= doctype, "dlno" .= docNumber])
+          (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["error" .= (T.pack $ show clientErr :: Text)])
         return $ Left $ PullDocErrorInfo errCode errMsg
       Right pullResp -> do
         case pullResp.uri of
           Just docUri -> do
             logInfo $ "DigiLocker pull API - Success, URI: " <> docUri
+            -- Log PULL_DOCUMENT flow (success)
+            createDigiLockerLog
+              driverId
+              merchantId
+              merchantOpCityId
+              "PULL_DOCUMENT"
+              Nothing
+              (Just docUri)
+              "SUCCESS"
+              Nothing
+              Nothing
+              (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["orgid" .= ("000048" :: Text), "doctype" .= doctype, "dlno" .= docNumber])
+              (TE.decodeUtf8 $ BSL.toStrict $ encode pullResp)
             return $ Right docUri
           Nothing -> do
             let errCode = fromMaybe "uri_missing" pullResp._error
             let errMsg = fromMaybe "URI not found in response" pullResp.error_description
             logError $ "DigiLocker pull API - Error: " <> errCode <> " - " <> errMsg
+            -- Log PULL_DOCUMENT flow (error - no URI)
+            createDigiLockerLog
+              driverId
+              merchantId
+              merchantOpCityId
+              "PULL_DOCUMENT"
+              Nothing
+              Nothing
+              "FAILED"
+              (Just errCode)
+              (Just errMsg)
+              (TE.decodeUtf8 $ BSL.toStrict $ encode $ object ["orgid" .= ("000048" :: Text), "doctype" .= doctype, "dlno" .= docNumber])
+              (TE.decodeUtf8 $ BSL.toStrict $ encode pullResp)
             return $ Left $ PullDocErrorInfo errCode errMsg
 
 -- Extract error code from DigiLocker API error response
