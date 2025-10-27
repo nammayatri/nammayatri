@@ -14,6 +14,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.PurchasedPass as Beam
 import qualified Storage.Queries.PurchasedPass ()
@@ -53,6 +54,14 @@ findByShortId ::
 findByShortId shortId = do
   findOneWithKV
     [Se.Is Beam.shortId $ Se.Eq (getShortId shortId)]
+
+findByOrderShortId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ShortId DOrder.PaymentOrder ->
+  m (Maybe DPurchasedPass.PurchasedPass)
+findByOrderShortId orderShortId = do
+  findOneWithKV
+    [Se.Is Beam.orderShortId $ Se.Eq (getShortId orderShortId)]
 
 updateStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
