@@ -153,6 +153,8 @@ types:
     transactionId : Maybe Text
     validationStatus : Maybe ValidationStatus
     verifiedBy : Maybe VerifiedBy
+  DigiLockerInitiateResp:
+    authorizationUrl: Text
 
 apis:
   - GET:
@@ -277,6 +279,11 @@ apis:
         type: CommonDocumentReq
       response:
         type: APISuccess
+  - POST:
+      endpoint: /driver/digilocker/initiate
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: DigiLockerInitiateResp
   - POST:
       endpoint: /dobpp/verify/callback/digiLocker
       mandatoryQuery:

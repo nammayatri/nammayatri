@@ -10,6 +10,7 @@ import Data.Maybe
 import qualified Data.Text as T
 import Data.Time (defaultTimeLocale, formatTime)
 import qualified Data.Time as DT
+import qualified Domain.Action.UI.DriverOnboarding.DigiLocker (DigiLockerInitiateResp (..), initiateDigiLocker)
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
@@ -1069,6 +1070,20 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
             updatedAt = now
           }
 
+--------- DigiLocker API ---------
+
+-- | Initiate DigiLocker OAuth flow with PKCE
+postDriverDigilockerInitiate ::
+  ( Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  Environment.Flow API.Types.UI.DriverOnboardingV2.DigiLockerInitiateResp
+postDriverDigilockerInitiate (mbPersonId, merchantId, merchantOpCityId) = do
+  personId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
+  -- Import and delegate to the DigiLocker module
+  initiateDigiLocker (personId, merchantId, merchantOpCityId)
+
 -- DigiLocker state data stored in Redis
 data DigiLockerStateData = DigiLockerStateData
   { driverId :: Id Domain.Types.Person.Person,
@@ -1113,6 +1128,9 @@ postDobppVerifyCallbackDigiLocker code state mbError mbErrorDescription = do
     let errorMsg = fromMaybe "Unknown error occurred during DigiLocker verification" mbErrorDescription
     logError $ "DigiLocker callback error - Code: " <> errorCode <> ", Description: " <> errorMsg <> ", State: " <> state <> ", DriverId: " <> stateData.driverId.getId
 
+    -- Delete the session to allow retry
+    Domain.Action.UI.DriverOnboarding.DigiLocker.deleteDigiLockerSession stateData.driverId
+
     -- Push error to Redis for frontend polling
     let errorStatusData =
           DigiLockerStatusData
@@ -1126,6 +1144,9 @@ postDobppVerifyCallbackDigiLocker code state mbError mbErrorDescription = do
 
   -- Success case - store success status in Redis
   logInfo $ "DigiLocker callback success - State: " <> state <> ", Code: " <> code <> ", DriverId: " <> stateData.driverId.getId
+
+  -- Delete the session after successful completion
+  Domain.Action.UI.DriverOnboarding.DigiLocker.deleteDigiLockerSession stateData.driverId
 
   let successStatusData =
         DigiLockerStatusData

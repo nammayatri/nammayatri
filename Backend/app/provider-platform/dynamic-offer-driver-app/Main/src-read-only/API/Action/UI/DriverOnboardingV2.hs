@@ -197,6 +197,13 @@ type API =
       :> Post
            ('[JSON])
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "driver"
+      :> "digilocker"
+      :> "initiate"
+      :> Post
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.DigiLockerInitiateResp
       :<|> "dobpp"
       :> "verify"
       :> "callback"
@@ -219,7 +226,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> postDobppVerifyCallbackDigiLocker
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> postDriverDigilockerInitiate :<|> postDobppVerifyCallbackDigiLocker
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -389,5 +396,14 @@ postDriverRegisterCommonDocument ::
   )
 postDriverRegisterCommonDocument a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterCommonDocument (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-postDobppVerifyCallbackDigiLocker :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDriverDigilockerInitiate ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DigiLockerInitiateResp
+  )
+postDriverDigilockerInitiate a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverDigilockerInitiate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+postDobppVerifyCallbackDigiLocker :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDobppVerifyCallbackDigiLocker a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDobppVerifyCallbackDigiLocker a4 a3 a2 a1

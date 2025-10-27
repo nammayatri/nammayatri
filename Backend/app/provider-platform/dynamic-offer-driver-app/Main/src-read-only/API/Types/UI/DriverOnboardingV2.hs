@@ -55,6 +55,10 @@ data CommonDocumentReq = CommonDocumentReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DigiLockerInitiateResp = DigiLockerInitiateResp {authorizationUrl :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
   { checkExpiry :: Kernel.Prelude.Bool,
     checkExtraction :: Kernel.Prelude.Bool,
