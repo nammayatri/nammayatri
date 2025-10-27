@@ -198,7 +198,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
       Just Payment.FRFSBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId refunds JMU.switchFRFSQuoteTierUtil
       Just Payment.FRFSBusBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId refunds JMU.switchFRFSQuoteTierUtil
       Just Payment.FRFSMultiModalBooking -> do
-        mbPass <- QPurchasedPass.findByShortId (ShortId orderShortId)
+        mbPass <- QPurchasedPass.findByOrderShortId (ShortId orderShortId)
         case mbPass of
           Just _ -> void $ Pass.webhookHandlerPass (ShortId orderShortId) merchantId
           Nothing -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId refunds JMU.switchFRFSQuoteTierUtil

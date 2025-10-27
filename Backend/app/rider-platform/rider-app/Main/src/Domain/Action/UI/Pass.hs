@@ -393,7 +393,7 @@ webhookHandlerPass orderShortId _merchantId = do
   logInfo $ "Pass payment webhook handler called for orderShortId: " <> orderShortId.getShortId
 
   -- Find purchased pass by order short id
-  mbPurchasedPass <- QPurchasedPass.findByShortId (Id.ShortId orderShortId.getShortId)
+  mbPurchasedPass <- QPurchasedPass.findByOrderShortId orderShortId
 
   case mbPurchasedPass of
     Nothing -> do
