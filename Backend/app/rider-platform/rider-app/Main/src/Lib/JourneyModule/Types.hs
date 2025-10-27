@@ -1047,12 +1047,14 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
   mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
   person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   let isPTBookingAllowedForUser = ("PTBookingAllowed#Yes" `elem` (maybe [] (map YTypes.getTagNameValueExpiry) person.customerNammaTags))
+  let isPTBookingNotAllowedForUser = ("PTBookingAllowed#No" `elem` (maybe [] (map YTypes.getTagNameValueExpiry) person.customerNammaTags))
   let isSearchFailed = fromMaybe False onSearchFailed
-  let bookingAllowed =
+  let bookingAllowedForVehicleType =
         case vehicleType of
           Spec.METRO -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.metroBookingAllowed)) || isPTBookingAllowedForUser)
           Spec.SUBWAY -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed)) || isPTBookingAllowedForUser)
           Spec.BUS -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.busBookingAllowed)) || isPTBookingAllowedForUser)
+  let bookingAllowed = bookingAllowedForVehicleType && not isPTBookingNotAllowedForUser
   now <- getCurrentTime
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg Nothing
   (mbEstimatedFare, mbChildFare, mbQuote, mbFareParameters, quoteCategories, categories) <-
