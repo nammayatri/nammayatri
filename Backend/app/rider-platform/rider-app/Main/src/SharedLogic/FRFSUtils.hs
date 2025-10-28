@@ -1217,7 +1217,7 @@ mkCategoryPriceItemFromDCategorySelect quoteCategories = mapMaybe mkPriceItem qu
   where
     mkPriceItem :: DCategorySelect -> Maybe CategoryPriceItem
     mkPriceItem category = do
-      quantity <- category.selectedQuantity <|> Just 0
+      let quantity = category.quantity
       let unitPrice = category.price
       return $
         CategoryPriceItem
