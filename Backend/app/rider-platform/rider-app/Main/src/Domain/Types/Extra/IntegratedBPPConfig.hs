@@ -81,7 +81,8 @@ data CRISConfig = CRISConfig
     agentDataDecryptionKey :: EncryptedField 'AsEncrypted Text,
     utsDataKey :: EncryptedField 'AsEncrypted Text,
     routeSortingCriteria :: Maybe CRISRouteSortingCriteria,
-    reconDuration :: Maybe Int
+    reconDuration :: Maybe Int,
+    singleModeWalkThreshold :: Maybe Int
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
