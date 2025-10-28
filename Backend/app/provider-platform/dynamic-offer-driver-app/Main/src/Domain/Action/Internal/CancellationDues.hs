@@ -40,10 +40,10 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
   riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
-  logInfo $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show booking.fareParams.customerCancellationDues
-  unless (booking.fareParams.customerCancellationDues == Just req.waiveOffAmount) $ do
-    logWarning $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show booking.fareParams.customerCancellationDues
-    throwError $ InvalidRequest $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show booking.fareParams.customerCancellationDues <> " and riderDetails.cancellationDues " <> show riderDetails.cancellationDues
+  logInfo $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show ride.cancellationChargesOnCancel
+  unless (ride.cancellationChargesOnCancel == Just req.waiveOffAmount) $ do
+    logWarning $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show ride.cancellationChargesOnCancel
+    throwError $ InvalidRequest $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show ride.cancellationChargesOnCancel <> " and riderDetails.cancellationDues " <> show riderDetails.cancellationDues
   when (riderDetails.cancellationDues < req.waiveOffAmount) $
     throwError $ InvalidRequest $ "Cancellation Due Amount is less than the waived off amount for riderId " <> riderDetails.id.getId
   let logicInput =

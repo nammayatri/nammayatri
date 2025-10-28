@@ -283,6 +283,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         reactBundleVersion = driver.reactBundleVersion,
         driverCancellationPenaltyFeeId = Nothing,
         driverCancellationPenaltyAmount = Nothing,
+        cancellationChargesOnCancel = Nothing,
         driverCancellationPenaltyWaivedReason = Nothing
       }
 
