@@ -12,6 +12,8 @@ module Storage.CachedQueries.Merchant.MultiModalBus
     mkRouteKey,
     withCrossAppRedisNew,
     utcToIST,
+    incrementBusRouteMismatchCounter,
+    getBusRouteMismatchCount,
   )
 where
 
@@ -117,3 +119,17 @@ getRoutesBuses routeId = do
 
 getBusesForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [Text] -> m [RouteWithBuses]
 getBusesForRoutes = mapConcurrently getRoutesBuses
+
+incrementBusRouteMismatchCounter :: (MonadFlow m, CacheFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> Text -> m ()
+incrementBusRouteMismatchCounter busNumber routeNumber = do
+  let key = busRouteMismatchKey busNumber routeNumber
+  withCrossAppRedisNew $ do
+    _ <- Hedis.incr key
+    Hedis.expire key 3600
+    return ()
+
+busRouteMismatchKey :: Text -> Text -> Text
+busRouteMismatchKey busNumber routeNumber = "BusTracking:MismatchedRouteNumber-" <> busNumber <> "-" <> routeNumber
+
+getBusRouteMismatchCount :: (MonadFlow m, Hedis.HedisFlow m env, HasField "ltsHedisEnv" env Hedis.HedisEnv) => Text -> Text -> m (Maybe Integer)
+getBusRouteMismatchCount busNumber routeNumber = withCrossAppRedisNew $ Hedis.get (busRouteMismatchKey busNumber routeNumber)
