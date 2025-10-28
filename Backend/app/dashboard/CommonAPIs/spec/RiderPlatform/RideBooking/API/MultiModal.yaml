@@ -45,6 +45,22 @@ apis:
         type: CustomerSendMessageReq
       response:
         type: APISuccess
+  - POST:
+      endpoint: addComment/{customerId}/
+      auth: ApiAuthV2
+      params:
+        customerId: Text
+      request:
+        type: CustomerCommentReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: getComments/{customerId}/
+      auth: ApiAuthV2
+      params:
+        customerId: Text
+      response:
+        type: CustomerCommentsResp
 types:
   CustomerSendMessageReq:
     title: Text
@@ -52,3 +68,8 @@ types:
     channel: MediaChannel
   MediaChannel:
     - enum: WHATSAPP, PUSH_NOTIFICATION, SMS
+  CustomerCommentReq:
+    body: Text
+  CustomerCommentsResp:
+    customerId: Id Person
+    comments: Maybe [Text]

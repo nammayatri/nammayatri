@@ -501,7 +501,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         authBlocked = Nothing,
         lastUsedVehicleServiceTiers = [],
         lastUsedVehicleCategories = [],
-        imeiNumber = Nothing -- TODO: take it from the request
+        imeiNumber = Nothing, -- TODO: take it from the request
+        comments = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
