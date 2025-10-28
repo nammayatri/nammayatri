@@ -22,7 +22,7 @@ getProfileDetail ::
   Environment.Flow Domain.Action.UI.Profile.ProfileRes
 getProfileDetail merchantShortId _opCity personId = do
   m <- findMerchantByShortId merchantShortId
-  API.UI.Profile.getPersonDetails' (personId, m.id) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing --CACTODO: this is a temporary implementation need to discuss and implement toss part if required or change response type all together for this api to stop sending cfg version forever.
+  API.UI.Profile.getPersonDetails' (personId, m.id) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing --CACTODO: this is a temporary implementation need to discuss and implement toss part if required or change response type all together for this api to stop sending cfg version forever.
 
 postProfileUpdate ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

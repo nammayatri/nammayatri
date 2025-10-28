@@ -153,7 +153,8 @@ data ProfileRes = ProfileRes
     isPayoutEnabled :: Maybe Bool,
     publicTransportVersion :: Maybe Text,
     isMultimodalRider :: Bool,
-    customerTags :: DA.Value
+    customerTags :: DA.Value,
+    profilePicture :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -267,13 +268,14 @@ getPersonDetails ::
   Maybe Int ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Bool ->
   Maybe Version ->
   Maybe Text ->
   Maybe Version ->
   Maybe Version ->
   Maybe Text ->
   m ProfileRes
-getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = do
+getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
@@ -328,9 +330,9 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
       )
       vehicleTypes
   let isMultimodalRider = getIsMultimodalRider riderConfig.enableMultiModalForAllUsers decPerson.customerNammaTags integratedBPPConfigs
-  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider
+  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage
   where
-    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider = do
+    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam = do
       gtfsVersion <-
         try @_ @SomeException (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
           Left _ -> return (map (.feedKey) integratedBPPConfigs)
@@ -363,6 +365,7 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
             cancellationRate = cancellationPerc,
             publicTransportVersion = if null gtfsVersion then Nothing else Just (T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) riderConfig.domainPublicTransportDataVersion)),
             customerTags = YUtils.convertTags $ fromMaybe [] customerNammaTags,
+            profilePicture = if includeProfileImageParam == Just True then profilePicture else Nothing,
             ..
           }
 
