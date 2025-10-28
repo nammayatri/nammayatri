@@ -13,24 +13,24 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FRFSQuoteCategoryT f = FRFSQuoteCategoryT
-  { bppItemId :: B.C f Kernel.Prelude.Text,
-    category :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType),
-    code :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    title :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    tnc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    finalPrice :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    offeredPrice :: B.C f Kernel.Types.Common.HighPrecMoney,
-    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
-    price :: B.C f Kernel.Types.Common.HighPrecMoney,
-    quoteId :: B.C f Kernel.Prelude.Text,
-    selectedQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    ticketCategoryMetadataConfigId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { bppItemId :: (B.C f Kernel.Prelude.Text),
+    category :: (B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType)),
+    code :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    description :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    title :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    tnc :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    finalPrice :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    id :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    offeredPrice :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
+    price :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    quoteId :: (B.C f Kernel.Prelude.Text),
+    selectedQuantity :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    ticketCategoryMetadataConfigId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -40,6 +40,6 @@ instance B.Table FRFSQuoteCategoryT where
 
 type FRFSQuoteCategory = FRFSQuoteCategoryT Identity
 
-$(enableKVPG ''FRFSQuoteCategoryT ['id] [['quoteId]])
+$(enableKVPG (''FRFSQuoteCategoryT) [('id)] [[('quoteId)]])
 
-$(mkTableInstances ''FRFSQuoteCategoryT "frfs_quote_category")
+$(mkTableInstances (''FRFSQuoteCategoryT) "frfs_quote_category")

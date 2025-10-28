@@ -6,7 +6,7 @@ import qualified API.Types.UI.MultimodalConfirm as MultimodalConfirm
 import BecknV2.FRFS.Enums hiding (END, START)
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
-import Control.Monad.Extra hiding (fromMaybeM)
+import Control.Monad.Extra hiding (concatMapM, fromMaybeM)
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (groupBy, nub, nubBy)
 import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy)
@@ -692,7 +692,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCatego
                   -- TODO :: Update the status of the old payment booking to REATTEMPTED, Uncomment post release.
                   -- void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REATTEMPTED booking.id
                   void $ QFRFSTicketBooking.updateTotalPriceAndQuantityById totalPrice ticketQuantity childTicketQuantity Nothing booking.id
-                  return $ booking {DFRFSTicketBooking.quoteId = quoteId, DFRFSTicketBooking.bppItemId = quote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.totalPrice = totalPrice, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
+                  return $ booking {DFRFSTicketBooking.quoteId = quoteId, DFRFSTicketBooking.bppItemId = updatedQuote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.totalPrice = totalPrice, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
                 else return booking
             pure (rider, updatedBooking)
         )
@@ -740,6 +740,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCatego
                 recentLocationId = mbSearch >>= (.recentLocationId),
                 failureReason = Nothing,
                 isSingleMode = isSingleMode,
+                confirmedPaymentBookingId = Nothing,
                 ..
               }
       QFRFSTicketBooking.create booking
@@ -794,24 +795,23 @@ webhookHandlerFRFSTicket paymentOrderId merchantId refunds switchFRFSQuoteTier =
   logDebug $ "frfs ticket order bap webhookc call" <> paymentOrderId.getShortId
   order <- QPaymentOrder.findByShortId paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getShortId)
   bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId order.id
-  bookings <- mapMaybeM (QFRFSTicketBooking.findById . (.frfsTicketBookingId)) bookingPayments
-  processRefunds
-
-  mapM_ (\booking -> frfsBookingStatus (booking.riderId, merchantId) False booking switchFRFSQuoteTier) bookings
+  booking <- maybe (pure Nothing) (\bookingPayment -> QFRFSTicketBooking.findById bookingPayment.frfsTicketBookingId) (listToMaybe bookingPayments) >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  processRefunds bookingPayments
+  mbLatestPaymentBooking <- QFRFSTicketBookingPayment.findLatestTBPByBookingId booking.id
+  void $ processPaymentBookings booking.riderId booking merchantId False (mbLatestPaymentBooking <&> (.id)) switchFRFSQuoteTier Nothing bookingPayments
   where
-    processRefunds :: Environment.Flow ()
-    processRefunds = do
+    processRefunds :: [DFRFSTicketBookingPayment.FRFSTicketBookingPayment] -> Environment.Flow ()
+    processRefunds bookingPayments = do
       mapM_
         ( \refund -> do
             let refundStatus = refund.status
             refundEntry <- QRefunds.findById (Id refund.requestId) >>= fromMaybeM (InvalidRequest "Refund entry not found")
             bookingPaymentIds <- case refundEntry.split of
               Just splits ->
-                mapM
+                concatMapM
                   ( \split -> do
-                      let bookingId = split.frfsBookingId
-                      bookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId (Id bookingId) >>= fromMaybeM (FRFSTicketBookingPaymentNotFound bookingId)
-                      pure bookingPayment.id
+                      let refundSplitBookingPayments = filter (\bookingPayment -> bookingPayment.frfsTicketBookingId.getId == split.frfsBookingId) bookingPayments
+                      pure (refundSplitBookingPayments <&> (.id))
                   )
                   splits
               Nothing -> pure []
@@ -832,9 +832,26 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
   booking <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   frfsBookingStatus (personId, merchantId_) False booking (\_ _ -> pure ())
 
+processPaymentBookings :: Kernel.Types.Id.Id Domain.Types.Person.Person -> DFRFSTicketBooking.FRFSTicketBooking -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Bool -> Maybe (Kernel.Types.Id.Id DFRFSTicketBookingPayment.FRFSTicketBookingPayment) -> (DJL.JourneyLeg -> Id DFRFSQuote.FRFSQuote -> Environment.Flow ()) -> (Kernel.Prelude.Maybe (API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes, DFRFSTicketBooking.FRFSTicketBooking)) -> [DFRFSTicketBookingPayment.FRFSTicketBookingPayment] -> Environment.Flow (API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes, DFRFSTicketBooking.FRFSTicketBooking)
+processPaymentBookings personId booking merchantId isMultiModalBooking mbLatestPaymentBookingId switchFRFSQuoteTier updatedBookingStatus [] =
+  case updatedBookingStatus of
+    Just result -> return result
+    Nothing -> frfsBookingStatusUtil (personId, merchantId) isMultiModalBooking booking Nothing mbLatestPaymentBookingId switchFRFSQuoteTier
+processPaymentBookings personId booking merchantId isMultiModalBooking mbLatestPaymentBookingId switchFRFSQuoteTier updatedBookingStatus (paymentBooking : restPaymentBookings) = do
+  let updatedBooking = maybe booking snd updatedBookingStatus
+  bookingStatus <- frfsBookingStatusUtil (personId, merchantId) isMultiModalBooking updatedBooking (Just paymentBooking) mbLatestPaymentBookingId switchFRFSQuoteTier
+  processPaymentBookings personId updatedBooking merchantId isMultiModalBooking mbLatestPaymentBookingId switchFRFSQuoteTier (Just bookingStatus) restPaymentBookings
+
 -- pass isMultiModalBooking = True in case of multimodal flow
 frfsBookingStatus :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Bool -> DFRFSTicketBooking.FRFSTicketBooking -> (DJL.JourneyLeg -> Id DFRFSQuote.FRFSQuote -> Environment.Flow ()) -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' switchFRFSQuoteTier = do
+frfsBookingStatus (personId, merchantId) isMultiModalBooking booking' switchFRFSQuoteTier = do
+  paymentBookings <- QFRFSTicketBookingPayment.findAllTBPByBookingId booking'.id
+  let mbLatestPaymentBookingId = listToMaybe paymentBookings <&> (.id)
+  (bookingStatusAPIRes, _) <- processPaymentBookings personId booking' merchantId isMultiModalBooking mbLatestPaymentBookingId switchFRFSQuoteTier Nothing paymentBookings
+  return bookingStatusAPIRes
+
+frfsBookingStatusUtil :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Bool -> DFRFSTicketBooking.FRFSTicketBooking -> Maybe DFRFSTicketBookingPayment.FRFSTicketBookingPayment -> Maybe (Kernel.Types.Id.Id DFRFSTicketBookingPayment.FRFSTicketBookingPayment) -> (DJL.JourneyLeg -> Id DFRFSQuote.FRFSQuote -> Environment.Flow ()) -> Environment.Flow (API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes, DFRFSTicketBooking.FRFSTicketBooking)
+frfsBookingStatusUtil (personId, merchantId_) isMultiModalBooking booking' mbPaymentBooking mbLatestPaymentBookingId switchFRFSQuoteTier = do
   logInfo $ "frfsBookingStatus for booking: " <> show booking'
   let bookingId = booking'.id
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
@@ -853,7 +870,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' switchFRF
   case booking.status of
     DFRFSTicketBooking.NEW -> buildFRFSTicketBookingStatusAPIRes booking quoteCategories Nothing
     DFRFSTicketBooking.FAILED -> do
-      paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+      paymentBooking <- fromMaybeM (InvalidRequest "Payment booking not found") mbPaymentBooking
       paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
       paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id (orderStatusCall merchantOperatingCity.id booking (Just person.id.getId) person.clientSdkVersion)
       logInfo $ "payment status resp: " <> show paymentStatusResp
@@ -864,12 +881,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' switchFRF
         let mPrice = Common.mkPrice (Just booking'.totalPrice.currency) (HighPrecMoney $ toRational (0 :: Int))
         void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById mPrice mPrice booking.id
       when (paymentBookingStatus == FRFSTicketService.SUCCESS) do
-        unless (paymentBooking.status `elem` [DFRFSTicketBookingPayment.REFUND_INITIATED, DFRFSTicketBookingPayment.REFUND_FAILED, DFRFSTicketBookingPayment.REFUNDED]) $ do
-          logInfo $ "inside refund bloc"
-          void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING paymentBooking.id
-          riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
-          logInfo $ "riderConfig.enableAutoJourneyRefund: " <> show riderConfig.enableAutoJourneyRefund
-          when riderConfig.enableAutoJourneyRefund $ refundOrderCall booking person
+        logInfo $ "inside refund bloc"
+        refundOrderCall booking paymentBooking person
         markJourneyPaymentSuccess booking paymentOrder paymentBooking
       when (paymentBookingStatus == FRFSTicketService.PENDING) do
         void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
@@ -884,23 +897,34 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' switchFRF
       let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing, transactionId = Nothing}
       buildFRFSTicketBookingStatusAPIRes booking quoteCategories mbPaymentObj
     DFRFSTicketBooking.CONFIRMING -> do
+      paymentBooking <- fromMaybeM (InvalidRequest "Payment booking not found") mbPaymentBooking
+      paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
+      paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id (orderStatusCall merchantOperatingCity.id booking (Just person.id.getId) person.clientSdkVersion)
+      logInfo $ "paymentStatusResp: " <> show paymentStatusResp
+      let paymentBookingStatus = makeTicketBookingPaymentAPIStatus paymentStatusResp.status
+      logInfo $ "paymentBookingStatus: " <> show paymentBookingStatus
       if addUTCTime 5 booking.validTill < now
         then do
-          paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (FRFSTicketBookingPaymentNotFound bookingId.getId)
           logInfo $ "booking is expired in confirming: " <> show booking
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
-          void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING paymentBooking.id
-          riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
-          when riderConfig.enableAutoJourneyRefund $ refundOrderCall booking person
-          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing Nothing
+          refundOrderCall updatedBooking paymentBooking person
           buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
         else do
+          refundWhenOlderPaymentBookingGetsCharged booking paymentBooking person paymentBookingStatus
           buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentSuccess
     DFRFSTicketBooking.CONFIRMED -> do
+      paymentBooking <- fromMaybeM (InvalidRequest "Payment booking not found") mbPaymentBooking
+      paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
+      paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id (orderStatusCall merchantOperatingCity.id booking (Just person.id.getId) person.clientSdkVersion)
+      logInfo $ "payment status resp: " <> show paymentStatusResp
+      let paymentBookingStatus = makeTicketBookingPaymentAPIStatus paymentStatusResp.status
+      logInfo $ "payment booking status: " <> show paymentBookingStatus
+      refundWhenOlderPaymentBookingGetsCharged booking paymentBooking person paymentBookingStatus
       void $ CallExternalBPP.status merchant.id merchantOperatingCity bapConfig booking
       buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentSuccess
     DFRFSTicketBooking.APPROVED -> do
-      paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+      paymentBooking <- fromMaybeM (InvalidRequest "Payment booking not found") mbPaymentBooking
       paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
       paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id (orderStatusCall merchantOperatingCity.id booking (Just person.id.getId) person.clientSdkVersion)
       logInfo $ "payment status response: " <> show paymentStatusResp
@@ -910,23 +934,21 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' switchFRF
           logInfo $ "payment failed in approved: " <> show booking
           QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
           QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
-          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing Nothing
           buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
         else
           if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (booking.validTill < now)
             then do
               logInfo $ "booking is expired in approved: " <> show booking
               void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
-              void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING paymentBooking.id
-              riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
-              when riderConfig.enableAutoJourneyRefund $ refundOrderCall booking person
-              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing Nothing
+              refundOrderCall updatedBooking paymentBooking person
               buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
             else do
               txn <- QPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
               let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
               void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
-              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.PAYMENT_PENDING Nothing Nothing
+              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.PAYMENT_PENDING Nothing Nothing Nothing
               paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId merchantOperatingCity.id booking
               let paymentObj =
                     Just $
@@ -937,7 +959,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' switchFRF
                         }
               buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentObj
     DFRFSTicketBooking.PAYMENT_PENDING -> do
-      paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+      paymentBooking <- fromMaybeM (InvalidRequest "Payment booking not found") mbPaymentBooking
       paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
       paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id (orderStatusCall merchantOperatingCity.id booking (Just person.id.getId) person.clientSdkVersion)
       logInfo $ "paymentStatusResp: " <> show paymentStatusResp
@@ -948,33 +970,39 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' switchFRF
           logInfo $ "payment failed in payment pending: " <> show booking
           QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
           QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
-          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing Nothing
           buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
         else
-          if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (booking.validTill < now)
+          if ((paymentBookingStatus == FRFSTicketService.SUCCESS) && (booking.validTill < now))
             then do
               logInfo $ "booking is expired in payment success and booking is expired: " <> show booking
               void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
-              void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING paymentBooking.id
-              riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
-              when riderConfig.enableAutoJourneyRefund $ refundOrderCall booking person
-              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing Nothing
+              refundOrderCall updatedBooking paymentBooking person
               buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
             else
               if paymentBookingStatus == FRFSTicketService.SUCCESS
                 then do
+                  refundWhenOlderPaymentBookingGetsCharged booking paymentBooking person paymentBookingStatus
                   -- Add default TTL of 1 min or the value provided in the config
                   let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
                   transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
                   txnId <- getSuccessTransactionId transactions
-                  let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
+                  let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId) (Just paymentBooking.id.getId)
                   -- setNxExpire
                   isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
                   when isLockAcquired $ do
                     void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.SUCCESS paymentBooking.id
                     void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
+                    void $ QFRFSTicketBooking.updateConfirmedPaymentBookingIdById (Just paymentBooking.id.getId) booking.id
                     markJourneyPaymentSuccess booking paymentOrder paymentBooking
-                    quoteUpdatedBooking <- maybeM (pure booking) pure (QFRFSTicketBooking.findById bookingId)
+                    quoteUpdatedBooking <-
+                      maybeM
+                        (pure updatedBooking)
+                        ( \booking'' -> do
+                            pure $ makeUpdatedBooking booking'' DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId) (Just paymentBooking.id.getId)
+                        )
+                        (QFRFSTicketBooking.findById bookingId)
                     let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
                     mRiderNumber <- mapM decrypt person.mobileNumber
                     void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
@@ -1008,8 +1036,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' switchFRF
                   buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
     DFRFSTicketBooking.CANCELLED -> do
       FRFSUtils.updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
-      paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
-      let mbPaymentObj = paymentBooking <&> \tbp -> FRFSTicketService.FRFSBookingPaymentAPI {status = Utils.mkTBPStatusAPI tbp.status, paymentOrder = Nothing, transactionId = Nothing}
+      let mbPaymentObj = mbPaymentBooking <&> \tbp -> FRFSTicketService.FRFSBookingPaymentAPI {status = Utils.mkTBPStatusAPI tbp.status, paymentOrder = Nothing, transactionId = Nothing}
       buildFRFSTicketBookingStatusAPIRes booking quoteCategories mbPaymentObj
     DFRFSTicketBooking.COUNTER_CANCELLED -> do
       FRFSUtils.updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
@@ -1019,6 +1046,12 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' switchFRF
     DFRFSTicketBooking.TECHNICAL_CANCEL_REJECTED -> do
       buildFRFSTicketBookingStatusAPIRes booking quoteCategories Nothing
   where
+    -- If User attempts to make Success against the older Payment Order, we must provide REFUND
+    refundWhenOlderPaymentBookingGetsCharged booking paymentBooking person paymentBookingStatus = do
+      whenJust mbLatestPaymentBookingId $ \latestPaymentBookingId -> do
+        when (latestPaymentBookingId /= paymentBooking.id && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
+          refundOrderCall booking paymentBooking person
+
     markJourneyPaymentSuccess booking paymentOrder paymentBooking = do
       mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.searchId.getId)
       whenJust mbJourneyLeg $ \journeyLeg -> do
@@ -1089,21 +1122,21 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' switchFRF
     orderStatusCall merchantOperatingCityId booking mRoutingId sdkVersion = Payment.orderStatus merchantId_ merchantOperatingCityId Nothing (getPaymentType booking.vehicleType) mRoutingId sdkVersion
     commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId_
 
-    makeUpdatedBooking DFRFSTicketBooking.FRFSTicketBooking {..} updatedStatus mTTL transactionId =
+    makeUpdatedBooking DFRFSTicketBooking.FRFSTicketBooking {..} updatedStatus mTTL transactionId mbConfirmedPaymentBookingId =
       let validTill' = mTTL & fromMaybe validTill
           newPaymentTxnId = transactionId <|> paymentTxnId
-       in DFRFSTicketBooking.FRFSTicketBooking {status = updatedStatus, validTill = validTill', paymentTxnId = newPaymentTxnId, ..}
+          confirmedPaymentBookingId' = mbConfirmedPaymentBookingId <|> confirmedPaymentBookingId
+       in DFRFSTicketBooking.FRFSTicketBooking {status = updatedStatus, validTill = validTill', paymentTxnId = newPaymentTxnId, confirmedPaymentBookingId = confirmedPaymentBookingId', ..}
     getSuccessTransactionId transactions = do
       let successTransactions = filter (\transaction -> transaction.status == Payment.CHARGED) transactions
       case successTransactions of
         [] -> throwError $ InvalidRequest "No successful transaction found"
         [transaction] -> return transaction.id
         _ -> throwError $ InvalidRequest "Multiple successful transactions found"
-    refundOrderCall booking person = do
+
+    refundOrderCall booking paymentBooking person = do
       logInfo $ "payment status api refundOrderCall"
-      riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-      when riderConfig.enableAutoJourneyRefund $
-        FRFSUtils.markAllRefundBookings booking person.id
+      FRFSUtils.markAllRefundBookings booking paymentBooking person.id
 
 getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Maybe Spec.VehicleCategory -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
 getFrfsBookingList (mbPersonId, _merchantId) mbLimit mbOffset mbVehicleCategory = do
@@ -1112,11 +1145,12 @@ getFrfsBookingList (mbPersonId, _merchantId) mbLimit mbOffset mbVehicleCategory 
   mapM
     ( \booking -> do
         quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
-        buildFRFSTicketBookingStatusAPIRes booking quoteCategories Nothing
+        (bookingStatusAPIRes, _) <- buildFRFSTicketBookingStatusAPIRes booking quoteCategories Nothing
+        return bookingStatusAPIRes
     )
     bookings
 
-buildFRFSTicketBookingStatusAPIRes :: DFRFSTicketBooking.FRFSTicketBooking -> [FRFSQuoteCategory.FRFSQuoteCategory] -> Maybe FRFSTicketService.FRFSBookingPaymentAPI -> Environment.Flow FRFSTicketService.FRFSTicketBookingStatusAPIRes
+buildFRFSTicketBookingStatusAPIRes :: DFRFSTicketBooking.FRFSTicketBooking -> [FRFSQuoteCategory.FRFSQuoteCategory] -> Maybe FRFSTicketService.FRFSBookingPaymentAPI -> Environment.Flow (FRFSTicketService.FRFSTicketBookingStatusAPIRes, DFRFSTicketBooking.FRFSTicketBooking)
 buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   stations <- mapM (Utils.mkPOrgStationAPI booking.partnerOrgId integratedBppConfig) =<< (decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db"))
@@ -1132,27 +1166,29 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
       fareParameters = FRFSUtils.calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
       quantity = fareParameters.adultItem <&> (.quantity)
   return $
-    FRFSTicketService.FRFSTicketBookingStatusAPIRes
-      { bookingId = booking.id,
-        city = merchantOperatingCity.city,
-        updatedAt = booking.updatedAt,
-        createdAt = booking.createdAt,
-        _type = booking._type,
-        quoteCategories = map mkFRFSQuoteCategoryAPIEntity quoteCategories,
-        price = Just $ booking.totalPrice.amount,
-        priceWithCurrency = Just $ mkPriceAPIEntity booking.totalPrice,
-        quantity,
-        validTill = booking.validTill,
-        vehicleType = booking.vehicleType,
-        status = booking.status,
-        discountedTickets = booking.discountedTickets,
-        eventDiscountAmount = booking.eventDiscountAmount,
-        payment = payment <&> (\p -> p {transactionId = booking.paymentTxnId}),
-        isFareChanged = booking.isFareChanged,
-        googleWalletJWTUrl = booking.googleWalletJWTUrl,
-        integratedBppConfigId = booking.integratedBppConfigId,
-        ..
-      }
+    ( FRFSTicketService.FRFSTicketBookingStatusAPIRes
+        { bookingId = booking.id,
+          city = merchantOperatingCity.city,
+          updatedAt = booking.updatedAt,
+          createdAt = booking.createdAt,
+          _type = booking._type,
+          quoteCategories = map mkFRFSQuoteCategoryAPIEntity quoteCategories,
+          price = Just $ booking.totalPrice.amount,
+          priceWithCurrency = Just $ mkPriceAPIEntity booking.totalPrice,
+          quantity,
+          validTill = booking.validTill,
+          vehicleType = booking.vehicleType,
+          status = booking.status,
+          discountedTickets = booking.discountedTickets,
+          eventDiscountAmount = booking.eventDiscountAmount,
+          payment = payment <&> (\p -> p {transactionId = booking.paymentTxnId}),
+          isFareChanged = booking.isFareChanged,
+          googleWalletJWTUrl = booking.googleWalletJWTUrl,
+          integratedBppConfigId = booking.integratedBppConfigId,
+          ..
+        },
+      booking
+    )
 
 mkFRFSQuoteCategoryAPIEntity :: FRFSQuoteCategory.FRFSQuoteCategory -> FRFSTicketService.FRFSQuoteCategoryAPIEntity
 mkFRFSQuoteCategoryAPIEntity FRFSQuoteCategory.FRFSQuoteCategory {..} =

@@ -152,9 +152,9 @@ createPayments ::
   Maybe Bool ->
   m ()
 createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer = do
-  ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
+  ticketBookingPaymentsNotExists <- mapM (fmap null . QFRFSTicketBookingPayment.findAllTBPByBookingId . (.id)) bookings
   isPaymentOrderProcessed <-
-    if and ticketBookingPaymentsExist
+    if and ticketBookingPaymentsNotExists
       then do
         paymentOrder <- createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket
         return $ isJust paymentOrder

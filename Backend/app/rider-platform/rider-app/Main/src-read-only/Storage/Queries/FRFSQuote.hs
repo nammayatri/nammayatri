@@ -23,7 +23,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSQuote.FRFSQuote] -> m ())
 createMany = traverse_ create
 
-findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [Domain.Types.FRFSQuote.FRFSQuote])
+findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ([Domain.Types.FRFSQuote.FRFSQuote]))
 findAllBySearchId searchId = do findAllWithKV [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m (Maybe Domain.Types.FRFSQuote.FRFSQuote))
@@ -46,12 +46,12 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.discountedTickets discountedTickets,
       Se.Set Beam.estimatedPrice (Kernel.Prelude.fmap (.amount) estimatedPrice),
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
-      Se.Set Beam.appSession (fareDetails <&> (.appSession)),
-      Se.Set Beam.distance (fareDetails <&> (.distance)),
-      Se.Set Beam.providerRouteId (fareDetails <&> (.providerRouteId)),
-      Se.Set Beam.ticketTypeCode (fareDetails <&> (.ticketTypeCode)),
-      Se.Set Beam.trainTypeCode (fareDetails <&> (.trainTypeCode)),
-      Se.Set Beam.via (fareDetails <&> (.via)),
+      Se.Set Beam.appSession ((fareDetails <&> (.appSession))),
+      Se.Set Beam.distance ((fareDetails <&> (.distance))),
+      Se.Set Beam.providerRouteId ((fareDetails <&> (.providerRouteId))),
+      Se.Set Beam.ticketTypeCode ((fareDetails <&> (.ticketTypeCode))),
+      Se.Set Beam.trainTypeCode ((fareDetails <&> (.trainTypeCode))),
+      Se.Set Beam.via ((fareDetails <&> (.via))),
       Se.Set Beam.fromStationId fromStationCode,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -60,8 +60,8 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.oldCacheDump oldCacheDump,
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
-      Se.Set Beam.currency (Kernel.Prelude.fmap (.currency) price),
-      Se.Set Beam.price (Kernel.Prelude.fmap (.amount) price),
+      Se.Set Beam.currency ((Kernel.Prelude.fmap (.currency)) price),
+      Se.Set Beam.price ((Kernel.Prelude.fmap (.amount)) price),
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,
       Se.Set Beam.providerName providerName,
