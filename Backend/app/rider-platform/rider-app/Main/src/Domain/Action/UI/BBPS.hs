@@ -145,7 +145,15 @@ getBbpsGetOrderStatus ::
 getBbpsGetOrderStatus (_, _) refIdTxt = do
   let refId = Kernel.Types.Id.Id refIdTxt
   bbpsInfo <- QBBPS.findByRefId refId >>= fromMaybeM (InvalidRequest "BBPS info not found")
-  bbpsStatusHandler bbpsInfo
+  person <- QP.findById (Kernel.Types.Id.cast bbpsInfo.customerId) >>= fromMaybeM (InvalidRequest "Person not found")
+  bbpsStatusHandler bbpsInfo (withPaymentStatusResponseHandler bbpsInfo person)
+  where
+    withPaymentStatusResponseHandler :: DBBPS.BBPS -> DP.Person -> (DPayment.PaymentStatusResp -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
+    withPaymentStatusResponseHandler bbpsInfo person action = do
+      let orderStatusCall = Payment.orderStatus bbpsInfo.merchantId bbpsInfo.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion
+      let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person bbpsInfo.customerId
+      orderStatusResponse <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.cast bbpsInfo.refId) orderStatusCall
+      action orderStatusResponse
 
 postBbpsCrossCheckPayment :: API.Types.UI.BBPS.BBPSServerReq -> Environment.Flow API.Types.UI.BBPS.BBPSServerResp
 postBbpsCrossCheckPayment _req = do
@@ -208,19 +216,20 @@ getBbpsOrders (mbPersonId, merchantId) mbLimit mbOffset mbActive mbStatus = do
 mkBBPSInfoApiRes :: DBBPS.BBPS -> API.BBPSInfoAPIRes
 mkBBPSInfoApiRes DBBPS.BBPS {..} = API.BBPSInfoAPIRes {billDetails = API.BBPSBillDetails {txnAmount = highPrecMoneyToText amount, ..}, ..}
 
-webhookHandlerBBPS :: Kernel.Types.Id.ShortId DPaymentOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
-webhookHandlerBBPS orderShortId _merchantId = do
+webhookHandlerBBPS :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> DPayment.PaymentStatusResp -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
+webhookHandlerBBPS _merchantId paymentStatusResponse = do
+  orderShortId <- DPayment.getOrderShortId paymentStatusResponse
   logDebug $ "bbps order bap webhookc call" <> orderShortId.getShortId
   order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
   bbpsInfo <- QBBPS.findByRefId (Kernel.Types.Id.cast order.id) >>= fromMaybeM (InvalidRequest "BBPS info not found")
-  bbpsStatusHandler bbpsInfo
+  bbpsStatusHandler bbpsInfo withPaymentStatusResponseHandler
+  where
+    withPaymentStatusResponseHandler :: (DPayment.PaymentStatusResp -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
+    withPaymentStatusResponseHandler action = action paymentStatusResponse
 
-bbpsStatusHandler :: DBBPS.BBPS -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
-bbpsStatusHandler bbpsInfo = do
-  let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person bbpsInfo.customerId
-  person <- QP.findById (Kernel.Types.Id.cast bbpsInfo.customerId) >>= fromMaybeM (InvalidRequest "Person not found")
-  let orderStatusCall = Payment.orderStatus bbpsInfo.merchantId bbpsInfo.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion
-      oldResp =
+bbpsStatusHandler :: DBBPS.BBPS -> ((DPayment.PaymentStatusResp -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
+bbpsStatusHandler bbpsInfo withPaymentStatusResponseHandler = do
+  let oldResp =
         API.BBPSPaymentStatusAPIRes
           { status = bbpsInfo.status,
             paymentInformation = bbpsInfo.paymentInformation,
@@ -230,24 +239,24 @@ bbpsStatusHandler bbpsInfo = do
           }
   if
       | bbpsInfo.status `elem` [DBBPS.NEW, DBBPS.PENDING] -> do
-        paymentStatusResp <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.cast bbpsInfo.refId) orderStatusCall
-        maybeM
-          (pure oldResp)
-          ( \(bbpsStatus, paymentInfo, payMode, txnUUID) -> do
-              when (bbpsInfo.status /= bbpsStatus) $ do
-                if bbpsStatus == DBBPS.CONFIRMATION_PENDING
-                  then withBBPSLock bbpsInfo.refId $ QBBPS.updatePaymentInformationAndStatusByRefId txnUUID payMode paymentInfo bbpsStatus bbpsInfo.refId
-                  else withBBPSLock bbpsInfo.refId $ QBBPS.updateStatusByRefId bbpsStatus bbpsInfo.refId
-              return $
-                API.BBPSPaymentStatusAPIRes
-                  { status = bbpsStatus,
-                    paymentTxnId = txnUUID,
-                    paymentInformation = paymentInfo,
-                    paymentMode = payMode,
-                    errorMessage = bbpsInfo.errorMessage
-                  }
-          )
-          (pure $ makePaymentInformation paymentStatusResp)
+        withPaymentStatusResponseHandler $ \paymentStatusResp -> do
+          maybeM
+            (pure oldResp)
+            ( \(bbpsStatus, paymentInfo, payMode, txnUUID) -> do
+                when (bbpsInfo.status /= bbpsStatus) $ do
+                  if bbpsStatus == DBBPS.CONFIRMATION_PENDING
+                    then withBBPSLock bbpsInfo.refId $ QBBPS.updatePaymentInformationAndStatusByRefId txnUUID payMode paymentInfo bbpsStatus bbpsInfo.refId
+                    else withBBPSLock bbpsInfo.refId $ QBBPS.updateStatusByRefId bbpsStatus bbpsInfo.refId
+                return $
+                  API.BBPSPaymentStatusAPIRes
+                    { status = bbpsStatus,
+                      paymentTxnId = txnUUID,
+                      paymentInformation = paymentInfo,
+                      paymentMode = payMode,
+                      errorMessage = bbpsInfo.errorMessage
+                    }
+            )
+            (pure $ makePaymentInformation paymentStatusResp)
       | bbpsInfo.status `elem` [DBBPS.CONFIRMATION_PENDING, DBBPS.FAILED, DBBPS.SUCCESS, DBBPS.REFUNDED, DBBPS.REFUND_FAILED] -> return oldResp
       | bbpsInfo.status `elem` [DBBPS.AWAITING_BBPS_CONFIRMATION] -> return oldResp -- Extra state might be needed later to handle some cases -- we can call bbps status api here..
       | bbpsInfo.status `elem` [DBBPS.REFUND_PENDING, DBBPS.CONFIRMATION_FAILED] -> do
@@ -260,7 +269,7 @@ bbpsStatusHandler bbpsInfo = do
               | isRefundSuccess -> void $ withBBPSLock bbpsInfo.refId $ QBBPS.updateStatusByRefId DBBPS.REFUNDED bbpsInfo.refId
               | isAnyRefundPending -> void $ do
                 when (bbpsInfo.status /= DBBPS.REFUND_PENDING) $ withBBPSLock bbpsInfo.refId $ QBBPS.updateStatusByRefId DBBPS.REFUND_PENDING bbpsInfo.refId
-                DPayment.orderStatusService commonPersonId (Kernel.Types.Id.cast bbpsInfo.refId) orderStatusCall
+                withPaymentStatusResponseHandler $ \_ -> return oldResp
               | allRefundFailed -> void $ withBBPSLock bbpsInfo.refId $ QBBPS.updateStatusByRefId DBBPS.REFUND_FAILED bbpsInfo.refId
               | otherwise -> pure ()
         return oldResp

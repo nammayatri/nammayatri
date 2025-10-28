@@ -35,6 +35,7 @@ module Lib.Payment.Domain.Action
     buildPaymentOrder,
     updateRefundStatus,
     buildOrderOffer,
+    getOrderShortId,
   )
 where
 
@@ -80,7 +81,9 @@ import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 
 data PaymentStatusResp
   = PaymentStatus
-      { status :: Payment.TransactionStatus,
+      { orderId :: Id DOrder.PaymentOrder,
+        orderShortId :: ShortId DOrder.PaymentOrder,
+        status :: Payment.TransactionStatus,
         bankErrorMessage :: Maybe Text,
         bankErrorCode :: Maybe Text,
         isRetried :: Maybe Bool,
@@ -696,7 +699,9 @@ orderStatusService personId orderId orderStatusCall = do
         Right _ -> pure ()
       return $
         PaymentStatus
-          { status = transactionStatus,
+          { orderId = orderId,
+            orderShortId = order.shortId,
+            status = transactionStatus,
             bankErrorCode = orderTxn.bankErrorCode,
             bankErrorMessage = orderTxn.bankErrorMessage,
             isRetried = isRetriedOrder,
@@ -1118,3 +1123,8 @@ verifyVPAService ::
   m Payment.VerifyVPAResp
 verifyVPAService verifyVPAReq verifyVPACall = do
   verifyVPACall verifyVPAReq -- api call
+
+getOrderShortId :: MonadFlow m => PaymentStatusResp -> m (ShortId DOrder.PaymentOrder)
+getOrderShortId paymentStatusResp = case paymentStatusResp of
+  PaymentStatus {..} -> pure orderShortId
+  _ -> throwError $ InternalError "Order Id not found in response."
