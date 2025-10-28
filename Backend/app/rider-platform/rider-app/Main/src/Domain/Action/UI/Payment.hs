@@ -210,20 +210,22 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
       _ -> throwError $ InternalError "Order Id not found in response."
     callWebhookHandlerWithOrderStatus paymentServiceType orderShortId orderStatusCall = do
       paymentOrder <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
-      orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
-      orderStatusHandler paymentServiceType paymentOrder orderStatusResponse
+      paymentStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
+      orderStatusHandler paymentServiceType paymentOrder paymentStatusResponse
 
 orderStatusHandler :: Payment.PaymentServiceType -> DOrder.PaymentOrder -> DPayment.PaymentStatusResp -> Flow ()
-orderStatusHandler paymentServiceType paymentOrder orderStatusResponse = do
+orderStatusHandler paymentServiceType paymentOrder paymentStatusResponse = do
   case paymentServiceType of
-    Payment.FRFSBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket paymentOrder.shortId (cast paymentOrder.merchantId) orderStatusResponse.refunds JMU.switchFRFSQuoteTierUtil
-    Payment.FRFSBusBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket paymentOrder.shortId (cast paymentOrder.merchantId) orderStatusResponse.refunds JMU.switchFRFSQuoteTierUtil
+    Payment.FRFSBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (cast paymentOrder.merchantId) paymentStatusResponse JMU.switchFRFSQuoteTierUtil
+    Payment.FRFSBusBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (cast paymentOrder.merchantId) paymentStatusResponse JMU.switchFRFSQuoteTierUtil
     Payment.FRFSMultiModalBooking -> do
       mbPass <- QPurchasedPass.findByOrderShortId paymentOrder.shortId
       case mbPass of
-        Just _ -> void $ Pass.webhookHandlerPass paymentOrder.shortId (cast paymentOrder.merchantId)
-        Nothing -> void $ FRFSTicketService.webhookHandlerFRFSTicket paymentOrder.shortId (cast paymentOrder.merchantId) orderStatusResponse.refunds JMU.switchFRFSQuoteTierUtil
-    Payment.BBPS -> void $ BBPS.webhookHandlerBBPS paymentOrder.shortId (cast paymentOrder.merchantId)
+        Just _ -> do
+          orderShortId <- DPayment.getOrderShortId paymentStatusResponse
+          void $ Pass.webhookHandlerPass orderShortId (cast paymentOrder.merchantId)
+        Nothing -> void $ FRFSTicketService.webhookHandlerFRFSTicket (cast paymentOrder.merchantId) paymentStatusResponse JMU.switchFRFSQuoteTierUtil
+    Payment.BBPS -> void $ BBPS.webhookHandlerBBPS (cast paymentOrder.merchantId) paymentStatusResponse
     _ -> pure ()
 
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text
