@@ -1188,7 +1188,7 @@ tfQuotation booking =
   Just
     Spec.Quotation
       { quotationBreakup = mkQuotationBreakup booking.fareParams,
-        quotationPrice = tfQuotationPrice $ HighPrecMoney $ toRational booking.estimatedFare,
+        quotationPrice = tfQuotationPrice (HighPrecMoney $ toRational booking.estimatedFare) booking.currency,
         quotationTtl = Nothing
       }
 
@@ -1197,16 +1197,16 @@ tfQuotationSU fareParams estimatedFare =
   Just
     Spec.Quotation
       { quotationBreakup = mkQuotationBreakup fareParams,
-        quotationPrice = tfQuotationPrice estimatedFare,
+        quotationPrice = tfQuotationPrice estimatedFare fareParams.currency,
         quotationTtl = Nothing
       }
 
-tfQuotationPrice :: HighPrecMoney -> Maybe Spec.Price
-tfQuotationPrice estimatedFare =
+tfQuotationPrice :: HighPrecMoney -> Currency -> Maybe Spec.Price
+tfQuotationPrice estimatedFare currency =
   Just
     Spec.Price
       { priceComputedValue = Nothing,
-        priceCurrency = Just "INR",
+        priceCurrency = Just $ show currency,
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
         priceOfferedValue = Just $ encodeToText estimatedFare,
@@ -1223,7 +1223,7 @@ mkQuotationBreakup fareParams =
       Just
         Spec.Price
           { priceComputedValue = Nothing,
-            priceCurrency = Just "INR",
+            priceCurrency = Just $ show fareParams.currency,
             priceMaximumValue = Nothing,
             priceMinimumValue = Nothing,
             priceOfferedValue = Just $ encodeToText money,
@@ -1297,7 +1297,7 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemId = Just $ maybe (Common.mkItemId shortId booking.vehicleServiceTier) getId (booking.estimateId),
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
-          itemPrice = tfItemPrice $ booking.estimatedFare,
+          itemPrice = tfItemPrice booking.estimatedFare booking.currency,
           itemTags = mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
         }
     ]
@@ -1312,7 +1312,7 @@ tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId upd
           itemId = Just $ Common.mkItemId shortId booking.vehicleServiceTier,
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
-          itemPrice = tfItemPrice updatedBooking.estimatedFare,
+          itemPrice = tfItemPrice updatedBooking.estimatedFare booking.currency,
           itemTags = mkRateCardTag estimatedDistance' booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
         }
     ]
@@ -1322,12 +1322,12 @@ tfPaymentId mbPaymentId = do
   paymentId <- mbPaymentId
   Just [paymentId]
 
-tfItemPrice :: HighPrecMoney -> Maybe Spec.Price
-tfItemPrice estimatedFare =
+tfItemPrice :: HighPrecMoney -> Currency -> Maybe Spec.Price
+tfItemPrice estimatedFare currency =
   Just
     Spec.Price
       { priceComputedValue = Nothing,
-        priceCurrency = Just "INR",
+        priceCurrency = Just $ show currency,
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
         priceOfferedValue = Just $ Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice Nothing estimatedFare, -- TODO : Remove this and make non mandatory on BAP side
