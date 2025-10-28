@@ -20,6 +20,7 @@ module Domain.Action.Dashboard.RideBooking.Driver
     postDriverExemptCash,
     postDriverEnable,
     getDriverInfo,
+    getDriverFeedbackList,
     postDriverUnlinkVehicle,
     postDriverEndRCAssociation,
     postDriverSetRCStatus,
@@ -31,6 +32,7 @@ where
 import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified Data.Map as M
+import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.Driver as Driver
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
@@ -342,6 +344,43 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
 
   buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory blockHistory (fromMaybe 0 driverInfo.drunkAndDriveViolationCount)
 
+getDriverFeedbackList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe (Id Common.Driver) ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow Common.GetFeedbackListRes
+getDriverFeedbackList merchantShortId _opCity mbPersonId mbMobileNumber mbMobileCountryCode = do
+  when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
+    throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
+  merchant <- findMerchantByShortId merchantShortId
+  let mbPersonId' = cast @Common.Driver @DP.Person <$> mbPersonId
+  driverId <- case (mbPersonId', mbMobileNumber) of
+    (Just personId, _) -> do
+      person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist $ personId.getId)
+      unless (person.merchantId == merchant.id) $ throwError (PersonDoesNotExist $ personId.getId)
+      pure personId
+    (Nothing, Just mobileNumber) -> do
+      mobileNumberDbHash <- getDbHash mobileNumber
+      let mobileCountryCode = fromMaybe DCommon.mobileIndianCode (DCommon.appendPlusInMobileCountryCode (T.strip <$> mbMobileCountryCode))
+      person <-
+        B.runInReplica $
+          QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberDbHash merchant.id DP.DRIVER
+            >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
+      pure person.id
+    _ -> throwError $ InvalidRequest "Either \"personId\" or \"mobileNumber\" is required"
+
+  feedbacks <- QFeedback.findOtherFeedbacks [] driverId (Just 500)
+  ratings <- QRating.findAllRatingsForPersonWithLimitOffset driverId (Just 500)
+
+  let combinedFeedbacks = buildDriverFeedbackAPIEntity feedbacks ratings
+
+  pure $
+    Common.GetFeedbackListRes
+      { feedbacks = combinedFeedbacks
+      }
+
 buildDriverInfoRes ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
   QPerson.DriverWithRidesCount ->
@@ -386,9 +425,6 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let isACAllowedForDriver = checkIfACAllowedForDriver info (catMaybes serviceTierACThresholds)
   let isVehicleACWorking = maybe False (\v -> v.airConditioned /= Just False) vehicle
   cancellationData <- SCR.getCancellationRateData person.merchantOperatingCityId person.id
-  feedbacks <- QFeedback.findOtherFeedbacks [] person.id (Just 500)
-  ratings <- QRating.findAllRatingsForPerson person.id
-  let combinedFeedbacks = buildDriverFeedbackAPIEntity feedbacks ratings
   pure
     Common.DriverInfoRes
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -442,7 +478,6 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         createdAt = Just info.createdAt,
         reactVersion = person.reactBundleVersion,
         driverMode = info.mode,
-        feedbacks = combinedFeedbacks,
         lastOfflineTime = info.lastOfflineTime,
         drunkAndDriveViolationCount
       }
@@ -451,8 +486,6 @@ buildDriverFeedbackAPIEntity :: [DFeedback.Feedback] -> [DRating.Rating] -> [Com
 buildDriverFeedbackAPIEntity feedbacks ratings =
   let feedbackMap = M.fromList [(DFeedback.rideId fb, fb) | fb <- feedbacks]
       ratingMap = M.fromList [(DRating.rideId rating, rating) | rating <- ratings]
-
-      -- From feedbacks (with optional rating)
       fromFeedbacks =
         map
           ( \(DFeedback.Feedback {..}) ->
@@ -464,21 +497,19 @@ buildDriverFeedbackAPIEntity feedbacks ratings =
                 }
           )
           feedbacks
-
-      -- From ratings without feedback badge
       fromRatingsOnly =
         mapMaybe
           ( \rating ->
-              case M.lookup (DRating.rideId rating) feedbackMap of
-                Nothing ->
+              case (M.lookup (DRating.rideId rating) feedbackMap, DRating.feedbackDetails rating) of
+                (Nothing, Just details) ->
                   Just $
                     Common.DriverFeedbackAPIEntity
                       { rideId = cast (DRating.rideId rating),
                         createdAt = DRating.createdAt rating,
                         feedbackText = Nothing,
-                        feedbackDetails = DRating.feedbackDetails rating
+                        feedbackDetails = Just details
                       }
-                Just _ -> Nothing -- Already included in fromFeedbacks
+                _ -> Nothing
           )
           ratings
    in fromFeedbacks ++ fromRatingsOnly

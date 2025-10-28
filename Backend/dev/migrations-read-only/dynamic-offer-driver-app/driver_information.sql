@@ -279,4 +279,4 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ride_request_vo
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.driver_information ALTER COLUMN last_offline_time DROP DEFAULT;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN last_offline_time SET DEFAULT;
