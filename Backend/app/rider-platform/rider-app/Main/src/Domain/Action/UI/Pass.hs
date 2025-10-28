@@ -201,7 +201,7 @@ purchasePassWithPayment person pass merchantId personId = do
             commonPersonId = Id.cast @DP.Person @DPayment.Person personId
             createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just personId.getId) person.clientSdkVersion
 
-        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId Nothing createOrderReq createOrderCall
+        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId createOrderReq createOrderCall
       else return Nothing
 
   QPurchasedPass.create purchasedPass
