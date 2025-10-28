@@ -2,6 +2,7 @@ module Lib.JourneyModule.Types where
 
 import API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
+import qualified API.Types.UI.RiderLocation as RL
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import Control.Applicative ((<|>))
@@ -262,7 +263,8 @@ data JourneyInitData = JourneyInitData
     endTime :: Maybe UTCTime,
     maximumWalkDistance :: Meters,
     isSingleMode :: Bool,
-    relevanceScore :: Maybe Double
+    relevanceScore :: Maybe Double,
+    busLocationData :: [RL.BusLocation]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1288,8 +1290,9 @@ mkJourneyLeg ::
   Maybe Gates ->
   Maybe FinalBoardedBusData ->
   Maybe Spec.ServiceTierType ->
+  [RL.BusLocation] ->
   m DJL.JourneyLeg
-mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId multimodalSearchRequestId maximumWalkDistance fare mbGates mbFinalBoardedBusData mbUserBookedServiceTierType = do
+mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId multimodalSearchRequestId maximumWalkDistance fare mbGates mbFinalBoardedBusData mbUserBookedServiceTierType busLocationData = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
   routeDetails <- mapM (mkRouteDetail journeyLegId fare) leg.routeDetails
@@ -1345,7 +1348,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         isDeleted = Just False,
         sequenceNumber = idx,
         multimodalSearchRequestId = Just multimodalSearchRequestId.getId,
-        busLocationData = []
+        busLocationData
       }
   where
     straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
