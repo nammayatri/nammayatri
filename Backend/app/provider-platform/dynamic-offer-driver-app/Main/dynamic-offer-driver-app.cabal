@@ -1492,6 +1492,7 @@ library
     , lens
     , lens-aeson
     , location-updates
+    , memory
     , mobility-core
     , network-uri
     , openapi3
@@ -1627,6 +1628,7 @@ executable dynamic-offer-driver-app-exe
     , jwt >=0.11
     , lens
     , lens-aeson
+    , memory
     , mobility-core
     , network-uri
     , openapi3

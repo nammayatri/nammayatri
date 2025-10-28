@@ -2104,7 +2104,7 @@ updateDocumentStatus detailsKey docType status availability pullFields errorCode
              }
         else doc
 
------------ DigiLocker Initiate API -----------
+----------- GET DIGILOCKER AUTHORIZATION URL -----------
 
 postDriverDigilockerInitiate ::
   ( Maybe (Id Domain.Types.Person.Person),
@@ -2145,8 +2145,15 @@ postDriverDigilockerInitiate (mbDriverId, merchantId, merchantOpCityId) = do
             codeVerifier = codeVerifier
           }
 
+  logDebug $ "DigiLocker initiate - BEFORE Redis.setExp for key: " <> stateKey
   Redis.setExp stateKey stateData 3600 -- 1 hour TTL
-  logInfo $ "DigiLocker initiate - Stored state data in Redis with key: " <> stateKey <> ", TTL: 3600s"
+  logDebug $ "DigiLocker initiate - AFTER Redis.setExp for key: " <> stateKey
+
+  -- Verify the key was actually written
+  verifyKey <- Redis.get stateKey :: Flow (Maybe APITypes.DigiLockerStateData)
+  case verifyKey of
+    Just val -> logInfo $ "DigiLocker initiate - VERIFIED: State data stored in Redis with key: " <> stateKey <> ", value: " <> (TE.decodeUtf8 $ BSL.toStrict $ encode val) <> ", TTL: 3600s"
+    Nothing -> logError $ "DigiLocker initiate - ERROR: Failed to store state data in Redis for key: " <> stateKey <> ", attempted value: " <> (TE.decodeUtf8 $ BSL.toStrict $ encode stateData)
 
   -- Step 5: Construct DigiLocker authorization URL
   let authorizationUrl = constructDigiLockerAuthUrl digiLockerState codeChallenge

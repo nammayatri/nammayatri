@@ -132,6 +132,7 @@ dependencies:
   - json-logic-hs
   - yudhishthira
   - network-uri
+  - memory
   - text-format
   - scientific
   - hex-text
