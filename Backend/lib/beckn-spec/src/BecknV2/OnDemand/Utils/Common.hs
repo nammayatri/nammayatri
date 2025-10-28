@@ -98,6 +98,7 @@ mapVariantToVehicle = \case
   DTV.VIP_ESCORT -> Enums.CAB
   DTV.VIP_OFFICER -> Enums.CAB
   DTV.AC_PRIORITY -> Enums.CAB
+  DTV.BIKE_PLUS -> Enums.MOTORCYCLE
 
 castVehicleCategoryToDomain :: Enums.VehicleCategory -> DVC.VehicleCategory
 castVehicleCategoryToDomain = \case
@@ -147,12 +148,13 @@ mapServiceTierToCategory = \case
   VIP_ESCORT -> Enums.CAB
   VIP_OFFICER -> Enums.CAB
   AC_PRIORITY -> Enums.CAB
+  BIKE_PLUS -> Enums.MOTORCYCLE
 
 getListOfServiceTireTypes :: Enums.VehicleCategory -> [DVST.ServiceTierType]
 getListOfServiceTireTypes Enums.CAB = [DVST.SEDAN, DVST.SUV, DVST.HATCHBACK, DVST.TAXI, DVST.TAXI_PLUS, DVST.ECO, DVST.COMFY, DVST.PREMIUM, DVST.PREMIUM_SEDAN, DVST.BLACK, DVST.BLACK_XL, DVST.SUV_PLUS, DVST.HERITAGE_CAB, DVST.VIP_ESCORT, DVST.VIP_OFFICER, DVST.AC_PRIORITY]
 getListOfServiceTireTypes Enums.AUTO_RICKSHAW = [DVST.AUTO_RICKSHAW, DVST.EV_AUTO_RICKSHAW, DVST.AUTO_PLUS]
-getListOfServiceTireTypes Enums.MOTORCYCLE = [DVST.BIKE, DVST.DELIVERY_BIKE]
-getListOfServiceTireTypes Enums.TWO_WHEELER = [DVST.BIKE, DVST.DELIVERY_BIKE]
+getListOfServiceTireTypes Enums.MOTORCYCLE = [DVST.BIKE, DVST.DELIVERY_BIKE, DVST.BIKE_PLUS]
+getListOfServiceTireTypes Enums.TWO_WHEELER = [DVST.BIKE, DVST.DELIVERY_BIKE, DVST.BIKE_PLUS]
 getListOfServiceTireTypes Enums.AMBULANCE = [DVST.AMBULANCE_TAXI, DVST.AMBULANCE_TAXI_OXY, DVST.AMBULANCE_AC, DVST.AMBULANCE_AC_OXY, DVST.AMBULANCE_VENTILATOR]
 getListOfServiceTireTypes Enums.METRO = []
 getListOfServiceTireTypes Enums.SUBWAY = []

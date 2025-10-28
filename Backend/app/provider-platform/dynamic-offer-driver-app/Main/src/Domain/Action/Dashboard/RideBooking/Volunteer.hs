@@ -103,6 +103,7 @@ getVolunteerBooking merchantShortId opCity otpCode = do
     convertVehicleVariant DVST.VIP_ESCORT = Common.VIP_ESCORT
     convertVehicleVariant DVST.VIP_OFFICER = Common.VIP_OFFICER
     convertVehicleVariant DVST.AC_PRIORITY = Common.AC_PRIORITY
+    convertVehicleVariant DVST.BIKE_PLUS = Common.BIKE_PLUS
 
     buildBookingLocation Domain.Location {..} =
       Common.Location
