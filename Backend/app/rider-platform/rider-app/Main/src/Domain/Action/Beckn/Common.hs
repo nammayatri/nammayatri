@@ -352,6 +352,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         isSafetyPlus = isSafetyPlus,
         isInsured = booking.isInsured,
         insuredAmount = booking.insuredAmount,
+        cancellationChargesOnCancel = Nothing,
         ..
       }
 
@@ -834,6 +835,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
       QRB.updateStatus booking.id DRB.CANCELLED
       QBPL.makeAllInactiveByBookingId booking.id
   whenJust mbRide $ \ride -> void $ do
+    void $ QRide.updateCancellationChargesOnCancel (maybe Nothing (Just . (.amount)) cancellationFee) ride.id
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (InternalError "RiderConfig not found")
   fork "Cancellation Settlement" $ do

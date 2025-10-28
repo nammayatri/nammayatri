@@ -66,6 +66,7 @@ Ride:
     tripEndPos: Maybe LatLong
     previousRideTripEndPos: Maybe LatLong
     previousRideTripEndTime: Maybe UTCTime
+    cancellationChargesOnCancel : Maybe HighPrecMoney
     isDriverSpecialLocWarrior: Bool
     isAdvanceBooking : Bool
     isPetRide: Bool
@@ -294,6 +295,10 @@ Ride:
     updateIsPickupOrDestinationEdited:
       kvFunction: updateOneWithKV
       params: [isPickupOrDestinationEdited]
+      where: id
+    updateCancellationChargesOnCancel:
+      kvFunction: updateOneWithKV
+      params: [cancellationChargesOnCancel]
       where: id
 
   excludedDefaultQueries:

@@ -606,11 +606,11 @@ cancellationChargesWaiveOff merchantShortId _ reqRideId = do
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (merchant.id == booking.merchantId) $
     throwError (RideDoesNotExist rideId.getId)
-  fareBreakup <- B.runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
-  let cancellationCharges = filter (\fareBreakup' -> fareBreakup'.description == "CANCELLATION_CHARGES") fareBreakup
-  case listToMaybe cancellationCharges of
+  -- fareBreakup <- B.runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
+  -- let cancellationCharges = filter (\fareBreakup' -> fareBreakup'.description == "CANCELLATION_CHARGES") fareBreakup
+  case ride.cancellationChargesOnCancel of
     Just entity -> do
-      let charges = entity.amount.amount
+      let charges = entity
       case booking.bppBookingId of
         Just bppBookingId -> do
           if charges > 0
@@ -620,7 +620,7 @@ cancellationChargesWaiveOff merchantShortId _ reqRideId = do
               case result of
                 Right _ -> do
                   logInfo $ "CancellationChargesWaiveOff: Successfully waived off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges
-                  return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Just charges, waivedOffAmountWithCurrency = Just PriceAPIEntity {amount = charges, currency = entity.amount.currency}, waivedOffSuccess = True}
+                  return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Just charges, waivedOffAmountWithCurrency = Just PriceAPIEntity {amount = charges, currency = INR}, waivedOffSuccess = True}
                 Left err -> do
                   logError $ "CancellationChargesWaiveOff: Failed to waive off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges <> " with error: " <> show err
                   return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}

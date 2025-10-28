@@ -279,7 +279,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         isPickupOrDestinationEdited = Just False,
         isInsured = booking.isInsured,
         insuredAmount = booking.insuredAmount,
-        reactBundleVersion = driver.reactBundleVersion
+        reactBundleVersion = driver.reactBundleVersion,
+        cancellationChargesOnCancel = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

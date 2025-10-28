@@ -26,6 +26,7 @@ data RideT f = RideT
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bookingId :: B.C f Kernel.Prelude.Text,
     bppRideId :: B.C f Kernel.Prelude.Text,
+    cancellationChargesOnCancel :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cancellationFeeIfCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     chargeableDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     chargeableDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
