@@ -160,6 +160,15 @@ apis:
               mbFleet: Bool
             response:
               type: DriverInfoRes
+  - GET:
+      endpoint: /feedback/list
+      auth: ApiAuthV2
+      query:
+        - personId: Id Driver
+        - mobileNumber: Text
+        - mobileCountryCode: Text
+      response:
+        type: GetFeedbackListRes
   - POST: # UnlinkVehicleAPI
       endpoint: /{driverId}/unlinkVehicle
       auth: ApiAuthV2
@@ -304,6 +313,7 @@ types:
     - softBlockReasonFlag: Maybe Text
     - driverMode: Maybe DriverMode
     - lastOfflineTime: Maybe UTCTime
+  GetFeedbackListRes:
     - feedbacks: [DriverFeedbackAPIEntity]
   DriverFeedbackAPIEntity:
     - rideId: Id Ride
