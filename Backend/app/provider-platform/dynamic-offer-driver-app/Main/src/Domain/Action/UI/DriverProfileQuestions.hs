@@ -18,6 +18,7 @@ import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
+import Kernel.Beam.Functions
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -30,6 +31,7 @@ import qualified Storage.Queries.DriverProfileQuestions as DPQ
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Person as QPerson
 import Tools.ChatCompletion as TC
 import Tools.Error
 
@@ -151,7 +153,15 @@ getDriverProfileQues ::
 getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
   driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
   driverProfile <- DPQ.findByPersonId driverId
-  profileImage <- ImageQuery.findByPersonIdImageTypeAndValidationStatus driverId DTO.ProfilePhoto DImage.APPROVED >>= maybe (return Nothing) (\image -> S3.get (T.unpack (image.s3Path)) <&> Just)
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  profileImage <- case person.faceImageId of
+    Just mediaId -> do
+      mediaEntry <- runInReplica $ QMF.findById mediaId >>= fromMaybeM (FileDoNotExist driverId.getId)
+      case mediaEntry.s3FilePath of
+        Just s3Path -> Just <$> S3.get (T.unpack s3Path)
+        _ -> fetchLegacyProfileImage driverId
+    Nothing -> do
+      fetchLegacyProfileImage driverId
 
   case driverProfile of
     Just res ->
@@ -188,3 +198,7 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
     extractFilePath url = case T.splitOn "filePath=" url of
       [_before, after] -> after
       _ -> T.empty
+
+    fetchLegacyProfileImage driverId =
+      ImageQuery.findByPersonIdImageTypeAndValidationStatus driverId DTO.ProfilePhoto DImage.APPROVED
+        >>= maybe (pure Nothing) (\image -> Just <$> S3.get (T.unpack image.s3Path))
