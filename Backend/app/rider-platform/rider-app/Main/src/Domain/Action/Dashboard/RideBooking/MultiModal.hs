@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.Dashboard.RideBooking.MultiModal (getMultiModalList, postMultiModalSendMessage) where
+module Domain.Action.Dashboard.RideBooking.MultiModal (getMultiModalList, postMultiModalSendMessage, postMultiModalAddComment, getMultiModalGetComments) where
 
 import qualified API.Types.Dashboard.RideBooking.MultiModal
 import Data.Aeson
@@ -69,6 +69,21 @@ notifyCustomerFromDashboard customerId req = do
                 sound = Nothing
               }
       TNotifications.notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
+
+postMultiModalAddComment :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.MultiModal.CustomerCommentReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postMultiModalAddComment _merchantShortId _opCity customerId req = do
+  person <- QPerson.findById (Kernel.Types.Id.Id customerId) >>= fromMaybeM (PersonDoesNotExist customerId)
+  let existingComments = person.comments
+  let updatedComments = case existingComments of
+        Just existingComments' -> Just $ req.body : existingComments'
+        Nothing -> Just [req.body]
+  QPerson.updatePersonComments (Kernel.Types.Id.Id customerId) updatedComments
+  pure Kernel.Types.APISuccess.Success
+
+getMultiModalGetComments :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.Flow API.Types.Dashboard.RideBooking.MultiModal.CustomerCommentsResp)
+getMultiModalGetComments _merchantShortId _opCity customerId = do
+  person <- QPerson.findById (Kernel.Types.Id.Id customerId) >>= fromMaybeM (PersonDoesNotExist customerId)
+  pure API.Types.Dashboard.RideBooking.MultiModal.CustomerCommentsResp {comments = person.comments, customerId = person.id}
 
 instance FromHttpApiData [Domain.Types.Journey.JourneyStatus] where
   parseUrlPiece = parseHeader . DT.encodeUtf8

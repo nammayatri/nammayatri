@@ -237,3 +237,9 @@ ALTER TABLE atlas_app.person ADD COLUMN last_used_vehicle_categories text[] ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN comments text[] ;

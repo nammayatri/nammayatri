@@ -119,6 +119,7 @@ Person:
     profilePicture: Maybe Text
     verificationChannel: Maybe Text
     liveActivityToken : Maybe Text
+    comments: "Maybe [Text]"
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
