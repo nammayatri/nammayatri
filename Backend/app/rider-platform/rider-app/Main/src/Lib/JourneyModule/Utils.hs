@@ -1052,7 +1052,14 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
       routeDetailsWithDistance <- mapM (\(osc, dsc) -> measureLatency (buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc True) "buildMultimodalRouteDetails") viaPoints
       logDebug $ "buildTrainAllViaRoutes routeDetailsWithDistance: " <> show routeDetailsWithDistance
       -- ensure that atleast one train route is possible or two stops are less than 1km apart so that user can walk to other station e.g. Chennai Park to Central station
-      let isRoutePossible = all (\(mbRouteDetails, mbDistance) -> isJust mbRouteDetails || (isJust mbDistance && mbDistance < Just (HighPrecMeters 1000))) routeDetailsWithDistance
+      let singleModeWalkThreshold =
+            fromMaybe
+              1000
+              ( case integratedBppConfig.providerConfig of
+                  DIntegratedBPPConfig.CRIS config -> fromIntegral <$> config.singleModeWalkThreshold
+                  _ -> Nothing
+              )
+      let isRoutePossible = all (\(mbRouteDetails, mbDistance) -> isJust mbRouteDetails || (isJust mbDistance && mbDistance < Just (HighPrecMeters singleModeWalkThreshold))) routeDetailsWithDistance
       if isRoutePossible
         then do
           let routeDetails = mapMaybe (\(mbRouteDetails, _) -> mbRouteDetails) routeDetailsWithDistance
