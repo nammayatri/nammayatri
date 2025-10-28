@@ -36,4 +36,19 @@ apis:
         - customerId: Text
       response:
         type: BookingListResV2
-types: {}
+  - POST:
+      endpoint: sendMessage/{customerId}/
+      auth: ApiAuthV2
+      params:
+        customerId: Text
+      request:
+        type: CustomerSendMessageReq
+      response:
+        type: APISuccess
+types:
+  CustomerSendMessageReq:
+    title: Text
+    message: Text
+    channel: MediaChannel
+  MediaChannel:
+    - enum: WHATSAPP, PUSH_NOTIFICATION, SMS
