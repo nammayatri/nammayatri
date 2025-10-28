@@ -125,6 +125,7 @@ DriverInformation:
     isSilentModeEnabled: Maybe Bool
     isHighAccuracyLocationEnabled: Maybe Bool
     rideRequestVolumeEnabled: Maybe Bool
+    lastOfflineTime: Maybe UTCTime
 
   default:
     active: "false"

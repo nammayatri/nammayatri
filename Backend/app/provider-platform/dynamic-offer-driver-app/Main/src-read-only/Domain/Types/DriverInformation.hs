@@ -64,6 +64,7 @@ data DriverInformation = DriverInformation
     issueBreachCooldownTimes :: Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachCooldownTime],
     lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    lastOfflineTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     latestScheduledBooking :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     latestScheduledPickup :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     maxPickupRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,

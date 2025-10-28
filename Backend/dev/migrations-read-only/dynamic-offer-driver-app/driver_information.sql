@@ -237,3 +237,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_high_accurac
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ride_request_volume_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN last_offline_time timestamp with time zone;
