@@ -55,7 +55,8 @@ data ONDCBecknConfig = ONDCBecknConfig
     fareCachingAllowed :: Maybe Bool,
     singleTicketForMultiplePassengers :: Maybe Bool,
     mergeQuoteCriteria :: Maybe MergeQuoteCriteria,
-    routeBasedQuoteSelection :: Maybe Bool
+    routeBasedQuoteSelection :: Maybe Bool,
+    routeBasedVehicleTracking :: Maybe Bool
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
