@@ -92,7 +92,8 @@ getLiveMapDrivers merchantShortId _opCity radius requestorId mbReqFleetOwnerId m
         DV.SUV_PLUS,
         DV.BIKE,
         DV.EV_AUTO_RICKSHAW,
-        DV.HERITAGE_CAB
+        DV.HERITAGE_CAB,
+        DV.BIKE_PLUS
       ]
 
 getDriverCurrentLocation :: ID.Id DP.Person -> Environment.Flow LatLong
