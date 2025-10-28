@@ -145,7 +145,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
     walletPOCfg <- do
       pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
       DPOC.getWalletClassNameConfig pOrgCfg.config
-    let mbClassName = lookup booking.merchantOperatingCityId.getId walletPOCfg.className
+    let mbClassName = lookup booking.providerId walletPOCfg.className
     whenJust mbClassName $ \className -> do
       fork ("adding googleJWTUrl" <> " Booking Id: " <> booking.id.getId) $ do
         let serviceName = DEMSC.WalletService GW.GoogleWallet
