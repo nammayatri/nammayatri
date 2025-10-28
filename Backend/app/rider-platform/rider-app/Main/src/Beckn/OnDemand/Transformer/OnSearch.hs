@@ -54,7 +54,7 @@ buildInterCityQuoteInfo item quoteId_ currency = do
         Price
           { amountInt = Money 0,
             amount = HighPrecMoney 0.0,
-            currency = INR
+            currency
           }
   let baseFare = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getBaseFare itemTags currency)
   let perHourCharge = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPerHourCharge itemTags currency)

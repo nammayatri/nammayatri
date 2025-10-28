@@ -396,7 +396,7 @@ processRestFee paymentMode DriverFee {..} vendorFees subscriptionConfig _ _ tran
 
 makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> TransporterConfig -> Payment.OfferListReq
 makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transporterConfig = do
-  let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalFee, currency = INR} -- add UDFs
+  let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalFee, currency = transporterConfig.currency} -- add UDFs
       customerReq = Payment.OfferCustomer {customerId = driver.id.getId, email = driver.email, mobile = Nothing}
   Payment.OfferListReq
     { order = offerOrder,
