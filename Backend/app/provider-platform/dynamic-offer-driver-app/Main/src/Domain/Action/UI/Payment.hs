@@ -152,19 +152,21 @@ getStatus ::
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Id DOrder.PaymentOrder ->
   m DPayment.PaymentStatusResp
-getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
+getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId -- api call
-  order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
   now <- getCurrentTime
-  invoices <- QIN.findById (cast orderId)
+  invoices <- QIN.findById (cast paymentOrderId)
   let firstInvoice = listToMaybe invoices
   let mbServiceName = firstInvoice <&> (.serviceName)
   if order.status == Juspay.CHARGED -- Consider CHARGED status as terminal status
     then do
       return $
         DPayment.PaymentStatus
-          { status = order.status,
+          { orderId = order.id,
+            orderShortId = order.shortId,
+            status = order.status,
             bankErrorCode = firstInvoice >>= (.bankErrorCode),
             bankErrorMessage = firstInvoice >>= (.bankErrorMessage),
             isRetried = Just $ order.isRetried,
@@ -186,7 +188,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
           >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
       paymentServiceName <- Payment.decidePaymentService serviceConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
-      paymentStatus <- DPayment.orderStatusService commonPersonId orderId (orderStatusCall paymentServiceName (Just order.personId.getId))
+      paymentStatus <- DPayment.orderStatusService commonPersonId paymentOrderId (orderStatusCall paymentServiceName (Just order.personId.getId))
       case paymentStatus of
         DPayment.MandatePaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do

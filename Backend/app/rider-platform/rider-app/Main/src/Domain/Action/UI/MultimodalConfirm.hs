@@ -62,6 +62,8 @@ import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEst
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
@@ -103,6 +105,10 @@ import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.JourneyModule.Utils as JMU
+import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.Cancel as SharedCancel
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -117,6 +123,7 @@ import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
@@ -220,7 +227,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   legs <- QJourneyLeg.getJourneyLegs journeyId
   allJourneyFrfsBookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
-  frfsBookingStatusArr <- mapM (\booking -> FRFSTicketService.frfsBookingStatus (personId, merchantId) True booking JMU.switchFRFSQuoteTierUtil) allJourneyFrfsBookings
+  frfsBookingStatusArr <- mapM (\booking -> FRFSTicketService.frfsBookingStatus (personId, merchantId) True (withPaymentStatusResponseHandler booking person) booking person JMU.switchFRFSQuoteTierUtil) allJourneyFrfsBookings
   paymentGateWayId <- Payment.fetchGatewayReferenceId merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
   logInfo $ "paymentGateWayId: " <> show paymentGateWayId
   let anyFirstBooking = listToMaybe frfsBookingStatusArr
@@ -280,6 +287,20 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
             paymentFareUpdate = Nothing,
             gatewayReferenceId = paymentGateWayId
           }
+  where
+    withPaymentStatusResponseHandler :: DFRFSTicketBooking.FRFSTicketBooking -> Domain.Types.Person.Person -> ((DFRFSTicketBookingPayment.FRFSTicketBookingPayment, DPaymentOrder.PaymentOrder, DPayment.PaymentStatusResp) -> Environment.Flow FRFSTicketService.FRFSTicketBookingStatusAPIRes) -> Environment.Flow FRFSTicketService.FRFSTicketBookingStatusAPIRes
+    withPaymentStatusResponseHandler booking person action = do
+      paymentBooking <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+      paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
+      let commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person booking.riderId
+      let orderStatusCall = Payment.orderStatus booking.merchantId booking.merchantOperatingCityId Nothing (getPaymentType booking.vehicleType) (Just person.id.getId) person.clientSdkVersion
+      paymentStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
+      action (paymentBooking, paymentOrder, paymentStatusResponse)
+
+    getPaymentType = \case
+      Spec.METRO -> Payment.FRFSMultiModalBooking
+      Spec.SUBWAY -> Payment.FRFSMultiModalBooking
+      Spec.BUS -> Payment.FRFSMultiModalBooking
 
 -- TODO :: To be deprecated @Kavyashree
 postMultimodalPaymentUpdateOrder ::
