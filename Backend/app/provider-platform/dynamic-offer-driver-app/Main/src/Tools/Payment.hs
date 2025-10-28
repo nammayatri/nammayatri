@@ -14,6 +14,7 @@
 
 module Tools.Payment where
 
+import Data.Aeson
 -- import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -29,6 +30,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Version
 import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
 -- import System.Environment as SE
@@ -177,3 +179,8 @@ decidePaymentServiceForRecurring paymentServiceName driverId merchantOpCityId se
               else paymentServiceName
         Nothing -> pure paymentServiceName
     _ -> pure paymentServiceName
+
+data PaymentServiceType = DriverFeeSubscription
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''PaymentServiceType)
