@@ -1202,17 +1202,13 @@ mkCategoryPriceItemFromQuoteCategories quoteCategories = mapMaybe mkPriceItem qu
   where
     mkPriceItem :: DFRFSQuoteCategory.FRFSQuoteCategory -> Maybe CategoryPriceItem
     mkPriceItem category = do
-      quantity <- category.selectedQuantity
-      nonZeroQuantity <-
-        if quantity > 0
-          then Just quantity
-          else Nothing
+      quantity <- category.selectedQuantity <|> Just 0
       let unitPrice = fromMaybe category.offeredPrice category.finalPrice
       return $
         CategoryPriceItem
-          { quantity = nonZeroQuantity,
+          { quantity = quantity,
             unitPrice,
-            totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational nonZeroQuantity),
+            totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quantity),
             categoryType = category.category
           }
 
@@ -1221,16 +1217,13 @@ mkCategoryPriceItemFromDCategorySelect quoteCategories = mapMaybe mkPriceItem qu
   where
     mkPriceItem :: DCategorySelect -> Maybe CategoryPriceItem
     mkPriceItem category = do
-      nonZeroQuantity <-
-        if category.quantity > 0
-          then Just category.quantity
-          else Nothing
+      quantity <- category.selectedQuantity <|> Just 0
       let unitPrice = category.price
       return $
         CategoryPriceItem
-          { quantity = nonZeroQuantity,
+          { quantity = quantity,
             unitPrice,
-            totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational nonZeroQuantity),
+            totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quantity),
             categoryType = category.category
           }
 
