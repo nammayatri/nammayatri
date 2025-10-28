@@ -70,6 +70,7 @@ Ride:
     vehicleNumber: Text
     vehicleModel: Text
     vehicleColor: Maybe Text
+    cancellationChargesOnCancel : Maybe HighPrecMoney
     vehicleVariant: VehicleVariant|NoRelation
     vehicleServiceTierType: Maybe ServiceTierType
     otp: Text
@@ -322,6 +323,10 @@ Ride:
     updateTalkedWithDriver:
       kvFunction: updateOneWithKV
       params: [talkedWithDriver]
+      where: id
+    updateCancellationChargesOnCancel:
+      kvFunction: updateOneWithKV
+      params: [cancellationChargesOnCancel]
       where: id
 
   excludedDefaultQueries:

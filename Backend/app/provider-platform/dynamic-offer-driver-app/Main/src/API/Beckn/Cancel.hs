@@ -106,6 +106,11 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
                         cancellationFee = cancellationCharge
                       }
               unless isReallocated $ do
+                mbRide <- QRide.findActiveByRBId booking.id
+                void $ case mbRide of
+                  Just ride ->
+                    QRide.updateCancellationChargesOnCancel (maybe Nothing (Just . (.amount)) cancellationCharge) ride.id
+                  Nothing -> return ()
                 buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
                 void $
                   Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do

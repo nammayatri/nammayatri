@@ -224,3 +224,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_cancellation_penalty_a
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_cancellation_penalty_waived_reason text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_charges_on_cancel double precision ;
