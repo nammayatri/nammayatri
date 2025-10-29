@@ -22,6 +22,7 @@ module Domain.Action.ProviderPlatform.Management.Ride
     postRideRoute,
     getRideKaptureList,
     getRideFareBreakUp,
+    getRideListV2,
   )
 where
 
@@ -125,3 +126,8 @@ getRideFareBreakUp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Com
 getRideFareBreakUp merchantShortId opCity apiTokenInfo rideId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideFareBreakUp) rideId
+
+getRideListV2 :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Kernel.Types.Common.Currency) -> Maybe Text -> Maybe Text -> Maybe (Kernel.Prelude.UTCTime) -> Maybe Int -> Maybe Int -> Maybe (ShortId Common.Ride) -> Maybe Common.RideStatus -> Maybe (Kernel.Prelude.UTCTime) -> Flow Common.RideListResV2
+getRideListV2 merchantShortId opCity apiTokenInfo currency customerPhoneNo driverPhoneNo from limit offset rideShortId rideStatus to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideListV2) currency customerPhoneNo driverPhoneNo from limit offset rideShortId rideStatus to

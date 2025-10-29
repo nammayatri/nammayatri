@@ -40,6 +40,8 @@ derivePersistField "BookingStatus"
 
 $(mkHttpInstancesForEnum ''BookingStatus)
 
+$(mkHttpInstancesForEnum ''RideStatus)
+
 ---------------------------------------------------------
 -- multiple ride end ------------------------------
 

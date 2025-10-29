@@ -14,6 +14,7 @@
 
 module Domain.Action.Dashboard.Ride
   ( getRideList,
+    getRideListV2,
     rideInfo,
     rideSync,
     multipleRideSync,
@@ -131,6 +132,42 @@ getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mb
     maxLimit = 20
     defaultLimit = 10
 
+getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe (ShortId Common.Ride) -> Maybe DRide.RideStatus -> Maybe UTCTime -> Flow Common.RideListResV2
+getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbRideStatus mbto = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  whenJust mbCurrency $ \currency -> do
+    unless (currency == merchantOpCity.currency) $
+      throwError (InvalidRequest "Invalid currency")
+
+  let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
+  let offset = fromMaybe 0 mbOffset
+  let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
+  mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
+  mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
+  now <- getCurrentTime
+  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhoneDBHash) $
+    throwError $ InvalidRequest "At least one filter is required"
+  when (isNothing mbfrom && isNothing mbto) $ throwError $ InvalidRequest "from and to date are required"
+  case (mbfrom, mbto) of
+    (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "from date should be less than to date"
+    _ -> pure ()
+  let from = fromMaybe now mbfrom
+  let to = fromMaybe now mbto
+  enableClickhouse <- L.runIO $ Se.lookupEnv "ENABLE_CLICKHOUSE"
+  rideItems <-
+    if addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
+      then BppT.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash from to
+      else QRide.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverPhone now mbfrom mbto
+  logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
+  rideListItems <- traverse buildRideListItemV2 rideItems
+  let count = length rideListItems
+  let summary = Common.Summary {totalCount = 10000, count}
+  pure Common.RideListResV2 {totalItems = count, summary, rides = rideListItems}
+  where
+    maxLimit = 20
+    defaultLimit = 10
+
 buildRideListItem :: EncFlow m r => QRide.RideItem -> m Common.RideListItem
 buildRideListItem QRide.RideItem {..} = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
@@ -151,6 +188,27 @@ buildRideListItem QRide.RideItem {..} = do
         bookingStatus,
         rideCreatedAt = rideCreatedAt
       }
+
+buildRideListItemV2 :: EncFlow m r => QRide.RideItemV2 -> m Common.RideListItemV2
+buildRideListItemV2 QRide.RideItemV2 {..} = do
+  driverPhoneNumber <- mapM decrypt driverPhoneNo
+  pure
+    Common.RideListItemV2
+      { rideId = cast @DRide.Ride @Common.Ride rideId,
+        rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) rideShortId,
+        rideCreatedAt = rideCreatedAt,
+        rideStatus = castRideStatus' rideStatus,
+        driverName = driverName,
+        driverPhoneNo = driverPhoneNumber
+      }
+
+castRideStatus' :: DRide.RideStatus -> Common.RideStatus
+castRideStatus' = \case
+  DRide.UPCOMING -> Common.RIDE_UPCOMING
+  DRide.NEW -> Common.RIDE_NEW
+  DRide.INPROGRESS -> Common.RIDE_INPROGRESS
+  DRide.COMPLETED -> Common.RIDE_COMPLETED
+  DRide.CANCELLED -> Common.RIDE_CANCELLED
 
 ---------------------------------------------------------------------------------------------------
 ticketRideList :: ShortId DM.Merchant -> Context.City -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
