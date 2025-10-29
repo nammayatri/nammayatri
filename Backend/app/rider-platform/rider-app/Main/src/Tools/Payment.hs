@@ -172,6 +172,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
     Just (DMSC.BusPaymentServiceConfig vsc) -> func vsc mRoutingId req
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> func vsc mRoutingId req
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> func vsc mRoutingId req
+    Just (DMSC.PassPaymentServiceConfig vsc) -> func vsc mRoutingId req
     _ -> throwError $ InternalError "Unknown Service Config"
   where
     getPaymentServiceByType = \case
@@ -487,6 +488,7 @@ getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceTyp
     Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
     _ -> False
   where
     getPaymentServiceByType = \case
@@ -517,6 +519,7 @@ getIsPercentageSplit merchantId merchantOperatingCityId mbPlaceId paymentService
     Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
     _ -> False
   where
     getPaymentServiceByType = \case
@@ -547,6 +550,7 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     _ -> False
   where
     getPaymentServiceByType = \case
@@ -582,6 +586,7 @@ fetchGatewayReferenceId merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
     _ -> Nothing
   where
     getPaymentServiceByType = \case
@@ -612,6 +617,7 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
     Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
     _ -> Nothing
   where
     getPaymentServiceByType = \case
