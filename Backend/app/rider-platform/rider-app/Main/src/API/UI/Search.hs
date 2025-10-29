@@ -30,6 +30,7 @@ module API.UI.Search
 where
 
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified API.Types.UI.RiderLocation as RL
 import qualified API.UI.CancelSearch as CancelSearch
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
@@ -427,7 +428,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
           void $ multimodalIntiateHelper isSingleMode Nothing multimodalResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney Nothing False True routeLiveInfo
 
     multimodalIntiateHelper isSingleMode singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken isFirstJourneyReq allJourneysLoaded routeLiveInfo = do
-      mbJourneyWithIndex <- JMU.measureLatency (go isSingleMode indexedRoutesToProcess userPreferences routeLiveInfo) "Multimodal Init Time" -- process until first journey is found
+      mbJourneyWithIndex <- JMU.measureLatency (go isSingleMode indexedRoutesToProcess userPreferences routeLiveInfo searchRequest.busLocationData) "Multimodal Init Time" -- process until first journey is found
       QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
 
       journeys <- if isFirstJourneyReq then DQuote.getJourneys searchRequest (Just True) else return Nothing
@@ -446,7 +447,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                     else do
                       res <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
                       return $ Just res
-                fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences routeLiveInfo allJourneysLoaded
+                fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences routeLiveInfo allJourneysLoaded searchRequest.busLocationData
                 return resp
               Nothing -> do
                 QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
@@ -454,9 +455,9 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
           else do
             case mbJourneyWithIndex of
               Just (idx, _) -> do
-                fork "Process all routes " $ processRestOfRoutes [x | (j, x) <- indexedRoutesToProcess, j /= idx] userPreferences routeLiveInfo allJourneysLoaded
+                fork "Process all routes " $ processRestOfRoutes [x | (j, x) <- indexedRoutesToProcess, j /= idx] userPreferences routeLiveInfo allJourneysLoaded searchRequest.busLocationData
               Nothing -> do
-                fork "Process all routes " $ processRestOfRoutes (map snd indexedRoutesToProcess) userPreferences routeLiveInfo allJourneysLoaded
+                fork "Process all routes " $ processRestOfRoutes (map snd indexedRoutesToProcess) userPreferences routeLiveInfo allJourneysLoaded searchRequest.busLocationData
             return Nothing
 
       return $
@@ -476,16 +477,16 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                     then Just NoUserPreferredFirstJourney
                     else Nothing
           }
-    go :: Bool -> [(Int, MultiModalTypes.MultiModalRoute)] -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> Flow (Maybe (Int, Journey.Journey))
-    go _ [] _ _ = return Nothing
-    go isSingleMode ((idx, r) : routes) userPreferences routeLiveInfo = do
-      mbResult <- processRoute isSingleMode r userPreferences routeLiveInfo
+    go :: Bool -> [(Int, MultiModalTypes.MultiModalRoute)] -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> [RL.BusLocation] -> Flow (Maybe (Int, Journey.Journey))
+    go _ [] _ _ _ = return Nothing
+    go isSingleMode ((idx, r) : routes) userPreferences routeLiveInfo busLocationData = do
+      mbResult <- processRoute isSingleMode r userPreferences routeLiveInfo busLocationData
       case mbResult of
-        Nothing -> go isSingleMode routes userPreferences routeLiveInfo
+        Nothing -> go isSingleMode routes userPreferences routeLiveInfo busLocationData
         Just journey -> return $ Just (idx, journey)
 
-    processRoute :: Bool -> MultiModalTypes.MultiModalRoute -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> Flow (Maybe Journey.Journey)
-    processRoute isSingleMode r userPreferences routeLiveInfo = do
+    processRoute :: Bool -> MultiModalTypes.MultiModalRoute -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> [RL.BusLocation] -> Flow (Maybe Journey.Journey)
+    processRoute isSingleMode r userPreferences routeLiveInfo busLocationData = do
       updatedRoute <- updateRouteWithLegDurations r
       let initReq =
             JMTypes.JourneyInitData
@@ -501,7 +502,8 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 endTime = updatedRoute.endTime,
                 isSingleMode,
                 maximumWalkDistance = riderConfig.maximumWalkDistance,
-                relevanceScore = updatedRoute.relevanceScore
+                relevanceScore = updatedRoute.relevanceScore,
+                busLocationData
               }
       JM.init initReq userPreferences
 
@@ -594,9 +596,9 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                   routeDetails = updatedRouteDetails
                 }
 
-    processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> Bool -> Flow ()
-    processRestOfRoutes routes userPreferences routeLiveInfo allJourneysLoaded = do
-      forM_ routes $ \route' -> processRoute False route' userPreferences routeLiveInfo
+    processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> Bool -> [RL.BusLocation] -> Flow ()
+    processRestOfRoutes routes userPreferences routeLiveInfo allJourneysLoaded busLocationData = do
+      forM_ routes $ \route' -> processRoute False route' userPreferences routeLiveInfo busLocationData
       allRoutesLoaded <- getAllRoutesLoadedKey searchRequest.id.getId
       when (allJourneysLoaded || allRoutesLoaded) $ QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
       cacheAllRoutesLoadedKey searchRequest.id.getId True
