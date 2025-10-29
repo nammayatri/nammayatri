@@ -36,6 +36,7 @@ module Lib.Payment.Domain.Action
     updateRefundStatus,
     buildOrderOffer,
     getOrderShortId,
+    getTransactionStatus,
   )
 where
 
@@ -394,7 +395,7 @@ createOrderService ::
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m (Maybe Payment.CreateOrderResp)
-createOrderService merchantId mbMerchantOpCityId personId createOrderReq createOrderCall = do
+createOrderService merchantId mbMerchantOpCityId personId paymentServiceType createOrderReq createOrderCall = do
   logInfo $ "CreateOrderService: "
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
@@ -489,7 +490,7 @@ buildPaymentOrder ::
   Payment.CreateOrderReq ->
   Payment.CreateOrderResp ->
   m DOrder.PaymentOrder
-buildPaymentOrder merchantId mbMerchantOpCityId personId req resp = do
+buildPaymentOrder merchantId mbMerchantOpCityId personId paymentServiceType req resp = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
   let mkPaymentOrder =
@@ -1136,3 +1137,8 @@ getOrderShortId :: MonadFlow m => PaymentStatusResp -> m (ShortId DOrder.Payment
 getOrderShortId paymentStatusResp = case paymentStatusResp of
   PaymentStatus {..} -> pure orderShortId
   _ -> throwError $ InternalError "Order Id not found in response."
+
+getTransactionStatus :: MonadFlow m => PaymentStatusResp -> m Payment.TransactionStatus
+getTransactionStatus paymentStatusResp = case paymentStatusResp of
+  PaymentStatus {..} -> pure status
+  _ -> throwError $ InternalError "Transaction Status not found in response."

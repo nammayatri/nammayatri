@@ -224,7 +224,8 @@ orderStatusHandler paymentServiceType' paymentOrder paymentStatusResponse = do
     Payment.FRFSMultiModalBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (cast paymentOrder.merchantId) paymentStatusResponse JMU.switchFRFSQuoteTierUtil
     Payment.FRFSPassPurchase -> do
       orderShortId <- DPayment.getOrderShortId paymentStatusResponse
-      void $ Pass.webhookHandlerPass orderShortId (cast paymentOrder.merchantId)
+      status <- DPayment.getTransactionStatus paymentStatusResponse
+      void $ Pass.webhookHandlerPass orderShortId (cast paymentOrder.merchantId) status
     Payment.BBPS -> void $ BBPS.webhookHandlerBBPS (cast paymentOrder.merchantId) paymentStatusResponse
     _ -> pure ()
 
