@@ -23,10 +23,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("ride" :> (GetRideList :<|> PostRideEndMultiple :<|> PostRideCancelMultiple :<|> GetRideInfo :<|> PostRideSync :<|> PostRideSyncMultiple :<|> PostRideRoute :<|> GetRideKaptureList :<|> GetRideFareBreakUp))
+type API = ("ride" :> (GetRideList :<|> GetRideListV2 :<|> PostRideEndMultiple :<|> PostRideCancelMultiple :<|> GetRideInfo :<|> PostRideSync :<|> PostRideSyncMultiple :<|> PostRideRoute :<|> GetRideKaptureList :<|> GetRideFareBreakUp))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getRideList merchantId city :<|> postRideEndMultiple merchantId city :<|> postRideCancelMultiple merchantId city :<|> getRideInfo merchantId city :<|> postRideSync merchantId city :<|> postRideSyncMultiple merchantId city :<|> postRideRoute merchantId city :<|> getRideKaptureList merchantId city :<|> getRideFareBreakUp merchantId city
+handler merchantId city = getRideList merchantId city :<|> getRideListV2 merchantId city :<|> postRideEndMultiple merchantId city :<|> postRideCancelMultiple merchantId city :<|> getRideInfo merchantId city :<|> postRideSync merchantId city :<|> postRideSyncMultiple merchantId city :<|> postRideRoute merchantId city :<|> getRideKaptureList merchantId city :<|> getRideFareBreakUp merchantId city
 
 type GetRideList =
   ( ApiAuth
@@ -34,6 +34,14 @@ type GetRideList =
       ('DSL)
       (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.RIDE) / ('API.Types.ProviderPlatform.Management.Ride.GET_RIDE_LIST))
       :> API.Types.ProviderPlatform.Management.Ride.GetRideList
+  )
+
+type GetRideListV2 =
+  ( ApiAuth
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.RIDE) / ('API.Types.ProviderPlatform.Management.Ride.GET_RIDE_LIST_V2))
+      :> API.Types.ProviderPlatform.Management.Ride.GetRideListV2
   )
 
 type PostRideEndMultiple =
@@ -102,6 +110,9 @@ type GetRideFareBreakUp =
 
 getRideList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Ride.BookingStatus) -> Kernel.Prelude.Maybe (Kernel.Types.Common.Currency) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Ride.RideListRes)
 getRideList merchantShortId opCity apiTokenInfo bookingStatus currency customerPhoneNo driverPhoneNo from limit offset rideShortId to = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Ride.getRideList merchantShortId opCity apiTokenInfo bookingStatus currency customerPhoneNo driverPhoneNo from limit offset rideShortId to
+
+getRideListV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Common.Currency) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Ride.RideStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Ride.RideListResV2)
+getRideListV2 merchantShortId opCity apiTokenInfo currency customerPhoneNo driverPhoneNo from limit offset rideShortId rideStatus to = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Ride.getRideListV2 merchantShortId opCity apiTokenInfo currency customerPhoneNo driverPhoneNo from limit offset rideShortId rideStatus to
 
 postRideEndMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Ride.MultipleRideEndReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Ride.MultipleRideEndResp)
 postRideEndMultiple merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Ride.postRideEndMultiple merchantShortId opCity apiTokenInfo req
