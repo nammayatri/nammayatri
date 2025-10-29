@@ -36,6 +36,7 @@ module Lib.Payment.Domain.Action
     updateRefundStatus,
     buildOrderOffer,
     getOrderShortId,
+    getTransactionStatus,
   )
 where
 
@@ -1141,3 +1142,8 @@ getOrderShortId :: MonadFlow m => PaymentStatusResp -> m (ShortId DOrder.Payment
 getOrderShortId paymentStatusResp = case paymentStatusResp of
   PaymentStatus {..} -> pure orderShortId
   _ -> throwError $ InternalError "Order Id not found in response."
+
+getTransactionStatus :: MonadFlow m => PaymentStatusResp -> m Payment.TransactionStatus
+getTransactionStatus paymentStatusResp = case paymentStatusResp of
+  PaymentStatus {..} -> pure status
+  _ -> throwError $ InternalError "Transaction Status not found in response."
