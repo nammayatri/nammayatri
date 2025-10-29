@@ -223,7 +223,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
 
   case lockResult of
     Left () -> do
-      logError $ "Driver fee calculation job for merchant " <> merchantId.getId <> " could not acquire lock. Job completing without processing."
+      logError $ "Driver fee calculation job for merchant " <> merchantId.getId <> " could not acquire lock. Rescheduling job."
       ReSchedule <$> getRescheduledTime 600
     Right result -> return result
 
