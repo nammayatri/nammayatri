@@ -42,10 +42,26 @@ type API =
       :> Get
            ('[JSON])
            API.Types.UI.Pass.PurchasedPassAPIEntity
+      :<|> TokenAuth
+      :> "multimodal"
+      :> "pass"
+      :> "list"
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "status"
+           Domain.Types.PurchasedPass.StatusType
+      :> Get
+           ('[JSON])
+           [API.Types.UI.Pass.PurchasedPassAPIEntity]
   )
 
 handler :: Environment.FlowServer API
-handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> getMultimodalPassStatus
+handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> getMultimodalPassStatus :<|> getMultimodalPassList
 
 getMultimodalPassAvailablePasses ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -72,3 +88,14 @@ getMultimodalPassStatus ::
     Environment.FlowHandler API.Types.UI.Pass.PurchasedPassAPIEntity
   )
 getMultimodalPassStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.getMultimodalPassStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getMultimodalPassList ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Domain.Types.PurchasedPass.StatusType) ->
+    Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassAPIEntity]
+  )
+getMultimodalPassList a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.getMultimodalPassList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
