@@ -181,6 +181,6 @@ decidePaymentServiceForRecurring paymentServiceName driverId merchantOpCityId se
     _ -> pure paymentServiceName
 
 data PaymentServiceType = DriverFeeSubscription
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
+  deriving (Generic, FromJSON, ToJSON, Show, Read, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''PaymentServiceType)

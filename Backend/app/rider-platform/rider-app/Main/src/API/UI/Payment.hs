@@ -32,11 +32,10 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
-import qualified Tools.Payment as TPayment
 
 type API =
   TokenAuth
-    :> Payment.API "rideId" "rideId" DRide.Ride DRide.Ride Payment.CreateOrderResp TPayment.PaymentServiceType
+    :> Payment.API "rideId" "rideId" DRide.Ride DRide.Ride Payment.CreateOrderResp
 
 handler :: FlowServer API
 handler authInfo =
@@ -48,8 +47,8 @@ handler authInfo =
 createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DRide.Ride -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails rideId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails rideId
 
-getStatus :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> Maybe TPayment.PaymentServiceType -> FlowHandler DPayment.PaymentStatusResp
-getStatus tokenDetails orderId serviceType = withFlowHandlerAPI $ DPayment.getStatus tokenDetails orderId (fromMaybe TPayment.Normal serviceType)
+getStatus :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp
+getStatus tokenDetails orderId = withFlowHandlerAPI $ DPayment.getStatus tokenDetails orderId
 
 getOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
 getOrder tokenDetails orderId = withFlowHandlerAPI $ DPayment.getOrder tokenDetails orderId

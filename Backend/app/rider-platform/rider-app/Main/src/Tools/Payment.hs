@@ -180,6 +180,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
       FRFSBooking -> pure $ DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> pure $ DMSC.BusPaymentService Payment.Juspay
       FRFSMultiModalBooking -> pure $ DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> pure $ DMSC.PassPaymentService Payment.Juspay
 
 decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> m DMSC.ServiceName
 decidePaymentService paymentServiceName clientSdkVersion = do
@@ -243,8 +244,8 @@ runWithServiceConfig3 func getCfg merchantId merchantOperatingCityId req1 req2 r
     DMSC.PaymentServiceConfig msc -> func msc req1 req2 req3
     _ -> throwError $ InternalError "Unknown Service Config"
 
-data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMultiModalBooking
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
+data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMultiModalBooking | FRFSPassPurchase
+  deriving (Generic, FromJSON, ToJSON, Show, Read, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''PaymentServiceType)
 
@@ -494,6 +495,7 @@ getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceTyp
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
 
 getIsPercentageSplit ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -523,6 +525,7 @@ getIsPercentageSplit merchantId merchantOperatingCityId mbPlaceId paymentService
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
 
 getIsRefundSplitEnabled ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -552,6 +555,7 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
 
 extractSplitSettlementDetailsAmount :: Maybe SplitSettlementDetails -> Maybe SplitSettlementDetailsAmount
 extractSplitSettlementDetailsAmount Nothing = Nothing
@@ -586,6 +590,7 @@ fetchGatewayReferenceId merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
 
 fetchOfferSKUConfig ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -615,3 +620,4 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay

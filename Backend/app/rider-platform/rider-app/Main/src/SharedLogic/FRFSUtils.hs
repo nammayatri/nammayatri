@@ -968,8 +968,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
       commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
       createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId Nothing createOrderReq createOrderCall
-  mapM (DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId Nothing createOrderReq) orderResp
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId Nothing (show paymentType) createOrderReq createOrderCall
+  mapM (DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId Nothing (show paymentType) createOrderReq) orderResp
   where
     getPaymentIds = do
       orderShortId <- generateShortId
