@@ -464,3 +464,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_online_payment_ride boolean
 
 ------- SQL updates -------
 
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN nearby_bus_max_time_threshold integer ;
