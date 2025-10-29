@@ -121,18 +121,18 @@ getStatus ::
   Flow DPayment.PaymentStatusResp
 getStatus (personId, merchantId) orderId = do
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
-  paymentOrder <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  paymentOrder <- QOrder.findById orderId |<|>| QOrder.findByShortId (ShortId orderId.getId) >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   mocId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
   let paymentServiceType = maybe Payment.Normal (\paymentServiceType'' -> fromMaybe Payment.Normal (readMaybe (T.unpack paymentServiceType'') :: Maybe Payment.PaymentServiceType)) paymentOrder.paymentServiceType
   ticketPlaceId <-
     case paymentServiceType of
       Payment.Normal -> do
-        ticketBooking <- QTB.findById (cast orderId)
+        ticketBooking <- QTB.findById (cast paymentOrder.id)
         return $ ticketBooking <&> (.ticketPlaceId)
       _ -> return Nothing
   let commonPersonId = cast @DP.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion -- api call
-  orderStatusResponse <- DPayment.orderStatusService commonPersonId orderId orderStatusCall
+  orderStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
   orderStatusHandler paymentServiceType paymentOrder orderStatusResponse
   return orderStatusResponse
 
