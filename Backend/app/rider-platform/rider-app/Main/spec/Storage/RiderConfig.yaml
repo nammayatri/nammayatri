@@ -166,6 +166,7 @@ RiderConfig:
     dashboardMediaFileUrlPattern : Maybe Text
     maxNearbyBuses: Maybe Int
     nearbyBusSearchRadius: Maybe Double
+    nearbyBusMaxTimeThreshold: Maybe Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
