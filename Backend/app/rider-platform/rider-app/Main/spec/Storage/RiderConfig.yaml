@@ -167,6 +167,7 @@ RiderConfig:
     maxNearbyBuses: Maybe Int
     nearbyBusSearchRadius: Maybe Double
     enableOnlinePaymentRide: Maybe Bool
+    nearbyBusMaxTimeThreshold: Maybe Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
