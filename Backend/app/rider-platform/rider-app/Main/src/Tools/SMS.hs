@@ -18,6 +18,8 @@ module Tools.SMS
   )
 where
 
+import Data.Char (digitToInt)
+import qualified Data.Text as T
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -34,15 +36,29 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QM
 import Tools.Error
 
 sendSMS :: ServiceFlow m r => Id Merchant -> Id DMOC.MerchantOperatingCity -> SendSMSReq -> m SendSMSRes
-sendSMS merchantId merchantOperatingCityId = Sms.sendSMS handler
+sendSMS merchantId merchantOperatingCityId req = Sms.sendSMS handler req
   where
     handler = Sms.SmsHandler {..}
 
     getProvidersPriorityList = do
-      merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      merchantConfig <-
+        QMSUC.findByMerchantOperatingCityId merchantOperatingCityId
+          >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       let smsServiceProviders = merchantConfig.smsProvidersPriorityList
-      when (null smsServiceProviders) $ throwError $ InternalError ("No sms service provider configured for the merchant, merchantOperatingCityId:" <> merchantOperatingCityId.getId)
-      pure smsServiceProviders
+          phoneNumber = req.phoneNumber
+      when (null smsServiceProviders) $
+        throwError $
+          InternalError
+            ( "No sms service provider configured for the merchant, merchantOperatingCityId: "
+                <> merchantOperatingCityId.getId
+            )
+      -- get last digit
+      let lastDigit = digitToInt (T.last phoneNumber)
+          startIndex = lastDigit `mod` (length smsServiceProviders)
+
+      let shiftedProviders = rotate startIndex smsServiceProviders
+      logDebug $ "hihi" <> (T.pack $ show smsServiceProviders) <> (T.pack $ show shiftedProviders)
+      pure shiftedProviders
 
     getProviderConfig provider = do
       merchantSmsServiceConfig <-
@@ -51,3 +67,8 @@ sendSMS merchantId merchantOperatingCityId = Sms.sendSMS handler
       case merchantSmsServiceConfig.serviceConfig of
         DMSC.SmsServiceConfig msc -> pure msc
         _ -> throwError $ InternalError "Unknown Service Config"
+
+rotate :: Int -> [a] -> [a]
+rotate n xs = take len . drop (n `mod` len) . cycle $ xs
+  where
+    len = length xs
