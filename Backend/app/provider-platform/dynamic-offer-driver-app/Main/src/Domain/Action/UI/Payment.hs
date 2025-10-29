@@ -171,6 +171,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
             isRetried = Just $ order.isRetried,
             isRetargeted = Just $ order.isRetargeted,
             retargetLink = order.retargetLink,
+            amount = order.amount,
             refunds = [],
             payerVpa = Nothing,
             card = Nothing,
