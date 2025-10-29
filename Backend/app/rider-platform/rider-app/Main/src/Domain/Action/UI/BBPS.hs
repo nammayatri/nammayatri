@@ -127,7 +127,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
       createOrderCall = Payment.createOrder person.merchantId person.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId createOrderReq createOrderCall
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId (show Payment.BBPS) createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> do
       QBBPS.create bbpsInfo

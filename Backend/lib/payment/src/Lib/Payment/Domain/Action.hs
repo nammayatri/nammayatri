@@ -96,7 +96,8 @@ data PaymentStatusResp
         authIdCode :: Maybe Text,
         txnUUID :: Maybe Text,
         effectAmount :: Maybe HighPrecMoney,
-        offers :: Maybe [Payment.Offer]
+        offers :: Maybe [Payment.Offer],
+        paymentServiceType :: Maybe Text
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -224,6 +225,7 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             action = Nothing,
             personId,
             merchantId,
+            paymentServiceType = Nothing,
             paymentMerchantId = Nothing,
             amount = createPaymentIntentReq.amount,
             currency = createPaymentIntentReq.currency,
@@ -387,6 +389,7 @@ createOrderService ::
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
+  Text ->
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m (Maybe Payment.CreateOrderResp)
@@ -396,7 +399,7 @@ createOrderService merchantId mbMerchantOpCityId personId createOrderReq createO
   case mbExistingOrder of
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId createOrderReq createOrderResp
+      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId paymentServiceType createOrderReq createOrderResp
       QOrder.create paymentOrder
       return $ Just createOrderResp
     Just existingOrder -> do
@@ -481,6 +484,7 @@ buildPaymentOrder ::
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
+  Text ->
   Payment.CreateOrderReq ->
   Payment.CreateOrderResp ->
   m DOrder.PaymentOrder
@@ -500,6 +504,7 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId req resp = do
             action = resp.sdk_payload.payload.action,
             personId,
             merchantId,
+            paymentServiceType = Just paymentServiceType,
             paymentMerchantId = resp.sdk_payload.payload.merchantId,
             amount = req.amount,
             currency = resp.sdk_payload.payload.currency,
@@ -713,6 +718,7 @@ orderStatusService personId orderId orderStatusCall = do
             txnUUID = transactionUUID,
             effectAmount = effectiveAmount,
             offers = offers,
+            paymentServiceType = order.paymentServiceType,
             ..
           }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
@@ -922,6 +928,7 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             action = Nothing,
             personId = Id req.customerId,
             merchantId = merchantId,
+            paymentServiceType = Nothing,
             paymentMerchantId = Nothing,
             amount = req.amount,
             currency = INR,

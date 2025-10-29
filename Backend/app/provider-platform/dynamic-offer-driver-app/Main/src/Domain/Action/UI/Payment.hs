@@ -164,6 +164,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
         DPayment.PaymentStatus
           { orderId = order.id,
             orderShortId = order.shortId,
+            paymentServiceType = order.paymentServiceType,
             status = order.status,
             bankErrorCode = firstInvoice >>= (.bankErrorCode),
             bankErrorMessage = firstInvoice >>= (.bankErrorMessage),
