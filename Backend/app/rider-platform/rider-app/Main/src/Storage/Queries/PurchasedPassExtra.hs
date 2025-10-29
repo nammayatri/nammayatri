@@ -4,6 +4,7 @@
 module Storage.Queries.PurchasedPassExtra where
 
 import qualified Domain.Types.Extra.PurchasedPass ()
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PassType as DPassType
 import qualified Domain.Types.Person as DP
@@ -46,6 +47,22 @@ findAllByPersonId ::
 findAllByPersonId personId = do
   findAllWithKV
     [Se.Is Beam.personId $ Se.Eq (getId personId)]
+
+findAllByPersonIdWithFilters ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Maybe DPurchasedPass.StatusType ->
+  Maybe Int ->
+  Maybe Int ->
+  m [DPurchasedPass.PurchasedPass]
+findAllByPersonIdWithFilters personId merchantId mbStatus mbLimit mbOffset = do
+  let baseConds = [Se.Is Beam.personId $ Se.Eq (getId personId), Se.Is Beam.merchantId $ Se.Eq (getId merchantId)]
+      statusConds = case mbStatus of
+        Nothing -> []
+        Just s -> [Se.Is Beam.status $ Se.Eq s]
+      conds = baseConds ++ statusConds
+  findAllWithOptionsKV conds (Se.Desc Beam.createdAt) mbLimit mbOffset
 
 findByShortId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
