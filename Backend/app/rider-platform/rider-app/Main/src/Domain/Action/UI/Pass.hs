@@ -4,6 +4,7 @@ module Domain.Action.UI.Pass
   ( getMultimodalPassAvailablePasses,
     postMultimodalPassSelect,
     getMultimodalPassStatus,
+    getMultimodalPassList,
     webhookHandlerPass,
   )
 where
@@ -224,31 +225,7 @@ getMultimodalPassStatus (mbPersonId, _merchantId) purchasedPassId = do
 
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
 
-  passType <- B.runInReplica $ QPassType.findById purchasedPass.passTypeId >>= fromMaybeM (PassTypeNotFound purchasedPass.passTypeId.getId)
-  passCategory <- B.runInReplica $ QPassCategory.findById passType.passCategoryId >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
-
-  let tripsLeft = case purchasedPass.maxValidTrips of
-        Just maxTrips -> Just $ max 0 (maxTrips - purchasedPass.usedCount)
-        Nothing -> Nothing
-
-  passAPIEntity <- buildPassAPIEntityFromPurchasedPass personId purchasedPass
-  let passDetailsEntity =
-        PassAPI.PassDetailsAPIEntity
-          { category = buildPassCategoryAPIEntity passCategory,
-            passType = buildPassTypeAPIEntity passType,
-            passDetails = passAPIEntity
-          }
-
-  return $
-    PassAPI.PurchasedPassAPIEntity
-      { id = purchasedPass.id,
-        shortId = purchasedPass.shortId,
-        passEntity = passDetailsEntity,
-        tripsLeft = tripsLeft,
-        status = purchasedPass.status,
-        purchaseDate = purchasedPass.createdAt,
-        expiryDate = purchasedPass.validTill
-      }
+  buildPurchasedPassAPIEntity personId purchasedPass
 
 -- Helper functions
 
@@ -383,6 +360,35 @@ checkEligibility logics personData = do
             -- All rules must be True for eligibility
       return $ and results
 
+-- Build PurchasedPass API Entity
+buildPurchasedPassAPIEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id DP.Person -> DPurchasedPass.PurchasedPass -> m PassAPI.PurchasedPassAPIEntity
+buildPurchasedPassAPIEntity personId purchasedPass = do
+  passType <- B.runInReplica $ QPassType.findById purchasedPass.passTypeId >>= fromMaybeM (PassTypeNotFound purchasedPass.passTypeId.getId)
+  passCategory <- B.runInReplica $ QPassCategory.findById passType.passCategoryId >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
+
+  let tripsLeft = case purchasedPass.maxValidTrips of
+        Just maxTrips -> Just $ max 0 (maxTrips - purchasedPass.usedCount)
+        Nothing -> Nothing
+
+  passAPIEntity <- buildPassAPIEntityFromPurchasedPass personId purchasedPass
+  let passDetailsEntity =
+        PassAPI.PassDetailsAPIEntity
+          { category = buildPassCategoryAPIEntity passCategory,
+            passType = buildPassTypeAPIEntity passType,
+            passDetails = passAPIEntity
+          }
+
+  return $
+    PassAPI.PurchasedPassAPIEntity
+      { id = purchasedPass.id,
+        shortId = purchasedPass.shortId,
+        passEntity = passDetailsEntity,
+        tripsLeft = tripsLeft,
+        status = purchasedPass.status,
+        purchaseDate = purchasedPass.createdAt,
+        expiryDate = purchasedPass.validTill
+      }
+
 -- Webhook Handler for Pass Payment Status Updates
 webhookHandlerPass ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
@@ -449,3 +455,19 @@ webhookHandlerPass orderShortId _merchantId = do
               -- For other statuses (PENDING, NEW, etc.), keep as Pending
               logInfo $ "Payment status is " <> show transaction.status <> " for pass: " <> purchasedPass.id.getId
               pure ()
+
+getMultimodalPassList ::
+  ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    Maybe Int ->
+    Maybe Int ->
+    Maybe DPurchasedPass.StatusType ->
+    Environment.Flow [PassAPI.PurchasedPassAPIEntity]
+  )
+getMultimodalPassList (mbCallerPersonId, merchantId) mbLimitParam mbOffsetParam mbStatusParam = do
+  personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+
+  purchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatusParam mbLimitParam mbOffsetParam
+
+  mapM (buildPurchasedPassAPIEntity personId) purchasedPasses
