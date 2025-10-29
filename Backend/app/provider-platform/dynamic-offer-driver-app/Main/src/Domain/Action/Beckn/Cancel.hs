@@ -40,6 +40,16 @@ import Environment
 import EulerHS.Prelude
 import Kernel.Beam.Functions
 import Kernel.External.Maps
+-- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+-- import qualified Lib.Yudhishthira.Types as LYT
+
+-- import qualified SharedLogic.UserCancellationDues as UserCancellationDues
+
+-- import qualified Storage.Queries.CallStatus as QCallStatus
+
+-- import Tools.DynamicLogic
+
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -254,6 +264,8 @@ customerCancellationChargesCalculation booking mbRide currDistanceToPickup = do
 cancelSearch ::
   ( CacheFlow m r,
     EsqDBFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Esq.EsqDBReplicaFlow m r
   ) =>
   Id DM.Merchant ->

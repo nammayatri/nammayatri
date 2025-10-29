@@ -592,27 +592,45 @@ notifyDriverNewAllocation merchantOpCityId booking personId lang mbToken = do
 
 notifyDriverClearedFare ::
   ( CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
   Id SearchTry ->
   Price ->
   m ()
-notifyDriverClearedFare merchantOpCityId driver sReqId fare = do
-  let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  dynamicFCMNotifyPerson
-    newCityId
-    driver.id
-    driver.deviceToken
-    (fromMaybe ENGLISH driver.language)
-    Nothing
-    (createFCMReq "CLEARED_FARE" (getId sReqId) FCM.SearchRequest (\r -> r {showType = FCM.DO_NOT_SHOW}))
-    (Just ())
-    [ ("amount", show fare.amount),
-      ("currency", show fare.currency)
-    ]
-    Nothing
+notifyDriverClearedFare merchantOpCityId driver sReqId _ = do
+  notificationData <- buildClearedFareNotificationData merchantOpCityId driver.id driver.deviceToken sReqId
+  runWithServiceConfigForProviders merchantOpCityId notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
+
+buildClearedFareNotificationData ::
+  ( ServiceFlow m r,
+    ToJSON EmptyDynamicParam
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Id SearchTry ->
+  m (Notification.NotificationReq EmptyDynamicParam EmptyDynamicParam)
+buildClearedFareNotificationData merchantOpCityId driverId mbDeviceToken searchRequestId = do
+  let params = [("", "")]
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "CLEARED_FARE" Nothing Nothing Nothing Nothing >>= fromMaybeM (InternalError "MerchantPushNotification not found for CLEARED_FARE")
+  return $
+    Notification.NotificationReq
+      { category = Notification.CLEARED_FARE,
+        subCategory = Nothing,
+        showNotification = Notification.DO_NOT_SHOW,
+        messagePriority = Just Notification.HIGH,
+        entity = Notification.Entity Notification.SearchRequest (getId searchRequestId) EmptyDynamicParam,
+        dynamicParams = EmptyDynamicParam,
+        body = buildTemplate params mbMerchantPN.body,
+        title = buildTemplate params mbMerchantPN.title,
+        auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
+        ttl = Nothing,
+        sound = Nothing
+      }
 
 -- title = FCM.FCMNotificationTitle "Clearing Fare!"
 -- body =
@@ -624,25 +642,46 @@ notifyDriverClearedFare merchantOpCityId driver sReqId fare = do
 
 notifyOnCancelSearchRequest ::
   ( CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
   Id SearchTry ->
   Trip.TripCategory ->
   m ()
-notifyOnCancelSearchRequest merchantOpCityId person searchTryId tripCategory = do
-  let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  dynamicFCMNotifyPerson
-    newCityId
-    person.id
-    person.deviceToken
-    (fromMaybe ENGLISH person.language)
-    (Just tripCategory)
-    (createFCMReq "CANCELLED_SEARCH_REQUEST" searchTryId.getId FCM.SearchRequest (\r -> r {showType = FCM.DO_NOT_SHOW}))
-    (pure ())
-    []
-    Nothing
+notifyOnCancelSearchRequest merchantOpCityId driver searchTryId tripCategory = do
+  notificationData <- buildCancelSearchNotificationData merchantOpCityId driver.id driver.deviceToken searchTryId tripCategory
+  runWithServiceConfigForProviders merchantOpCityId notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
+
+buildCancelSearchNotificationData ::
+  ( ServiceFlow m r,
+    ToJSON EmptyDynamicParam
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Id SearchTry ->
+  Trip.TripCategory ->
+  m (Notification.NotificationReq EmptyDynamicParam EmptyDynamicParam)
+buildCancelSearchNotificationData merchantOpCityId driverId mbDeviceToken searchRequestId tripCategory = do
+  let params = [("", "")]
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "CANCELLED_SEARCH_REQUEST" (Just tripCategory) Nothing Nothing Nothing >>= fromMaybeM (InternalError "MerchantPushNotification not found for CANCELLED_SEARCH_REQUEST")
+  return $
+    Notification.NotificationReq
+      { category = Notification.CANCELLED_SEARCH_REQUEST,
+        subCategory = Nothing,
+        showNotification = Notification.DO_NOT_SHOW,
+        messagePriority = Just Notification.HIGH,
+        entity = Notification.Entity Notification.SearchRequest (getId searchRequestId) EmptyDynamicParam,
+        dynamicParams = EmptyDynamicParam,
+        body = buildTemplate params mbMerchantPN.body,
+        title = buildTemplate params mbMerchantPN.title,
+        auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
+        ttl = Nothing,
+        sound = Nothing
+      }
 
 --notifType = FCM.CANCELLED_SEARCH_REQUEST
 -- title = FCMNotificationTitle "Search Request cancelled!"
