@@ -97,7 +97,8 @@ data PaymentStatusResp
         txnUUID :: Maybe Text,
         effectAmount :: Maybe HighPrecMoney,
         offers :: Maybe [Payment.Offer],
-        paymentServiceType :: Maybe Text
+        paymentServiceType :: Maybe Text,
+        amount :: HighPrecMoney
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
