@@ -162,6 +162,7 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           isSafetyPlus = False,
           safetyPlusCharges = Nothing,
           coinsRewardedOnGoldTierRide = Nothing,
+          cancellationCharges = Nothing,
           ..
         }
 
