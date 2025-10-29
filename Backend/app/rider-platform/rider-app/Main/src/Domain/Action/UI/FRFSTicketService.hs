@@ -962,7 +962,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
           let mPrice = Common.mkPrice (Just booking'.totalPrice.currency) (HighPrecMoney $ toRational (0 :: Int))
           void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById mPrice mPrice booking.id
         when (paymentBookingStatus == FRFSTicketService.SUCCESS) do
-          markJourneyPaymentSuccess booking paymentOrder paymentBooking
+          void $ markJourneyPaymentSuccess booking paymentOrder paymentBooking
         when (paymentBookingStatus == FRFSTicketService.PENDING) do
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
           void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.PENDING paymentBooking.id
@@ -1057,12 +1057,17 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                     when isLockAcquired $ do
                       void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.SUCCESS paymentBooking.id
                       void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
-                      markJourneyPaymentSuccess booking paymentOrder paymentBooking
+                      mbJourneyLeg <- markJourneyPaymentSuccess booking paymentOrder paymentBooking
                       quoteUpdatedBooking <- maybeM (pure booking) pure (QFRFSTicketBooking.findById bookingId)
                       let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
                       mRiderNumber <- mapM decrypt person.mobileNumber
                       void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
-                      void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking quoteCategories
+                      mbJourney <- case mbJourneyLeg of
+                        Just journeyLeg -> do
+                          QJourney.findByPrimaryKey journeyLeg.journeyId
+                        Nothing -> pure Nothing
+                      let mbIsSingleMode = mbJourney >>= (.isSingleMode)
+                      void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking quoteCategories mbIsSingleMode
                       when isMultiModalBooking do
                         riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
                         becknConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId merchantId_ "FRFS" merchantOperatingCity.id
@@ -1112,6 +1117,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
             switchFRFSQuoteTier journeyLeg paymentBookingQuoteId
         void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) (Just True) journeyId
         void $ QJourney.updateStatus DJ.INPROGRESS journeyId
+      pure mbJourneyLeg
 
     mkPaymentSuccessLockKey bookingId = "frfsPaymentSuccess:" <> bookingId.getId
 

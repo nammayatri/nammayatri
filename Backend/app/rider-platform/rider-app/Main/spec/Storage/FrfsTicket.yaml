@@ -678,6 +678,7 @@ FRFSConfig:
     oneWayTicketLimit: Int
     metroStationTtl: Int
     busStationTtl: Seconds
+    singleModeBusStationTtl: Seconds
     discount: Int
     isEventOngoing: Maybe Bool
     isCancellationAllowed: Bool
@@ -697,6 +698,7 @@ FRFSConfig:
   beamType:
     isCancellationAllowed: Maybe Bool
     busStationTtl: Maybe Seconds
+    singleModeBusStationTtl: Maybe Seconds
     straightLineDistance: Maybe Meters
     radius: Maybe Meters
     validTillSeconds: Maybe Seconds
@@ -717,6 +719,7 @@ FRFSConfig:
     freeTicketInterval: "9999"
     maxFreeTicketCashback: "0"
     busStationTtl: "1800"
+    singleModeBusStationTtl: "1800"
     straightLineDistance: "5000"
     radius: "3000"
     validTillSeconds: "300"
@@ -726,6 +729,7 @@ FRFSConfig:
   fromTType:
     isCancellationAllowed: Kernel.Prelude.fromMaybe True|I
     busStationTtl: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 1800)|I
+    singleModeBusStationTtl: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 1800)|I
     straightLineDistance: Kernel.Prelude.fromMaybe  (Kernel.Types.Distance.Meters 5000)|I
     radius: Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 3000)|I
     validTillSeconds: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 300)|I
@@ -735,6 +739,7 @@ FRFSConfig:
   toTType:
     isCancellationAllowed: Kernel.Prelude.Just|I
     busStationTtl: Kernel.Prelude.Just|I
+    singleModeBusStationTtl: Kernel.Prelude.Just|I
     straightLineDistance: Kernel.Prelude.Just|I
     radius: Kernel.Prelude.Just|I
     validTillSeconds: Kernel.Prelude.Just|I
