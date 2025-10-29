@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.payment_order ADD COLUMN payment_service_type text;

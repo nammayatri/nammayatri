@@ -1100,7 +1100,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 splitSettlementDetails = splitSettlementDetails,
                 basket = Nothing
               }
-      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId Nothing createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion)
+      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId Nothing (show $ getPaymentType booking.vehicleType) createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion)
 
     getPaymentType = \case
       Spec.METRO -> if isMultiModalBooking then Payment.FRFSMultiModalBooking else Payment.FRFSBooking

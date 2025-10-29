@@ -34,11 +34,10 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
-import qualified Tools.Payment as TPayment
 
 type API =
   TokenAuth
-    :> Payment.API "invoiceId" "notificationId" Invoice Notification Payment.NotificationStatusResp TPayment.PaymentServiceType
+    :> Payment.API "invoiceId" "notificationId" Invoice Notification Payment.NotificationStatusResp
 
 handler :: FlowServer API
 handler authInfo =
@@ -51,8 +50,8 @@ createOrder :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCit
 createOrder tokenDetails invoiceId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails invoiceId
 
 -- This APIs are decoupled from Driver Fee Table.
-getStatus :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> Maybe TPayment.PaymentServiceType -> FlowHandler DPayment.PaymentStatusResp
-getStatus tokenDetails orderId _ = withFlowHandlerAPI $ DPayment.getStatus tokenDetails orderId
+getStatus :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp
+getStatus tokenDetails orderId = withFlowHandlerAPI $ DPayment.getStatus tokenDetails orderId
 
 getOrder :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
 getOrder tokenDetails orderId = withFlowHandlerAPI $ DPayment.getOrder tokenDetails orderId

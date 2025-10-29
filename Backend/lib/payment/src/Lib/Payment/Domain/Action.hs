@@ -96,7 +96,8 @@ data PaymentStatusResp
         authIdCode :: Maybe Text,
         txnUUID :: Maybe Text,
         effectAmount :: Maybe HighPrecMoney,
-        offers :: Maybe [Payment.Offer]
+        offers :: Maybe [Payment.Offer],
+        paymentServiceType :: Maybe Text
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -225,6 +226,7 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             personId,
             merchantId,
             entityName = Nothing,
+            paymentServiceType = Nothing,
             paymentMerchantId = Nothing,
             amount = createPaymentIntentReq.amount,
             currency = createPaymentIntentReq.currency,
@@ -389,16 +391,17 @@ createOrderService ::
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
   Maybe EntityName ->
+  Text ->
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m (Maybe Payment.CreateOrderResp)
-createOrderService merchantId mbMerchantOpCityId personId mbEntityName createOrderReq createOrderCall = do
+createOrderService merchantId mbMerchantOpCityId personId mbEntityName paymentServiceType createOrderReq createOrderCall = do
   logInfo $ "CreateOrderService: "
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName createOrderReq createOrderResp
+      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName paymentServiceType createOrderReq createOrderResp
       QOrder.create paymentOrder
       return $ Just createOrderResp
     Just existingOrder -> do
@@ -484,10 +487,11 @@ buildPaymentOrder ::
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
   Maybe EntityName ->
+  Text ->
   Payment.CreateOrderReq ->
   Payment.CreateOrderResp ->
   m DOrder.PaymentOrder
-buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName req resp = do
+buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName paymentServiceType req resp = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
   let mkPaymentOrder =
@@ -504,6 +508,7 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName req resp =
             personId,
             merchantId,
             entityName = mbEntityName,
+            paymentServiceType = Just paymentServiceType,
             paymentMerchantId = resp.sdk_payload.payload.merchantId,
             amount = req.amount,
             currency = resp.sdk_payload.payload.currency,
@@ -717,6 +722,7 @@ orderStatusService personId orderId orderStatusCall = do
             txnUUID = transactionUUID,
             effectAmount = effectiveAmount,
             offers = offers,
+            paymentServiceType = order.paymentServiceType,
             ..
           }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
@@ -927,6 +933,7 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             personId = Id req.customerId,
             merchantId = merchantId,
             entityName = Nothing,
+            paymentServiceType = Nothing,
             paymentMerchantId = Nothing,
             amount = req.amount,
             currency = INR,

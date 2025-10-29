@@ -25,14 +25,13 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 
-type API (entityId :: Symbol) (notificationEntityId :: Symbol) entity notificationEntity notificationResp paymentServiceType =
+type API (entityId :: Symbol) (notificationEntityId :: Symbol) entity notificationEntity notificationResp =
   "payment"
     :> ( Capture entityId (Id entity)
            :> "createOrder"
            :> Post '[JSON] Payment.CreateOrderResp
            :<|> Capture "orderId" (Id DOrder.PaymentOrder)
            :> "status"
-           :> QueryParam "entityType" paymentServiceType
            :> Get '[JSON] DPayment.PaymentStatusResp
            :<|> MandatoryQueryParam "orderId" (Id DOrder.PaymentOrder)
            :> Get '[JSON] DOrder.PaymentOrderAPIEntity

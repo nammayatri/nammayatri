@@ -30,6 +30,7 @@ data PaymentOrderT f = PaymentOrderT
     personId :: B.C f Text,
     merchantId :: B.C f Text,
     entityName :: B.C f (Maybe EntityName),
+    paymentServiceType :: B.C f (Maybe Text),
     paymentMerchantId :: B.C f (Maybe Text),
     requestId :: B.C f (Maybe Text),
     service :: B.C f (Maybe Text),

@@ -171,8 +171,8 @@ purchasePassWithPayment person pass merchantId personId = do
         customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
 
         -- Get split settlement details
-        isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing TPayment.Normal
-        isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing TPayment.Normal
+        isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
+        isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         splitSettlementDetails <- TPayment.mkSplitSettlementDetails isSplitEnabled pass.amount [] isPercentageSplitEnabled
 
         let createOrderReq =
@@ -199,9 +199,9 @@ purchasePassWithPayment person pass merchantId personId = do
 
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId
             commonPersonId = Id.cast @DP.Person @DPayment.Person personId
-            createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just personId.getId) person.clientSdkVersion
+            createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase (Just personId.getId) person.clientSdkVersion
 
-        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId Nothing createOrderReq createOrderCall
+        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId Nothing (show TPayment.FRFSPassPurchase) createOrderReq createOrderCall
       else return Nothing
 
   QPurchasedPass.create purchasedPass

@@ -35,6 +35,7 @@ data PaymentOrderE e = PaymentOrder
     personId :: Id Person,
     merchantId :: Id Merchant,
     entityName :: Maybe EntityName,
+    paymentServiceType :: Maybe Text,
     paymentMerchantId :: Maybe Text,
     amount :: HighPrecMoney,
     currency :: Currency,
