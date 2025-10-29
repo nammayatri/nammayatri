@@ -93,3 +93,13 @@ apis:
         purchasedPassId: Id PurchasedPass
       response:
         type: PurchasedPassAPIEntity
+
+  - GET:
+      endpoint: /multimodal/pass/list
+      auth: TokenAuth
+      query:
+        status: StatusType
+        limit: Int
+        offset: Int
+      response:
+        type: "[PurchasedPassAPIEntity]"
