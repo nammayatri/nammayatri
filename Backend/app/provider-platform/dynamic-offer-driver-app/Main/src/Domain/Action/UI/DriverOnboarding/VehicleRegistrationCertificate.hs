@@ -44,6 +44,12 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     getDriverDocumentInfo,
     getDocumentImage,
     isNameComparePercentageValid,
+    isFaceCompareValid,
+    getPersonImageByDocType,
+    faceMatchWithAadhaar,
+    faceMatchWithDL,
+    verifyDocumentImageMatch,
+    getImageByPersonIdAndImageId,
   )
 where
 
@@ -56,7 +62,7 @@ import qualified Data.List as DL
 import Data.Text as T hiding (elem, find, length, map, null, zip)
 import Data.Time (Day, utctDay)
 import Data.Time.Format
-import qualified Domain.Action.UI.DriverOnboarding.Image as Image
+import Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
@@ -274,7 +280,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_.getId)
       unless (imageMetadata.imageType == ODC.VehicleRegistrationCertificate) $
         throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) "")
-      Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
+      Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
 
     buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel =
@@ -327,7 +333,7 @@ getDocumentImage personId imageId_ expectedDocType = do
     throwError (ImageNotFound imageId_)
   unless (imageMetadata.imageType == expectedDocType) $
     throwError (ImageInvalidType (show expectedDocType) "")
-  Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
+  Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
     S3.get $ T.unpack imageMetadata.s3Path
 
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Flow ()
@@ -860,6 +866,77 @@ checkAadhaar merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirth
         else return False
     Nothing -> throwError $ InternalError "Aadhaar not found"
 
+faceMatchWithAadhaar :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Flow Bool
+faceMatchWithAadhaar person merchantOpCityId image1 = do
+  aadhaarFrontImage <- getPersonImageByDocType person.id ODC.AadhaarCard Image.APPROVED >>= fromMaybeM (InvalidRequest "Aadhaar image not found")
+  isFaceCompareValid person merchantOpCityId image1 aadhaarFrontImage
+
+faceMatchWithDL :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Flow Bool
+faceMatchWithDL person merchantOpCityId image1 = do
+  dlImage <- getPersonImageByDocType person.id ODC.DriverLicense Image.APPROVED >>= fromMaybeM (InvalidRequest "DriverLicense image not found")
+  isFaceCompareValid person merchantOpCityId image1 dlImage
+
+verifyDocumentImageMatch ::
+  Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  ODC.DocumentType ->
+  Maybe Text ->
+  DriverDocument ->
+  Maybe Text ->
+  Flow ()
+verifyDocumentImageMatch person merchantOpCityId verifyingDocumentType mbImage1 DriverDocument {..} mbProfileImage = do
+  case verifyingDocumentType of
+    ODC.AadhaarCard -> do
+      image1 <- fromMaybeM (InvalidRequest $ "Image is required for " <> show verifyingDocumentType) mbImage1
+      profilePhoto <- getPersonImageByDocType person.id ODC.ProfilePhoto Image.APPROVED
+
+      profileChecked <-
+        maybe
+          (pure False)
+          (isFaceCompareValid person merchantOpCityId image1)
+          profilePhoto
+
+      unless profileChecked $
+        whenJust dlNumber $ \_ -> do
+          isValidAadhaar <- faceMatchWithDL person merchantOpCityId image1
+          unless isValidAadhaar $
+            throwError (InvalidRequest "Aadhaar image is not matching with Driver License image.")
+    ODC.DriverLicense -> do
+      image1 <- fromMaybeM (InvalidRequest $ "Image is required for " <> show verifyingDocumentType) mbImage1
+      profilePhoto <- getPersonImageByDocType person.id ODC.ProfilePhoto Image.APPROVED
+
+      profileChecked <-
+        maybe
+          (pure False)
+          (isFaceCompareValid person merchantOpCityId image1)
+          profilePhoto
+
+      unless profileChecked $
+        whenJust aadhaarNumber $ \_ -> do
+          isValidDl <- faceMatchWithAadhaar person merchantOpCityId image1
+          unless isValidDl $
+            throwError (InvalidRequest "Driver License image is not matching with Aadhaar image.")
+    ODC.ProfilePhoto -> do
+      image1 <- fromMaybeM (InvalidRequest "Please send Base64 of profile image") mbProfileImage
+
+      profileVerified <-
+        maybe
+          (pure False)
+          ( \_ -> do
+              isValidProfile <- faceMatchWithAadhaar person merchantOpCityId image1
+              unless isValidProfile $
+                throwError (InvalidRequest "Profile image is not matching with Aadhaar image.")
+              pure isValidProfile
+          )
+          aadhaarNumber
+
+      unless profileVerified $
+        whenJust dlNumber $ \_ -> do
+          isValidProfilePhoto <- faceMatchWithDL person merchantOpCityId image1
+          unless isValidProfilePhoto $
+            throwError (InvalidRequest "Profile image is not matching with Driver License image.")
+    _ -> pure ()
+
 checkGST :: Id Person.Person -> Maybe Text -> Flow ()
 checkGST personId mbPanNumber = do
   mGstData <- DGQuery.findByDriverId personId
@@ -925,3 +1002,40 @@ validateNameAndDOB merchantId merchantOpCityId mbExtractedName mbVerifiedName mb
 isNameCompareRequired :: DTC.TransporterConfig -> DPan.VerifiedBy -> Bool
 isNameCompareRequired transporterConfig verifyBy =
   isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.DASHBOARD_ADMIN && verifyBy /= DPan.DASHBOARD_USER
+
+getPersonImageByDocType :: Id Person.Person -> DocumentType -> Image.SelfieFetchStatus -> Flow (Maybe Text)
+getPersonImageByDocType personId docType fetchStatus = do
+  mbImageMetadata <- ImageQuery.findByPersonIdImageTypeAndValidationStatus personId docType fetchStatus
+  case mbImageMetadata of
+    Just imageMetadata -> do
+      image <-
+        S3.get $ T.unpack imageMetadata.s3Path
+      pure (Just image)
+    _ -> pure Nothing
+
+getImageByPersonIdAndImageId :: Id Person.Person -> Id Image.Image -> DocumentType -> Flow Text
+getImageByPersonIdAndImageId personId imageId_ docType = do
+  imageMetadata <- ImageQuery.findById imageId_ >>= fromMaybeM (ImageNotFound imageId_.getId)
+  unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId_.getId)
+  unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_.getId)
+  unless (imageMetadata.imageType == docType) $
+    throwError (ImageInvalidType (show docType) "")
+  Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
+    S3.get $ T.unpack imageMetadata.s3Path
+
+isFaceCompareValid :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Flow Bool
+isFaceCompareValid person merchantOpCityId image1 image2 = do
+  let faceCompareReq =
+        Verification.FaceCompareReq
+          { document1 = image1,
+            document2 = image2,
+            driverId = person.id.getId
+          }
+  resp <- Verification.faceCompare person.merchantId merchantOpCityId faceCompareReq
+  logDebug $ "Face comparison response: " <> show resp
+  case resp.faceComparedData of
+    Just faceComparedData -> pure faceComparedData.is_a_match
+    Nothing -> throwError $ InternalError "Face comparison service returned invalid response"
+
+imageS3Lock :: Text -> Text -- adding due to cyclick dependcies
+imageS3Lock path = "image-s3-lock-" <> path

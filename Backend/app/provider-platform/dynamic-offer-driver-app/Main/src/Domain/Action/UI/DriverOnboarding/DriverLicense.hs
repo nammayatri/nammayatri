@@ -162,8 +162,12 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             logInfo $ "Ticket: " <> show ticket
             return ()
   let runBody = do
+        let driverDocument = VC.DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
+        image1 <- getImage imageId1
         when (VC.isNameCompareRequired transporterConfig verifyBy) $
-          VC.validateDocument merchantId merchantOpCityId person.id nameOnCard dateOfBirth Nothing DTO.DriverLicense VC.DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
+          VC.validateDocument merchantId merchantOpCityId person.id nameOnCard dateOfBirth Nothing DTO.DriverLicense driverDocument
+        when (fromMaybe False transporterConfig.isFaceMatchRequired) $
+          VC.verifyDocumentImageMatch person merchantOpCityId DTO.DriverLicense (Just image1) driverDocument Nothing
         mdriverLicense <- Query.findByDLNumber driverLicenseNumber
         case mdriverLicense of
           Just driverLicense -> do
@@ -181,7 +185,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             if documentVerificationConfig.doStrictVerifcation
               then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue req.vehicleCategory
-  if VC.isNameCompareRequired transporterConfig verifyBy
+  if VC.isNameCompareRequired transporterConfig verifyBy || fromMaybe False transporterConfig.isFaceMatchRequired
     then Redis.withWaitOnLockRedisWithExpiry (VC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
   return Success
