@@ -369,8 +369,9 @@ updateOperatorAnalyticsRatingScoreKey ::
   Id DP.Person ->
   TC.TransporterConfig ->
   Int ->
+  Bool ->
   m ()
-updateOperatorAnalyticsRatingScoreKey driverId transporterConfig ratingValue = do
+updateOperatorAnalyticsRatingScoreKey driverId transporterConfig ratingValue shouldIncrementCount = do
   mbOperatorId <- findOperatorIdForDriver driverId
   when (isNothing mbOperatorId) $ logTagInfo "AnalyticsUpdateRatingScoreKey" $ "No operator found for driver: " <> show driverId
 
@@ -378,7 +379,7 @@ updateOperatorAnalyticsRatingScoreKey driverId transporterConfig ratingValue = d
   whenJust mbOperatorId $ \operatorId -> do
     let ratingSumKey = makeOperatorAnalyticsKey operatorId RATING_SUM
     Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId SFleetOperatorStats.RATING_COUNT_AND_SCORE) 10 5000 $
-      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore operatorId transporterConfig ratingValue
+      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore operatorId transporterConfig ratingValue shouldIncrementCount
     -- Ensure Redis keys exist
     ensureRedisKeysExistForAllTime operatorId ratingSumKey ratingValue
 
@@ -387,8 +388,8 @@ updateOperatorAnalyticsRatingScoreKey driverId transporterConfig ratingValue = d
   when (isNothing mbFLeetOwner) $ logTagInfo "AnalyticsUpdateRatingScoreKey" $ "No fleet owner found for driver: " <> show driverId
   whenJust mbFLeetOwner $ \fleetOwner -> do
     Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId SFleetOperatorStats.RATING_COUNT_AND_SCORE) 10 5000 $ do
-      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore fleetOwner.fleetOwnerId transporterConfig ratingValue
-      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScoreDaily fleetOwner.fleetOwnerId transporterConfig ratingValue
+      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore fleetOwner.fleetOwnerId transporterConfig ratingValue shouldIncrementCount
+      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScoreDaily fleetOwner.fleetOwnerId transporterConfig ratingValue shouldIncrementCount
 
 updateOperatorAnalyticsTotalRideCount ::
   ( MonadFlow m,

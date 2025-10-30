@@ -102,12 +102,12 @@ incrementTotalRequestCount fleetOperatorId transporterConfig = do
       initStats <- buildInitialFleetOperatorStats fleetOperatorId transporterConfig
       QFleetOps.create initStats {DFS.totalRequestCount = Just 1}
 
-incrementTotalRatingCountAndTotalRatingScore :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> Int -> m ()
-incrementTotalRatingCountAndTotalRatingScore fleetOperatorId transporterConfig ratingValue = do
+incrementTotalRatingCountAndTotalRatingScore :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> Int -> Bool -> m ()
+incrementTotalRatingCountAndTotalRatingScore fleetOperatorId transporterConfig ratingValue shouldIncrementCount = do
   mbCurrent <- QFleetOps.findByPrimaryKey fleetOperatorId
   case mbCurrent of
     Just s -> do
-      let newTotalRatingCount = Just (fromMaybe 0 s.totalRatingCount + 1)
+      let newTotalRatingCount = Just (fromMaybe 0 s.totalRatingCount + if shouldIncrementCount then 1 else 0)
           newTotalRatingScore = Just (fromMaybe 0 s.totalRatingScore + ratingValue)
       QFleetOps.updateTotalRatingCountAndTotalRatingScoreByFleetOperatorId newTotalRatingCount newTotalRatingScore fleetOperatorId
     Nothing -> do
@@ -251,15 +251,15 @@ incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId ride transpo
           }
 
 -- Daily: increment total rating count and total rating score
-incrementTotalRatingCountAndTotalRatingScoreDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> Int -> m ()
-incrementTotalRatingCountAndTotalRatingScoreDaily fleetOperatorId transporterConfig ratingValue = do
+incrementTotalRatingCountAndTotalRatingScoreDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> Int -> Bool -> m ()
+incrementTotalRatingCountAndTotalRatingScoreDaily fleetOperatorId transporterConfig ratingValue shouldIncrementCount = do
   nowUTCTime <- getCurrentTime
   let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
   let merchantLocalDate = utctDay now
   mbCurrent <- QFleetOpsDaily.findByFleetOperatorIdAndDate fleetOperatorId merchantLocalDate
   case mbCurrent of
     Just s -> do
-      let newTotalRatingCount = Just (fromMaybe 0 s.totalRatingCount + 1)
+      let newTotalRatingCount = Just (fromMaybe 0 s.totalRatingCount + if shouldIncrementCount then 1 else 0)
           newTotalRatingScore = Just (fromMaybe 0 s.totalRatingScore + ratingValue)
       QFleetOpsDaily.updateTotalRatingCountAndTotalRatingScoreByFleetOperatorIdAndDate newTotalRatingCount newTotalRatingScore fleetOperatorId merchantLocalDate
     Nothing -> do
