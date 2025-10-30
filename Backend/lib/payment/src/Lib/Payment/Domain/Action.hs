@@ -147,10 +147,9 @@ createPaymentIntentService ::
   Payment.CreatePaymentIntentReq ->
   (Payment.CreatePaymentIntentReq -> m Payment.CreatePaymentIntentResp) ->
   (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
-  (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
   m Payment.CreatePaymentIntentResp
-createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideShortIdText createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall = do
+createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideShortIdText createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall cancelPaymentIntentCall = do
   let rideShortId = ShortId rideShortIdText
   mbExistingOrder <- QOrder.findById (cast rideId)
   case mbExistingOrder of
@@ -176,12 +175,30 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
               case resp of
                 Left err -> do
                   logError $ "Failed to update payment intent amount for paymentIntentId: " <> paymentIntentId <> " err: " <> show err
-                  void $ chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall -- charge older payment intent
+                  cancelOldTransaction transaction paymentIntentId -- cancel older payment intent
                   createNewTransaction existingOrder -- create new payment intent
                 Right _ -> updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder transaction
             else updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder transaction
   where
     isInProgress = (`elem` [Payment.NEW, Payment.PENDING_VBV, Payment.STARTED, Payment.AUTHORIZING])
+
+    cancelOldTransaction :: DTransaction.PaymentTransaction -> Payment.PaymentIntentId -> m ()
+    cancelOldTransaction transaction paymentIntentId = do
+      resp <- try @_ @SomeException $ withShortRetry $ cancelPaymentIntentCall paymentIntentId
+      (errorCode', errorMessage') <- case resp of
+        Left exec -> do
+          let err = fromException @Payment.StripeError exec
+              errorCode = err <&> toErrorCode
+              errorMessage = err >>= toMessage
+          logError $ "Error while cancelling payment intent: paymentIntentId: " <> paymentIntentId <> "; err: " <> show err <> "; error code: " <> show errorCode <> "; error message: " <> show errorMessage
+          pure (errorCode, errorMessage)
+        Right paymentIntentResp -> do
+          unless (paymentIntentResp.status == Payment.Cancelled) $ do
+            -- impossible: paymentIntentResp.status will be always canceled, if the cancellation attempt fails, Stripe will throw error instead of PaymentIntent object
+            logError $ "Invalid payment intent status: " <> show paymentIntentResp.status <> "; paymentIntentId: " <> paymentIntentId <> "; should be: canceled"
+          pure (Nothing, Nothing)
+      -- no need to update order status, because we will create new payment intent linked to this order
+      QTransaction.updateStatusAndError transaction.id Payment.CANCELLED errorCode' errorMessage'
 
     createNewTransaction :: (EncFlow m r, BeamFlow m r) => DOrder.PaymentOrder -> m Payment.CreatePaymentIntentResp
     createNewTransaction existingOrder = do
