@@ -535,6 +535,7 @@ library
       Storage.Queries.PassCategoryExtra
       Storage.Queries.PassExtra
       Storage.Queries.PassTypeExtra
+      Storage.Queries.PassVerifyTransactionExtra
       Storage.Queries.PersonDefaultEmergencyNumberExtra
       Storage.Queries.PersonExtra
       Storage.Queries.PersonStatsExtra
@@ -831,6 +832,7 @@ library
       Domain.Types.Pass
       Domain.Types.PassCategory
       Domain.Types.PassType
+      Domain.Types.PassVerifyTransaction
       Domain.Types.PaymentCustomer
       Domain.Types.PayoutConfig
       Domain.Types.Person
@@ -843,6 +845,7 @@ library
       Domain.Types.PlaceNameCache
       Domain.Types.PopularLocation
       Domain.Types.PurchasedPass
+      Domain.Types.PurchasedPassPayment
       Domain.Types.Quote
       Domain.Types.QuoteBreakup
       Domain.Types.Rating
@@ -971,6 +974,7 @@ library
       Storage.Beam.Pass
       Storage.Beam.PassCategory
       Storage.Beam.PassType
+      Storage.Beam.PassVerifyTransaction
       Storage.Beam.PaymentCustomer
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
@@ -982,6 +986,7 @@ library
       Storage.Beam.PlaceNameCache
       Storage.Beam.PopularLocation
       Storage.Beam.PurchasedPass
+      Storage.Beam.PurchasedPassPayment
       Storage.Beam.Quote
       Storage.Beam.QuoteBreakup
       Storage.Beam.Rating
@@ -1136,6 +1141,7 @@ library
       Storage.Queries.OrphanInstances.NyRegularSubscription
       Storage.Queries.OrphanInstances.PartnerOrganization
       Storage.Queries.OrphanInstances.PartnerOrgConfig
+      Storage.Queries.OrphanInstances.PassVerifyTransaction
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber
       Storage.Queries.OrphanInstances.PersonStats
@@ -1169,6 +1175,7 @@ library
       Storage.Queries.Pass
       Storage.Queries.PassCategory
       Storage.Queries.PassType
+      Storage.Queries.PassVerifyTransaction
       Storage.Queries.PaymentCustomer
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
@@ -1180,6 +1187,7 @@ library
       Storage.Queries.PlaceNameCache
       Storage.Queries.PopularLocation
       Storage.Queries.PurchasedPass
+      Storage.Queries.PurchasedPassPayment
       Storage.Queries.Quote
       Storage.Queries.QuoteBreakup
       Storage.Queries.Rating

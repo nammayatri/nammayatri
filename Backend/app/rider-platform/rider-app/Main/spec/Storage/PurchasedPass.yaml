@@ -12,7 +12,7 @@ PurchasedPass:
 
   types:
     StatusType:
-      enum: "Pending,Active,Failed,Expired,RefundPending,RefundInitiated,Refunded"
+      enum: "Pending,Active,PreBooked,Failed,Expired,RefundPending,RefundInitiated,Refunded"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
 
     BenefitType:
@@ -21,11 +21,10 @@ PurchasedPass:
 
   fields:
     id: Id PurchasedPass
-    shortId: ShortId PurchasedPass
-    orderShortId: ShortId PaymentOrder
+    passNumber: Int
     personId: Id Person
-    validTill: Maybe UTCTime
-    usedCount: Int
+    startDate: Day
+    endDate: Day
     passTypeId: Id PassType
     passCode: Text
     passName: Maybe Text
@@ -36,9 +35,56 @@ PurchasedPass:
     applicableVehicleServiceTiers: "[Id FRFSVehicleServiceTier]"
     maxValidTrips: Maybe Int
     maxValidDays: Maybe Int
+    usedTripCount: Maybe Int
     status: StatusType
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 
   constraints:
     id: PrimaryKey
+
+PurchasedPassPayment:
+  tableName: purchased_pass_payment
+
+  fields:
+    id: Id PurchasedPassPayment
+    orderId: Id PaymentOrder
+    purchasedPassId: Id PurchasedPass
+    startDate: Day
+    endDate: Day
+
+  constraints:
+    id: PrimaryKey
+    orderId: SecondaryKey
+    purchasedPassId: SecondaryKey
+
+  queries:
+    findOneByPaymentOrderId:
+        kvFunction: findOneWithKV
+        where: orderId
+
+    findAllByPurchasedPassId:
+      kvFunction: findAllWithKV
+      where: purchasedPassId
+
+PassVerifyTransaction:
+  tableName: pass_verify_transaction
+
+  fields:
+    id: Id PassVerifyTransaction
+    purchasePassId: Id PurchasedPass
+    validTill: UTCTime
+    verifiedAt: UTCTime
+    fleetId: Text
+
+  constraints:
+    id: PrimaryKey
+    purchasePassId: SecondaryKey
+
+  queries:
+    findAllByPurchasePassId:
+      kvFunction: findAllWithKV
+      where: purchasePassId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

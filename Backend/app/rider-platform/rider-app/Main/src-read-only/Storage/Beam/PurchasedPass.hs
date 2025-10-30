@@ -3,6 +3,7 @@
 
 module Storage.Beam.PurchasedPass where
 
+import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Extra.PurchasedPass ()
@@ -14,27 +15,27 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data PurchasedPassT f = PurchasedPassT
-  { applicableVehicleServiceTiers :: (B.C f [Kernel.Prelude.Text]),
-    benefitDescription :: (B.C f Kernel.Prelude.Text),
-    benefitType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType)),
-    benefitValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    id :: (B.C f Kernel.Prelude.Text),
-    maxValidDays :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    maxValidTrips :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    orderShortId :: (B.C f Kernel.Prelude.Text),
-    passAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    passCode :: (B.C f Kernel.Prelude.Text),
-    passName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    passTypeId :: (B.C f Kernel.Prelude.Text),
-    personId :: (B.C f Kernel.Prelude.Text),
-    shortId :: (B.C f Kernel.Prelude.Text),
-    status :: (B.C f Domain.Types.PurchasedPass.StatusType),
-    usedCount :: (B.C f Kernel.Prelude.Int),
-    validTill :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { applicableVehicleServiceTiers :: B.C f [Kernel.Prelude.Text],
+    benefitDescription :: B.C f Kernel.Prelude.Text,
+    benefitType :: B.C f (Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType),
+    benefitValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    endDate :: B.C f Data.Time.Calendar.Day,
+    id :: B.C f Kernel.Prelude.Text,
+    maxValidDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    maxValidTrips :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    passAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    passCode :: B.C f Kernel.Prelude.Text,
+    passName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    passNumber :: B.C f Kernel.Prelude.Int,
+    passTypeId :: B.C f Kernel.Prelude.Text,
+    personId :: B.C f Kernel.Prelude.Text,
+    startDate :: B.C f Data.Time.Calendar.Day,
+    status :: B.C f Domain.Types.PurchasedPass.StatusType,
+    usedTripCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -44,6 +45,6 @@ instance B.Table PurchasedPassT where
 
 type PurchasedPass = PurchasedPassT Identity
 
-$(enableKVPG (''PurchasedPassT) [('id)] [])
+$(enableKVPG ''PurchasedPassT ['id] [])
 
-$(mkTableInstances (''PurchasedPassT) "purchased_pass")
+$(mkTableInstances ''PurchasedPassT "purchased_pass")

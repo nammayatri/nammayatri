@@ -11,6 +11,8 @@ imports:
   ServiceTierType: BecknV2.FRFS.Enums
   CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
   Benefit: Domain.Types.Pass
+  APISuccess: Kernel.Types.APISuccess
+  Day: Data.Time
 
 module: Pass
 types:
@@ -50,6 +52,9 @@ types:
     passes: "[PassAPIEntity]"
     derive: "Show"
 
+  PassVerifyReq:
+    vehicleNumber: Text
+
   PassSelectionAPIEntity:
     purchasedPassId: Id PurchasedPass
     paymentOrder: Maybe CreateOrderResp
@@ -57,12 +62,15 @@ types:
 
   PurchasedPassAPIEntity:
     id: Id PurchasedPass
-    shortId: ShortId PurchasedPass
+    passNumber: Text
     passEntity: PassDetailsAPIEntity
     tripsLeft: Maybe Int
+    lastVerifiedVehicleNumber: Maybe Text
     status: StatusType
-    purchaseDate: UTCTime
-    expiryDate: Maybe UTCTime
+    purchaseDate: Day
+    daysToExpire: Int
+    startDate: Day
+    expiryDate: Day
     derive: "Show"
 
   PassDetailsAPIEntity:
@@ -83,6 +91,8 @@ apis:
       auth: TokenAuth
       params:
         passId: Id Pass
+      query:
+        startDate: Day
       response:
         type: PassSelectionAPIEntity
 
@@ -103,3 +113,13 @@ apis:
         offset: Int
       response:
         type: "[PurchasedPassAPIEntity]"
+
+  - POST:
+      endpoint: /multimodal/pass/{purchasedPassId}/verify
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      request:
+        type: PassVerifyReq
+      response:
+        type: APISuccess

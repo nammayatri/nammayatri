@@ -6,6 +6,7 @@ import qualified BecknV2.FRFS.Enums
 import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
+import qualified Data.Time
 import qualified Domain.Types.Pass
 import qualified Domain.Types.PassCategory
 import qualified Domain.Types.PassType
@@ -65,12 +66,19 @@ data PassTypeAPIEntity = PassTypeAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PassVerifyReq = PassVerifyReq {vehicleNumber :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PurchasedPassAPIEntity = PurchasedPassAPIEntity
-  { expiryDate :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
+  { daysToExpire :: Kernel.Prelude.Int,
+    expiryDate :: Data.Time.Day,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
+    lastVerifiedVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,
     passEntity :: PassDetailsAPIEntity,
-    purchaseDate :: Kernel.Prelude.UTCTime,
-    shortId :: Kernel.Types.Id.ShortId Domain.Types.PurchasedPass.PurchasedPass,
+    passNumber :: Data.Text.Text,
+    purchaseDate :: Data.Time.Day,
+    startDate :: Data.Time.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
     tripsLeft :: Data.Maybe.Maybe Kernel.Prelude.Int
   }
