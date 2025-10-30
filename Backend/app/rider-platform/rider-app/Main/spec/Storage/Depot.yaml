@@ -1,0 +1,42 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  DeviceType: Kernel.Types.Version
+  Person: Domain.Types.Person
+
+Depot:
+  tableName: depot
+
+  fields:
+    id: Id Depot
+    name: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+
+DepotManager:
+  tableName: depot_manager
+
+  fields:
+    personId: Id Person
+    depotCode: Id Depot
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    enabled: Bool
+    isAdmin: Bool
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    personId: PrimaryKey
+    depotCode: PrimaryKey
+
+  queries:
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+    findByDepotCode:
+      kvFunction: findOneWithKV
+      where: depotCode

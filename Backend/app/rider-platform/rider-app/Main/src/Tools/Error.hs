@@ -1080,3 +1080,29 @@ instance IsHTTPError MultimodalError where
     NoSelectedCategoryFound _ -> E500
 
 instance IsAPIError MultimodalError
+
+data DepotManagerError
+  = DepotManagerNotFound Text
+  | DepotFleetInfoNotFound Text
+  | DepotManagerDoesNotHaveAccessToFleet Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DepotManagerError
+
+instance IsBaseError DepotManagerError where
+  toMessage = \case
+    DepotManagerNotFound depotManagerId -> Just $ "Depot manager with id: " <> depotManagerId <> " not found."
+    DepotManagerDoesNotHaveAccessToFleet depotManagerId fleetId -> Just $ "Depot manager with id: " <> depotManagerId <> " does not have access to fleet with id: " <> fleetId <> "."
+    DepotFleetInfoNotFound fleetId -> Just $ "Depot fleet info with id: " <> fleetId <> " not found."
+
+instance IsHTTPError DepotManagerError where
+  toErrorCode = \case
+    DepotManagerNotFound _ -> "DEPOT_MANAGER_NOT_FOUND"
+    DepotManagerDoesNotHaveAccessToFleet _ _ -> "DEPOT_MANAGER_DOES_NOT_HAVE_ACCESS_TO_FLEET"
+    DepotFleetInfoNotFound _ -> "DEPOT_FLEET_INFO_NOT_FOUND"
+  toHttpCode = \case
+    DepotManagerNotFound _ -> E400
+    DepotManagerDoesNotHaveAccessToFleet _ _ -> E401
+    DepotFleetInfoNotFound _ -> E400
+
+instance IsAPIError DepotManagerError

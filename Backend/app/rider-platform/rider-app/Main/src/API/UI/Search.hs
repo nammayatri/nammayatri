@@ -39,6 +39,7 @@ import Data.Aeson
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
+import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Action.UI.MultimodalConfirm as DMC
 import qualified Domain.Action.UI.Quote as DQuote
 import qualified Domain.Action.UI.Search as DSearch
@@ -289,7 +290,17 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       DSearch.PTSearch ptSearchDetails -> do
         case (mbIntegratedBPPConfig, ptSearchDetails.vehicleNumber, ptSearchDetails.routeCode) of
           (Just integratedBPPConfig, Just userPassedVehicleNumber, Just userPassedRouteCode) -> do
-            mbRouteLiveInfo <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber
+            mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo userPassedVehicleNumber
+            mbRouteLiveInfo <-
+              case mbVehicleOverrideInfo of
+                Just (updatedVehicleNumber, newDeviceWaybillNo) -> do
+                  mbUpdatedVehicleRouteInfo <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig] updatedVehicleNumber
+                  if Just newDeviceWaybillNo /= ((.waybillId) . snd =<< mbUpdatedVehicleRouteInfo)
+                    then do
+                      Dispatcher.delFleetOverrideInfo userPassedVehicleNumber
+                      JMU.getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber
+                    else pure mbUpdatedVehicleRouteInfo
+                Nothing -> JMU.getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber
             return $
               maybe
                 Nothing

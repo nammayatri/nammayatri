@@ -333,3 +333,12 @@ instance ToJSON TripDetails where
       [ "tripId" .= tripId,
         "stops" .= stops
       ]
+
+data VehicleInfoResponse = VehicleInfoResponse
+  { driverCode :: Text,
+    conductorCode :: Text,
+    depotName :: Text,
+    scheduleNo :: Text,
+    waybillNo :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)

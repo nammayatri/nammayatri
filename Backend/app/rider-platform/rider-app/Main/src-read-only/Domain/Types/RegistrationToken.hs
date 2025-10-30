@@ -31,7 +31,7 @@ data RegistrationToken = RegistrationToken
 
 data LoginType = OTP | PASSWORD | DIRECT | OAUTH deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data Medium = SMS | WHATSAPP | EMAIL | SIGNATURE | PARTNER_ORG deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data Medium = SMS | WHATSAPP | EMAIL | SIGNATURE | PARTNER_ORG | MOBILE_NUMBER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RTEntityType = CUSTOMER | USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

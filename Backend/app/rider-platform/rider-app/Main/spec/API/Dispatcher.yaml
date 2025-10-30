@@ -1,0 +1,31 @@
+imports:
+module: Dispatcher
+types:
+  ScheduleUpdateReasons:
+    enum: "BreakDown,OtherReason Text"
+  DispatcherReq:
+    sourceFleetId: Text
+    updatedFleetId: Text
+    reason: ScheduleUpdateReasons
+  DispatcherRes:
+    depotName: Text
+    scheduleNo: Text
+    driverCode: Text
+    conductorCode: Text
+
+apis:
+  - GET:
+      endpoint: /dispatcher/{fleetId}/getFleetInfo
+      params:
+        fleetId: Text
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.Dispatcher.DispatcherRes
+
+  - POST:
+      endpoint: /dispatcher/updateFleetSchedule
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.Dispatcher.DispatcherReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

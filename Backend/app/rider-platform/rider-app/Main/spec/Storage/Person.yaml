@@ -384,6 +384,11 @@ Person:
       params: [lastUsedVehicleCategories]
       where: id
 
+    updatePersonPassword:
+      kvFunction: updateWithKV
+      params: [passwordHash]
+      where: id
+
   extraOperations:
     - EXTRA_QUERY_FILE
 

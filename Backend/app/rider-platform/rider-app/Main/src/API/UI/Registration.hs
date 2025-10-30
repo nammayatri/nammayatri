@@ -18,6 +18,7 @@ module API.UI.Registration
     DRegistration.ResendAuthRes,
     DRegistration.AuthVerifyReq (..),
     DRegistration.AuthVerifyRes (..),
+    DRegistration.PasswordAuthReq (..),
     API,
     handler,
   )
@@ -59,6 +60,9 @@ type API =
              :> Header "x-rn-version" Text
              :> Header "x-device" Text
              :> Post '[JSON] DRegistration.AuthRes
+           :<|> "password"
+             :> ReqBody '[JSON] DRegistration.PasswordAuthReq
+             :> Post '[JSON] DRegistration.AuthRes
            :<|> Capture "authId" (Id SRT.RegistrationToken)
              :> "verify"
              :> ReqBody '[JSON] DRegistration.AuthVerifyReq
@@ -77,6 +81,7 @@ handler :: FlowServer API
 handler =
   auth
     :<|> signatureAuth
+    :<|> passwordBasedAuth
     :<|> verify
     :<|> resend
     :<|> logout
@@ -91,6 +96,9 @@ signatureAuth (SignatureAuthResult req) mbBundleVersion mbClientVersion mbClient
 
 verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
 verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId
+
+passwordBasedAuth :: DRegistration.PasswordAuthReq -> FlowHandler DRegistration.AuthRes
+passwordBasedAuth req = withFlowHandlerAPI $ DRegistration.passwordBasedAuth req
 
 resend :: Id SR.RegistrationToken -> Maybe Text -> FlowHandler DRegistration.ResendAuthRes
 resend tokenId mbSenderHash = withFlowHandlerAPI $ DRegistration.resend tokenId mbSenderHash

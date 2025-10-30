@@ -98,11 +98,13 @@ destinationServiceability regToken = destination
 
 appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes
 appSignatureAuth :: Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes
+appPasswordAuth :: Reg.PasswordAuthReq -> ClientM Reg.AuthRes
 appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
 appReInitiateLogin :: Id AppSRT.RegistrationToken -> Maybe Text -> ClientM Reg.ResendAuthRes
 logout :: RegToken -> ClientM APISuccess
 appAuth
   :<|> appSignatureAuth
+  :<|> appPasswordAuth
   :<|> appVerify
   :<|> appReInitiateLogin
   :<|> logout =
@@ -136,7 +138,8 @@ mkAuthVerifyReq =
   Reg.AuthVerifyReq
     { otp = "7891",
       deviceToken = "AN_DEV_TOKEN",
-      whatsappNotificationEnroll = Just OPT_IN
+      whatsappNotificationEnroll = Just OPT_IN,
+      userPasswordString = Just "password"
     }
 
 initiateAuth :: ClientM Reg.AuthRes
