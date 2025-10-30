@@ -11,6 +11,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.UpgradedTier
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -96,6 +97,7 @@ data DriverInformationE e = DriverInformation
     referredByOperatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideRequestVolume :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideRequestVolumeEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    ruleBasedUpgradeTiers :: Kernel.Prelude.Maybe [Domain.Types.UpgradedTier.UpgradedTier],
     servicesEnabledForSubscription :: [Domain.Types.Extra.Plan.ServiceNames],
     softBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -200,6 +202,7 @@ instance EncryptedItem DriverInformation where
           referredByOperatorId = referredByOperatorId entity,
           rideRequestVolume = rideRequestVolume entity,
           rideRequestVolumeEnabled = rideRequestVolumeEnabled entity,
+          ruleBasedUpgradeTiers = ruleBasedUpgradeTiers entity,
           servicesEnabledForSubscription = servicesEnabledForSubscription entity,
           softBlockExpiryTime = softBlockExpiryTime entity,
           softBlockReasonFlag = softBlockReasonFlag entity,
@@ -296,6 +299,7 @@ instance EncryptedItem DriverInformation where
             referredByOperatorId = referredByOperatorId entity,
             rideRequestVolume = rideRequestVolume entity,
             rideRequestVolumeEnabled = rideRequestVolumeEnabled entity,
+            ruleBasedUpgradeTiers = ruleBasedUpgradeTiers entity,
             servicesEnabledForSubscription = servicesEnabledForSubscription entity,
             softBlockExpiryTime = softBlockExpiryTime entity,
             softBlockReasonFlag = softBlockReasonFlag entity,

@@ -1103,6 +1103,7 @@ TransporterConfig:
     cancellationFeeCycle: Maybe Seconds
     cancellationFeeDisputeWindow: Maybe Seconds
     cancellationFeeVendor: Maybe Text
+    upgradeTierDropRetentionTime: Maybe Seconds
 
   beamType:
     currency: Maybe Currency

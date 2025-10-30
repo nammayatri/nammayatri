@@ -336,7 +336,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             isTTSEnabled = Nothing,
             isHighAccuracyLocationEnabled = Nothing,
             rideRequestVolumeEnabled = Nothing,
-            lastOfflineTime = Just now
+            lastOfflineTime = Just now,
+            ruleBasedUpgradeTiers = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo

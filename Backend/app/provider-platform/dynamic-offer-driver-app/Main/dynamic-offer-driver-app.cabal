@@ -349,6 +349,7 @@ library
       Domain.Types.OnUpdate
       Domain.Types.Quote
       Domain.Types.RideRoute
+      Domain.Types.UpgradedTier
       Domain.Types.UtilsTH
       Domain.Types.Yudhishthira
       Environment
@@ -439,6 +440,7 @@ library
       SharedLogic.Pricing
       SharedLogic.Ride
       SharedLogic.RiderDetails
+      SharedLogic.RuleBasedTierUpgrade
       SharedLogic.ScheduledNotifications
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker

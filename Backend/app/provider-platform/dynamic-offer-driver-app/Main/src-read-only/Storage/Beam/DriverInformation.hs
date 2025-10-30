@@ -98,6 +98,7 @@ data DriverInformationT f = DriverInformationT
     referredByOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rideRequestVolume :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideRequestVolumeEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    ruleBasedUpgradeTiers :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     servicesEnabledForSubscription :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Extra.Plan.ServiceNames]),
     softBlockExpiryTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     softBlockReasonFlag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -124,6 +125,6 @@ instance B.Table DriverInformationT where
 
 type DriverInformation = DriverInformationT Identity
 
-$(enableKVPG (''DriverInformationT) [('driverId)] [])
+$(enableKVPG ''DriverInformationT ['driverId] [])
 
-$(mkTableInstances (''DriverInformationT) "driver_information")
+$(mkTableInstances ''DriverInformationT "driver_information")

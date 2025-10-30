@@ -201,3 +201,4 @@ castDashboardVehicleVariantToDomain = \case
   Common.EV_AUTO_RICKSHAW -> DV.EV_AUTO_RICKSHAW
   Common.VIP_ESCORT -> DV.VIP_ESCORT
   Common.VIP_OFFICER -> DV.VIP_OFFICER
+  Common.AC_PRIORITY -> DV.AC_PRIORITY
