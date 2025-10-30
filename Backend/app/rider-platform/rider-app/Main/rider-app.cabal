@@ -217,6 +217,7 @@ library
       Domain.Action.UI.CustomerReferral
       Domain.Action.UI.DeletedPerson
       Domain.Action.UI.Disability
+      Domain.Action.UI.Dispatcher
       Domain.Action.UI.DriverOffer
       Domain.Action.UI.EditLocation
       Domain.Action.UI.Estimate
@@ -652,6 +653,7 @@ library
       API.Action.UI.CRIS
       API.Action.UI.CustomerReferral
       API.Action.UI.DeletedPerson
+      API.Action.UI.Dispatcher
       API.Action.UI.EditLocation
       API.Action.UI.EstimateBP
       API.Action.UI.FavouriteDriver
@@ -720,6 +722,7 @@ library
       API.Types.UI.CRIS
       API.Types.UI.CustomerReferral
       API.Types.UI.DeletedPerson
+      API.Types.UI.Dispatcher
       API.Types.UI.EditLocation
       API.Types.UI.EstimateBP
       API.Types.UI.FavouriteDriver
@@ -767,6 +770,8 @@ library
       Domain.Types.Client
       Domain.Types.ClientPersonInfo
       Domain.Types.DeletedPerson
+      Domain.Types.Depot
+      Domain.Types.DepotManager
       Domain.Types.Disability
       Domain.Types.DisabilityTranslation
       Domain.Types.DraftTicketChange
@@ -907,6 +912,8 @@ library
       Storage.Beam.Client
       Storage.Beam.ClientPersonInfo
       Storage.Beam.DeletedPerson
+      Storage.Beam.Depot
+      Storage.Beam.DepotManager
       Storage.Beam.Disability
       Storage.Beam.DisabilityTranslation
       Storage.Beam.DraftTicketChange
@@ -1049,6 +1056,8 @@ library
       Storage.Queries.Client
       Storage.Queries.ClientPersonInfo
       Storage.Queries.DeletedPerson
+      Storage.Queries.Depot
+      Storage.Queries.DepotManager
       Storage.Queries.Disability
       Storage.Queries.DisabilityTranslation
       Storage.Queries.DraftTicketChange

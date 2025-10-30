@@ -20,6 +20,7 @@ module Domain.Action.UI.Registration
     AuthVerifyReq (..),
     AuthVerifyRes (..),
     OTPChannel (..),
+    PasswordAuthReq (..),
     auth,
     signatureAuth,
     createPerson,
@@ -30,6 +31,7 @@ module Domain.Action.UI.Registration
     createPersonWithPhoneNumber,
     buildPerson,
     getRegistrationTokenE,
+    passwordBasedAuth,
   )
 where
 
@@ -73,6 +75,7 @@ import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as BC
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import qualified Kernel.Types.Predicate as P
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Types.Version
 import Kernel.Utils.Common
@@ -166,6 +169,15 @@ validateSignatureAuthReq AuthReq {..} =
     [ whenJust mobileCountryCode $ \countryCode -> validateField "mobileCountryCode" countryCode P.mobileCountryCode
     ]
 
+data PasswordAuthReq = PasswordAuthReq
+  { userEmail :: Maybe Text,
+    userMobileNumber :: Maybe Text,
+    userCountryCode :: Maybe Text,
+    userMerchantId :: Id Merchant,
+    userPassword :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 data AuthRes = AuthRes
   { authId :: Id RegistrationToken,
     attempts :: Int,
@@ -189,14 +201,16 @@ type ResendAuthRes = AuthRes
 data AuthVerifyReq = AuthVerifyReq
   { otp :: Text,
     deviceToken :: Text,
-    whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods
+    whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods,
+    userPasswordString :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 validateAuthVerifyReq :: Validate AuthVerifyReq
 validateAuthVerifyReq AuthVerifyReq {..} =
   sequenceA_
-    [ validateField "otp" otp $ ExactLength 4 `And` star P.digit
+    [ validateField "otp" otp $ ExactLength 4 `And` star P.digit,
+      validateField "userPasswordString" userPasswordString $ P.MinLength 6 `And` P.MaxLength 30
     ]
 
 data AuthVerifyRes = AuthVerifyRes
@@ -291,7 +305,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
-  regToken <- makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM
+  regToken <- makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM False
   if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
     then do
       deploymentVersion <- asks (.version)
@@ -370,7 +384,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
-  regToken <- makeSession SR.SIGNATURE scfg entityId mkId useFakeOtpM
+  regToken <- makeSession SR.SIGNATURE scfg entityId mkId useFakeOtpM False
   if not person.blocked
     then do
       deploymentVersion <- asks (.version)
@@ -382,6 +396,40 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
       personAPIEntity <- verifyFlow person regToken reqWithMobileNumebr.whatsappNotificationEnroll deviceToken
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
+
+passwordBasedAuth ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions]
+  ) =>
+  PasswordAuthReq ->
+  m AuthRes
+passwordBasedAuth req = do
+  (mbPerson, method) <-
+    case (req.userMobileNumber, req.userCountryCode, req.userEmail) of
+      (Just mobileNumber, Just countryCode, Nothing) -> do
+        checkSlidingWindowLimit (verifyHitsCountKey . Id $ mobileNumber <> "_PASSWORD_AUTH")
+        mobileNumberHash <- getDbHash mobileNumber
+        (,SR.MOBILE_NUMBER) <$> Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash req.userMerchantId
+      (Nothing, _, Just email) -> do
+        checkSlidingWindowLimit (verifyHitsCountKey . Id $ email <> "_PASSWORD_AUTH")
+        (,SR.EMAIL) <$> Person.findByEmailAndMerchantId req.userMerchantId email
+      _ -> throwError $ InvalidRequest "Invalid request"
+  person <- fromMaybeM (PersonNotFound $ getId req.userMerchantId) mbPerson
+  passwordHash <- getDbHash req.userPassword
+  unless (person.passwordHash == Just passwordHash) $ throwError $ InvalidRequest "Invalid password"
+  let scfg =
+        SmsSessionConfig
+          { attempts = 3,
+            authExpiry = 30,
+            tokenExpiry = 30
+          }
+  registrationToken <- makeSession method scfg person.id.getId req.userMerchantId.getId Nothing True
+  _ <- RegistrationToken.create registrationToken
+  _ <- RegistrationToken.deleteByPersonIdExceptNew person.id registrationToken.id
+  return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked
 
 buildPerson ::
   ( HasFlowEnv m r '["version" ::: DeploymentVersion],
@@ -513,8 +561,9 @@ makeSession ::
   Text ->
   Text ->
   Maybe Text ->
+  Bool ->
   m SR.RegistrationToken
-makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp = do
+makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp verified = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- L.generateGUID
   token <- L.generateGUID
@@ -527,7 +576,7 @@ makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp = do
         authMedium,
         authType = SR.OTP,
         authValueHash = otp,
-        verified = False,
+        verified = verified,
         authExpiry = authExpiry,
         tokenExpiry = tokenExpiry,
         entityId = entityId,
@@ -594,6 +643,9 @@ verify tokenId req = do
   void $ RegistrationToken.setVerified True tokenId
   void $ Person.updateDeviceToken deviceToken person.id
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
+  whenJust req.userPasswordString $ \userPasswordString -> do
+    passwordHash <- getDbHash userPasswordString
+    void $ Person.updatePersonPassword (Just passwordHash) person.id
   when (isNothing person.customerReferralCode) $ do
     newCustomerReferralCode <- generateCustomerReferralCode
     checkIfReferralCodeExists <- Person.findPersonByCustomerReferralCode (Just newCustomerReferralCode)

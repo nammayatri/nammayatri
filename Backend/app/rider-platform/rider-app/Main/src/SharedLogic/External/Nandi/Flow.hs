@@ -84,6 +84,15 @@ getVehicleServiceType baseUrl gtfsId vehicleNumber = do
         logError $ "Error getting vehicle service type: " <> show err
         pure Nothing
 
+getVehicleInfo :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> Text -> m (Maybe VehicleInfoResponse)
+getVehicleInfo baseUrl gtfsId vehicleNumber = do
+  withShortRetry $
+    callAPI baseUrl (NandiAPI.getNandiVehicleInfo gtfsId vehicleNumber) "getVehicleInfo" NandiAPI.nandiVehicleInfoAPI >>= \case
+      Right response -> pure (Just response)
+      Left err -> do
+        logError $ "Error getting vehicle info: " <> show err
+        pure Nothing
+
 postGtfsGraphQL :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> GtfsGraphQLRequest -> m Value
 postGtfsGraphQL baseUrl request = do
   withShortRetry $ callAPI baseUrl (NandiAPI.postNandiGtfsGraphQL request) "postGtfsGraphQL" NandiAPI.nandiGtfsGraphQLAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_POST_GTFS_GRAPHQL_API") baseUrl)

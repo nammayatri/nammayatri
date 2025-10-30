@@ -556,7 +556,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
     Spec.BUS -> do
       case platformType of
         DIBC.APPLICATION -> do
-          vehicleTrackingInfo <- getVehicleInfo integratedBPPConfig
+          vehicleTrackingInfo <- getVehicleTrackingInfo integratedBPPConfig
           mapM
             ( \(vehicleId, vehicleInfo) -> do
                 upcomingStop <-
@@ -700,7 +700,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
 
     takeUntil y = foldr (\x acc -> x : if x == y then [] else acc) []
 
-    getVehicleInfo integratedBPPConfig = do
+    getVehicleTrackingInfo integratedBPPConfig = do
       vehicleInfoByRouteCode :: [(Text, VehicleInfo)] <- do
         vehicleTrackingResp <- LF.vehicleTrackingOnRoute (LF.ByRoute routeCode)
         pure $ mkVehicleInfo vehicleTrackingResp
