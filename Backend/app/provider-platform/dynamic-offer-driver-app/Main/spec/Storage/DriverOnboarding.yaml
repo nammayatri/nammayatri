@@ -86,6 +86,75 @@ IdfyVerification:
       kvFunction: deleteWithKV
       where: driverId
 
+DigilockerVerification:
+  tableName: digilocker_verification
+  fields:
+    id: Id DigilockerVerification
+    driverId: Id Person
+
+    # OAuth Session Fields
+    stateId: Text
+    codeVerifier: Text
+    codeChallenge: Text
+    codeMethod: Text
+    authorizationCode: Maybe Text
+    accessToken: Maybe Text
+    accessTokenExpiresAt: Maybe UTCTime
+    scope: Maybe Text
+
+    # Document Status (JSON)
+    docStatus: Text
+
+    # Session Status
+    sessionStatus: Text
+    responseCode: Maybe Text
+    responseDescription: Maybe Text
+
+    # Raw Response (for debugging)
+    tokenResponse: Maybe Text
+
+    # Metadata
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  excludedFields: []
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    stateId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+    findByStateId:
+      kvFunction: findOneWithKV
+      where: stateId
+    findLatestByDriverId:
+      kvFunction: findAllWithOptionsKV
+      where: driverId
+    updateSessionStatus:
+      kvFunction: updateWithKV
+      params: [sessionStatus, responseCode, responseDescription]
+      where: id
+    updateAccessToken:
+      kvFunction: updateWithKV
+      params: [accessToken, accessTokenExpiresAt, authorizationCode, scope]
+      where: stateId
+    updateDocStatus:
+      kvFunction: updateWithKV
+      params: [docStatus]
+      where: id
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
+
 AadhaarOtpVerify:
   tableName: aadhaar_otp_verify
   fields:
