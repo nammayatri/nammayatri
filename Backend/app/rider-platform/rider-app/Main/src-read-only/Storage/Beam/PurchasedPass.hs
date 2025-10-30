@@ -3,6 +3,7 @@
 
 module Storage.Beam.PurchasedPass where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import Domain.Types.Common ()
@@ -15,7 +16,7 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data PurchasedPassT f = PurchasedPassT
-  { applicableVehicleServiceTiers :: B.C f [Kernel.Prelude.Text],
+  { applicableVehicleServiceTiers :: B.C f [BecknV2.FRFS.Enums.ServiceTierType],
     benefitDescription :: B.C f Kernel.Prelude.Text,
     benefitType :: B.C f (Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType),
     benefitValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

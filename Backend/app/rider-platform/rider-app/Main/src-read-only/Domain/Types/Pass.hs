@@ -3,8 +3,8 @@
 
 module Domain.Types.Pass where
 
+import qualified BecknV2.FRFS.Enums
 import Data.Aeson
-import qualified Domain.Types.FRFSVehicleServiceTier
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PassType
@@ -15,7 +15,7 @@ import qualified Tools.Beam.UtilsTH
 
 data Pass = Pass
   { amount :: Kernel.Types.Common.HighPrecMoney,
-    applicableVehicleServiceTiers :: [Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier],
+    applicableVehicleServiceTiers :: [BecknV2.FRFS.Enums.ServiceTierType],
     autoApply :: Kernel.Prelude.Bool,
     benefit :: Kernel.Prelude.Maybe Domain.Types.Pass.Benefit,
     benefitDescription :: Kernel.Prelude.Text,
@@ -41,6 +41,6 @@ data Benefit
   = FullSaving
   | FixedSaving Kernel.Types.Common.HighPrecMoney
   | PercentageSaving Kernel.Types.Common.HighPrecMoney
-  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data PassDocumentType = ProfilePicture | Aadhaar deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data PassDocumentType = ProfilePicture | Aadhaar deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)

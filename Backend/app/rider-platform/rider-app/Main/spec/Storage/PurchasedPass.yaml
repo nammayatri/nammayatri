@@ -6,6 +6,7 @@ imports:
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   HighPrecMoney: Kernel.Types.Common
   FRFSVehicleServiceTier: Domain.Types.FRFSVehicleServiceTier
+  ServiceTierType: BecknV2.FRFS.Enums
 
 PurchasedPass:
   tableName: purchased_pass
@@ -32,7 +33,7 @@ PurchasedPass:
     benefitDescription: Text
     benefitType: Maybe BenefitType
     benefitValue: Maybe HighPrecMoney
-    applicableVehicleServiceTiers: "[Id FRFSVehicleServiceTier]"
+    applicableVehicleServiceTiers: "[ServiceTierType]"
     maxValidTrips: Maybe Int
     maxValidDays: Maybe Int
     usedTripCount: Maybe Int

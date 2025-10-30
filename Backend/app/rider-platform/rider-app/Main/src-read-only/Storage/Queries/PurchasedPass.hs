@@ -27,7 +27,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.applicableVehicleServiceTiers (Kernel.Types.Id.getId <$> applicableVehicleServiceTiers),
+    [ Se.Set Beam.applicableVehicleServiceTiers applicableVehicleServiceTiers,
       Se.Set Beam.benefitDescription benefitDescription,
       Se.Set Beam.benefitType benefitType,
       Se.Set Beam.benefitValue benefitValue,
@@ -55,7 +55,7 @@ instance FromTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass 
     pure $
       Just
         Domain.Types.PurchasedPass.PurchasedPass
-          { applicableVehicleServiceTiers = Kernel.Types.Id.Id <$> applicableVehicleServiceTiers,
+          { applicableVehicleServiceTiers = applicableVehicleServiceTiers,
             benefitDescription = benefitDescription,
             benefitType = benefitType,
             benefitValue = benefitValue,
@@ -81,7 +81,7 @@ instance FromTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass 
 instance ToTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass where
   toTType' (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
     Beam.PurchasedPassT
-      { Beam.applicableVehicleServiceTiers = Kernel.Types.Id.getId <$> applicableVehicleServiceTiers,
+      { Beam.applicableVehicleServiceTiers = applicableVehicleServiceTiers,
         Beam.benefitDescription = benefitDescription,
         Beam.benefitType = benefitType,
         Beam.benefitValue = benefitValue,

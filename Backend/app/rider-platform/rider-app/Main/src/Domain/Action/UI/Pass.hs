@@ -9,10 +9,12 @@ module Domain.Action.UI.Pass
 where
 
 import qualified API.Types.UI.Pass as PassAPI
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Time as DT
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PassCategory as DPassCategory
@@ -33,12 +35,13 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
-import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.PassCategoryExtra as QPassCategory
 import qualified Storage.Queries.PassExtra as QPass
 import qualified Storage.Queries.PassTypeExtra as QPassType
@@ -342,10 +345,6 @@ buildPassAPIEntity personId pass = do
   -- Check purchase eligibility using JSON logic
   eligibility <- checkEligibility pass.purchaseEligibilityJsonLogic personData
 
-  -- Extract service tier types from applicable vehicle service tiers
-  vehicleServiceTiers <- catMaybes <$> mapM (\tierId -> B.runInReplica $ QFRFSVehicleServiceTier.findById tierId) pass.applicableVehicleServiceTiers
-  let vehicleServiceTierTypes = map (._type) vehicleServiceTiers
-
   return $
     PassAPI.PassAPIEntity
       { id = pass.id,
@@ -353,7 +352,7 @@ buildPassAPIEntity personId pass = do
         savings = Nothing, -- TODO: Calculate based on benefit
         benefit = pass.benefit,
         benefitDescription = pass.benefitDescription,
-        vehicleServiceTierType = vehicleServiceTierTypes,
+        vehicleServiceTierType = pass.applicableVehicleServiceTiers,
         maxTrips = pass.maxValidTrips,
         maxDays = pass.maxValidDays,
         documentsRequired = pass.documentsRequired,
@@ -374,10 +373,6 @@ buildPassAPIEntityFromPurchasedPass _personId purchasedPass = do
         (Just DPurchasedPass.PercentageSaving, Just value) -> Just (DPass.PercentageSaving value)
         _ -> Nothing
 
-  -- Extract service tier types from applicable vehicle service tiers
-  vehicleServiceTiers <- catMaybes <$> mapM (\tierId -> B.runInReplica $ QFRFSVehicleServiceTier.findById tierId) purchasedPass.applicableVehicleServiceTiers
-  let vehicleServiceTierTypes = map (._type) vehicleServiceTiers
-
   return $
     PassAPI.PassAPIEntity
       { id = Id.cast purchasedPass.id,
@@ -385,7 +380,7 @@ buildPassAPIEntityFromPurchasedPass _personId purchasedPass = do
         savings = Nothing,
         benefit = benefit,
         benefitDescription = purchasedPass.benefitDescription,
-        vehicleServiceTierType = vehicleServiceTierTypes,
+        vehicleServiceTierType = purchasedPass.applicableVehicleServiceTiers,
         maxTrips = purchasedPass.maxValidTrips,
         maxDays = purchasedPass.maxValidDays,
         documentsRequired = [],
@@ -511,6 +506,10 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  (_, vehicleLiveRouteInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs passVerifyReq.vehicleNumber >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> passVerifyReq.vehicleNumber <> ", not found on any route")
+  unless (vehicleLiveRouteInfo.serviceType `elem` purchasedPass.applicableVehicleServiceTiers) $
+    throwError $ VehicleServiceTierUnserviceable ("Vehicle " <> passVerifyReq.vehicleNumber <> ", " <> show vehicleLiveRouteInfo.serviceType <> " bus is not allowed for this pass")
   id <- generateGUID
   now <- getCurrentTime
   let passVerifyTransaction =

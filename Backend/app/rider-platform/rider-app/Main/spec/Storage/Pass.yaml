@@ -5,6 +5,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   FRFSVehicleServiceTier: Domain.Types.FRFSVehicleServiceTier
   Value: Data.Aeson
+  ServiceTierType: BecknV2.FRFS.Enums
 
 Pass:
   tableName: pass
@@ -26,7 +27,7 @@ Pass:
     amount: HighPrecMoney
     benefitDescription: Text
     benefit: Maybe Benefit
-    applicableVehicleServiceTiers: "[Id FRFSVehicleServiceTier]"
+    applicableVehicleServiceTiers: "[ServiceTierType]"
     purchaseEligibilityJsonLogic: "[Value]"
     redeemEligibilityJsonLogic: "[Value]"
     maxValidTrips: Maybe Int

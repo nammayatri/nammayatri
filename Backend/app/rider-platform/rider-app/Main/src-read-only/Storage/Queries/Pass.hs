@@ -28,7 +28,7 @@ updateByPrimaryKey (Domain.Types.Pass.Pass {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.amount amount,
-      Se.Set Beam.applicableVehicleServiceTiers (Kernel.Types.Id.getId <$> applicableVehicleServiceTiers),
+      Se.Set Beam.applicableVehicleServiceTiers applicableVehicleServiceTiers,
       Se.Set Beam.autoApply autoApply,
       Se.Set Beam.benefit benefit,
       Se.Set Beam.benefitDescription benefitDescription,
@@ -55,7 +55,7 @@ instance FromTType' Beam.Pass Domain.Types.Pass.Pass where
       Just
         Domain.Types.Pass.Pass
           { amount = amount,
-            applicableVehicleServiceTiers = Kernel.Types.Id.Id <$> applicableVehicleServiceTiers,
+            applicableVehicleServiceTiers = applicableVehicleServiceTiers,
             autoApply = autoApply,
             benefit = benefit,
             benefitDescription = benefitDescription,
@@ -80,7 +80,7 @@ instance ToTType' Beam.Pass Domain.Types.Pass.Pass where
   toTType' (Domain.Types.Pass.Pass {..}) = do
     Beam.PassT
       { Beam.amount = amount,
-        Beam.applicableVehicleServiceTiers = Kernel.Types.Id.getId <$> applicableVehicleServiceTiers,
+        Beam.applicableVehicleServiceTiers = applicableVehicleServiceTiers,
         Beam.autoApply = autoApply,
         Beam.benefit = benefit,
         Beam.benefitDescription = benefitDescription,

@@ -3,9 +3,9 @@
 
 module Domain.Types.PurchasedPass where
 
+import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Data.Time.Calendar
-import qualified Domain.Types.FRFSVehicleServiceTier
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PassType
@@ -16,7 +16,7 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data PurchasedPass = PurchasedPass
-  { applicableVehicleServiceTiers :: [Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier],
+  { applicableVehicleServiceTiers :: [BecknV2.FRFS.Enums.ServiceTierType],
     benefitDescription :: Kernel.Prelude.Text,
     benefitType :: Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType,
     benefitValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
