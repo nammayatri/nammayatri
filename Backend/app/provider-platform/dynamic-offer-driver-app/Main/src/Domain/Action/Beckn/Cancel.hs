@@ -170,33 +170,34 @@ cancel req merchant booking mbActiveSearchTry = do
         cancellationCharges <- try @_ @SomeException $ do
           case mbRide of
             Just ride -> do
-              if ride.cancellationFeeIfCancelled == Nothing
-                then do
-                  rideTags <- updateNammaTagsForCancelledRide booking ride bookingCR transporterConfig
-                  when (validDriverCancellation `elem` rideTags) $ do
-                    let windowSize = toInteger $ fromMaybe 7 transporterConfig.cancellationRateWindow
-                    void $ SCR.incrementCancelledCount ride.driverId windowSize
-                  case booking.riderId of
-                    Just riderId -> do
-                      riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
-                      void $ QRD.updateCancelledRidesCount riderId.getId
-                      if validCustomerCancellation `elem` rideTags
-                        then do
-                          QRD.updateValidCancellationsCount riderId.getId
+              rideTags <- updateNammaTagsForCancelledRide booking ride bookingCR transporterConfig
+              when (validDriverCancellation `elem` rideTags) $ do
+                let windowSize = toInteger $ fromMaybe 7 transporterConfig.cancellationRateWindow
+                void $ SCR.incrementCancelledCount ride.driverId windowSize
+              case booking.riderId of
+                Just riderId -> do
+                  riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+                  void $ QRD.updateCancelledRidesCount riderId.getId
+                  if validCustomerCancellation `elem` rideTags
+                    then do
+                      QRD.updateValidCancellationsCount riderId.getId
+                      charges' <- case ride.cancellationFeeIfCancelled of
+                        Just cancelCharges -> return (Just cancelCharges)
+                        Nothing -> do
                           cancellationdues <- customerCancellationChargesCalculation booking ride riderDetails
                           case cancellationdues of
                             Just charges -> do
                               logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show charges)
-                              QRD.updateCancellationDues (charges + riderDetails.cancellationDues) riderId
                               QRide.updateCancellationFeeIfCancelledField (Just charges) ride.id
-                              when (charges > 0) $ do
-                                QRD.updateCancellationDueRidesCount riderId.getId
                               logTagInfo ("bookingId-" <> getId req.bookingId) ("after updation riderDetails.cancellationDues: " <> show riderDetails.cancellationDues <> " charges: " <> show charges)
                               return (Just charges)
                             Nothing -> return Nothing
-                        else return Nothing
-                    Nothing -> return Nothing
-                else return ride.cancellationFeeIfCancelled
+                      QRD.updateCancellationDues (fromMaybe 0 charges' + riderDetails.cancellationDues) riderId
+                      when (fromMaybe 0 charges' > 0) $ do
+                        QRD.updateCancellationDueRidesCount riderId.getId
+                      return charges'
+                    else return Nothing
+                Nothing -> return Nothing
             Nothing -> return Nothing
         logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation charges: " <> show cancellationCharges)
         cancelCharges <- case cancellationCharges of
