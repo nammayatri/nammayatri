@@ -884,7 +884,6 @@ library
       Domain.Types.CommonDriverOnboardingDocuments
       Domain.Types.ConditionalCharges
       Domain.Types.DailyStats
-      Domain.Types.DigiLockerLogs
       Domain.Types.DigilockerVerification
       Domain.Types.DocumentVerificationConfig
       Domain.Types.DriverBankAccount
@@ -1039,7 +1038,6 @@ library
       Storage.Beam.CommonDriverOnboardingDocuments
       Storage.Beam.ConditionalCharges
       Storage.Beam.DailyStats
-      Storage.Beam.DigiLockerLogs
       Storage.Beam.DigilockerVerification
       Storage.Beam.DocumentVerificationConfig
       Storage.Beam.DriverBankAccount
@@ -1198,7 +1196,6 @@ library
       Storage.Queries.CommonDriverOnboardingDocuments
       Storage.Queries.ConditionalCharges
       Storage.Queries.DailyStats
-      Storage.Queries.DigiLockerLogs
       Storage.Queries.DigilockerVerification
       Storage.Queries.DocumentVerificationConfig
       Storage.Queries.DriverBankAccount
