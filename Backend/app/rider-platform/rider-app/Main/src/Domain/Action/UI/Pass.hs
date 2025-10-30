@@ -172,8 +172,8 @@ purchasePassWithPayment person pass merchantId personId = do
         customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
 
         -- Get split settlement details
-        isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing TPayment.Normal
-        isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing TPayment.Normal
+        isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
+        isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         splitSettlementDetails <- TPayment.mkSplitSettlementDetails isSplitEnabled pass.amount [] isPercentageSplitEnabled
 
         let createOrderReq =
@@ -200,9 +200,9 @@ purchasePassWithPayment person pass merchantId personId = do
 
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId
             commonPersonId = Id.cast @DP.Person @DPayment.Person personId
-            createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just personId.getId) person.clientSdkVersion
+            createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase (Just personId.getId) person.clientSdkVersion
 
-        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId createOrderReq createOrderCall
+        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId (show TPayment.FRFSPassPurchase) createOrderReq createOrderCall
       else return Nothing
 
   QPurchasedPass.create purchasedPass
@@ -394,67 +394,36 @@ webhookHandlerPass ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
   Id.ShortId DOrder.PaymentOrder ->
   Id.Id DM.Merchant ->
+  Payment.TransactionStatus ->
   m ()
-webhookHandlerPass orderShortId _merchantId = do
+webhookHandlerPass orderShortId _merchantId status = do
   logInfo $ "Pass payment webhook handler called for orderShortId: " <> orderShortId.getShortId
-
   -- Find purchased pass by order short id
   mbPurchasedPass <- QPurchasedPass.findByOrderShortId orderShortId
-
   case mbPurchasedPass of
     Nothing -> do
       logError $ "Purchased pass not found for orderShortId: " <> orderShortId.getShortId
       pure ()
     Just purchasedPass -> do
-      -- Get payment order to check status
-      paymentOrder <- B.runInReplica $ QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
-
-      -- Get latest payment transaction
-      mbTransaction <- B.runInReplica $ QTransaction.findNewTransactionByOrderId paymentOrder.id
-
-      case mbTransaction of
-        Nothing -> do
-          logError $ "Payment transaction not found for order: " <> paymentOrder.id.getId
-          pure ()
-        Just transaction -> do
-          now <- getCurrentTime
-
-          -- Update purchased pass status based on payment transaction status
-          case transaction.status of
-            Payment.CHARGED -> do
-              -- Payment successful - activate pass
-              logInfo $ "Payment successful for pass: " <> purchasedPass.id.getId
-
-              let validTill = case purchasedPass.maxValidDays of
-                    Just days -> Just $ addUTCTime (fromIntegral $ days * 86400) now
-                    Nothing -> Nothing
-
-              -- Update pass to Active status
-              QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id
-
-              when (isJust validTill) $ do
-                QPurchasedPass.findById purchasedPass.id >>= \case
-                  Just pp -> QPurchasedPass.updateByPrimaryKey pp {DPurchasedPass.validTill = validTill}
-                  Nothing -> pure ()
-            Payment.AUTHENTICATION_FAILED -> do
-              logWarning $ "Payment authentication failed for pass: " <> purchasedPass.id.getId
-              QPurchasedPass.updateStatusById DPurchasedPass.Failed purchasedPass.id
-            Payment.AUTHORIZATION_FAILED -> do
-              logWarning $ "Payment authorization failed for pass: " <> purchasedPass.id.getId
-              QPurchasedPass.updateStatusById DPurchasedPass.Failed purchasedPass.id
-            Payment.JUSPAY_DECLINED -> do
-              logWarning $ "Payment declined for pass: " <> purchasedPass.id.getId
-              QPurchasedPass.updateStatusById DPurchasedPass.Failed purchasedPass.id
-            Payment.CANCELLED -> do
-              logInfo $ "Payment cancelled for pass: " <> purchasedPass.id.getId
-              QPurchasedPass.updateStatusById DPurchasedPass.Failed purchasedPass.id
-            Payment.AUTO_REFUNDED -> do
-              logInfo $ "Payment auto refunded for pass: " <> purchasedPass.id.getId
-              QPurchasedPass.updateStatusById DPurchasedPass.Refunded purchasedPass.id
-            _ -> do
-              -- For other statuses (PENDING, NEW, etc.), keep as Pending
-              logInfo $ "Payment status is " <> show transaction.status <> " for pass: " <> purchasedPass.id.getId
-              pure ()
+      now <- getCurrentTime
+      let validTill = case purchasedPass.maxValidDays of
+            Just days -> Just $ addUTCTime (fromIntegral $ days * 86400) now
+            Nothing -> Nothing
+      when (isJust validTill && status == Payment.CHARGED) $ do
+        QPurchasedPass.findById purchasedPass.id >>= \case
+          Just pp -> QPurchasedPass.updateByPrimaryKey pp {DPurchasedPass.validTill = validTill}
+          Nothing -> pure ()
+      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus status
+      whenJust mbPassStatus $ \passStatus -> QPurchasedPass.updateStatusById passStatus purchasedPass.id
+  where
+    convertPaymentStatusToPurchasedPassStatus = \case
+      Payment.CHARGED -> Just DPurchasedPass.Active
+      Payment.AUTHENTICATION_FAILED -> Just DPurchasedPass.Failed
+      Payment.AUTHORIZATION_FAILED -> Just DPurchasedPass.Failed
+      Payment.JUSPAY_DECLINED -> Just DPurchasedPass.Failed
+      Payment.CANCELLED -> Just DPurchasedPass.Failed
+      Payment.AUTO_REFUNDED -> Just DPurchasedPass.Refunded
+      _ -> Nothing
 
 getMultimodalPassList ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),

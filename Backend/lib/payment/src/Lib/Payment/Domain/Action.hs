@@ -35,6 +35,8 @@ module Lib.Payment.Domain.Action
     buildPaymentOrder,
     updateRefundStatus,
     buildOrderOffer,
+    getOrderShortId,
+    getTransactionStatus,
   )
 where
 
@@ -80,7 +82,9 @@ import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 
 data PaymentStatusResp
   = PaymentStatus
-      { status :: Payment.TransactionStatus,
+      { orderId :: Id DOrder.PaymentOrder,
+        orderShortId :: ShortId DOrder.PaymentOrder,
+        status :: Payment.TransactionStatus,
         bankErrorMessage :: Maybe Text,
         bankErrorCode :: Maybe Text,
         isRetried :: Maybe Bool,
@@ -93,7 +97,9 @@ data PaymentStatusResp
         authIdCode :: Maybe Text,
         txnUUID :: Maybe Text,
         effectAmount :: Maybe HighPrecMoney,
-        offers :: Maybe [Payment.Offer]
+        offers :: Maybe [Payment.Offer],
+        paymentServiceType :: Maybe Text,
+        amount :: HighPrecMoney
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -221,6 +227,7 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             action = Nothing,
             personId,
             merchantId,
+            paymentServiceType = Nothing,
             paymentMerchantId = Nothing,
             amount = createPaymentIntentReq.amount,
             currency = createPaymentIntentReq.currency,
@@ -384,16 +391,17 @@ createOrderService ::
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
+  Text ->
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m (Maybe Payment.CreateOrderResp)
-createOrderService merchantId mbMerchantOpCityId personId createOrderReq createOrderCall = do
+createOrderService merchantId mbMerchantOpCityId personId paymentServiceType createOrderReq createOrderCall = do
   logInfo $ "CreateOrderService: "
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId createOrderReq createOrderResp
+      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId paymentServiceType createOrderReq createOrderResp
       QOrder.create paymentOrder
       return $ Just createOrderResp
     Just existingOrder -> do
@@ -478,10 +486,11 @@ buildPaymentOrder ::
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
+  Text ->
   Payment.CreateOrderReq ->
   Payment.CreateOrderResp ->
   m DOrder.PaymentOrder
-buildPaymentOrder merchantId mbMerchantOpCityId personId req resp = do
+buildPaymentOrder merchantId mbMerchantOpCityId personId paymentServiceType req resp = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
   let mkPaymentOrder =
@@ -497,6 +506,7 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId req resp = do
             action = resp.sdk_payload.payload.action,
             personId,
             merchantId,
+            paymentServiceType = Just paymentServiceType,
             paymentMerchantId = resp.sdk_payload.payload.merchantId,
             amount = req.amount,
             currency = resp.sdk_payload.payload.currency,
@@ -696,7 +706,9 @@ orderStatusService personId orderId orderStatusCall = do
         Right _ -> pure ()
       return $
         PaymentStatus
-          { status = transactionStatus,
+          { orderId = orderId,
+            orderShortId = order.shortId,
+            status = transactionStatus,
             bankErrorCode = orderTxn.bankErrorCode,
             bankErrorMessage = orderTxn.bankErrorMessage,
             isRetried = isRetriedOrder,
@@ -708,6 +720,7 @@ orderStatusService personId orderId orderStatusCall = do
             txnUUID = transactionUUID,
             effectAmount = effectiveAmount,
             offers = offers,
+            paymentServiceType = order.paymentServiceType,
             ..
           }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
@@ -917,6 +930,7 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             action = Nothing,
             personId = Id req.customerId,
             merchantId = merchantId,
+            paymentServiceType = Nothing,
             paymentMerchantId = Nothing,
             amount = req.amount,
             currency = INR,
@@ -1118,3 +1132,13 @@ verifyVPAService ::
   m Payment.VerifyVPAResp
 verifyVPAService verifyVPAReq verifyVPACall = do
   verifyVPACall verifyVPAReq -- api call
+
+getOrderShortId :: MonadFlow m => PaymentStatusResp -> m (ShortId DOrder.PaymentOrder)
+getOrderShortId paymentStatusResp = case paymentStatusResp of
+  PaymentStatus {..} -> pure orderShortId
+  _ -> throwError $ InternalError "Order Id not found in response."
+
+getTransactionStatus :: MonadFlow m => PaymentStatusResp -> m Payment.TransactionStatus
+getTransactionStatus paymentStatusResp = case paymentStatusResp of
+  PaymentStatus {..} -> pure status
+  _ -> throwError $ InternalError "Transaction Status not found in response."
