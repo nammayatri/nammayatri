@@ -604,11 +604,11 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
   selectedQuoteCategories <-
     catMaybes
       <$> sequence
-        [ (find (\quoteCategory -> quoteCategory.category == ADULT) quoteCategories <&> (.id))
+        [ (find (\quoteCategory -> quoteCategory.category == ADULT) quoteCategories)
             & \case
-              Just quoteCategoryId ->
+              Just quoteCategory ->
                 return $
-                  req.ticketQuantity <&> \ticketQuantity -> FRFSTicketService.FRFSCategorySelectionReq {quoteCategoryId = quoteCategoryId, quantity = ticketQuantity}
+                  (req.ticketQuantity <|> quoteCategory.selectedQuantity) <&> \ticketQuantity -> FRFSTicketService.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity = ticketQuantity}
               Nothing -> createFRFSQuoteCategory quoteId req.ticketQuantity ADULT,
           (find (\quoteCategory -> quoteCategory.category == CHILD) quoteCategories <&> (.id))
             & \case
