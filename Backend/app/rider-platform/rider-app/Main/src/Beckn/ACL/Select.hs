@@ -64,12 +64,12 @@ buildSelectReqMessage res endLoc isValueAddNP bapConfig =
     }
 
 tfOrder :: DSelect.DSelectRes -> Location.Location -> Bool -> BecknConfig -> Spec.Order
-tfOrder res endLoc isValueAddNP bapConfig =
+tfOrder res endLoc isValueAddNP _bapConfig =
   let orderBilling = Nothing
       orderCancellation = Nothing
       orderCancellationTerms = Nothing
       orderId = Nothing
-      orderPayments = tfPayments res bapConfig
+      orderPayments = Nothing -- Not sent in select request per ONDC spec
       orderProvider = Just $ tfProvider res
       orderQuote = Nothing
       orderStatus = Nothing
@@ -112,12 +112,12 @@ tfCustomer mbPhoneNumber = do
 
 tfVehicle :: DSelect.DSelectRes -> Spec.Vehicle
 tfVehicle res =
-  let (category, variant) = UCommon.castVehicleVariant res.variant
+  let (category, _variant) = UCommon.castVehicleVariant res.variant
       vehicleColor = Nothing
       vehicleMake = Nothing
       vehicleModel = Nothing
       vehicleRegistration = Nothing
-      vehicleVariant = Just variant
+      vehicleVariant = Nothing
       vehicleCategory = Just category
       vehicleCapacity = Nothing
    in Spec.Vehicle {..}
@@ -133,9 +133,9 @@ tfOrderItem res isValueAddNP =
         if isValueAddNP
           then Just $ mkItemTags res
           else Nothing
-      itemPrice = tfPrice res
+      _itemPrice = tfPrice res
    in Spec.Item
-        { itemPrice = Just itemPrice,
+        { itemPrice = Nothing,
           ..
         }
 
@@ -430,8 +430,8 @@ tfPrice res =
       priceOfferedValue = Nothing
    in Spec.Price {..}
 
-tfPayments :: DSelect.DSelectRes -> BecknConfig -> Maybe [Spec.Payment]
-tfPayments res bapConfig = do
+_tfPayments :: DSelect.DSelectRes -> BecknConfig -> Maybe [Spec.Payment]
+_tfPayments res bapConfig = do
   let mPrice = Just res.estimate.estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
   Just $ L.singleton $ mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee

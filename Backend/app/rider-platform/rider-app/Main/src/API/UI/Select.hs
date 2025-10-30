@@ -86,6 +86,7 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonId
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
+    logDebug $ "SelectReqV2 " <> encodeToText becknReq
     void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   let searchRequestId = estimate.requestId
@@ -114,6 +115,7 @@ select2' (personId, merchantId) estimateId req = withPersonIdLogTag personId $ d
   journeyID <- Redis.whenWithLockRedisAndReturnValue (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select2 personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
+    logDebug $ "SelectReqV2 " <> encodeToText becknReq
     void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
     let journeyId = dSelectReq.mbJourneyId
     pure journeyId
