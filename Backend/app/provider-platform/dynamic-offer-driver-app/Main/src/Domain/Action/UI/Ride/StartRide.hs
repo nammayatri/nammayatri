@@ -171,7 +171,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
           when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing driverReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
           when (not (fromMaybe False ride.enableOtpLessRide) && driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
           logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          pure (driverReq.point, driverReq.odometer)
+          validatedPoint <- validateStartRideCoordinates driverReq.point booking
+          pure (validatedPoint, driverReq.odometer)
         DashboardReq dashboardReq -> do
           when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing dashboardReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
           logTagInfo "dashboard -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
@@ -210,6 +211,13 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   where
     isValidRideStatus status = status `elem` [DRide.NEW, DRide.UPCOMING]
     isInProgress status = (status == DRide.INPROGRESS)
+
+    validateStartRideCoordinates point booking =
+      if point.lat == 0.0 && point.lon == 0.0
+        then do
+          logWarning "Invalid GPS coordinates (0.0, 0.0) received for ride start, using booking location as fallback"
+          pure $ getCoordinates booking.fromLocation
+        else pure point
 
 makeStartRideIdKey :: Id DP.Person -> Text
 makeStartRideIdKey driverId = "StartRideKey:PersonId-" <> driverId.getId
