@@ -406,7 +406,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             merchantId = search.merchantId,
             merchantOperatingCityId = search.merchantOperatingCityId,
             ticketCategoryMetadataConfigId = ticketCategoryMetadataConfig' <&> (.id.getId),
-            selectedQuantity = Nothing,
+            selectedQuantity = if category.category == ADULT then Just search.quantity else Nothing, -- To Handle Partner Org
             createdAt = now,
             updatedAt = now
           }
