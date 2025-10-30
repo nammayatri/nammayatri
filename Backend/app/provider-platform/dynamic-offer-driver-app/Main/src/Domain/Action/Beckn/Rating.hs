@@ -140,38 +140,56 @@ handler merchantId req ride = do
 
   rating <- B.runInReplica $ QRating.findRatingForRide ride.id
   mediaId <- audioFeedbackUpload mbBooking req.filePath transporterConfig
-  _ <- case rating of
+  (netRatingValue, shouldIncrementCount) <- case rating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
       newRating <- buildRating ride.merchantId (Just ride.merchantOperatingCityId) ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver mediaId
       QRating.create newRating
+      pure (ratingValue, True)
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
-  calculateAverageRating driverId merchant.minimumDriverRatesCount ratingValue ratingCount ratingsSum transporterConfig
+      let oldRatingValue = rideRating.ratingValue
+      let newRatingValue = ratingValue
+      QRating.updateRating newRatingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
+      pure (newRatingValue - oldRatingValue, False)
+  calculateAverageRating driverId merchant.minimumDriverRatesCount shouldIncrementCount netRatingValue ratingCount ratingsSum transporterConfig
 
 calculateAverageRating ::
   (CacheFlow m r, EsqDBFlow m r, EncFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
   Id DP.Person ->
   Int ->
+  Bool ->
   Int ->
   Maybe Int ->
   Maybe Int ->
   DTC.TransporterConfig ->
   m ()
-calculateAverageRating personId minimumDriverRatesCount ratingValue mbtotalRatings mbtotalRatingScore transporterConfig = do
+calculateAverageRating personId minimumDriverRatesCount shouldIncrementCount ratingValue mbtotalRatings mbtotalRatingScore transporterConfig = do
   logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
   let totalRatings = fromMaybe 0 mbtotalRatings
   let totalRatingScore = fromMaybe 0 mbtotalRatingScore
-  let newRatingsCount = totalRatings + 1
-  let newTotalRatingScore = totalRatingScore + ratingValue
+  let newRatingsCount = totalRatings + if shouldIncrementCount then 1 else 0
+  let newTotalRatingScore = totalRatingScore + ratingValue -- old + (new - old) = new (This type of calculation only executes when rating will be updated)
+  when (newTotalRatingScore < 0) $
+    logTagError "PersonAPI" $
+      "Negative total rating score detected; person="
+        +|| personId
+        ||+ ", ratingValue="
+        +|| ratingValue
+        ||+ ", previousTotal="
+        +|| totalRatingScore
+        ||+ ", newTotal="
+        +|| newTotalRatingScore
+        ||+ ", ratingCount="
+        +|| newRatingsCount
+        ||+ ". Investigate rating accumulation logic."
   when (totalRatings == 0) $
     logTagInfo "PersonAPI" "No rating found to calculate"
   let isValidRating = newRatingsCount >= minimumDriverRatesCount
   logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
-  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsRatingScoreKey personId transporterConfig ratingValue
+  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsRatingScoreKey personId transporterConfig ratingValue shouldIncrementCount
   void $ QDriverStats.updateAverageRating personId (Just newRatingsCount) (Just newTotalRatingScore) (Just isValidRating)
 
 buildRating ::
