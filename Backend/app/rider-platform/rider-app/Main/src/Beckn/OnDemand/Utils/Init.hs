@@ -14,7 +14,6 @@
 
 module Beckn.OnDemand.Utils.Init where
 
-import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
@@ -41,12 +40,12 @@ mkStops origin mDestination mStartOtp intermediateStops =
                 { stopLocation =
                     Just $
                       Spec.Location
-                        { locationAddress = Just $ UCommon.mkAddress origin.address,
-                          locationAreaCode = origin.address.areaCode,
-                          locationCity = Just $ Spec.City Nothing origin.address.city,
-                          locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                        { locationAddress = Nothing, -- Not allowed in init request per ONDC spec
+                          locationAreaCode = Nothing, -- Not allowed in init request per ONDC spec
+                          locationCity = Nothing, -- Not allowed in init request per ONDC spec
+                          locationCountry = Nothing, -- Not allowed in init request per ONDC spec
                           locationGps = Utils.gpsToText originGps,
-                          locationState = Just $ Spec.State origin.address.state,
+                          locationState = Nothing, -- Not allowed in init request per ONDC spec
                           locationId = Nothing,
                           locationUpdatedAt = Nothing
                         },
@@ -61,7 +60,7 @@ mkStops origin mDestination mStartOtp intermediateStops =
                               authorizationToken = mStartOtp
                             },
                   stopTime = Nothing,
-                  stopId = Just "0",
+                  stopId = Nothing, -- Not allowed in init request per ONDC spec
                   stopParentStopId = Nothing
                 },
             ( \destination ->
@@ -69,25 +68,48 @@ mkStops origin mDestination mStartOtp intermediateStops =
                   { stopLocation =
                       Just $
                         Spec.Location
-                          { locationAddress = Just $ UCommon.mkAddress destination.address,
-                            locationAreaCode = destination.address.areaCode,
-                            locationCity = Just $ Spec.City Nothing destination.address.city,
-                            locationCountry = Just $ Spec.Country Nothing destination.address.country,
+                          { locationAddress = Nothing, -- Not allowed in init request per ONDC spec
+                            locationAreaCode = Nothing, -- Not allowed in init request per ONDC spec
+                            locationCity = Nothing, -- Not allowed in init request per ONDC spec
+                            locationCountry = Nothing, -- Not allowed in init request per ONDC spec
                             locationGps = Utils.gpsToText (destinationGps destination),
-                            locationState = Just $ Spec.State destination.address.state,
+                            locationState = Nothing, -- Not allowed in init request per ONDC spec
                             locationId = Nothing,
                             locationUpdatedAt = Nothing
                           },
                     stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
                     stopTime = Nothing,
-                    stopId = Just $ show (length intermediateStops + 1),
-                    stopParentStopId = Just $ show (length intermediateStops)
+                    stopId = Nothing, -- Not allowed in init request per ONDC spec
+                    stopParentStopId = Nothing -- Not allowed in init request per ONDC spec
                   }
             )
               <$> mDestination
           ]
-          <> (map (\(location, order) -> UCommon.mkIntermediateStop location order (order - 1)) $ zip intermediateStops [1 ..])
+          <> (map (\(location, order) -> mkIntermediateStopForInit location order (order - 1)) $ zip intermediateStops [1 ..])
+
+mkIntermediateStopForInit :: Location.Location -> Int -> Int -> Spec.Stop
+mkIntermediateStopForInit stop _stopId _parentStopId =
+  let gps = Gps.Gps {lat = stop.lat, lon = stop.lon}
+   in Spec.Stop
+        { stopLocation =
+            Just $
+              Spec.Location
+                { locationAddress = Nothing, -- Not allowed in init request per ONDC spec
+                  locationAreaCode = Nothing, -- Not allowed in init request per ONDC spec
+                  locationCity = Nothing, -- Not allowed in init request per ONDC spec
+                  locationCountry = Nothing, -- Not allowed in init request per ONDC spec
+                  locationGps = Utils.gpsToText gps,
+                  locationState = Nothing, -- Not allowed in init request per ONDC spec
+                  locationId = Just stop.id.getId,
+                  locationUpdatedAt = Nothing
+                },
+          stopType = Just $ show Enums.INTERMEDIATE_STOP,
+          stopAuthorization = Nothing,
+          stopTime = Nothing,
+          stopId = Nothing, -- Not allowed in init request per ONDC spec
+          stopParentStopId = Nothing -- Not allowed in init request per ONDC spec
+        }
 
 mkPayment :: Maybe DMPM.PaymentMethodInfo -> DBC.BecknConfig -> Context.City -> [Spec.Payment]
 mkPayment _ bapConfig city = do

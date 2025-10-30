@@ -55,7 +55,9 @@ tfOrder uiConfirm isValueAddNP bapConfig = do
   let orderBilling_ = tfOrderBilling uiConfirm.riderPhone uiConfirm.riderName & Just
   let orderFulfillments_ = Just $ Data.List.singleton $ tfOrderFulfillments uiConfirm isValueAddNP
   let orderItems_ = Just $ Data.List.singleton $ tfOrderItems uiConfirm
-  BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellation = orderCancellation_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderStatus = orderStatus_, orderCreatedAt = Just uiConfirm.booking.createdAt, orderUpdatedAt = Just uiConfirm.booking.updatedAt}
+  let orderCreatedAt_ = Nothing -- Not allowed in init request per ONDC spec
+  let orderUpdatedAt_ = Nothing -- Not allowed in init request per ONDC spec
+  BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellation = orderCancellation_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderStatus = orderStatus_, orderCreatedAt = orderCreatedAt_, orderUpdatedAt = orderUpdatedAt_}
 
 tfOrderBilling :: Maybe Data.Text.Text -> Maybe Data.Text.Text -> BecknV2.OnDemand.Types.Billing
 tfOrderBilling mbPhoneNumber mbRiderName = do
@@ -77,12 +79,12 @@ tfOrderFulfillments uiConfirm isValueAddNP = do
 tfOrderItems :: SharedLogic.Confirm.DConfirmRes -> BecknV2.OnDemand.Types.Item
 tfOrderItems uiConfirm = do
   let itemDescriptor_ = Nothing
-  let itemFulfillmentIds_ = Just $ Data.List.singleton uiConfirm.bppQuoteId
+  let itemFulfillmentIds_ = Nothing -- Should not be sent in init request
   let itemId_ = Just uiConfirm.itemId
   let itemLocationIds_ = Nothing
   let itemPaymentIds_ = Nothing
   let itemPrice_ = Nothing
-  let itemTags_ = Just $ mkItemTags uiConfirm
+  let itemTags_ = Nothing -- Should not be sent in init request per ONDC spec
   BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
 
 tfPrice :: SharedLogic.Confirm.DConfirmRes -> BecknV2.OnDemand.Types.Price
