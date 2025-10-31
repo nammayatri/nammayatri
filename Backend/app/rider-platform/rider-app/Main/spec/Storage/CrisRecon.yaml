@@ -1,0 +1,25 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+CrisRecon:
+  tableName: cris_recon
+
+  fields:
+    id: Id CrisRecon
+    bppOrderId: Text
+    fareAmount: HighPrecMoney
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    dateIst: Text
+
+  sqlType:
+    dateIst: "date"
+
+  queries:
+    findByBppOrderId:
+      kvFunction: findOneWithKV
+      where:
+        and: [bppOrderId]
+
