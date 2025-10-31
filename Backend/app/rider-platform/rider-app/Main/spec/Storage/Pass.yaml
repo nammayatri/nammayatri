@@ -19,6 +19,12 @@ Pass:
       enum: "FullSaving,FixedSaving HighPrecMoney,PercentageSaving HighPrecMoney"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
 
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PassDocumentType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PassDocumentType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Benefit>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Benefit>
+
   fields:
     id: Id Pass
     passTypeId: Id PassType
@@ -42,3 +48,6 @@ Pass:
   constraints:
     id: PrimaryKey
     passTypeId: !SecondaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

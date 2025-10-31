@@ -21,7 +21,7 @@ import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Common hiding (Price (..), PriceAPIEntity (..), id)
 import Lib.Payment.Domain.Types.Common (EntityName)
-import qualified Lib.Payment.Domain.Types.PaymentOrder ()
+import qualified Lib.Payment.Domain.Types.PaymentOrder
 
 data PaymentOrderT f = PaymentOrderT
   { id :: B.C f Text,
@@ -30,7 +30,7 @@ data PaymentOrderT f = PaymentOrderT
     personId :: B.C f Text,
     merchantId :: B.C f Text,
     entityName :: B.C f (Maybe EntityName),
-    paymentServiceType :: B.C f (Maybe Text),
+    paymentServiceType :: B.C f (Maybe Lib.Payment.Domain.Types.PaymentOrder.PaymentServiceType),
     paymentMerchantId :: B.C f (Maybe Text),
     requestId :: B.C f (Maybe Text),
     service :: B.C f (Maybe Text),
@@ -61,6 +61,7 @@ data PaymentOrderT f = PaymentOrderT
     bankErrorMessage :: B.C f (Maybe Text),
     serviceProvider :: B.C f (Maybe Payment.PaymentService),
     sdkPayloadDump :: B.C f (Maybe Value),
+    validTill :: B.C f (Maybe UTCTime),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     merchantOperatingCityId :: B.C f (Maybe Text),

@@ -23,7 +23,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BBPS.BBPS] -> m ())
 createMany = traverse_ create
 
-findAllByCustomerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.BBPS.BBPS])
+findAllByCustomerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.BBPS.BBPS]))
 findAllByCustomerId limit offset customerId = do findAllWithOptionsKV [Se.Is Beam.customerId $ Se.Eq (Kernel.Types.Id.getId customerId)] (Se.Desc Beam.createdAt) limit offset
 
 findByRefId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BBPS.BBPS -> m (Maybe Domain.Types.BBPS.BBPS))

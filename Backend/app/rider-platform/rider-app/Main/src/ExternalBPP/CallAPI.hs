@@ -20,7 +20,6 @@ import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch as DSearch
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DBooking
-import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DBooking
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -30,7 +29,7 @@ import qualified Domain.Types.Station as DStation
 import Environment
 import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..))
 import qualified ExternalBPP.Flow as Flow
-import Kernel.External.Types (ServiceFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
@@ -41,10 +40,8 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
-import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
@@ -194,7 +191,24 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       (merchant', booking', quoteCategories') <- DOnInit.validateRequest onInitReq
       DOnInit.onInit onInitReq merchant' booking' quoteCategories' mbEnableOffer
 
-cancel :: Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.CancellationType -> DBooking.FRFSTicketBooking -> Flow ()
+cancel ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    SchedulerFlow r,
+    EsqDBReplicaFlow m r,
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    Metrics.HasBAPMetrics m r
+  ) =>
+  Merchant ->
+  MerchantOperatingCity ->
+  BecknConfig ->
+  Spec.CancellationType ->
+  DBooking.FRFSTicketBooking ->
+  m ()
 cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   frfsConfig <-
@@ -215,7 +229,27 @@ cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
         void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
     _ -> return ()
 
-confirm :: (DOrder -> Flow ()) -> Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> Flow ()
+confirm ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    SchedulerFlow r,
+    EsqDBReplicaFlow m r,
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+    Metrics.HasBAPMetrics m r
+  ) =>
+  (DOrder -> m ()) ->
+  Merchant ->
+  MerchantOperatingCity ->
+  BecknConfig ->
+  (Maybe Text, Maybe Text) ->
+  DBooking.FRFSTicketBooking ->
+  [DFRFSQuoteCategory.FRFSQuoteCategory] ->
+  m ()
 confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking quoteCategories = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
@@ -246,16 +280,27 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
             case fromException err :: Maybe CRISError of
               Just crisError -> void $ QFRFSTicketBooking.updateFailureReasonById (Just crisError.errorMessage) booking.id
               Nothing -> logError $ "FRFS External Confirm failed with error: " <> show err
-            paymentBooking <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
             void $ QFRFSTicketBooking.updateStatusById DBooking.FAILED booking.id
-            void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING paymentBooking.id
-            riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
-            when riderConfig.enableAutoJourneyRefund $
-              FRFSUtils.markAllRefundBookings booking booking.riderId
             throwM err
           Right _ -> return ()
 
-status :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> DBooking.FRFSTicketBooking -> Flow ()
+status ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    SchedulerFlow r,
+    EsqDBReplicaFlow m r,
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String]
+  ) =>
+  Id Merchant ->
+  MerchantOperatingCity ->
+  BecknConfig ->
+  DBooking.FRFSTicketBooking ->
+  m ()
 status merchantId merchantOperatingCity bapConfig booking = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
@@ -266,6 +311,20 @@ status merchantId merchantOperatingCity bapConfig booking = do
       onStatusReq <- Flow.status merchantId merchantOperatingCity integratedBPPConfig bapConfig booking
       void $ processOnStatus onStatusReq
   where
+    processOnStatus ::
+      ( CacheFlow m r,
+        EsqDBFlow m r,
+        MonadFlow m,
+        EncFlow m r,
+        SchedulerFlow r,
+        EsqDBReplicaFlow m r,
+        HasLongDurationRetryCfg r c,
+        HasShortDurationRetryCfg r c,
+        CallFRFSBPP.BecknAPICallFlow m r,
+        HasFlowEnv m r '["googleSAPrivateKey" ::: String]
+      ) =>
+      DOrder ->
+      m DOnStatus.DOnStatusResp
     processOnStatus onStatusReq = do
       let bookingOnStatusReq = DOnStatus.Booking onStatusReq
       (merchant', booking') <- DOnStatus.validateRequest bookingOnStatusReq

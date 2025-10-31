@@ -42,6 +42,7 @@ data BBPSPaymentStatus
   | SUCCESS
   | FAILED
   | REFUND_PENDING
+  | REFUND_INITIATED
   | REFUND_FAILED
   | REFUNDED
   | CONFIRMATION_PENDING
@@ -53,8 +54,8 @@ data BBPSSessionPayload = BBPSSessionPayload {token :: Kernel.Prelude.Text} deri
 
 data Tag = Tag {name :: Kernel.Prelude.Text, value :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BBPSPaymentMode)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BBPSPaymentMode))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BBPSPaymentStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BBPSPaymentStatus))
 
-$(mkHttpInstancesForEnum ''BBPSPaymentStatus)
+$(mkHttpInstancesForEnum (''BBPSPaymentStatus))

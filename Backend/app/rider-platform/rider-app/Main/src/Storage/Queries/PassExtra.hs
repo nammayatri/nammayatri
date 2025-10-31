@@ -3,7 +3,6 @@
 
 module Storage.Queries.PassExtra where
 
-import qualified Domain.Types.Extra.Pass ()
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PassType as DPassType
 import Kernel.Beam.Functions
@@ -14,7 +13,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Pass as Beam
-import qualified Storage.Queries.Pass ()
+import Storage.Queries.OrphanInstances.Pass ()
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

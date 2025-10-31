@@ -11,17 +11,17 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PassTypeT f = PassTypeT
-  { catchline :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    description :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    name :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    order :: (B.C f Kernel.Prelude.Int),
-    passCategoryId :: (B.C f Kernel.Prelude.Text),
-    title :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { catchline :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    name :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    order :: B.C f Kernel.Prelude.Int,
+    passCategoryId :: B.C f Kernel.Prelude.Text,
+    title :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table PassTypeT where
 
 type PassType = PassTypeT Identity
 
-$(enableKVPG (''PassTypeT) [('id)] [])
+$(enableKVPG ''PassTypeT ['id] [])
 
-$(mkTableInstances (''PassTypeT) "pass_type")
+$(mkTableInstances ''PassTypeT "pass_type")

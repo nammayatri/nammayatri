@@ -56,6 +56,7 @@ import System.Environment (lookupEnv)
 import Tools.Metrics
 import Tools.Metrics.BAPMetrics.Types
 import TransactionLogs.Types
+import qualified UrlShortner.Common as UrlShortner
 
 data HandlerCfg = HandlerCfg
   { schedulerConfig :: SchedulerConfig,
@@ -78,6 +79,7 @@ data HandlerEnv = HandlerEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
+    ltsHedisEnv :: HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     cacheConfig :: CacheConfig,
@@ -125,7 +127,9 @@ data HandlerEnv = HandlerEnv
     searchLimitExceedNotificationTemplate :: Text,
     slackCfg :: SlackConfig,
     inMemEnv :: KTC.InMemEnv,
-    url :: Maybe Text
+    url :: Maybe Text,
+    googleSAPrivateKey :: String,
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
   }
   deriving (Generic)
 
@@ -163,6 +167,7 @@ buildHandlerEnv HandlerCfg {..} = do
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   let serviceClickhouseCfg = riderClickhouseCfg
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  ltsHedisEnv <- connectHedis ltsRedis identity
   let url = Nothing
   return HandlerEnv {..}
 

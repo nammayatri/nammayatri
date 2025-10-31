@@ -42,7 +42,6 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
-import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketCategoryMetadataConfig as DFRFSTicketCategoryMetadataConfig
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -57,14 +56,13 @@ import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import qualified Domain.Types.RouteTripMapping as DRTM
 import qualified Domain.Types.Station as Station
 import qualified Domain.Types.VendorSplitDetails as VendorSplitDetails
-import Environment
 import EulerHS.Prelude (comparing, concatMapM, (+||), (||+))
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.External.Maps.Types ()
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -78,21 +76,15 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
-import Lib.Payment.Domain.Types.Refunds as Refunds
 import Lib.Payment.Storage.Beam.BeamFlow
-import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
-import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import SharedLogic.JobScheduler as JobScheduler
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.FRFSGtfsStageFare as QFRFSGtfsStageFare
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
@@ -106,9 +98,7 @@ import Storage.Queries.FRFSStageFare as QFRFSStageFare
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
-import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJL
-import qualified Storage.Queries.Person as QP
 import Storage.Queries.RouteTripMapping as QRouteTripMapping
 import Storage.Queries.StopFare as QRouteStopFare
 import qualified Storage.Queries.VendorSplitDetails as QVendorSplitDetails
@@ -809,112 +799,6 @@ getAllJourneyFrfsBookings booking = do
       return (Just leg.journeyId, bookings)
     Nothing -> pure (Nothing, [booking])
 
-markAllRefundBookings ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    MonadFlow m,
-    EsqDBReplicaFlow m r,
-    ServiceFlow m r,
-    EncFlow m r,
-    SchedulerFlow r
-  ) =>
-  DFRFSTicketBooking.FRFSTicketBooking ->
-  Id DP.Person ->
-  m ()
-markAllRefundBookings booking personId = do
-  (mbJourneyId, allJourneyFrfsBookings) <- getAllJourneyFrfsBookings booking
-  allPaymentBookings <- mapM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) allJourneyFrfsBookings
-  let paymentBookings = catMaybes allPaymentBookings
-
-  let terminalBookings = filter (\frfsBooking -> frfsBooking.status `elem` [DFRFSTicketBooking.FAILED, DFRFSTicketBooking.CANCELLED]) allJourneyFrfsBookings
-      nonRefundInitiatedBookings' =
-        catMaybes $
-          map
-            ( \bkg ->
-                find
-                  ( \paymentBooking ->
-                      paymentBooking.frfsTicketBookingId == bkg.id
-                        && paymentBooking.status == DFRFSTicketBookingPayment.REFUND_PENDING
-                  )
-                  paymentBookings
-                  <&> \paymentBooking -> (bkg, paymentBooking.id)
-            )
-            terminalBookings
-  nonRefundInitiatedBookings <-
-    filterM
-      ( \(currBooking, _paymentBookingId) -> do
-          let mkRefundLockKey = "frfsRefundBooking:" <> currBooking.id.getId
-          processedCount <- Redis.incr mkRefundLockKey
-          void $ Redis.expire mkRefundLockKey 60
-          pure (processedCount == 1)
-      )
-      nonRefundInitiatedBookings'
-  let allFailed = not (null terminalBookings) && all (\frfsBooking -> frfsBooking.status == DFRFSTicketBooking.FAILED) allJourneyFrfsBookings
-  whenJust (listToMaybe nonRefundInitiatedBookings) $ \_ -> do
-    logInfo $ "payment status api markAllRefundBookings: " <> show nonRefundInitiatedBookings
-    logInfo $ "allFailed flag in markAllRefundBookings: " <> show allFailed
-    person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-    let (bookings, paymentBookingIds) = unzip nonRefundInitiatedBookings
-    payments <- mapM (QFRFSTicketBookingPayment.findById) paymentBookingIds
-    orderShortId <- case listToMaybe (catMaybes payments) of
-      Just payment -> do
-        order <- QPaymentOrder.findById payment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound payment.paymentOrderId.getId)
-        pure order.shortId.getShortId
-      Nothing -> throwError (InvalidRequest "orderShortId not found in markAllRefundBookings")
-    frfsConfig <-
-      CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
-        >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
-    (vendorSplitDetails, amountUpdated) <- createVendorSplitFromBookings bookings person.merchantId person.merchantOperatingCityId Payment.FRFSMultiModalBooking frfsConfig.isFRFSTestingEnabled
-    isSplitEnabled <- Payment.getIsSplitEnabled person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-    splitDetails <- Payment.mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
-    let refundSplitDetails = mkRefundSplitDetails bookings
-    refundId <- generateGUID
-    when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
-    logInfo $ "refund info for refundId: " <> show refundId <> ", amount: " <> show amountUpdated <> ", orderShortId: " <> orderShortId <> ", splitSettlementDetails" <> show splitDetails
-    logInfo $ "internal split details: " <> show refundSplitDetails
-    let refundReq =
-          Payment.AutoRefundReq
-            { orderId = orderShortId,
-              requestId = refundId,
-              amount = amountUpdated,
-              splitSettlementDetails = splitDetails
-            }
-        createRefundCall refundReq' = Payment.refundOrder person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion refundReq'
-    result <- try @_ @SomeException $ DPayment.refundService (refundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = refundId}) (Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId) (Just refundSplitDetails) createRefundCall
-    case result of
-      Left err -> do
-        forM_ paymentBookingIds $ \paymentBookingId -> do
-          void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED paymentBookingId
-        logError $ "Refund service failed for journey " <> refundId <> ": " <> show err
-      Right _ -> do
-        logInfo $ "Refund service completed successfully for journey " <> refundId
-        forM_ paymentBookingIds $ \paymentBookingId -> do
-          void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_INITIATED paymentBookingId
-
-        riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-        let scheduleAfter = riderConfig.refundStatusUpdateInterval -- Schedule for 24 hours later
-            jobData =
-              JobScheduler.CheckRefundStatusJobData
-                { JobScheduler.refundId = refundId,
-                  JobScheduler.numberOfRetries = 0
-                }
-        createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just person.merchantOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
-        logInfo $ "Scheduled refund status check job for " <> refundId <> " in 24 hours (initial check)"
-
-        logInfo $ "payment status api markAllRefundBookings completed"
-    pure ()
-  where
-    mkRefundSplitDetails :: [DFRFSTicketBooking.FRFSTicketBooking] -> [Refunds.Split]
-    mkRefundSplitDetails bookings =
-      map
-        ( \bkg ->
-            Refunds.Split
-              { splitAmount = bkg.totalPrice.amount,
-                frfsBookingId = bkg.id.getId
-              }
-        )
-        bookings
-
 createPaymentOrder ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
@@ -968,8 +852,9 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
       commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
       createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId Nothing (show paymentType) createOrderReq createOrderCall
-  mapM (DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId Nothing (show paymentType) createOrderReq) orderResp
+  mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId merchantOperatingCityId Nothing paymentType
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq createOrderCall
+  mapM (DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq) orderResp
   where
     getPaymentIds = do
       orderShortId <- generateShortId
@@ -1007,7 +892,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
 makecancelledTtlKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
 makecancelledTtlKey bookingId = "FRFS:OnConfirm:CancelledTTL:bookingId-" <> bookingId.getId
 
-totalOrderValue :: DTBP.FRFSTicketBookingPaymentStatus -> DFRFSTicketBooking.FRFSTicketBooking -> Flow Price
+totalOrderValue :: MonadFlow m => DTBP.FRFSTicketBookingPaymentStatus -> DFRFSTicketBooking.FRFSTicketBooking -> m Price
 totalOrderValue paymentBookingStatus booking =
   if paymentBookingStatus == DTBP.REFUND_PENDING || paymentBookingStatus == DTBP.REFUNDED
     then booking.totalPrice `addPrice` refundAmountToPrice -- Here the `refundAmountToPrice` value is in Negative
@@ -1016,7 +901,7 @@ totalOrderValue paymentBookingStatus booking =
     refundAmountToPrice = mkPrice (Just INR) (fromMaybe (HighPrecMoney $ toRational (0 :: Int)) booking.refundAmount)
 
 -- TODO :: This function called in Ticket Cancellation flow does not properly handle multiple quote category, whe enabling cancellation for multiple categories this needs to be rectified.
-updateTotalOrderValueAndSettlementAmount :: DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> BecknConfig -> Flow ()
+updateTotalOrderValueAndSettlementAmount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> BecknConfig -> m ()
 updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig = do
   paymentBooking <- runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
   let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking

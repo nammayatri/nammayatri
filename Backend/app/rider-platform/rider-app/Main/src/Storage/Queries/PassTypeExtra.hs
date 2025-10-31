@@ -13,7 +13,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.PassType as Beam
-import qualified Storage.Queries.PassType ()
+import Storage.Queries.OrphanInstances.PassType ()
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

@@ -62,7 +62,6 @@ import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEst
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
-import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
@@ -84,6 +83,7 @@ import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import qualified ExternalBPP.ExternalAPI.CallAPI as DirectExternalBPP
 import qualified ExternalBPP.ExternalAPI.Types
+import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Google.MapsClient.Types (LatLngV2 (..), LocationV2 (..), WayPointV2 (..))
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.MultiModal.Interface as MultiModal
@@ -107,11 +107,11 @@ import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
-import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.Cancel as SharedCancel
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -227,56 +227,42 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   legs <- QJourneyLeg.getJourneyLegs journeyId
   allJourneyFrfsBookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
-  frfsBookingStatusArr <- mapM (\booking -> FRFSTicketService.frfsBookingStatus (personId, merchantId) True (withPaymentStatusResponseHandler booking person) booking person JMU.switchFRFSQuoteTierUtil) allJourneyFrfsBookings
-  paymentGateWayId <- Payment.fetchGatewayReferenceId merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-  logInfo $ "paymentGateWayId: " <> show paymentGateWayId
-  let anyFirstBooking = listToMaybe frfsBookingStatusArr
-      paymentOrder =
-        anyFirstBooking >>= (.payment)
-          <&> ( \p ->
-                  ApiTypes.PaymentOrder
-                    { sdkPayload = p.paymentOrder,
-                      status =
-                        if any (\b -> (b.payment <&> (.status)) == Just FRFSTicketService.SUCCESS) frfsBookingStatusArr
-                          then FRFSTicketService.SUCCESS
-                          else p.status
-                    }
-              )
-      allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyFrfsBookings
-  paymentFareUpdate <-
-    mapMaybeM
+  bookingsPaymentOrders <-
+    mapM
       ( \booking -> do
-          let leg = find (\l -> l.legSearchId == Just booking.searchId.getId) legs
-          -- TODO :: This is not being used so not handling, when being used handle it properly using `price` as oldFare and `finalPrice` as newFare.
-          if fromMaybe False booking.isFareChanged
-            then case leg <&> (.sequenceNumber) of
-              Just journeyLegOrder -> do
-                quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
-                let fareUpdatedCategories =
-                      filter
-                        (\(_, price, finalPrice) -> price /= finalPrice)
-                        $ mapMaybe (\quoteCategory -> quoteCategory.finalPrice <&> \finalPrice -> (quoteCategory.category, quoteCategory.price, finalPrice)) quoteCategories
-                return $
-                  Just
-                    ( fareUpdatedCategories <&> \(category, price, finalPrice) ->
-                        ApiTypes.PaymentFareUpdate
-                          { journeyLegOrder,
-                            category = category,
-                            oldFare = mkPriceAPIEntity price,
-                            newFare = mkPriceAPIEntity finalPrice
-                          }
-                    )
-              Nothing -> return Nothing
-            else return Nothing
+          QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
+            >>= \case
+              Just paymentBooking -> do
+                paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
+                let paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
+                    merchantOperatingCityId = fromMaybe booking.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
+                    commonPersonId = cast @Domain.Types.Person.Person @DPayment.Person personId
+                    orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
+                orderStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
+                void $ SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusResponse
+                createOrderResp <- buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCityId booking person paymentServiceType
+                return (createOrderResp, Just paymentBooking.status)
+              Nothing -> return (Nothing, Nothing)
       )
       allJourneyFrfsBookings
-  if allLegsOnInitDone
+  paymentGateWayId <- Payment.fetchGatewayReferenceId merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
+  let anyFirstBookingPaymentOrder = listToMaybe bookingsPaymentOrders
+      paymentOrder =
+        case anyFirstBookingPaymentOrder of
+          Just (Just paymentOrder', Just paymentBookingStatus) ->
+            Just $
+              ApiTypes.PaymentOrder
+                { sdkPayload = Just paymentOrder',
+                  status = mkDomainPaymentStatusToAPIStatus paymentBookingStatus
+                }
+          _ -> Nothing
+      allPaymentOrders = all (isJust . fst) bookingsPaymentOrders
+  if allPaymentOrders
     then do
       return $
         ApiTypes.JourneyBookingPaymentStatus
           { journeyId,
             paymentOrder,
-            paymentFareUpdate = Just $ concat paymentFareUpdate,
             gatewayReferenceId = paymentGateWayId
           }
     else do
@@ -284,23 +270,55 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
         ApiTypes.JourneyBookingPaymentStatus
           { journeyId,
             paymentOrder = Nothing,
-            paymentFareUpdate = Nothing,
             gatewayReferenceId = paymentGateWayId
           }
   where
-    withPaymentStatusResponseHandler :: DFRFSTicketBooking.FRFSTicketBooking -> Domain.Types.Person.Person -> ((DFRFSTicketBookingPayment.FRFSTicketBookingPayment, DPaymentOrder.PaymentOrder, DPayment.PaymentStatusResp) -> Environment.Flow FRFSTicketService.FRFSTicketBookingStatusAPIRes) -> Environment.Flow FRFSTicketService.FRFSTicketBookingStatusAPIRes
-    withPaymentStatusResponseHandler booking person action = do
-      paymentBooking <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
-      paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
-      let commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person booking.riderId
-      let orderStatusCall = Payment.orderStatus booking.merchantId booking.merchantOperatingCityId Nothing (getPaymentType booking.vehicleType) (Just person.id.getId) person.clientSdkVersion
-      paymentStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
-      action (paymentBooking, paymentOrder, paymentStatusResponse)
+    mkDomainPaymentStatusToAPIStatus :: DFRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> FRFSTicketServiceAPI.FRFSBookingPaymentStatusAPI
+    mkDomainPaymentStatusToAPIStatus = \case
+      DFRFSTicketBookingPayment.PENDING -> FRFSTicketServiceAPI.PENDING
+      DFRFSTicketBookingPayment.REATTEMPTED -> FRFSTicketServiceAPI.PENDING
+      DFRFSTicketBookingPayment.SUCCESS -> FRFSTicketServiceAPI.SUCCESS
+      DFRFSTicketBookingPayment.FAILED -> FRFSTicketServiceAPI.FAILURE
+      DFRFSTicketBookingPayment.REFUND_PENDING -> FRFSTicketServiceAPI.REFUND_PENDING
+      DFRFSTicketBookingPayment.REFUNDED -> FRFSTicketServiceAPI.REFUNDED
+      DFRFSTicketBookingPayment.REFUND_FAILED -> FRFSTicketServiceAPI.REFUND_FAILED
+      DFRFSTicketBookingPayment.REFUND_INITIATED -> FRFSTicketServiceAPI.REFUND_INITIATED
 
     getPaymentType = \case
       Spec.METRO -> Payment.FRFSMultiModalBooking
       Spec.SUBWAY -> Payment.FRFSMultiModalBooking
       Spec.BUS -> Payment.FRFSMultiModalBooking
+
+    buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCityId booking person paymentServiceType = do
+      personEmail <- mapM decrypt person.email
+      personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+      isSplitEnabled_ <- Payment.getIsSplitEnabled (cast paymentOrder.merchantId) merchantOperatingCityId Nothing (getPaymentType booking.vehicleType)
+      isPercentageSplitEnabled <- Payment.getIsPercentageSplit (cast paymentOrder.merchantId) merchantOperatingCityId Nothing (getPaymentType booking.vehicleType)
+      splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled
+      let createOrderReq =
+            Payment.CreateOrderReq
+              { orderId = paymentOrder.id.getId,
+                orderShortId = paymentOrder.shortId.getShortId,
+                amount = paymentOrder.amount,
+                customerId = person.id.getId,
+                customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
+                customerPhone = personPhone,
+                customerFirstName = person.firstName,
+                customerLastName = person.lastName,
+                createMandate = Nothing,
+                mandateMaxAmount = Nothing,
+                mandateFrequency = Nothing,
+                mandateEndDate = Nothing,
+                mandateStartDate = Nothing,
+                optionsGetUpiDeepLinks = Nothing,
+                metadataExpiryInMins = Nothing,
+                metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+                splitSettlementDetails = splitSettlementDetails,
+                basket = Nothing
+              }
+      mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
+      let createOrderCall = Payment.createOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType Nothing person.clientSdkVersion
+      DPayment.createOrderService paymentOrder.merchantId (Just $ cast merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentServiceType createOrderReq createOrderCall
 
 -- TODO :: To be deprecated @Kavyashree
 postMultimodalPaymentUpdateOrder ::

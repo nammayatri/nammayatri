@@ -7,7 +7,6 @@ import qualified BecknV2.FRFS.Enums
 import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
-import qualified Domain.Types.Extra.Pass ()
 import qualified Domain.Types.Pass
 import Kernel.External.Encryption
 import Kernel.Prelude

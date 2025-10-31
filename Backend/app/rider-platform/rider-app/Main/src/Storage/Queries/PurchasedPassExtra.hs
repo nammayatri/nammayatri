@@ -19,7 +19,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.PurchasedPass as Beam
-import qualified Storage.Queries.PurchasedPass ()
+import Storage.Queries.OrphanInstances.PurchasedPass ()
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

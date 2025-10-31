@@ -28,9 +28,10 @@ import qualified Domain.Types.FRFSTicketStatus as Ticket
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
-import Environment
 import Kernel.Beam.Functions
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude hiding (second)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -49,7 +50,17 @@ data DOnStatus = Booking DOrder | TicketVerification DTicketPayload
 
 data DOnStatusResp = Async | TicketVerificationSync Ticket.FRFSTicket
 
-validateRequest :: DOnStatus -> Flow (Merchant, Booking.FRFSTicketBooking)
+validateRequest ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    ServiceFlow m r,
+    SchedulerFlow r
+  ) =>
+  DOnStatus ->
+  m (Merchant, Booking.FRFSTicketBooking)
 validateRequest (Booking DOrder {..}) = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QTBooking.findByBppOrderId (Just bppOrderId) >>= fromMaybeM (BookingDoesNotExist messageId)
@@ -63,7 +74,20 @@ validateRequest (TicketVerification DTicketPayload {..}) = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, booking)
 
-onStatus :: Merchant -> Booking.FRFSTicketBooking -> DOnStatus -> Flow DOnStatusResp
+onStatus ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    ServiceFlow m r,
+    SchedulerFlow r,
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String]
+  ) =>
+  Merchant ->
+  Booking.FRFSTicketBooking ->
+  DOnStatus ->
+  m DOnStatusResp
 onStatus _merchant booking (Booking dOrder) = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   checkInprogress <- fetchCheckInprogress integratedBPPConfig.providerConfig
@@ -143,7 +167,6 @@ onStatus _merchant booking (Booking dOrder) = do
     refreshTicket ticket =
       whenJust ticket.qrRefreshAt $ \qrRefreshAt ->
         void $ QTicket.updateRefreshTicketQRByTBookingIdAndTicketNumber ticket.qrData (Just qrRefreshAt) booking.id ticket.ticketNumber
-    fetchCheckInprogress :: DIBC.ProviderConfig -> Flow Bool
     fetchCheckInprogress = \case
       DIBC.ONDC _ -> do
         let key = Utils.mkCheckInprogressKey booking.searchId.getId

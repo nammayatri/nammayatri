@@ -47,6 +47,7 @@ module Tools.Payment
     fetchGatewayReferenceId,
     fetchOfferSKUConfig,
     extractSplitSettlementDetailsAmount,
+    getPaymentOrderValidity,
   )
 where
 
@@ -88,6 +89,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Version
+import Lib.Payment.Domain.Types.PaymentOrder
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
@@ -244,11 +246,6 @@ runWithServiceConfig3 func getCfg merchantId merchantOperatingCityId req1 req2 r
   case merchantPaymentServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig msc -> func msc req1 req2 req3
     _ -> throwError $ InternalError "Unknown Service Config"
-
-data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMultiModalBooking | FRFSPassPurchase
-  deriving (Generic, FromJSON, ToJSON, Show, Read, ToSchema, ToParamSchema)
-
-$(mkHttpInstancesForEnum ''PaymentServiceType)
 
 data SplitType = FIXED | FLEXIBLE deriving (Eq, Ord, Read, Show, Generic, ToSchema, ToParamSchema)
 
@@ -438,13 +435,15 @@ mkUnaggregatedRefundSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecM
 mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
   False -> return Nothing
   True -> do
+    uuid <- L.generateGUID
     let vendorSplits =
           map
             ( \fee ->
                 let roundedFee = roundVendorFee fee
                  in RefundSplit
                       { refundAmount = splitAmount roundedFee,
-                        subMid = vendorId roundedFee
+                        subMid = vendorId roundedFee,
+                        uniqueSplitId = fromMaybe uuid fee.ticketId
                       }
             )
             vendorFees
@@ -553,6 +552,41 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     _ -> False
   where
+    getPaymentServiceByType = \case
+      Normal -> DMSC.PaymentService Payment.Juspay
+      BBPS -> DMSC.BbpsPaymentService Payment.Juspay
+      FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
+      FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
+      FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
+
+getPaymentOrderValidity ::
+  (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe (Id TicketPlace) ->
+  PaymentServiceType ->
+  m (Maybe Seconds)
+getPaymentOrderValidity merchantId merchantOperatingCityId mbPlaceId paymentServiceType = do
+  placeBasedConfig <- case mbPlaceId of
+    Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
+    Nothing -> return Nothing
+  merchantServiceConfig <-
+    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
+  return $ case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
+    Just (DMSC.PaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    Just (DMSC.MetroPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    Just (DMSC.BusPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    Just (DMSC.BbpsPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    _ -> Nothing
+  where
+    extractPaymentOrderValidity = \case
+      JuspayConfig cfg -> cfg.paymentOrderValidity
+      _ -> Nothing
+
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
       BBPS -> DMSC.BbpsPaymentService Payment.Juspay

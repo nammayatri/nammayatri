@@ -98,13 +98,12 @@ data IntegratedQRReq = IntegratedQRReq {integratedQR :: Lib.JourneyModule.Types.
 data JourneyBookingPaymentStatus = JourneyBookingPaymentStatus
   { gatewayReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
-    paymentFareUpdate :: Kernel.Prelude.Maybe [PaymentFareUpdate],
     paymentOrder :: Kernel.Prelude.Maybe PaymentOrder
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JourneyConfirmReq = JourneyConfirmReq {journeyConfirmReqElements :: [JourneyConfirmReqElement], enableOffer :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
+data JourneyConfirmReq = JourneyConfirmReq {enableOffer :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, journeyConfirmReqElements :: [JourneyConfirmReqElement]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
