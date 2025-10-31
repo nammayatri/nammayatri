@@ -406,7 +406,8 @@ data DriverInformationRes = DriverInformationRes
     rideRequestVolume :: Maybe Int,
     isTTSEnabled :: Maybe Bool,
     isHighAccuracyLocationEnabled :: Maybe Bool,
-    rideRequestVolumeEnabled :: Maybe Bool
+    rideRequestVolumeEnabled :: Maybe Bool,
+    profilePhotoUploadedAt :: Maybe UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -486,7 +487,8 @@ data DriverEntityRes = DriverEntityRes
     rideRequestVolume :: Maybe Int,
     isTTSEnabled :: Maybe Bool,
     isHighAccuracyLocationEnabled :: Maybe Bool,
-    rideRequestVolumeEnabled :: Maybe Bool
+    rideRequestVolumeEnabled :: Maybe Bool,
+    profilePhotoUploadedAt :: Maybe UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -1025,9 +1027,11 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
   let maskedDeviceToken = maskText . (.getFCMRecipientToken) <$> person.deviceToken
-  mediaUrl <- forM person.faceImageId $ \mediaId -> do
-    mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
-    return mediaEntry.url
+  (mediaUrl, profilePhotoUploadedAt) <- case person.faceImageId of
+    Just mediaId -> do
+      mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
+      return (Just mediaEntry.url, Just mediaEntry.createdAt)
+    Nothing -> return (Nothing, Nothing)
   aadhaarCardPhotoResp <- try @_ @SomeException (fetchAndCacheAadhaarImage person driverInfo)
   let aadhaarCardPhoto = join (eitherToMaybe aadhaarCardPhotoResp)
   let rating =
