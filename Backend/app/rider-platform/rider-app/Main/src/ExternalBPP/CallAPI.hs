@@ -249,8 +249,9 @@ confirm ::
   (Maybe Text, Maybe Text) ->
   DBooking.FRFSTicketBooking ->
   [DFRFSQuoteCategory.FRFSQuoteCategory] ->
+  Maybe Bool ->
   m ()
-confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking quoteCategories = do
+confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
@@ -273,7 +274,7 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
           frfsConfig <-
             CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
               >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
-          onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories
+          onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode
           onConfirmHandler onConfirmReq
         case result of
           Left err -> do

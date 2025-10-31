@@ -34,6 +34,7 @@ data FRFSConfig = FRFSConfig
     providerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     radius :: Kernel.Types.Common.Meters,
     roundTripTicketLimit :: Kernel.Prelude.Int,
+    singleModeBusStationTtl :: Kernel.Types.Time.Seconds,
     straightLineDistance :: Kernel.Types.Common.Meters,
     validTillSeconds :: Kernel.Types.Time.Seconds,
     createdAt :: Kernel.Prelude.UTCTime,
