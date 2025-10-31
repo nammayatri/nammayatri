@@ -1,6 +1,3 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-
 module ExternalBPP.ExternalAPI.CallAPI where
 
 import qualified BecknV2.FRFS.Enums as Spec
@@ -238,11 +235,6 @@ getStationList integrationBPPConfig = do
 getPaymentDetails :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams
 getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = error "Unimplemented!"
 
-data ChangeOverType = CO_DIRECT | CO_INDIRECT
-  deriving (Show, Eq)
-
-type Pair = (Text, Text, ChangeOverType)
-
 getChangeOverAndViaPoints :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => [BasicRouteDetail] -> IntegratedBPPConfig -> m (Text, Text)
 getChangeOverAndViaPoints fareRouteDetails integrationBPPConfig = do
   allStations <- buildStations fareRouteDetails integrationBPPConfig
@@ -251,42 +243,18 @@ getChangeOverAndViaPoints fareRouteDetails integrationBPPConfig = do
         [] -> []
         [_] -> []
         xs -> nub $ drop 1 (take (length xs - 1) xs)
-      changeOverStationCodesWithDuplicates = concatMap (\rd -> [rd.startStopCode, rd.endStopCode]) fareRouteDetails
-      changeOverPoints = case changeOverStationCodesWithDuplicates of
+      changeOverStationCodes = nub $ concatMap (\rd -> [rd.startStopCode, rd.endStopCode]) fareRouteDetails
+      changeOverPoints = case changeOverStationCodes of
         [] -> []
         [_] -> []
         xs -> nub $ drop 1 (take (length xs - 1) xs)
-      changeOverStationCodePairsWithTypes = pairs changeOverPoints
-      configuredDirectChangeOvers = case integrationBPPConfig.providerConfig of
-        CRIS config -> fromMaybe [] (changeOverDirectStations config)
+      configuredChangeOverStations = case integrationBPPConfig.providerConfig of
+        CRIS config -> fromMaybe [] (changeOverIndirectStations config) <> fromMaybe [] (changeOverDirectStations config)
         _ -> []
-      configuredIndirectChangeOvers = case integrationBPPConfig.providerConfig of
-        CRIS config -> fromMaybe [] (changeOverIndirectStations config)
-        _ -> []
-      changeOverStations = filterBasedOnChangeOverType configuredDirectChangeOvers configuredIndirectChangeOvers changeOverStationCodePairsWithTypes
+      changeOverStations = filter (`elem` configuredChangeOverStations) changeOverPoints
       viaPoints = if null viaStations then " " else T.intercalate "-" viaStations
       changeOver = if null changeOverStations then " " else T.intercalate "-" changeOverStations
   return (viaPoints, changeOver)
-  where
-    pairs :: [Text] -> [Pair]
-    pairs [] = []
-    pairs [_] = []
-    pairs (x : y : xs) = toPair (x, y) : pairs xs
-
-    toPair :: (Text, Text) -> Pair
-    toPair (a, b)
-      | a == b = (a, b, CO_DIRECT)
-      | otherwise = (a, b, CO_INDIRECT)
-
-    filterBasedOnChangeOverType :: [Text] -> [Text] -> [Pair] -> [Text]
-    filterBasedOnChangeOverType configuredDirectChangeOvers configuredIndirectChangeOvers pairs' =
-      nub $ concatMap go pairs'
-      where
-        go :: Pair -> [Text]
-        go (a, _, CO_DIRECT)
-          | a `elem` configuredDirectChangeOvers = [a]
-          | otherwise = []
-        go (a, b, CO_INDIRECT) = filter (`elem` configuredIndirectChangeOvers) [a, b]
 
 buildStations :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => [BasicRouteDetail] -> IntegratedBPPConfig -> m [DStation]
 buildStations basicRouteDetails integratedBPPConfig = do
