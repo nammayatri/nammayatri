@@ -47,6 +47,9 @@ PurchasedPass:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 
+  sqlType:
+    applicableVehicleServiceTiers: text[]
+
   constraints:
     id: PrimaryKey
 

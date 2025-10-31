@@ -49,5 +49,11 @@ Pass:
     id: PrimaryKey
     passTypeId: !SecondaryKey
 
+  sqlType:
+    applicableVehicleServiceTiers: text[]
+    documentsRequired: text[]
+    purchaseEligibilityJsonLogic: jsonb[]
+    redeemEligibilityJsonLogic: jsonb[]
+
   extraOperations:
     - EXTRA_QUERY_FILE

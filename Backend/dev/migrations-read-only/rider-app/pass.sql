@@ -59,3 +59,16 @@ ALTER TABLE atlas_app.pass ALTER COLUMN applicable_vehicle_service_tiers TYPE te
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass ALTER COLUMN redeem_eligibility_json_logic TYPE jsonb[];
+ALTER TABLE atlas_app.pass ALTER COLUMN purchase_eligibility_json_logic TYPE jsonb[];
+ALTER TABLE atlas_app.pass ALTER COLUMN documents_required TYPE text[];
+ALTER TABLE atlas_app.pass ALTER COLUMN applicable_vehicle_service_tiers TYPE text[];
+
+
+------- SQL updates -------
+
