@@ -63,7 +63,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
           return otpCode
   let ticketDescription = "ROUTE: " <> route.shortName <> " | FROM: " <> fromStation.name <> " | TO: " <> toStation.name
       fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
-      singleTicketPrice = fareParameters.totalUnitPrice.amountInt
+      singleTicketPrice = (getUnitPriceFromPriceItem fareParameters.adultItem).amountInt
       adultQuantity = maybe 0 (.quantity) fareParameters.adultItem
       childQuantity = maybe 0 (.quantity) fareParameters.childItem
       qrValidityIST = addUTCTime (secondsToNominalDiffTime 19800) qrValidity

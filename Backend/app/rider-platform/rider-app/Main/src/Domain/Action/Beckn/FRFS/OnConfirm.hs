@@ -275,7 +275,7 @@ buildReconTable merchant booking fareParameters _dOrder tickets mRiderNumber int
             Recon.date = show now,
             Recon.destinationStationCode = toStation.code,
             Recon.differenceAmount = Nothing,
-            Recon.fare = fareParameters.totalUnitPrice,
+            Recon.fare = FRFSUtils.getUnitPriceFromPriceItem fareParameters.adultItem,
             Recon.frfsTicketBookingId = booking.id,
             Recon.message = Nothing,
             Recon.mobileNumber = mRiderNumber,

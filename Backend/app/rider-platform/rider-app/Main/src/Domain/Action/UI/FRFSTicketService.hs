@@ -591,8 +591,8 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
           FRFSTicketService.FRFSQuoteAPIRes
             { quoteId = quote.id,
               _type = quote._type,
-              price = fareParameters.totalUnitPrice.amount,
-              priceWithCurrency = mkPriceAPIEntity fareParameters.totalUnitPrice,
+              price = (FRFSUtils.getUnitPriceFromPriceItem fareParameters.adultItem).amount,
+              priceWithCurrency = mkPriceAPIEntity (FRFSUtils.getUnitPriceFromPriceItem fareParameters.adultItem),
               quantity = fareParameters.totalQuantity,
               validTill = quote.validTill,
               vehicleType = quote.vehicleType,

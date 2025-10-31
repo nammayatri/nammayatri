@@ -75,7 +75,6 @@ import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as BC
 import Kernel.Types.Id
 import Kernel.Types.Predicate
-import qualified Kernel.Types.Predicate as P
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Types.Version
 import Kernel.Utils.Common

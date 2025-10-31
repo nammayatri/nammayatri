@@ -1067,7 +1067,6 @@ data FRFSFareParameters = FRFSFareParameters
   { adultItem :: Maybe PriceItem,
     childItem :: Maybe PriceItem,
     totalPrice :: Price,
-    totalUnitPrice :: Price,
     totalQuantity :: Int,
     currency :: Currency
   }
@@ -1076,11 +1075,11 @@ data FRFSFareParameters = FRFSFareParameters
 getQuantityFromPriceItem :: Maybe PriceItem -> Int
 getQuantityFromPriceItem = maybe 0 (.quantity)
 
-getUnitPriceFromPriceItem :: Maybe PriceItem -> HighPrecMoney
-getUnitPriceFromPriceItem = maybe (HighPrecMoney 0.0) ((.amount) . (.unitPrice))
+getUnitPriceFromPriceItem :: Maybe PriceItem -> Price
+getUnitPriceFromPriceItem = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.unitPrice)
 
-getAmountFromPriceItem :: Maybe PriceItem -> HighPrecMoney
-getAmountFromPriceItem = maybe (HighPrecMoney 0.0) ((.amount) . (.totalPrice))
+getAmountFromPriceItem :: Maybe PriceItem -> Price
+getAmountFromPriceItem = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.totalPrice)
 
 mkCategoryPriceItemFromQuoteCategories :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> [CategoryPriceItem]
 mkCategoryPriceItemFromQuoteCategories quoteCategories = mapMaybe mkPriceItem quoteCategories
@@ -1119,14 +1118,8 @@ calculateFareParameters priceItems =
       currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem)
       totalPrice =
         Price
-          { amount = getAmountFromPriceItem adultItem + getAmountFromPriceItem childItem,
-            amountInt = round (getAmountFromPriceItem adultItem + getAmountFromPriceItem childItem),
-            currency
-          }
-      totalUnitPrice =
-        Price
-          { amount = getUnitPriceFromPriceItem adultItem + getUnitPriceFromPriceItem childItem,
-            amountInt = round (getUnitPriceFromPriceItem adultItem + getUnitPriceFromPriceItem childItem),
+          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount,
+            amountInt = round ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount),
             currency
           }
       totalQuantity =
@@ -1135,7 +1128,6 @@ calculateFareParameters priceItems =
         { adultItem = adultItem,
           childItem = childItem,
           totalPrice = totalPrice,
-          totalUnitPrice = totalUnitPrice,
           totalQuantity = totalQuantity,
           currency
         }
@@ -1167,14 +1159,8 @@ calculateFareParametersWithQuoteFallback categories quote =
       currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem)
       totalPrice =
         Price
-          { amount = getAmountFromPriceItem adultItem + getAmountFromPriceItem childItem,
-            amountInt = round (getAmountFromPriceItem adultItem + getAmountFromPriceItem childItem),
-            currency
-          }
-      totalUnitPrice =
-        Price
-          { amount = getUnitPriceFromPriceItem adultItem + getUnitPriceFromPriceItem childItem,
-            amountInt = round (getUnitPriceFromPriceItem adultItem + getUnitPriceFromPriceItem childItem),
+          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount,
+            amountInt = round ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount),
             currency
           }
       totalQuantity =
@@ -1183,7 +1169,6 @@ calculateFareParametersWithQuoteFallback categories quote =
         { adultItem = adultItem,
           childItem = childItem,
           totalPrice = totalPrice,
-          totalUnitPrice = totalUnitPrice,
           totalQuantity = totalQuantity,
           currency = currency
         }
@@ -1226,14 +1211,8 @@ calculateFareParametersWithBookingFallback categories booking =
       currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem)
       totalPrice =
         Price
-          { amount = getAmountFromPriceItem adultItem + getAmountFromPriceItem childItem,
-            amountInt = round (getAmountFromPriceItem adultItem + getAmountFromPriceItem childItem),
-            currency
-          }
-      totalUnitPrice =
-        Price
-          { amount = getUnitPriceFromPriceItem adultItem + getUnitPriceFromPriceItem childItem,
-            amountInt = round (getUnitPriceFromPriceItem adultItem + getUnitPriceFromPriceItem childItem),
+          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount,
+            amountInt = round ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount),
             currency
           }
       totalQuantity =
@@ -1242,7 +1221,6 @@ calculateFareParametersWithBookingFallback categories booking =
         { adultItem = adultItem,
           childItem = childItem,
           totalPrice = totalPrice,
-          totalUnitPrice = totalUnitPrice,
           totalQuantity = totalQuantity,
           currency
         }
