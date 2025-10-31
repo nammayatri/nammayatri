@@ -211,7 +211,7 @@ postWalletTopup (mbPersonId, merchantId, mocId) req = do
     case existingTopUpFee of
       Just fee -> pure fee
       Nothing -> do
-        driverFee <- mkDriverFee driverId req.amount
+        driverFee <- mkDriverFee driverId req.amount transporterConfig.currency
         QDF.create driverFee
         pure driverFee
   case eitherResult of
@@ -240,7 +240,7 @@ postWalletTopup (mbPersonId, merchantId, mocId) req = do
             orderResp = createOrderResp
           }
 
-    mkDriverFee driverId amount = do
+    mkDriverFee driverId amount currency = do
       now <- getCurrentTime
       feeId <- generateGUID
       pure $
@@ -251,8 +251,8 @@ postWalletTopup (mbPersonId, merchantId, mocId) req = do
             merchantOperatingCityId = mocId,
             feeType = DF.WALLET_TOPUP,
             status = DF.PAYMENT_PENDING,
-            currency = INR,
-            platformFee = DF.PlatformFee {fee = 0, cgst = 0, sgst = 0, currency = INR},
+            currency,
+            platformFee = DF.PlatformFee {fee = 0, cgst = 0, sgst = 0, currency},
             govtCharges = 0,
             specialZoneAmount = 0,
             totalEarnings = amount,

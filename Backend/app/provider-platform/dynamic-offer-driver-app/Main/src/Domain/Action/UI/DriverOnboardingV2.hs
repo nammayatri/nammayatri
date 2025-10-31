@@ -220,7 +220,7 @@ getDriverRateCard ::
     Environment.Flow [API.Types.UI.DriverOnboardingV2.RateCardResp]
   )
 getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDuration mbTripCategoryQuery mbServiceTierType = do
-  distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOperatingCityId
+  (currency, distanceUnit) <- SMerchant.getCurrencyAndDistanceUnitByMerchantOpCity merchantOperatingCityId
   let mbDistance = reqDistance
       mbDuration = reqDuration
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
@@ -242,15 +242,15 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
   case mbServiceTierType' of
     Just serviceTierType -> do
       when (serviceTierType `notElem` driverVehicleServiceTierTypes) $ throwError $ InvalidRequest ("Service tier " <> show serviceTierType <> " not available for driver")
-      mbRateCard <- getRateCardForServiceTier mbDistance mbDuration mbPickup transporterConfig tripCategory distanceUnit serviceTierType
+      mbRateCard <- getRateCardForServiceTier mbDistance mbDuration mbPickup transporterConfig tripCategory distanceUnit currency serviceTierType
       return $ maybeToList mbRateCard
     Nothing -> do
-      rateCards <- mapM (getRateCardForServiceTier mbDistance mbDuration mbPickup transporterConfig tripCategory distanceUnit) driverVehicleServiceTierTypes
+      rateCards <- mapM (getRateCardForServiceTier mbDistance mbDuration mbPickup transporterConfig tripCategory distanceUnit currency) driverVehicleServiceTierTypes
       return $ catMaybes rateCards
   where
-    mkBreakupItem :: Text -> Text -> Maybe API.Types.UI.DriverOnboardingV2.RateCardItem
-    mkBreakupItem title valueInText = do
-      priceObject <- stringToPrice INR valueInText -- change INR to proper currency after Roman changes
+    mkBreakupItem :: Currency -> Text -> Text -> Maybe API.Types.UI.DriverOnboardingV2.RateCardItem
+    mkBreakupItem currency title valueInText = do
+      priceObject <- stringToPrice currency valueInText
       return $
         API.Types.UI.DriverOnboardingV2.RateCardItem
           { title,
@@ -258,8 +258,8 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
             priceWithCurrency = mkPriceAPIEntity priceObject
           }
 
-    getRateCardForServiceTier :: Maybe Meters -> Maybe Minutes -> Maybe LatLong -> Maybe TransporterConfig -> TripCategory -> DistanceUnit -> Domain.Types.Common.ServiceTierType -> Environment.Flow (Maybe API.Types.UI.DriverOnboardingV2.RateCardResp)
-    getRateCardForServiceTier mbDistance mbDuration mbPickupLatLon transporterConfig tripCategory distanceUnit serviceTierType = do
+    getRateCardForServiceTier :: Maybe Meters -> Maybe Minutes -> Maybe LatLong -> Maybe TransporterConfig -> TripCategory -> DistanceUnit -> Currency -> Domain.Types.Common.ServiceTierType -> Environment.Flow (Maybe API.Types.UI.DriverOnboardingV2.RateCardResp)
+    getRateCardForServiceTier mbDistance mbDuration mbPickupLatLon transporterConfig tripCategory distanceUnit currency serviceTierType = do
       now <- getCurrentTime
       eitherFullFarePolicy <-
         try @_ @SomeException (getFarePolicy mbPickupLatLon Nothing Nothing Nothing Nothing Nothing merchantOperatingCityId False tripCategory serviceTierType Nothing Nothing Nothing Nothing [])
@@ -303,7 +303,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   estimatedDistance = mbDistance,
                   estimatedRideDuration = minutesToSeconds <$> mbDuration,
                   timeDiffFromUtc = transporterConfig <&> (.timeDiffFromUtc),
-                  currency = INR, -- fix it later
+                  currency,
                   distanceUnit,
                   tollCharges = Nothing,
                   merchantOperatingCityId = Just merchantOperatingCityId,
@@ -314,15 +314,15 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
               perKmRate =
                 PriceAPIEntity
                   { amount = HighPrecMoney perKmAmount,
-                    currency = INR
+                    currency
                   }
               totalFare =
                 PriceAPIEntity
                   { amount = totalFareAmount,
-                    currency = INR
+                    currency
                   }
               perMinuteRate = getPerMinuteRate fareParams
-          let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id mkBreakupItem Nothing Nothing Nothing totalFare.amount Nothing (fullFarePolicyToFarePolicy fullFarePolicy)
+          let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id (mkBreakupItem currency) Nothing Nothing Nothing totalFare.amount Nothing (fullFarePolicyToFarePolicy fullFarePolicy)
           return $
             Just $
               API.Types.UI.DriverOnboardingV2.RateCardResp

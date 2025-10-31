@@ -940,6 +940,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   paymentCurrency <- case currency of
     INR -> pure INR
+    EUR -> pure EUR
     _ -> throwError $ InvalidRequest "Invalid currency" -- is it correct?
   offers <- SPayment.offerListCache merchantId driverId merchantOpCityId plan.serviceName =<< makeOfferReq paymentCurrency applicationDate plan.paymentMode transporterConfig_
   let allPendingAndOverDueDriverfee = dueDriverFees <> pendingRegistrationDfee
