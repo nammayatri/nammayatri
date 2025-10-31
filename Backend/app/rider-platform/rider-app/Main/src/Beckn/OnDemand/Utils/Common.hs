@@ -227,6 +227,7 @@ castVehicleVariant = \case
   VehVar.BOAT -> (show Enums.BOAT, "BOAT")
   VehVar.VIP_ESCORT -> (show Enums.CAB, "VIP_ESCORT")
   VehVar.VIP_OFFICER -> (show Enums.CAB, "VIP_OFFICER")
+  VehVar.BIKE_PLUS -> (show Enums.TWO_WHEELER, "BIKE_PLUS")
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 parseVehicleVariant mbCategory mbVariant =
@@ -261,6 +262,7 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "BOAT", Just "BOAT") -> Just VehVar.BOAT
     (Just "CAB", Just "VIP_ESCORT") -> Just VehVar.VIP_ESCORT
     (Just "CAB", Just "VIP_OFFICER") -> Just VehVar.VIP_OFFICER
+    (Just "TWO_WHEELER", Just "BIKE_PLUS") -> Just VehVar.BIKE_PLUS
     _ -> Nothing
 
 castCancellationSourceV2 :: Text -> SBCR.CancellationSource

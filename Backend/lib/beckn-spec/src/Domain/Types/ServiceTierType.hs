@@ -59,6 +59,7 @@ data ServiceTierType
   | BOAT
   | VIP_ESCORT
   | VIP_OFFICER
+  | BIKE_PLUS
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
 allServiceTiersTypes :: [ServiceTierType]

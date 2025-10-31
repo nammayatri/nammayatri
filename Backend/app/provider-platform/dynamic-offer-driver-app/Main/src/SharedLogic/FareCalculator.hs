@@ -691,6 +691,7 @@ calculateFareParameters params = do
             BOAT -> avgSpeedOfVehicle.boat.getKilometers
             VIP_ESCORT -> avgSpeedOfVehicle.vipEscort.getKilometers
             VIP_OFFICER -> avgSpeedOfVehicle.vipOfficer.getKilometers
+            BIKE_PLUS -> avgSpeedOfVehicle.bikeplus.getKilometers
       if avgSpeedOfVehicle' > 0
         then do
           let distanceInKilometer = realToFrac @_ @Double distance.getMeters / 1000

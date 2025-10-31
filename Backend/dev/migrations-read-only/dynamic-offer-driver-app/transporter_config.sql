@@ -508,3 +508,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN driver_wallet
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fee_dispute_window integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fee_cycle integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fee_vendor text ;
+
+
+
+------- SQL updates -------
+

@@ -43,6 +43,7 @@ castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVarian
   (Just "BUS", Just "BUS_AC") -> Just VehVar.BUS_AC
   (Just "CAB", Just "VIP_ESCORT") -> Just VehVar.VIP_ESCORT
   (Just "CAB", Just "VIP_OFFICER") -> Just VehVar.VIP_OFFICER
+  (Just "TWO_WHEELER", Just "BIKE_PLUS") -> Just VehVar.BIKE_PLUS
   _ -> Nothing
 
 castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector
