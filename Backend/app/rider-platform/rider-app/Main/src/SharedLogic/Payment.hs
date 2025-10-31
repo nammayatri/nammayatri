@@ -44,9 +44,8 @@ makePaymentIntent merchantId merchantOpCityId personId ride createPaymentIntentR
       commonRideId = cast @Ride.Ride @DPayment.Ride ride.id
       createPaymentIntentCall = TPayment.createPaymentIntent merchantId merchantOpCityId
       updatePaymentIntentAmountCall = TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId
-      capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
-      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
-  DPayment.createPaymentIntentService commonMerchantId (Just $ cast merchantOpCityId) commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall
+      cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId
+  DPayment.createPaymentIntentService commonMerchantId (Just $ cast merchantOpCityId) commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall cancelPaymentIntentCall
 
 cancelPaymentIntent ::
   ( MonadFlow m,
