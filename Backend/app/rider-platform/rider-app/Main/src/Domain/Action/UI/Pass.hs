@@ -515,6 +515,8 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
+  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (InvalidRequest $ "Pass will be active from " <> show purchasedPass.startDate)
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   (_, vehicleLiveRouteInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs passVerifyReq.vehicleNumber >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> passVerifyReq.vehicleNumber <> ", not found on any route")
   unless (vehicleLiveRouteInfo.serviceType `elem` purchasedPass.applicableVehicleServiceTiers) $
