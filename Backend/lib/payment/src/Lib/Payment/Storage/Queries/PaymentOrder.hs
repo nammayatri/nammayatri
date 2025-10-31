@@ -108,6 +108,26 @@ updateEffectiveAmount orderId effectAmount = do
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
 
+findAllByStatusAndCreatedAtAfter :: BeamFlow m r => [Payment.TransactionStatus] -> UTCTime -> m [DOrder.PaymentOrder]
+findAllByStatusAndCreatedAtAfter statuses createdAtAfter =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamPO.createdAt $ Se.GreaterThanOrEq createdAtAfter,
+          Se.Is BeamPO.status $ Se.In statuses
+        ]
+    ]
+    (Se.Desc BeamPO.createdAt)
+    Nothing
+    Nothing
+
+findAllByCreatedAtAfter :: BeamFlow m r => UTCTime -> m [DOrder.PaymentOrder]
+findAllByCreatedAtAfter createdAtAfter =
+  findAllWithOptionsKV
+    [Se.Is BeamPO.createdAt $ Se.GreaterThanOrEq createdAtAfter]
+    (Se.Desc BeamPO.createdAt)
+    Nothing
+    Nothing
+
 instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
   fromTType' orderT@BeamPO.PaymentOrderT {..} = do
     paymentLinks <- parsePaymentLinks orderT
