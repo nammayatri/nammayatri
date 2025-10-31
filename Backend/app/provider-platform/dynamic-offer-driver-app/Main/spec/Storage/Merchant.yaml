@@ -47,6 +47,7 @@ imports:
   ServiceName: Domain.Types.Extra.MerchantServiceConfig
   GatewayAndRegistryService: Domain.Types
   Role: Domain.Types.Person
+  Version: Kernel.Types.Version
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -1555,6 +1556,38 @@ MerchantServiceConfig:
     configJSON: getConfigJSON
   fromTType:
     serviceConfig: Storage.Queries.Transformers.MerchantServiceConfig.mkServiceConfig configJSON serviceName|EM
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
+
+MerchantClientConfig:
+  derives: Generic,Show
+  fields:
+    packageId: Text
+    clientOS: Maybe Kernel.Types.Version.DeviceType
+    clientServiceConfig: Domain.Types.Extra.MerchantClientConfig.ClientServiceConfig
+    updatedAt: UTCTime
+    createdAt: UTCTime
+  beamFields:
+    clientServiceConfig:
+      serviceName: Domain.Types.MerchantClientConfig.ClientService
+      configJSON: Value
+  constraints:
+    packageId: PrimaryKey
+    serviceName: PrimaryKey
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+  beamInstance:
+    - MakeTableInstances
+  sqlType:
+    serviceName: character varying(50)
+    configJSON: json
+  toTType:
+    serviceName: getServiceName
+    configJSON: getConfigJSON
+  fromTType:
+    clientServiceConfig: Storage.Queries.Transformers.MerchantClientConfig.mkServiceConfig configJSON serviceName|EM
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE
