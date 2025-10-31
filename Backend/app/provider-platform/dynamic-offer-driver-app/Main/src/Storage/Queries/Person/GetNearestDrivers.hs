@@ -129,7 +129,7 @@ getNearestDrivers NearestDriversReq {..} = do
       let softBlockedTiers = fromMaybe [] info.softBlockStiers
       let removeSoftBlockedTiers = filter (\stier -> stier `notElem` softBlockedTiers)
       let upgradedTiers = DL.intersect ((.tier) <$> fromMaybe [] vehicle.ruleBasedUpgradeTiers) ((.tier) <$> fromMaybe [] info.ruleBasedUpgradeTiers)
-      let addRuleBasedUpgradeTiers existing = (filter (\tier -> maybe False (\tierInfo -> vehicle.variant `elem` tierInfo.allowedVehicleVariant) (HashMap.lookup tier cityServiceTiersHashMap)) upgradedTiers) <> existing
+      let addRuleBasedUpgradeTiers existing = DL.nub $ (filter (\tier -> maybe False (\tierInfo -> vehicle.variant `elem` tierInfo.allowedVehicleVariant) (HashMap.lookup tier cityServiceTiersHashMap)) upgradedTiers) <> existing
       let selectedDriverServiceTiers =
             removeSoftBlockedTiers $
               addRuleBasedUpgradeTiers $
