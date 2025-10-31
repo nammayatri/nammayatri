@@ -246,6 +246,7 @@ let RiderJobType =
       | NyRegularMaster
       | NyRegularInstance
       | CrisRecon
+      | PaymentOrderStatusCheck
       >
 
 let jobInfoMapx =
@@ -283,6 +284,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.NyRegularInstance, mapValue = True }
       , { mapKey = RiderJobType.NyRegularMaster, mapValue = True }
       , { mapKey = RiderJobType.CrisRecon, mapValue = True }
+      , { mapKey = RiderJobType.PaymentOrderStatusCheck, mapValue = True }
       ]
 
 let cacConfig =

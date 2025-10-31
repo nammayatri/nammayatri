@@ -20,7 +20,7 @@ import Kernel.External.Encryption (DbHash)
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Common hiding (Price (..), PriceAPIEntity (..), id)
-import Lib.Payment.Domain.Types.Common (EntityName)
+import Lib.Payment.Domain.Types.Common (EntityName, PaymentFulfillmentStatus)
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 
 data PaymentOrderT f = PaymentOrderT
@@ -65,7 +65,8 @@ data PaymentOrderT f = PaymentOrderT
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     merchantOperatingCityId :: B.C f (Maybe Text),
-    effectAmount :: B.C f (Maybe HighPrecMoney)
+    effectAmount :: B.C f (Maybe HighPrecMoney),
+    paymentFulfillmentStatus :: B.C f (Maybe PaymentFulfillmentStatus)
   }
   deriving (Generic, B.Beamable)
 
