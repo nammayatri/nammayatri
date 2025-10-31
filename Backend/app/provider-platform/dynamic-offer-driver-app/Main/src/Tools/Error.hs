@@ -1242,6 +1242,9 @@ data DriverOnboardingError
   | DuplicateWebhookReceived
   | WebhookAuthFailed
   | RCBlockedByAnotherAccount
+  | DigiLockerVerificationInProgress
+  | DigiLockerDocumentsBeingVerified
+  | DigiLockerPullRequired
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1299,6 +1302,9 @@ instance IsBaseError DriverOnboardingError where
     DuplicateWebhookReceived -> Just "Multiple webhooks received for same request id."
     WebhookAuthFailed -> Just "Auth header data mismatch ocurred!!!!!!"
     RCBlockedByAnotherAccount -> Just "RC is Blocked By another Account"
+    DigiLockerVerificationInProgress -> Just "DigiLocker verification already in progress. Please complete the current session or wait for it to expire."
+    DigiLockerDocumentsBeingVerified -> Just "Documents are being verified. Please check status or wait for completion."
+    DigiLockerPullRequired -> Just "Some documents require manual pull. Please complete the pull operation or wait for the session to expire."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1355,6 +1361,9 @@ instance IsHTTPError DriverOnboardingError where
     DuplicateWebhookReceived -> "DUPLICATE_WEBHOOK_RECEIVED"
     WebhookAuthFailed -> "WEBHOOK_AUTH_FAILED"
     RCBlockedByAnotherAccount -> "RC_BLOCKED_BY_ANOTHER_ACCOUNT"
+    DigiLockerVerificationInProgress -> "DIGILOCKER_VERIFICATION_IN_PROGRESS"
+    DigiLockerDocumentsBeingVerified -> "DIGILOCKER_DOCUMENTS_BEING_VERIFIED"
+    DigiLockerPullRequired -> "DIGILOCKER_PULL_REQUIRED"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1409,6 +1418,9 @@ instance IsHTTPError DriverOnboardingError where
     DuplicateWebhookReceived -> E400
     WebhookAuthFailed -> E401
     RCBlockedByAnotherAccount -> E400
+    DigiLockerVerificationInProgress -> E409
+    DigiLockerDocumentsBeingVerified -> E409
+    DigiLockerPullRequired -> E409
 
 instance IsAPIError DriverOnboardingError
 

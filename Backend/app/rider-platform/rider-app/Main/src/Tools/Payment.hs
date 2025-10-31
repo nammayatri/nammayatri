@@ -436,13 +436,15 @@ mkUnaggregatedRefundSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecM
 mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
   False -> return Nothing
   True -> do
+    uuid <- L.generateGUID
     let vendorSplits =
           map
             ( \fee ->
                 let roundedFee = roundVendorFee fee
                  in RefundSplit
                       { refundAmount = splitAmount roundedFee,
-                        subMid = vendorId roundedFee
+                        subMid = vendorId roundedFee,
+                        uniqueSplitId = fromMaybe uuid fee.ticketId
                       }
             )
             vendorFees

@@ -96,7 +96,7 @@ getTokenofJMService merchantId merchantOpCityId = do
         QMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId (DMSC.TokenizationService Tokenize.JourneyMonitoring)
           >>= maybe (throwError $ MerchantServiceUsageConfigNotFound merchantId.getId) pure
           >>= validateTokenizationServiceConfig
-      res <- Tokenize.tokenize sc Tokenize.TokenizationReq {expiry = Nothing}
+      res <- Tokenize.tokenize sc Tokenize.TokenizationReq {expiry = Nothing, code = Nothing, codeVerifier = Nothing}
       now <- getCurrentTime
       let expirationSeconds = diffUTCTimeInSeconds now (res.expiresAt)
       Hedis.withCrossAppRedis $ Hedis.setExp (mkJMTokenKey merchantOpCityId) res.token expirationSeconds

@@ -88,6 +88,12 @@ IdfyVerification:
 
 DigilockerVerification:
   tableName: digilocker_verification
+
+  types:
+    SessionStatus:
+      enum: "PENDING, SUCCESS, FAILED, CONSENT_DENIED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
   fields:
     id: Id DigilockerVerification
     driverId: Id Person
@@ -103,10 +109,10 @@ DigilockerVerification:
     scope: Maybe Text
 
     # Document Status (JSON)
-    docStatus: Text
+    docStatus: Value
 
     # Session Status
-    sessionStatus: Text
+    sessionStatus: SessionStatus
     responseCode: Maybe Text
     responseDescription: Maybe Text
 
@@ -120,6 +126,9 @@ DigilockerVerification:
     updatedAt: UTCTime
 
   excludedFields: []
+
+  sqlType:
+    docStatus: jsonb
 
   constraints:
     id: PrimaryKey
@@ -140,20 +149,23 @@ DigilockerVerification:
       kvFunction: findAllWithOptionsKV
       where: driverId
     updateSessionStatus:
-      kvFunction: updateWithKV
+      kvFunction: updateOneWithKV
       params: [sessionStatus, responseCode, responseDescription]
       where: id
     updateAccessToken:
-      kvFunction: updateWithKV
+      kvFunction: updateOneWithKV
       params: [accessToken, accessTokenExpiresAt, authorizationCode, scope]
       where: stateId
     updateDocStatus:
-      kvFunction: updateWithKV
+      kvFunction: updateOneWithKV
       params: [docStatus]
       where: id
     deleteByDriverId:
       kvFunction: deleteWithKV
       where: driverId
+
+  domainInstance:
+    - Custom Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList <SessionStatus>
 
 AadhaarOtpVerify:
   tableName: aadhaar_otp_verify

@@ -19,7 +19,7 @@ data DigilockerVerification = DigilockerVerification
     codeMethod :: Kernel.Prelude.Text,
     codeVerifier :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
-    docStatus :: Kernel.Prelude.Text,
+    docStatus :: Data.Aeson.Value,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.DigilockerVerification.DigilockerVerification,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
@@ -27,9 +27,13 @@ data DigilockerVerification = DigilockerVerification
     responseCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     responseDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     scope :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    sessionStatus :: Kernel.Prelude.Text,
+    sessionStatus :: Domain.Types.DigilockerVerification.SessionStatus,
     stateId :: Kernel.Prelude.Text,
     tokenResponse :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data SessionStatus = PENDING | SUCCESS | FAILED | CONSENT_DENIED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SessionStatus)

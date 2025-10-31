@@ -20,3 +20,21 @@ ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN state_id t
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN token_response text ;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ALTER COLUMN doc_status SET DEFAULT '{}';
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ALTER COLUMN code_method SET DEFAULT 'S256';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ALTER COLUMN doc_status TYPE jsonb;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ALTER COLUMN doc_status DROP DEFAULT;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ALTER COLUMN code_method DROP DEFAULT;

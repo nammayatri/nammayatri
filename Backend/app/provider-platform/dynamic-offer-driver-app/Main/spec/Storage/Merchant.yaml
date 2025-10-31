@@ -1099,6 +1099,7 @@ TransporterConfig:
     subscriptionConfig: SubscriptionConfig
     analyticsConfig: AnalyticsConfig
     driverWalletConfig: DriverWalletConfig
+    digilockerEnabled: Maybe Bool
 
   beamType:
     currency: Maybe Currency

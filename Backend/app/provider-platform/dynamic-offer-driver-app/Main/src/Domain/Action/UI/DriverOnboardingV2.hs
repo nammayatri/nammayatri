@@ -6,10 +6,10 @@ import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
 import qualified Crypto.Hash as Hash
 import Crypto.Random (getRandomBytes)
-import Data.Aeson (encode)
+import Data.Aeson (Value (..), object)
+import qualified Data.Aeson.KeyMap as HM
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Base64 as B64
-import qualified Data.ByteString.Lazy as BSL
 import Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
@@ -23,6 +23,7 @@ import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
 import Domain.Types.Common
 import qualified Domain.Types.CommonDriverOnboardingDocuments
+import qualified Domain.Types.DigilockerVerification as DDV
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as Domain
@@ -37,6 +38,7 @@ import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
@@ -51,7 +53,9 @@ import Kernel.External.Encryption
 import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (Language (..), ServiceFlow)
+import qualified Kernel.External.Verification.Digilocker.Types as DigilockerTypes
 import qualified Kernel.External.Verification.Interface as VI
+import qualified Kernel.External.Verification.Interface.Types as Verification
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -75,11 +79,13 @@ import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
+import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
@@ -1111,19 +1117,32 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
 -- Helper function to create DigiLocker logs
 ----------- DigiLocker Integration Configuration and Helpers -----------
 
--- TODO: Move these to environment variables in AppCfg/AppEnv
--- For now keeping them as constants, will be updated to fetch from environment
-digiLockerClientId :: Text
-digiLockerClientId = "YOUR_CLIENT_ID" -- TODO: Fetch from environment
+-- DigiLocker Configuration Type will be auto-generated from API YAML spec
+-- Import: API.Types.UI.DriverOnboardingV2.DigiLockerCfg (after running generator)
 
-digiLockerClientSecret :: Text
-digiLockerClientSecret = "YOUR_CLIENT_SECRET" -- TODO: Fetch from environment
+-- DigiLocker config is fetched from MerchantServiceConfig (credentials, URLs)
+-- TransporterConfig.digilockerEnabled determines if feature is enabled
 
-digiLockerRedirectUri :: Text
-digiLockerRedirectUri = "YOUR_REDIRECT_URI" -- TODO: Fetch from environment
+getDigiLockerConfig :: Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Flow DigilockerTypes.DigiLockerCfg
+getDigiLockerConfig merchantOpCityId = do
+  -- Check if DigiLocker is enabled for this merchant+city
+  transporterConfig <-
+    CQTC.findByMerchantOpCityId merchantOpCityId Nothing
+      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
-digiLockerTokenUrl :: Text
-digiLockerTokenUrl = "http://digilocker.meripehchaan.gov.in/public/oauth2/1/token"
+  unless (transporterConfig.digilockerEnabled == Just True) $
+    throwError $ InvalidRequest "DigiLocker not enabled for this merchant"
+
+  -- Fetch DigiLocker service config
+  let serviceName = DMSC.VerificationService Verification.DigiLocker
+  merchantServiceConfig <-
+    CQMSC.findByServiceAndCity serviceName merchantOpCityId
+      >>= fromMaybeM (InternalError "DigiLocker service config not found. Please configure DigiLocker in merchant_service_config table.")
+
+  case merchantServiceConfig.serviceConfig of
+    DMSC.VerificationServiceConfig (Verification.DigiLockerConfig config) ->
+      return config
+    _ -> throwError $ InternalError "Invalid DigiLocker service config type"
 
 -- Servant API type for DigiLocker token endpoint
 type DigiLockerTokenAPI =
@@ -1449,24 +1468,28 @@ postDobppVerifyCallbackDigiLocker mbError mbErrorDescription code stateParam = d
 
   logInfo $ "DigiLocker callback - Merchant validated: " <> merchant.name <> ", DriverId: " <> driverId.getId
 
-  -- Step 5: Call DigiLocker token API to exchange code for access token
+  -- Step 5: Fetch DigiLocker config
+  digiLockerConfig <- getDigiLockerConfig person.merchantOperatingCityId
+  logInfo $ "DigiLocker callback - Config retrieved for merchantOpCityId: " <> person.merchantOperatingCityId.getId
+
+  -- Step 6: Call DigiLocker token API to exchange code for access token
   let tokenRequest =
         APITypes.DigiLockerTokenRequest
           { grant_type = "authorization_code",
             code = code,
-            client_id = digiLockerClientId,
-            client_secret = digiLockerClientSecret,
-            redirect_uri = digiLockerRedirectUri,
+            client_id = digiLockerConfig.clientId,
+            client_secret = digiLockerConfig.clientSecret,
+            redirect_uri = digiLockerConfig.redirectUri,
             code_verifier = codeVerifier
           }
 
   logInfo $ "DigiLocker callback - Calling token API for DriverId: " <> driverId.getId
 
   -- Make the HTTP call to DigiLocker token endpoint
-  tokenUrl <- Kernel.Prelude.parseBaseUrl digiLockerTokenUrl
+  let tokenUrlParsed = digiLockerConfig.url
   let eulerClient = Euler.client digiLockerTokenAPI tokenRequest
   tokenResponse <-
-    ( try @_ @SomeException (callAPI tokenUrl eulerClient "digilocker-token" digiLockerTokenAPI)
+    ( try @_ @SomeException (callAPI tokenUrlParsed eulerClient "digilocker-token" digiLockerTokenAPI)
         >>= \case
           Left err -> do
             logError $ "DigiLocker callback - Token API call failed. Error: " <> show err <> ", DriverId: " <> driverId.getId
@@ -2023,62 +2046,249 @@ postDriverDigilockerInitiate ::
     Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
   ) ->
   Environment.Flow APITypes.DigiLockerInitiateResp
-postDriverDigilockerInitiate (mbDriverId, _merchantId, _merchantOpCityId) = do
+postDriverDigilockerInitiate (mbDriverId, merchantId, merchantOpCityId) = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   logInfo $ "DigiLocker initiate - Starting authorization flow for DriverId: " <> driverId.getId
 
-  -- Step 1: Generate code_verifier (cryptographically secure random string, 43-128 characters for PKCE)
-  -- Mix 24 random bytes with current timestamp for guaranteed uniqueness and debugging
+  -- Step 1: Verify DigiLocker is enabled for this merchant+city
+  verifyDigiLockerEnabled merchantOpCityId
+
+  -- Step 2: Check for existing active session
+  latestSession <- QDV.findLatestByDriverId (Just 1) (Just 0) driverId
+
+  case latestSession of
+    [] -> do
+      -- No existing session - create new one
+      logInfo $ "DigiLocker initiate - No existing session found for DriverId: " <> driverId.getId
+      createNewDigiLockerSession driverId merchantId merchantOpCityId
+    (session : _) -> do
+      -- Existing session found - validate and decide action
+      logInfo $ "DigiLocker initiate - Found existing session for DriverId: " <> driverId.getId <> ", SessionStatus: " <> show session.sessionStatus
+      handleExistingSession driverId merchantId merchantOpCityId session
+
+----------- Helper Functions for DigiLocker Initiate -----------
+
+-- Verify DigiLocker is enabled for merchant+city
+verifyDigiLockerEnabled :: Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Flow ()
+verifyDigiLockerEnabled merchantOpCityId = do
+  transporterConfig <-
+    CQTC.findByMerchantOpCityId merchantOpCityId Nothing
+      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+
+  -- Check if digilockerEnabled is true in TransporterConfig
+  unless (fromMaybe False transporterConfig.digilockerEnabled) $
+    throwError $ InvalidRequest "DigiLocker is not enabled for this merchant+city"
+
+  logInfo $ "DigiLocker initiate - Verified DigiLocker is enabled for merchantOpCityId: " <> merchantOpCityId.getId
+
+-- Handle existing session logic
+handleExistingSession ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  DDV.DigilockerVerification ->
+  Flow APITypes.DigiLockerInitiateResp
+handleExistingSession driverId merchantId merchantOpCityId session = do
+  now <- getCurrentTime
+
+  case session.sessionStatus of
+    DDV.PENDING -> handlePendingSession driverId merchantId merchantOpCityId session now
+    DDV.SUCCESS -> handleSuccessSession driverId merchantId merchantOpCityId session now
+    DDV.FAILED -> do
+      logInfo $ "DigiLocker initiate - Previous session FAILED, creating new session for DriverId: " <> driverId.getId
+      createNewDigiLockerSession driverId merchantId merchantOpCityId
+    DDV.CONSENT_DENIED -> do
+      logInfo $ "DigiLocker initiate - Previous session CONSENT_DENIED, creating new session for DriverId: " <> driverId.getId
+      createNewDigiLockerSession driverId merchantId merchantOpCityId
+
+-- Handle PENDING session
+handlePendingSession ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  DDV.DigilockerVerification ->
+  UTCTime ->
+  Flow APITypes.DigiLockerInitiateResp
+handlePendingSession _driverId _merchantId _merchantOpCityId _session _now = do
+  -- Session is PENDING - callback hasn't been called yet
+  logInfo $ "DigiLocker initiate - Session PENDING, returning 409"
+  throwError DigiLockerVerificationInProgress
+
+-- Handle SUCCESS session
+handleSuccessSession ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  DDV.DigilockerVerification ->
+  UTCTime ->
+  Flow APITypes.DigiLockerInitiateResp
+handleSuccessSession driverId merchantId merchantOpCityId session now = do
+  -- Check document statuses in docStatus JSON
+  checkDocumentStatuses driverId merchantId merchantOpCityId session now
+
+-- Check document statuses and decide action
+checkDocumentStatuses ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  DDV.DigilockerVerification ->
+  UTCTime ->
+  Flow APITypes.DigiLockerInitiateResp
+checkDocumentStatuses driverId merchantId merchantOpCityId session now = do
+  -- docStatus is already a Value type, no parsing needed
+  let docStatusMap = session.docStatus
+
+  -- Check for PENDING documents
+  when (hasDocWithStatus docStatusMap "PENDING") $ do
+    logInfo $ "DigiLocker initiate - Found PENDING documents, returning 409"
+    throwError DigiLockerDocumentsBeingVerified
+
+  -- Check for FAILED or CONSENT_DENIED documents
+  if hasDocWithStatus docStatusMap "FAILED" || hasDocWithStatus docStatusMap "CONSENT_DENIED"
+    then do
+      logInfo $ "DigiLocker initiate - Found FAILED or CONSENT_DENIED documents, creating new session"
+      createNewDigiLockerSession driverId merchantId merchantOpCityId
+    else -- Check for PULL_REQUIRED documents
+
+      if hasDocWithStatus docStatusMap "PULL_REQUIRED"
+        then handlePullRequiredDocs driverId merchantId merchantOpCityId session docStatusMap now
+        else -- If no problematic status, check actual document tables
+          checkActualDocumentTables driverId merchantId merchantOpCityId
+
+-- Handle PULL_REQUIRED documents
+handlePullRequiredDocs ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  DDV.DigilockerVerification ->
+  Value ->
+  UTCTime ->
+  Flow APITypes.DigiLockerInitiateResp
+handlePullRequiredDocs driverId merchantId merchantOpCityId session _docStatusMap now = do
+  case session.accessTokenExpiresAt of
+    Nothing -> do
+      logInfo $ "DigiLocker initiate - PULL_REQUIRED with no expiry, creating new session"
+      createNewDigiLockerSession driverId merchantId merchantOpCityId
+    Just expiresAt ->
+      if now < expiresAt
+        then do
+          logInfo $ "DigiLocker initiate - PULL_REQUIRED with valid token, returning 409"
+          throwError DigiLockerPullRequired
+        else do
+          logInfo $ "DigiLocker initiate - PULL_REQUIRED with expired token, creating new session"
+          createNewDigiLockerSession driverId merchantId merchantOpCityId
+
+-- Check actual document tables for verification status
+checkActualDocumentTables ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Flow APITypes.DigiLockerInitiateResp
+checkActualDocumentTables driverId merchantId merchantOpCityId = do
+  -- Check DriverLicense
+  mbDL <- QDL.findByDriverId driverId
+  let dlStatus = mbDL >>= (\dl -> Just dl.verificationStatus)
+
+  -- Check PanCard
+  mbPan <- QDPC.findByDriverId driverId
+  let panStatus = mbPan >>= (\pan -> Just pan.verificationStatus)
+
+  -- Check AadhaarCard
+  mbAadhaar <- QAadhaarCard.findByPrimaryKey driverId
+  let aadhaarStatus = mbAadhaar >>= (\aadhaar -> Just aadhaar.verificationStatus)
+
+  let allStatuses = [dlStatus, panStatus, aadhaarStatus]
+
+  -- If any document is PENDING → Return 409
+  when (any (== Just Documents.PENDING) allStatuses) $ do
+    logInfo $ "DigiLocker initiate - Found PENDING documents in tables, returning 409"
+    throwError DigiLockerDocumentsBeingVerified
+
+  -- If all documents are VALID → Return error (already verified)
+  let allDocumentsValid = all (== Just Documents.VALID) allStatuses
+  if allDocumentsValid
+    then do
+      logInfo $ "DigiLocker initiate - All documents already verified"
+      throwError $ InvalidRequest "All documents are already verified. You should not be calling this API."
+    else do
+      -- Else → Create new session (handles FAILED, INVALID, missing docs, etc.)
+      logInfo $ "DigiLocker initiate - Creating new session for document verification"
+      createNewDigiLockerSession driverId merchantId merchantOpCityId
+
+-- Create new DigiLocker session
+createNewDigiLockerSession ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Flow APITypes.DigiLockerInitiateResp
+createNewDigiLockerSession driverId merchantId merchantOpCityId = do
+  logInfo $ "DigiLocker initiate - Creating new session for DriverId: " <> driverId.getId
+
+  -- Fetch DigiLocker credentials from MerchantServiceConfig
+  digiLockerConfig <- getDigiLockerConfig merchantOpCityId
+  logInfo $ "DigiLocker initiate - Config retrieved for merchantOpCityId: " <> merchantOpCityId.getId
+
+  -- Generate PKCE parameters
   randomBytes <- liftIO $ getRandomBytes 24
   now <- getCurrentTime
   let timestampMillis = T.pack $ show $ (floor (utcTimeToPOSIXSeconds now * 1000) :: Integer)
   let timestampBytes = TE.encodeUtf8 timestampMillis
   let combinedBytes = randomBytes <> timestampBytes
   let codeVerifier = base64UrlEncodeNoPadding combinedBytes
-
-  logDebug $ "DigiLocker initiate - Generated code_verifier (length: " <> show (T.length codeVerifier) <> ") with timestamp-based entropy"
-
-  -- Step 2: Generate code_challenge = BASE64URL(SHA256(code_verifier))
   let codeChallenge = generateCodeChallenge codeVerifier
+  let codeMethod = "S256"
 
-  logDebug $ "DigiLocker initiate - Generated code_challenge: " <> codeChallenge
+  -- Generate state ID
+  stateId <- generateGUID
 
-  -- Step 3: Generate random state (UUID for simplicity and tracking)
-  stateUUID <- generateGUID
-  let digiLockerState = T.replace "-" "" stateUUID -- Remove hyphens from UUID for cleaner state
-  logDebug $ "DigiLocker initiate - Generated state: " <> digiLockerState
-
-  -- Step 4: Store code_verifier and driver_id in Redis with state as key
-  let stateKey = mkDigiLockerStateKey digiLockerState
-  let stateData =
-        APITypes.DigiLockerStateData
-          { driverId = driverId,
-            codeVerifier = codeVerifier
+  -- Create session record in DB
+  sessionId <- generateGUID
+  let newSession =
+        DDV.DigilockerVerification
+          { id = sessionId,
+            driverId = driverId,
+            stateId = stateId,
+            codeVerifier = codeVerifier,
+            codeChallenge = codeChallenge,
+            codeMethod = codeMethod,
+            authorizationCode = Nothing,
+            accessToken = Nothing,
+            accessTokenExpiresAt = Nothing,
+            scope = Nothing,
+            docStatus = object [], -- Empty JSON object
+            sessionStatus = DDV.PENDING,
+            responseCode = Nothing,
+            responseDescription = Nothing,
+            tokenResponse = Nothing,
+            merchantId = Just merchantId,
+            merchantOperatingCityId = Just merchantOpCityId,
+            createdAt = now,
+            updatedAt = now
           }
 
-  logDebug $ "DigiLocker initiate - BEFORE Redis.setExp for key: " <> stateKey
-  Redis.setExp stateKey stateData 3600 -- 1 hour TTL
-  logDebug $ "DigiLocker initiate - AFTER Redis.setExp for key: " <> stateKey
+  QDV.create newSession
 
-  -- Verify the key was actually written
-  verifyKey <- Redis.get stateKey :: Flow (Maybe APITypes.DigiLockerStateData)
-  case verifyKey of
-    Just val -> logInfo $ "DigiLocker initiate - VERIFIED: State data stored in Redis with key: " <> stateKey <> ", value: " <> (TE.decodeUtf8 $ BSL.toStrict $ encode val) <> ", TTL: 3600s"
-    Nothing -> logError $ "DigiLocker initiate - ERROR: Failed to store state data in Redis for key: " <> stateKey <> ", attempted value: " <> (TE.decodeUtf8 $ BSL.toStrict $ encode stateData)
+  logInfo $ "DigiLocker initiate - Created session with ID: " <> sessionId.getId <> ", StateId: " <> stateId
 
-  -- Step 5: Construct DigiLocker authorization URL
-  let authorizationUrl = constructDigiLockerAuthUrl digiLockerState codeChallenge
+  -- Construct authorization URL with config from MerchantServiceConfig
+  let authUrl = constructDigiLockerAuthUrl digiLockerConfig stateId codeChallenge
 
-  logInfo $ "DigiLocker initiate - Authorization URL generated for DriverId: " <> driverId.getId
+  return $ APITypes.DigiLockerInitiateResp {authorizationUrl = authUrl}
 
-  -- Log INITIATE flow
-  -- TODO: Add DigiLocker logging
-  -- createDigiLockerLog removed - will be replaced with new logging approach
+----------- Helper Functions for JSON Parsing -----------
 
-  return $
-    APITypes.DigiLockerInitiateResp
-      { authorizationUrl = authorizationUrl
-      }
+-- Check if any document has a specific status in the docStatus Value
+hasDocWithStatus :: Value -> Text -> Bool
+hasDocWithStatus (Object obj) targetStatus =
+  any (hasStatus targetStatus) (HM.elems obj)
+  where
+    hasStatus :: Text -> Value -> Bool
+    hasStatus target (Object docObj) =
+      case HM.lookup "status" docObj of
+        Just (String status) -> status == target
+        _ -> False
+    hasStatus _ _ = False
+hasDocWithStatus _ _ = False
 
 -- Helper: Base64URL encode without padding (as per RFC 7636)
 -- Implements: base64url_encode_without_padding
@@ -2100,16 +2310,16 @@ generateCodeChallenge codeVerifier =
    in base64UrlEncodeNoPadding hashBytes
 
 -- Helper: Construct DigiLocker authorization URL with all required parameters
-constructDigiLockerAuthUrl :: Text -> Text -> Text
-constructDigiLockerAuthUrl digiLockerState codeChallenge =
-  let baseUrl = "https://digilocker.meripehchaan.gov.in/public/oauth2/1/authorize"
+constructDigiLockerAuthUrl :: DigilockerTypes.DigiLockerCfg -> Text -> Text -> Text
+constructDigiLockerAuthUrl config digiLockerState codeChallenge =
+  let baseUrl = Kernel.Prelude.showBaseUrl config.url
       params =
         [ ("response_type", "code"),
-          ("client_id", digiLockerClientId),
-          ("redirect_uri", digiLockerRedirectUri),
+          ("client_id", config.clientId),
+          ("redirect_uri", config.redirectUri),
           ("state", digiLockerState),
           ("code_challenge", codeChallenge),
-          ("code_challenge_method", "S256"),
+          ("code_challenge_method", config.codeChallengeMethod),
           ("pla", "Y"),
           ("plsignup", "Y"),
           ("ulsignup", "Y"),
