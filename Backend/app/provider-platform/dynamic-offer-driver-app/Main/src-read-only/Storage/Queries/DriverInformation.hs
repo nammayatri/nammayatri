@@ -10,6 +10,7 @@ import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.UpgradedTier
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -328,6 +329,11 @@ updateTripEndLocation driverTripEndLocation driverId = do
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateUpgradedTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Domain.Types.UpgradedTier.UpgradedTier] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateUpgradedTiers ruleBasedUpgradeTiers driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.ruleBasedUpgradeTiers (Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateWalletBalance :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateWalletBalance walletBalance driverId = do
   _now <- getCurrentTime
@@ -421,6 +427,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.referredByOperatorId referredByOperatorId,
       Se.Set Beam.rideRequestVolume rideRequestVolume,
       Se.Set Beam.rideRequestVolumeEnabled rideRequestVolumeEnabled,
+      Se.Set Beam.ruleBasedUpgradeTiers (Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers),
       Se.Set Beam.servicesEnabledForSubscription (Kernel.Prelude.Just servicesEnabledForSubscription),
       Se.Set Beam.softBlockExpiryTime softBlockExpiryTime,
       Se.Set Beam.softBlockReasonFlag softBlockReasonFlag,

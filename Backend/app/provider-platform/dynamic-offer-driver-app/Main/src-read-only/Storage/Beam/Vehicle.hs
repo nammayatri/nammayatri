@@ -3,6 +3,7 @@
 
 module Storage.Beam.Vehicle where
 
+import qualified Data.Aeson
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import Domain.Types.Common ()
@@ -31,6 +32,7 @@ data VehicleT f = VehicleT
     oxygen :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     registrationCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory),
     registrationNo :: B.C f Kernel.Prelude.Text,
+    ruleBasedUpgradeTiers :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     selectedServiceTiers :: B.C f [Domain.Types.Common.ServiceTierType],
     size :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     variant :: B.C f Domain.Types.VehicleVariant.VehicleVariant,

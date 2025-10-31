@@ -22,3 +22,6 @@ invalidCustomerCancellation = LYT.TagNameValue "CustomerCancellation#Invalid"
 
 validCancellationPenaltyApplicable :: LYT.TagNameValue
 validCancellationPenaltyApplicable = LYT.TagNameValue "CancellationPenaltyApplicable#Valid"
+
+acPriorityEligibleTag :: LYT.TagNameValue
+acPriorityEligibleTag = LYT.TagNameValue "ACPriorityEligible#Yes"
