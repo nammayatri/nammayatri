@@ -209,8 +209,7 @@ data AuthVerifyReq = AuthVerifyReq
 validateAuthVerifyReq :: Validate AuthVerifyReq
 validateAuthVerifyReq AuthVerifyReq {..} =
   sequenceA_
-    [ validateField "otp" otp $ ExactLength 4 `And` star P.digit,
-      validateField "userPasswordString" userPasswordString $ P.MinLength 6 `And` P.MaxLength 30
+    [ validateField "otp" otp $ ExactLength 4 `And` star P.digit
     ]
 
 data AuthVerifyRes = AuthVerifyRes
