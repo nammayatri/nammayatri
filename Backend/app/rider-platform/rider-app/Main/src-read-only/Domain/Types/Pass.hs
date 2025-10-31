@@ -8,9 +8,11 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PassType
+import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data Pass = Pass
@@ -44,3 +46,11 @@ data Benefit
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PassDocumentType = ProfilePicture | Aadhaar deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PassDocumentType)
+
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PassDocumentType)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Benefit)
+
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''Benefit)

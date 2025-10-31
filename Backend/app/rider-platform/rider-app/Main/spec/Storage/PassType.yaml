@@ -20,3 +20,6 @@ PassType:
   constraints:
     id: PrimaryKey
     passCategoryId: !SecondaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

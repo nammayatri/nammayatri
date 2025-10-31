@@ -13,12 +13,18 @@ PurchasedPass:
 
   types:
     StatusType:
-      enum: "Pending,Active,PreBooked,Failed,Expired,RefundPending,RefundInitiated,Refunded"
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+      enum: "Pending,Active,PreBooked,Failed,Expired,RefundPending,RefundInitiated,Refunded,RefundFailed"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
 
     BenefitType:
       enum: "FullSaving,FixedSaving,PercentageSaving"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <StatusType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <StatusType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <BenefitType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <BenefitType>
 
   fields:
     id: Id PurchasedPass
@@ -43,6 +49,9 @@ PurchasedPass:
 
   constraints:
     id: PrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 PurchasedPassPayment:
   tableName: purchased_pass_payment

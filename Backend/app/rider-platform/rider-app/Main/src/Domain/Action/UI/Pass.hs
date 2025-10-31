@@ -3,8 +3,8 @@ module Domain.Action.UI.Pass
     postMultimodalPassSelect,
     getMultimodalPassStatus,
     getMultimodalPassList,
-    webhookHandlerPass,
     postMultimodalPassVerify,
+    passOrderStatusHandler,
   )
 where
 
@@ -48,7 +48,6 @@ import qualified Storage.Queries.PassTypeExtra as QPassType
 import qualified Storage.Queries.PassVerifyTransaction as QPassVerifyTransaction
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
-import qualified Storage.Queries.PurchasedPassExtra as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import Tools.Error
 import qualified Tools.Payment as TPayment
@@ -239,8 +238,8 @@ purchasePassWithPayment person pass merchantId personId mbStartDay = do
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId
             commonPersonId = Id.cast @DP.Person @DPayment.Person personId
             createOrderCall = TPayment.createOrder merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase (Just personId.getId) person.clientSdkVersion
-
-        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId Nothing (show TPayment.FRFSPassPurchase) createOrderReq createOrderCall
+        mbPaymentOrderValidity <- TPayment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
+        DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase createOrderReq createOrderCall
       else return Nothing
 
   QPurchasedPass.create purchasedPass
@@ -445,24 +444,33 @@ buildPurchasedPassAPIEntity personId purchasedPass = do
       }
 
 -- Webhook Handler for Pass Payment Status Updates
-webhookHandlerPass ::
+passOrderStatusHandler ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
   Id.Id DOrder.PaymentOrder ->
   Id.Id DM.Merchant ->
   Payment.TransactionStatus ->
-  m ()
-webhookHandlerPass paymentOrderId _merchantId status = do
+  m (DPayment.PaymentFulfillmentStatus, Maybe Text)
+passOrderStatusHandler paymentOrderId _merchantId status = do
   logInfo $ "Pass payment webhook handler called for paymentOrderId: " <> paymentOrderId.getId
   mbPurchasedPassPayment <- QPurchasedPassPayment.findOneByPaymentOrderId paymentOrderId
   mbPurchasedPass <- maybe (pure Nothing) (QPurchasedPass.findById . (.purchasedPassId)) mbPurchasedPassPayment
   case mbPurchasedPass of
     Nothing -> do
       logError $ "Purchased pass not found for paymentOrderId: " <> paymentOrderId.getId
-      pure ()
+      return (DPayment.FulfillmentPending, Nothing)
     Just purchasedPass -> do
       istTime <- getLocalCurrentTime (19800 :: Seconds)
       let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (purchasedPass.startDate > DT.utctDay istTime) status
       whenJust mbPassStatus $ \passStatus -> QPurchasedPass.updateStatusById passStatus purchasedPass.id
+      case mbPassStatus of
+        Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId)
+        Just DPurchasedPass.Expired -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId)
+        Just DPurchasedPass.Failed -> return (DPayment.FulfillmentFailed, Just purchasedPass.id.getId)
+        Just DPurchasedPass.RefundPending -> return (DPayment.FulfillmentRefundPending, Just purchasedPass.id.getId)
+        Just DPurchasedPass.RefundInitiated -> return (DPayment.FulfillmentRefundInitiated, Just purchasedPass.id.getId)
+        Just DPurchasedPass.RefundFailed -> return (DPayment.FulfillmentRefundFailed, Just purchasedPass.id.getId)
+        Just DPurchasedPass.Refunded -> return (DPayment.FulfillmentRefunded, Just purchasedPass.id.getId)
+        _ -> return (DPayment.FulfillmentPending, Just purchasedPass.id.getId)
   where
     convertPaymentStatusToPurchasedPassStatus futureDatePass = \case
       Payment.CHARGED -> if futureDatePass then Just DPurchasedPass.PreBooked else Just DPurchasedPass.Active

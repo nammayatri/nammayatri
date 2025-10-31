@@ -23,3 +23,72 @@ ALTER TABLE atlas_app.refunds ADD COLUMN split json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.refunds ALTER COLUMN short_id TYPE character varying(36);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.refunds ADD COLUMN is_api_call_success boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

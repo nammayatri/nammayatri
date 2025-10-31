@@ -22,7 +22,7 @@ module Lib.Payment.Domain.Action
     createNotificationService,
     createExecutionService,
     buildSDKPayload,
-    refundService,
+    createRefundService,
     createPaymentIntentService,
     updateForCXCancelPaymentIntentService,
     chargePaymentIntentService,
@@ -70,7 +70,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrderSplit as DPaymentOrderSpli
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
 import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
 import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
-import Lib.Payment.Domain.Types.Refunds (Refunds (..), Split (..))
+import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QPaymentOrderOffer
@@ -98,8 +98,11 @@ data PaymentStatusResp
         txnUUID :: Maybe Text,
         effectAmount :: Maybe HighPrecMoney,
         offers :: Maybe [Payment.Offer],
-        paymentServiceType :: Maybe Text,
-        amount :: HighPrecMoney
+        paymentServiceType :: Maybe DOrder.PaymentServiceType,
+        paymentFulfillmentStatus :: Maybe PaymentFulfillmentStatus,
+        domainEntityId :: Maybe Text,
+        amount :: HighPrecMoney,
+        validTill :: Maybe UTCTime
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -249,6 +252,7 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             isRetargeted = False,
             retargetLink = Nothing,
             sdkPayloadDump = Nothing,
+            validTill = Nothing,
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = mbMerchantOpCityId
@@ -392,18 +396,19 @@ createOrderService ::
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
+  Maybe Seconds ->
   Maybe EntityName ->
-  Text ->
+  DOrder.PaymentServiceType ->
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m (Maybe Payment.CreateOrderResp)
-createOrderService merchantId mbMerchantOpCityId personId mbEntityName paymentServiceType createOrderReq createOrderCall = do
+createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderCall = do
   logInfo $ "CreateOrderService: "
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName paymentServiceType createOrderReq createOrderResp
+      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType createOrderReq createOrderResp
       QOrder.create paymentOrder
       return $ Just createOrderResp
     Just existingOrder -> do
@@ -488,15 +493,17 @@ buildPaymentOrder ::
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
+  Maybe Seconds ->
   Maybe EntityName ->
-  Text ->
+  DOrder.PaymentServiceType ->
   Payment.CreateOrderReq ->
   Payment.CreateOrderResp ->
   m DOrder.PaymentOrder
-buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName paymentServiceType req resp = do
+buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType req resp = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
-  let mkPaymentOrder =
+  let paymentOrderValidTill = mbPaymentOrderValidity <&> (\validity -> addUTCTime (fromIntegral validity) now)
+      mkPaymentOrder =
         DOrder.PaymentOrder
           { id = Id req.orderId,
             shortId = ShortId req.orderShortId,
@@ -531,6 +538,7 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName paymentSer
             isRetargeted = False,
             retargetLink = Nothing,
             sdkPayloadDump = resp.sdk_payload_json,
+            validTill = paymentOrderValidTill,
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = mbMerchantOpCityId
@@ -548,7 +556,7 @@ mkPaymentOrderSplit vendorId amount mdrBorneBy merchantCommission paymentOrderId
         vendorId = vendorId,
         merchantId = merchantId.getId,
         amount = mkPrice Nothing amount,
-        mdrBorneBy = show mdrBorneBy,
+        mdrBorneBy = mdrBorneBy,
         merchantCommission = mkPrice Nothing merchantCommission,
         merchantOperatingCityId = merchantOperatingCityId <&> (.getId),
         paymentOrderId = Id paymentOrderId,
@@ -725,6 +733,9 @@ orderStatusService personId orderId orderStatusCall = do
             effectAmount = effectiveAmount,
             offers = offers,
             paymentServiceType = order.paymentServiceType,
+            validTill = order.validTill,
+            paymentFulfillmentStatus = Nothing, -- To be filled by Domain
+            domainEntityId = Nothing, -- To be filled by Domain
             ..
           }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
@@ -956,6 +967,7 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             isRetargeted = False,
             retargetLink = Nothing,
             sdkPayloadDump = Nothing,
+            validTill = Nothing,
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = mbMerchantOpCityId
@@ -963,37 +975,82 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
 
 --- refunds api ----
 
-refundService ::
+createRefundService ::
   ( EncFlow m r,
     BeamFlow m r
   ) =>
-  (Payment.AutoRefundReq, Id Refunds) ->
-  Id Merchant ->
-  Maybe [Split] ->
+  ShortId DOrder.PaymentOrder ->
   (Payment.AutoRefundReq -> m Payment.AutoRefundResp) ->
-  m Payment.AutoRefundResp
-refundService (request, refundId) merchantId splitDetails refundsCall = do
-  now <- getCurrentTime
-  QRefunds.create $ mkRefundsEntry now
-  response <- refundsCall request
-  mapM_ (\Payment.RefundsData {..} -> QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status (Kernel.Types.Id.Id requestId)) response.refunds
-  return response
+  m (Maybe Payment.AutoRefundResp)
+createRefundService orderShortId refundsCall = do
+  order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderDoesNotExist orderShortId.getShortId)
+  exisitingOrderRefunds <- QRefunds.findAllByOrderId order.shortId
+  if null exisitingOrderRefunds
+    then do
+      paymentSplits <- QPaymentOrderSplit.findByPaymentOrder order.id
+      splitSettlementDetails <- mkSplitSettlementDetails paymentSplits
+      refundId <- generateGUID
+      let refundReq =
+            PInterface.AutoRefundReq
+              { orderId = order.shortId.getShortId,
+                requestId = refundId,
+                amount = order.amount,
+                splitSettlementDetails
+              }
+      now <- getCurrentTime
+      QRefunds.create $ mkRefundsEntry order.merchantId refundReq now
+      resp <- try @_ @SomeException (refundsCall refundReq)
+      case resp of
+        Right response -> do
+          mapM_ updateRefundStatus response.refunds
+          QRefunds.updateIsApiCallSuccess (Just True) (Id refundReq.requestId)
+          return $ Just response
+        Left err -> do
+          logError $ "Refund API Call Failure with Error: " <> show err
+          QRefunds.updateIsApiCallSuccess (Just False) (Id refundReq.requestId)
+          return Nothing
+    else return Nothing
   where
-    mkRefundsEntry now =
+    mkSplitSettlementDetails :: MonadFlow m => [DPaymentOrderSplit.PaymentOrderSplit] -> m (Maybe PInterface.RefundSplitSettlementDetails)
+    mkSplitSettlementDetails paymentSplits = do
+      if null paymentSplits
+        then return Nothing
+        else do
+          marketPlaceSplit <- find (\split -> split.vendorId == "marketPlace") paymentSplits & fromMaybeM (InternalError "marketPlace Split Detail not Found")
+          let vendorSplits =
+                map
+                  ( \split ->
+                      PInterface.RefundSplit
+                        { refundAmount = split.amount.amount,
+                          subMid = split.vendorId,
+                          uniqueSplitId = split.id.getId
+                        }
+                  )
+                  paymentSplits
+              mdrBorneBy = marketPlaceSplit.mdrBorneBy
+          return $
+            Just $
+              PInterface.RefundSplitSettlementDetails
+                { marketplace = PInterface.RefundMarketplace marketPlaceSplit.amount.amount,
+                  mdrBorneBy,
+                  vendor = PInterface.RefundVendor vendorSplits
+                }
+
+    mkRefundsEntry merchantId refundReq now =
       Refunds
-        { id = refundId,
+        { id = Id refundReq.requestId,
           merchantId = merchantId.getId,
-          shortId = ShortId request.requestId,
+          shortId = ShortId refundReq.requestId,
           status = REFUND_PENDING,
-          orderId = ShortId request.orderId,
-          refundAmount = request.amount,
+          isApiCallSuccess = Nothing,
+          orderId = ShortId refundReq.orderId,
+          refundAmount = refundReq.amount,
           errorMessage = Nothing,
           errorCode = Nothing,
           idAssignedByServiceProvider = Nothing,
           initiatedBy = Nothing,
           createdAt = now,
-          updatedAt = now,
-          split = splitDetails
+          updatedAt = now
         }
 
 updateRefundStatus :: (BeamFlow m r) => Payment.RefundsData -> m ()

@@ -7,7 +7,6 @@ import qualified BecknV2.FRFS.Enums
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import Domain.Types.Common ()
-import qualified Domain.Types.Extra.PurchasedPass ()
 import qualified Domain.Types.PurchasedPass
 import Kernel.External.Encryption
 import Kernel.Prelude

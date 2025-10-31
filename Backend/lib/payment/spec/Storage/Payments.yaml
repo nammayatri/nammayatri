@@ -9,6 +9,7 @@ imports:
   EntityName : Lib.Payment.Domain.Types.Common
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
+  MBY: Kernel.External.Payment.Interface.Types
 
 
 PaymentOrderSplit:
@@ -19,7 +20,7 @@ PaymentOrderSplit:
     paymentOrderId : Id PaymentOrder
     vendorId : Text
     amount : Price
-    mdrBorneBy: Text
+    mdrBorneBy: MBY
     merchantCommission: Price
     merchantId: Text
     merchantOperatingCityId : Maybe Text
@@ -56,6 +57,9 @@ PaymentOrderSplit:
 
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <Kernel.External.Payment.Interface.Types.MBY>
 
 
 PaymentOrderOffer:

@@ -845,7 +845,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
 
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
   journeyLegInfo' <- getLegRouteInfo (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
-  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters
+  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters booking.totalPrice
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
@@ -875,7 +875,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill
       }
   where
-    mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters = do
+    mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters totalBookingAmount = do
       mbBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
       refundBloc <- case mbBookingPayment of
         Just bookingPayment -> do
@@ -883,23 +883,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
           case mbPaymentOrder of
             Just paymentOrder -> do
               refundEntries <- QRefunds.findAllByOrderId paymentOrder.shortId
-              let matchingRefundEntry =
-                    find
-                      ( \refundEntry ->
-                          case refundEntry.split of
-                            Just splits -> any (\split -> split.frfsBookingId == booking.id.getId) splits
-                            Nothing -> False
-                      )
-                      refundEntries
-              case matchingRefundEntry of
-                Just refundEntry -> do
-                  let amount = case refundEntry.split of
-                        Just splits -> find (\split -> split.frfsBookingId == booking.id.getId) splits <&> (.splitAmount)
-                        Nothing -> Just refundEntry.refundAmount
-                  case amount of
-                    Just amount' -> return $ Just $ LegSplitInfo {amount = amount', status = refundEntry.status}
-                    Nothing -> return Nothing
-                Nothing -> return Nothing
+              let firstRefundEntry = listToMaybe refundEntries
+              return $ firstRefundEntry <&> \refundEntry -> LegSplitInfo {amount = totalBookingAmount.amount, status = refundEntry.status}
             Nothing -> return Nothing
         Nothing -> return Nothing
       case booking.vehicleType of

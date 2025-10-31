@@ -11,13 +11,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PassCategoryT f = PassCategoryT
-  { description :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    name :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { description :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    name :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -27,6 +27,6 @@ instance B.Table PassCategoryT where
 
 type PassCategory = PassCategoryT Identity
 
-$(enableKVPG (''PassCategoryT) [('id)] [])
+$(enableKVPG ''PassCategoryT ['id] [])
 
-$(mkTableInstances (''PassCategoryT) "pass_category")
+$(mkTableInstances ''PassCategoryT "pass_category")

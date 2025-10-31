@@ -293,7 +293,6 @@ library
       Domain.Types.Extra.MerchantServiceConfig
       Domain.Types.Extra.NyRegularSubscription
       Domain.Types.Extra.PartnerOrgConfig
-      Domain.Types.Extra.Pass
       Domain.Types.Extra.PersonFlowStatus
       Domain.Types.Extra.PlaceNameCache
       Domain.Types.Extra.PurchasedPass
@@ -1141,12 +1140,16 @@ library
       Storage.Queries.OrphanInstances.NyRegularSubscription
       Storage.Queries.OrphanInstances.PartnerOrganization
       Storage.Queries.OrphanInstances.PartnerOrgConfig
+      Storage.Queries.OrphanInstances.Pass
+      Storage.Queries.OrphanInstances.PassCategory
+      Storage.Queries.OrphanInstances.PassType
       Storage.Queries.OrphanInstances.PassVerifyTransaction
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
       Storage.Queries.OrphanInstances.PopularLocation
+      Storage.Queries.OrphanInstances.PurchasedPass
       Storage.Queries.OrphanInstances.Quote
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.RecentLocation

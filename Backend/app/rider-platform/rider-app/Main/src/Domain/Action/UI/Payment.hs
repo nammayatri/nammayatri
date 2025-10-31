@@ -22,10 +22,6 @@ module Domain.Action.UI.Payment
 where
 
 import Control.Applicative ((<|>))
-import qualified Data.Text as T
-import qualified Domain.Action.UI.BBPS as BBPS
-import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
-import qualified Domain.Action.UI.Pass as Pass
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
@@ -45,13 +41,12 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
-import Lib.Payment.Storage.Beam.BeamFlow ()
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant (BasicAuthData)
+import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -111,7 +106,7 @@ createOrder (personId, merchantId) rideId = do
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
       createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal (Just person.id.getId) person.clientSdkVersion -- api call
-  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId Nothing (show Payment.Normal) createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
+  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.Normal createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- order status -----------------------------------------------------
 
@@ -123,7 +118,7 @@ getStatus (personId, merchantId) orderId = do
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   paymentOrder <- QOrder.findById orderId |<|>| QOrder.findByShortId (ShortId orderId.getId) >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   mocId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
-  let paymentServiceType = maybe Payment.Normal (\paymentServiceType'' -> fromMaybe Payment.Normal (readMaybe (T.unpack paymentServiceType'') :: Maybe Payment.PaymentServiceType)) paymentOrder.paymentServiceType
+  let paymentServiceType = fromMaybe Payment.Normal paymentOrder.paymentServiceType
   ticketPlaceId <-
     case paymentServiceType of
       Payment.Normal -> do
@@ -131,10 +126,9 @@ getStatus (personId, merchantId) orderId = do
         return $ ticketBooking <&> (.ticketPlaceId)
       _ -> return Nothing
   let commonPersonId = cast @DP.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion -- api call
+      orderStatusCall = Payment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion
   orderStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
-  orderStatusHandler paymentServiceType paymentOrder orderStatusResponse
-  return orderStatusResponse
+  SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusResponse
 
 getOrder ::
   ( CacheFlow m r,
@@ -196,7 +190,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
   logDebug $ "order short Id from Response bap webhook: " <> show orderShortId
   whenJust mbServiceType $ \paymentServiceType -> do
     Redis.whenWithLockRedis (mkOrderStatusCheckKey orderShortId status) 60 $ do
-      callWebhookHandlerWithOrderStatus paymentServiceType (ShortId orderShortId) (\_ -> pure osr)
+      void $ callWebhookHandlerWithOrderStatus paymentServiceType (ShortId orderShortId) (\_ -> pure osr)
   pure Ack
   where
     getPaymentServiceByType = \case
@@ -210,23 +204,11 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
     getOrderData osr = case osr of
       Payment.OrderStatusResp {..} -> pure (orderShortId, transactionStatus)
       _ -> throwError $ InternalError "Order Id not found in response."
-    callWebhookHandlerWithOrderStatus paymentServiceType orderShortId orderStatusCall = do
+    callWebhookHandlerWithOrderStatus paymentServiceType' orderShortId orderStatusCall = do
       paymentOrder <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
+      let paymentServiceType = fromMaybe paymentServiceType' paymentOrder.paymentServiceType
       paymentStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
-      orderStatusHandler paymentServiceType paymentOrder paymentStatusResponse
-
-orderStatusHandler :: Payment.PaymentServiceType -> DOrder.PaymentOrder -> DPayment.PaymentStatusResp -> Flow ()
-orderStatusHandler paymentServiceType' paymentOrder paymentStatusResponse = do
-  let paymentServiceType = maybe paymentServiceType' (\paymentServiceType'' -> fromMaybe paymentServiceType' (readMaybe (T.unpack paymentServiceType'') :: Maybe Payment.PaymentServiceType)) paymentOrder.paymentServiceType
-  case paymentServiceType of
-    Payment.FRFSBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (cast paymentOrder.merchantId) paymentStatusResponse JMU.switchFRFSQuoteTierUtil
-    Payment.FRFSBusBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (cast paymentOrder.merchantId) paymentStatusResponse JMU.switchFRFSQuoteTierUtil
-    Payment.FRFSMultiModalBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (cast paymentOrder.merchantId) paymentStatusResponse JMU.switchFRFSQuoteTierUtil
-    Payment.FRFSPassPurchase -> do
-      status <- DPayment.getTransactionStatus paymentStatusResponse
-      void $ Pass.webhookHandlerPass paymentOrder.id (cast paymentOrder.merchantId) status
-    Payment.BBPS -> void $ BBPS.webhookHandlerBBPS (cast paymentOrder.merchantId) paymentStatusResponse
-    _ -> pure ()
+      SPayment.orderStatusHandler paymentServiceType paymentOrder paymentStatusResponse
 
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text
 mkOrderStatusCheckKey orderId status = "lockKey:orderId:" <> orderId <> ":status" <> show status

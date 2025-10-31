@@ -22,14 +22,12 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Scheduler
-import SharedLogic.FRFSUtils as FRFSUtils
 import SharedLogic.JobScheduler
+import SharedLogic.Payment as SPayment
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
-import Tools.Error
 
 checkMultimodalConfirmFailJob ::
   ( EncFlow m r,
@@ -48,16 +46,12 @@ checkMultimodalConfirmFailJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest $ "booking not found for id: " <> show bookingId)
   frfsTickets <- QFRFSTicket.findAllByTicketBookingId bookingId
 
-  paymentBooking <- QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId
+  paymentBooking <- QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest $ "payment booking not found for booking id: " <> show bookingId)
 
-  let isPaymentInTerminalState = case paymentBooking of
-        Just pb -> pb.status == DFRFSTicketBookingPayment.SUCCESS || pb.status == DFRFSTicketBookingPayment.REFUND_PENDING
-        Nothing -> False
+  let isPaymentInTerminalState = paymentBooking.status == DFRFSTicketBookingPayment.SUCCESS || paymentBooking.status == DFRFSTicketBookingPayment.REFUND_PENDING
 
   if ((booking.status == DFRFSTicketBooking.FAILED || null frfsTickets) && isPaymentInTerminalState)
     then do
-      riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-      when riderConfig.enableAutoJourneyRefund $
-        FRFSUtils.markAllRefundBookings booking booking.riderId
+      void $ SPayment.initiateRefundWithPaymentStatusRespSync booking.riderId paymentBooking.paymentOrderId
       return Complete
     else return Complete

@@ -10,9 +10,11 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PassType
 import qualified Domain.Types.Person
+import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data PurchasedPass = PurchasedPass
@@ -42,4 +44,22 @@ data PurchasedPass = PurchasedPass
 
 data BenefitType = FullSaving | FixedSaving | PercentageSaving deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data StatusType = Pending | Active | PreBooked | Failed | Expired | RefundPending | RefundInitiated | Refunded deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data StatusType
+  = Pending
+  | Active
+  | PreBooked
+  | Failed
+  | Expired
+  | RefundPending
+  | RefundInitiated
+  | Refunded
+  | RefundFailed
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''StatusType)
+
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''StatusType)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''BenefitType)
+
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''BenefitType)
