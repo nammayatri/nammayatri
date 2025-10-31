@@ -402,6 +402,7 @@ library
       SharedLogic.MetroOffer
       SharedLogic.NyRegularSubscriptionHasher
       SharedLogic.NySubscription
+      SharedLogic.OTP
       SharedLogic.Payment
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
