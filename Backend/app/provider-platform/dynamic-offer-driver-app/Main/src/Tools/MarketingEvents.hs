@@ -13,6 +13,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.Queries.Person as QPerson
 import Tools.Error
 import Tools.Notifications
 
@@ -40,7 +41,8 @@ notifyMarketingEvents driverId deviceToken marketingEventsType vehicleCategory c
   logDebug $ "the event to be triggered is :" <> events
 
   notification <- setNotificationData events merchantOpCityId driverId eventDestination deviceToken
-  runWithServiceConfigForProviders merchantOpCityId notification EulerHS.Prelude.id (clearDeviceToken driverId)
+  driver <- QPerson.findById driverId
+  runWithServiceConfigForProviders merchantOpCityId (driver >>= (.clientId)) (driver >>= (.clientDevice)) notification EulerHS.Prelude.id (clearDeviceToken driverId)
   where
     splitFirstChars :: T.Text -> T.Text
     splitFirstChars shortId = T.concat $ map (T.take 1) $ T.splitOn "_" shortId

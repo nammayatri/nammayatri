@@ -624,7 +624,7 @@ sendFCMToBPPOnFailedCallStatus callStatus idInfo = do
       when (DM.isNothing booking.exotelDeclinedCallStatusReceivingTime) $ do
         driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
         notification <- setNotificationData booking.merchantOperatingCityId ride.driverId driver.deviceToken
-        runWithServiceConfigForProviders booking.merchantOperatingCityId notification EulerHS.Prelude.id (clearDeviceToken ride.driverId)
+        runWithServiceConfigForProviders booking.merchantOperatingCityId driver.clientId driver.clientDevice notification EulerHS.Prelude.id (clearDeviceToken ride.driverId)
         QRB.updateExotelCallDeclinedTime booking.id
     else return ()
   where
