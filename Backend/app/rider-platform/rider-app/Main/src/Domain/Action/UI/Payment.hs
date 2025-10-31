@@ -18,6 +18,7 @@ module Domain.Action.UI.Payment
     getStatus,
     getOrder,
     juspayWebhookHandler,
+    stripeWebhookHandler,
   )
 where
 
@@ -31,7 +32,9 @@ import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
+import qualified Kernel.External.Payment.Interface.Stripe as Stripe
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import Kernel.External.Payment.Stripe.Webhook (RawByteString (..))
 import qualified Kernel.External.Payment.Types as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
@@ -154,6 +157,42 @@ mkOrderAPIEntity DOrder.PaymentOrder {..} = do
 
 -- webhook ----------------------------------------------------------
 
+fetchPaymentServiceConfig ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe Payment.PaymentServiceType ->
+  Maybe Text ->
+  Payment.PaymentService ->
+  Flow Payment.PaymentServiceConfig
+fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service = do
+  merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
+  let city = fromMaybe merchant.defaultCity mbCity
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
+  let merchantId = merchant.id
+  placeBasedConfig <- case mbPlaceId of
+    Just id -> CQPBSC.findByPlaceIdAndServiceName (Id id) (DMSC.PaymentService service)
+    Nothing -> return Nothing
+  merchantServiceConfig' <- do
+    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCity.id (getPaymentServiceByType mbServiceType)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show service))
+  case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
+    Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.MetroPaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.BusPaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.BbpsPaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> pure vsc
+    _ -> throwError $ InternalError "Unknown Service Config"
+  where
+    getPaymentServiceByType = \case
+      Just Payment.Normal -> DMSC.PaymentService service
+      Just Payment.BBPS -> DMSC.BbpsPaymentService service
+      Just Payment.FRFSBooking -> DMSC.MetroPaymentService service
+      Just Payment.FRFSBusBooking -> DMSC.BusPaymentService service
+      Just Payment.FRFSMultiModalBooking -> DMSC.MultiModalPaymentService service
+      Just Payment.FRFSPassPurchase -> DMSC.PassPaymentService service
+      Nothing -> DMSC.PaymentService service
+
 juspayWebhookHandler ::
   ShortId DM.Merchant ->
   Maybe Context.City ->
@@ -163,25 +202,7 @@ juspayWebhookHandler ::
   Value ->
   Flow AckResponse
 juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData value = do
-  merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
-  let city = fromMaybe merchant.defaultCity mbCity
-  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
-  let merchantId = merchant.id
-  placeBasedConfig <- case mbPlaceId of
-    Just id -> CQPBSC.findByPlaceIdAndServiceName (Id id) (DMSC.PaymentService Payment.Juspay)
-    Nothing -> return Nothing
-  merchantServiceConfig' <- do
-    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCity.id (getPaymentServiceByType mbServiceType)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show Payment.Juspay))
-  paymentServiceConfig <- do
-    case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
-      Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
-      Just (DMSC.MetroPaymentServiceConfig vsc) -> pure vsc
-      Just (DMSC.BusPaymentServiceConfig vsc) -> pure vsc
-      Just (DMSC.BbpsPaymentServiceConfig vsc) -> pure vsc
-      Just (DMSC.MultiModalPaymentServiceConfig vsc) -> pure vsc
-      Just (DMSC.PassPaymentServiceConfig vsc) -> pure vsc
-      _ -> throwError $ InternalError "Unknown Service Config"
+  paymentServiceConfig <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId Payment.Juspay
   orderWebhookResponse <- Juspay.orderStatusWebhook paymentServiceConfig DPayment.juspayWebhookService authData value
   osr <- case orderWebhookResponse of
     Nothing -> throwError $ InternalError "Order Contents not found."
@@ -193,14 +214,6 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
       void $ callWebhookHandlerWithOrderStatus paymentServiceType (ShortId orderShortId) (\_ -> pure osr)
   pure Ack
   where
-    getPaymentServiceByType = \case
-      Just Payment.Normal -> DMSC.PaymentService Payment.Juspay
-      Just Payment.BBPS -> DMSC.BbpsPaymentService Payment.Juspay
-      Just Payment.FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
-      Just Payment.FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
-      Just Payment.FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
-      Just Payment.FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
-      Nothing -> DMSC.PaymentService Payment.Juspay
     getOrderData osr = case osr of
       Payment.OrderStatusResp {..} -> pure (orderShortId, transactionStatus)
       _ -> throwError $ InternalError "Order Id not found in response."
@@ -212,3 +225,16 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
 
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text
 mkOrderStatusCheckKey orderId status = "lockKey:orderId:" <> orderId <> ":status" <> show status
+
+stripeWebhookHandler ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe Payment.PaymentServiceType ->
+  Maybe Text ->
+  Maybe Text ->
+  RawByteString ->
+  Flow AckResponse
+stripeWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader rawBytes = do
+  paymentServiceConfig <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId Payment.Stripe
+  let checkDuplicatedEvent _eventId = pure False -- FIXME
+  Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent DPayment.stripeWebhookService mbSigHeader rawBytes
