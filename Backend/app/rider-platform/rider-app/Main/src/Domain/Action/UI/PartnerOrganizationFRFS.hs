@@ -551,8 +551,8 @@ mkQuoteRes (quote, quoteCategories) = do
     FRFSTypes.FRFSQuoteAPIRes
       { quoteId = quote.id,
         _type = quote._type,
-        price = (FRFSUtils.getUnitPriceFromPriceItem fareParameters.adultItem).amount,
-        priceWithCurrency = mkPriceAPIEntity (FRFSUtils.getUnitPriceFromPriceItem fareParameters.adultItem),
+        price = (Utils.getUnitPriceFromPriceItem fareParameters.adultItem).amount,
+        priceWithCurrency = mkPriceAPIEntity (Utils.getUnitPriceFromPriceItem fareParameters.adultItem),
         quantity = fareParameters.totalQuantity,
         validTill = quote.validTill,
         vehicleType = quote.vehicleType,
