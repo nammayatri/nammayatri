@@ -25,13 +25,14 @@ import qualified API.IGM as IGM
 import qualified API.Internal as Internal
 import qualified API.UI as UI
 import qualified Data.ByteString as BS
-import Data.OpenApi
+import Data.OpenApi hiding (Header)
 import qualified Domain.Action.Internal.Payout as Payout
 import qualified Domain.Action.UI.Payment as Payment
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
+import qualified Kernel.External.Payment.Stripe.Webhook as Stripe
 import qualified Kernel.External.Payout.Juspay.Webhook as JuspayPayout
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -63,6 +64,12 @@ type MainAPI =
              :> QueryParam "placeId" Text
              :> Juspay.JuspayWebhookAPI
          )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> QueryParam "city" Context.City
+             :> QueryParam "serviceType" TPayment.PaymentServiceType
+             :> QueryParam "placeId" Text
+             :> Stripe.StripeWebhookAPI
+         )
     :<|> Dashboard.APIV2
     :<|> Internal.API
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
@@ -88,6 +95,7 @@ mainServer =
     -- :<|> Beckn.handler  -- TODO : Revert after 2.x release
     -- :<|> const Beckn.handler  -- TODO : Revert after 2.x release
     :<|> juspayWebhookHandler
+    :<|> stripeWebhookHandler
     :<|> Dashboard.handlerV2
     :<|> Internal.handler
     :<|> juspayPayoutWebhookHandlerV2
@@ -123,6 +131,17 @@ juspayWebhookHandler ::
   FlowHandler AckResponse
 juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId secret =
   withFlowHandlerAPI . Payment.juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId secret
+
+stripeWebhookHandler ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe TPayment.PaymentServiceType ->
+  Maybe Text ->
+  Maybe Text ->
+  Stripe.RawByteString ->
+  FlowHandler AckResponse
+stripeWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader =
+  withFlowHandlerAPI . Payment.stripeWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader
 
 juspayPayoutWebhookHandlerV2 ::
   ShortId DM.Merchant ->

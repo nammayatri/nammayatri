@@ -19,6 +19,7 @@ module Lib.Payment.Domain.Action
     createOrderService,
     orderStatusService,
     juspayWebhookService,
+    stripeWebhookService,
     createNotificationService,
     createExecutionService,
     buildSDKPayload,
@@ -48,6 +49,7 @@ import qualified Data.Time as Time
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Interface.Events.Types as PEInterface
 import qualified Kernel.External.Payment.Interface.Types as PInterface
 import Kernel.External.Payment.Juspay.Types (RefundStatus (REFUND_PENDING))
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
@@ -691,6 +693,7 @@ orderStatusService personId orderId orderStatusCall = do
                 isRetargeted = Nothing,
                 splitSettlementResponse = Nothing,
                 retargetLink = Nothing,
+                applicationFeeAmount = Nothing,
                 ..
               }
       maybe
@@ -719,6 +722,7 @@ orderStatusService personId orderId orderStatusCall = do
                 isRetried = isRetriedOrder,
                 isRetargeted = isRetargetedOrder,
                 retargetLink = retargetPaymentLink,
+                applicationFeeAmount = Nothing,
                 ..
               }
       maybe
@@ -768,6 +772,7 @@ data OrderTxn = OrderTxn
     respCode :: Maybe Text,
     gatewayReferenceId :: Maybe Text,
     amount :: HighPrecMoney,
+    applicationFeeAmount :: Maybe HighPrecMoney,
     bankErrorMessage :: Maybe Text,
     bankErrorCode :: Maybe Text,
     currency :: Currency,
@@ -811,12 +816,13 @@ updateOrderTransaction order resp respDump = do
       let updTransaction =
             transaction{statusId = resp.transactionStatusId,
                         status = resp.transactionStatus,
-                        paymentMethodType = resp.paymentMethod,
+                        paymentMethodType = resp.paymentMethod, -- why paymentMethod and paymentMethodType confused?
                         paymentMethod = resp.paymentMethodType,
                         respMessage = resp.respMessage,
                         respCode = resp.respCode,
                         gatewayReferenceId = resp.gatewayReferenceId,
                         amount = resp.amount,
+                        applicationFeeAmount = fromMaybe transaction.applicationFeeAmount resp.applicationFeeAmount,
                         currency = resp.currency,
                         mandateStatus = resp.mandateStatus,
                         mandateStartDate = resp.mandateStartDate,
@@ -856,7 +862,7 @@ buildPaymentTransaction order OrderTxn {..} respDump = do
         ..
       }
 
--- webhook ----------------------------------------------------------
+-- juspay webhook ----------------------------------------------------------
 
 juspayWebhookService ::
   BeamFlow m r =>
@@ -881,6 +887,7 @@ juspayWebhookService resp respDump = do
                 isRetargeted = Nothing,
                 retargetLink = Nothing,
                 splitSettlementResponse = Nothing,
+                applicationFeeAmount = Nothing,
                 ..
               }
       maybe
@@ -902,6 +909,7 @@ juspayWebhookService resp respDump = do
                 isRetried = isRetriedOrder,
                 isRetargeted = isRetargetedOrder,
                 retargetLink = retargetPaymentLink,
+                applicationFeeAmount = Nothing,
                 ..
               }
       maybe
@@ -913,6 +921,90 @@ juspayWebhookService resp respDump = do
       mapM_ updateRefundStatus refunds
     _ -> return ()
   return Ack
+
+-- stripe webhook ----------------------------------------------------------
+
+stripeWebhookService ::
+  BeamFlow m r =>
+  PEInterface.ServiceEventResp ->
+  Text ->
+  m AckResponse
+stripeWebhookService resp respDump = do
+  logWarning $ "Webhook response dump: " <> respDump
+  logWarning $ "Webhook response: " <> show resp
+  let mbOrderTxn = case resp.eventData of
+        PEInterface.PaymentIntentSucceededEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
+        PEInterface.PaymentIntentPaymentFailedEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
+        PEInterface.PaymentIntentProcessingEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
+        PEInterface.PaymentIntentCanceledEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
+        PEInterface.PaymentIntentCreatedEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
+        PEInterface.PaymentIntentRequiresActionEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
+        PEInterface.ChargeSucceededEvent charge -> Just $ mkChargeOrderTxn charge
+        PEInterface.ChargeFailedEvent charge -> Just $ mkChargeOrderTxn charge
+        PEInterface.ChargeRefundedEvent charge -> Just $ mkChargeOrderTxn charge
+        PEInterface.ChargeDisputeCreatedEvent charge -> Just $ mkChargeOrderTxn charge
+        PEInterface.ChargeDisputeClosedEvent charge -> Just $ mkChargeOrderTxn charge
+        PEInterface.ChargeRefundUpdatedEvent charge -> Just $ mkChargeOrderTxn charge
+        _ -> Nothing
+
+  whenJust mbOrderTxn \orderTxn -> do
+    whenJust orderTxn.txnId $ \txnId -> do
+      order <- QOrder.findByPaymentServiceOrderId txnId >>= fromMaybeM (PaymentOrderNotFound txnId)
+      Redis.whenWithLockRedis (txnStripeProccessingKey txnId) 60 $ updateOrderTransaction order orderTxn $ Just respDump
+  pure Ack
+
+txnStripeProccessingKey :: Text -> Text
+txnStripeProccessingKey txnId = "Txn:Stripe:Processing:TxnId-" <> txnId
+
+mkDefaultStripeOrderTxn :: Payment.TransactionStatus -> HighPrecMoney -> Currency -> OrderTxn
+mkDefaultStripeOrderTxn transactionStatus amount currency =
+  OrderTxn
+    { transactionUUID = Nothing,
+      transactionStatusId = 0, -- not used in stripe
+      txnId = Nothing,
+      paymentMethodType = Nothing,
+      paymentMethod = Nothing,
+      respMessage = Nothing,
+      respCode = Nothing,
+      gatewayReferenceId = Nothing,
+      applicationFeeAmount = Nothing,
+      bankErrorMessage = Nothing,
+      bankErrorCode = Nothing,
+      dateCreated = Nothing,
+      mandateStatus = Nothing,
+      mandateStartDate = Nothing,
+      mandateEndDate = Nothing,
+      mandateId = Nothing,
+      mandateFrequency = Nothing,
+      mandateMaxAmount = Nothing,
+      isRetried = Nothing,
+      isRetargeted = Nothing,
+      retargetLink = Nothing,
+      splitSettlementResponse = Nothing,
+      ..
+    }
+
+mkPaymentIntentOrderTxn :: PEInterface.PaymentIntent -> OrderTxn
+mkPaymentIntentOrderTxn PEInterface.PaymentIntent {..} = do
+  let transactionStatus = Payment.castToTransactionStatus status
+  let defaultOrderTxn = mkDefaultStripeOrderTxn transactionStatus amount currency
+  defaultOrderTxn{txnId = Just id,
+                  paymentMethod = paymentMethod,
+                  dateCreated = Just createdAt,
+                  applicationFeeAmount = applicationFeeAmount
+                 }
+
+mkChargeOrderTxn :: PEInterface.Charge -> OrderTxn
+mkChargeOrderTxn PEInterface.Charge {..} = do
+  let transactionStatus = PInterface.castChargeToTransactionStatus status
+  let defaultOrderTxn = mkDefaultStripeOrderTxn transactionStatus amount currency
+  defaultOrderTxn{txnId = paymentIntent,
+                  paymentMethod = paymentMethod,
+                  dateCreated = Just createdAt,
+                  applicationFeeAmount = applicationFeeAmount,
+                  bankErrorMessage = failureMessage,
+                  bankErrorCode = failureCode
+                 }
 
 --- notification api ----------
 
