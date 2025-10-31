@@ -28,6 +28,7 @@ data SubscriptionConfigT f = SubscriptionConfigT
     deepLinkExpiryTimeInMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     defaultCityVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     enableCityBasedFeeSwitch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enablePayoutSettlement :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableServiceUsageChargeDefault :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     eventsEnabledForWebhook :: B.C f (Kernel.Prelude.Maybe [Domain.Types.WebhookExtra.WebhookEvent]),
     executionEnabledForVehicleCategories :: B.C f (Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory]),

@@ -30,9 +30,10 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.VendorFee.VendorFee {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [Se.Set Beam.amount amount, Se.Set Beam.createdAt createdAt, Se.Set Beam.updatedAt _now]
-    [ Se.And
-        [ Se.Is Beam.driverFeeId $ Se.Eq (Kernel.Types.Id.getId driverFeeId),
-          Se.Is Beam.vendorId $ Se.Eq vendorId
-        ]
+    [ Se.Set Beam.amount amount,
+      Se.Set Beam.isVendorFeeProcessedAt isVendorFeeProcessedAt,
+      Se.Set Beam.splitMethod splitMethod,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
+    [Se.And [Se.Is Beam.driverFeeId $ Se.Eq (Kernel.Types.Id.getId driverFeeId), Se.Is Beam.vendorId $ Se.Eq vendorId]]
