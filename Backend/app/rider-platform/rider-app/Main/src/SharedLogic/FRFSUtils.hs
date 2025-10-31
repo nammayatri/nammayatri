@@ -1126,7 +1126,7 @@ calculateFareParameters priceItems =
       totalUnitPrice =
         Price
           { amount = getUnitPriceFromPriceItem adultItem + getUnitPriceFromPriceItem childItem,
-            amountInt = round (getAmountFromPriceItem adultItem + getAmountFromPriceItem childItem),
+            amountInt = round (getUnitPriceFromPriceItem adultItem + getUnitPriceFromPriceItem childItem),
             currency
           }
       totalQuantity =
@@ -1174,7 +1174,7 @@ calculateFareParametersWithQuoteFallback categories quote =
       totalUnitPrice =
         Price
           { amount = getUnitPriceFromPriceItem adultItem + getUnitPriceFromPriceItem childItem,
-            amountInt = round (getAmountFromPriceItem adultItem + getAmountFromPriceItem childItem),
+            amountInt = round (getUnitPriceFromPriceItem adultItem + getUnitPriceFromPriceItem childItem),
             currency
           }
       totalQuantity =
@@ -1233,7 +1233,7 @@ calculateFareParametersWithBookingFallback categories booking =
       totalUnitPrice =
         Price
           { amount = getUnitPriceFromPriceItem adultItem + getUnitPriceFromPriceItem childItem,
-            amountInt = round (getAmountFromPriceItem adultItem + getAmountFromPriceItem childItem),
+            amountInt = round (getUnitPriceFromPriceItem adultItem + getUnitPriceFromPriceItem childItem),
             currency
           }
       totalQuantity =

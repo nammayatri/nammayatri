@@ -33,7 +33,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
-      totalFare = fareParameters.totalPrice.amountInt.getMoney
+      singleTicketPrice = fareParameters.totalUnitPrice.amountInt.getMoney
       totalTicketQuantity = fareParameters.totalQuantity
   ticketsData <-
     generateQRTickets config $
@@ -42,7 +42,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
           destination = toStation.code,
           ticketType = "SJT", -- TODO: FIX THIS
           noOfTickets = 1, -- Always set to 1 as per requirement
-          ticketFare = totalFare,
+          ticketFare = singleTicketPrice,
           customerMobileNo = fromMaybe "9999999999" mRiderNumber,
           uniqueTxnRefNo = orderId,
           bankRefNo = paymentTxnId,
