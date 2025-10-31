@@ -12,15 +12,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PurchasedPassPaymentT f = PurchasedPassPaymentT
-  { endDate :: B.C f Data.Time.Calendar.Day,
-    id :: B.C f Kernel.Prelude.Text,
-    orderId :: B.C f Kernel.Prelude.Text,
-    purchasedPassId :: B.C f Kernel.Prelude.Text,
-    startDate :: B.C f Data.Time.Calendar.Day,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { endDate :: (B.C f Data.Time.Calendar.Day),
+    id :: (B.C f Kernel.Prelude.Text),
+    orderId :: (B.C f Kernel.Prelude.Text),
+    purchasedPassId :: (B.C f Kernel.Prelude.Text),
+    startDate :: (B.C f Data.Time.Calendar.Day),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +30,6 @@ instance B.Table PurchasedPassPaymentT where
 
 type PurchasedPassPayment = PurchasedPassPaymentT Identity
 
-$(enableKVPG ''PurchasedPassPaymentT ['id] [['orderId], ['purchasedPassId]])
+$(enableKVPG (''PurchasedPassPaymentT) [('id)] [[('orderId)], [('purchasedPassId)]])
 
-$(mkTableInstances ''PurchasedPassPaymentT "purchased_pass_payment")
+$(mkTableInstances (''PurchasedPassPaymentT) "purchased_pass_payment")

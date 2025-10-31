@@ -33,3 +33,8 @@ ALTER TABLE atlas_app.purchased_pass ADD COLUMN used_trip_count integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass ALTER COLUMN applicable_vehicle_service_tiers TYPE text;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass ALTER COLUMN applicable_vehicle_service_tiers TYPE text[];
