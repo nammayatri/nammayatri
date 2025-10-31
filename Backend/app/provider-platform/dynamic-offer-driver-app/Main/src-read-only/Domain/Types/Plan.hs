@@ -29,6 +29,7 @@ data Plan = Plan
     frequency :: Domain.Types.Plan.Frequency,
     id :: Kernel.Types.Id.Id Domain.Types.Plan.Plan,
     isDeprecated :: Kernel.Prelude.Bool,
+    isFleetOwnerPlan :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isOfferApplicable :: Kernel.Prelude.Bool,
     listingPriority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxAmount :: Kernel.Types.Common.HighPrecMoney,

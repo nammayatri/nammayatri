@@ -5,8 +5,8 @@ import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
+import Kernel.Types.Id
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, HighPrecMoney, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetOwnerInformation as Beam
 import Storage.Queries.OrphanInstances.FleetOwnerInformation ()
@@ -175,3 +175,13 @@ getFleetOwnerByTicketPlaceId mbTicketPlaceId = do
           <> [Se.Is Beam.verified $ Se.Eq True]
           <> [Se.Is Beam.ticketPlaceId $ Se.Eq mbTicketPlaceId]
     ]
+
+updatePrepaidSubscriptionBalanceAndExpiry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> HighPrecMoney -> Maybe UTCTime -> m ()
+updatePrepaidSubscriptionBalanceAndExpiry fleetOwnerPersonId amount expiryDate = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.prepaidSubscriptionBalance (Just amount),
+      Se.Set Beam.planExpiryDate expiryDate,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (getId fleetOwnerPersonId)]
