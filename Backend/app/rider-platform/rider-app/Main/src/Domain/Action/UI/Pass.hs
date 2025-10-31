@@ -464,6 +464,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       whenJust mbPassStatus $ \passStatus -> QPurchasedPass.updateStatusById passStatus purchasedPass.id
       case mbPassStatus of
         Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId)
+        Just DPurchasedPass.PreBooked -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId)
         Just DPurchasedPass.Expired -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId)
         Just DPurchasedPass.Failed -> return (DPayment.FulfillmentFailed, Just purchasedPass.id.getId)
         Just DPurchasedPass.RefundPending -> return (DPayment.FulfillmentRefundPending, Just purchasedPass.id.getId)
