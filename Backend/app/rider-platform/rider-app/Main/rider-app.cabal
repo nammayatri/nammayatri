@@ -766,6 +766,7 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.ClientPersonInfo
+      Domain.Types.CrisRecon
       Domain.Types.DeletedPerson
       Domain.Types.Disability
       Domain.Types.DisabilityTranslation
@@ -908,6 +909,7 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.ClientPersonInfo
+      Storage.Beam.CrisRecon
       Storage.Beam.DeletedPerson
       Storage.Beam.Disability
       Storage.Beam.DisabilityTranslation
@@ -1052,6 +1054,7 @@ library
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.ClientPersonInfo
+      Storage.Queries.CrisRecon
       Storage.Queries.DeletedPerson
       Storage.Queries.Disability
       Storage.Queries.DisabilityTranslation
