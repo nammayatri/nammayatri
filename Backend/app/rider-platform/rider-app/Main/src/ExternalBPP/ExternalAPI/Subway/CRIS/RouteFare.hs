@@ -116,8 +116,7 @@ getCachedFaresAndRecache config merchantOperatingCityId request = do
         routeFareDetails `forM` \routeFareDetail -> do
           let allFares = routeFareDetail.fareDtlsList
           let routeId = routeFareDetail.routeId
-          let onlySelectedViaFares = filter (\fare -> fare.via == request.changeOver) allFares
-          let fares = if null onlySelectedViaFares || request.changeOver == " " then allFares else onlySelectedViaFares
+          let fares = if request.changeOver == " " then allFares else filter (\fare -> fare.via == request.changeOver) allFares
           fares `forM` \fare -> do
             let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
                 mbChildFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.childFare
