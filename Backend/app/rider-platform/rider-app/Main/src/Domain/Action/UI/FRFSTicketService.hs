@@ -967,11 +967,17 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
           void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.PENDING paymentBooking.id
         let paymentStatusAPI =
-              case paymentBookingStatus of
-                FRFSTicketService.FAILURE -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.FAILED
-                FRFSTicketService.SUCCESS -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.FAILED
-                FRFSTicketService.PENDING -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.PENDING
-                _ -> Nothing
+              case paymentBooking.status of
+                DFRFSTicketBookingPayment.REFUND_PENDING -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_PENDING
+                DFRFSTicketBookingPayment.REFUND_INITIATED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_INITIATED
+                DFRFSTicketBookingPayment.REFUND_FAILED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_FAILED
+                DFRFSTicketBookingPayment.REFUNDED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUNDED
+                _ ->
+                  case paymentBookingStatus of
+                    FRFSTicketService.FAILURE -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.FAILED
+                    FRFSTicketService.SUCCESS -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_PENDING
+                    FRFSTicketService.PENDING -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.PENDING
+                    _ -> Nothing
         logInfo $ "payment status api: " <> show paymentStatusAPI
         let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing, transactionId = Nothing}
         buildFRFSTicketBookingStatusAPIRes booking quoteCategories mbPaymentObj
