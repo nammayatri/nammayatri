@@ -302,6 +302,7 @@ library
       Domain.Types.Extra.DriverPlan
       Domain.Types.Extra.Feedback
       Domain.Types.Extra.Location
+      Domain.Types.Extra.MerchantClientConfig
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
@@ -614,6 +615,7 @@ library
       Storage.Queries.LocationExtra
       Storage.Queries.LocationMappingExtra
       Storage.Queries.MandateExtra
+      Storage.Queries.MerchantClientConfigExtra
       Storage.Queries.MerchantExtra
       Storage.Queries.MerchantPaymentMethodExtra
       Storage.Queries.MerchantServiceConfigExtra
@@ -655,6 +657,7 @@ library
       Storage.Queries.Transformers.DriverStats
       Storage.Queries.Transformers.Invoice
       Storage.Queries.Transformers.Location
+      Storage.Queries.Transformers.MerchantClientConfig
       Storage.Queries.Transformers.MerchantMessage
       Storage.Queries.Transformers.MerchantPaymentMethod
       Storage.Queries.Transformers.MerchantServiceConfig
@@ -908,6 +911,7 @@ library
       Domain.Types.LocationMapping
       Domain.Types.Mandate
       Domain.Types.Merchant
+      Domain.Types.MerchantClientConfig
       Domain.Types.MerchantMessage
       Domain.Types.MerchantOperatingCity
       Domain.Types.MerchantPaymentMethod
@@ -1057,6 +1061,7 @@ library
       Storage.Beam.LocationMapping
       Storage.Beam.Mandate
       Storage.Beam.Merchant
+      Storage.Beam.MerchantClientConfig
       Storage.Beam.MerchantMessage
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.MerchantPaymentMethod
@@ -1210,6 +1215,7 @@ library
       Storage.Queries.LocationMapping
       Storage.Queries.Mandate
       Storage.Queries.Merchant
+      Storage.Queries.MerchantClientConfig
       Storage.Queries.MerchantMessage
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.MerchantPaymentMethod
@@ -1270,6 +1276,7 @@ library
       Storage.Queries.OrphanInstances.LocationMapping
       Storage.Queries.OrphanInstances.Mandate
       Storage.Queries.OrphanInstances.Merchant
+      Storage.Queries.OrphanInstances.MerchantClientConfig
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.Message
