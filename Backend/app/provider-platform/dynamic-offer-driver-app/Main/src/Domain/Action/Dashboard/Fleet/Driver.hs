@@ -2494,7 +2494,7 @@ parseDriverInfo idx row = do
   let driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory = Csv.readMaybeCSVField idx (fromMaybe "" row.driverOnboardingVehicleCategory) "Onboarding Vehicle Category"
       fleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneNo) "Fleet number"
       badgeName :: Maybe Text = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeName) "Badge name"
-      badgeRank :: Maybe Text = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeRank) "Badge rank"
+      badgeRank :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.badgeRank) "Badge rank"
       badgeType :: Maybe DFBT.FleetBadgeType = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeType) "Badge type"
   pure $ DriverDetails driverName driverPhoneNumber driverOnboardingVehicleCategory fleetPhoneNo badgeName badgeRank badgeType
 
@@ -2867,6 +2867,13 @@ createOrUpdateFleetBadge merchant merchantOpCity person driverDetails fleetOwner
   case mbBadgeAssociation of
     Just badgeAssociation -> do
       QFB.updateBadgeNameAndRankById badgeName driverDetails.badgeRank badgeAssociation.badgeId
+      badge <- QFB.findByPrimaryKey badgeAssociation.badgeId >>= fromMaybeM (InvalidRequest "Badge not found")
+      let (driverBadgeName, conductorBadgeName) = case badgeType of
+            DFBT.DRIVER -> (Just badge.badgeName, Nothing)
+            DFBT.CONDUCTOR -> (Nothing, Just badge.badgeName)
+            DFBT.PILOT -> (Just badge.badgeName, badge.badgeRank)
+            DFBT.OFFICER -> (Just badge.badgeName, badge.badgeRank)
+      QP.updatePersonName (cast person.id) driverBadgeName conductorBadgeName
     Nothing -> do
       fleetBadgeId <- generateGUID
       let newBadge = buildNewBadge fleetBadgeId now
