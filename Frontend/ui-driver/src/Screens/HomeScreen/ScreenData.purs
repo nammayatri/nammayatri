@@ -326,6 +326,8 @@ initData =
       , showInsuranceBanner : false
       , coinWaitingThreshold : 0
       , nyClubConsent : Nothing
+      , willCancellationBlock : false
+      , cancellationValues : { cancelledRides: 0, totalRides: 0, suspensionHours: 0, blockType: Nothing }
       }
   }
 
