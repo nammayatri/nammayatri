@@ -83,7 +83,8 @@ data CRISConfig = CRISConfig
     routeSortingCriteria :: Maybe CRISRouteSortingCriteria,
     reconDuration :: Maybe Int,
     singleModeWalkThreshold :: Maybe Int,
-    useRouteFareV4 :: Maybe Bool
+    useRouteFareV4 :: Maybe Bool,
+    enableBookType :: Maybe Bool
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
