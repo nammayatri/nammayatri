@@ -36,6 +36,7 @@ import qualified Domain.Types.Trip as DTrip
 import Domain.Utils (castTravelModeToVehicleCategory, mapConcurrently)
 import Environment
 import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
+import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as CRISRouteFareV3
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.Types as CRISTypes
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
@@ -1136,8 +1137,8 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
     getAllSubwayRoutes = do
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
-          routeFareReq <- getRouteFareRequest originStopCode destinationStopCode " " " " personId
-          fares <- CRISRouteFare.getRouteFare crisConfig mocid routeFareReq
+          routeFareReq <- getRouteFareRequest originStopCode destinationStopCode " " " " personId (crisConfig.useRouteFareV4 /= Just True)
+          (fares, _) <- if (crisConfig.useRouteFareV4 == Just True) then CRISRouteFare.getRouteFare crisConfig mocid routeFareReq else CRISRouteFareV3.getRouteFare crisConfig mocid routeFareReq True
           let redisKey = CRISRouteFare.mkRouteFareKey originStopCode destinationStopCode searchReqId
           unless (null fares) $ Hedis.setExp redisKey fares 1800
           let sortedFares = case crisConfig.routeSortingCriteria of
@@ -1340,22 +1341,25 @@ getDistanceAndDuration merchantId merchantOpCityId startLocation endLocation = d
       -- Return Nothing instead of throwing error to allow graceful fallback
       return (Nothing, Nothing)
 
-getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Id Person -> m CRISTypes.CRISFareRequest
-getRouteFareRequest sourceCode destCode changeOver viaPoints personId = do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbMobileNumber <- mapM decrypt person.mobileNumber
-  mbImeiNumber <- mapM decrypt person.imeiNumber
-  sessionId <- getRandomInRange (1, 1000000 :: Int)
-  return $
-    CRISTypes.CRISFareRequest
-      { mobileNo = mbMobileNumber,
-        imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
-        appSession = sessionId,
-        sourceCode = sourceCode,
-        destCode = destCode,
-        changeOver = changeOver,
-        via = viaPoints
-      }
+getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Id Person -> Bool -> m CRISTypes.CRISFareRequest
+getRouteFareRequest sourceCode destCode changeOver viaPoints personId useDummy = do
+  if useDummy
+    then getDummyRouteFareRequest sourceCode destCode changeOver viaPoints
+    else do
+      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      mbMobileNumber <- mapM decrypt person.mobileNumber
+      mbImeiNumber <- mapM decrypt person.imeiNumber
+      sessionId <- getRandomInRange (1, 1000000 :: Int)
+      return $
+        CRISTypes.CRISFareRequest
+          { mobileNo = mbMobileNumber,
+            imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
+            appSession = sessionId,
+            sourceCode = sourceCode,
+            destCode = destCode,
+            changeOver = changeOver,
+            via = viaPoints
+          }
 
 data VehicleLiveRouteInfo = VehicleLiveRouteInfo
   { routeCode :: Maybe Text,
@@ -1596,3 +1600,17 @@ getLegTierOptionsUtil journeyLeg = do
       (_, availableRoutesByTiers, _) <- findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig journeyLeg.merchantId journeyLeg.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY) False False
       return availableRoutesByTiers
     _ -> return []
+
+getDummyRouteFareRequest :: MonadFlow m => Text -> Text -> Text -> Text -> m CRISTypes.CRISFareRequest
+getDummyRouteFareRequest sourceCode destCode changeOver viaPoints = do
+  sessionId <- getRandomInRange (1, 1000000 :: Int)
+  return $
+    CRISTypes.CRISFareRequest
+      { mobileNo = Just "1111111111",
+        imeiNo = "abcdefgh",
+        appSession = sessionId,
+        sourceCode = sourceCode,
+        destCode = destCode,
+        changeOver = changeOver,
+        via = viaPoints
+      }

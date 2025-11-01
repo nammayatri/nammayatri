@@ -35,6 +35,7 @@ import qualified API.UI.CancelSearch as CancelSearch
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import qualified BecknV2.OnDemand.Enums
+import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
@@ -48,6 +49,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.EstimateStatus as Estimate
+import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as Journey
 import qualified Domain.Types.Merchant as Merchant
@@ -59,6 +61,8 @@ import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import Environment
+import ExternalBPP.ExternalAPI.CallAPI as CallAPI
+import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as RouteFareV3
 import ExternalBPP.ExternalAPI.Subway.CRIS.SDKData
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
@@ -740,14 +744,50 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             Just integratedBPPConfig -> do
               case integratedBPPConfig.providerConfig of
                 DIBC.CRIS config -> do
-                  mbGetSdkDataReq <- mkGetSDKDataReq personId
-                  case mbGetSdkDataReq of
-                    Just getSDKDataReq -> do
-                      getSdkDataResp <- getSDKData config getSDKDataReq
-                      return $ Just getSdkDataResp.sdkData
-                    Nothing -> return Nothing
+                  if (config.useRouteFareV4 == Just True)
+                    then do
+                      mbGetSdkDataReq <- mkGetSDKDataReq personId
+                      case mbGetSdkDataReq of
+                        Just getSDKDataReq -> do
+                          getSdkDataResp <- getSDKData config getSDKDataReq
+                          return $ Just getSdkDataResp.sdkData
+                        Nothing -> return Nothing
+                    else findValidSdkToken integratedBPPConfig merchantOperatingCityId subwayRoutes
                 _ -> return Nothing
             Nothing -> return Nothing
+
+    findValidSdkToken :: DIBC.IntegratedBPPConfig -> Id MerchantOperatingCity -> [(Int, MultiModalTypes.MultiModalRoute)] -> Flow (Maybe Text)
+    findValidSdkToken _ _ [] = return Nothing
+    findValidSdkToken integratedBPPConfig mocId ((_, multiModalRoute) : restRoutes) = do
+      let subwayLegs = filter (\leg -> leg.mode == MultiModalTypes.Subway) multiModalRoute.legs
+      mbSdkToken <- findValidSdkTokenFromLegs integratedBPPConfig mocId subwayLegs
+      case mbSdkToken of
+        Just token -> return $ Just token
+        Nothing -> findValidSdkToken integratedBPPConfig mocId restRoutes
+
+    findValidSdkTokenFromLegs :: DIBC.IntegratedBPPConfig -> Id MerchantOperatingCity -> [MultiModalTypes.MultiModalLeg] -> Flow (Maybe Text)
+    findValidSdkTokenFromLegs _ _ [] = return Nothing
+    findValidSdkTokenFromLegs integratedBPPConfig mocId (leg : restLegs) = do
+      mbSdkToken <- tryGetSdkTokenFromLeg integratedBPPConfig mocId leg
+      case mbSdkToken of
+        Just token -> return $ Just token
+        Nothing -> findValidSdkTokenFromLegs integratedBPPConfig mocId restLegs
+
+    tryGetSdkTokenFromLeg :: DIBC.IntegratedBPPConfig -> Id MerchantOperatingCity -> MultiModalTypes.MultiModalLeg -> Flow (Maybe Text)
+    tryGetSdkTokenFromLeg integratedBPPConfig mocId leg = do
+      let mbRouteCode = listToMaybe leg.routeDetails >>= (.gtfsId) <&> gtfsIdtoDomainCode
+          mbFromStopCode = (leg.fromStopDetails >>= (.stopCode)) <|> ((leg.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)
+          mbToStopCode = (leg.toStopDetails >>= (.stopCode)) <|> ((leg.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)
+      case (mbFromStopCode, mbToStopCode, mbRouteCode) of
+        (Just fromCode, Just toCode, Just routeCode) -> do
+          case integratedBPPConfig.providerConfig of
+            DIBC.CRIS config' -> do
+              (viaPoints, changeOver) <- CallAPI.getChangeOverAndViaPoints [CallAPI.BasicRouteDetail {routeCode = routeCode, startStopCode = fromCode, endStopCode = toCode}] integratedBPPConfig
+              routeFareReq <- JMU.getRouteFareRequest fromCode toCode changeOver viaPoints personId False
+              (_, sdkToken) <- RouteFareV3.getRouteFare config' mocId routeFareReq False
+              return $ sdkToken
+            _ -> return Nothing
+        _ -> return Nothing
 
     mkMultimodalResponse :: MultiModalTypes.MultiModalLeg -> UTCTime -> UTCTime -> MultiModalTypes.MultiModalResponse
     mkMultimodalResponse leg startTime endTime =

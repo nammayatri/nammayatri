@@ -1,4 +1,4 @@
-module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare where
+module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
@@ -27,7 +27,7 @@ import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTi
 
 -- API type with updated endpoint
 type RouteFareAPI =
-  "t" :> "uts.cris.in" :> "VCU" :> "1" :> "get_route_fare_details_v4"
+  "t" :> "uts.cris.in" :> "VCU" :> "1" :> "get_route_fare_details_v3"
     :> Header "Authorization" Text
     :> Header "Content-Type" Text
     :> Header "appCode" Text
@@ -50,16 +50,17 @@ getRouteFare ::
   CRISConfig ->
   Id MerchantOperatingCity ->
   CRISFareRequest ->
+  Bool ->
   m ([FRFSUtils.FRFSFare], Maybe Text)
-getRouteFare config merchantOperatingCityId request = do
+getRouteFare config merchantOperatingCityId request useCache = do
   let redisKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
   redisResp <- Hedis.safeGet redisKey
-  case redisResp of
-    Just fares -> do
+  case (redisResp, useCache) of
+    (Just fares, True) -> do
       logDebug $ "getCachedFaresAndRecache: fares found in cache" <> show fares
       fork "fetchAndCacheFares for suburban" $ void fetchAndCacheFares
       return (fares, Nothing)
-    Nothing -> do
+    (_, _) -> do
       fetchAndCacheFares
   where
     fetchAndCacheFares = do
@@ -193,7 +194,7 @@ getRouteFare config merchantOperatingCityId request = do
       let fareCacheKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
       let fares = concat frfsDetails
       Hedis.setExp fareCacheKey fares 3600
-      return $ (fares, Nothing)
+      return $ (fares, decryptedResponse.sdkData)
 
 routeFareAPI :: Proxy RouteFareAPI
 routeFareAPI = Proxy
