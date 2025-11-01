@@ -268,7 +268,7 @@ createOrder config integratedBPPConfig booking quoteCategories = do
     Nothing -> getBppOrderId booking
   classCode <- getFRFSVehicleServiceTier quote
   startTime <- fromMaybeM (CRISError "Start time not found") booking.startTime
-  let tpBookType = if booking.isSingleMode == Just True then 1 else 0
+  let tpBookType = if config.enableBookType == Just True && booking.isSingleMode == Just True then 1 else 0
 
   let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
       adultQuantity = fareParameters.adultItem <&> (.quantity)
