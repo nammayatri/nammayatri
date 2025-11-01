@@ -71,3 +71,8 @@ VehicleServiceTier:
           - vehicleCategory
           - merchantOperatingCityId
           - baseVehicleServiceTier: "(Just True)|CIM"
+    findOneByBaseServiceTierTypeAndMerchantIdAndCityId:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - eq: [merchantId, merchantOperatingCityId, serviceTierType]

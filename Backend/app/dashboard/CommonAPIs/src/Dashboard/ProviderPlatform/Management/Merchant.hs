@@ -226,3 +226,14 @@ instance ToMultipart Tmp UpdateOnboardingVehicleVariantMappingReq where
     MultipartData
       [Input "vehicleCategory" form.vehicleCategory]
       [FileData "file" (T.pack form.file) "" (form.file)]
+
+-- Update UpdateVehicleServiceTierReq
+
+instance FromMultipart Tmp UpdateVehicleServiceTierReq where
+  fromMultipart form = do
+    UpdateVehicleServiceTierReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp UpdateVehicleServiceTierReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
