@@ -32,6 +32,7 @@ import qualified ExternalBPP.ExternalAPI.Metro.CMRL.StationList as CMRLStationLi
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus as CMRLStatus
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney as CRISBookJourney
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
+import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as CRISRouteFareV3
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
 import Kernel.External.Types (ServiceFlow)
@@ -131,13 +132,13 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
   where
     callCRISAPI config' changeOver viaPoints = do
       let (_, startStop, endStop) = getRouteCodeAndStartAndStop
-      routeFareReq <- JMU.getRouteFareRequest startStop endStop changeOver viaPoints riderId
-      resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq
+      routeFareReq <- JMU.getRouteFareRequest startStop endStop changeOver viaPoints riderId (config'.useRouteFareV4 /= Just True)
+      resp <- try @_ @SomeException $ if (config'.useRouteFareV4 == Just True) then CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq else CRISRouteFareV3.getRouteFare config' merchanOperatingCity.id routeFareReq True
       case resp of
         Left err -> do
           logError $ "Error while calling CRIS API: " <> show err
           return []
-        Right fares -> return fares
+        Right (fares, _) -> return fares
 
     fetchAndCacheFares config' redisKey changeOver viaPoints isFareMandatory = do
       fares <- callCRISAPI config' changeOver viaPoints
