@@ -139,7 +139,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
     return $ show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) :: Integer)
   let qrValidityIST = addUTCTime (secondsToNominalDiffTime 19800) qrValidity
       fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
-      singleAdultTicketPrice = fareParameters.adultItem <&> (.totalPrice.amount)
+      singleAdultTicketPrice = (getUnitPriceFromPriceItem fareParameters.adultItem).amount
       adultQuantity = maybe 0 (.quantity) fareParameters.adultItem
       childQuantity = maybe 0 (.quantity) fareParameters.childItem
   let ticketReq =
@@ -149,7 +149,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
             noAdult = show adultQuantity,
             noChild = show childQuantity,
             btypeId = busTypeId,
-            tktAmt = fromMaybe 0 singleAdultTicketPrice,
+            tktAmt = singleAdultTicketPrice,
             transNo = ticketNumber,
             transDate = T.pack $ formatTime Time.defaultTimeLocale "%Y-%m-%d %H:%M:%S" now,
             agentId = config.agentId

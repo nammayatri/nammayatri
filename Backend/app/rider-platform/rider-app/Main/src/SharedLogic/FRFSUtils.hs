@@ -1139,7 +1139,7 @@ calculateFareParametersWithQuoteFallback :: [CategoryPriceItem] -> Quote.FRFSQuo
 calculateFareParametersWithQuoteFallback categories quote =
   let fareParameters = calculateFareParameters categories
       adultItem =
-        fareParameters.adultItem
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.adultItem else Nothing)
           <|> ( ((,) <$> quote.quantity <*> quote.price) <&> \(quantity, unitPrice) ->
                   PriceItem
                     { quantity = quantity,
@@ -1148,7 +1148,7 @@ calculateFareParametersWithQuoteFallback categories quote =
                     }
               )
       childItem =
-        fareParameters.childItem
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.adultItem else Nothing)
           <|> ( ((,) <$> quote.childTicketQuantity <*> quote.price) <&> \(quantity, unitPrice) ->
                   PriceItem
                     { quantity = quantity,
@@ -1181,7 +1181,7 @@ calculateFareParametersWithBookingFallback categories booking =
       mbRouteStations :: Maybe [APITypes.FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
       mbRouteStation = listToMaybe =<< mbRouteStations
       adultItem =
-        fareParameters.adultItem
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.adultItem else Nothing)
           <|> ( ((,,) <$> booking.quantity <*> (mbRouteStation <&> (.priceWithCurrency)) <*> (booking.finalPrice <|> Just booking.totalPrice)) <&> \(quantity, unitPrice', totalPrice') ->
                   PriceItem
                     { quantity = quantity,
@@ -1195,7 +1195,7 @@ calculateFareParametersWithBookingFallback categories booking =
                     }
               )
       childItem =
-        fareParameters.childItem
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.adultItem else Nothing)
           <|> ( ((,,) <$> booking.childTicketQuantity <*> (mbRouteStation <&> (.priceWithCurrency)) <*> (booking.finalPrice <|> Just booking.totalPrice)) <&> \(quantity, unitPrice', totalPrice') ->
                   PriceItem
                     { quantity = quantity,

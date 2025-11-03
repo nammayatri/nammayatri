@@ -273,7 +273,7 @@ createOrder config integratedBPPConfig booking quoteCategories = do
   let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
       adultQuantity = fareParameters.adultItem <&> (.quantity)
       childQuantity = fareParameters.childItem <&> (.quantity)
-      chargeableAmount = fareParameters.totalPrice.amountInt.getMoney
+      chargeableAmount = maybe booking.totalPrice.amountInt.getMoney ((.getMoney) . (.amountInt)) booking.finalPrice
   let bookJourneyReq =
         CRISBookingRequest
           { mob = fromMaybe "9999999999" mbMobileNumber,
