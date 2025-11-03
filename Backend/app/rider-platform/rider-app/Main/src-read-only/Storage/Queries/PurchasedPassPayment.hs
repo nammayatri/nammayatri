@@ -4,6 +4,8 @@
 
 module Storage.Queries.PurchasedPassPayment where
 
+import qualified Data.Time.Calendar
+import qualified Domain.Types.Person
 import qualified Domain.Types.PurchasedPass
 import qualified Domain.Types.PurchasedPassPayment
 import Kernel.Beam.Functions
@@ -22,13 +24,33 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PurchasedPassPayment.PurchasedPassPayment] -> m ())
 createMany = traverse_ create
 
-findAllByPurchasedPassId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m ([Domain.Types.PurchasedPassPayment.PurchasedPassPayment]))
+findAllByPurchasedPassId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m [Domain.Types.PurchasedPassPayment.PurchasedPassPayment])
 findAllByPurchasedPassId purchasedPassId = do findAllWithKV [Se.Is Beam.purchasedPassId $ Se.Eq (Kernel.Types.Id.getId purchasedPassId)]
+
+findAllByPurchasedPassIdAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Domain.Types.PurchasedPass.StatusType -> Data.Time.Calendar.Day -> m [Domain.Types.PurchasedPassPayment.PurchasedPassPayment])
+findAllByPurchasedPassIdAndStatus purchasedPassId status endDate = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.purchasedPassId $ Se.Eq (Kernel.Types.Id.getId purchasedPassId),
+          Se.Is Beam.status $ Se.Eq status,
+          Se.Is Beam.endDate $ Se.GreaterThanOrEq endDate
+        ]
+    ]
+
+findAllWithPersonId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.PurchasedPassPayment.PurchasedPassPayment])
+findAllWithPersonId limit offset personId = do findAllWithOptionsKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)] (Se.Desc Beam.createdAt) limit offset
 
 findOneByPaymentOrderId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m (Maybe Domain.Types.PurchasedPassPayment.PurchasedPassPayment))
 findOneByPaymentOrderId orderId = do findOneWithKV [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getId orderId)]
+
+updateStatusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PurchasedPass.StatusType -> Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> m ())
+updateStatusById status id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -39,10 +61,13 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.endDate endDate,
+    [ Se.Set Beam.amount amount,
+      Se.Set Beam.endDate endDate,
       Se.Set Beam.orderId (Kernel.Types.Id.getId orderId),
+      Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.purchasedPassId (Kernel.Types.Id.getId purchasedPassId),
       Se.Set Beam.startDate startDate,
+      Se.Set Beam.status status,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
@@ -55,11 +80,14 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
     pure $
       Just
         Domain.Types.PurchasedPassPayment.PurchasedPassPayment
-          { endDate = endDate,
+          { amount = amount,
+            endDate = endDate,
             id = Kernel.Types.Id.Id id,
             orderId = Kernel.Types.Id.Id orderId,
+            personId = Kernel.Types.Id.Id personId,
             purchasedPassId = Kernel.Types.Id.Id purchasedPassId,
             startDate = startDate,
+            status = status,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -69,11 +97,14 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
 instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.PurchasedPassPayment where
   toTType' (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..}) = do
     Beam.PurchasedPassPaymentT
-      { Beam.endDate = endDate,
+      { Beam.amount = amount,
+        Beam.endDate = endDate,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.orderId = Kernel.Types.Id.getId orderId,
+        Beam.personId = Kernel.Types.Id.getId personId,
         Beam.purchasedPassId = Kernel.Types.Id.getId purchasedPassId,
         Beam.startDate = startDate,
+        Beam.status = status,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

@@ -1,11 +1,11 @@
 module Domain.Action.UI.Pass
   ( getMultimodalPassAvailablePasses,
     postMultimodalPassSelect,
-    getMultimodalPassStatus,
     getMultimodalPassList,
     postMultimodalPassVerify,
     passOrderStatusHandler,
     postMultimodalPassSwitchDeviceId,
+    getMultimodalPassTransactions,
   )
 where
 
@@ -129,11 +129,7 @@ purchasePassWithPayment ::
   m PassAPI.PassSelectionAPIEntity
 purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
   -- Check if pass is already purchased and active
-  existingActivePasses <- QPurchasedPass.findActivePassByPersonIdAndPassTypeId personId pass.passTypeId
-  whenJust existingActivePasses $ \_ -> throwError (InvalidRequest "You already have an active pass of this type")
-
   now <- getCurrentTime
-  purchasedPassId <- generateGUID
   purchasedPassPaymentId <- generateGUID
   paymentOrderId <- generateGUID
   paymentOrderShortId <- generateShortId
@@ -159,48 +155,67 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
           Just days -> DT.addDays (fromIntegral days) startDate
           Nothing -> startDate
 
+  allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId (Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]) Nothing Nothing
+  let mbActiveSamePass = listToMaybe $ filter (\p -> p.passTypeId == pass.passTypeId && p.deviceId == deviceId) allActivePurchasedPasses
+
   let initialStatus = if pass.amount == 0 then DPurchasedPass.Active else DPurchasedPass.Pending
-      -- Convert Pass.Benefit to flattened benefitType and benefitValue
-      (benefitType, benefitValue) = case pass.benefit of
-        Nothing -> (Nothing, Nothing)
-        Just DPass.FullSaving -> (Just DPurchasedPass.FullSaving, Nothing)
-        Just (DPass.FixedSaving amount) -> (Just DPurchasedPass.FixedSaving, Just amount)
-        Just (DPass.PercentageSaving percentage) -> (Just DPurchasedPass.PercentageSaving, Just percentage)
+  purchasedPassId <-
+    case mbActiveSamePass of
+      Just activeSamePass -> do
+        let overlaps (aStart, aEnd) (bStart, bEnd) = not (aEnd < bStart || bEnd < aStart)
+            hasDateOverlap activePass =
+              overlaps (activePass.startDate, activePass.endDate) (startDate, endDate)
+        when (hasDateOverlap activeSamePass) $
+          throwError (InvalidRequest "You already have an active pass of this type in the selected dates")
+        return activeSamePass.id
+      Nothing -> do
+        newPurchasedPassId <- generateGUID
+        let (benefitType, benefitValue) = case pass.benefit of
+              Nothing -> (Nothing, Nothing)
+              Just DPass.FullSaving -> (Just DPurchasedPass.FullSaving, Nothing)
+              Just (DPass.FixedSaving amount) -> (Just DPurchasedPass.FixedSaving, Just amount)
+              Just (DPass.PercentageSaving percentage) -> (Just DPurchasedPass.PercentageSaving, Just percentage)
 
-      purchasedPass =
-        DPurchasedPass.PurchasedPass
-          { id = purchasedPassId,
-            passNumber = fromIntegral passNumber,
-            personId = personId,
-            startDate,
-            endDate,
-            passTypeId = pass.passTypeId,
-            passCode = pass.code,
-            passName = pass.name,
-            passAmount = pass.amount,
-            benefitDescription = pass.benefitDescription,
-            benefitType = benefitType,
-            benefitValue = benefitValue,
-            applicableVehicleServiceTiers = pass.applicableVehicleServiceTiers,
-            maxValidTrips = pass.maxValidTrips,
-            maxValidDays = pass.maxValidDays,
-            deviceSwitchCount = 0,
-            deviceId,
-            status = initialStatus,
-            merchantId = pass.merchantId,
-            usedTripCount = Just 0,
-            merchantOperatingCityId = pass.merchantOperatingCityId,
-            createdAt = now,
-            updatedAt = now
-          }
+            purchasedPass =
+              DPurchasedPass.PurchasedPass
+                { id = newPurchasedPassId,
+                  passNumber = fromIntegral passNumber,
+                  personId = personId,
+                  startDate,
+                  endDate,
+                  passTypeId = pass.passTypeId,
+                  passCode = pass.code,
+                  passName = pass.name,
+                  passAmount = pass.amount,
+                  benefitDescription = pass.benefitDescription,
+                  benefitType = benefitType,
+                  benefitValue = benefitValue,
+                  applicableVehicleServiceTiers = pass.applicableVehicleServiceTiers,
+                  maxValidTrips = pass.maxValidTrips,
+                  maxValidDays = pass.maxValidDays,
+                  deviceSwitchCount = 0,
+                  deviceId,
+                  status = initialStatus,
+                  merchantId = pass.merchantId,
+                  usedTripCount = Just 0,
+                  merchantOperatingCityId = pass.merchantOperatingCityId,
+                  createdAt = now,
+                  updatedAt = now
+                }
 
-      purchasedPassPayment =
+        QPurchasedPass.create purchasedPass
+        return newPurchasedPassId
+
+  let purchasedPassPayment =
         DPurchasedPassPayment.PurchasedPassPayment
           { id = purchasedPassPaymentId,
             orderId = paymentOrderId,
             purchasedPassId = purchasedPassId,
+            personId = personId,
             startDate,
             endDate,
+            status = initialStatus,
+            amount = pass.amount,
             merchantId = Just pass.merchantId,
             merchantOperatingCityId = Just pass.merchantOperatingCityId,
             createdAt = now,
@@ -246,8 +261,6 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
         mbPaymentOrderValidity <- TPayment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase createOrderReq createOrderCall
       else return Nothing
-
-  QPurchasedPass.create purchasedPass
   QPurchasedPassPayment.create purchasedPassPayment
   return $
     PassAPI.PassSelectionAPIEntity
@@ -271,24 +284,6 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
 
     makeLastPassNumberKey :: Text
     makeLastPassNumberKey = "CachedQueries:Pass:NextPassNumber"
-
-getMultimodalPassStatus ::
-  ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
-      Id.Id DM.Merchant
-    ) ->
-    Id.Id DPurchasedPass.PurchasedPass ->
-    Text ->
-    Environment.Flow PassAPI.PurchasedPassAPIEntity
-  )
-getMultimodalPassStatus (mbPersonId, _merchantId) purchasedPassId deviceId = do
-  personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
-  purchasedPass <- B.runInReplica $ QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
-
-  unless (purchasedPass.personId == personId) $ throwError AccessDenied
-
-  buildPurchasedPassAPIEntity personId deviceId purchasedPass
-
--- Helper functions
 
 -- Generate Redis lock key for pass purchase
 mkPassPurchaseLockKey :: Id.Id DP.Person -> Id.Id DPassType.PassType -> Text
@@ -433,13 +428,8 @@ buildPurchasedPassAPIEntity personId deviceId purchasedPass = do
           }
 
   istTime <- getLocalCurrentTime (19800 :: Seconds)
-  let daysToExpire = fromIntegral $ DT.diffDays purchasedPass.endDate (DT.utctDay istTime)
-
-  when (purchasedPass.status == DPurchasedPass.PreBooked && purchasedPass.startDate <= DT.utctDay istTime) $ do
-    QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id
-
-  when (purchasedPass.status == DPurchasedPass.Active && purchasedPass.endDate < DT.utctDay istTime) $ do
-    QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
+  let today = DT.utctDay istTime
+  let daysToExpire = fromIntegral $ DT.diffDays purchasedPass.endDate today
 
   lastVerifiedVehicleNumber <- QPassVerifyTransaction.findLastVerifiedVehicleNumberByPurchasePassId purchasedPass.id
   return $
@@ -469,14 +459,14 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
   logInfo $ "Pass payment webhook handler called for paymentOrderId: " <> paymentOrderId.getId
   mbPurchasedPassPayment <- QPurchasedPassPayment.findOneByPaymentOrderId paymentOrderId
   mbPurchasedPass <- maybe (pure Nothing) (QPurchasedPass.findById . (.purchasedPassId)) mbPurchasedPassPayment
-  case mbPurchasedPass of
-    Nothing -> do
-      logError $ "Purchased pass not found for paymentOrderId: " <> paymentOrderId.getId
-      return (DPayment.FulfillmentPending, Nothing)
-    Just purchasedPass -> do
+  case (mbPurchasedPassPayment, mbPurchasedPass) of
+    (Just purchasedPassPayment, Just purchasedPass) -> do
       istTime <- getLocalCurrentTime (19800 :: Seconds)
-      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (purchasedPass.startDate > DT.utctDay istTime) status
-      whenJust mbPassStatus $ \passStatus -> QPurchasedPass.updateStatusById passStatus purchasedPass.id
+      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (purchasedPassPayment.startDate > DT.utctDay istTime) status
+      whenJust mbPassStatus $ \passStatus -> do
+        QPurchasedPassPayment.updateStatusById passStatus purchasedPassPayment.id
+        when (passStatus `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
+          QPurchasedPass.updateStatusById passStatus purchasedPass.id
       case mbPassStatus of
         Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId)
         Just DPurchasedPass.PreBooked -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId)
@@ -487,6 +477,9 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
         Just DPurchasedPass.RefundFailed -> return (DPayment.FulfillmentRefundFailed, Just purchasedPass.id.getId)
         Just DPurchasedPass.Refunded -> return (DPayment.FulfillmentRefunded, Just purchasedPass.id.getId)
         _ -> return (DPayment.FulfillmentPending, Just purchasedPass.id.getId)
+    _ -> do
+      logError $ "Purchased pass not found for paymentOrderId: " <> paymentOrderId.getId
+      return (DPayment.FulfillmentPending, Nothing)
   where
     convertPaymentStatusToPurchasedPassStatus futureDatePass = \case
       Payment.CHARGED -> if futureDatePass then Just DPurchasedPass.PreBooked else Just DPurchasedPass.Active
@@ -514,12 +507,30 @@ getMultimodalPassList (mbCallerPersonId, merchantId) mbLimitParam mbOffsetParam 
         Just DPurchasedPass.Active -> Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]
         Just s -> Just [s]
         Nothing -> Nothing
+
+  passEntities <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
+  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  let today = DT.utctDay istTime
+  forM_ passEntities $ \purchasedPass -> do
+    when (purchasedPass.status == DPurchasedPass.PreBooked && purchasedPass.startDate <= today) $ do
+      QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id
+
+    when (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && purchasedPass.endDate < today) $ do
+      -- check if user has already renewed the pass
+      allPreBookedPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus purchasedPass.id DPurchasedPass.PreBooked today
+      let mbFirstPreBookedPayment = listToMaybe allPreBookedPayments
+      case mbFirstPreBookedPayment of
+        Just firstPreBookedPayment -> do
+          let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
+          QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus
+        Nothing -> do
+          QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
+
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
   let passWithSameDevice = filter (\pass -> pass.deviceId == deviceId) allActivePurchasedPasses
   let purchasedPasses = if null passWithSameDevice then allActivePurchasedPasses else passWithSameDevice
-  -- filter out expired passes
-  passEntities <- mapM (buildPurchasedPassAPIEntity personId deviceId) purchasedPasses
-  return $ filter (\pass -> pass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) passEntities
+
+  mapM (buildPurchasedPassAPIEntity personId deviceId) purchasedPasses
 
 postMultimodalPassVerify ::
   ( ( Maybe (Id.Id DP.Person),
@@ -571,3 +582,27 @@ postMultimodalPassSwitchDeviceId (mbCallerPersonId, merchantId) req = do
     when (purchasedPass.deviceId /= req.deviceId) $ do
       QPurchasedPass.updateDeviceIdById req.deviceId (purchasedPass.deviceSwitchCount + 1) purchasedPass.id
   return APISuccess.Success
+
+getMultimodalPassTransactions ::
+  ( ( Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Environment.Flow [PassAPI.PurchasedPassTransactionAPIEntity]
+  )
+getMultimodalPassTransactions (mbCallerPersonId, _) mbLimitParam mbOffsetParam = do
+  personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+  let limit = fromMaybe 10 mbLimitParam
+  let offset = fromMaybe 0 mbOffsetParam
+  allPurchasedPassTransactions <- QPurchasedPassPayment.findAllWithPersonId (Just limit) (Just offset) personId
+  return $ map buildPurchasedPassPaymentAPIEntity allPurchasedPassTransactions
+  where
+    buildPurchasedPassPaymentAPIEntity :: DPurchasedPassPayment.PurchasedPassPayment -> PassAPI.PurchasedPassTransactionAPIEntity
+    buildPurchasedPassPaymentAPIEntity purchasedPassPayment = do
+      PassAPI.PurchasedPassTransactionAPIEntity
+        { startDate = purchasedPassPayment.startDate,
+          endDate = purchasedPassPayment.endDate,
+          status = purchasedPassPayment.status,
+          amount = purchasedPassPayment.amount
+        }

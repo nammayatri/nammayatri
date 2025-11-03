@@ -84,6 +84,13 @@ types:
     passDetails: PassAPIEntity
     derive: "Show"
 
+  PurchasedPassTransactionAPIEntity:
+    startDate: Day
+    endDate: Day
+    amount: HighPrecMoney
+    status: StatusType
+    derive: "Show"
+
 apis:
   - GET:
       endpoint: /multimodal/pass/availablePasses
@@ -102,16 +109,6 @@ apis:
         deviceId: Text
       response:
         type: PassSelectionAPIEntity
-
-  - GET:
-      endpoint: /multimodal/pass/{purchasedPassId}/status
-      auth: TokenAuth
-      params:
-        purchasedPassId: Id PurchasedPass
-      mandatoryQuery:
-        deviceId: Text
-      response:
-        type: PurchasedPassAPIEntity
 
   - GET:
       endpoint: /multimodal/pass/list
@@ -142,3 +139,12 @@ apis:
         type: PassSwitchDeviceIdReq
       response:
         type: APISuccess
+
+  - GET:
+      endpoint: /multimodal/pass/transactions
+      auth: TokenAuth
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[PurchasedPassTransactionAPIEntity]"

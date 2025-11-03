@@ -74,7 +74,10 @@ PurchasedPassPayment:
     id: Id PurchasedPassPayment
     orderId: Id PaymentOrder
     purchasedPassId: Id PurchasedPass
+    amount: HighPrecMoney
+    personId: Id Person
     startDate: Day
+    status: Domain.Types.PurchasedPass.StatusType
     endDate: Day
 
   constraints:
@@ -90,6 +93,24 @@ PurchasedPassPayment:
     findAllByPurchasedPassId:
       kvFunction: findAllWithKV
       where: purchasedPassId
+
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: [status]
+      where: id
+
+    findAllByPurchasedPassIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - purchasedPassId
+          - status
+          - gte:
+            - endDate
+
+    findAllWithPersonId:
+      kvFunction: findAllWithOptionsKV
+      where: personId
 
 PassVerifyTransaction:
   tableName: pass_verify_transaction

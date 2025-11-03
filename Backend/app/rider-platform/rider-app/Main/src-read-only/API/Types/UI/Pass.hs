@@ -90,3 +90,7 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PurchasedPassTransactionAPIEntity = PurchasedPassTransactionAPIEntity {amount :: Kernel.Types.Common.HighPrecMoney, endDate :: Data.Time.Day, startDate :: Data.Time.Day, status :: Domain.Types.PurchasedPass.StatusType}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
