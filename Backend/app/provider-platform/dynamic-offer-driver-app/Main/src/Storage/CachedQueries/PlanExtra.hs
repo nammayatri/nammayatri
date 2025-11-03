@@ -46,9 +46,9 @@ findByMerchantOpCityIdAndPaymentModeWithServiceName ::
   Maybe Bool ->
   m [Plan]
 findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated mbIsFleetOwnerPlan =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndPaymentModeKey (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndPaymentModeKey (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated mbIsFleetOwnerPlan) >>= \case
     Just a -> pure a
-    Nothing -> cacheByMerchantIdAndPaymentMode (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated /=<< Queries.findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated mbIsFleetOwnerPlan
+    Nothing -> cacheByMerchantIdAndPaymentMode (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated mbIsFleetOwnerPlan /=<< Queries.findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated mbIsFleetOwnerPlan
 
 ------------------- -----------------------
 findByMerchantOpCityIdAndServiceName ::
@@ -81,11 +81,12 @@ cacheByMerchantIdAndPaymentMode ::
   PaymentMode ->
   ServiceNames ->
   Maybe Bool ->
+  Maybe Bool ->
   [Plan] ->
   m ()
-cacheByMerchantIdAndPaymentMode (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated plans = do
+cacheByMerchantIdAndPaymentMode (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated mbIsFleetOwnerPlan plans = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdAndPaymentModeKey (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated) plans expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdAndPaymentModeKey (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated mbIsFleetOwnerPlan) plans expTime
 
 findByMerchantOpCityIdAndTypeWithServiceName :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> PlanType -> ServiceNames -> DVC.VehicleCategory -> Bool -> m [Plan]
 findByMerchantOpCityIdAndTypeWithServiceName (Id merchantOperatingCityId) planType serviceName vehicleCategory isDeprecated =
@@ -157,8 +158,8 @@ makeAllPlanKey = "driver-offer:CachedQueries:Plan:PlanId-ALL"
 makePlanIdAndPaymentModeKey :: Id Plan -> PaymentMode -> ServiceNames -> Text
 makePlanIdAndPaymentModeKey id paymentMode serviceName = "driver-offer:CachedQueries:Plan:PlanId-" <> id.getId <> ":PaymentMode-" <> show paymentMode <> ":ServiceName-" <> show serviceName
 
-makeMerchantIdAndPaymentModeKey :: Id DMOC.MerchantOperatingCity -> PaymentMode -> ServiceNames -> Maybe Bool -> Text
-makeMerchantIdAndPaymentModeKey merchantOpCityId paymentMode serviceName mbIsDeprecated =
+makeMerchantIdAndPaymentModeKey :: Id DMOC.MerchantOperatingCity -> PaymentMode -> ServiceNames -> Maybe Bool -> Maybe Bool -> Text
+makeMerchantIdAndPaymentModeKey merchantOpCityId paymentMode serviceName mbIsDeprecated mbIsFleetOwnerPlan =
   "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-"
     <> merchantOpCityId.getId
     <> ":PaymentMode-"
@@ -167,6 +168,8 @@ makeMerchantIdAndPaymentModeKey merchantOpCityId paymentMode serviceName mbIsDep
     <> show serviceName
     <> ":IsDeprecated-"
     <> show mbIsDeprecated
+    <> ":IsFleetOwnerPlan-"
+    <> show mbIsFleetOwnerPlan
 
 makeMerchantIdAndServiceNameKey :: Id DMOC.MerchantOperatingCity -> ServiceNames -> Maybe Bool -> Maybe Bool -> Text
 makeMerchantIdAndServiceNameKey merchantOpCityId serviceName mbIsDeprecated mbIsFleetOwnerPlan =

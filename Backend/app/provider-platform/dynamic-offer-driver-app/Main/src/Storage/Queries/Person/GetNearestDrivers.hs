@@ -15,9 +15,9 @@ import Domain.Types
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.Driver.DriverInformation as DIAPI
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
 import qualified Domain.Types.FleetDriverAssociation as FDA
 import qualified Domain.Types.FleetOwnerInformation as FOI
-import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.VehicleServiceTier as DVST
@@ -103,7 +103,7 @@ getNearestDrivers NearestDriversReq {..} = do
   let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
       allowedVehicleVariant = DL.nub (concatMap (.allowedVehicleVariant) allowedCityServiceTiers)
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (bool (Just allowedVehicleVariant) Nothing (null allowedVehicleVariant))
-  driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
+  driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity minWalletAmountForCashRides paymentInstrument
   driverInfos <- filterDriversBySufficientBalance prepaidSubscriptionAndWalletEnabled rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
