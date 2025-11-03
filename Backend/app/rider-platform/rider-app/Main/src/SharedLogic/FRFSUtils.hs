@@ -1195,7 +1195,7 @@ calculateFareParametersWithBookingFallback categories booking =
                     }
               )
       childItem =
-        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.adultItem else Nothing)
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.childItem else Nothing)
           <|> ( ((,,) <$> booking.childTicketQuantity <*> (mbRouteStation <&> (.priceWithCurrency)) <*> (booking.finalPrice <|> Just booking.totalPrice)) <&> \(quantity, unitPrice', totalPrice') ->
                   PriceItem
                     { quantity = quantity,

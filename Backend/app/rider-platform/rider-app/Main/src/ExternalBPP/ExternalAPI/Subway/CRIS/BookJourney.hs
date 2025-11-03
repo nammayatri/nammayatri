@@ -313,7 +313,7 @@ createOrder config integratedBPPConfig booking quoteCategories = do
             agentAccountId = show config.tpAccountId,
             bookAuthCode = bookAuthCode,
             agentAppTxnId = orderId,
-            bankDeductedAmount = round booking.totalPrice.amount.getHighPrecMoney,
+            bankDeductedAmount = chargeableAmount,
             tpBookType = tpBookType
           }
   logInfo $ "GetBookJourney: " <> show bookJourneyReq
