@@ -184,6 +184,7 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
             applicableVehicleServiceTiers = pass.applicableVehicleServiceTiers,
             maxValidTrips = pass.maxValidTrips,
             maxValidDays = pass.maxValidDays,
+            deviceSwitchCount = 0,
             deviceId,
             status = initialStatus,
             merchantId = pass.merchantId,
@@ -451,6 +452,7 @@ buildPurchasedPassAPIEntity personId deviceId purchasedPass = do
         status = purchasedPass.status,
         startDate = purchasedPass.startDate,
         deviceMismatch,
+        deviceSwitchAllowed = purchasedPass.deviceSwitchCount == 0,
         daysToExpire = daysToExpire,
         purchaseDate = DT.utctDay purchasedPass.createdAt,
         expiryDate = purchasedPass.endDate
@@ -567,5 +569,5 @@ postMultimodalPassSwitchDeviceId (mbCallerPersonId, merchantId) req = do
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId (Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]) Nothing Nothing
   forM_ allActivePurchasedPasses $ \purchasedPass -> do
     when (purchasedPass.deviceId /= req.deviceId) $ do
-      QPurchasedPass.updateDeviceIdById req.deviceId purchasedPass.id
+      QPurchasedPass.updateDeviceIdById req.deviceId (purchasedPass.deviceSwitchCount + 1) purchasedPass.id
   return APISuccess.Success

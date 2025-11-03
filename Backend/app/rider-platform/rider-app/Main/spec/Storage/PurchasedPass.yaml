@@ -34,6 +34,7 @@ PurchasedPass:
     endDate: Day
     passTypeId: Id PassType
     deviceId: Text
+    deviceSwitchCount: Int
     passCode: Text
     passName: Maybe Text
     passAmount: HighPrecMoney
@@ -47,6 +48,15 @@ PurchasedPass:
     status: StatusType
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+
+  beamType:
+    deviceSwitchCount: Maybe Int
+
+  fromTType:
+    deviceSwitchCount: (fromMaybe 0 deviceSwitchCount)|E
+
+  toTType:
+    deviceSwitchCount: Just deviceSwitchCount|E
 
   sqlType:
     applicableVehicleServiceTiers: text[]

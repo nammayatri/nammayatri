@@ -77,6 +77,7 @@ data PassVerifyReq = PassVerifyReq {vehicleNumber :: Data.Text.Text}
 data PurchasedPassAPIEntity = PurchasedPassAPIEntity
   { daysToExpire :: Kernel.Prelude.Int,
     deviceMismatch :: Kernel.Prelude.Bool,
+    deviceSwitchAllowed :: Kernel.Prelude.Bool,
     expiryDate :: Data.Time.Day,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
     lastVerifiedVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,

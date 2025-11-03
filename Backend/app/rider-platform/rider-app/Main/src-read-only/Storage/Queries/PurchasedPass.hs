@@ -33,6 +33,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
       Se.Set Beam.benefitType benefitType,
       Se.Set Beam.benefitValue benefitValue,
       Se.Set Beam.deviceId deviceId,
+      Se.Set Beam.deviceSwitchCount (Just deviceSwitchCount),
       Se.Set Beam.endDate endDate,
       Se.Set Beam.maxValidDays maxValidDays,
       Se.Set Beam.maxValidTrips maxValidTrips,

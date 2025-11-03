@@ -23,6 +23,7 @@ data PurchasedPass = PurchasedPass
     benefitType :: Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType,
     benefitValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     deviceId :: Kernel.Prelude.Text,
+    deviceSwitchCount :: Kernel.Prelude.Int,
     endDate :: Data.Time.Calendar.Day,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
     maxValidDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

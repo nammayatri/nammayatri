@@ -75,6 +75,7 @@ types:
     startDate: Day
     expiryDate: Day
     deviceMismatch: Bool
+    deviceSwitchAllowed: Bool
     derive: "Show"
 
   PassDetailsAPIEntity:

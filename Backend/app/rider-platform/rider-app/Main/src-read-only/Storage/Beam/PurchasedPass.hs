@@ -20,6 +20,7 @@ data PurchasedPassT f = PurchasedPassT
     benefitType :: B.C f (Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType),
     benefitValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     deviceId :: B.C f Kernel.Prelude.Text,
+    deviceSwitchCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     endDate :: B.C f Data.Time.Calendar.Day,
     id :: B.C f Kernel.Prelude.Text,
     maxValidDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
