@@ -81,11 +81,8 @@ buildInitialFleetOperatorStats fleetOperatorId transporterConfig = do
       }
 
 -- Common lock key for operator analytics mutations
-makeFleetOperatorMetricLockKey :: Text -> KeyMetric -> Text
-makeFleetOperatorMetricLockKey fleetOperatorId metricName = "FleetOperatorStats:Lock:" <> fleetOperatorId <> ":" <> show metricName
-
-data KeyMetric = RIDE_METRICS | DRIVER_CANCEL | CUSTOMER_CANCEL | ACCEPTATION_REQUEST | TOTAL_REQUEST | REJECTED_REQUEST | PULLED_REQUEST | RATING_COUNT_AND_SCORE
-  deriving (Show, Eq)
+makeFleetOperatorMetricLockKey :: Text -> Text
+makeFleetOperatorMetricLockKey fleetOperatorId = "FleetOperatorStats:Lock:" <> fleetOperatorId
 
 incrementTotalRidesTotalDistAndTotalEarning :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DR.Ride -> DTTC.TransporterConfig -> m ()
 incrementTotalRidesTotalDistAndTotalEarning fleetOperatorId ride transporterConfig = do
