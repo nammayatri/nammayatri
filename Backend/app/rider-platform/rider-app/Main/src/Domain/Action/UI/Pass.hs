@@ -465,7 +465,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (purchasedPassPayment.startDate > DT.utctDay istTime) status
       whenJust mbPassStatus $ \passStatus -> do
         QPurchasedPassPayment.updateStatusById passStatus purchasedPassPayment.id
-        when (passStatus `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
+        when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
           QPurchasedPass.updateStatusById passStatus purchasedPass.id
       case mbPassStatus of
         Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId)
