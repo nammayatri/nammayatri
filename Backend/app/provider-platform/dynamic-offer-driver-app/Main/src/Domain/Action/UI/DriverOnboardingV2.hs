@@ -2313,6 +2313,7 @@ generateCodeChallenge codeVerifier =
 constructDigiLockerAuthUrl :: DigilockerTypes.DigiLockerCfg -> Text -> Text -> Text
 constructDigiLockerAuthUrl config digiLockerState codeChallenge =
   let baseUrl = Kernel.Prelude.showBaseUrl config.url
+      authPath = "/public/oauth2/1/authorize"
       params =
         [ ("response_type", "code"),
           ("client_id", config.clientId),
@@ -2326,7 +2327,7 @@ constructDigiLockerAuthUrl config digiLockerState codeChallenge =
           ("purpose", "verification")
         ]
       queryString = T.intercalate "&" $ map (\(k, v) -> k <> "=" <> encodeURIComponent v) params
-   in baseUrl <> "?" <> queryString
+   in baseUrl <> authPath <> "?" <> queryString
   where
     -- URL encode text for query parameters
     encodeURIComponent :: Text -> Text

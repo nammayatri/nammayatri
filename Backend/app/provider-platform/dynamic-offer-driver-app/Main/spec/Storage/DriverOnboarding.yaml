@@ -128,7 +128,7 @@ DigilockerVerification:
   excludedFields: []
 
   sqlType:
-    docStatus: jsonb
+    docStatus: json
 
   constraints:
     id: PrimaryKey
