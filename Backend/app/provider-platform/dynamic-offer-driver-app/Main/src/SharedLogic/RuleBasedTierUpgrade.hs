@@ -1,11 +1,14 @@
-module SharedLogic.RuleBasedTierUpgrade (computeEligibleUpgradeTiers) where
+module SharedLogic.RuleBasedTierUpgrade
+  ( computeEligibleUpgradeTiers,
+  )
+where
 
 import Data.Either.Extra (eitherToMaybe)
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as ST
 import qualified Domain.Types.TransporterConfig as DTTC
 import qualified Domain.Types.UpgradedTier as DU
-import Domain.Types.VehicleVariant (VehicleVariant)
+import qualified Domain.Types.Yudhishthira as Yudhishthira
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.Prelude
 import Kernel.Utils.Common
@@ -36,15 +39,6 @@ computeMergedUpgrades now retentionSeconds existing newlyEligible =
       totallyNew = mkTierInfos now $ filter (\tier -> tier `notElem` existingTiers) newlyEligible
    in retained <> totallyNew
 
-data UpgradeTierData = UpgradeTierData
-  { driverRating :: Maybe Double,
-    vehicleAgeInMonths :: Maybe Int,
-    vehicleVariant :: VehicleVariant,
-    ridesCount :: Int,
-    favRiderCount :: Int
-  }
-  deriving (Generic, ToJSON, FromJSON)
-
 eligibleTiersFromTags :: [LYT.TagNameValue] -> [ST.ServiceTierType]
 eligibleTiersFromTags tags = mapMaybe matchTag tags
   where
@@ -65,15 +59,15 @@ computeEligibleUpgradeTiers ride transporterConfig =
       rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (InternalError $ "computeEligibleUpgradeTiers: RideDetailsNotFound: " <> ride.id.getId)
       driverInfo <- QDriverInformation.findById ride.driverId >>= fromMaybeM (InternalError $ "computeEligibleUpgradeTiers: DriverInfoNotFound: " <> ride.driverId.getId)
       vehicle <- runInReplica $ QVehicle.findById ride.driverId >>= fromMaybeM (InternalError $ "computeEligibleUpgradeTiers: VehicleNotFound for driver: " <> ride.driverId.getId)
-      let upgradeTierData =
-            UpgradeTierData
+      let upgradeTierTagData =
+            Yudhishthira.UpgradeTierTagData
               { driverRating = realToFrac <$> driverStats.rating,
                 vehicleAgeInMonths = (.getMonths) <$> rideDetails.vehicleAge,
                 ridesCount = driverStats.totalRides,
                 favRiderCount = driverStats.favRiderCount,
                 vehicleVariant = vehicle.variant
               }
-      nammaTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.UpgradeTier upgradeTierData)
+      nammaTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.UpgradeTier upgradeTierTagData)
       let newEligibleTiers = eligibleTiersFromTags $ fromMaybe [] $ eitherToMaybe nammaTags
           newUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] driverInfo.ruleBasedUpgradeTiers) newEligibleTiers
           vehicleNewUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] vehicle.ruleBasedUpgradeTiers) newEligibleTiers
