@@ -484,31 +484,46 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
 
 buildDriverFeedbackAPIEntity :: [DFeedback.Feedback] -> [DRating.Rating] -> [Common.DriverFeedbackAPIEntity]
 buildDriverFeedbackAPIEntity feedbacks ratings =
-  let feedbackMap = M.fromList [(DFeedback.rideId fb, fb) | fb <- feedbacks]
+  let feedbacksByRide = M.fromListWith (++) [(DFeedback.rideId fb, [fb]) | fb <- feedbacks]
       ratingMap = M.fromList [(DRating.rideId rating, rating) | rating <- ratings]
+      hasContent mbText mbDetails =
+        (isJust mbText && mbText /= Just "") || (isJust mbDetails && mbDetails /= Just "")
       fromFeedbacks =
-        map
-          ( \(DFeedback.Feedback {..}) ->
-              Common.DriverFeedbackAPIEntity
-                { rideId = cast rideId,
-                  createdAt = createdAt,
-                  feedbackText = Just badge,
-                  feedbackDetails = M.lookup rideId ratingMap >>= DRating.feedbackDetails
-                }
+        mapMaybe
+          ( \(rideId, fbs) ->
+              case fbs of
+                [] -> Nothing
+                (firstFb : _) ->
+                  let badges = filter (not . T.null) $ map (\fb -> getField @"badge" (fb :: DFeedback.Feedback)) fbs
+                      combinedBadges = T.intercalate ", " badges
+                      mbRatingDetails = M.lookup rideId ratingMap >>= DRating.feedbackDetails
+                      feedbackText = if T.null combinedBadges then Nothing else Just combinedBadges
+                      entity =
+                        Common.DriverFeedbackAPIEntity
+                          { rideId = cast rideId,
+                            createdAt = getField @"createdAt" (firstFb :: DFeedback.Feedback),
+                            feedbackText = feedbackText,
+                            feedbackDetails = mbRatingDetails
+                          }
+                   in if hasContent feedbackText mbRatingDetails
+                        then Just entity
+                        else Nothing
           )
-          feedbacks
+          (M.toList feedbacksByRide)
+
       fromRatingsOnly =
         mapMaybe
           ( \rating ->
-              case (M.lookup (DRating.rideId rating) feedbackMap, DRating.feedbackDetails rating) of
-                (Nothing, Just details) ->
-                  Just $
-                    Common.DriverFeedbackAPIEntity
-                      { rideId = cast (DRating.rideId rating),
-                        createdAt = DRating.createdAt rating,
-                        feedbackText = Nothing,
-                        feedbackDetails = Just details
-                      }
+              case (M.lookup (DRating.rideId rating) feedbacksByRide, DRating.feedbackDetails rating) of
+                (Nothing, Just details)
+                  | details /= "" ->
+                    Just $
+                      Common.DriverFeedbackAPIEntity
+                        { rideId = cast (DRating.rideId rating),
+                          createdAt = DRating.createdAt rating,
+                          feedbackText = Nothing,
+                          feedbackDetails = Just details
+                        }
                 _ -> Nothing
           )
           ratings
