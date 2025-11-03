@@ -83,6 +83,7 @@ defaultCityRemoteConfig defaultValue =
   , pudukkottai : Just defaultValue
   , bidar : Just defaultValue
   , srinagar : Just defaultValue
+  , trivandrum : Just defaultValue
   , config: Nothing
   }
 
