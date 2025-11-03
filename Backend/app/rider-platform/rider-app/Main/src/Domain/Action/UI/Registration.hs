@@ -21,6 +21,8 @@ module Domain.Action.UI.Registration
     AuthVerifyRes (..),
     OTPChannel (..),
     PasswordAuthReq (..),
+    GetTokenReq (..),
+    TempCodeRes (..),
     auth,
     signatureAuth,
     createPerson,
@@ -32,6 +34,8 @@ module Domain.Action.UI.Registration
     buildPerson,
     getRegistrationTokenE,
     passwordBasedAuth,
+    getToken,
+    generateTempAppCode,
   )
 where
 
@@ -167,6 +171,16 @@ validateSignatureAuthReq AuthReq {..} =
   sequenceA_
     [ whenJust mobileCountryCode $ \countryCode -> validateField "mobileCountryCode" countryCode P.mobileCountryCode
     ]
+
+data GetTokenReq = GetTokenReq
+  { appSecretCode :: Text,
+    userMobileNo :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data TempCodeRes = TempCodeRes
+  {tempCode :: Text}
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data PasswordAuthReq = PasswordAuthReq
   { userEmail :: Maybe Text,
@@ -394,6 +408,62 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
       personAPIEntity <- verifyFlow person regToken reqWithMobileNumebr.whatsappNotificationEnroll deviceToken
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
+
+mkUserIdFromTempAppSecretKey :: Text -> Text
+mkUserIdFromTempAppSecretKey appSecretKey = "rider-platform:getUserIdKey:" <> appSecretKey
+
+setUserIdToTempAppSecretKey :: (CacheFlow m r, Redis.HedisFlow m r) => Text -> Id SP.Person -> m ()
+setUserIdToTempAppSecretKey appSecretKey personId = Redis.setExp (mkUserIdFromTempAppSecretKey appSecretKey) (getId personId) 120 -- 2 minutes
+
+getUserIdFromTempAppSecretKey :: (CacheFlow m r, Redis.HedisFlow m r) => Text -> m (Maybe (Id SP.Person))
+getUserIdFromTempAppSecretKey appSecretKey = (fmap (\(a :: Text) -> Id a)) <$> Redis.safeGet (mkUserIdFromTempAppSecretKey appSecretKey)
+
+generateTempAppCode ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Redis.HedisFlow m r
+  ) =>
+  Id SP.Person ->
+  m TempCodeRes
+generateTempAppCode personId = do
+  tempCode <- show . (mod 10000) <$> Redis.incr mkTempAppSecretKey
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
+  case TE.decodeUtf8 . (.hash.unDbHash) <$> person.mobileNumber of
+    Just mobileNumberHash -> do
+      let appSecretKey = mobileNumberHash <> ":" <> show tempCode
+      setUserIdToTempAppSecretKey appSecretKey person.id
+      return $ TempCodeRes tempCode
+    Nothing -> throwError $ InvalidRequest "Mobile number not found"
+  where
+    mkTempAppSecretKey :: Text
+    mkTempAppSecretKey = "rider-platform:temp-app-secret-key:" <> getId personId
+
+getToken ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions]
+  ) =>
+  GetTokenReq ->
+  m AuthRes
+getToken req = do
+  mobileNumberHash <- TE.decodeUtf8 . (.unDbHash) <$> getDbHash req.userMobileNo
+  getTokenAttempts <- Redis.incr $ getUserLimitKey mobileNumberHash
+  when (getTokenAttempts > 3) $ throwError $ InvalidRequest "Too many attempts"
+  Redis.expire (getUserLimitKey mobileNumberHash) 3600 -- 1 hour
+  let appSecretKey = mobileNumberHash <> ":" <> req.appSecretCode
+  mbPersonId <- getUserIdFromTempAppSecretKey appSecretKey
+  case mbPersonId of
+    Just personId -> do
+      person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
+      registrationToken <- (listToMaybe <$> RegistrationToken.findAllByPersonId personId) >>= fromMaybeM (InternalError $ "Registration token not found for person id: " <> getId personId)
+      return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked
+    Nothing -> do
+      throwError $ GetUserIdError appSecretKey
+  where
+    getUserLimitKey :: Text -> Text
+    getUserLimitKey userMobileNo = "getUserLimitKey:" <> userMobileNo
 
 passwordBasedAuth ::
   ( CacheFlow m r,

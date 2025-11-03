@@ -19,6 +19,8 @@ module API.UI.Registration
     DRegistration.AuthVerifyReq (..),
     DRegistration.AuthVerifyRes (..),
     DRegistration.PasswordAuthReq (..),
+    DRegistration.GetTokenReq (..),
+    DRegistration.TempCodeRes (..),
     API,
     handler,
   )
@@ -63,6 +65,9 @@ type API =
            :<|> "password"
              :> ReqBody '[JSON] DRegistration.PasswordAuthReq
              :> Post '[JSON] DRegistration.AuthRes
+           :<|> "get-token"
+             :> ReqBody '[JSON] DRegistration.GetTokenReq
+             :> Post '[JSON] DRegistration.AuthRes
            :<|> Capture "authId" (Id SRT.RegistrationToken)
              :> "verify"
              :> ReqBody '[JSON] DRegistration.AuthVerifyReq
@@ -72,6 +77,9 @@ type API =
              :> Header "x-sender-hash" Text
              :> "resend"
              :> Post '[JSON] DRegistration.ResendAuthRes
+           :<|> "generate-temp-app-code"
+             :> TokenAuth
+             :> Post '[JSON] DRegistration.TempCodeRes
            :<|> "logout"
              :> TokenAuth
              :> Post '[JSON] APISuccess
@@ -82,8 +90,10 @@ handler =
   auth
     :<|> signatureAuth
     :<|> passwordBasedAuth
+    :<|> getToken
     :<|> verify
     :<|> resend
+    :<|> generateTempAppCode
     :<|> logout
 
 auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
@@ -100,8 +110,14 @@ verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId
 passwordBasedAuth :: DRegistration.PasswordAuthReq -> FlowHandler DRegistration.AuthRes
 passwordBasedAuth req = withFlowHandlerAPI $ DRegistration.passwordBasedAuth req
 
+getToken :: DRegistration.GetTokenReq -> FlowHandler DRegistration.AuthRes
+getToken req = withFlowHandlerAPI $ DRegistration.getToken req
+
 resend :: Id SR.RegistrationToken -> Maybe Text -> FlowHandler DRegistration.ResendAuthRes
 resend tokenId mbSenderHash = withFlowHandlerAPI $ DRegistration.resend tokenId mbSenderHash
+
+generateTempAppCode :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DRegistration.TempCodeRes
+generateTempAppCode (perosnId, _) = withFlowHandlerAPI $ DRegistration.generateTempAppCode perosnId
 
 logout :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
 logout (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRegistration.logout personId

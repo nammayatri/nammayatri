@@ -1106,3 +1106,25 @@ instance IsHTTPError DepotManagerError where
     DepotFleetInfoNotFound _ -> E400
 
 instance IsAPIError DepotManagerError
+
+data GetUserTokenError
+  = GetUserIdError Text
+  | UserNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''GetUserTokenError
+
+instance IsBaseError GetUserTokenError where
+  toMessage = \case
+    GetUserIdError appSecretKey -> Just $ "Get user id error for app secret key: " <> appSecretKey
+    UserNotFound mobileNumberHash -> Just $ "User with mobile number hash: " <> mobileNumberHash <> " not found."
+
+instance IsHTTPError GetUserTokenError where
+  toErrorCode = \case
+    GetUserIdError _ -> "GET_USER_ID_ERROR"
+    UserNotFound _ -> "USER_NOT_FOUND"
+  toHttpCode = \case
+    GetUserIdError _ -> E400
+    UserNotFound _ -> E400
+
+instance IsAPIError GetUserTokenError

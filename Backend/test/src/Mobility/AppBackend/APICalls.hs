@@ -99,14 +99,18 @@ destinationServiceability regToken = destination
 appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes
 appSignatureAuth :: Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes
 appPasswordAuth :: Reg.PasswordAuthReq -> ClientM Reg.AuthRes
+appGetToken :: Reg.GetTokenReq -> ClientM Reg.AuthRes
 appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
 appReInitiateLogin :: Id AppSRT.RegistrationToken -> Maybe Text -> ClientM Reg.ResendAuthRes
+appGenerateTempAppCode :: RegToken -> ClientM Reg.TempCodeRes
 logout :: RegToken -> ClientM APISuccess
 appAuth
   :<|> appSignatureAuth
   :<|> appPasswordAuth
+  :<|> appGetToken
   :<|> appVerify
   :<|> appReInitiateLogin
+  :<|> appGenerateTempAppCode
   :<|> logout =
     client (Proxy :: Proxy Reg.API)
 
