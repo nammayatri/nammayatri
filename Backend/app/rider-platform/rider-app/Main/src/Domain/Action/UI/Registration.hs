@@ -428,12 +428,12 @@ generateTempAppCode ::
 generateTempAppCode personId = do
   tempCode <- show . (mod 10000) <$> Redis.incr mkTempAppSecretKey
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
-  case TE.decodeUtf8 . (.hash.unDbHash) <$> person.mobileNumber of
-    Just mobileNumberHash -> do
+  case A.toJSON . (.hash) <$> person.mobileNumber of
+    Just (A.String mobileNumberHash) -> do
       let appSecretKey = mobileNumberHash <> ":" <> show tempCode
       setUserIdToTempAppSecretKey appSecretKey person.id
       return $ TempCodeRes tempCode
-    Nothing -> throwError $ InvalidRequest "Mobile number not found"
+    _ -> throwError $ InvalidRequest "Mobile number not found"
   where
     mkTempAppSecretKey :: Text
     mkTempAppSecretKey = "rider-platform:temp-app-secret-key:" <> getId personId
@@ -448,19 +448,22 @@ getToken ::
   GetTokenReq ->
   m AuthRes
 getToken req = do
-  mobileNumberHash <- TE.decodeUtf8 . (.unDbHash) <$> getDbHash req.userMobileNo
-  getTokenAttempts <- Redis.incr $ getUserLimitKey mobileNumberHash
-  when (getTokenAttempts > 3) $ throwError $ InvalidRequest "Too many attempts"
-  Redis.expire (getUserLimitKey mobileNumberHash) 3600 -- 1 hour
-  let appSecretKey = mobileNumberHash <> ":" <> req.appSecretCode
-  mbPersonId <- getUserIdFromTempAppSecretKey appSecretKey
-  case mbPersonId of
-    Just personId -> do
-      person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
-      registrationToken <- (listToMaybe <$> RegistrationToken.findAllByPersonId personId) >>= fromMaybeM (InternalError $ "Registration token not found for person id: " <> getId personId)
-      return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked
-    Nothing -> do
-      throwError $ GetUserIdError appSecretKey
+  mobileNumberHashVal <- A.toJSON <$> getDbHash req.userMobileNo
+  case mobileNumberHashVal of
+    A.String mobileNumberHash -> do
+      getTokenAttempts <- Redis.incr $ getUserLimitKey mobileNumberHash
+      when (getTokenAttempts > 3) $ throwError $ InvalidRequest "Too many attempts"
+      Redis.expire (getUserLimitKey mobileNumberHash) 3600 -- 1 hour
+      let appSecretKey = mobileNumberHash <> ":" <> req.appSecretCode
+      mbPersonId <- getUserIdFromTempAppSecretKey appSecretKey
+      case mbPersonId of
+        Just personId -> do
+          person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
+          registrationToken <- (listToMaybe <$> RegistrationToken.findAllByPersonId personId) >>= fromMaybeM (InternalError $ "Registration token not found for person id: " <> getId personId)
+          return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked
+        Nothing -> do
+          throwError $ GetUserIdError appSecretKey
+    _ -> throwError $ InvalidRequest "Mobile number not found"
   where
     getUserLimitKey :: Text -> Text
     getUserLimitKey userMobileNo = "getUserLimitKey:" <> userMobileNo
