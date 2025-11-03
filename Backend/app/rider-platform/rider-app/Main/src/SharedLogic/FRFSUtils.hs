@@ -1081,6 +1081,11 @@ getUnitPriceFromPriceItem = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.un
 getAmountFromPriceItem :: Maybe PriceItem -> Price
 getAmountFromPriceItem = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.totalPrice)
 
+nonZeroQuantity :: Maybe Int -> Maybe Int
+nonZeroQuantity = \case
+  Just quantity -> if quantity > 0 then Just quantity else Nothing
+  Nothing -> Nothing
+
 mkCategoryPriceItemFromQuoteCategories :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> [CategoryPriceItem]
 mkCategoryPriceItemFromQuoteCategories quoteCategories = mapMaybe mkPriceItem quoteCategories
   where

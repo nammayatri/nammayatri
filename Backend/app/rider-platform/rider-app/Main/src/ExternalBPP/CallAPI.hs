@@ -153,7 +153,7 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote quo
         let categories =
               mapMaybe
                 ( \category -> do
-                    selectedQuantity <- category.selectedQuantity
+                    selectedQuantity <- FRFSUtils.nonZeroQuantity category.selectedQuantity
                     return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity, category = category.category, price = category.price}
                 )
                 quoteCategories
@@ -175,7 +175,7 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       let categories =
             mapMaybe
               ( \category -> do
-                  selectedQuantity <- category.selectedQuantity
+                  selectedQuantity <- FRFSUtils.nonZeroQuantity category.selectedQuantity
                   return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity, category = category.category, price = category.offeredPrice}
               )
               quoteCategories
@@ -260,7 +260,7 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
         let filteredDCategories :: [DCategorySelect] =
               mapMaybe
                 ( \category -> do
-                    selectedQuantity <- category.selectedQuantity
+                    selectedQuantity <- FRFSUtils.nonZeroQuantity category.selectedQuantity
                     return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity, category = category.category, price = fromMaybe category.offeredPrice category.finalPrice}
                 )
                 quoteCategories
