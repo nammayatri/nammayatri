@@ -80,6 +80,19 @@ updateStatusById status purchasedPassId = do
     ]
     [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
 
+updateDeviceIdById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Id DPurchasedPass.PurchasedPass ->
+  m ()
+updateDeviceIdById deviceId purchasedPassId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.deviceId deviceId,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
+
 getLastPassNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   m Int

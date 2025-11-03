@@ -33,6 +33,7 @@ PurchasedPass:
     startDate: Day
     endDate: Day
     passTypeId: Id PassType
+    deviceId: Text
     passCode: Text
     passName: Maybe Text
     passAmount: HighPrecMoney
