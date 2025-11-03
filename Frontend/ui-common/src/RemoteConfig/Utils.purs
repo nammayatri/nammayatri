@@ -210,6 +210,7 @@ getCityBasedConfig config city = case city of
   "pudukkottai" -> fromMaybe config.default config.pudukkottai
   "bidar" -> fromMaybe config.default config.bidar
   "srinagar" -> fromMaybe config.default config.srinagar
+  "trivandrum" -> fromMaybe config.default config.trivandrum
   _ -> case (getMerchant FunctionCall) of
         YATRISATHI -> fromMaybe config.default config.ysCities
         _ -> config.default
