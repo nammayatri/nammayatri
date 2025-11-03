@@ -1148,7 +1148,7 @@ calculateFareParametersWithQuoteFallback categories quote =
                     }
               )
       childItem =
-        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.adultItem else Nothing)
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.childItem else Nothing)
           <|> ( ((,) <$> quote.childTicketQuantity <*> quote.price) <&> \(quantity, unitPrice) ->
                   PriceItem
                     { quantity = quantity,
