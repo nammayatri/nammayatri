@@ -562,7 +562,7 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
             prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
             fleetPrepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
             rideFare,
-            minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides enforceSufficientDriverBalance,
+            minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides prepaidSubscriptionAndWalletEnabled,
             paymentInstrument,
             isRental,
             isInterCity,
@@ -792,7 +792,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
             prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
             fleetPrepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
-            minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides enforceSufficientDriverBalance,
+            minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides prepaidSubscriptionAndWalletEnabled,
             paymentInstrument,
             rideFare,
             ..
@@ -1062,7 +1062,7 @@ calculateDriverPoolCurrentlyOnRide CalculateDriverPoolReq {..} mbBatchNum = do
               prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
               fleetPrepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
               rideFare,
-              minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides enforceSufficientDriverBalance,
+              minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides prepaidSubscriptionAndWalletEnabled,
               paymentInstrument,
               ..
             }

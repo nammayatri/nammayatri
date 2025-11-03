@@ -102,7 +102,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       allowedVehicleVariant = DL.nub $ concatMap (.allowedVehicleVariant) allowedCityServiceTiers
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong onRideRadius (Just allowedVehicleVariant)
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show driverLocs
-  driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity
+  driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity minWalletAmountForCashRides paymentInstrument
   driverInfos <- QGND.filterDriversBySufficientBalance prepaidSubscriptionAndWalletEnabled rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
   logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show (DIAPI.convertToDriverInfoAPIEntity <$> driverInfos)
   vehicles <- Int.getVehicles driverInfos

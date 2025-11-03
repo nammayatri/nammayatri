@@ -2620,8 +2620,10 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
         let keysToClear =
               [ CQPlan.makeAllPlanKey,
                 CQPlan.makePlanIdAndPaymentModeKey plan.id plan.paymentMode plan.serviceName,
-                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated),
-                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing,
+                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated) (Just True),
+                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated) Nothing,
+                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing (Just True),
+                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing Nothing,
                 CQPlan.makeMerchantIdAndTypeKey plan.merchantOpCityId plan.planType plan.serviceName plan.vehicleCategory False,
                 CQPlan.makeMerchantIdKey plan.merchantOpCityId plan.serviceName,
                 CQPlan.makeMerchantIdAndPaymentModeAndVariantKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleVariant (Just plan.isDeprecated),

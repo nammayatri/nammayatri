@@ -251,7 +251,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         merchantOperatingCityId = booking.merchantOperatingCityId,
         status = status,
         driverId = cast driver.id,
-        fleetOwnerId = mFleetOwnerId,
+        fleetOwnerId = mFleetOwnerId, -- fleet owner of driver, rideDetails stores fleet owner of vehicle
         otp = otp,
         endOtp = Nothing,
         trackingUrl = trackingUrl,

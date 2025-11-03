@@ -100,7 +100,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocation nearestRadius (Just allowedVehicleVariant)
   specialLocWarriorDriverInfos <- Int.getSpecialLocWarriorDriverInfoWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
   driverHomeLocs <- Int.getDriverGoHomeReqNearby (driverLocs <&> (.driverId))
-  driverInfoWithoutSpecialLocWarrior <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity
+  driverInfoWithoutSpecialLocWarrior <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity minWalletAmountForCashRides paymentInstrument
   let driverInfos_ = specialLocWarriorDriverInfos <> driverInfoWithoutSpecialLocWarrior
   driverInfos <- QGND.filterDriversBySufficientBalance prepaidSubscriptionAndWalletEnabled rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
   logDebug $ "MetroWarriorDebugging getNearestGoHomeDrivers" <> show (DIAPI.convertToDriverInfoAPIEntity <$> specialLocWarriorDriverInfos)
