@@ -2783,13 +2783,18 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
   mbVehicle <- runInReplica $ QVehicle.findById personId
   let vehicleCategory = fromMaybe subscriptionConfig.defaultCityVehicleCategory (mbVehicle >>= (.category))
   let fee = fee' - if isJust mbSgst && isJust mbCgst then 0.0 else sgst + cgst
-  driverFee <-
-    case dueDriverFee of
-      [] -> do
-        driverFee' <- mkDriverFee fee cgst sgst vehicleCategory
-        QDF.create driverFee'
-        pure [driverFee']
-      dfee -> pure dfee
+  -- Mark all previous pending fees as INACTIVE before creating new entry
+  now <- getCurrentTime
+  unless (null dueDriverFee) $ do
+    let oldFeeIds = map (.id) dueDriverFee
+    -- Find and mark only ACTIVE_INVOICE invoices as INACTIVE to avoid touching paid/failed invoices
+    oldInvoices <- mapM (\oldFee -> QINV.findActiveManualInvoiceByFeeId oldFee.id (feeTypeToInvoicetype feeType) Domain.ACTIVE_INVOICE) dueDriverFee
+    mapM_ (mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id))) oldInvoices
+    QDF.updateStatusByIds DDF.INACTIVE oldFeeIds now
+  -- Always create a new driver fee entry
+  driverFee' <- mkDriverFee fee cgst sgst vehicleCategory
+  QDF.create driverFee'
+  let driverFee = [driverFee']
   invoices <- mapM (\fee_ -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee_.id (feeTypeToInvoicetype feeType) Domain.ACTIVE_INVOICE)) driverFee
   let paymentService = subscriptionConfig.paymentServiceName
       sortedInvoices = mergeSortAndRemoveDuplicate invoices
