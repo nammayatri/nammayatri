@@ -12,15 +12,15 @@ data ClientService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-$(mkBeamInstancesForEnum ''ClientService)
-
 instance Show ClientService where
-  show ClientFCMService = "FCM"
+  show ClientFCMService = "Notification_FCM"
 
 instance Read ClientService where
   readsPrec _ s
-    | s == "FCM" = [(ClientFCMService, "")]
+    | s == "Notification_FCM" = [(ClientFCMService, "")]
     | otherwise = []
+
+$(mkBeamInstancesForEnum ''ClientService)
 
 data ClientServiceConfig
   = ClientFCMServiceConfig FT.FCMConfig
