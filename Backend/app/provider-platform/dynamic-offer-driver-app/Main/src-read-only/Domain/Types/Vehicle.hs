@@ -9,6 +9,7 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.UpgradedTier
 import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
@@ -32,6 +33,7 @@ data Vehicle = Vehicle
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     registrationCategory :: Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory,
     registrationNo :: Kernel.Prelude.Text,
+    ruleBasedUpgradeTiers :: Kernel.Prelude.Maybe [Domain.Types.UpgradedTier.UpgradedTier],
     selectedServiceTiers :: [Domain.Types.Common.ServiceTierType],
     size :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     variant :: Domain.Types.VehicleVariant.VehicleVariant,

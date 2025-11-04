@@ -84,6 +84,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
+import SharedLogic.RuleBasedTierUpgrade
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.TransporterConfig as QTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -501,7 +502,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
         DC.incrementValidRideCount driverId expirationPeriod 1
         DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType) (Just ride.id.getId) ride.vehicleVariant
-
+    computeEligibleUpgradeTiers ride thresholdConfig
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)

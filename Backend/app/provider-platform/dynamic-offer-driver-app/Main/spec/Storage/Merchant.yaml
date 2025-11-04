@@ -1062,6 +1062,7 @@ TransporterConfig:
     aaEnabledClientSdkVersion : Text
     isAAEnabledForRecurring : Maybe Bool
     analyticsConfig: AnalyticsConfig
+    upgradeTierDropRetentionTime: Maybe Seconds
 
   beamType:
     currency: Maybe Currency

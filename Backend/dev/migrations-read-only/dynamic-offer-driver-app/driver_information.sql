@@ -247,3 +247,4 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN last_offline_ti
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_tts_enabled boolean ;
 
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN rule_based_upgrade_tiers json ;

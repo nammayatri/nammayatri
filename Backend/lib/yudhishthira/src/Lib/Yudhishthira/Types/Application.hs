@@ -23,6 +23,7 @@ data ApplicationEvent
   | RideStart
   | RideEnd
   | RideCancel
+  | UpgradeTier
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''ApplicationEvent)

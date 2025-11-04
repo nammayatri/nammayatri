@@ -223,6 +223,7 @@ data TransporterConfigT f = TransporterConfigT
     updateOrderStatusBatchSize :: B.C f Kernel.Prelude.Int,
     updatePayoutStatusBatchSize :: B.C f Kernel.Prelude.Int,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    upgradeTierDropRetentionTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     upwardsRecomputeBuffer :: B.C f Kernel.Types.Common.HighPrecMeters,
     upwardsRecomputeBufferPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     useOfferListCache :: B.C f Kernel.Prelude.Bool,

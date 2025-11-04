@@ -11,6 +11,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.UpgradedTier
 import qualified Domain.Types.VehicleCategory
 import qualified Kernel.External.Maps
 import Kernel.Prelude
@@ -89,6 +90,7 @@ data DriverInformation = DriverInformation
     referredByOperatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideRequestVolume :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideRequestVolumeEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    ruleBasedUpgradeTiers :: Kernel.Prelude.Maybe [Domain.Types.UpgradedTier.UpgradedTier],
     servicesEnabledForSubscription :: [Domain.Types.Extra.Plan.ServiceNames],
     softBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
