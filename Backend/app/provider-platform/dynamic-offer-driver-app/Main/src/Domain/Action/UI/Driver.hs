@@ -2926,20 +2926,42 @@ getSecurityDepositDfStatus ::
   ServiceNames ->
   m [SecurityDepositDfStatusRes]
 getSecurityDepositDfStatus (personId, _, _) serviceName = do
-  driverFees <- runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [DDF.ONE_TIME_SECURITY_DEPOSIT] [DDF.PAYMENT_PENDING, DDF.CLEARED, DDF.PAYMENT_OVERDUE, DDF.EXEMPTED, DDF.COLLECTED_CASH, DDF.REFUND_FAILED]
-  mapM buildSecurityDepositDfStatus $ sortOn (.createdAt) driverFees
+  driverFees <- runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [DDF.ONE_TIME_SECURITY_DEPOSIT] [DDF.PAYMENT_PENDING, DDF.CLEARED, DDF.PAYMENT_OVERDUE, DDF.EXEMPTED, DDF.COLLECTED_CASH, DDF.REFUND_FAILED, DDF.REFUNDED]
+  concat <$> mapM buildSecurityDepositDfStatus (sortOn (.createdAt) driverFees)
   where
     buildSecurityDepositDfStatus dfee = do
       let securityDepositAmount = SLDriverFee.roundToHalf dfee.currency dfee.govtCharges + dfee.platformFee.fee + dfee.platformFee.cgst + dfee.platformFee.sgst
           securityDepositAmountWithCurrency = Just $ PriceAPIEntity securityDepositAmount dfee.currency
-      return $
-        SecurityDepositDfStatusRes
-          { securityDepositStatus = dfee.status,
-            driverFeeId = dfee.id.getId,
-            createdAt = dfee.createdAt,
-            refundedAmount = dfee.refundedAmount,
-            ..
-          }
+
+      let refundStatuses = [DDF.REFUNDED, DDF.REFUND_FAILED]
+      if dfee.status `elem` refundStatuses
+        then
+          return
+            [ SecurityDepositDfStatusRes
+                { securityDepositStatus = DDF.CLEARED,
+                  securityDepositAmountWithCurrency = securityDepositAmountWithCurrency,
+                  refundedAmount = Nothing,
+                  driverFeeId = dfee.id.getId,
+                  createdAt = dfee.createdAt
+                },
+              SecurityDepositDfStatusRes
+                { securityDepositStatus = dfee.status,
+                  securityDepositAmountWithCurrency = securityDepositAmountWithCurrency,
+                  refundedAmount = dfee.refundedAmount,
+                  driverFeeId = dfee.id.getId,
+                  createdAt = fromMaybe dfee.updatedAt dfee.refundedAt
+                }
+            ]
+        else
+          return
+            [ SecurityDepositDfStatusRes
+                { securityDepositStatus = dfee.status,
+                  securityDepositAmountWithCurrency = securityDepositAmountWithCurrency,
+                  refundedAmount = dfee.refundedAmount,
+                  driverFeeId = dfee.id.getId,
+                  createdAt = dfee.createdAt
+                }
+            ]
 
 data RefundByPayoutReq = RefundByPayoutReq
   { serviceName :: ServiceNames,
@@ -2979,7 +3001,8 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
         CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
           >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
       uid <- generateGUID
-      let ((driverFeeToPayout, driverFeeToSettle), _) = driverFeeWithRefundData driverFeeSorted refundAmount uid
+      now <- getCurrentTime
+      let ((driverFeeToPayout, driverFeeToSettle), _) = driverFeeWithRefundData driverFeeSorted refundAmount uid now
       person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       phoneNo <- mapM decrypt person.mobileNumber
       payoutServiceName <- Payout.decidePayoutService (fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName) person.clientSdkVersion person.merchantOperatingCityId
@@ -3013,7 +3036,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
   return Success
   where
     mapToAmount = \dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
-    driverFeeWithRefundData driverFeeSorted refundAmount uid =
+    driverFeeWithRefundData driverFeeSorted refundAmount uid refundInitiatedAt =
       foldl'
         ( \acc dfee@DDF.DriverFee {serviceName = planServiceName, ..} -> do
             let amount = mapToAmount dfee
@@ -3026,6 +3049,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
                           refundedBy = Just DDF.PAYOUT,
                           refundEntityId = Just uid,
                           refundedAmount = Just $ min (snd acc) amount,
+                          refundedAt = Just refundInitiatedAt,
                           serviceName = planServiceName,
                           ..
                         }

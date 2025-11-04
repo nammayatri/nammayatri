@@ -1090,8 +1090,11 @@ getDriverSecurityDepositStatus merchantShortId _opCity driverId serviceName' = d
   where
     mapSecurityDepositDfStatusResToDashboardType =
       map
-        ( \(DDriver.SecurityDepositDfStatusRes {..}) -> do
-            Common.SecurityDepositDfStatusRes {securityDepositStatus = DCommon.castStatus securityDepositStatus, ..}
+        ( \(DDriver.SecurityDepositDfStatusRes {..}) ->
+            Common.SecurityDepositDfStatusRes
+              { securityDepositStatus = DCommon.castStatus securityDepositStatus,
+                ..
+              }
         )
 
 ---------------------------------------------------------------------
