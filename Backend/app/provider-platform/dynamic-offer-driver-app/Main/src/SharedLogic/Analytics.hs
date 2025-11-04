@@ -74,11 +74,11 @@ convertToAllTimeFallbackRes metricsList =
             totalRequestCount = getMetricValue TOTAL_REQUEST_COUNT
           }
 
-data FleetAllTimeMetric = ACTIVE_DRIVER_COUNT | ACTIVE_VEHICLE_COUNT | CURRENT_ONLINE_DRIVER_COUNT
+data FleetAllTimeMetric = ACTIVE_DRIVER_COUNT | ACTIVE_VEHICLE_COUNT
   deriving (Show, Eq, Ord)
 
 fleetAllTimeMetrics :: [FleetAllTimeMetric]
-fleetAllTimeMetrics = [ACTIVE_DRIVER_COUNT, ACTIVE_VEHICLE_COUNT, CURRENT_ONLINE_DRIVER_COUNT]
+fleetAllTimeMetrics = [ACTIVE_DRIVER_COUNT, ACTIVE_VEHICLE_COUNT]
 
 fleetAllTimeKeys :: Text -> [Text]
 fleetAllTimeKeys fleetOperatorId = map (makeFleetAnalyticsKey fleetOperatorId) fleetAllTimeMetrics
@@ -90,15 +90,15 @@ data FleetAllTimeFallbackRes = FleetAllTimeFallbackRes
   }
   deriving (Show, Eq)
 
-convertToFleetAllTimeFallbackRes :: [(FleetAllTimeMetric, Int)] -> CommonAllTimeFallbackRes
-convertToFleetAllTimeFallbackRes metricsList =
+convertToFleetAllTimeFallbackRes :: [(FleetAllTimeMetric, Int)] -> Int -> CommonAllTimeFallbackRes
+convertToFleetAllTimeFallbackRes metricsList currentOnlineDriverCount =
   let metricsMap = Map.fromList metricsList
       getMetricValue metric = Map.findWithDefault 0 metric metricsMap
    in FleetAllTimeFallback $
         FleetAllTimeFallbackRes
           { activeDriverCount = getMetricValue ACTIVE_DRIVER_COUNT,
             activeVehicleCount = getMetricValue ACTIVE_VEHICLE_COUNT,
-            currentOnlineDriverCount = getMetricValue CURRENT_ONLINE_DRIVER_COUNT
+            currentOnlineDriverCount
           }
 
 makeFleetKeyPrefix :: Text -> Text
@@ -664,16 +664,15 @@ fallbackToClickHouseAndUpdateRedisForAllTimeFleet fleetOwnerId fleetAllTimeKeysD
   activeVehicleCount <- CVehicle.countByDriverIds driverIds
   currentOnlineDriverCount <- getOnlineDriverCount
   -- update redis (best-effort)
-  mapM_ (uncurry Redis.set) (zip fleetAllTimeKeysData [activeDriverCount, activeVehicleCount, currentOnlineDriverCount])
-  pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [activeDriverCount, activeVehicleCount, currentOnlineDriverCount])
+  mapM_ (uncurry Redis.set) (zip fleetAllTimeKeysData [activeDriverCount, activeVehicleCount])
+  pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [activeDriverCount, activeVehicleCount]) currentOnlineDriverCount
   where
     getOnlineDriverCount = do
-      let onlineKey = DDF.getStatusKey fleetOwnerId DDF.ONLINE
-      res <- Redis.get @Int onlineKey
+      res <- DDF.getOnlineKeyValue fleetOwnerId
       if isNothing res
         then do
           void $ SDFStatus.handleCacheMissForDriverFlowStatus DP.FLEET_OWNER fleetOwnerId (DDF.allKeys fleetOwnerId)
-          onlineRes <- Redis.get @Int onlineKey
+          onlineRes <- DDF.getOnlineKeyValue fleetOwnerId
           pure (fromMaybe 0 onlineRes)
         else pure (fromMaybe 0 res)
 
@@ -761,10 +760,13 @@ handleCacheMissForAnalyticsAllTimeCommon role entityId allTimeKeysData = do
       logTagInfo logTag $ "inProgress key present for " <> show role <> "Id: " <> entityId <> ". Waiting for it to clear."
       SDFStatus.waitUntilKeyGone inProgressKey
       allTimeKeysRes <- mapM (\key -> fromMaybe 0 <$> Redis.get @Int key) allTimeKeysData
-      pure $ case role of
-        DP.OPERATOR -> convertToAllTimeFallbackRes (zip allTimeMetrics allTimeKeysRes)
-        DP.FLEET_OWNER -> convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics allTimeKeysRes)
-        _ -> error $ "Unsupported role for analytics: " <> show role
+      case role of
+        DP.OPERATOR ->
+          pure $ convertToAllTimeFallbackRes (zip allTimeMetrics allTimeKeysRes)
+        DP.FLEET_OWNER -> do
+          currentOnlineDriverCount <- DDF.getOnlineKeyValue entityId
+          pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics allTimeKeysRes) (fromMaybe 0 currentOnlineDriverCount)
+        _ -> throwError $ InvalidRequest $ "Unsupported role for analytics: " <> show role
     _ -> do
       lockAcquired <- Redis.setNxExpire inProgressKey 60 True -- 60 seconds expiry
       if lockAcquired
