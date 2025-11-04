@@ -374,6 +374,7 @@ rideInfo merchantId reqRideId = do
         _ -> Nothing
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
+  unencryptedDriverAlternateNumber <- mapM decrypt ride.driverAlternateNumber
   let fareProductType = mkFareProductType booking.bookingDetails
   pure
     Common.RideInfoRes
@@ -387,6 +388,7 @@ rideInfo merchantId reqRideId = do
         customerDropLocation = mbtoLocation,
         driverName = ride.driverName,
         driverPhoneNo = Just ride.driverMobileNumber,
+        driverAlternatePhoneNo = unencryptedDriverAlternateNumber,
         driverRegisteredAt = ride.driverRegisteredAt,
         vehicleNo = ride.vehicleNumber,
         vehicleModel = ride.vehicleModel,

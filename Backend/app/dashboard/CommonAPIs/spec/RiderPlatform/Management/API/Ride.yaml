@@ -155,6 +155,7 @@ types:
     - customerDropLocation: Maybe Location
     - driverName: Text
     - driverPhoneNo: Maybe Text
+    - driverAlternatePhoneNo: Maybe Text
     - driverRegisteredAt: Maybe UTCTime
     - vehicleNo: Text
     - vehicleModel: Text
