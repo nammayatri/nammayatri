@@ -209,8 +209,36 @@ parseStationsFromInMemoryServer ::
   IntegratedBPPConfig ->
   m [Station.Station]
 parseStationsFromInMemoryServer stations integratedBPPConfig = do
-  let routeStopMappingInMemoryServerWithPublicData = map (\RouteStopMappingInMemoryServer {..} -> RouteStopMappingInMemoryServerWithPublicData estimatedTravelTimeFromPreviousStop providerCode routeCode sequenceNum stopCode stopName stopPoint vehicleType Nothing gates hindiName regionalName parentStopCode) stations
-  parseStationsFromInMemoryServerWithPublicData routeStopMappingInMemoryServerWithPublicData integratedBPPConfig
+  now <- getCurrentTime
+  stationsExtraInformation <- mapM (\station -> QStationsExtraInformation.getByStationIdAndCity station.stopCode integratedBPPConfig.merchantOperatingCityId) stations
+  let stationAddressMap = HM.fromList $ map (\info -> (info.stationId, (info.address, info.suggestedDestinations))) stationsExtraInformation
+  mapM
+    ( \station -> do
+        return $
+          Station.Station
+            { address = join (fst <$> HM.lookup station.stopCode stationAddressMap),
+              code = station.stopCode,
+              hindiName = station.hindiName,
+              id = Id station.stopCode,
+              integratedBppConfigId = integratedBPPConfig.id,
+              lat = Just station.stopPoint.lat,
+              lon = Just station.stopPoint.lon,
+              merchantId = integratedBPPConfig.merchantId,
+              merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId,
+              name = station.stopName,
+              possibleTypes = Nothing,
+              regionalName = station.regionalName,
+              suggestedDestinations = join (snd <$> HM.lookup station.stopCode stationAddressMap),
+              geoJson = station.geoJson,
+              gates = station.gates,
+              timeBounds = Unbounded,
+              vehicleType = BecknFRFSUtils.becknVehicleCategoryToFrfsVehicleCategory integratedBPPConfig.vehicleCategory,
+              parentStopCode = station.parentStopCode,
+              createdAt = now,
+              updatedAt = now
+            }
+    )
+    stations
 
 parseStationsFromInMemoryServerWithPublicData ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, EsqDBFlow m r, HasShortDurationRetryCfg r c, Log m, CacheFlow m r) =>
