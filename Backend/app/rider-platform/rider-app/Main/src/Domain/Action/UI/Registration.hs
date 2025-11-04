@@ -430,7 +430,7 @@ generateTempAppCode personId = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
   case A.toJSON . (.hash) <$> person.mobileNumber of
     Just (A.String mobileNumberHash) -> do
-      let appSecretKey = mobileNumberHash <> ":" <> show tempCode
+      let appSecretKey = mobileNumberHash <> ":" <> tempCode
       setUserIdToTempAppSecretKey appSecretKey person.id
       return $ TempCodeRes tempCode
     _ -> throwError $ InvalidRequest "Mobile number not found"
