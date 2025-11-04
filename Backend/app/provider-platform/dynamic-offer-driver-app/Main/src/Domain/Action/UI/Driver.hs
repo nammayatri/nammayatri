@@ -1032,7 +1032,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
     Just mediaId -> do
       mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
       return (Just mediaEntry.url, Just mediaEntry.createdAt)
-    Nothing -> return (Nothing, Nothing)
+    Nothing -> return (Nothing, driverInfo.enabledAt)
   aadhaarCardPhotoResp <- withTryCatch "fetchAndCacheAadhaarImage:buildDriverEntityRes" (fetchAndCacheAadhaarImage person driverInfo)
   let aadhaarCardPhoto = join (eitherToMaybe aadhaarCardPhotoResp)
   let rating =
