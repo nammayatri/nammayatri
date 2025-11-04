@@ -78,7 +78,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN valid_days integer ;
 
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN cancellation_penalty_amount double precision ;
 
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN added_to_fee_id character varying(36) ;
+
+
