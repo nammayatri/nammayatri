@@ -514,3 +514,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fe
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN upgrade_tier_drop_retention_time integer ;
+
+
+
+------- SQL updates -------
+

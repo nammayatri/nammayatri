@@ -815,6 +815,7 @@ TransporterConfig:
       vipEscort: Kilometers
       vipOfficer: Kilometers
       bikeplus: Kilometers
+      erickshaw: Kilometers
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     DashboardMediaSendingLimit:
       sms: Int
@@ -845,6 +846,7 @@ TransporterConfig:
       vipEscort: Maybe Seconds
       vipOfficer: Maybe Seconds
       bikeplus: Maybe Seconds
+      erickshaw: Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     DistanceRecomputeConfigs:
       estimatedDistanceUpper: Meters

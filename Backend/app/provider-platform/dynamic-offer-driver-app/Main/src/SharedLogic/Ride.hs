@@ -413,3 +413,4 @@ getArrivalTimeBufferOfVehicle bufferJson serviceTier =
     DST.VIP_OFFICER -> buffer.vipOfficer
     DST.AC_PRIORITY -> buffer.sedan
     DST.BIKE_PLUS -> buffer.bikeplus
+    DST.E_RICKSHAW -> buffer.erickshaw

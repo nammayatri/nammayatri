@@ -1280,6 +1280,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.VIP_OFFICER -> [DVST.VIP_OFFICER]
               DV.AC_PRIORITY -> [DVST.AC_PRIORITY]
               DV.BIKE_PLUS -> [DVST.BIKE_PLUS]
+              DV.E_RICKSHAW -> [DVST.E_RICKSHAW]
 
       QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
