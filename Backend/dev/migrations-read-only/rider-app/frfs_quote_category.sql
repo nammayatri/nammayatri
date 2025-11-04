@@ -28,12 +28,12 @@ ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN category text ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN final_price TYPE double precision;
+ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN final_price TYPE double precision USING final_price::double precision;
 
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN ticket_category_metadata_config_id SET DEFAULT Unknown;
+ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN ticket_category_metadata_config_id SET DEFAULT 'Unknown';
 ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN ticket_category_metadata_config_id DROP NOT NULL;
 
 
