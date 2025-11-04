@@ -24,7 +24,7 @@ import qualified SharedLogic.External.Nandi.Flow as Flow
 import SharedLogic.External.Nandi.Types
 import Storage.CachedQueries.OTPRest.Common as OTPRestCommon
 import qualified Storage.CachedQueries.RoutePolylines as QRoutePolylines
-import qualified Storage.Queries.StationsExtraInformation as QStationsExtraInformation
+import qualified Storage.CachedQueries.StationsExtraInformation as QStationsExtraInformation
 import Tools.Error
 import Tools.MultiModal as MM
 
