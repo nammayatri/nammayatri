@@ -169,10 +169,11 @@ snapToRoadWithFallback ::
   Maybe MapsServiceConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Bool ->
   Maybe Text ->
   SnapToRoadReq ->
   m ([Maps.MapsService], Either String SnapToRoadResp)
-snapToRoadWithFallback rectifyDistantPointsFailureUsing _merchantId merchantOperatingCityId entityId = Maps.snapToRoadWithFallback entityId rectifyDistantPointsFailureUsing handler
+snapToRoadWithFallback rectifyDistantPointsFailureUsing _merchantId merchantOperatingCityId includeRectifiedDistance entityId = Maps.snapToRoadWithFallback entityId rectifyDistantPointsFailureUsing includeRectifiedDistance handler
   where
     handler = Maps.SnapToRoadHandler {..}
 
