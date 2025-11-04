@@ -1,5 +1,4 @@
 CREATE TABLE atlas_app.purchased_pass ();
-
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN applicable_vehicle_service_tiers text[] NOT NULL;
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN benefit_description text NOT NULL;
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN benefit_type text ;
@@ -23,9 +22,7 @@ ALTER TABLE atlas_app.purchased_pass ADD COLUMN used_trip_count integer ;
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.purchased_pass ADD PRIMARY KEY ( id);
-
-
-
 ------- SQL updates -------
+ALTER TABLE atlas_app.purchased_pass ADD COLUMN used_trip_count integer ;
 
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN device_switch_count integer ;
