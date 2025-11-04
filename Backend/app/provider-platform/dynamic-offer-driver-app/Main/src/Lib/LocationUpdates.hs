@@ -231,7 +231,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
   transportConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let snapToRoad' shouldRectifyDistantPointsFailure =
         if transportConfig.useWithSnapToRoadFallback
-          then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId (fmap getId rideId)
+          then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId False (fmap getId rideId)
           else snapToRoadWithService (fmap getId rideId)
       enableNightSafety = not isEndRide
       enableSafetyCheckWrtTripCategory = \case
