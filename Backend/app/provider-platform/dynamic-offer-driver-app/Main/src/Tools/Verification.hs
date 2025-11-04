@@ -26,9 +26,13 @@ module Tools.Verification
     verifySdkResp,
     getTask,
     nameCompare,
+    getDigiLockerXml,
+    getDigiLockerFile,
+    pullDigiLockerDrivingLicense,
   )
 where
 
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -51,6 +55,7 @@ import Kernel.External.Verification as Reexport hiding
     verifySdkResp,
   )
 import qualified Kernel.External.Verification as Verification
+import qualified Kernel.External.Verification.Digilocker.Types as DigiTypes
 import Kernel.External.Verification.Interface.InternalScripts
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -204,3 +209,32 @@ callService merchantOpCityId vsc func req = do
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc' -> func vsc' req
     _ -> throwError $ InternalError "Unknown Service Config"
+
+-- DigiLocker specific functions
+
+getDigiLockerXml ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DigiLockerGetXmlReq ->
+  m GetTaskResp
+getDigiLockerXml _merchantId merchantOpCityId req =
+  callService merchantOpCityId DigiLocker Verification.getXml req
+
+getDigiLockerFile ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DigiLockerGetFileReq ->
+  m BSL.ByteString
+getDigiLockerFile _merchantId merchantOpCityId req =
+  callService merchantOpCityId DigiLocker Verification.getFile req
+
+pullDigiLockerDrivingLicense ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DigiLockerPullDrivingLicenseReq ->
+  m DigiTypes.DigiLockerPullDocumentResponse
+pullDigiLockerDrivingLicense _merchantId merchantOpCityId req =
+  callService merchantOpCityId DigiLocker Verification.pullDrivingLicense req
