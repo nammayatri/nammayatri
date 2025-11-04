@@ -125,7 +125,7 @@ import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.RiderDetails as QRiderDetails
-import qualified Storage.Queries.SubscriptionTransaction as QSubscriptionTransaction
+-- import qualified Storage.Queries.SubscriptionTransaction as QSubscriptionTransaction
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VendorFee as QVF
 import qualified Storage.Queries.VendorSplitDetails as QVSD
