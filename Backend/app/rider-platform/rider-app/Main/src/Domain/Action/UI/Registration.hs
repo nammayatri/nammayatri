@@ -426,7 +426,7 @@ generateTempAppCode ::
   Id SP.Person ->
   m TempCodeRes
 generateTempAppCode personId = do
-  tempCode <- show . (mod 10000) <$> Redis.incr mkTempAppSecretKey
+  tempCode <- show . (`mod` 10000) <$> Redis.incr mkTempAppSecretKey
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
   case A.toJSON . (.hash) <$> person.mobileNumber of
     Just (A.String mobileNumberHash) -> do
@@ -436,7 +436,7 @@ generateTempAppCode personId = do
     _ -> throwError $ InvalidRequest "Mobile number not found"
   where
     mkTempAppSecretKey :: Text
-    mkTempAppSecretKey = "rider-platform:temp-app-secret-key:" <> getId personId
+    mkTempAppSecretKey = "rider-platform:temp-app-secret-key:"
 
 getToken ::
   ( CacheFlow m r,
