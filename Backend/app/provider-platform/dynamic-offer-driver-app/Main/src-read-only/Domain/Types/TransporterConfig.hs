@@ -226,6 +226,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     updateOrderStatusBatchSize :: Kernel.Prelude.Int,
     updatePayoutStatusBatchSize :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
+    upgradeTierDropRetentionTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     upwardsRecomputeBuffer :: Kernel.Types.Common.HighPrecMeters,
     upwardsRecomputeBufferPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     useOfferListCache :: Kernel.Prelude.Bool,

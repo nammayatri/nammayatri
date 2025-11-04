@@ -122,13 +122,16 @@ getNearestDrivers NearestDriversReq {..} = do
       let ifUsageRestricted = any (\(_, usageRestricted) -> usageRestricted) availableTiersWithUsageRestriction
       let softBlockedTiers = fromMaybe [] info.softBlockStiers
       let removeSoftBlockedTiers = filter (\stier -> stier `notElem` softBlockedTiers)
+      let upgradedTiers = DL.intersect ((.tier) <$> fromMaybe [] vehicle.ruleBasedUpgradeTiers) ((.tier) <$> fromMaybe [] info.ruleBasedUpgradeTiers)
+      let addRuleBasedUpgradeTiers existing = DL.nub $ (filter (\tier -> maybe False (\tierInfo -> vehicle.variant `elem` tierInfo.allowedVehicleVariant) (HashMap.lookup tier cityServiceTiersHashMap)) upgradedTiers) <> existing
       let selectedDriverServiceTiers =
             removeSoftBlockedTiers $
-              if ifUsageRestricted
-                then do
-                  (.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction) -- no need to check for user selection
-                else do
-                  DL.intersect vehicle.selectedServiceTiers ((.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction))
+              addRuleBasedUpgradeTiers $
+                if ifUsageRestricted
+                  then do
+                    (.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction) -- no need to check for user selection
+                  else do
+                    DL.intersect vehicle.selectedServiceTiers ((.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction))
       if null serviceTiers
         then Just $ mapMaybe (mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap) selectedDriverServiceTiers
         else do

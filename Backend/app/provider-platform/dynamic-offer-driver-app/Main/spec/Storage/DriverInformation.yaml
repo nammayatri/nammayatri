@@ -17,6 +17,7 @@ imports:
   VehicleCategory: Domain.Types.VehicleCategory
   ServiceNames : Domain.Types.Extra.Plan
   Meters: Kernel.Types.Common
+  UpgradedTier: Domain.Types.UpgradedTier
 DriverInformation:
   tableName: driver_information
   types:
@@ -127,6 +128,7 @@ DriverInformation:
     rideRequestVolumeEnabled: Maybe Bool
     lastOfflineTime: Maybe UTCTime
     isTTSEnabled: Maybe Bool
+    ruleBasedUpgradeTiers: Maybe [UpgradedTier]
 
   default:
     active: "false"
@@ -175,12 +177,14 @@ DriverInformation:
     preferredSecondarySpecialLocIds: "Maybe [Text]"
     issueBreachCooldownTimes: Maybe Value
     servicesEnabledForSubscription: Maybe [ServiceNames]
+    ruleBasedUpgradeTiers: Maybe Value
 
   sqlType:
     preferredSecondarySpecialLocIds: "text[]"
     issueBreachCooldownTimes: "json"
     softBlockStiers: "text[]"
     servicesEnabledForSubscription: "text[]"
+    ruleBasedUpgradeTiers: "json"
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
@@ -198,6 +202,8 @@ DriverInformation:
     issueBreachCooldownTimes: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachCooldownTimes|E
     servicesEnabledForSubscription: Storage.Queries.Transformers.DriverInformation.backfillServiceEnabledForSubscription driverId servicesEnabledForSubscription| EM
+    ruleBasedUpgradeTiers: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< ruleBasedUpgradeTiers|E
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
@@ -216,6 +222,7 @@ DriverInformation:
     driverTripEndLocationLon: Kernel.Prelude.fmap (.lon)|I
     issueBreachCooldownTimes: Kernel.Prelude.toJSON <$> issueBreachCooldownTimes|E
     servicesEnabledForSubscription: Kernel.Prelude.Just|I
+    ruleBasedUpgradeTiers: Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers|E
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -397,4 +404,8 @@ DriverInformation:
     updateDrunkAndDriveViolationCount:
       kvFunction: updateOneWithKV
       params: [drunkAndDriveViolationCount]
+      where: driverId
+    updateUpgradedTiers:
+      kvFunction: updateOneWithKV
+      params: [ruleBasedUpgradeTiers]
       where: driverId

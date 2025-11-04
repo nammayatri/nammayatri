@@ -60,6 +60,7 @@ import qualified SharedLogic.FareCalculator as FareCalculator
 import SharedLogic.FarePolicy as SFP
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.Ride (updateOnRideStatusWithAdvancedRideCheck)
+import SharedLogic.RuleBasedTierUpgrade
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -159,6 +160,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             fork "cancelRide/ReAllocate - Notify BAP" $ do
               isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
               unless isReallocated $ BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source noShowCharges
+            computeEligibleUpgradeTiers ride transporterConfig
         )
         ( do
             logDebug $ "CancelRideTransaction:RID:-" <> rideId.getId <> " Unlocked"

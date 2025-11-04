@@ -336,7 +336,8 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       downgradeReason = Nothing,
       createdAt = now,
       updatedAt = now,
-      vehicleTags = vehicleTag
+      vehicleTags = vehicleTag,
+      ruleBasedUpgradeTiers = Nothing
     }
 
 makeVehicleAPIEntity :: Maybe DVST.ServiceTierType -> Vehicle -> VehicleAPIEntity

@@ -453,3 +453,5 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN aa_enabled_clie
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN analytics_config json  default '{"allowCacheDriverFlowStatus": false}' :: json;
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN upgrade_tier_drop_retention_time integer ;
