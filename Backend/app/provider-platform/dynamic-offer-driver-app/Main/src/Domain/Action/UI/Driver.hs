@@ -406,7 +406,8 @@ data DriverInformationRes = DriverInformationRes
     rideRequestVolume :: Maybe Int,
     isTTSEnabled :: Maybe Bool,
     isHighAccuracyLocationEnabled :: Maybe Bool,
-    rideRequestVolumeEnabled :: Maybe Bool
+    rideRequestVolumeEnabled :: Maybe Bool,
+    profilePhotoUploadedAt :: Maybe UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -486,7 +487,8 @@ data DriverEntityRes = DriverEntityRes
     rideRequestVolume :: Maybe Int,
     isTTSEnabled :: Maybe Bool,
     isHighAccuracyLocationEnabled :: Maybe Bool,
-    rideRequestVolumeEnabled :: Maybe Bool
+    rideRequestVolumeEnabled :: Maybe Bool,
+    profilePhotoUploadedAt :: Maybe UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -1025,9 +1027,11 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
   decMobNum <- mapM decrypt person.mobileNumber
   decaltMobNum <- mapM decrypt person.alternateMobileNumber
   let maskedDeviceToken = maskText . (.getFCMRecipientToken) <$> person.deviceToken
-  mediaUrl <- forM person.faceImageId $ \mediaId -> do
-    mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
-    return mediaEntry.url
+  (mediaUrl, profilePhotoUploadedAt) <- case person.faceImageId of
+    Just mediaId -> do
+      mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
+      return (Just mediaEntry.url, Just mediaEntry.createdAt)
+    Nothing -> return (Nothing, Nothing)
   aadhaarCardPhotoResp <- try @_ @SomeException (fetchAndCacheAadhaarImage person driverInfo)
   let aadhaarCardPhoto = join (eitherToMaybe aadhaarCardPhotoResp)
   let rating =
@@ -1275,6 +1279,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.VIP_ESCORT -> [DVST.VIP_ESCORT]
               DV.VIP_OFFICER -> [DVST.VIP_OFFICER]
               DV.AC_PRIORITY -> [DVST.AC_PRIORITY]
+              DV.BIKE_PLUS -> [DVST.BIKE_PLUS]
 
       QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
@@ -2697,12 +2702,12 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
           fork "Error in case of no quote - Potential drainer lag" $ throwError (ShouldNotHappen $ "Quote with quoteId = \"" <> quoteId <> "\" not found.")
           pure Nothing
         Just quote -> do
-          let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkBreakupItem estimatedDistance quote.fareParams.customerCancellationDues Nothing estimatedFare quote.fareParams.congestionChargeViaDp) quote.farePolicy
+          let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem currency) estimatedDistance quote.fareParams.customerCancellationDues Nothing estimatedFare quote.fareParams.congestionChargeViaDp) quote.farePolicy
           return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, ..} (catMaybes farePolicyBreakups)
 
-    mkBreakupItem :: Text -> Text -> Maybe DOVT.RateCardItem
-    mkBreakupItem title valueInText = do
-      priceObject <- DOV.stringToPrice INR valueInText
+    mkBreakupItem :: Currency -> Text -> Text -> Maybe DOVT.RateCardItem
+    mkBreakupItem currency title valueInText = do
+      priceObject <- DOV.stringToPrice currency valueInText
       return $
         DOVT.RateCardItem
           { title,
@@ -2783,13 +2788,18 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
   mbVehicle <- runInReplica $ QVehicle.findById personId
   let vehicleCategory = fromMaybe subscriptionConfig.defaultCityVehicleCategory (mbVehicle >>= (.category))
   let fee = fee' - if isJust mbSgst && isJust mbCgst then 0.0 else sgst + cgst
-  driverFee <-
-    case dueDriverFee of
-      [] -> do
-        driverFee' <- mkDriverFee fee cgst sgst vehicleCategory
-        QDF.create driverFee'
-        pure [driverFee']
-      dfee -> pure dfee
+  -- Mark all previous pending fees as INACTIVE before creating new entry
+  now <- getCurrentTime
+  unless (null dueDriverFee) $ do
+    let oldFeeIds = map (.id) dueDriverFee
+    -- Find and mark only ACTIVE_INVOICE invoices as INACTIVE to avoid touching paid/failed invoices
+    oldInvoices <- mapM (\oldFee -> QINV.findActiveManualInvoiceByFeeId oldFee.id (feeTypeToInvoicetype feeType) Domain.ACTIVE_INVOICE) dueDriverFee
+    mapM_ (mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id))) oldInvoices
+    QDF.updateStatusByIds DDF.INACTIVE oldFeeIds now
+  -- Always create a new driver fee entry
+  driverFee' <- mkDriverFee fee cgst sgst vehicleCategory
+  QDF.create driverFee'
+  let driverFee = [driverFee']
   invoices <- mapM (\fee_ -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee_.id (feeTypeToInvoicetype feeType) Domain.ACTIVE_INVOICE)) driverFee
   let paymentService = subscriptionConfig.paymentServiceName
       sortedInvoices = mergeSortAndRemoveDuplicate invoices

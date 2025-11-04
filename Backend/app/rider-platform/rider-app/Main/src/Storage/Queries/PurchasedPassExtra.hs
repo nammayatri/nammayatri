@@ -27,22 +27,6 @@ findById ::
   m (Maybe DPurchasedPass.PurchasedPass)
 findById purchasedPassId = findOneWithKV [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
 
-findActivePassByPersonIdAndPassTypeId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Id DP.Person ->
-  Id DPassType.PassType ->
-  m (Maybe DPurchasedPass.PurchasedPass)
-findActivePassByPersonIdAndPassTypeId personId passTypeId = do
-  istTime <- getLocalCurrentTime (19800 :: Seconds)
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.personId $ Se.Eq (getId personId),
-          Se.Is Beam.passTypeId $ Se.Eq (getId passTypeId),
-          Se.Is Beam.status $ Se.Eq DPurchasedPass.Active,
-          Se.Is Beam.endDate $ Se.GreaterThan (utctDay istTime)
-        ]
-    ]
-
 findAllByPersonId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DP.Person ->
@@ -67,6 +51,24 @@ findAllByPersonIdWithFilters personId merchantId mbStatus mbLimit mbOffset = do
       conds = baseConds ++ statusConds
   findAllWithOptionsKV conds (Se.Desc Beam.createdAt) mbLimit mbOffset
 
+updatePurchaseData ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DPurchasedPass.PurchasedPass ->
+  Day ->
+  Day ->
+  DPurchasedPass.StatusType ->
+  m ()
+updatePurchaseData purchasedPassId startDate endDate status = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.startDate startDate,
+      Se.Set Beam.endDate endDate,
+      Se.Set Beam.status status,
+      Se.Set Beam.usedTripCount (Just 0),
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
+
 updateStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   DPurchasedPass.StatusType ->
@@ -76,6 +78,21 @@ updateStatusById status purchasedPassId = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.status status,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
+
+updateDeviceIdById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Int ->
+  Id DPurchasedPass.PurchasedPass ->
+  m ()
+updateDeviceIdById deviceId deviceSwitchCount purchasedPassId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.deviceId deviceId,
+      Se.Set Beam.deviceSwitchCount (Just deviceSwitchCount),
       Se.Set Beam.updatedAt now
     ]
     [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]

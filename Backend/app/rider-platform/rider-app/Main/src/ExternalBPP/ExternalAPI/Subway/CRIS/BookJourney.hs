@@ -268,12 +268,12 @@ createOrder config integratedBPPConfig booking quoteCategories = do
     Nothing -> getBppOrderId booking
   classCode <- getFRFSVehicleServiceTier quote
   startTime <- fromMaybeM (CRISError "Start time not found") booking.startTime
-  let tpBookType = if booking.isSingleMode == Just True then 1 else 0
+  let tpBookType = if config.enableBookType == Just True && booking.isSingleMode == Just True then 1 else 0
 
   let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
       adultQuantity = fareParameters.adultItem <&> (.quantity)
       childQuantity = fareParameters.childItem <&> (.quantity)
-      chargeableAmount = fareParameters.totalPrice.amountInt.getMoney
+      chargeableAmount = maybe booking.totalPrice.amountInt.getMoney ((.getMoney) . (.amountInt)) booking.finalPrice
   let bookJourneyReq =
         CRISBookingRequest
           { mob = fromMaybe "9999999999" mbMobileNumber,
@@ -313,7 +313,7 @@ createOrder config integratedBPPConfig booking quoteCategories = do
             agentAccountId = show config.tpAccountId,
             bookAuthCode = bookAuthCode,
             agentAppTxnId = orderId,
-            bankDeductedAmount = round booking.totalPrice.amount.getHighPrecMoney,
+            bankDeductedAmount = chargeableAmount,
             tpBookType = tpBookType
           }
   logInfo $ "GetBookJourney: " <> show bookJourneyReq

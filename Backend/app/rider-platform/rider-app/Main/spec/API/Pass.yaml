@@ -60,6 +60,9 @@ types:
     paymentOrder: Maybe CreateOrderResp
     derive: "Show"
 
+  PassSwitchDeviceIdReq:
+    deviceId: Text
+
   PurchasedPassAPIEntity:
     id: Id PurchasedPass
     passNumber: Text
@@ -71,12 +74,21 @@ types:
     daysToExpire: Int
     startDate: Day
     expiryDate: Day
+    deviceMismatch: Bool
+    deviceSwitchAllowed: Bool
     derive: "Show"
 
   PassDetailsAPIEntity:
     category: PassCategoryAPIEntity
     passType: PassTypeAPIEntity
     passDetails: PassAPIEntity
+    derive: "Show"
+
+  PurchasedPassTransactionAPIEntity:
+    startDate: Day
+    endDate: Day
+    amount: HighPrecMoney
+    status: StatusType
     derive: "Show"
 
 apis:
@@ -93,16 +105,10 @@ apis:
         passId: Id Pass
       query:
         startDate: Day
+      mandatoryQuery:
+        deviceId: Text
       response:
         type: PassSelectionAPIEntity
-
-  - GET:
-      endpoint: /multimodal/pass/{purchasedPassId}/status
-      auth: TokenAuth
-      params:
-        purchasedPassId: Id PurchasedPass
-      response:
-        type: PurchasedPassAPIEntity
 
   - GET:
       endpoint: /multimodal/pass/list
@@ -111,6 +117,8 @@ apis:
         status: StatusType
         limit: Int
         offset: Int
+      mandatoryQuery:
+        deviceId: Text
       response:
         type: "[PurchasedPassAPIEntity]"
 
@@ -123,3 +131,20 @@ apis:
         type: PassVerifyReq
       response:
         type: APISuccess
+
+  - POST:
+      endpoint: /multimodal/pass/switchDeviceId
+      auth: TokenAuth
+      request:
+        type: PassSwitchDeviceIdReq
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /multimodal/pass/transactions
+      auth: TokenAuth
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[PurchasedPassTransactionAPIEntity]"

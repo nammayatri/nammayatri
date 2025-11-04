@@ -244,6 +244,7 @@ castVariant Variant.AUTO_PLUS = (show Enums.AUTO_RICKSHAW, "AUTO_PLUS")
 castVariant Variant.VIP_ESCORT = (show Enums.CAB, "VIP_ESCORT")
 castVariant Variant.VIP_OFFICER = (show Enums.CAB, "VIP_OFFICER")
 castVariant Variant.AC_PRIORITY = (show Enums.CAB, "AC_PRIORITY")
+castVariant Variant.BIKE_PLUS = (show Enums.TWO_WHEELER, "BIKE_PLUS")
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
@@ -286,6 +287,8 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "CAB", Just "VIP_ESCORT") -> Just Variant.VIP_ESCORT
   (Just "CAB", Just "VIP_OFFICER") -> Just Variant.VIP_OFFICER
   (Just "CAB", Just "AC_PRIORITY") -> Just Variant.AC_PRIORITY
+  (Just "TWO_WHEELER", Just "BIKE_PLUS") -> Just Variant.BIKE_PLUS
+  (Just "MOTORCYCLE", Just "BIKE_PLUS") -> Just Variant.BIKE_PLUS
   _ -> Nothing
 
 parseAddress :: MonadFlow m => Spec.Location -> m (Maybe DL.LocationAddress)
@@ -1190,7 +1193,7 @@ tfQuotation booking =
   Just
     Spec.Quotation
       { quotationBreakup = mkQuotationBreakup booking.fareParams,
-        quotationPrice = tfQuotationPrice $ HighPrecMoney $ toRational booking.estimatedFare,
+        quotationPrice = tfQuotationPrice (HighPrecMoney $ toRational booking.estimatedFare) booking.currency,
         quotationTtl = Nothing
       }
 
@@ -1199,16 +1202,16 @@ tfQuotationSU fareParams estimatedFare =
   Just
     Spec.Quotation
       { quotationBreakup = mkQuotationBreakup fareParams,
-        quotationPrice = tfQuotationPrice estimatedFare,
+        quotationPrice = tfQuotationPrice estimatedFare fareParams.currency,
         quotationTtl = Nothing
       }
 
-tfQuotationPrice :: HighPrecMoney -> Maybe Spec.Price
-tfQuotationPrice estimatedFare =
+tfQuotationPrice :: HighPrecMoney -> Currency -> Maybe Spec.Price
+tfQuotationPrice estimatedFare currency =
   Just
     Spec.Price
       { priceComputedValue = Nothing,
-        priceCurrency = Just "INR",
+        priceCurrency = Just $ show currency,
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
         priceOfferedValue = Just $ encodeToText estimatedFare,
@@ -1225,7 +1228,7 @@ mkQuotationBreakup fareParams =
       Just
         Spec.Price
           { priceComputedValue = Nothing,
-            priceCurrency = Just "INR",
+            priceCurrency = Just $ show fareParams.currency,
             priceMaximumValue = Nothing,
             priceMinimumValue = Nothing,
             priceOfferedValue = Just $ encodeToText money,
@@ -1299,7 +1302,7 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemId = Just $ maybe (Common.mkItemId shortId booking.vehicleServiceTier) getId (booking.estimateId),
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
-          itemPrice = tfItemPrice $ booking.estimatedFare,
+          itemPrice = tfItemPrice booking.estimatedFare booking.currency,
           itemTags = mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
         }
     ]
@@ -1314,7 +1317,7 @@ tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId upd
           itemId = Just $ Common.mkItemId shortId booking.vehicleServiceTier,
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
-          itemPrice = tfItemPrice updatedBooking.estimatedFare,
+          itemPrice = tfItemPrice updatedBooking.estimatedFare booking.currency,
           itemTags = mkRateCardTag estimatedDistance' booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
         }
     ]
@@ -1324,12 +1327,12 @@ tfPaymentId mbPaymentId = do
   paymentId <- mbPaymentId
   Just [paymentId]
 
-tfItemPrice :: HighPrecMoney -> Maybe Spec.Price
-tfItemPrice estimatedFare =
+tfItemPrice :: HighPrecMoney -> Currency -> Maybe Spec.Price
+tfItemPrice estimatedFare currency =
   Just
     Spec.Price
       { priceComputedValue = Nothing,
-        priceCurrency = Just "INR",
+        priceCurrency = Just $ show currency,
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
         priceOfferedValue = Just $ Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice Nothing estimatedFare, -- TODO : Remove this and make non mandatory on BAP side
@@ -1620,6 +1623,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 Variant.VIP_ESCORT -> avgSpeed.vipEscort.getKilometers
                 Variant.VIP_OFFICER -> avgSpeed.vipOfficer.getKilometers
                 Variant.AC_PRIORITY -> avgSpeed.sedan.getKilometers
+                Variant.BIKE_PLUS -> avgSpeed.bikeplus.getKilometers
 
           getDuration pricing.distanceToNearestDriver variantSpeed
 

@@ -1,4 +1,4 @@
-module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare where
+module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
@@ -27,7 +27,7 @@ import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTi
 
 -- API type with updated endpoint
 type RouteFareAPI =
-  "t" :> "uts.cris.in" :> "VCU" :> "1" :> "get_route_fare_details_v4"
+  "t" :> "uts.cris.in" :> "VCU" :> "1" :> "get_route_fare_details_v3"
     :> Header "Authorization" Text
     :> Header "Content-Type" Text
     :> Header "appCode" Text
@@ -50,16 +50,17 @@ getRouteFare ::
   CRISConfig ->
   Id MerchantOperatingCity ->
   CRISFareRequest ->
+  Bool ->
   m ([FRFSUtils.FRFSFare], Maybe Text)
-getRouteFare config merchantOperatingCityId request = do
+getRouteFare config merchantOperatingCityId request useCache = do
   let redisKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
   redisResp <- Hedis.safeGet redisKey
-  case redisResp of
-    Just fares -> do
-      logDebug $ "getCachedFaresAndRecache: fares found in cache" <> show fares
-      fork "fetchAndCacheFares for suburban" $ void fetchAndCacheFares
+  case (redisResp, useCache) of
+    (Just fares, True) -> do
+      logDebug $ "[V3] getCachedFaresAndRecache: fares found in cache" <> show fares
+      fork "[V3] fetchAndCacheFares for suburban" $ void fetchAndCacheFares
       return (fares, Nothing)
-    Nothing -> do
+    (_, _) -> do
       fetchAndCacheFares
   where
     fetchAndCacheFares = do
@@ -82,7 +83,7 @@ getRouteFare config merchantOperatingCityId request = do
               ]
       let jsonStr = decodeUtf8 $ LBS.toStrict $ encode fareRequest
 
-      logInfo $ "getRouteFare Req: " <> jsonStr
+      logInfo $ "[V3] getRouteFare Req: " <> jsonStr
 
       encryptionKey <- decrypt config.encryptionKey
       decryptionKey <- decrypt config.decryptionKey
@@ -93,23 +94,23 @@ getRouteFare config merchantOperatingCityId request = do
              in client (Just $ "Bearer " <> token) (Just "application/json") (Just "CUMTA") payload'
       encryptedResponse <- callCRISAPI config routeFareAPI (eulerClientFn payload) "getRouteFare"
 
-      logInfo $ "getRouteFare Resp: " <> show encryptedResponse
+      logInfo $ "[V3] getRouteFare Resp: " <> show encryptedResponse
 
       -- Fix the encoding chain
       decryptedResponse :: CRISFareResponse <- case eitherDecode (encode encryptedResponse) of
-        Left err -> throwError (CRISError $ "Failed to parse encrypted getRouteFare Resp: " <> T.pack (show err))
+        Left err -> throwError (CRISError $ "[V3] Failed to parse encrypted getRouteFare Resp: " <> T.pack (show err))
         Right encResp -> do
-          logInfo $ "getRouteFare Resp Code: " <> responseCode encResp
+          logInfo $ "[V3] getRouteFare Resp Code: " <> responseCode encResp
           if encResp.responseCode == "0"
             then do
               case decryptResponseData (responseData encResp) decryptionKey of
-                Left err -> throwError (CRISError $ "Failed to decrypt getRouteFare Resp: " <> T.pack err)
+                Left err -> throwError (CRISError $ "[V3] Failed to decrypt getRouteFare Resp: " <> T.pack err)
                 Right decryptedJson -> do
-                  logInfo $ "getRouteFare Decrypted Resp: " <> decryptedJson
+                  logInfo $ "[V3] getRouteFare Decrypted Resp: " <> decryptedJson
                   case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
-                    Left err -> throwError (CRISError $ "Failed to decode getRouteFare Resp: " <> T.pack (show err))
+                    Left err -> throwError (CRISError $ "[V3] Failed to decode getRouteFare Resp: " <> T.pack (show err))
                     Right fareResponse -> pure fareResponse
-            else throwError (CRISError $ "Non-zero response code in getRouteFare Resp: " <> encResp.responseCode <> " " <> encResp.responseData)
+            else throwError (CRISError $ "[V3] Non-zero response code in getRouteFare Resp: " <> encResp.responseCode <> " " <> encResp.responseData)
       let routeFareDetails = decryptedResponse.routeFareDetailsList
 
       frfsDetails <-
@@ -120,11 +121,11 @@ getRouteFare config merchantOperatingCityId request = do
           fares `forM` \fare -> do
             let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
                 mbChildFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.childFare
-            fareAmount <- mbFareAmount & fromMaybeM (CRISError $ "Failed to parse fare amount: " <> show fare.adultFare)
-            childFareAmount <- mbChildFareAmount & fromMaybeM (CRISError $ "Failed to parse fare amount: " <> show fare.childFare)
-            classCode <- pure fare.classCode & fromMaybeM (CRISError $ "Failed to parse class code: " <> show fare.classCode)
+            fareAmount <- mbFareAmount & fromMaybeM (CRISError $ "[V3] Failed to parse fare amount: " <> show fare.adultFare)
+            childFareAmount <- mbChildFareAmount & fromMaybeM (CRISError $ "[V3] Failed to parse fare amount: " <> show fare.childFare)
+            classCode <- pure fare.classCode & fromMaybeM (CRISError $ "[V3] Failed to parse class code: " <> show fare.classCode)
             serviceTiers <- QFRFSVehicleServiceTier.findByProviderCode classCode merchantOperatingCityId
-            serviceTier <- serviceTiers & listToMaybe & fromMaybeM (CRISError $ "Failed to find service tier: " <> show classCode)
+            serviceTier <- serviceTiers & listToMaybe & fromMaybeM (CRISError $ "[V3] Failed to find service tier: " <> show classCode)
             return $
               FRFSUtils.FRFSFare
                 { categories =
@@ -193,7 +194,7 @@ getRouteFare config merchantOperatingCityId request = do
       let fareCacheKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
       let fares = concat frfsDetails
       Hedis.setExp fareCacheKey fares 3600
-      return $ (fares, Nothing)
+      return $ (fares, decryptedResponse.sdkData)
 
 routeFareAPI :: Proxy RouteFareAPI
 routeFareAPI = Proxy

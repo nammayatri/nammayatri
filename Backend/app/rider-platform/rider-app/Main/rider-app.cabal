@@ -347,6 +347,7 @@ library
       ExternalBPP.ExternalAPI.Subway.CRIS.OtpGeneration
       ExternalBPP.ExternalAPI.Subway.CRIS.ReconTicketEnquiry
       ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare
+      ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3
       ExternalBPP.ExternalAPI.Subway.CRIS.SDKData
       ExternalBPP.ExternalAPI.Subway.CRIS.Types
       ExternalBPP.ExternalAPI.Subway.CRIS.Uts
@@ -769,6 +770,7 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.ClientPersonInfo
+      Domain.Types.CrisRecon
       Domain.Types.DeletedPerson
       Domain.Types.Depot
       Domain.Types.DepotManager
@@ -913,6 +915,7 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.ClientPersonInfo
+      Storage.Beam.CrisRecon
       Storage.Beam.DeletedPerson
       Storage.Beam.Depot
       Storage.Beam.DepotManager
@@ -1059,6 +1062,7 @@ library
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.ClientPersonInfo
+      Storage.Queries.CrisRecon
       Storage.Queries.DeletedPerson
       Storage.Queries.Depot
       Storage.Queries.DepotManager

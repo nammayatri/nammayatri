@@ -74,11 +74,11 @@ convertToAllTimeFallbackRes metricsList =
             totalRequestCount = getMetricValue TOTAL_REQUEST_COUNT
           }
 
-data FleetAllTimeMetric = ACTIVE_DRIVER_COUNT | ACTIVE_VEHICLE_COUNT | CURRENT_ONLINE_DRIVER_COUNT
+data FleetAllTimeMetric = ACTIVE_DRIVER_COUNT | ACTIVE_VEHICLE_COUNT
   deriving (Show, Eq, Ord)
 
 fleetAllTimeMetrics :: [FleetAllTimeMetric]
-fleetAllTimeMetrics = [ACTIVE_DRIVER_COUNT, ACTIVE_VEHICLE_COUNT, CURRENT_ONLINE_DRIVER_COUNT]
+fleetAllTimeMetrics = [ACTIVE_DRIVER_COUNT, ACTIVE_VEHICLE_COUNT]
 
 fleetAllTimeKeys :: Text -> [Text]
 fleetAllTimeKeys fleetOperatorId = map (makeFleetAnalyticsKey fleetOperatorId) fleetAllTimeMetrics
@@ -90,15 +90,15 @@ data FleetAllTimeFallbackRes = FleetAllTimeFallbackRes
   }
   deriving (Show, Eq)
 
-convertToFleetAllTimeFallbackRes :: [(FleetAllTimeMetric, Int)] -> CommonAllTimeFallbackRes
-convertToFleetAllTimeFallbackRes metricsList =
+convertToFleetAllTimeFallbackRes :: [(FleetAllTimeMetric, Int)] -> Int -> CommonAllTimeFallbackRes
+convertToFleetAllTimeFallbackRes metricsList currentOnlineDriverCount =
   let metricsMap = Map.fromList metricsList
       getMetricValue metric = Map.findWithDefault 0 metric metricsMap
    in FleetAllTimeFallback $
         FleetAllTimeFallbackRes
           { activeDriverCount = getMetricValue ACTIVE_DRIVER_COUNT,
             activeVehicleCount = getMetricValue ACTIVE_VEHICLE_COUNT,
-            currentOnlineDriverCount = getMetricValue CURRENT_ONLINE_DRIVER_COUNT
+            currentOnlineDriverCount
           }
 
 makeFleetKeyPrefix :: Text -> Text
@@ -283,7 +283,7 @@ updateOperatorAnalyticsCancelCount transporterConfig driverId = do
   when (isNothing mbOperatorId) $ logTagInfo "AnalyticsUpdateCancelCount" $ "No operator found for driver: " <> show driverId
   whenJust mbOperatorId $ \operatorId -> do
     let cancelCountKey = makeOperatorAnalyticsKey operatorId CANCEL_COUNT
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId SFleetOperatorStats.DRIVER_CANCEL) 10 5000 $
+    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $
       SFleetOperatorStats.incrementDriverCancellationCount operatorId transporterConfig
     -- Ensure Redis keys exist
     ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId cancelCountKey Redis.incrby 1
@@ -291,7 +291,7 @@ updateOperatorAnalyticsCancelCount transporterConfig driverId = do
   mbFleetOwner <- QFDA.findByDriverId driverId True
   when (isNothing mbFleetOwner) $ logTagInfo "AnalyticsUpdateCancelCount" $ "No fleet owner found for driver: " <> show driverId
   whenJust mbFleetOwner $ \fleetOwner -> do
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId SFleetOperatorStats.DRIVER_CANCEL) 10 5000 $ do
+    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
       SFleetOperatorStats.incrementDriverCancellationCount fleetOwner.fleetOwnerId transporterConfig
       SFleetOperatorStats.incrementDriverCancellationCountDaily fleetOwner.fleetOwnerId transporterConfig
 
@@ -310,7 +310,7 @@ updateFleetOwnerAnalyticsCustomerCancelCount driverId transporterConfig = do
   mbFleetOwner <- QFDA.findByDriverId driverId True
   when (isNothing mbFleetOwner) $ logTagInfo "AnalyticsUpdateCustomerCancelCount" $ "No fleet owner found for driver: " <> show driverId
   whenJust mbFleetOwner $ \fleetOwner -> do
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId SFleetOperatorStats.CUSTOMER_CANCEL) 10 5000 $ do
+    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
       SFleetOperatorStats.incrementCustomerCancellationCount fleetOwner.fleetOwnerId transporterConfig
       SFleetOperatorStats.incrementCustomerCancellationCountDaily fleetOwner.fleetOwnerId transporterConfig
 
@@ -340,28 +340,28 @@ updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporte
   when (isNothing mbFleetOwner) $ logTagInfo "AnalyticsUpdateAcceptationAndTotalRequestCount" $ "No fleet owner found for driver: " <> show driverId
   whenJust mbFleetOwner $ \fleetOwner -> do
     when incrementRejectedRequestCount $ do
-      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId SFleetOperatorStats.REJECTED_REQUEST) 10 5000 $
+      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $
         SFleetOperatorStats.incrementRejectedRequestCountDaily fleetOwner.fleetOwnerId (transporterConfig :: TC.TransporterConfig) -- RejectedRequestCount only store in Fleet Daily Stats
     when incrementPulledRequestCount $ do
-      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId SFleetOperatorStats.PULLED_REQUEST) 10 5000 $
+      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $
         SFleetOperatorStats.incrementPulledRequestCountDaily fleetOwner.fleetOwnerId (transporterConfig :: TC.TransporterConfig) -- PulledRequestCount only store in Fleet Daily Stats
     when incrementTotalRequestCount $ do
-      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId SFleetOperatorStats.TOTAL_REQUEST) 10 5000 $ do
+      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
         SFleetOperatorStats.incrementTotalRequestCount fleetOwner.fleetOwnerId (transporterConfig :: TC.TransporterConfig)
         SFleetOperatorStats.incrementTotalRequestCountDaily fleetOwner.fleetOwnerId (transporterConfig :: TC.TransporterConfig)
     when incrementAcceptationCount $ do
-      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId SFleetOperatorStats.ACCEPTATION_REQUEST) 10 5000 $ do
+      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
         SFleetOperatorStats.incrementAcceptationRequestCount fleetOwner.fleetOwnerId (transporterConfig :: TC.TransporterConfig)
         SFleetOperatorStats.incrementAcceptationRequestCountDaily fleetOwner.fleetOwnerId (transporterConfig :: TC.TransporterConfig)
   where
     updateAcceptationCount operatorId = do
       let acceptationCountKey = makeOperatorAnalyticsKey operatorId ACCEPTATION_COUNT
-      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId SFleetOperatorStats.ACCEPTATION_REQUEST) 10 5000 $
+      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $
         SFleetOperatorStats.incrementAcceptationRequestCount operatorId (transporterConfig :: TC.TransporterConfig)
       ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId acceptationCountKey Redis.incrby 1
     updateTotalRequestCount operatorId = do
       let totalRequestCountKey = makeOperatorAnalyticsKey operatorId TOTAL_REQUEST_COUNT
-      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId SFleetOperatorStats.TOTAL_REQUEST) 10 5000 $
+      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $
         SFleetOperatorStats.incrementTotalRequestCount operatorId (transporterConfig :: TC.TransporterConfig)
       ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId totalRequestCountKey Redis.incrby 1
 
@@ -377,16 +377,17 @@ updateOperatorAnalyticsRatingScoreKey ::
   Id DP.Person ->
   TC.TransporterConfig ->
   Int ->
+  Bool ->
   m ()
-updateOperatorAnalyticsRatingScoreKey driverId transporterConfig ratingValue = do
+updateOperatorAnalyticsRatingScoreKey driverId transporterConfig ratingValue shouldIncrementCount = do
   mbOperatorId <- findOperatorIdForDriver driverId
   when (isNothing mbOperatorId) $ logTagInfo "AnalyticsUpdateRatingScoreKey" $ "No operator found for driver: " <> show driverId
 
   -- Operator analytics
   whenJust mbOperatorId $ \operatorId -> do
     let ratingSumKey = makeOperatorAnalyticsKey operatorId RATING_SUM
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId SFleetOperatorStats.RATING_COUNT_AND_SCORE) 10 5000 $
-      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore operatorId transporterConfig ratingValue
+    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $
+      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore operatorId transporterConfig ratingValue shouldIncrementCount
     -- Ensure Redis keys exist
     ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId ratingSumKey Redis.incrby (fromIntegral ratingValue)
 
@@ -394,9 +395,9 @@ updateOperatorAnalyticsRatingScoreKey driverId transporterConfig ratingValue = d
   mbFLeetOwner <- QFDA.findByDriverId driverId True
   when (isNothing mbFLeetOwner) $ logTagInfo "AnalyticsUpdateRatingScoreKey" $ "No fleet owner found for driver: " <> show driverId
   whenJust mbFLeetOwner $ \fleetOwner -> do
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId SFleetOperatorStats.RATING_COUNT_AND_SCORE) 10 5000 $ do
-      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore fleetOwner.fleetOwnerId transporterConfig ratingValue
-      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScoreDaily fleetOwner.fleetOwnerId transporterConfig ratingValue
+    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
+      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore fleetOwner.fleetOwnerId transporterConfig ratingValue shouldIncrementCount
+      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScoreDaily fleetOwner.fleetOwnerId transporterConfig ratingValue shouldIncrementCount
 
 updateOperatorAnalyticsTotalRideCount ::
   ( MonadFlow m,
@@ -415,7 +416,7 @@ updateOperatorAnalyticsTotalRideCount transporterConfig driverId ride = do
   when (isNothing mbOperatorId) $ logTagInfo "AnalyticsUpdateTotalRideCount" $ "No operator found for driver: " <> show driverId
   whenJust mbOperatorId $ \operatorId -> do
     let totalRideCountKey = makeOperatorAnalyticsKey operatorId TOTAL_RIDE_COUNT
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId SFleetOperatorStats.RIDE_METRICS) 10 5000 $
+    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $
       SFleetOperatorStats.incrementTotalRidesTotalDistAndTotalEarning operatorId ride transporterConfig
     -- Ensure Redis keys exist
     ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId totalRideCountKey Redis.incrby 1
@@ -423,7 +424,7 @@ updateOperatorAnalyticsTotalRideCount transporterConfig driverId ride = do
   mbFLeetOwner <- QFDA.findByDriverId driverId True
   when (isNothing mbFLeetOwner) $ logTagInfo "AnalyticsUpdateTotalRideCount" $ "No fleet owner found for driver: " <> show driverId
   whenJust mbFLeetOwner $ \fleetOwner -> do
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId SFleetOperatorStats.RIDE_METRICS) 10 5000 $ do
+    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
       SFleetOperatorStats.incrementTotalRidesTotalDistAndTotalEarning fleetOwner.fleetOwnerId ride transporterConfig
       SFleetOperatorStats.incrementTotalEarningDistanceAndCompletedRidesDaily fleetOwner.fleetOwnerId ride transporterConfig
 
@@ -663,16 +664,15 @@ fallbackToClickHouseAndUpdateRedisForAllTimeFleet fleetOwnerId fleetAllTimeKeysD
   activeVehicleCount <- CVehicle.countByDriverIds driverIds
   currentOnlineDriverCount <- getOnlineDriverCount
   -- update redis (best-effort)
-  mapM_ (uncurry Redis.set) (zip fleetAllTimeKeysData [activeDriverCount, activeVehicleCount, currentOnlineDriverCount])
-  pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [activeDriverCount, activeVehicleCount, currentOnlineDriverCount])
+  mapM_ (uncurry Redis.set) (zip fleetAllTimeKeysData [activeDriverCount, activeVehicleCount])
+  pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [activeDriverCount, activeVehicleCount]) currentOnlineDriverCount
   where
     getOnlineDriverCount = do
-      let onlineKey = DDF.getStatusKey fleetOwnerId DDF.ONLINE
-      res <- Redis.get @Int onlineKey
+      res <- DDF.getOnlineKeyValue fleetOwnerId
       if isNothing res
         then do
           void $ SDFStatus.handleCacheMissForDriverFlowStatus DP.FLEET_OWNER fleetOwnerId (DDF.allKeys fleetOwnerId)
-          onlineRes <- Redis.get @Int onlineKey
+          onlineRes <- DDF.getOnlineKeyValue fleetOwnerId
           pure (fromMaybe 0 onlineRes)
         else pure (fromMaybe 0 res)
 
@@ -760,10 +760,13 @@ handleCacheMissForAnalyticsAllTimeCommon role entityId allTimeKeysData = do
       logTagInfo logTag $ "inProgress key present for " <> show role <> "Id: " <> entityId <> ". Waiting for it to clear."
       SDFStatus.waitUntilKeyGone inProgressKey
       allTimeKeysRes <- mapM (\key -> fromMaybe 0 <$> Redis.get @Int key) allTimeKeysData
-      pure $ case role of
-        DP.OPERATOR -> convertToAllTimeFallbackRes (zip allTimeMetrics allTimeKeysRes)
-        DP.FLEET_OWNER -> convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics allTimeKeysRes)
-        _ -> error $ "Unsupported role for analytics: " <> show role
+      case role of
+        DP.OPERATOR ->
+          pure $ convertToAllTimeFallbackRes (zip allTimeMetrics allTimeKeysRes)
+        DP.FLEET_OWNER -> do
+          currentOnlineDriverCount <- DDF.getOnlineKeyValue entityId
+          pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics allTimeKeysRes) (fromMaybe 0 currentOnlineDriverCount)
+        _ -> throwError $ InvalidRequest $ "Unsupported role for analytics: " <> show role
     _ -> do
       lockAcquired <- Redis.setNxExpire inProgressKey 60 True -- 60 seconds expiry
       if lockAcquired

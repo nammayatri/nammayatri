@@ -33,6 +33,8 @@ PurchasedPass:
     startDate: Day
     endDate: Day
     passTypeId: Id PassType
+    deviceId: Text
+    deviceSwitchCount: Int
     passCode: Text
     passName: Maybe Text
     passAmount: HighPrecMoney
@@ -46,6 +48,15 @@ PurchasedPass:
     status: StatusType
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+
+  beamType:
+    deviceSwitchCount: Maybe Int
+
+  fromTType:
+    deviceSwitchCount: (fromMaybe 0 deviceSwitchCount)|E
+
+  toTType:
+    deviceSwitchCount: Just deviceSwitchCount|E
 
   sqlType:
     applicableVehicleServiceTiers: text[]
@@ -63,7 +74,10 @@ PurchasedPassPayment:
     id: Id PurchasedPassPayment
     orderId: Id PaymentOrder
     purchasedPassId: Id PurchasedPass
+    amount: HighPrecMoney
+    personId: Id Person
     startDate: Day
+    status: Domain.Types.PurchasedPass.StatusType
     endDate: Day
 
   constraints:
@@ -79,6 +93,24 @@ PurchasedPassPayment:
     findAllByPurchasedPassId:
       kvFunction: findAllWithKV
       where: purchasedPassId
+
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: [status]
+      where: id
+
+    findAllByPurchasedPassIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - purchasedPassId
+          - status
+          - gte:
+            - endDate
+
+    findAllWithPersonId:
+      kvFunction: findAllWithOptionsKV
+      where: personId
 
 PassVerifyTransaction:
   tableName: pass_verify_transaction

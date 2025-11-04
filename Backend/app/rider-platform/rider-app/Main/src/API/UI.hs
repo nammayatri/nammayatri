@@ -24,6 +24,7 @@ import qualified API.Action.UI.CRIS as CRIS
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CustomerReferral as CustomerReferral
 import qualified API.Action.UI.DeletedPerson as DeletedPerson
+import qualified API.Action.UI.Dispatcher as Dispatcher
 import qualified API.Action.UI.EditLocation as EditLocation
 import qualified API.Action.UI.EstimateBP as EstimateBP
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
@@ -153,6 +154,7 @@ type API =
            :<|> AttractionRecommend.API
            :<|> RiderLocation.API
            :<|> Pass.API
+           :<|> Dispatcher.API
        )
 
 handler :: FlowServer API
@@ -222,3 +224,4 @@ handler =
     :<|> AttractionRecommend.handler
     :<|> RiderLocation.handler
     :<|> Pass.handler
+    :<|> Dispatcher.handler

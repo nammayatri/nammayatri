@@ -82,7 +82,9 @@ data CRISConfig = CRISConfig
     utsDataKey :: EncryptedField 'AsEncrypted Text,
     routeSortingCriteria :: Maybe CRISRouteSortingCriteria,
     reconDuration :: Maybe Int,
-    singleModeWalkThreshold :: Maybe Int
+    singleModeWalkThreshold :: Maybe Int,
+    useRouteFareV4 :: Maybe Bool,
+    enableBookType :: Maybe Bool
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

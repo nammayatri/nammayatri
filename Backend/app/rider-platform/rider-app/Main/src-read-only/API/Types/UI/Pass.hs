@@ -56,6 +56,10 @@ data PassSelectionAPIEntity = PassSelectionAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PassSwitchDeviceIdReq = PassSwitchDeviceIdReq {deviceId :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PassTypeAPIEntity = PassTypeAPIEntity
   { catchline :: Data.Maybe.Maybe Data.Text.Text,
     description :: Data.Maybe.Maybe Data.Text.Text,
@@ -72,6 +76,8 @@ data PassVerifyReq = PassVerifyReq {vehicleNumber :: Data.Text.Text}
 
 data PurchasedPassAPIEntity = PurchasedPassAPIEntity
   { daysToExpire :: Kernel.Prelude.Int,
+    deviceMismatch :: Kernel.Prelude.Bool,
+    deviceSwitchAllowed :: Kernel.Prelude.Bool,
     expiryDate :: Data.Time.Day,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
     lastVerifiedVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,
@@ -82,5 +88,9 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
     status :: Domain.Types.PurchasedPass.StatusType,
     tripsLeft :: Data.Maybe.Maybe Kernel.Prelude.Int
   }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PurchasedPassTransactionAPIEntity = PurchasedPassTransactionAPIEntity {amount :: Kernel.Types.Common.HighPrecMoney, endDate :: Data.Time.Day, startDate :: Data.Time.Day, status :: Domain.Types.PurchasedPass.StatusType}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

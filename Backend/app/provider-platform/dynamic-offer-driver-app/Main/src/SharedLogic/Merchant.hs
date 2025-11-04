@@ -47,3 +47,8 @@ getDistanceUnitByMerchantOpCity :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.Mer
 getDistanceUnitByMerchantOpCity merchantOpCityId = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   pure merchantOperatingCity.distanceUnit
+
+getCurrencyAndDistanceUnitByMerchantOpCity :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m (Currency, DistanceUnit)
+getCurrencyAndDistanceUnitByMerchantOpCity merchantOpCityId = do
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  pure (merchantOperatingCity.currency, merchantOperatingCity.distanceUnit)

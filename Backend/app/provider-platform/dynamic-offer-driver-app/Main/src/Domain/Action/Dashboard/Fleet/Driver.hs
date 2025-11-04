@@ -2985,11 +2985,14 @@ getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId = do
   -- try redis first
   mbAllTimeKeysRes <- mapM (Redis.get @Int) allTimeKeysData
   logTagInfo "fleetMbAllTimeKeysRes" (show mbAllTimeKeysRes)
+
+  onlineDriverCount <- DDF.getOnlineKeyValue fleetOwnerId
+  logTagInfo "onlineDriverCount" (show onlineDriverCount)
   -- fallback to ClickHouse and populate cache when missing
   (activeDriverCount, activeVehicleCount, currentOnlineDriverCount) <- do
-    if all isJust mbAllTimeKeysRes
+    if all isJust mbAllTimeKeysRes && isJust onlineDriverCount
       then do
-        let res = Analytics.convertToFleetAllTimeFallbackRes (zip Analytics.fleetAllTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes))
+        let res = Analytics.convertToFleetAllTimeFallbackRes (zip Analytics.fleetAllTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes)) (fromMaybe 0 onlineDriverCount)
         logTagInfo "FleetAllTimeFallbackRes" (show res)
         Analytics.extractFleetAnalyticsData res
       else do

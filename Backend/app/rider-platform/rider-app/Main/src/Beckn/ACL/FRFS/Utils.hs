@@ -414,5 +414,6 @@ mkDCategorySelect orderItem = do
           Just "SJT" -> ADULT
           Just "SFSJT" -> FEMALE
           _ -> ADULT
-      price = fromMaybe (Price (Money 0) (HighPrecMoney 0.0) INR) (orderItem.itemPrice >>= Utils.parsePrice)
-  return $ DCategorySelect {bppItemId = bppItemId', quantity = quantity', category = category, price = price}
+      originalPrice = orderItem.itemPrice >>= Utils.parsePrice
+      offeredPrice = orderItem.itemPrice >>= Utils.parseOfferPrice
+  return $ DCategorySelect {bppItemId = bppItemId', quantity = quantity', category = category, price = fromMaybe (Price (Money 0) (HighPrecMoney 0.0) INR) (offeredPrice <|> originalPrice)}

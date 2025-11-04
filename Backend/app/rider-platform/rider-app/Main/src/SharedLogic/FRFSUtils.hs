@@ -992,7 +992,7 @@ updateQuoteCategoriesWithFinalPrice categories quoteCategories = do
       case find (\(quoteCategoryId, _) -> quoteCategoryId == category.id) categories of
         Just (_, finalPrice) -> do
           QFRFSQuoteCategory.updateFinalPriceByQuoteCategoryId (Just finalPrice) category.id
-          return (category {DFRFSQuoteCategory.finalPrice = Just finalPrice}, finalPrice /= category.price)
+          return (category {DFRFSQuoteCategory.finalPrice = Just finalPrice}, finalPrice /= category.offeredPrice)
         Nothing -> do
           QFRFSQuoteCategory.updateFinalPriceByQuoteCategoryId Nothing category.id
           return (category {DFRFSQuoteCategory.finalPrice = Nothing}, False)
@@ -1066,6 +1066,7 @@ data PriceItem = PriceItem
 data FRFSFareParameters = FRFSFareParameters
   { adultItem :: Maybe PriceItem,
     childItem :: Maybe PriceItem,
+    femaleItem :: Maybe PriceItem,
     totalPrice :: Price,
     totalQuantity :: Int,
     currency :: Currency
@@ -1080,6 +1081,11 @@ getUnitPriceFromPriceItem = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.un
 
 getAmountFromPriceItem :: Maybe PriceItem -> Price
 getAmountFromPriceItem = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.totalPrice)
+
+nonZeroQuantity :: Maybe Int -> Maybe Int
+nonZeroQuantity = \case
+  Just quantity -> if quantity > 0 then Just quantity else Nothing
+  Nothing -> Nothing
 
 mkCategoryPriceItemFromQuoteCategories :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> [CategoryPriceItem]
 mkCategoryPriceItemFromQuoteCategories quoteCategories = mapMaybe mkPriceItem quoteCategories
@@ -1115,11 +1121,12 @@ calculateFareParameters :: [CategoryPriceItem] -> FRFSFareParameters
 calculateFareParameters priceItems =
   let adultItem = find (\category -> category.categoryType == ADULT) priceItems <&> mkPriceItem
       childItem = find (\category -> category.categoryType == CHILD) priceItems <&> mkPriceItem
-      currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem)
+      femaleItem = find (\category -> category.categoryType == FEMALE) priceItems <&> mkPriceItem
+      currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem <|> femaleItem)
       totalPrice =
         Price
-          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount,
-            amountInt = round ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount),
+          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount,
+            amountInt = round ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
             currency
           }
       totalQuantity =
@@ -1127,6 +1134,7 @@ calculateFareParameters priceItems =
    in FRFSFareParameters
         { adultItem = adultItem,
           childItem = childItem,
+          femaleItem = femaleItem,
           totalPrice = totalPrice,
           totalQuantity = totalQuantity,
           currency
@@ -1139,7 +1147,7 @@ calculateFareParametersWithQuoteFallback :: [CategoryPriceItem] -> Quote.FRFSQuo
 calculateFareParametersWithQuoteFallback categories quote =
   let fareParameters = calculateFareParameters categories
       adultItem =
-        fareParameters.adultItem
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.adultItem else Nothing)
           <|> ( ((,) <$> quote.quantity <*> quote.price) <&> \(quantity, unitPrice) ->
                   PriceItem
                     { quantity = quantity,
@@ -1148,7 +1156,7 @@ calculateFareParametersWithQuoteFallback categories quote =
                     }
               )
       childItem =
-        fareParameters.childItem
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.childItem else Nothing)
           <|> ( ((,) <$> quote.childTicketQuantity <*> quote.price) <&> \(quantity, unitPrice) ->
                   PriceItem
                     { quantity = quantity,
@@ -1156,18 +1164,20 @@ calculateFareParametersWithQuoteFallback categories quote =
                       totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quantity)
                     }
               )
-      currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem)
+      femaleItem = fareParameters.femaleItem
+      currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem <|> femaleItem)
       totalPrice =
         Price
-          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount,
-            amountInt = round ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount),
+          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount,
+            amountInt = round ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
             currency
           }
       totalQuantity =
-        getQuantityFromPriceItem adultItem + getQuantityFromPriceItem childItem
+        getQuantityFromPriceItem adultItem + getQuantityFromPriceItem childItem + getQuantityFromPriceItem femaleItem
    in FRFSFareParameters
         { adultItem = adultItem,
           childItem = childItem,
+          femaleItem = femaleItem,
           totalPrice = totalPrice,
           totalQuantity = totalQuantity,
           currency = currency
@@ -1181,7 +1191,7 @@ calculateFareParametersWithBookingFallback categories booking =
       mbRouteStations :: Maybe [APITypes.FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
       mbRouteStation = listToMaybe =<< mbRouteStations
       adultItem =
-        fareParameters.adultItem
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.adultItem else Nothing)
           <|> ( ((,,) <$> booking.quantity <*> (mbRouteStation <&> (.priceWithCurrency)) <*> (booking.finalPrice <|> Just booking.totalPrice)) <&> \(quantity, unitPrice', totalPrice') ->
                   PriceItem
                     { quantity = quantity,
@@ -1195,7 +1205,7 @@ calculateFareParametersWithBookingFallback categories booking =
                     }
               )
       childItem =
-        fareParameters.childItem
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.childItem else Nothing)
           <|> ( ((,,) <$> booking.childTicketQuantity <*> (mbRouteStation <&> (.priceWithCurrency)) <*> (booking.finalPrice <|> Just booking.totalPrice)) <&> \(quantity, unitPrice', totalPrice') ->
                   PriceItem
                     { quantity = quantity,
@@ -1208,18 +1218,20 @@ calculateFareParametersWithBookingFallback categories booking =
                       totalPrice = modifyPrice totalPrice' $ \p -> HighPrecMoney $ ((p.getHighPrecMoney) / (toRational (adultQuantity + childQuantity))) * (toRational quantity)
                     }
               )
-      currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem)
+      femaleItem = fareParameters.femaleItem
+      currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem <|> femaleItem)
       totalPrice =
         Price
-          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount,
-            amountInt = round ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount),
+          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount,
+            amountInt = round ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
             currency
           }
       totalQuantity =
-        getQuantityFromPriceItem adultItem + getQuantityFromPriceItem childItem
+        getQuantityFromPriceItem adultItem + getQuantityFromPriceItem childItem + getQuantityFromPriceItem femaleItem
    in FRFSFareParameters
         { adultItem = adultItem,
           childItem = childItem,
+          femaleItem = femaleItem,
           totalPrice = totalPrice,
           totalQuantity = totalQuantity,
           currency

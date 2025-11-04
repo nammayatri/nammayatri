@@ -8,6 +8,7 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 -- import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.VehicleVariant as DVV
 import Kernel.Prelude
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types.Application as YA
@@ -57,11 +58,21 @@ data PenaltyCheckTagData = PenaltyCheckTagData
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+data UpgradeTierTagData = UpgradeTierTagData
+  { driverRating :: Maybe Double,
+    vehicleAgeInMonths :: Maybe Int,
+    vehicleVariant :: DVV.VehicleVariant,
+    ridesCount :: Int,
+    favRiderCount :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 $(YTH.generateGenericDefault ''TagData)
 $(YTH.generateGenericDefault ''EndRideTagData)
 $(YTH.generateGenericDefault ''CancelRideTagData)
 $(YTH.generateGenericDefault ''SelectTagData)
 $(YTH.generateGenericDefault ''PenaltyCheckTagData)
+$(YTH.generateGenericDefault ''UpgradeTierTagData)
 
 instance YTC.LogicInputLink YA.ApplicationEvent where
   getLogicInputDef a =
@@ -71,4 +82,5 @@ instance YTC.LogicInputLink YA.ApplicationEvent where
       YA.RideEnd -> fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @EndRideTagData)
       YA.RideCancel -> fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @CancelRideTagData)
       YA.PenaltyCheck -> fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @PenaltyCheckTagData)
+      YA.UpgradeTier -> fmap A.toJSON . listToMaybe $ YTH.genDef (Proxy @UpgradeTierTagData)
       _ -> Nothing
