@@ -1,5 +1,4 @@
 CREATE TABLE atlas_app.pass ();
-
 ALTER TABLE atlas_app.pass ADD COLUMN amount double precision NOT NULL;
 ALTER TABLE atlas_app.pass ADD COLUMN applicable_vehicle_service_tiers text[] NOT NULL;
 ALTER TABLE atlas_app.pass ADD COLUMN auto_apply boolean NOT NULL;
@@ -21,54 +20,5 @@ ALTER TABLE atlas_app.pass ADD COLUMN redeem_eligibility_json_logic jsonb[] NOT 
 ALTER TABLE atlas_app.pass ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.pass ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.pass ADD PRIMARY KEY ( id);
-
-
-
 ------- SQL updates -------
-
-ALTER TABLE atlas_app.pass ALTER COLUMN redeem_eligibility_json_logic TYPE text;
-ALTER TABLE atlas_app.pass ALTER COLUMN purchase_eligibility_json_logic TYPE text;
-ALTER TABLE atlas_app.pass ALTER COLUMN documents_required TYPE text;
 ALTER TABLE atlas_app.pass ADD COLUMN payment_valid_till integer ;
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.pass ALTER COLUMN applicable_vehicle_service_tiers TYPE text;
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.pass ALTER COLUMN redeem_eligibility_json_logic TYPE jsonb[];
-ALTER TABLE atlas_app.pass ALTER COLUMN purchase_eligibility_json_logic TYPE jsonb[];
-ALTER TABLE atlas_app.pass ALTER COLUMN documents_required TYPE text[];
-ALTER TABLE atlas_app.pass ALTER COLUMN applicable_vehicle_service_tiers TYPE text[];
-
-
-------- SQL updates -------
-

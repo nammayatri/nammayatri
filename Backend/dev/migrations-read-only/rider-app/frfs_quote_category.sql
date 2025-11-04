@@ -33,7 +33,7 @@ ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN final_price TYPE double p
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN ticket_category_metadata_config_id SET DEFAULT Unknown;
+ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN ticket_category_metadata_config_id SET DEFAULT 'Unknown';
 ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN ticket_category_metadata_config_id DROP NOT NULL;
 
 
