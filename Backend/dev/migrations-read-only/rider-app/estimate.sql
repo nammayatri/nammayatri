@@ -234,7 +234,7 @@ ALTER TABLE atlas_app.estimate ADD COLUMN trip_category text ;
 
 
 
-
+ hv vh hv
 ------- SQL updates -------
 
 
