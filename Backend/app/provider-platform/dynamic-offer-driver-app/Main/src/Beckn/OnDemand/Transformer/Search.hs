@@ -27,7 +27,7 @@ import qualified Kernel.External.Maps
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Registry.Subscriber
-import Kernel.Utils.Common (decodeFromText, fromMaybeM, type (:::))
+import Kernel.Utils.Common (fromMaybeM, type (:::))
 import Kernel.Utils.Logging (logDebug)
 import Tools.Error
 
@@ -121,23 +121,6 @@ buildLocation location = do
       { address,
         gps = latLong
       }
-
-getIsReserveRide :: Spec.SearchReqMessage -> Maybe Bool
-getIsReserveRide req = do
-  intent <- req.searchReqMessageIntent
-  fulfillment <- intent.intentFulfillment
-  tags <- fulfillment.fulfillmentTags
-  readMaybe . T.unpack =<< Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.RESERVED_RIDE_TAG (Just tags)
-
-getReserveRideEstimate :: Spec.SearchReqMessage -> Maybe Bool -> Maybe DBppEstimate.BppEstimate
-getReserveRideEstimate req isReserveRide = do
-  if isReserveRide == Just True
-    then do
-      intent <- req.searchReqMessageIntent
-      fulfillment <- intent.intentFulfillment
-      tags <- fulfillment.fulfillmentTags
-      decodeFromText =<< Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.RESERVED_PRICING_TAG (Just tags)
-    else Nothing
 
 getPhoneNumberFromTag :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text], EncFlow m r) => Maybe Text -> m (Maybe Text)
 getPhoneNumberFromTag customerPhoneNum_ = do
