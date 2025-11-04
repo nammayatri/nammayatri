@@ -21,18 +21,20 @@ import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
-import qualified BecknV2.OnDemand.Utils.Payment as OUP
 import BecknV2.Utils
 import Control.Lens ((%~))
+import qualified Data.Aeson as A
 import qualified Data.List as DL
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Location as DLoc
 import EulerHS.Prelude hiding (id, state, (%~))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -72,7 +74,7 @@ tfOrder res bapConfig = do
       orderItems = tfItems res,
       orderPayments = tfPayments res bapConfig,
       orderProvider = tfProvider res,
-      orderQuote = tfQuotation res,
+      orderQuote = Nothing, -- Not allowed in confirm request per ONDC spec
       orderStatus = Nothing,
       orderCreatedAt = Nothing,
       orderUpdatedAt = Nothing
@@ -86,7 +88,7 @@ tfFulfillments res =
           fulfillmentCustomer = tfCustomer res,
           fulfillmentId = res.fulfillmentId,
           fulfillmentState = Nothing,
-          fulfillmentStops = Utils.mkStops' (Just res.fromLocation) stops res.mbToLocation, -------fix me -----RITIKA
+          fulfillmentStops = mkStopsForConfirm (Just res.fromLocation) stops res.mbToLocation,
           fulfillmentTags = Nothing,
           fulfillmentType = Utils.tripCategoryToFulfillmentType <$> res.tripCategory,
           fulfillmentVehicle = tfVehicle res
@@ -112,33 +114,13 @@ tfItems res =
         }
     ]
 
--- TODO: Discuss payment info transmission with ONDC
+-- | Build payment for confirm request
+-- Per ONDC spec, confirm request should not include currency in payment params
 tfPayments :: DOnInit.OnInitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bapConfig = do
   let mPrice = Just res.estimatedTotalFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
-  Just $ DL.singleton $ OUP.mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice res.paymentId mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
-
-tfQuotation :: DOnInit.OnInitRes -> Maybe Spec.Quotation
-tfQuotation res =
-  Just $
-    Spec.Quotation
-      { quotationBreakup = Nothing,
-        quotationPrice = tfQuotationPrice res,
-        quotationTtl = Nothing
-      }
-
-tfQuotationPrice :: DOnInit.OnInitRes -> Maybe Spec.Price
-tfQuotationPrice res =
-  Just $
-    Spec.Price
-      { priceComputedValue = Nothing,
-        priceCurrency = Just $ show res.estimatedTotalFare.currency,
-        priceMaximumValue = Nothing,
-        priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ encodeToText res.estimatedTotalFare.amount,
-        priceValue = Just $ encodeToText res.estimatedFare.amount
-      }
+  Just $ DL.singleton $ mkPaymentForConfirm (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice res.paymentId mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
 tfCustomer :: DOnInit.OnInitRes -> Maybe Spec.Customer
 tfCustomer res =
@@ -252,3 +234,226 @@ tfOrderBilling res =
       { billingPhone = Just $ maskNumber res.riderPhoneNumber,
         billingName = res.mbRiderName
       }
+
+-- | Build payment for confirm request without currency in params
+-- Per ONDC spec, confirm request should not include currency in payment params
+mkPaymentForConfirm ::
+  Text -> -- City
+  Text -> -- CollectedBy
+  Enums.PaymentStatus ->
+  Maybe Price ->
+  Maybe Text -> -- TxnId
+  Maybe BknPaymentParams ->
+  Maybe Text -> -- SettlementType
+  Maybe Text -> -- SettlementWindow
+  Maybe BaseUrl -> -- StaticTermsUrl
+  Maybe Text -> -- BuyerFinderFee
+  Spec.Payment
+mkPaymentForConfirm txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettlementType mSettlementWindow mSettlementTermsUrl mbff = do
+  let mAmount = show . (.amount) <$> mPrice
+  Spec.Payment
+    { paymentCollectedBy = Just collectedBy,
+      paymentId = mTxnId,
+      paymentParams =
+        if Kernel.Prelude.or [isJust mTxnId, isJust mAmount, isJust mPaymentParams]
+          then Just $ mkPaymentParamsForConfirm mPaymentParams mTxnId mAmount
+          else Nothing,
+      paymentStatus = encodeToText' paymentStatus,
+      paymentTags = Just $ mkPaymentTagsForConfirm txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff,
+      paymentType = encodeToText' Enums.ON_FULFILLMENT
+    }
+
+mkPaymentParamsForConfirm :: Maybe BknPaymentParams -> Maybe Text -> Maybe Text -> Spec.PaymentParams
+mkPaymentParamsForConfirm mPaymentParams _mTxnId mAmount = do
+  Spec.PaymentParams
+    { paymentParamsAmount = mAmount,
+      paymentParamsBankAccountNumber = mPaymentParams >>= (.bankAccNumber),
+      paymentParamsBankCode = mPaymentParams >>= (.bankCode),
+      paymentParamsCurrency = Nothing, -- Not allowed in confirm request per ONDC spec
+      paymentParamsVirtualPaymentAddress = mPaymentParams >>= (.vpa)
+    }
+
+mkPaymentTagsForConfirm :: Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe BaseUrl -> Maybe Text -> [Spec.TagGroup]
+mkPaymentTagsForConfirm _txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff =
+  catMaybes
+    [ Just $ mkBuyerFinderFeeTagGroup mbff,
+      Just $ mkSettlementTagGroup mSettlementType mAmount mSettlementWindow mSettlementTermsUrl
+    ]
+
+mkBuyerFinderFeeTagGroup :: Maybe Text -> Spec.TagGroup
+mkBuyerFinderFeeTagGroup mbff =
+  Spec.TagGroup
+    { tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.BUYER_FINDER_FEES,
+              descriptorName = Nothing,
+              descriptorShortDesc = Nothing
+            },
+      tagGroupDisplay = Just False,
+      tagGroupList =
+        Just
+          [ Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.BUYER_FINDER_FEES_PERCENTAGE,
+                        descriptorName = Nothing,
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Nothing, -- Not allowed in confirm request per ONDC spec
+                tagValue = mbff
+              }
+          ]
+    }
+
+mkSettlementTagGroup :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe BaseUrl -> Spec.TagGroup
+mkSettlementTagGroup mSettlementType mAmount mSettlementWindow mSettlementTermsUrl =
+  Spec.TagGroup
+    { tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.SETTLEMENT_TERMS,
+              descriptorName = Nothing,
+              descriptorShortDesc = Nothing
+            },
+      tagGroupDisplay = Just False,
+      tagGroupList =
+        Just $
+          catMaybes
+            [ Just $
+                Spec.Tag
+                  { tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.SETTLEMENT_TYPE,
+                            descriptorName = Nothing,
+                            descriptorShortDesc = Nothing
+                          },
+                    tagDisplay = Nothing, -- Not allowed in confirm request per ONDC spec
+                    tagValue = mSettlementType
+                  },
+              ( \amount ->
+                  Spec.Tag
+                    { tagDescriptor =
+                        Just $
+                          Spec.Descriptor
+                            { descriptorCode = Just $ show Tags.SETTLEMENT_AMOUNT,
+                              descriptorName = Nothing,
+                              descriptorShortDesc = Nothing
+                            },
+                      tagDisplay = Nothing, -- Not allowed in confirm request per ONDC spec
+                      tagValue = Just amount
+                    }
+              )
+                <$> mAmount,
+              Just $
+                Spec.Tag
+                  { tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.SETTLEMENT_WINDOW,
+                            descriptorName = Nothing,
+                            descriptorShortDesc = Nothing
+                          },
+                    tagDisplay = Nothing, -- Not allowed in confirm request per ONDC spec
+                    tagValue = mSettlementWindow
+                  },
+              ( \url ->
+                  Spec.Tag
+                    { tagDescriptor =
+                        Just $
+                          Spec.Descriptor
+                            { descriptorCode = Just $ show Tags.STATIC_TERMS,
+                              descriptorName = Nothing,
+                              descriptorShortDesc = Nothing
+                            },
+                      tagDisplay = Nothing, -- Not allowed in confirm request per ONDC spec
+                      tagValue = Just $ showBaseUrl url
+                    }
+              )
+                <$> mSettlementTermsUrl
+            ]
+    }
+
+-- | Helper function to encode values to JSON text
+encodeToText' :: (A.ToJSON a) => a -> Maybe Text
+encodeToText' = A.decode . A.encode
+
+-- | Build stops for confirm request without address field
+-- Per ONDC spec, confirm request should not include location.address in stops
+mkStopsForConfirm :: Maybe DLoc.Location -> [DLoc.Location] -> Maybe DLoc.Location -> Maybe [Spec.Stop]
+mkStopsForConfirm mOrigin intermediateStops mDestination =
+  let originGps origin = Gps.Gps {lat = origin.lat, lon = origin.lon}
+      destinationGps dest = Gps.Gps {lat = dest.lat, lon = dest.lon}
+   in Just $
+        catMaybes
+          [ ( \origin ->
+                Spec.Stop
+                  { stopLocation =
+                      Just $
+                        Spec.Location
+                          { locationAddress = Nothing, -- Not allowed in confirm request per ONDC spec
+                            locationAreaCode = Nothing, -- Not allowed in confirm request per ONDC spec
+                            locationCity = Nothing, -- Not allowed in confirm request per ONDC spec
+                            locationCountry = Nothing, -- Not allowed in confirm request per ONDC spec
+                            locationGps = Utils.gpsToText (originGps origin),
+                            locationState = Nothing, -- Not allowed in confirm request per ONDC spec
+                            locationId = Nothing,
+                            locationUpdatedAt = Nothing
+                          },
+                    stopType = Just $ show Enums.START,
+                    stopAuthorization = Nothing,
+                    stopTime = Nothing,
+                    stopId = Nothing, -- Not allowed in confirm request per ONDC spec
+                    stopParentStopId = Nothing
+                  }
+            )
+              <$> mOrigin,
+            ( \destination ->
+                Spec.Stop
+                  { stopLocation =
+                      Just $
+                        Spec.Location
+                          { locationAddress = Nothing, -- Not allowed in confirm request per ONDC spec
+                            locationAreaCode = Nothing, -- Not allowed in confirm request per ONDC spec
+                            locationCity = Nothing, -- Not allowed in confirm request per ONDC spec
+                            locationCountry = Nothing, -- Not allowed in confirm request per ONDC spec
+                            locationGps = Utils.gpsToText (destinationGps destination),
+                            locationState = Nothing, -- Not allowed in confirm request per ONDC spec
+                            locationId = Nothing,
+                            locationUpdatedAt = Nothing
+                          },
+                    stopType = Just $ show Enums.END,
+                    stopAuthorization = Nothing,
+                    stopTime = Nothing,
+                    stopId = Nothing, -- Not allowed in confirm request per ONDC spec
+                    stopParentStopId = Nothing
+                  }
+            )
+              <$> mDestination
+          ]
+          <> fmap (\(location, stopId) -> mkIntermediateStopForConfirm location stopId (stopId - 1)) (zip intermediateStops [1 ..])
+
+mkIntermediateStopForConfirm :: DLoc.Location -> Int -> Int -> Spec.Stop
+mkIntermediateStopForConfirm stop _stopId _parentStopId =
+  let gps = Gps.Gps {lat = stop.lat, lon = stop.lon}
+   in Spec.Stop
+        { stopLocation =
+            Just $
+              Spec.Location
+                { locationAddress = Nothing, -- Not allowed in confirm request per ONDC spec
+                  locationAreaCode = Nothing, -- Not allowed in confirm request per ONDC spec
+                  locationCity = Nothing, -- Not allowed in confirm request per ONDC spec
+                  locationCountry = Nothing, -- Not allowed in confirm request per ONDC spec
+                  locationGps = Utils.gpsToText gps,
+                  locationState = Nothing, -- Not allowed in confirm request per ONDC spec
+                  locationId = Just stop.id.getId,
+                  locationUpdatedAt = Nothing
+                },
+          stopType = Just $ show Enums.INTERMEDIATE_STOP,
+          stopAuthorization = Nothing,
+          stopTime = Nothing,
+          stopId = Nothing, -- Not allowed in confirm request per ONDC spec
+          stopParentStopId = Nothing
+        }
