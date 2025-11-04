@@ -29,10 +29,4 @@ findByPrimaryKey driverFeeId vendorId = do findOneWithKV [Se.And [Se.Is Beam.dri
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VendorFee.VendorFee -> m ())
 updateByPrimaryKey (Domain.Types.VendorFee.VendorFee {..}) = do
   _now <- getCurrentTime
-  updateWithKV
-    [Se.Set Beam.amount amount, Se.Set Beam.createdAt createdAt, Se.Set Beam.updatedAt _now]
-    [ Se.And
-        [ Se.Is Beam.driverFeeId $ Se.Eq (Kernel.Types.Id.getId driverFeeId),
-          Se.Is Beam.vendorId $ Se.Eq vendorId
-        ]
-    ]
+  updateWithKV [Se.Set Beam.amount amount, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.driverFeeId $ Se.Eq (Kernel.Types.Id.getId driverFeeId), Se.Is Beam.vendorId $ Se.Eq vendorId]]

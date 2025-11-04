@@ -43,7 +43,6 @@ updateByPrimaryKey (Domain.Types.RegistrationToken.RegistrationToken {..}) = do
       Se.Set Beam.authMedium authMedium,
       Se.Set Beam.authType authType,
       Se.Set Beam.authValueHash authValueHash,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.createdViaPartnerOrgId (Kernel.Types.Id.getId <$> createdViaPartnerOrgId),
       Se.Set Beam.entityId entityId,
       Se.Set Beam.entityType entityType,

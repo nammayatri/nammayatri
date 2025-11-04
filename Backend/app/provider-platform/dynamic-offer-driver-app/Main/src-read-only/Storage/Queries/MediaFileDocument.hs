@@ -30,7 +30,7 @@ deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id
 
 findAllByMerchantOpCityIdAndRcIdAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Domain.Types.Common.MediaFileDocumentType -> m ([Domain.Types.MediaFileDocument.MediaFileDocument]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Domain.Types.Common.MediaFileDocumentType -> m [Domain.Types.MediaFileDocument.MediaFileDocument])
 findAllByMerchantOpCityIdAndRcIdAndType limit offset merchantOperatingCityId rcId mediaFileDocumentType = do
   findAllWithOptionsKV
     [ Se.And
@@ -79,7 +79,6 @@ updateByPrimaryKey (Domain.Types.MediaFileDocument.MediaFileDocument {..}) = do
       Se.Set Beam.s3Path s3Path,
       Se.Set Beam.status status,
       Se.Set Beam.uploadLink uploadLink,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

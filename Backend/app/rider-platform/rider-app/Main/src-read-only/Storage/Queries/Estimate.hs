@@ -56,7 +56,6 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
       Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.device device,
       Se.Set Beam.discount (discount <&> (.amount)),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),

@@ -36,7 +36,6 @@ updateByPrimaryKey (Domain.Types.BookingCancellationReason.BookingCancellationRe
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.additionalInfo additionalInfo,
-      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverCancellationLocationLat (driverCancellationLocation <&> (.lat)),
       Se.Set Beam.driverCancellationLocationLon (driverCancellationLocation <&> (.lon)),

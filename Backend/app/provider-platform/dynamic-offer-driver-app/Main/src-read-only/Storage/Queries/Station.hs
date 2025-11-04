@@ -75,7 +75,6 @@ updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
       Se.Set Beam.possibleTypes possibleTypes,
       Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),
       Se.Set Beam.vehicleType vehicleType,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

@@ -65,7 +65,6 @@ updateByPrimaryKey (Domain.Types.FleetBadge.FleetBadge {..}) = do
     [ Se.Set Beam.badgeName badgeName,
       Se.Set Beam.badgeRank badgeRank,
       Se.Set Beam.badgeType badgeType,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.fleetOwnerId (Kernel.Types.Id.getId fleetOwnerId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),

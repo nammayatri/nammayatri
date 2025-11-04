@@ -40,8 +40,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.MerchantConfig.MerchantConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.enabled enabled,
+    [ Se.Set Beam.enabled enabled,
       Se.Set Beam.fraudAuthCountThreshold fraudAuthCountThreshold,
       Se.Set Beam.fraudAuthCountWindow fraudAuthCountWindow,
       Se.Set Beam.fraudBookingCancellationCountThreshold fraudBookingCancellationCountThreshold,

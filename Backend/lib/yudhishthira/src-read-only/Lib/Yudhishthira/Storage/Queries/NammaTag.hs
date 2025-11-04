@@ -48,7 +48,6 @@ updateByPrimaryKey (Lib.Yudhishthira.Types.NammaTag.NammaTag {..}) = do
       Se.Set Beam.llmContext (getLlmContext rule),
       Se.Set Beam.ruleEngine (getRuleEngine rule),
       Se.Set Beam.validity validity,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.name $ Se.Eq name]]

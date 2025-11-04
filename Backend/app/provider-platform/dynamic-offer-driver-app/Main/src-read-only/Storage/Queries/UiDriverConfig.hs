@@ -29,7 +29,6 @@ updateByPrimaryKey (Domain.Types.UiDriverConfig.UiDriverConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.config config,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.os os,
       Se.Set Beam.platform platform,

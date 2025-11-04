@@ -104,7 +104,6 @@ updateByPrimaryKey (Domain.Types.FleetOperatorStats.FleetOperatorStats {..}) = d
       Se.Set Beam.totalRequestCount totalRequestCount,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId]]

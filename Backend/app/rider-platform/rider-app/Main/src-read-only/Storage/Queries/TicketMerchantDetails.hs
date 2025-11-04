@@ -54,7 +54,6 @@ updateByPrimaryKey (Domain.Types.TicketMerchantDetails.TicketMerchantDetails {..
       Se.Set Beam.contactDetailsEmail (Domain.Types.TicketMerchantDetails.email contactDetails),
       Se.Set Beam.contactDetailsName (Domain.Types.TicketMerchantDetails.name contactDetails),
       Se.Set Beam.contactDetailsNumber (Domain.Types.TicketMerchantDetails.number contactDetails),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.docCancelledChequeEncrypted (docCancelledCheque <&> unEncrypted . (.encrypted)),
       Se.Set Beam.docCancelledChequeHash (docCancelledCheque <&> (.hash)),
       Se.Set Beam.docPanEncrypted (docPan & unEncrypted . encrypted),

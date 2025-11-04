@@ -94,7 +94,6 @@ updateByPrimaryKey (Domain.Types.DriverModuleCompletion.DriverModuleCompletion {
       Se.Set Beam.ratingAtTheTimeOfCompletion ratingAtTheTimeOfCompletion,
       Se.Set Beam.startedAt startedAt,
       Se.Set Beam.status status,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.completionId $ Se.Eq (Kernel.Types.Id.getId completionId)]]

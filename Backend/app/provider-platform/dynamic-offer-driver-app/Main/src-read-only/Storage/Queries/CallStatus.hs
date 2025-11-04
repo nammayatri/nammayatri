@@ -79,7 +79,6 @@ updateByPrimaryKey (Domain.Types.CallStatus.CallStatus {..}) = do
       Se.Set Beam.callId callId,
       Se.Set Beam.callService callService,
       Se.Set Beam.conversationDuration conversationDuration,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.dtmfNumberUsed dtmfNumberUsed,
       Se.Set Beam.entityId entityId,
       Se.Set Beam.merchantId merchantId,

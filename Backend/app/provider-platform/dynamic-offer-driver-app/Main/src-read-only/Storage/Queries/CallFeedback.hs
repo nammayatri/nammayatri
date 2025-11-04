@@ -40,7 +40,6 @@ updateByPrimaryKey (Domain.Types.CallFeedback.CallFeedback {..}) = do
       Se.Set Beam.optionIds optionIds,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.callId $ Se.Eq callId, Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

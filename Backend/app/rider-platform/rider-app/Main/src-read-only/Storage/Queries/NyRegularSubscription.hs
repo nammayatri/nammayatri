@@ -112,7 +112,6 @@ updateByPrimaryKey (Domain.Types.NyRegularSubscription.NyRegularSubscription {..
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bppId bppId,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.dropoffLocationId (Kernel.Types.Id.getId $ (.id) dropoffLocation),
       Se.Set Beam.fixedPrice ((.amount) <$> fixedPrice),
       Se.Set Beam.fixedPriceCurrency ((.currency) <$> fixedPrice),

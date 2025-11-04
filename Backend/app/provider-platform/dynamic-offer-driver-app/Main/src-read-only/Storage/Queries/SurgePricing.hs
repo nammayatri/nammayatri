@@ -47,7 +47,6 @@ updateByPrimaryKey (Domain.Types.SurgePricing.SurgePricing {..}) = do
       Se.Set Beam.sourceHex sourceHex,
       Se.Set Beam.surgeMultiplier surgeMultiplier,
       Se.Set Beam.vehicleServiceTier (Kernel.Prelude.Just vehicleServiceTier),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

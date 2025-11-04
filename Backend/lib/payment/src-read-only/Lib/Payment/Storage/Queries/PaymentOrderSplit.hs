@@ -31,7 +31,7 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findByPaymentOrder ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m ([Lib.Payment.Domain.Types.PaymentOrderSplit.PaymentOrderSplit]))
+  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m [Lib.Payment.Domain.Types.PaymentOrderSplit.PaymentOrderSplit])
 findByPaymentOrder paymentOrderId = do findAllWithKV [Se.Is Beam.paymentOrderId $ Se.Eq (Kernel.Types.Id.getId paymentOrderId)]
 
 findByPrimaryKey ::
@@ -43,9 +43,8 @@ updateByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.P
 updateByPrimaryKey (Lib.Payment.Domain.Types.PaymentOrderSplit.PaymentOrderSplit {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) amount),
+    [ Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
       Se.Set Beam.price ((.amount) amount),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.mdrBorneBy mdrBorneBy,
       Se.Set Beam.merchantCommission ((.amount) merchantCommission),
       Se.Set Beam.merchantId merchantId,
@@ -76,7 +75,7 @@ instance FromTType' Beam.PaymentOrderSplit Lib.Payment.Domain.Types.PaymentOrder
 instance ToTType' Beam.PaymentOrderSplit Lib.Payment.Domain.Types.PaymentOrderSplit.PaymentOrderSplit where
   toTType' (Lib.Payment.Domain.Types.PaymentOrderSplit.PaymentOrderSplit {..}) = do
     Beam.PaymentOrderSplitT
-      { Beam.currency = ((Kernel.Prelude.Just . (.currency))) amount,
+      { Beam.currency = (Kernel.Prelude.Just . (.currency)) amount,
         Beam.price = (.amount) amount,
         Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,

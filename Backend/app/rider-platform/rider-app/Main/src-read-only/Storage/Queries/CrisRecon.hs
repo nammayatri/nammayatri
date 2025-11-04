@@ -32,7 +32,6 @@ updateByPrimaryKey (Domain.Types.CrisRecon.CrisRecon {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bppOrderId bppOrderId,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.dateIst dateIst,
       Se.Set Beam.fareAmount fareAmount,
       Se.Set Beam.updatedAt _now,

@@ -16,7 +16,7 @@ import qualified Storage.Queries.FleetBadgeAssociation as Queries
 
 findAllFleetBadgeAssociationByFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m ([Domain.Types.FleetBadgeAssociation.FleetBadgeAssociation]))
+  (Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m [Domain.Types.FleetBadgeAssociation.FleetBadgeAssociation])
 findAllFleetBadgeAssociationByFleetOwnerId fleetOwnerId isActive = do
   (Hedis.safeGet $ "driverOfferCachedQueries:FleetBadgeAssociation:" <> ":FleetOwnerId-" <> show fleetOwnerId <> ":IsActive-" <> show isActive)
     >>= ( \case

@@ -43,8 +43,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
+    [ Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
       Se.Set Beam.reachedHome mbReachedHome,

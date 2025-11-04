@@ -32,7 +32,6 @@ updateByPrimaryKey (Domain.Types.DriverBlockReason.DriverBlockReason {..}) = do
       Se.Set Beam.blockTimeInHours blockTimeInHours,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.reasonCode $ Se.Eq (Kernel.Types.Id.getId reasonCode)]]

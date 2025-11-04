@@ -51,10 +51,7 @@ updateByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (
 updateByPrimaryKey (Lib.Yudhishthira.Types.TimeBoundConfig.TimeBoundConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.timeBounds timeBounds,
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.updatedAt _now
-    ]
+    [Se.Set Beam.timeBounds timeBounds, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.name $ Se.Eq name,

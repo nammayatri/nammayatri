@@ -58,8 +58,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DraftTicketChange.DraftTicketChange {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.draftPayload (Data.Aeson.toJSON <$> draftPayload),
+    [ Se.Set Beam.draftPayload (Data.Aeson.toJSON <$> draftPayload),
       Se.Set Beam.isApprovalRequired isApprovalRequired,
       Se.Set Beam.message message,
       Se.Set Beam.status status,

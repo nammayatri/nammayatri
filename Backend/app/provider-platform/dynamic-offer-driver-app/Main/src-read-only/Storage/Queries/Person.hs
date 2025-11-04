@@ -32,12 +32,12 @@ createMany = traverse_ create
 deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findAllByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> [Domain.Types.Person.Role] -> m ([Domain.Types.Person.Person]))
+findAllByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> [Domain.Types.Person.Role] -> m [Domain.Types.Person.Person])
 findAllByMerchantId merchantId role = do findAllWithDb [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId), Se.Is Beam.role $ Se.In role]]
 
 findAllByPersonIdsAndMerchantOpsCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.Person.Person]))
+  ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.Person.Person])
 findAllByPersonIdsAndMerchantOpsCityId id merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -117,19 +117,18 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.alternateMobileNumberEncrypted (((alternateMobileNumber <&> unEncrypted . (.encrypted)))),
-      Se.Set Beam.alternateMobileNumberHash ((alternateMobileNumber <&> (.hash))),
+    [ Se.Set Beam.alternateMobileNumberEncrypted (alternateMobileNumber <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.alternateMobileNumberHash (alternateMobileNumber <&> (.hash)),
       Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.backendConfigVersion (fmap Kernel.Utils.Version.versionToText backendConfigVersion),
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
-      Se.Set Beam.clientManufacturer ((clientDevice >>= (.deviceManufacturer))),
-      Se.Set Beam.clientModelName ((clientDevice <&> (.deviceModel))),
-      Se.Set Beam.clientOsType ((clientDevice <&> (.deviceType))),
-      Se.Set Beam.clientOsVersion ((clientDevice <&> (.deviceVersion))),
+      Se.Set Beam.clientManufacturer (clientDevice >>= (.deviceManufacturer)),
+      Se.Set Beam.clientModelName (clientDevice <&> (.deviceModel)),
+      Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
+      Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
       Se.Set Beam.clientId clientId,
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.description description,
       Se.Set Beam.deviceToken deviceToken,
       Se.Set Beam.driverTag (Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType driverTag),
@@ -149,8 +148,8 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.merchantOperatingCityId (Just $ Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.middleName middleName,
       Se.Set Beam.mobileCountryCode mobileCountryCode,
-      Se.Set Beam.mobileNumberEncrypted (((mobileNumber <&> unEncrypted . (.encrypted)))),
-      Se.Set Beam.mobileNumberHash ((mobileNumber <&> (.hash))),
+      Se.Set Beam.mobileNumberEncrypted (mobileNumber <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.mobileNumberHash (mobileNumber <&> (.hash)),
       Se.Set Beam.nyClubConsent nyClubConsent,
       Se.Set Beam.onboardedFromDashboard onboardedFromDashboard,
       Se.Set Beam.passwordHash passwordHash,

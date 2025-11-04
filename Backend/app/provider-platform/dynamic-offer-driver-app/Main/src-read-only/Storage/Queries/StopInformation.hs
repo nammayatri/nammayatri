@@ -51,8 +51,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.StopInformation.StopInformation {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
+    [ Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
       Se.Set Beam.stopEndLat (Kernel.Prelude.fmap (.lat) stopEndLatLng),
       Se.Set Beam.stopEndLon (Kernel.Prelude.fmap (.lon) stopEndLatLng),
       Se.Set Beam.stopLocId (Kernel.Types.Id.getId stopLocId),

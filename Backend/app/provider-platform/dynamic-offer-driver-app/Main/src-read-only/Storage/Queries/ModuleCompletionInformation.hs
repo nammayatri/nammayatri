@@ -76,11 +76,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.ModuleCompletionInformation.ModuleCompletionInformation {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.entityStatus entityStatus,
-      Se.Set Beam.selectedEntityId selectedEntityId,
-      Se.Set Beam.updatedAt _now
-    ]
+    [Se.Set Beam.entityStatus entityStatus, Se.Set Beam.selectedEntityId selectedEntityId, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.attempt $ Se.Eq attempt,
           Se.Is Beam.completionId $ Se.Eq (Kernel.Types.Id.getId completionId),

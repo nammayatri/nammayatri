@@ -245,7 +245,7 @@ FRFSQuoteCategory:
   beamType:
     category: Maybe FRFSQuoteCategoryType
   default:
-    ticketCategoryMetadataConfigId: "Unknown"
+    ticketCategoryMetadataConfigId:  "'Unknown'"
 
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E

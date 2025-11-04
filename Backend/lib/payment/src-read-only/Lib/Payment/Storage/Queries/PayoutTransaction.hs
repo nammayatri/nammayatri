@@ -47,7 +47,6 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutTransaction.PayoutTransaction
   updateWithKV
     [ Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
       Se.Set Beam.price ((.amount) amount),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.fulfillmentMethod fulfillmentMethod,
       Se.Set Beam.gateWayRefId gateWayRefId,
       Se.Set Beam.merchantId merchantId,
