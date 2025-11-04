@@ -38,7 +38,6 @@ updateByPrimaryKey (Domain.Types.FleetConfig.FleetConfig {..}) = do
       Se.Set Beam.unlinkDriverAndVehicleOnTripTermination (Just unlinkDriverAndVehicleOnTripTermination),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.fleetOwnerId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerId)]]

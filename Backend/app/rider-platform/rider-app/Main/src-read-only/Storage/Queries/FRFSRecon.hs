@@ -58,7 +58,7 @@ updateByPrimaryKey (Domain.Types.FRFSRecon.FRFSRecon {..}) = do
       Se.Set Beam.date date,
       Se.Set Beam.destinationStationCode destinationStationCode,
       Se.Set Beam.differenceAmount (Kernel.Prelude.fmap (.amount) differenceAmount),
-      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) fare),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) fare),
       Se.Set Beam.fare ((.amount) fare),
       Se.Set Beam.frfsTicketBookingId (Kernel.Types.Id.getId frfsTicketBookingId),
       Se.Set Beam.message message,
@@ -81,7 +81,6 @@ updateByPrimaryKey (Domain.Types.FRFSRecon.FRFSRecon {..}) = do
       Se.Set Beam.txnId txnId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -137,7 +136,7 @@ instance ToTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
         Beam.date = date,
         Beam.destinationStationCode = destinationStationCode,
         Beam.differenceAmount = Kernel.Prelude.fmap (.amount) differenceAmount,
-        Beam.currency = ((Kernel.Prelude.Just . (.currency))) fare,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) fare,
         Beam.fare = (.amount) fare,
         Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
         Beam.id = Kernel.Types.Id.getId id,

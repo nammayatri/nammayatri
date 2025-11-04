@@ -443,7 +443,6 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.weeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]

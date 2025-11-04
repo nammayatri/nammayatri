@@ -112,7 +112,6 @@ updateByPrimaryKey (Domain.Types.FRFSTicket.FRFSTicket {..}) = do
       Se.Set Beam.status status,
       Se.Set Beam.ticketNumber ticketNumber,
       Se.Set Beam.validTill validTill,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

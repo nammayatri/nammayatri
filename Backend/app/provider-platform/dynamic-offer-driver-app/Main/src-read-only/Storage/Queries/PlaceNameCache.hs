@@ -37,7 +37,6 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.PlaceNameCache.PlaceNameCache {..}) = do
   updateWithKV
     [ Se.Set Beam.addressComponents addressComponents,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.formattedAddress formattedAddress,
       Se.Set Beam.geoHash geoHash,
       Se.Set Beam.lat lat,

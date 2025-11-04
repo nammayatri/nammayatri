@@ -48,8 +48,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.merchantShortId merchantShortId,
+    [ Se.Set Beam.merchantShortId merchantShortId,
       Se.Set Beam.reasonToChange reasonToChange,
       Se.Set Beam.reqStatus reqStatus,
       Se.Set Beam.suspectId suspectId,

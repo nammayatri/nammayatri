@@ -74,7 +74,6 @@ updateByPrimaryKey (Domain.Types.BookingUpdateRequest.BookingUpdateRequest {..})
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bookingId (Kernel.Types.Id.getId bookingId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currentPointLat currentPointLat,
       Se.Set Beam.currentPointLon currentPointLon,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),

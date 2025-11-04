@@ -21,7 +21,7 @@ import qualified Sequelize as Se
 create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.Refunds.Refunds -> m ())
 create = createWithKV
 
-findAllByOrderId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m ([Lib.Payment.Domain.Types.Refunds.Refunds]))
+findAllByOrderId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m [Lib.Payment.Domain.Types.Refunds.Refunds])
 findAllByOrderId orderId = do findAllWithKV [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getShortId orderId)]
 
 findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds -> m (Maybe Lib.Payment.Domain.Types.Refunds.Refunds))

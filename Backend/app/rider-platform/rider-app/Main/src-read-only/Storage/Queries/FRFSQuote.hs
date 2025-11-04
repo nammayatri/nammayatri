@@ -73,7 +73,6 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.toStationId toStationCode,
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleType vehicleType,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

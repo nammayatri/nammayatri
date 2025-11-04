@@ -36,11 +36,12 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.MerchantState.MerchantState {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.allowedDestinationStates allowedDestinationStates,
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.updatedAt _now
+    [Se.Set Beam.allowedDestinationStates allowedDestinationStates, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
+          Se.Is Beam.state $ Se.Eq state
+        ]
     ]
-    [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId), Se.Is Beam.state $ Se.Eq state]]
 
 instance FromTType' Beam.MerchantState Domain.Types.MerchantState.MerchantState where
   fromTType' (Beam.MerchantStateT {..}) = do

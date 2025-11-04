@@ -54,7 +54,6 @@ updateByPrimaryKey (Domain.Types.NyRegularInstanceLog.NyRegularInstanceLog {..})
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.automationStatus automationStatus,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.nyRegularSubscriptionId (Kernel.Types.Id.getId nyRegularSubscriptionId),
       Se.Set Beam.scheduledPickupTime scheduledPickupTime,
       Se.Set Beam.updatedAt _now,

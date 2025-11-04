@@ -45,7 +45,6 @@ updateByPrimaryKey (Domain.Types.MetaData.MetaData {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.appPermissions appPermissions,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.device device,
       Se.Set Beam.deviceDateTime deviceDateTime,
       Se.Set Beam.deviceOS deviceOS,

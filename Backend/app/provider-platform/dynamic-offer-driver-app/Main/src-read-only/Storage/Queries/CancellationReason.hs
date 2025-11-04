@@ -34,7 +34,6 @@ updateByPrimaryKey (Domain.Types.CancellationReason.CancellationReason {..}) = d
     [ Se.Set Beam.description description,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.priority priority,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.reasonCode $ Se.Eq (reasonCodeToText reasonCode)]]

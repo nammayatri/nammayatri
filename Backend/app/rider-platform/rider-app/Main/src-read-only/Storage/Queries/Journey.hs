@@ -80,7 +80,6 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
       Se.Set Beam.toLocationAddress Nothing,
       Se.Set Beam.toLocationId (Kernel.Types.Id.getId <$> (toLocation <&> (.id))),
       Se.Set Beam.totalLegs totalLegs,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

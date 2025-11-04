@@ -61,7 +61,6 @@ updateByPrimaryKey (Domain.Types.RideRelatedNotificationConfig.RideRelatedNotifi
       Se.Set Beam.onScheduledBooking onScheduledBooking,
       Se.Set Beam.timeDiff (Kernel.Utils.Common.nominalDiffTimeToSeconds timeDiff),
       Se.Set Beam.timeDiffEvent timeDiffEvent,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]

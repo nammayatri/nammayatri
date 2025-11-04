@@ -47,8 +47,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.MerchantOnboardingStepConfig.MerchantOnboardingStepConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.dependency dependency,
+    [ Se.Set Beam.dependency dependency,
       Se.Set Beam.isAdminOnly isAdminOnly,
       Se.Set Beam.isApprovalRequired isApprovalRequired,
       Se.Set Beam.stepDescription stepDescription,

@@ -310,8 +310,8 @@ postFleetManagementFleetMemberAssociationCreate merchantShortId _opCity req = do
             level = req.level,
             parentGroupCode = req.parentGroupCode,
             groupCode = req.groupCode,
+            createdAt = existingAssociation.createdAt,
             order = req.order,
-            createdAt = now,
             updatedAt = now
           }
     Nothing -> do

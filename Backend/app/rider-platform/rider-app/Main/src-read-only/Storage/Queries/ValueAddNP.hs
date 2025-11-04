@@ -29,7 +29,7 @@ findByPrimaryKey subscriberId = do findOneWithKV [Se.And [Se.Is Beam.subscriberI
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.ValueAddNP.ValueAddNP -> m ())
 updateByPrimaryKey (Domain.Types.ValueAddNP.ValueAddNP {..}) = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.enabled enabled, Se.Set Beam.createdAt createdAt, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.subscriberId $ Se.Eq subscriberId]]
+  updateWithKV [Se.Set Beam.enabled enabled, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.subscriberId $ Se.Eq subscriberId]]
 
 instance FromTType' Beam.ValueAddNP Domain.Types.ValueAddNP.ValueAddNP where
   fromTType' (Beam.ValueAddNPT {..}) = do pure $ Just Domain.Types.ValueAddNP.ValueAddNP {enabled = enabled, subscriberId = subscriberId, createdAt = createdAt, updatedAt = updatedAt}

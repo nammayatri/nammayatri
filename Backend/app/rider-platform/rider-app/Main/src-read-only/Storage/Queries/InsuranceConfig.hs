@@ -46,7 +46,6 @@ updateByPrimaryKey (Domain.Types.InsuranceConfig.InsuranceConfig {..}) = do
   updateWithKV
     [ Se.Set Beam.allowedVehicleServiceTiers allowedVehicleServiceTiers,
       Se.Set Beam.city city,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverInsuredAmount driverInsuredAmount,
       Se.Set Beam.hours hours,
       Se.Set Beam.insuredAmount insuredAmount,

@@ -91,7 +91,6 @@ updateByPrimaryKey (Domain.Types.Invoice.Invoice {..}) = do
     [ Se.Set Beam.bankErrorCode bankErrorCode,
       Se.Set Beam.bankErrorMessage bankErrorMessage,
       Se.Set Beam.bankErrorUpdatedAt bankErrorUpdatedAt,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverFeeId (Kernel.Types.Id.getId driverFeeId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.invoiceShortId invoiceShortId,

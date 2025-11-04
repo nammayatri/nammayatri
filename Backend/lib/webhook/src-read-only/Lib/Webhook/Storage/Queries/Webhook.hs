@@ -31,7 +31,6 @@ updateByPrimaryKey (Lib.Webhook.Types.Webhook.Webhook {..}) = do
   updateWithKV
     [ Se.Set Beam.batchId batchId,
       Se.Set Beam.city city,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.eventName eventName,
       Se.Set Beam.extMerchantName extMerchantName,
       Se.Set Beam.lastTriedAt lastTriedAt,

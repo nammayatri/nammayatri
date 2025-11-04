@@ -64,7 +64,6 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.congestionMultiplier congestionMultiplier,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.dpVersion dpVersion,

@@ -87,7 +87,6 @@ updateByPrimaryKey (Domain.Types.RouteTripStopMapping.RouteTripStopMapping {..})
       Se.Set Beam.stopLon ((.lon) stopPoint),
       Se.Set Beam.stopSequenceNum stopSequenceNum,
       Se.Set Beam.vehicleType vehicleType,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [ Se.And

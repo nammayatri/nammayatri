@@ -106,7 +106,6 @@ updateByPrimaryKey (Domain.Types.TicketBooking.TicketBooking {..}) = do
       Se.Set Beam.blockExpirationTime blockExpirationTime,
       Se.Set Beam.bookedSeats bookedSeats,
       Se.Set Beam.cancelledSeats cancelledSeats,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.paymentMethod paymentMethod,
       Se.Set Beam.peopleTicketQuantity (Data.Aeson.toJSON <$> peopleTicketQuantity),

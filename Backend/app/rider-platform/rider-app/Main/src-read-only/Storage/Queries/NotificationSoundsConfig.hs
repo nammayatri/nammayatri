@@ -51,7 +51,6 @@ updateByPrimaryKey (Domain.Types.NotificationSoundsConfig.NotificationSoundsConf
     [ Se.Set Beam.blindSound blindSound,
       Se.Set Beam.defaultSound defaultSound,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId), Se.Is Beam.notificationType $ Se.Eq notificationType]]

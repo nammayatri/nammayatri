@@ -58,7 +58,6 @@ updateByPrimaryKey (Domain.Types.BackgroundVerification.BackgroundVerification {
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.reportId reportId,
       Se.Set Beam.reportStatus reportStatus,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]

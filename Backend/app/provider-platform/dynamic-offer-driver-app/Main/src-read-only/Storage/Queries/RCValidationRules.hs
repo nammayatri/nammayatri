@@ -39,7 +39,6 @@ updateByPrimaryKey (Domain.Types.RCValidationRules.RCValidationRules {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.vehicleClass vehicleClass,
       Se.Set Beam.vehicleOEM vehicleOEM,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

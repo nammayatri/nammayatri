@@ -42,7 +42,6 @@ updateByPrimaryKey (Domain.Types.SearchReqLocation.SearchReqLocation {..}) = do
       Se.Set Beam.street (Domain.Types.LocationAddress.street address),
       Se.Set Beam.title (Domain.Types.LocationAddress.title address),
       Se.Set Beam.ward (Domain.Types.LocationAddress.ward address),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
       Se.Set Beam.updatedAt _now

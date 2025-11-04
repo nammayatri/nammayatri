@@ -77,7 +77,6 @@ updateByPrimaryKey (Domain.Types.TicketBookingService.TicketBookingService {..})
       Se.Set Beam.bookedSeats bookedSeats,
       Se.Set Beam.btype btype,
       Se.Set Beam.cancelledSeats cancelledSeats,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.expiryDate expiryDate,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.shortId (Kernel.Types.Id.getShortId shortId),

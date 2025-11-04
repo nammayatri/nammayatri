@@ -64,8 +64,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Notification.Notification {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.merchantShortId merchantShortId,
+    [ Se.Set Beam.merchantShortId merchantShortId,
       Se.Set Beam.metadata metadata,
       Se.Set Beam.notificationCategory notificationCategory,
       Se.Set Beam.notificationCount notificationCount,

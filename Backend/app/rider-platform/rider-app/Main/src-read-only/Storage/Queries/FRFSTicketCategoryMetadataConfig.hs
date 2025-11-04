@@ -58,7 +58,6 @@ updateByPrimaryKey (Domain.Types.FRFSTicketCategoryMetadataConfig.FRFSTicketCate
       Se.Set Beam.title title,
       Se.Set Beam.tnc tnc,
       Se.Set Beam.vehicleCategory vehicleCategory,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

@@ -80,7 +80,6 @@ updateByPrimaryKey (Domain.Types.TripTransaction.TripTransaction {..}) = do
     [ Se.Set Beam.allowEndingMidRoute allowEndingMidRoute,
       Se.Set Beam.conductorFleetBadgeId (Kernel.Types.Id.getId <$> conductorFleetBadgeId),
       Se.Set Beam.conductorName conductorName,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.deviationCount deviationCount,
       Se.Set Beam.fleetBadgeId (Kernel.Types.Id.getId <$> driverFleetBadgeId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),

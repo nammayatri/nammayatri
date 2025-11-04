@@ -43,7 +43,6 @@ updateByPrimaryKey (Domain.Types.CancellationFarePolicy.CancellationFarePolicy {
       Se.Set Beam.perMetreCancellationCharge perMetreCancellationCharge,
       Se.Set Beam.perMinuteCancellationCharge perMinuteCancellationCharge,
       Se.Set Beam.percentageOfRideFareToBeCharged percentageOfRideFareToBeCharged,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

@@ -4,7 +4,6 @@
 
 module Storage.Queries.Message (module Storage.Queries.Message, module ReExport) where
 
-import qualified Data.Time
 import qualified Domain.Types.Message
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -28,7 +27,6 @@ updateByPrimaryKey (Domain.Types.Message.Message {..}) = do
   updateWithKV
     [ Se.Set Beam.messageType _type,
       Se.Set Beam.alwaysTriggerOnOnboarding (Kernel.Prelude.Just alwaysTriggerOnOnboarding),
-      Se.Set Beam.createdAt (Data.Time.utcToLocalTime Data.Time.utc createdAt),
       Se.Set Beam.description description,
       Se.Set Beam.label label,
       Se.Set Beam.likeCount likeCount,

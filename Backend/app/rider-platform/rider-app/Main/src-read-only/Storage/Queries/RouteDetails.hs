@@ -95,7 +95,6 @@ updateByPrimaryKey (Domain.Types.RouteDetails.RouteDetails {..}) = do
       Se.Set Beam.userBookedRouteShortName userBookedRouteShortName,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

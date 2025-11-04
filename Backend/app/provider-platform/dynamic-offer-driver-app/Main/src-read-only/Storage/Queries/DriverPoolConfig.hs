@@ -41,7 +41,6 @@ updateByPrimaryKey (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
       Se.Set Beam.area area,
       Se.Set Beam.batchSizeOnRide batchSizeOnRide,
       Se.Set Beam.batchSizeOnRideWithStraightLineDistance batchSizeOnRideWithStraightLineDistance,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currentRideTripCategoryValidForForwardBatching currentRideTripCategoryValidForForwardBatching,
       Se.Set Beam.distanceBasedBatchSplit distanceBasedBatchSplit,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),

@@ -31,7 +31,6 @@ updateByPrimaryKey (Domain.Types.SubscriptionTransaction.SubscriptionTransaction
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.amount amount,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.entityId entityId,
       Se.Set Beam.fleetOwnerId (Kernel.Types.Id.getId <$> fleetOwnerId),

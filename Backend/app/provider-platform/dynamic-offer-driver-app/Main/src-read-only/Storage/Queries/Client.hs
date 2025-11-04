@@ -29,7 +29,6 @@ updateByPrimaryKey (Domain.Types.Client.Client {..}) = do
   updateWithKV
     [ Se.Set Beam.shortId (Kernel.Types.Id.getShortId shortId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

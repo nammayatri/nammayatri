@@ -29,7 +29,6 @@ updateByPrimaryKey (Domain.Types.DeletedPerson.DeletedPerson {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.clientOsType clientOsType,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.deviceId deviceId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),

@@ -38,7 +38,6 @@ updateByPrimaryKey (Domain.Types.FleetBookingAssignments.FleetBookingAssignments
   updateWithKV
     [ Se.Set Beam.amount amount,
       Se.Set Beam.bookingId bookingId,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.fleetOwnerId fleetOwnerId,
       Se.Set Beam.mainAssignmentId (Kernel.Types.Id.getId mainAssignmentId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

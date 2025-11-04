@@ -49,7 +49,6 @@ updateByPrimaryKey (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
       Se.Set Beam.startDate startDate,
       Se.Set Beam.status status,
       Se.Set Beam.usedTripCount usedTripCount,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

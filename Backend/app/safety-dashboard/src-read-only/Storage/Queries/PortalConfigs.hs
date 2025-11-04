@@ -30,7 +30,7 @@ findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Ty
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PortalConfigs.PortalConfigs -> m ())
 updateByPrimaryKey (Domain.Types.PortalConfigs.PortalConfigs {..}) = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.configName configName, Se.Set Beam.createdAt createdAt, Se.Set Beam.updatedAt _now, Se.Set Beam.value value] [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+  updateWithKV [Se.Set Beam.configName configName, Se.Set Beam.updatedAt _now, Se.Set Beam.value value] [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.PortalConfigs Domain.Types.PortalConfigs.PortalConfigs where
   fromTType' (Beam.PortalConfigsT {..}) = do

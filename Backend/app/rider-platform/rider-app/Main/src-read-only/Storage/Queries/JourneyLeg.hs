@@ -131,7 +131,6 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.toStopName (toStopDetails >>= (.name)),
       Se.Set Beam.toStopPlatformCode (toStopDetails >>= (.platformCode)),
       Se.Set Beam.userBookedBusServiceTierType userBookedBusServiceTierType,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

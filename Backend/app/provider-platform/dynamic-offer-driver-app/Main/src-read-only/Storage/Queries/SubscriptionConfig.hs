@@ -103,7 +103,6 @@ updateByPrimaryKey (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = d
       Se.Set Beam.waiveOffOfferTitle (Kernel.Prelude.Just waiveOffOfferTitle),
       Se.Set Beam.webhookConfig (Kernel.Prelude.toJSON <$> webhookConfig),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.serviceName $ Se.Eq serviceName, Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)]]

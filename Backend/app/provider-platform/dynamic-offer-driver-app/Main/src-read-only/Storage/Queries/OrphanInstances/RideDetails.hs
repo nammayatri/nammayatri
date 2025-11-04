@@ -41,7 +41,7 @@ instance ToTType' Beam.RideDetails Domain.Types.RideDetails.RideDetails where
         Beam.defaultServiceTierName = defaultServiceTierName,
         Beam.driverCountryCode = driverCountryCode,
         Beam.driverName = driverName,
-        Beam.driverNumberEncrypted = (driverNumber <&> unEncrypted . (.encrypted)),
+        Beam.driverNumberEncrypted = driverNumber <&> unEncrypted . (.encrypted),
         Beam.driverNumberHash = driverNumber <&> (.hash),
         Beam.fleetOwnerId = fleetOwnerId,
         Beam.id = Kernel.Types.Id.getId id,

@@ -64,8 +64,8 @@ updateByPrimaryKey (Domain.Types.DriverGstin.DriverGstin {..}) = do
       Se.Set Beam.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.driverName driverName,
-      Se.Set Beam.gstinEncrypted (((gstin & unEncrypted . encrypted))),
-      Se.Set Beam.gstinHash ((gstin & hash)),
+      Se.Set Beam.gstinEncrypted (gstin & unEncrypted . encrypted),
+      Se.Set Beam.gstinHash (gstin & hash),
       Se.Set Beam.isProvisional isProvisional,
       Se.Set Beam.legalName legalName,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -77,7 +77,6 @@ updateByPrimaryKey (Domain.Types.DriverGstin.DriverGstin {..}) = do
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.verifiedBy verifiedBy,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

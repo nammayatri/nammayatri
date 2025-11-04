@@ -33,7 +33,6 @@ updateByPrimaryKey (Domain.Types.RecentLocation.RecentLocation {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.address address,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.entityType entityType,
       Se.Set Beam.fare fare,
       Se.Set Beam.frequency frequency,

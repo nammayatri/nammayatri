@@ -28,7 +28,6 @@ updateByPrimaryKey (Domain.Types.OnSearchEvent.OnSearchEvent {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bppId bppId,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.errorCode errorCode,
       Se.Set Beam.errorMessage errorMessage,
       Se.Set Beam.errorType errorType,

@@ -64,7 +64,6 @@ updateByPrimaryKey (Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogi
       Se.Set Beam.modifiedBy (Kernel.Types.Id.getId <$> modifiedBy),
       Se.Set Beam.percentageRollout percentageRollout,
       Se.Set Beam.versionDescription versionDescription,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [ Se.And

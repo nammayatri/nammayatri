@@ -106,7 +106,6 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.cancellationDuesPaid (Kernel.Prelude.Just cancellationDuesPaid),
       Se.Set Beam.cancelledRides (Kernel.Prelude.Just cancelledRides),
       Se.Set Beam.completedRides (Kernel.Prelude.Just completedRides),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.disputeChancesUsed disputeChancesUsed,
       Se.Set Beam.firstRideId firstRideId,

@@ -30,7 +30,6 @@ updateByPrimaryKey (Domain.Types.PopularLocation.PopularLocation {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.address address,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
