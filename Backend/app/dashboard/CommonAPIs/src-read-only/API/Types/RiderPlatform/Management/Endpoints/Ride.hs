@@ -184,6 +184,7 @@ data RideInfoRes = RideInfoRes
     customerDropLocation :: Kernel.Prelude.Maybe Location,
     driverName :: Kernel.Prelude.Text,
     driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverAlternatePhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverRegisteredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     vehicleNo :: Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Text,
