@@ -36,7 +36,7 @@ type DigiLockerCallbackAPI =
     :> QueryParam "error_description" Text
     :> QueryParam "code" Text
     :> MandatoryQueryParam "state" Text
-    :> Post '[JSON] AckResponse
+    :> Get '[JSON] AckResponse
 
 -- | Handler for DigiLocker OAuth 2.0 callback
 -- This is called by DigiLocker after user authorization
