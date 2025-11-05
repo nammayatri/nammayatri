@@ -444,7 +444,8 @@ rideAssignedReqHandler req = do
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
         let createPaymentIntentReq =
               Payment.CreatePaymentIntentReq
-                { amount = booking.estimatedFare.amount,
+                { orderShortId = ride.shortId.getShortId,
+                  amount = booking.estimatedFare.amount,
                   applicationFeeAmount,
                   currency = booking.estimatedFare.currency,
                   customer = customerPaymentId,

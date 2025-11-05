@@ -69,7 +69,8 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
     email <- mapM decrypt person.email
     let createPaymentIntentReq =
           Payment.CreatePaymentIntentReq
-            { amount = fareWithTip.amount,
+            { orderShortId = ride.shortId.getShortId,
+              amount = fareWithTip.amount,
               applicationFeeAmount,
               currency = fareWithTip.currency,
               customer = customerPaymentId,
