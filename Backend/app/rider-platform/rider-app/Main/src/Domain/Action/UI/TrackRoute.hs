@@ -9,12 +9,12 @@ import qualified Data.Map as M
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
-import qualified Domain.Types.Station as Station
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JMU
 import SharedLogic.FRFSUtils
@@ -65,8 +65,8 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
   logInfo $ "deduplicatedVehicles: " <> show deduplicatedVehicles
   let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop deduplicatedVehicles
   let (confirmedHighBuses, ghostBuses) = List.partition (\a -> ((snd a).vehicleInfo >>= (.routeState)) == Just CQMMB.ConfirmedHigh) vehiclesYetToReachSelectedStop
-  let sortedTracking = sortOn (distanceToStop mbSourceStop . snd) ghostBuses
-  let sortedConfirmed = sortOn (distanceToStop mbSourceStop . snd) confirmedHighBuses
+  let sortedTracking = sortOn (distanceToStop currentLocation . snd) ghostBuses
+  let sortedConfirmed = sortOn (distanceToStop currentLocation . snd) confirmedHighBuses
   let (nearestXBuses, restOfBuses) = splitAt maxBuses $ sortedConfirmed <> sortedTracking
   serviceTiersOfSelectedBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] <- mapM (\vehicle -> (,vehicle) <$> JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig] (snd vehicle).vehicleId) nearestXBuses
   serviceTiersOfRemainingBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] <- mapM (\vehicle -> (,vehicle) <$> JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig] (snd vehicle).vehicleId) restOfBuses
@@ -105,11 +105,10 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
 
     mkVehicleInfo VehicleInfo {..} = TrackRoute.VehicleInfoForRoute {..}
 
-    distanceToStop :: Maybe Station.Station -> VehicleTracking -> Double
-    distanceToStop mbSourceStop vt =
-      case find (\u -> Just u.stopCode == fmap (.code) mbSourceStop) vt.upcomingStops of
-        Just u -> maybe (1 / 0) (fromIntegral . getMeters) u.travelDistance
-        Nothing -> 1 / 0
+    distanceToStop :: Maybe LatLong -> VehicleTracking -> Maybe HighPrecMeters
+    distanceToStop mbSourceStopLocation vt = do
+      let mbVehicleLocation = (vt.vehicleInfo >>= \a -> LatLong <$> (a.latitude) <*> (a.longitude))
+      distanceBetweenInMeters <$> mbVehicleLocation <*> mbSourceStopLocation
 
     isRouteBasedVehicleTracking :: DIBC.IntegratedBPPConfig -> Bool
     isRouteBasedVehicleTracking config = case config.providerConfig of
