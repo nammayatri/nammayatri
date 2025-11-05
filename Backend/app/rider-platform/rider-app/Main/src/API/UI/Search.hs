@@ -143,6 +143,7 @@ type API =
       :> Header "x-device" Text
       :> Header "is-dashboard-request" Bool
       :> Header "imei-number" Text
+      :> Header "departure-time" UTCTime
       :> Post '[JSON] MultimodalSearchResp
 
 type SearchAPI =
@@ -213,7 +214,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
   fork "Multimodal Search" $ do
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     if riderConfig.makeMultiModalSearch
-      then void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId)
+      then void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId Nothing)
       else QSearchRequest.updateAllJourneysLoaded (Just True) dSearchRes.searchRequest.id
   return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
   where
@@ -262,8 +263,8 @@ handleBookingCancellation merchantId _personId stuckRideAutoCancellationBuffer s
         _ -> do
           return True
 
-multimodalSearchHandler :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Bool -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Text -> FlowHandler MultimodalSearchResp
-multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbImeiNumber = withFlowHandlerAPI $
+multimodalSearchHandler :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Bool -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe UTCTime -> FlowHandler MultimodalSearchResp
+multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbImeiNumber mbDepartureTime = withFlowHandlerAPI $
   withPersonIdLogTag personId $ do
     checkSearchRateLimit personId
     fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
@@ -273,10 +274,10 @@ multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVe
     dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) True Nothing
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let initiateJourney = fromMaybe False mbInitiateJourney
-    JMU.measureLatency (multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId) "multiModalSearch"
+    JMU.measureLatency (multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId mbDepartureTime) "multiModalSearch"
 
-multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> Bool -> DSearch.SearchReq -> Id Person.Person -> Flow MultimodalSearchResp
-multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJourney req' personId = withLogTag ("multimodalSearch" <> searchRequest.id.getId) $ do
+multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> Bool -> DSearch.SearchReq -> Id Person.Person -> Maybe UTCTime -> Flow MultimodalSearchResp
+multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJourney req' personId mbDepartureTime = withLogTag ("multimodalSearch" <> searchRequest.id.getId) $ do
   now <- getCurrentTime
   userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
   let req = DSearch.extractSearchDetails now req'
@@ -372,7 +373,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = fromLocation.latitude, longitude = fromLocation.longitude}}},
                   destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = destination.lat, longitude = destination.lon}}},
                   arrivalTime = Nothing,
-                  departureTime = Nothing,
+                  departureTime = mbDepartureTime,
                   mode = Nothing,
                   transitPreferences = Nothing,
                   transportModes = Nothing,
@@ -784,7 +785,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             DIBC.CRIS config' -> do
               (viaPoints, changeOver) <- CallAPI.getChangeOverAndViaPoints [CallAPI.BasicRouteDetail {routeCode = routeCode, startStopCode = fromCode, endStopCode = toCode}] integratedBPPConfig
               routeFareReq <- JMU.getRouteFareRequest fromCode toCode changeOver viaPoints personId False
-              (_, sdkToken) <- RouteFareV3.getRouteFare config' mocId routeFareReq False
+              (_, sdkToken) <- RouteFareV3.getRouteFare config' mocId routeFareReq False True
               return $ sdkToken
             _ -> return Nothing
         _ -> return Nothing
