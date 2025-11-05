@@ -1030,66 +1030,68 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         logInfo $ "paymentStatusResp: " <> show paymentStatusResp
         let paymentBookingStatus = makeTicketBookingPaymentAPIStatus paymentStatusResp.status
         logInfo $ "paymentBookingStatus: " <> show paymentBookingStatus
-        if paymentBookingStatus == FRFSTicketService.FAILURE
-          then do
-            logInfo $ "payment failed in payment pending: " <> show booking
-            QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
-            QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
-            let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-            buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
-          else
-            if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (booking.validTill < now)
-              then do
-                logInfo $ "booking is expired in payment success and booking is expired: " <> show booking
-                void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
-                let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-                buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
-              else
-                if paymentBookingStatus == FRFSTicketService.SUCCESS
-                  then do
-                    -- Add default TTL of 1 min or the value provided in the config
-                    let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
-                    transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
-                    txnId <- getSuccessTransactionId transactions
-                    let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
-                    -- setNxExpire
-                    isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
-                    when isLockAcquired $ do
-                      void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.SUCCESS paymentBooking.id
-                      void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
-                      markJourneyPaymentSuccess booking paymentOrder paymentBooking
-                      quoteUpdatedBooking <- maybeM (pure booking) pure (QFRFSTicketBooking.findById bookingId)
-                      let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
-                      mRiderNumber <- mapM decrypt person.mobileNumber
-                      void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
-                      void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking quoteCategories
-                      when isMultiModalBooking do
-                        riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
-                        becknConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId merchantId_ "FRFS" merchantOperatingCity.id
-                        let initTTLs = map (.initTTLSec) becknConfigs
-                        let maxInitTTL = intToNominalDiffTime $ case catMaybes initTTLs of
-                              [] -> 0 -- 30 minutes in seconds if all are Nothing
-                              ttlList -> maximum ttlList
-                        let bufferTime = case riderConfig.refundBufferTTLSec of
-                              Just secs -> secs.getSeconds
-                              Nothing -> 2 * 60
-                        let scheduleAfter = maxInitTTL + (intToNominalDiffTime bufferTime) -- schedule job (maxInitTTL + bufferTime) after calling confirm
-                            jobData = JobScheduler.CheckMultimodalConfirmFailJobData {JobScheduler.bookingId = bookingId}
-                        createJobIn @_ @'CheckMultimodalConfirmFail (Just merchantId_) (Just merchantOperatingCity.id) scheduleAfter (jobData :: CheckMultimodalConfirmFailJobData)
-                    buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentSuccess
-                  else do
-                    logInfo $ "payment success in payment pending: " <> show booking
-                    paymentOrder_ <- buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCity.id booking
-                    txn <- QPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
-                    let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
-                        paymentObj =
-                          Just
-                            FRFSTicketService.FRFSBookingPaymentAPI
-                              { status = paymentStatus_,
-                                paymentOrder = paymentOrder_,
-                                transactionId = Nothing
-                              }
-                    buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
+        bookingApiResp <-
+          if paymentBookingStatus == FRFSTicketService.FAILURE
+            then do
+              logInfo $ "payment failed in payment pending: " <> show booking
+              QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
+              QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
+              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+              buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
+            else
+              if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (booking.validTill < now)
+                then do
+                  logInfo $ "booking is expired in payment success and booking is expired: " <> show booking
+                  void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
+                  let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+                  buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
+                else
+                  if paymentBookingStatus == FRFSTicketService.SUCCESS
+                    then do
+                      -- Add default TTL of 1 min or the value provided in the config
+                      let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
+                      transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
+                      txnId <- getSuccessTransactionId transactions
+                      let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
+                      -- setNxExpire
+                      isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
+                      when isLockAcquired $ do
+                        void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.SUCCESS paymentBooking.id
+                        void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
+                        markJourneyPaymentSuccess booking paymentOrder paymentBooking
+                        quoteUpdatedBooking <- maybeM (pure booking) pure (QFRFSTicketBooking.findById bookingId)
+                        let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
+                        mRiderNumber <- mapM decrypt person.mobileNumber
+                        void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
+                        void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking quoteCategories
+                      buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentSuccess
+                    else do
+                      logInfo $ "payment success in payment pending: " <> show booking
+                      paymentOrder_ <- buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCity.id booking
+                      txn <- QPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
+                      let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
+                          paymentObj =
+                            Just
+                              FRFSTicketService.FRFSBookingPaymentAPI
+                                { status = paymentStatus_,
+                                  paymentOrder = paymentOrder_,
+                                  transactionId = Nothing
+                                }
+                      buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
+        when (isMultiModalBooking && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
+          riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
+          becknConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId merchantId_ "FRFS" merchantOperatingCity.id
+          let initTTLs = map (.initTTLSec) becknConfigs
+          let maxInitTTL = intToNominalDiffTime $ case catMaybes initTTLs of
+                [] -> 0 -- 30 minutes in seconds if all are Nothing
+                ttlList -> maximum ttlList
+          let bufferTime = case riderConfig.refundBufferTTLSec of
+                Just secs -> secs.getSeconds
+                Nothing -> 2 * 60
+          let scheduleAfter = maxInitTTL + (intToNominalDiffTime bufferTime) -- schedule job (maxInitTTL + bufferTime) after calling confirm
+              jobData = JobScheduler.CheckMultimodalConfirmFailJobData {JobScheduler.bookingId = bookingId}
+          createJobIn @_ @'CheckMultimodalConfirmFail (Just merchantId_) (Just merchantOperatingCity.id) scheduleAfter (jobData :: CheckMultimodalConfirmFailJobData)
+        return bookingApiResp
     DFRFSTicketBooking.CANCELLED -> do
       FRFSUtils.updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
