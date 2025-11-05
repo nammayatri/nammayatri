@@ -122,6 +122,7 @@ import qualified Storage.Queries.ServicePeopleCategory as SQSPC
 import qualified Storage.Queries.ServicePeopleCategoryExtra as SQSPCE
 import qualified Storage.Queries.TicketPlace as SQTP
 import qualified Storage.Queries.TicketService as SQTS
+import qualified Storage.Queries.ValueAddNP as SQVNP
 import qualified Storage.Queries.WhiteListOrg as QWLO
 import Tools.Error
 import qualified Tools.Payment as Payment
@@ -1516,6 +1517,8 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
             createdAt = now,
             updatedAt = now
           }
+      valueAddNpReq = VNP.ValueAddNP {enabled = True, subscriberId = req.bppSubscriberId.getShortId, createdAt = now, updatedAt = now}
+  SQVNP.create valueAddNpReq
   QWLO.create whiteListOrgReq
 
   pure $
