@@ -729,7 +729,7 @@ getPublicTransportDataImpl ::
     Kernel.Prelude.Bool ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType sendAllUpcomingTrips = do
+getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbRequestCity <- maybe (pure Nothing) (CQMOC.findByMerchantIdAndCity merchantId) mbCity
@@ -766,7 +766,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
       Nothing -> return Nothing
 
   let mbOppositeTripDetails :: Maybe [NandiTypes.BusScheduleTrip] =
-        case (mbEnableSwitchRoute, sendAllUpcomingTrips) of
+        case (mbEnableSwitchRoute, isPublicVehicleData) of
           (Just True, False) -> do
             mbVehicleLiveRouteInfo
               <&> \(_, vehicleLiveRouteInfo) -> do
@@ -853,7 +853,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                   routes <- maybeToList <$> OTPRest.getRouteByRouteId bppConfig routeCode
                   routeStopMappingInMem <- OTPRest.getRouteStopMappingByRouteCodeInMem routeCode bppConfig
                   routeStops <- OTPRest.parseRouteStopMappingInMemoryServer routeStopMappingInMem bppConfig bppConfig.merchantId bppConfig.merchantOperatingCityId
-                  stations <- OTPRest.parseStationsFromInMemoryServer routeStopMappingInMem bppConfig
+                  stations <- OTPRest.parseStationsFromInMemoryServer routeStopMappingInMem bppConfig (not isPublicVehicleData)
                   mkResponse stations routes routeStops bppConfig mbServiceType
               )
               >>= \case

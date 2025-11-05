@@ -170,7 +170,7 @@ getStationsByGtfsId ::
 getStationsByGtfsId integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   stations <- Flow.getStationsByGtfsId baseUrl integratedBPPConfig.feedKey
-  parseStationsFromInMemoryServerWithPublicData stations integratedBPPConfig
+  parseStationsFromInMemoryServerWithPublicData stations integratedBPPConfig True
 
 getStationByGtfsIdAndStopCode ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -180,7 +180,7 @@ getStationByGtfsIdAndStopCode ::
 getStationByGtfsIdAndStopCode stopCode integratedBPPConfig = IM.withInMemCache ["SBSC", stopCode, integratedBPPConfig.id.getId] 3600 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   stations <- Flow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode
-  listToMaybe <$> parseStationsFromInMemoryServer [stations] integratedBPPConfig
+  listToMaybe <$> parseStationsFromInMemoryServer [stations] integratedBPPConfig True
 
 findAllStationsByVehicleType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> VehicleCategory -> IntegratedBPPConfig -> m [Station.Station]
 findAllStationsByVehicleType limit offset vehicleType integratedBPPConfig = do
@@ -194,7 +194,7 @@ findAllMatchingStations mbSearchStr mbLimit mbOffset vehicle integratedBPPConfig
     else do
       baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
       stations <- Flow.getStationsByGtfsIdFuzzySearch baseUrl integratedBPPConfig.feedKey (fromMaybe "" mbSearchStr)
-      parsedStations <- parseStationsFromInMemoryServer stations integratedBPPConfig
+      parsedStations <- parseStationsFromInMemoryServer stations integratedBPPConfig False
       pure $ take (fromMaybe (length parsedStations) mbLimit) $ drop (fromMaybe 0 mbOffset) $ filter (\station -> station.vehicleType == vehicle) parsedStations
 
 getStationsByVehicleType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => VehicleCategory -> IntegratedBPPConfig -> m [Station.Station]
@@ -207,19 +207,21 @@ parseStationsFromInMemoryServer ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, EsqDBFlow m r, HasShortDurationRetryCfg r c, Log m, CacheFlow m r) =>
   [RouteStopMappingInMemoryServer] ->
   IntegratedBPPConfig ->
+  Bool ->
   m [Station.Station]
-parseStationsFromInMemoryServer stations integratedBPPConfig = do
+parseStationsFromInMemoryServer stations integratedBPPConfig needExtraInformation = do
   let routeStopMappingInMemoryServerWithPublicData = map (\RouteStopMappingInMemoryServer {..} -> RouteStopMappingInMemoryServerWithPublicData estimatedTravelTimeFromPreviousStop providerCode routeCode sequenceNum stopCode stopName stopPoint vehicleType Nothing gates hindiName regionalName parentStopCode) stations
-  parseStationsFromInMemoryServerWithPublicData routeStopMappingInMemoryServerWithPublicData integratedBPPConfig
+  parseStationsFromInMemoryServerWithPublicData routeStopMappingInMemoryServerWithPublicData integratedBPPConfig needExtraInformation
 
 parseStationsFromInMemoryServerWithPublicData ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, EsqDBFlow m r, HasShortDurationRetryCfg r c, Log m, CacheFlow m r) =>
   [RouteStopMappingInMemoryServerWithPublicData] ->
   IntegratedBPPConfig ->
+  Bool ->
   m [Station.Station]
-parseStationsFromInMemoryServerWithPublicData stations integratedBPPConfig = do
+parseStationsFromInMemoryServerWithPublicData stations integratedBPPConfig needExtraInformation = do
   now <- getCurrentTime
-  stationsExtraInformation <- QStationsExtraInformation.getBystationIdsAndCity (map (.stopCode) stations) integratedBPPConfig.merchantOperatingCityId
+  stationsExtraInformation <- if needExtraInformation then IM.withInMemCache ["StationsExtraInformation", integratedBPPConfig.id.getId] 3600 $ QStationsExtraInformation.getBystationIdsAndCity (map (.stopCode) stations) integratedBPPConfig.merchantOperatingCityId else pure []
   let stationAddressMap = HM.fromList $ map (\info -> (info.stationId, (info.address, info.suggestedDestinations))) stationsExtraInformation
   mapM
     ( \station -> do
