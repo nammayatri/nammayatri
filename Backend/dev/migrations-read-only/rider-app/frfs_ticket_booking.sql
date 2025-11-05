@@ -289,3 +289,8 @@ ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN quantity DROP NOT NULL;
 ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN estimated_price SET DEFAULT 0;
 ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN estimated_price DROP NOT NULL;
 
+
+
+
+------- SQL updates -------
+

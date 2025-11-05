@@ -31,3 +31,8 @@ ALTER TABLE atlas_app.frfs_config ADD PRIMARY KEY ( merchant_operating_city_id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_config ADD COLUMN can_update_existing_payment_order boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_config ADD COLUMN single_mode_bus_station_ttl integer  default 1800;
