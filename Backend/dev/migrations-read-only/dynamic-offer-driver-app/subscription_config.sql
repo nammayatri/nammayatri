@@ -114,3 +114,8 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN autopay_enable
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN show_manual_plans_in_ui boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN disabled_variants_for_subscription text[] ;

@@ -11,6 +11,7 @@ import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.Plan
 import qualified Domain.Types.SubscriptionConfig
 import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import qualified Domain.Types.WebhookExtra
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -27,6 +28,7 @@ data SubscriptionConfigT f = SubscriptionConfigT
     dataEntityToSend :: B.C f (Kernel.Prelude.Maybe [Domain.Types.SubscriptionConfig.CurrentPlanEntites]),
     deepLinkExpiryTimeInMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     defaultCityVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
+    disabledVariantsForSubscription :: B.C f (Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant]),
     enableCityBasedFeeSwitch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableServiceUsageChargeDefault :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     eventsEnabledForWebhook :: B.C f (Kernel.Prelude.Maybe [Domain.Types.WebhookExtra.WebhookEvent]),
