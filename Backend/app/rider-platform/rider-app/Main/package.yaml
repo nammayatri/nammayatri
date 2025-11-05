@@ -118,6 +118,7 @@ dependencies:
   - directory
   - filepath
   - scheduler
+  - regex-compat
   - singletons
   - singletons-th
   - regex-posix

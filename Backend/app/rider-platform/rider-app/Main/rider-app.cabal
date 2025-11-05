@@ -1343,6 +1343,7 @@ library
     , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
+    , regex-compat
     , regex-posix
     , resource-pool
     , scheduler
@@ -1480,6 +1481,7 @@ executable rider-app-exe
     , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
+    , regex-compat
     , regex-posix
     , resource-pool
     , rider-app
@@ -1614,6 +1616,7 @@ test-suite rider-app-test
     , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
+    , regex-compat
     , regex-posix
     , resource-pool
     , rider-app

@@ -82,6 +82,7 @@ import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingP
 import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
+import qualified Text.Regex as TR
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.SMS as Sms
@@ -361,11 +362,18 @@ processQRData qrData = do
   if isBase64Image qrData
     then do
       scanResult <- liftIO $ scanQRFromBase64 qrData
-      case scanResult of
-        Right extractedText -> pure extractedText
-        Left err -> do
-          logError $ "Failed to process QR image: " <> err
-          pure qrData -- fallback to original qrData if processing fails
+      processedQr <-
+        case scanResult of
+          Right extractedText -> pure extractedText
+          Left err -> do
+            logError $ "Failed to process QR image: " <> err
+            pure qrData -- fallback to original qrData if processing fails
+            -- `<QR_DATA> Codabar:A:8A` CMRL sometimes gives this pattern in the QR data, we need to remove it as it is failign verification
+      let removeCMRLCodabarPattern processedQrData = T.pack $ TR.subRegex (TR.mkRegex "[[:space:]]Codabar:.*$") (T.unpack processedQrData) ""
+          finalQrData = removeCMRLCodabarPattern processedQr
+      when (qrData /= finalQrData) $ do
+        logError $ "Original and processed QR data: " <> finalQrData <> " <- " <> processedQr <> " <- " <> qrData
+      return finalQrData
     else pure qrData
 
 -- | Check if text likely represents a base64 encoded image
