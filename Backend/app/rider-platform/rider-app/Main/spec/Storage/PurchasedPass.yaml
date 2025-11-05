@@ -37,6 +37,7 @@ PurchasedPass:
     deviceSwitchCount: Int
     passCode: Text
     passName: Maybe Text
+    passDescription: Maybe Text
     passAmount: HighPrecMoney
     benefitDescription: Text
     benefitType: Maybe BenefitType

@@ -30,6 +30,7 @@ Pass:
     passTypeId: Id PassType
     code: Text
     name: Maybe Text
+    description: Maybe Text
     amount: HighPrecMoney
     benefitDescription: Text
     benefit: Maybe Benefit

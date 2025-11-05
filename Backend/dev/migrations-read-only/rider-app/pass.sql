@@ -22,3 +22,8 @@ ALTER TABLE atlas_app.pass ADD COLUMN updated_at timestamp with time zone NOT NU
 ALTER TABLE atlas_app.pass ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 ALTER TABLE atlas_app.pass ADD COLUMN payment_valid_till integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass ADD COLUMN description text ;

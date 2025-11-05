@@ -32,6 +32,7 @@ data PurchasedPass = PurchasedPass
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     passAmount :: Kernel.Types.Common.HighPrecMoney,
     passCode :: Kernel.Prelude.Text,
+    passDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passNumber :: Kernel.Prelude.Int,
     passTypeId :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,

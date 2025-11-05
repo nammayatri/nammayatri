@@ -29,6 +29,7 @@ data PurchasedPassT f = PurchasedPassT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     passAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
     passCode :: B.C f Kernel.Prelude.Text,
+    passDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     passName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     passNumber :: B.C f Kernel.Prelude.Int,
     passTypeId :: B.C f Kernel.Prelude.Text,

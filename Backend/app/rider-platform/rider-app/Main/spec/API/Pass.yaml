@@ -42,6 +42,7 @@ types:
     documentsRequired: "[PassDocumentType]"
     eligibility: Bool
     name: Maybe Text
+    description: Maybe Text
     code: Text
     autoApply: Bool
     derive: "Show"

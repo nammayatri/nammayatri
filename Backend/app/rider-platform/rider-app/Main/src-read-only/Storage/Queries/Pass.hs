@@ -34,6 +34,7 @@ updateByPrimaryKey (Domain.Types.Pass.Pass {..}) = do
       Se.Set Beam.benefit benefit,
       Se.Set Beam.benefitDescription benefitDescription,
       Se.Set Beam.code code,
+      Se.Set Beam.description description,
       Se.Set Beam.documentsRequired documentsRequired,
       Se.Set Beam.enable enable,
       Se.Set Beam.maxValidDays maxValidDays,

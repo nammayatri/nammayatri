@@ -41,6 +41,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.passAmount passAmount,
       Se.Set Beam.passCode passCode,
+      Se.Set Beam.passDescription passDescription,
       Se.Set Beam.passName passName,
       Se.Set Beam.passNumber passNumber,
       Se.Set Beam.passTypeId (Kernel.Types.Id.getId passTypeId),

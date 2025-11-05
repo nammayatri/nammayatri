@@ -26,3 +26,9 @@ ALTER TABLE atlas_app.purchased_pass ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN used_trip_count integer ;
 
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN device_switch_count integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass ADD COLUMN pass_description text ;

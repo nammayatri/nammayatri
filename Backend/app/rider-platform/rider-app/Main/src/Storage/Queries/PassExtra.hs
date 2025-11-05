@@ -27,9 +27,12 @@ findAllByPassTypeIdAndEnabled ::
   Bool ->
   m [DPass.Pass]
 findAllByPassTypeIdAndEnabled passTypeId enabled = do
-  findAllWithKV
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.passTypeId $ Se.Eq (getId passTypeId),
           Se.Is Beam.enable $ Se.Eq enabled
         ]
     ]
+    (Se.Desc Beam.order)
+    Nothing
+    Nothing

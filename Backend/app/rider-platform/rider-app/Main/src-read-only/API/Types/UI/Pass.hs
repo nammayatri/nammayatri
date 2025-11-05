@@ -25,6 +25,7 @@ data PassAPIEntity = PassAPIEntity
     benefit :: Data.Maybe.Maybe Domain.Types.Pass.Benefit,
     benefitDescription :: Data.Text.Text,
     code :: Data.Text.Text,
+    description :: Data.Maybe.Maybe Data.Text.Text,
     documentsRequired :: [Domain.Types.Pass.PassDocumentType],
     eligibility :: Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Pass.Pass,
