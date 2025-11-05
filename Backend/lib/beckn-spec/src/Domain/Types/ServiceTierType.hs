@@ -61,6 +61,7 @@ data ServiceTierType
   | VIP_OFFICER
   | AC_PRIORITY
   | BIKE_PLUS
+  | E_RICKSHAW
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
 allServiceTiersTypes :: [ServiceTierType]
