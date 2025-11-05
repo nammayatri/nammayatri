@@ -51,8 +51,9 @@ getRouteFare ::
   Id MerchantOperatingCity ->
   CRISFareRequest ->
   Bool ->
+  Bool ->
   m ([FRFSUtils.FRFSFare], Maybe Text)
-getRouteFare config merchantOperatingCityId request useCache = do
+getRouteFare config merchantOperatingCityId request useCache getAllFares = do
   let redisKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
   redisResp <- Hedis.safeGet redisKey
   case (redisResp, useCache) of
@@ -117,7 +118,12 @@ getRouteFare config merchantOperatingCityId request useCache = do
         routeFareDetails `forM` \routeFareDetail -> do
           let allFares = routeFareDetail.fareDtlsList
           let routeId = routeFareDetail.routeId
-          let fares = if request.changeOver == " " then allFares else filter (\fare -> fare.via == request.changeOver) allFares
+          let validStations = T.splitOn "-" request.via
+          let fares' = if getAllFares then allFares else filter (\fare -> fare.via `Kernel.Prelude.elem` validStations) allFares
+          let fares =
+                if request.changeOver == " "
+                  then fares'
+                  else filter (\fare -> fare.via == request.changeOver) allFares
           fares `forM` \fare -> do
             let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
                 mbChildFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.childFare
