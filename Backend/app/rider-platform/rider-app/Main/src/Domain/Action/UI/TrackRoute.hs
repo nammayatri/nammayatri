@@ -52,10 +52,9 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
         if isRouteBasedVehicleTracking integratedBPPConfig
           then pure [routeCode]
           else do
-            possibleRoutes <- getPossibleRoutesBetweenTwoStops sourceStopId destinationStopId integratedBPPConfig
-            logInfo $ "possibleRoutes between two stops: " <> show possibleRoutes
-            let routeCodes = map (.route.code) possibleRoutes
-            pure $ if null routeCodes then [routeCode] else routeCodes
+            routeCodes <- JMU.getRouteCodesFromTo sourceStopId destinationStopId integratedBPPConfig
+            logInfo $ "possibleRoutes between two stops: " <> show routeCodes
+            pure $ List.nub $ [routeCode] <> routeCodes
       _ -> pure [routeCode]
   riderConfig <- CQRC.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist personCityInfo.merchantOperatingCityId.getId)
   let maxBuses = fromMaybe 5 $ mbMaxBuses <|> riderConfig.maxNearbyBuses
