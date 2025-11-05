@@ -551,9 +551,9 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (InvalidRequest $ "Pass will be active from " <> show purchasedPass.startDate)
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-  (_, vehicleLiveRouteInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs passVerifyReq.vehicleNumber >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> passVerifyReq.vehicleNumber <> ", not found on any route")
+  (_, vehicleLiveRouteInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs passVerifyReq.vehicleNumber >>= fromMaybeM (InvalidRequest $ "Entered Bus OTP: " <> passVerifyReq.vehicleNumber <> " is invalid. Please check again.")
   unless (vehicleLiveRouteInfo.serviceType `elem` purchasedPass.applicableVehicleServiceTiers) $
-    throwError $ VehicleServiceTierUnserviceable ("Vehicle " <> passVerifyReq.vehicleNumber <> ", " <> show vehicleLiveRouteInfo.serviceType <> " bus is not allowed for this pass")
+    throwError $ InvalidRequest ("This pass is only " <> purchasedPass.benefitDescription)
   id <- generateGUID
   now <- getCurrentTime
   let passVerifyTransaction =
