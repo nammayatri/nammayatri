@@ -32,9 +32,6 @@ findById (Id paymentOrder) = findOneWithKV [Se.Is BeamPO.id $ Se.Eq paymentOrder
 findByShortId :: BeamFlow m r => ShortId DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
 findByShortId (ShortId shortId) = findOneWithKV [Se.Is BeamPO.shortId $ Se.Eq shortId]
 
-findByPaymentServiceOrderId :: BeamFlow m r => Text -> m (Maybe DOrder.PaymentOrder)
-findByPaymentServiceOrderId paymentServiceOrderId = findOneWithKV [Se.Is BeamPO.paymentServiceOrderId $ Se.Eq paymentServiceOrderId]
-
 findLatestByPersonId :: BeamFlow m r => Text -> m (Maybe DOrder.PaymentOrder)
 findLatestByPersonId personId =
   findAllWithOptionsKV

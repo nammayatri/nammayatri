@@ -228,7 +228,8 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         email <- mapM decrypt person.email
         let createPaymentIntentReq =
               Payment.CreatePaymentIntentReq
-                { amount = tipRequest.amount.amount,
+                { orderShortId = ride.shortId.getShortId,
+                  amount = tipRequest.amount.amount,
                   applicationFeeAmount = applicationFeeAmountForTipAmount tipRequest,
                   currency = tipRequest.amount.currency,
                   customer = customerPaymentId,

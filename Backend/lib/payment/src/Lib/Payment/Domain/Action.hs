@@ -290,7 +290,7 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
       pure
         DTransaction.PaymentTransaction
           { id = uuid,
-            txnUUID = Nothing,
+            txnUUID = Just resp.paymentIntentId,
             txnId = Just resp.paymentIntentId,
             paymentMethodType = Nothing, -- fix it later
             paymentMethod = Nothing, -- fix it later
@@ -947,10 +947,17 @@ stripeWebhookService resp respDump = do
         PEInterface.ChargeRefundUpdatedEvent charge -> Just $ mkChargeOrderTxn charge
         _ -> Nothing
 
-  whenJust mbOrderTxn \orderTxn -> do
-    whenJust orderTxn.txnId $ \txnId -> do
-      order <- QOrder.findByPaymentServiceOrderId txnId >>= fromMaybeM (PaymentOrderNotFound txnId)
-      Redis.whenWithLockRedis (txnStripeProccessingKey txnId) 60 $ updateOrderTransaction order orderTxn $ Just respDump
+  whenJust mbOrderTxn $ \(mbOrderShortId, orderTxn) -> do
+    case mbOrderShortId of
+      Just orderShortId -> do
+        order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
+        maybe
+          (updateOrderTransaction order orderTxn Nothing)
+          ( \transactionUUID' ->
+              Redis.whenWithLockRedis (txnStripeProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
+          )
+          orderTxn.transactionUUID
+      Nothing -> throwError (InvalidRequest $ "orderShortId not found for eventId: " <> resp.id.getId)
   pure Ack
 
 txnStripeProccessingKey :: Text -> Text
@@ -984,27 +991,33 @@ mkDefaultStripeOrderTxn transactionStatus amount currency =
       ..
     }
 
-mkPaymentIntentOrderTxn :: PEInterface.PaymentIntent -> OrderTxn
+mkPaymentIntentOrderTxn :: PEInterface.PaymentIntent -> (Maybe Text, OrderTxn)
 mkPaymentIntentOrderTxn PEInterface.PaymentIntent {..} = do
   let transactionStatus = Payment.castToTransactionStatus status
-  let defaultOrderTxn = mkDefaultStripeOrderTxn transactionStatus amount currency
-  defaultOrderTxn{txnId = Just id,
-                  paymentMethod = paymentMethod,
-                  dateCreated = Just createdAt,
-                  applicationFeeAmount = applicationFeeAmount
-                 }
+      defaultOrderTxn = mkDefaultStripeOrderTxn transactionStatus amount currency
+      orderTxn =
+        defaultOrderTxn{txnId = Just paymentIntentId,
+                        transactionUUID = Just paymentIntentId,
+                        paymentMethod = paymentMethod,
+                        dateCreated = Just createdAt,
+                        applicationFeeAmount = applicationFeeAmount
+                       }
+  (orderShortId, orderTxn)
 
-mkChargeOrderTxn :: PEInterface.Charge -> OrderTxn
+mkChargeOrderTxn :: PEInterface.Charge -> (Maybe Text, OrderTxn)
 mkChargeOrderTxn PEInterface.Charge {..} = do
   let transactionStatus = PInterface.castChargeToTransactionStatus status
-  let defaultOrderTxn = mkDefaultStripeOrderTxn transactionStatus amount currency
-  defaultOrderTxn{txnId = paymentIntent,
-                  paymentMethod = paymentMethod,
-                  dateCreated = Just createdAt,
-                  applicationFeeAmount = applicationFeeAmount,
-                  bankErrorMessage = failureMessage,
-                  bankErrorCode = failureCode
-                 }
+      defaultOrderTxn = mkDefaultStripeOrderTxn transactionStatus amount currency
+      orderTxn =
+        defaultOrderTxn{txnId = paymentIntentId,
+                        transactionUUID = paymentIntentId,
+                        paymentMethod = paymentMethod,
+                        dateCreated = Just createdAt,
+                        applicationFeeAmount = applicationFeeAmount,
+                        bankErrorMessage = failureMessage,
+                        bankErrorCode = failureCode
+                       }
+  (orderShortId, orderTxn)
 
 --- notification api ----------
 
