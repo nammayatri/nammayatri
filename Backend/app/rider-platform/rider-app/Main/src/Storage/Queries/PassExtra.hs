@@ -33,6 +33,6 @@ findAllByPassTypeIdAndEnabled passTypeId enabled = do
           Se.Is Beam.enable $ Se.Eq enabled
         ]
     ]
-    (Se.Desc Beam.order)
+    (Se.Asc Beam.order)
     Nothing
     Nothing

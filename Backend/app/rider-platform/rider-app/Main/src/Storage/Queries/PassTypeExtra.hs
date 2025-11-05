@@ -26,5 +26,8 @@ findAllByPassCategoryId ::
   Id DPassCategory.PassCategory ->
   m [DPassType.PassType]
 findAllByPassCategoryId passCategoryId = do
-  findAllWithKV
+  findAllWithOptionsKV
     [Se.Is Beam.passCategoryId $ Se.Eq (getId passCategoryId)]
+    (Se.Asc Beam.order)
+    Nothing
+    Nothing
