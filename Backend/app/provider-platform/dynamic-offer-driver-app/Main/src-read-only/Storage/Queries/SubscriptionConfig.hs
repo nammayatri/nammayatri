@@ -71,6 +71,7 @@ updateByPrimaryKey (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = d
       Se.Set Beam.dataEntityToSend (Kernel.Prelude.Just dataEntityToSend),
       Se.Set Beam.deepLinkExpiryTimeInMinutes deepLinkExpiryTimeInMinutes,
       Se.Set Beam.defaultCityVehicleCategory (Kernel.Prelude.Just defaultCityVehicleCategory),
+      Se.Set Beam.disabledVariantsForSubscription disabledVariantsForSubscription,
       Se.Set Beam.enableCityBasedFeeSwitch (Kernel.Prelude.Just enableCityBasedFeeSwitch),
       Se.Set Beam.enableServiceUsageChargeDefault (Kernel.Prelude.Just enableServiceUsageChargeDefault),
       Se.Set Beam.eventsEnabledForWebhook (Kernel.Prelude.Just eventsEnabledForWebhook),
@@ -103,7 +104,6 @@ updateByPrimaryKey (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = d
       Se.Set Beam.waiveOffOfferTitle (Kernel.Prelude.Just waiveOffOfferTitle),
       Se.Set Beam.webhookConfig (Kernel.Prelude.toJSON <$> webhookConfig),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.serviceName $ Se.Eq serviceName, Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)]]
@@ -121,6 +121,7 @@ instance FromTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subs
             dataEntityToSend = Kernel.Prelude.fromMaybe [] dataEntityToSend,
             deepLinkExpiryTimeInMinutes = deepLinkExpiryTimeInMinutes,
             defaultCityVehicleCategory = Kernel.Prelude.fromMaybe Domain.Types.VehicleCategory.AUTO_CATEGORY defaultCityVehicleCategory,
+            disabledVariantsForSubscription = disabledVariantsForSubscription,
             enableCityBasedFeeSwitch = Kernel.Prelude.fromMaybe False enableCityBasedFeeSwitch,
             enableServiceUsageChargeDefault = Kernel.Prelude.fromMaybe True enableServiceUsageChargeDefault,
             eventsEnabledForWebhook = Kernel.Prelude.fromMaybe [] eventsEnabledForWebhook,
@@ -170,6 +171,7 @@ instance ToTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subscr
         Beam.dataEntityToSend = Kernel.Prelude.Just dataEntityToSend,
         Beam.deepLinkExpiryTimeInMinutes = deepLinkExpiryTimeInMinutes,
         Beam.defaultCityVehicleCategory = Kernel.Prelude.Just defaultCityVehicleCategory,
+        Beam.disabledVariantsForSubscription = disabledVariantsForSubscription,
         Beam.enableCityBasedFeeSwitch = Kernel.Prelude.Just enableCityBasedFeeSwitch,
         Beam.enableServiceUsageChargeDefault = Kernel.Prelude.Just enableServiceUsageChargeDefault,
         Beam.eventsEnabledForWebhook = Kernel.Prelude.Just eventsEnabledForWebhook,

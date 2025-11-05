@@ -11,6 +11,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.Plan
 import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import qualified Domain.Types.WebhookExtra
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
@@ -27,6 +28,7 @@ data SubscriptionConfig = SubscriptionConfig
     dataEntityToSend :: [Domain.Types.SubscriptionConfig.CurrentPlanEntites],
     deepLinkExpiryTimeInMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     defaultCityVehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
+    disabledVariantsForSubscription :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant],
     enableCityBasedFeeSwitch :: Kernel.Prelude.Bool,
     enableServiceUsageChargeDefault :: Kernel.Prelude.Bool,
     eventsEnabledForWebhook :: [Domain.Types.WebhookExtra.WebhookEvent],
