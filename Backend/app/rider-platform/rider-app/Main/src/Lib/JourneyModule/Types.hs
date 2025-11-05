@@ -61,7 +61,6 @@ import Kernel.Types.Id
 import Kernel.Types.Price as KTP
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
-import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
@@ -487,7 +486,16 @@ data UnifiedTicketQR = UnifiedTicketQR
   deriving anyclass (ToSchema)
 
 instance ToJSON UnifiedTicketQR where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  toJSON (UnifiedTicketQR version _type txnId createdAt cmrl mtc cris) =
+    object
+      [ "version" .= version,
+        "type" .= _type,
+        "txnId" .= txnId,
+        "createdAt" .= createdAt,
+        "CMRL" .= cmrl,
+        "MTC" .= mtc,
+        "CRIS" .= cris
+      ]
 
 instance FromJSON UnifiedTicketQR where
   parseJSON = withObject "UnifiedTicketQR" $ \o -> do
