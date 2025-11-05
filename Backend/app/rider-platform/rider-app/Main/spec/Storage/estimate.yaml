@@ -118,6 +118,8 @@ Estimate:
     boostSearchPreSelectionServiceTierConfig : "Maybe [ServiceTierType]"
     smartTipReason: Maybe Text
     isInsured: Bool
+    qar : Maybe Double
+    estimateTags: Maybe [Text]
     insuredAmount: Maybe Text
     isMultimodalSearch: Maybe Bool
 

@@ -101,7 +101,8 @@ data Pricing = Pricing
     specialLocationName :: Maybe Text,
     vehicleIconUrl :: Maybe BaseUrl,
     smartTipSuggestion :: Maybe HighPrecMoney,
-    smartTipReason :: Maybe Text
+    smartTipReason :: Maybe Text,
+    qar :: Maybe Double
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -1359,6 +1360,7 @@ convertEstimateToPricing specialLocationName (DEst.Estimate {..}, serviceTier, m
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
       isAirConditioned = serviceTier.isAirConditioned,
+      qar = mbActualQARFromLocGeohashDistance <|> mbActualQARFromLocGeohash <|> mbActualQARCity,
       ..
     }
 
@@ -1381,6 +1383,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       smartTipSuggestion = Nothing,
       smartTipReason = Nothing,
       tipOptions = Nothing,
+      qar = Nothing,
       ..
     }
 
@@ -1405,6 +1408,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       smartTipSuggestion = Nothing,
       smartTipReason = Nothing,
       tipOptions = Nothing,
+      qar = Nothing,
       ..
     }
 
@@ -1431,6 +1435,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
             <> durationToNearestDriverTagSingleton
             <> smartTipSuggestionTagSingleton
             <> smartTipReasonTagSingleton
+            <> qarTagSingleton
       }
   where
     smartTipSuggestionTagSingleton
@@ -1462,6 +1467,21 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                       descriptorShortDesc = Nothing
                     },
               tagValue = pricing.smartTipReason
+            }
+    qarTagSingleton
+      | isNothing pricing.qar || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.QAR,
+                      descriptorName = Just "QAR",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> pricing.qar
             }
     specialLocationTagSingleton specialLocationTag
       | isNothing specialLocationTag = Nothing
