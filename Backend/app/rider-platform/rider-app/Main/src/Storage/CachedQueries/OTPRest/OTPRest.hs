@@ -221,7 +221,8 @@ parseStationsFromInMemoryServerWithPublicData ::
   m [Station.Station]
 parseStationsFromInMemoryServerWithPublicData stations integratedBPPConfig needExtraInformation = do
   now <- getCurrentTime
-  stationsExtraInformation <- if needExtraInformation then IM.withInMemCache ["StationsExtraInformation", integratedBPPConfig.id.getId] 3600 $ QStationsExtraInformation.getBystationIdsAndCity (map (.stopCode) stations) integratedBPPConfig.merchantOperatingCityId else pure []
+  allStationsExtraInformation <- if needExtraInformation then IM.withInMemCache ["StationsExtraInformation", integratedBPPConfig.id.getId] 3600 $ QStationsExtraInformation.getAllStationsByCity integratedBPPConfig.merchantOperatingCityId else pure []
+  let stationsExtraInformation = filter (\info -> info.stationId `elem` map (.stopCode) stations) allStationsExtraInformation
   let stationAddressMap = HM.fromList $ map (\info -> (info.stationId, (info.address, info.suggestedDestinations))) stationsExtraInformation
   mapM
     ( \station -> do
