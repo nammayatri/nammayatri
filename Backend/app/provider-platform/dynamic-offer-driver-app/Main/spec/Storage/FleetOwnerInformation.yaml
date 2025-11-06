@@ -116,10 +116,6 @@ FleetOwnerInformation:
       kvFunction: updateOneWithKV
       params: [lienAmount]
       where: fleetOwnerPersonId
-    updatePrepaidSubscriptionBalance:
-      kvFunction: updateOneWithKV
-      params: [prepaidSubscriptionBalance]
-      where: fleetOwnerPersonId
     updatePrepaidSubscriptionBalanceAndExpiry:
       kvFunction: updateOneWithKV
       params: [prepaidSubscriptionBalance, planExpiryDate]

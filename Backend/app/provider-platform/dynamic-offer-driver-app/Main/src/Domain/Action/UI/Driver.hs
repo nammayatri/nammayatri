@@ -871,7 +871,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
             now <- getCurrentTime
             logInfo $ "Driver going OFFLINE at: " <> show now <> " for driverId: " <> show driverId
             QDriverInformation.updateLastOfflineTime driverId now
-          DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo
+          DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing
         pure APISuccess.Success
     )
     ( do
