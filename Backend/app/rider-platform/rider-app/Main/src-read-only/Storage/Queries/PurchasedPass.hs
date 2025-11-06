@@ -8,6 +8,7 @@ import qualified Domain.Types.PurchasedPass
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -20,6 +21,11 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PurchasedPass.PurchasedPass] -> m ())
 createMany = traverse_ create
+
+updateDeviceSwitchCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m ())
+updateDeviceSwitchCount deviceSwitchCount id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.deviceSwitchCount (Just deviceSwitchCount), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m (Maybe Domain.Types.PurchasedPass.PurchasedPass))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -49,6 +55,8 @@ updateByPrimaryKey (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
       Se.Set Beam.startDate startDate,
       Se.Set Beam.status status,
       Se.Set Beam.usedTripCount usedTripCount,
+      Se.Set Beam.verificationValidity (Just verificationValidity),
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

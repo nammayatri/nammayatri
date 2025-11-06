@@ -20,6 +20,8 @@ data PurchasedPassPayment = PurchasedPassPayment
     endDate :: Data.Time.Calendar.Day,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
     orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
+    passCode :: Kernel.Prelude.Text,
+    passName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
     startDate :: Data.Time.Calendar.Day,

@@ -34,6 +34,7 @@ data PassT f = PassT
     passTypeId :: B.C f Kernel.Prelude.Text,
     purchaseEligibilityJsonLogic :: B.C f [Data.Aeson.Value],
     redeemEligibilityJsonLogic :: B.C f [Data.Aeson.Value],
+    verificationValidity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

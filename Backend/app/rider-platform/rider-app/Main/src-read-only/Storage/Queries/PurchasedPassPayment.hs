@@ -39,6 +39,18 @@ findAllByPurchasedPassIdAndStatus purchasedPassId status endDate = do
         ]
     ]
 
+findAllByPurchasedPassIdAndStatusStartDateGreaterThan ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Domain.Types.PurchasedPass.StatusType -> Data.Time.Calendar.Day -> m [Domain.Types.PurchasedPassPayment.PurchasedPassPayment])
+findAllByPurchasedPassIdAndStatusStartDateGreaterThan purchasedPassId status startDate = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.purchasedPassId $ Se.Eq (Kernel.Types.Id.getId purchasedPassId),
+          Se.Is Beam.status $ Se.Eq status,
+          Se.Is Beam.startDate $ Se.GreaterThanOrEq startDate
+        ]
+    ]
+
 findAllWithPersonId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.PurchasedPassPayment.PurchasedPassPayment])
@@ -64,12 +76,15 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
     [ Se.Set Beam.amount amount,
       Se.Set Beam.endDate endDate,
       Se.Set Beam.orderId (Kernel.Types.Id.getId orderId),
+      Se.Set Beam.passCode passCode,
+      Se.Set Beam.passName passName,
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.purchasedPassId (Kernel.Types.Id.getId purchasedPassId),
       Se.Set Beam.startDate startDate,
       Se.Set Beam.status status,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -83,6 +98,8 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
             endDate = endDate,
             id = Kernel.Types.Id.Id id,
             orderId = Kernel.Types.Id.Id orderId,
+            passCode = passCode,
+            passName = passName,
             personId = Kernel.Types.Id.Id personId,
             purchasedPassId = Kernel.Types.Id.Id purchasedPassId,
             startDate = startDate,
@@ -100,6 +117,8 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
         Beam.endDate = endDate,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.orderId = Kernel.Types.Id.getId orderId,
+        Beam.passCode = passCode,
+        Beam.passName = passName,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.purchasedPassId = Kernel.Types.Id.getId purchasedPassId,
         Beam.startDate = startDate,

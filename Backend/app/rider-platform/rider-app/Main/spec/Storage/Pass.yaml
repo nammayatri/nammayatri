@@ -39,12 +39,22 @@ Pass:
     redeemEligibilityJsonLogic: "[Value]"
     maxValidTrips: Maybe Int
     maxValidDays: Maybe Int
+    verificationValidity: Seconds
     documentsRequired: "[PassDocumentType]"
     order: Int
     enable: Bool
     autoApply: Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+
+  beamType:
+    verificationValidity: Maybe Seconds
+
+  fromTType:
+    verificationValidity: Kernel.Prelude.fromMaybe 9000|I
+
+  toTType:
+    verificationValidity: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey

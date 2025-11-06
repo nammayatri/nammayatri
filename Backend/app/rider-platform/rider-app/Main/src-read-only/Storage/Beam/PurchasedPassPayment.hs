@@ -18,6 +18,8 @@ data PurchasedPassPaymentT f = PurchasedPassPaymentT
     endDate :: B.C f Data.Time.Calendar.Day,
     id :: B.C f Kernel.Prelude.Text,
     orderId :: B.C f Kernel.Prelude.Text,
+    passCode :: B.C f Kernel.Prelude.Text,
+    passName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     personId :: B.C f Kernel.Prelude.Text,
     purchasedPassId :: B.C f Kernel.Prelude.Text,
     startDate :: B.C f Data.Time.Calendar.Day,

@@ -80,6 +80,7 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
     deviceMismatch :: Kernel.Prelude.Bool,
     deviceSwitchAllowed :: Kernel.Prelude.Bool,
     expiryDate :: Data.Time.Day,
+    futureRenewals :: [PurchasedPassTransactionAPIEntity],
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
     lastVerifiedVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,
     passEntity :: PassDetailsAPIEntity,
@@ -92,6 +93,14 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PurchasedPassTransactionAPIEntity = PurchasedPassTransactionAPIEntity {amount :: Kernel.Types.Common.HighPrecMoney, endDate :: Data.Time.Day, startDate :: Data.Time.Day, status :: Domain.Types.PurchasedPass.StatusType}
+data PurchasedPassTransactionAPIEntity = PurchasedPassTransactionAPIEntity
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    createdAt :: Kernel.Prelude.UTCTime,
+    endDate :: Data.Time.Day,
+    passCode :: Data.Text.Text,
+    passName :: Data.Maybe.Maybe Data.Text.Text,
+    startDate :: Data.Time.Day,
+    status :: Domain.Types.PurchasedPass.StatusType
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

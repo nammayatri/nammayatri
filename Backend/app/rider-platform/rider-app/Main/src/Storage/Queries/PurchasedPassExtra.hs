@@ -51,6 +51,28 @@ findAllByPersonIdWithFilters personId merchantId mbStatus mbLimit mbOffset = do
       conds = baseConds ++ statusConds
   findAllWithOptionsKV conds (Se.Desc Beam.createdAt) mbLimit mbOffset
 
+findPassByPersonIdAndPassTypeIdAndDeviceId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DPassType.PassType ->
+  Text ->
+  m (Maybe DPurchasedPass.PurchasedPass)
+findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId passTypeId deviceId =
+  do
+    findAllWithOptionsKV
+      [ Se.And
+          [ Se.Is Beam.personId $ Se.Eq (getId personId),
+            Se.Is Beam.merchantId $ Se.Eq (getId merchantId),
+            Se.Is Beam.passTypeId $ Se.Eq (getId passTypeId),
+            Se.Is Beam.deviceId $ Se.Eq deviceId
+          ]
+      ]
+      (Se.Desc Beam.createdAt)
+      (Just 1)
+      (Just 0)
+    <&> listToMaybe
+
 updatePurchaseData ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DPurchasedPass.PurchasedPass ->
@@ -61,12 +83,14 @@ updatePurchaseData ::
 updatePurchaseData purchasedPassId startDate endDate status = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.startDate startDate,
-      Se.Set Beam.endDate endDate,
-      Se.Set Beam.status status,
-      Se.Set Beam.usedTripCount (Just 0),
-      Se.Set Beam.updatedAt now
-    ]
+    ( [ Se.Set Beam.startDate startDate,
+        Se.Set Beam.endDate endDate,
+        Se.Set Beam.status status,
+        Se.Set Beam.usedTripCount (Just 0),
+        Se.Set Beam.updatedAt now
+      ]
+        <> (if status == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0)] else [])
+    )
     [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
 
 updateStatusById ::
@@ -77,9 +101,11 @@ updateStatusById ::
 updateStatusById status purchasedPassId = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.status status,
-      Se.Set Beam.updatedAt now
-    ]
+    ( [ Se.Set Beam.status status,
+        Se.Set Beam.updatedAt now
+      ]
+        <> (if status == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0)] else [])
+    )
     [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
 
 updateDeviceIdById ::

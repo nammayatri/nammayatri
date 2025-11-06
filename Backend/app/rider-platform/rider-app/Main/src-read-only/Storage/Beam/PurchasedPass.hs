@@ -37,6 +37,7 @@ data PurchasedPassT f = PurchasedPassT
     startDate :: B.C f Data.Time.Calendar.Day,
     status :: B.C f Domain.Types.PurchasedPass.StatusType,
     usedTripCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    verificationValidity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

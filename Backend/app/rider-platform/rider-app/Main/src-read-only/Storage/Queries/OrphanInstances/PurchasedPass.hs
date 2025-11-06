@@ -7,6 +7,7 @@ import qualified Domain.Types.PurchasedPass
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -39,6 +40,7 @@ instance FromTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass 
             startDate = startDate,
             status = status,
             usedTripCount = usedTripCount,
+            verificationValidity = Kernel.Prelude.fromMaybe 9000 verificationValidity,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -68,6 +70,7 @@ instance ToTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass wh
         Beam.startDate = startDate,
         Beam.status = status,
         Beam.usedTripCount = usedTripCount,
+        Beam.verificationValidity = Just verificationValidity,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

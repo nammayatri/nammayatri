@@ -32,3 +32,8 @@ ALTER TABLE atlas_app.purchased_pass ADD COLUMN device_switch_count integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN pass_description text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass ADD COLUMN verification_validity integer ;

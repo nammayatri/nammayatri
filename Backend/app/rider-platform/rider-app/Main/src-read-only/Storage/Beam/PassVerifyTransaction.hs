@@ -11,15 +11,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PassVerifyTransactionT f = PassVerifyTransactionT
-  { fleetId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    purchasePassId :: (B.C f Kernel.Prelude.Text),
-    validTill :: (B.C f Kernel.Prelude.UTCTime),
-    verifiedAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { fleetId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    purchasePassId :: B.C f Kernel.Prelude.Text,
+    validTill :: B.C f Kernel.Prelude.UTCTime,
+    verifiedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table PassVerifyTransactionT where
 
 type PassVerifyTransaction = PassVerifyTransactionT Identity
 
-$(enableKVPG (''PassVerifyTransactionT) [('id)] [[('purchasePassId)]])
+$(enableKVPG ''PassVerifyTransactionT ['id] [['purchasePassId]])
 
-$(mkTableInstances (''PassVerifyTransactionT) "pass_verify_transaction")
+$(mkTableInstances ''PassVerifyTransactionT "pass_verify_transaction")

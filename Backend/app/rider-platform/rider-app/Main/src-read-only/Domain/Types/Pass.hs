@@ -35,6 +35,7 @@ data Pass = Pass
     passTypeId :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
     purchaseEligibilityJsonLogic :: [Data.Aeson.Value],
     redeemEligibilityJsonLogic :: [Data.Aeson.Value],
+    verificationValidity :: Kernel.Types.Common.Seconds,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

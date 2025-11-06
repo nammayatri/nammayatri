@@ -7,6 +7,7 @@ import qualified Domain.Types.Pass
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -36,6 +37,7 @@ instance FromTType' Beam.Pass Domain.Types.Pass.Pass where
             passTypeId = Kernel.Types.Id.Id passTypeId,
             purchaseEligibilityJsonLogic = purchaseEligibilityJsonLogic,
             redeemEligibilityJsonLogic = redeemEligibilityJsonLogic,
+            verificationValidity = Kernel.Prelude.fromMaybe 9000 verificationValidity,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -62,6 +64,7 @@ instance ToTType' Beam.Pass Domain.Types.Pass.Pass where
         Beam.passTypeId = Kernel.Types.Id.getId passTypeId,
         Beam.purchaseEligibilityJsonLogic = purchaseEligibilityJsonLogic,
         Beam.redeemEligibilityJsonLogic = redeemEligibilityJsonLogic,
+        Beam.verificationValidity = Kernel.Prelude.Just verificationValidity,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

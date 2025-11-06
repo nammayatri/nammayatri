@@ -155,8 +155,7 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
           Just days -> DT.addDays (fromIntegral days) startDate
           Nothing -> startDate
 
-  allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId (Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]) Nothing Nothing
-  let mbActiveSamePass = listToMaybe $ filter (\p -> p.passTypeId == pass.passTypeId && p.deviceId == deviceId) allActivePurchasedPasses
+  mbActiveSamePass <- QPurchasedPass.findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId pass.passTypeId deviceId
 
   let initialStatus = if pass.amount == 0 then DPurchasedPass.Active else DPurchasedPass.Pending
   purchasedPassId <-
@@ -199,6 +198,7 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
                   status = initialStatus,
                   merchantId = pass.merchantId,
                   usedTripCount = Just 0,
+                  verificationValidity = pass.verificationValidity,
                   merchantOperatingCityId = pass.merchantOperatingCityId,
                   createdAt = now,
                   updatedAt = now
@@ -217,6 +217,8 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
             endDate,
             status = initialStatus,
             amount = pass.amount,
+            passCode = pass.code,
+            passName = pass.name,
             merchantId = Just pass.merchantId,
             merchantOperatingCityId = Just pass.merchantOperatingCityId,
             createdAt = now,
@@ -412,11 +414,12 @@ checkEligibility logics personData = do
       return $ and results
 
 -- Build PurchasedPass API Entity
-buildPurchasedPassAPIEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id DP.Person -> Text -> DPurchasedPass.PurchasedPass -> m PassAPI.PurchasedPassAPIEntity
-buildPurchasedPassAPIEntity personId deviceId purchasedPass = do
+buildPurchasedPassAPIEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id DP.Person -> Text -> DT.Day -> DPurchasedPass.PurchasedPass -> m PassAPI.PurchasedPassAPIEntity
+buildPurchasedPassAPIEntity personId deviceId today purchasedPass = do
   let deviceMismatch = purchasedPass.deviceId /= deviceId
   passType <- B.runInReplica $ QPassType.findById purchasedPass.passTypeId >>= fromMaybeM (PassTypeNotFound purchasedPass.passTypeId.getId)
   passCategory <- B.runInReplica $ QPassCategory.findById passType.passCategoryId >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
+  futureRenewals <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan purchasedPass.id DPurchasedPass.PreBooked today
 
   let tripsLeft = case purchasedPass.maxValidTrips of
         Just maxTrips -> Just $ max 0 (maxTrips - fromMaybe 0 purchasedPass.usedTripCount)
@@ -430,8 +433,6 @@ buildPurchasedPassAPIEntity personId deviceId purchasedPass = do
             passDetails = passAPIEntity
           }
 
-  istTime <- getLocalCurrentTime (19800 :: Seconds)
-  let today = DT.utctDay istTime
   let daysToExpire = fromIntegral $ DT.diffDays purchasedPass.endDate today
 
   lastVerifiedVehicleNumber <- QPassVerifyTransaction.findLastVerifiedVehicleNumberByPurchasePassId purchasedPass.id
@@ -448,7 +449,8 @@ buildPurchasedPassAPIEntity personId deviceId purchasedPass = do
         deviceSwitchAllowed = purchasedPass.deviceSwitchCount == 0,
         daysToExpire = daysToExpire,
         purchaseDate = DT.utctDay purchasedPass.createdAt,
-        expiryDate = purchasedPass.endDate
+        expiryDate = purchasedPass.endDate,
+        futureRenewals = buildPurchasedPassPaymentAPIEntity <$> futureRenewals
       }
 
 -- Webhook Handler for Pass Payment Status Updates
@@ -507,7 +509,7 @@ getMultimodalPassList (mbCallerPersonId, merchantId) mbLimitParam mbOffsetParam 
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
 
   let mbStatus = case mbStatusParam of
-        Just DPurchasedPass.Active -> Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]
+        Just DPurchasedPass.Active -> Just [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired]
         Just s -> Just [s]
         Nothing -> Nothing
 
@@ -533,7 +535,7 @@ getMultimodalPassList (mbCallerPersonId, merchantId) mbLimitParam mbOffsetParam 
   let passWithSameDevice = filter (\pass -> pass.deviceId == deviceId) allActivePurchasedPasses
   let purchasedPasses = if null passWithSameDevice then allActivePurchasedPasses else passWithSameDevice
 
-  mapM (buildPurchasedPassAPIEntity personId deviceId) purchasedPasses
+  mapM (buildPurchasedPassAPIEntity personId deviceId today) purchasedPasses
 
 postMultimodalPassVerify ::
   ( ( Maybe (Id.Id DP.Person),
@@ -560,7 +562,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
         DPassVerifyTransaction.PassVerifyTransaction
           { id = id,
             purchasePassId = purchasedPassId,
-            validTill = addUTCTime (intToNominalDiffTime 7200) now,
+            validTill = addUTCTime (intToNominalDiffTime (fromIntegral purchasedPass.verificationValidity)) now,
             verifiedAt = now,
             fleetId = passVerifyReq.vehicleNumber,
             createdAt = now,
@@ -600,12 +602,15 @@ getMultimodalPassTransactions (mbCallerPersonId, _) mbLimitParam mbOffsetParam =
   let offset = fromMaybe 0 mbOffsetParam
   allPurchasedPassTransactions <- QPurchasedPassPayment.findAllWithPersonId (Just limit) (Just offset) personId
   return $ map buildPurchasedPassPaymentAPIEntity allPurchasedPassTransactions
-  where
-    buildPurchasedPassPaymentAPIEntity :: DPurchasedPassPayment.PurchasedPassPayment -> PassAPI.PurchasedPassTransactionAPIEntity
-    buildPurchasedPassPaymentAPIEntity purchasedPassPayment = do
-      PassAPI.PurchasedPassTransactionAPIEntity
-        { startDate = purchasedPassPayment.startDate,
-          endDate = purchasedPassPayment.endDate,
-          status = purchasedPassPayment.status,
-          amount = purchasedPassPayment.amount
-        }
+
+buildPurchasedPassPaymentAPIEntity :: DPurchasedPassPayment.PurchasedPassPayment -> PassAPI.PurchasedPassTransactionAPIEntity
+buildPurchasedPassPaymentAPIEntity purchasedPassPayment =
+  PassAPI.PurchasedPassTransactionAPIEntity
+    { startDate = purchasedPassPayment.startDate,
+      endDate = purchasedPassPayment.endDate,
+      status = purchasedPassPayment.status,
+      amount = purchasedPassPayment.amount,
+      passName = purchasedPassPayment.passName,
+      passCode = purchasedPassPayment.passCode,
+      createdAt = purchasedPassPayment.createdAt
+    }

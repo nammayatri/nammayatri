@@ -39,6 +39,7 @@ PurchasedPass:
     passName: Maybe Text
     passDescription: Maybe Text
     passAmount: HighPrecMoney
+    verificationValidity: Seconds
     benefitDescription: Text
     benefitType: Maybe BenefitType
     benefitValue: Maybe HighPrecMoney
@@ -52,12 +53,15 @@ PurchasedPass:
 
   beamType:
     deviceSwitchCount: Maybe Int
+    verificationValidity: Maybe Seconds
 
   fromTType:
     deviceSwitchCount: (fromMaybe 0 deviceSwitchCount)|E
+    verificationValidity: Kernel.Prelude.fromMaybe 9000|I
 
   toTType:
     deviceSwitchCount: Just deviceSwitchCount|E
+    verificationValidity: Just verificationValidity|E
 
   sqlType:
     applicableVehicleServiceTiers: text[]
@@ -68,12 +72,20 @@ PurchasedPass:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+  queries:
+    updateDeviceSwitchCount:
+      kvFunction: updateWithKV
+      params: [deviceSwitchCount]
+      where: id
+
 PurchasedPassPayment:
   tableName: purchased_pass_payment
 
   fields:
     id: Id PurchasedPassPayment
     orderId: Id PaymentOrder
+    passCode: Text
+    passName: Maybe Text
     purchasedPassId: Id PurchasedPass
     amount: HighPrecMoney
     personId: Id Person
@@ -108,6 +120,15 @@ PurchasedPassPayment:
           - status
           - gte:
             - endDate
+
+    findAllByPurchasedPassIdAndStatusStartDateGreaterThan:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - purchasedPassId
+          - status
+          - gte:
+            - startDate
 
     findAllWithPersonId:
       kvFunction: findAllWithOptionsKV

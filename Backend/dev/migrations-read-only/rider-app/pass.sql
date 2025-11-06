@@ -27,3 +27,47 @@ ALTER TABLE atlas_app.pass ADD COLUMN payment_valid_till integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.pass ADD COLUMN description text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass ADD COLUMN verification_validity integer ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
