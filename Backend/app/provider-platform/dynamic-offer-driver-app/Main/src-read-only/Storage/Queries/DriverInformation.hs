@@ -4,8 +4,6 @@
 
 module Storage.Queries.DriverInformation (module Storage.Queries.DriverInformation, module ReExport) where
 
-import qualified Domain.Types.Common
-import qualified Domain.Types.DriverFlowStatus
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Person
@@ -76,19 +74,6 @@ updateAcUsageRestrictionAndScore acUsageRestrictionType airConditionScore driver
   updateOneWithKV
     [ Se.Set Beam.acUsageRestrictionType (Kernel.Prelude.Just acUsageRestrictionType),
       Se.Set Beam.airConditionScore airConditionScore,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
-
-updateActivity ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Common.DriverMode -> Kernel.Prelude.Maybe Domain.Types.DriverFlowStatus.DriverFlowStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateActivity active mode driverFlowStatus driverId = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.active active,
-      Se.Set Beam.mode mode,
-      Se.Set Beam.driverFlowStatus driverFlowStatus,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]

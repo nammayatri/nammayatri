@@ -323,10 +323,6 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [onRide]
       where: driverId
-    updateActivity:
-      kvFunction: updateOneWithKV
-      params: [active, mode, driverFlowStatus]
-      where: driverId
     addReferralCode: #check
       kvFunction: updateOneWithKV
       params: [referralCode, referredByDriverId]

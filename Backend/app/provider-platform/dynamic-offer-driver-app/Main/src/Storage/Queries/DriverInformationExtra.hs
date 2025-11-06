@@ -5,6 +5,7 @@ import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.Common as Common
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
+import qualified Domain.Types.DriverFlowStatus as DFS
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
@@ -117,6 +118,21 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
         <> ([Se.Set BeamDI.enabledAt (Just now) | isEnabled && isNothing enabledAt])
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
+updateActivityWithDriverFlowStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Bool -> Maybe Common.DriverMode -> Maybe DFS.DriverFlowStatus -> Maybe Bool -> Id Person.Driver -> m ())
+updateActivityWithDriverFlowStatus active mode driverFlowStatus mbHasRideStarted driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [ Se.Set BeamDI.active active,
+        Se.Set BeamDI.updatedAt now
+      ]
+        <> [Se.Set BeamDI.mode mode | isJust mode]
+        <> [Se.Set BeamDI.driverFlowStatus driverFlowStatus | isJust driverFlowStatus]
+        <> [Se.Set BeamDI.hasRideStarted mbHasRideStarted | isJust mbHasRideStarted]
+    )
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
 
 updateDynamicBlockedStateWithActivity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> Bool -> Maybe Bool -> Maybe Common.DriverMode -> BlockReasonFlag -> m ()
 updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime dashboardUserName merchantId reasonCode merchantOperatingCityId blockedBy isBlocked mbActive mbMode blockReasonFlag = do

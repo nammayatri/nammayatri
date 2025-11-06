@@ -178,16 +178,15 @@ endRideTransaction ::
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
   merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
-  QDI.updateHasRideStarted driverId False
+  oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active
+  DDriverMode.updateDriverModeAndFlowStatus driverId thresholdConfig oldDriverInfo.active Nothing newFlowStatus oldDriverInfo (Just False)
+  let driverInfo = oldDriverInfo {DI.driverFlowStatus = Just newFlowStatus}
   QRB.updateStatus booking.id SRB.COMPLETED
   whenJust mbRiderDetailsId $ \riderDetailsId -> do
     QRiderDetails.updateCompletedRidesCount riderDetailsId.getId
   whenJust mbFareParams QFare.create
   QRide.updateAll ride.id ride
-  oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active
-  DDriverMode.updateDriverModeAndFlowStatus driverId thresholdConfig oldDriverInfo.active oldDriverInfo.mode newFlowStatus oldDriverInfo
-  let driverInfo = oldDriverInfo {DI.driverFlowStatus = Just newFlowStatus}
   let safetyPlusCharges = maybe Nothing (\a -> find (\ac -> ac.chargeCategory == DAC.SAFETY_PLUS_CHARGES) a) $ (mbFareParams <&> (.conditionalCharges)) <|> (Just newFareParams.conditionalCharges)
   void $ QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
   when thresholdConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig driverId ride
@@ -258,8 +257,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
               let newBalance = fromMaybe 0 fleetOwnerInfo.prepaidSubscriptionBalance - fare
                   reserved = booking.estimatedFare
                   newlien = fromMaybe 0 fleetOwnerInfo.lienAmount - reserved
-              QFOI.updatePrepaidSubscriptionBalance (Just newBalance) fleetOwnerId
-              QFOI.updateLienAmount (Just newlien) fleetOwnerId
+              QFOI.updatePrepaidSubscriptionBalanceAndLienAmount (Just newBalance) (Just newlien) fleetOwnerId
               createSubscriptionTransaction ride newBalance booking
         Nothing -> do
           when (isJust subscriptionConfig.prepaidSubscriptionThreshold) $ do
