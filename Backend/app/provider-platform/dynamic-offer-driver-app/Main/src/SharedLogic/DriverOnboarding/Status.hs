@@ -3,6 +3,7 @@ module SharedLogic.DriverOnboarding.Status
     StatusRes' (..),
     VehicleDocumentItem (..),
     DocumentStatusItem (..),
+    CommonDocumentItem (..),
     DLDetails (..),
     RCDetails (..),
     statusHandler',
@@ -12,6 +13,7 @@ module SharedLogic.DriverOnboarding.Status
     mapStatus,
     checkAllDriverVehicleDocsVerified,
     activateRCAutomatically,
+    mkCommonDocumentItem,
   )
 where
 
@@ -22,6 +24,7 @@ import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
+import qualified Domain.Types.CommonDriverOnboardingDocuments as DCDOD
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as DL
@@ -108,6 +111,17 @@ data DocumentStatusItem = DocumentStatusItem
     verificationStatus :: ResponseStatus,
     verificationMessage :: Maybe Text,
     verificationUrl :: Maybe BaseUrl
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data CommonDocumentItem = CommonDocumentItem
+  { documentType :: DDVC.DocumentType,
+    documentData :: Text,
+    verificationStatus :: ResponseStatus,
+    rejectReason :: Maybe Text,
+    documentImageId :: Maybe Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1083,3 +1097,23 @@ getLatestVerificationRecord mbIdfyVerificationReq mbHvVerificationReq = do
     (Nothing, Just _) -> SDO.makeHVVerificationReqRecord <$> mbHvVerificationReq
     (Just _, Nothing) -> SDO.makeIdfyVerificationReqRecord <$> mbIdfyVerificationReq
     (Nothing, Nothing) -> Nothing
+
+-- Convert CommonDriverOnboardingDocuments to CommonDocumentItem
+mkCommonDocumentItem :: DCDOD.CommonDriverOnboardingDocuments -> CommonDocumentItem
+mkCommonDocumentItem doc =
+  CommonDocumentItem
+    { documentType = doc.documentType,
+      documentData = doc.documentData,
+      verificationStatus = mapVerificationStatus doc.verificationStatus,
+      rejectReason = doc.rejectReason,
+      documentImageId = getId <$> doc.documentImageId,
+      createdAt = doc.createdAt,
+      updatedAt = doc.updatedAt
+    }
+  where
+    mapVerificationStatus :: Documents.VerificationStatus -> ResponseStatus
+    mapVerificationStatus Documents.PENDING = PENDING
+    mapVerificationStatus Documents.VALID = VALID
+    mapVerificationStatus Documents.INVALID = INVALID
+    mapVerificationStatus Documents.MANUAL_VERIFICATION_REQUIRED = MANUAL_VERIFICATION_REQUIRED
+    mapVerificationStatus _ = PENDING -- default case
