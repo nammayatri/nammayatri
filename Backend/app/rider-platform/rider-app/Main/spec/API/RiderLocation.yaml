@@ -14,12 +14,12 @@ types:
     locationAccuracy: Maybe Double
 
   BusLocation:
-    id : Text
+    id : Maybe Text
     busNumber: Text
     distanceToBus: Double
     timestamp: UTCTime
     customerLocation: LatLong
-    customerLocationTimestamp: UTCTime
+    customerLocationTimestamp: Maybe UTCTime
     locationAccuracy: Maybe Double
     derive: "Show"
 

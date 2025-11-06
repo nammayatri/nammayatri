@@ -72,12 +72,12 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
           pure $
             Just
               API.Types.UI.RiderLocation.BusLocation
-                { id = locationId,
+                { id = Just locationId,
                   busNumber = busNumber,
                   distanceToBus = distanceToBus,
                   timestamp = busTimestamp,
                   customerLocation = riderLocation,
-                  customerLocationTimestamp = now,
+                  customerLocationTimestamp = Just now,
                   locationAccuracy = req.locationAccuracy
                 }
 
