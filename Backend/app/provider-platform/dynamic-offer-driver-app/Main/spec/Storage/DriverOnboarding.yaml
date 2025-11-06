@@ -119,6 +119,9 @@ DigilockerVerification:
     # Raw Response (for debugging)
     tokenResponse: Maybe Text
 
+    # Vehicle Category (for DL validation - mandatory for initiation)
+    vehicleCategory: VehicleCategory|NoRelation
+
     # Metadata
     merchantId: Maybe (Id Merchant)
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)

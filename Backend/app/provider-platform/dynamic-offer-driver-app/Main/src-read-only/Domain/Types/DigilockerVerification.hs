@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.VehicleCategory
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -30,7 +31,8 @@ data DigilockerVerification = DigilockerVerification
     sessionStatus :: Domain.Types.DigilockerVerification.SessionStatus,
     stateId :: Kernel.Prelude.Text,
     tokenResponse :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

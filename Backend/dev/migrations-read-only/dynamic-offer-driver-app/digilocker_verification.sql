@@ -19,4 +19,5 @@ ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN session_st
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN state_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN token_response text ;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN vehicle_category text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD PRIMARY KEY ( id);

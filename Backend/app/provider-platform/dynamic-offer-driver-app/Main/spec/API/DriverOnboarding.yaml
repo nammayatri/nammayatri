@@ -14,6 +14,7 @@ imports:
   Person: Domain.Types.Person
   PriceAPIEntity: Kernel.Types.Common
   Money: Kernel.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
   Driver: Domain.Types.Person
   TripCategory: Domain.Types.Common
   VerifiedBy: Domain.Types.DriverPanCard
@@ -209,6 +210,8 @@ types:
     dateOfBirth: Maybe Text
   AadhaarDocParams:
     aadhaarNumber: Text
+  DigiLockerInitiateReq:
+    vehicleCategory: VehicleCategory
   DigiLockerInitiateResp:
     authorizationUrl: Text
   PullDrivingLicenseReq:
@@ -363,6 +366,8 @@ apis:
   - POST:
       endpoint: /driver/digilocker/initiate
       auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DigiLockerInitiateReq
       response:
         type: DigiLockerInitiateResp
   - POST:

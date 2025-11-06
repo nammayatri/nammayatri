@@ -98,7 +98,8 @@ updateByPrimaryKey (Domain.Types.DigilockerVerification.DigilockerVerification {
       Se.Set Beam.sessionStatus sessionStatus,
       Se.Set Beam.stateId stateId,
       Se.Set Beam.tokenResponse tokenResponse,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.vehicleCategory vehicleCategory
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -125,7 +126,8 @@ instance FromTType' Beam.DigilockerVerification Domain.Types.DigilockerVerificat
             sessionStatus = sessionStatus,
             stateId = stateId,
             tokenResponse = tokenResponse,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            vehicleCategory = vehicleCategory
           }
 
 instance ToTType' Beam.DigilockerVerification Domain.Types.DigilockerVerification.DigilockerVerification where
@@ -149,5 +151,6 @@ instance ToTType' Beam.DigilockerVerification Domain.Types.DigilockerVerificatio
         Beam.sessionStatus = sessionStatus,
         Beam.stateId = stateId,
         Beam.tokenResponse = tokenResponse,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.vehicleCategory = vehicleCategory
       }

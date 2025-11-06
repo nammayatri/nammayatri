@@ -7,6 +7,7 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.DigilockerVerification
+import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -31,7 +32,8 @@ data DigilockerVerificationT f = DigilockerVerificationT
     sessionStatus :: B.C f Domain.Types.DigilockerVerification.SessionStatus,
     stateId :: B.C f Kernel.Prelude.Text,
     tokenResponse :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleCategory :: B.C f Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving (Generic, B.Beamable)
 

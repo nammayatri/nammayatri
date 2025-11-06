@@ -9,6 +9,7 @@ import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard
 import qualified Domain.Types.Image
 import qualified Domain.Types.Person
+import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -87,6 +88,10 @@ data DigiLockerDocumentStatus = DigiLockerDocumentStatus
     pullFields :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     status :: Kernel.Prelude.Text
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DigiLockerInitiateReq = DigiLockerInitiateReq {vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
