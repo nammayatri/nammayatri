@@ -197,36 +197,6 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
-      :<|> "dobpp"
-      :> "verify"
-      :> "callback"
-      :> "digiLocker"
-      :> QueryParam
-           "error"
-           Kernel.Prelude.Text
-      :> QueryParam
-           "error_description"
-           Kernel.Prelude.Text
-      :> MandatoryQueryParam
-           "code"
-           Kernel.Prelude.Text
-      :> MandatoryQueryParam
-           "state"
-           Kernel.Prelude.Text
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-      :<|> TokenAuth
-      :> "driver"
-      :> "documents"
-      :> "verify"
-      :> "digilocker"
-      :> ReqBody
-           '[JSON]
-           API.Types.UI.DriverOnboardingV2.DigiLockerPullDocRequest
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
       :> "digilocker"
@@ -237,20 +207,10 @@ type API =
       :> Post
            '[JSON]
            API.Types.UI.DriverOnboardingV2.DigiLockerInitiateResp
-      :<|> TokenAuth
-      :> "driver"
-      :> "pull_document"
-      :> "driving_license"
-      :> ReqBody
-           '[JSON]
-           API.Types.UI.DriverOnboardingV2.PullDrivingLicenseReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> postDobppVerifyCallbackDigiLocker :<|> postDriverDocumentsVerifyDigilocker :<|> postDriverDigilockerInitiate :<|> postDriverPull_documentDriving_license
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> postDriverDigilockerInitiate
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -420,19 +380,6 @@ postDriverRegisterCommonDocument ::
   )
 postDriverRegisterCommonDocument a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverRegisterCommonDocument (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-postDobppVerifyCallbackDigiLocker :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postDobppVerifyCallbackDigiLocker a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDobppVerifyCallbackDigiLocker a4 a3 a2 a1
-
-postDriverDocumentsVerifyDigilocker ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
-    ) ->
-    API.Types.UI.DriverOnboardingV2.DigiLockerPullDocRequest ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
-  )
-postDriverDocumentsVerifyDigilocker a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverDocumentsVerifyDigilocker (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
-
 postDriverDigilockerInitiate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -442,13 +389,3 @@ postDriverDigilockerInitiate ::
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DigiLockerInitiateResp
   )
 postDriverDigilockerInitiate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverDigilockerInitiate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
-
-postDriverPull_documentDriving_license ::
-  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
-    ) ->
-    API.Types.UI.DriverOnboardingV2.PullDrivingLicenseReq ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
-  )
-postDriverPull_documentDriving_license a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverPull_documentDriving_license (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

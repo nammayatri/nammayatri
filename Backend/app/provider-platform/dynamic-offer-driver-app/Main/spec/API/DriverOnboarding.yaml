@@ -159,68 +159,10 @@ types:
     transactionId : Maybe Text
     validationStatus : Maybe ValidationStatus
     verifiedBy : Maybe VerifiedBy
-  DigiLockerStateData:
-    driverId: Id Person
-    codeVerifier: Text
-  DigiLockerStatusData:
-    status: Text
-    errorCode: Maybe Text
-    errorDescription: Maybe Text
-  DigiLockerDetailsData:
-    digilocker: DigiLockerAuthData
-    documents: [DigiLockerDocumentStatus]
-  DigiLockerAuthData:
-    stateID: Maybe Bool
-    codeID: Maybe Bool
-    errorCode: Maybe Text
-    errorDescription: Maybe Text
-    accessToken: Maybe Text
-    scope: Maybe Text
-  DigiLockerDocumentStatus:
-    documentType: Text
-    status: Text
-    availability: Text
-    pullFields: Maybe [Text]
-    errorCode: Maybe Text
-    errorDescription: Maybe Text
-  DigiLockerTokenRequest:
-    grant_type: Text
-    code: Text
-    client_id: Text
-    client_secret: Text
-    redirect_uri: Text
-    code_verifier: Text
-  DigiLockerTokenResponse:
-    access_token: Text
-    token_type: Text
-    expires_in: Int
-    scope: Maybe Text
-    issued: Maybe Text
-    pull_docs: Maybe Text
-  DigiLockerPullDocRequest:
-    docType: Text
-    docParams: DocParams
-  DocParams:
-    enum: "PanParams PanDocParams | DLParams DLDocParams | AadhaarParams AadhaarDocParams"
-  PanDocParams:
-    panNumber: Text
-    dateOfBirth: Maybe Text
-  DLDocParams:
-    dlNumber: Text
-    dateOfBirth: Maybe Text
-  AadhaarDocParams:
-    aadhaarNumber: Text
   DigiLockerInitiateReq:
     vehicleCategory: VehicleCategory
   DigiLockerInitiateResp:
     authorizationUrl: Text
-  PullDrivingLicenseReq:
-    dlno: Text
-  # DigiLockerPullDocResponse is defined manually in Domain.Action.UI.DriverOnboardingV2
-  # DigiLockerPullDocResponse:
-  #   uri: Maybe Text
-  #   _error: Maybe Text
-  #   error_description: Maybe Text
 
 apis:
   - GET:
@@ -346,34 +288,9 @@ apis:
       response:
         type: APISuccess
   - POST:
-      endpoint: /dobpp/verify/callback/digiLocker
-      mandatoryQuery:
-        code: Text
-        state: Text
-      query:
-        error: Text
-        error_description: Text
-      response:
-        type: APISuccess
-      auth: NoAuth
-  - POST:
-      endpoint: /driver/documents/verify/digilocker
-      auth: TokenAuth PROVIDER_TYPE
-      request:
-        type: DigiLockerPullDocRequest
-      response:
-        type: APISuccess
-  - POST:
       endpoint: /driver/digilocker/initiate
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: DigiLockerInitiateReq
       response:
         type: DigiLockerInitiateResp
-  - POST:
-      endpoint: /driver/pull_document/driving_license
-      auth: TokenAuth PROVIDER_TYPE
-      request:
-        type: PullDrivingLicenseReq
-      response:
-        type: APISuccess

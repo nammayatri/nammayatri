@@ -8,7 +8,6 @@ import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard
 import qualified Domain.Types.Image
-import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
@@ -30,10 +29,6 @@ data AadhaarCardReq = AadhaarCardReq
     transactionId :: Kernel.Prelude.Text,
     validationStatus :: ValidationStatus
   }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data AadhaarDocParams = AadhaarDocParams {aadhaarNumber :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -61,82 +56,11 @@ data CommonDocumentReq = CommonDocumentReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data DLDocParams = DLDocParams {dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text, dlNumber :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DigiLockerAuthData = DigiLockerAuthData
-  { accessToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    codeID :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    errorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    errorDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    scope :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    stateID :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DigiLockerDetailsData = DigiLockerDetailsData {digilocker :: DigiLockerAuthData, documents :: [DigiLockerDocumentStatus]}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DigiLockerDocumentStatus = DigiLockerDocumentStatus
-  { availability :: Kernel.Prelude.Text,
-    documentType :: Kernel.Prelude.Text,
-    errorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    errorDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    pullFields :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
-    status :: Kernel.Prelude.Text
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data DigiLockerInitiateReq = DigiLockerInitiateReq {vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DigiLockerInitiateResp = DigiLockerInitiateResp {authorizationUrl :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DigiLockerPullDocRequest = DigiLockerPullDocRequest {docParams :: DocParams, docType :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DigiLockerStateData = DigiLockerStateData {codeVerifier :: Kernel.Prelude.Text, driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DigiLockerStatusData = DigiLockerStatusData {errorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, errorDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text, status :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DigiLockerTokenRequest = DigiLockerTokenRequest
-  { client_id :: Kernel.Prelude.Text,
-    client_secret :: Kernel.Prelude.Text,
-    code :: Kernel.Prelude.Text,
-    code_verifier :: Kernel.Prelude.Text,
-    grant_type :: Kernel.Prelude.Text,
-    redirect_uri :: Kernel.Prelude.Text
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DigiLockerTokenResponse = DigiLockerTokenResponse
-  { access_token :: Kernel.Prelude.Text,
-    expires_in :: Kernel.Prelude.Int,
-    issued :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    pull_docs :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    scope :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    token_type :: Kernel.Prelude.Text
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DocParams
-  = PanParams PanDocParams
-  | DLParams DLDocParams
-  | AadhaarParams AadhaarDocParams
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -248,14 +172,6 @@ data HVSdkCallLogReq = HVSdkCallLogReq
     status :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     txnId :: Kernel.Prelude.Text
   }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data PanDocParams = PanDocParams {dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text, panNumber :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data PullDrivingLicenseReq = PullDrivingLicenseReq {dlno :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
