@@ -301,11 +301,41 @@ notifyOnRideAssigned booking ride = do
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+
+  -- Check if vehicle number matches any special vehicle notification config
+  let matchedSpecialVehicleConfig = case riderConfig.specialVehicleNotificationConfigs of
+        Just configs -> L.find (\config -> config.vehicleNo == ride.vehicleNumber) configs
+        Nothing -> Nothing
+
   let entity = Notification.Entity Notification.Product rideId.getId (RideAssignedParam driverName booking.startTime booking.id booking.isScheduled)
       dynamicParams = RideAssignedParam driverName booking.startTime booking.id booking.isScheduled
   allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
+
   forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
     tag <- getDisabilityTag person.hasDisability person'.id
+
+    -- If vehicle number matches, send custom notification first
+    whenJust matchedSpecialVehicleConfig $ \specialConfig -> do
+      notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_ASSIGNMENT person'.merchantOperatingCityId
+      notificationSound <- getNotificationSound tag notificationSoundFromConfig
+      let customNotificationData =
+            Notification.NotificationReq
+              { category = Notification.DRIVER_ASSIGNMENT,
+                subCategory = Nothing,
+                showNotification = Notification.SHOW,
+                messagePriority = Nothing,
+                entity = entity,
+                body = specialConfig.notificationMessage,
+                title = specialConfig.notificationTitle,
+                auth = Notification.Auth person'.id.getId person'.deviceToken person'.notificationToken,
+                sound = notificationSound,
+                ttl = Nothing,
+                dynamicParams = dynamicParams
+              }
+      notifyPerson person'.merchantId person'.merchantOperatingCityId person'.id customNotificationData Nothing
+
+    -- Always send the normal DRIVER_ASSIGNMENT notification
     dynamicNotifyPerson
       person'
       (createNotificationReq "DRIVER_ASSIGNMENT" (\r -> r {soundTag = tag}))
