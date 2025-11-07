@@ -1356,7 +1356,8 @@ generateJourneyInfoResponse journey legs = do
         merchantOperatingCityName,
         paymentOrderShortId = journey.paymentOrderShortId,
         unifiedQRV2,
-        result = Just "Success"
+        result = Just "Success",
+        isSingleMode = journey.isSingleMode
       }
   where
     getUnifiedQRV2 :: Maybe JL.UnifiedTicketQR -> Maybe JL.UnifiedTicketQRV2

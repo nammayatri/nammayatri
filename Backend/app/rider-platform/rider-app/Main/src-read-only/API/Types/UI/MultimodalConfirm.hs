@@ -129,6 +129,7 @@ data JourneyInfoResp = JourneyInfoResp
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedMaxFare :: Kernel.Types.Common.PriceAPIEntity,
     estimatedMinFare :: Kernel.Types.Common.PriceAPIEntity,
+    isSingleMode :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     journeyStatus :: Domain.Types.Journey.JourneyStatus,
     legs :: [Lib.JourneyModule.Types.LegInfo],
