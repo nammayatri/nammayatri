@@ -1138,7 +1138,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
           routeFareReq <- getRouteFareRequest originStopCode destinationStopCode " " " " personId (crisConfig.useRouteFareV4 /= Just True)
-          (fares, _) <- if crisConfig.useRouteFareV4 == Just True then CRISRouteFare.getRouteFare crisConfig mocid routeFareReq True else CRISRouteFareV3.getRouteFare crisConfig mocid routeFareReq True True
+          (fares, _) <- if (crisConfig.useRouteFareV4 == Just True) then CRISRouteFare.getRouteFare crisConfig mocid routeFareReq else CRISRouteFareV3.getRouteFare crisConfig mocid routeFareReq True
           let redisKey = CRISRouteFare.mkRouteFareKey originStopCode destinationStopCode searchReqId
           unless (null fares) $ Hedis.setExp redisKey fares 1800
           let sortedFares = case crisConfig.routeSortingCriteria of
