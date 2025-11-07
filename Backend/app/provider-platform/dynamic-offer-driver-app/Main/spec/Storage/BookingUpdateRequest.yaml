@@ -85,6 +85,10 @@ BookingUpdateRequest:
       kvFunction: updateOneWithKV
       params: [status, updatedAt]
       where: bapBookingUpdateRequestId
+    findByBookingId:
+      kvFunction: findOneWithKV
+      where:
+        and: [bookingId]
 
   constraints:
     id: PrimaryKey
