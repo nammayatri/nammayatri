@@ -509,7 +509,7 @@ getMultimodalPassList (mbCallerPersonId, merchantId) mbLimitParam mbOffsetParam 
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
 
   let mbStatus = case mbStatusParam of
-        Just DPurchasedPass.Active -> Just [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired]
+        Just DPurchasedPass.Active -> Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]
         Just s -> Just [s]
         Nothing -> Nothing
 
