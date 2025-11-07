@@ -184,8 +184,8 @@ updateTotalRequestCountByFleetOperatorIdAndDate totalRequestCount fleetOperatorI
         ]
     ]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats))
-findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m (Maybe Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats))
+findByPrimaryKey fleetOperatorId merchantLocalDate = do findOneWithKV [Se.And [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId, Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats -> m ())
 updateByPrimaryKey (Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats {..}) = do
@@ -197,9 +197,7 @@ updateByPrimaryKey (Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats
       Se.Set Beam.distanceUnit distanceUnit,
       Se.Set Beam.driverCancellationCount driverCancellationCount,
       Se.Set Beam.driverFirstSubscription driverFirstSubscription,
-      Se.Set Beam.fleetOperatorId fleetOperatorId,
       Se.Set Beam.inspectionCompleted inspectionCompleted,
-      Se.Set Beam.merchantLocalDate merchantLocalDate,
       Se.Set Beam.pulledRequestCount pulledRequestCount,
       Se.Set Beam.rejectedRequestCount rejectedRequestCount,
       Se.Set Beam.totalCompletedRides totalCompletedRides,
@@ -212,7 +210,7 @@ updateByPrimaryKey (Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.id $ Se.Eq id]]
+    [Se.And [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId, Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
 
 instance FromTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats where
   fromTType' (Beam.FleetOperatorDailyStatsT {..}) = do
@@ -226,7 +224,6 @@ instance FromTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDaily
             driverCancellationCount = driverCancellationCount,
             driverFirstSubscription = driverFirstSubscription,
             fleetOperatorId = fleetOperatorId,
-            id = id,
             inspectionCompleted = inspectionCompleted,
             merchantLocalDate = merchantLocalDate,
             pulledRequestCount = pulledRequestCount,
@@ -253,7 +250,6 @@ instance ToTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDailySt
         Beam.driverCancellationCount = driverCancellationCount,
         Beam.driverFirstSubscription = driverFirstSubscription,
         Beam.fleetOperatorId = fleetOperatorId,
-        Beam.id = id,
         Beam.inspectionCompleted = inspectionCompleted,
         Beam.merchantLocalDate = merchantLocalDate,
         Beam.pulledRequestCount = pulledRequestCount,

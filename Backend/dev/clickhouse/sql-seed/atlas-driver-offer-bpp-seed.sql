@@ -56,7 +56,6 @@ CREATE TABLE atlas_driver_offer_bpp.driver_information (
 ORDER BY (driver_id);
 
 CREATE TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats (
-    `id` String,
     `fleet_operator_id` String,
     `merchant_local_date` Date DEFAULT today(),
     `rejected_request_count` Nullable(Int64),
@@ -70,7 +69,7 @@ CREATE TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats (
     `total_earning` Nullable(Float64),
     `version` DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(version)
-ORDER BY (merchant_local_date, fleet_operator_id, id);
+ORDER BY (merchant_local_date, fleet_operator_id);
 
 create table atlas_driver_offer_bpp.driver_operator_association (
     `id` String,

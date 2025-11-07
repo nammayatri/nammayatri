@@ -20,7 +20,6 @@ data FleetOperatorDailyStats = FleetOperatorDailyStats
     driverCancellationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     driverFirstSubscription :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     fleetOperatorId :: Kernel.Prelude.Text,
-    id :: Kernel.Prelude.Text,
     inspectionCompleted :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantLocalDate :: Data.Time.Calendar.Day,
     pulledRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

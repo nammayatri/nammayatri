@@ -27,8 +27,7 @@ incrementDailyCount fleetOperatorId transporterConfig getField updateCounter set
   case mbCurrent of
     Just s -> updateCounter (Just (fromMaybe 0 (getField s) + 1)) fleetOperatorId merchantLocalDate
     Nothing -> do
-      rowId <- generateGUIDText
-      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId rowId merchantLocalDate transporterConfig nowUTCTime
+      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId merchantLocalDate transporterConfig nowUTCTime
       QFleetOpsDaily.create (setInitField initStats)
 
 incrementOverallCount ::
@@ -149,12 +148,11 @@ incrementTotalRatingCountAndTotalRatingScore fleetOperatorId transporterConfig r
       QFleetOps.create initStats {DFS.totalRatingCount = Just 1, DFS.totalRatingScore = Just ratingValue}
 
 -- Helper: build initial FleetOperatorDailyStats row
-buildInitialFleetOperatorDailyStats :: (MonadFlow m) => Text -> Text -> Day -> DTTC.TransporterConfig -> UTCTime -> m DFODS.FleetOperatorDailyStats
-buildInitialFleetOperatorDailyStats fleetOperatorId rowId merchantLocalDate transporterConfig now = do
+buildInitialFleetOperatorDailyStats :: (MonadFlow m) => Text -> Day -> DTTC.TransporterConfig -> UTCTime -> m DFODS.FleetOperatorDailyStats
+buildInitialFleetOperatorDailyStats fleetOperatorId merchantLocalDate transporterConfig now = do
   pure
     DFODS.FleetOperatorDailyStats
       { fleetOperatorId = fleetOperatorId,
-        id = rowId,
         merchantLocalDate = merchantLocalDate,
         totalRatingCount = Nothing,
         totalRatingScore = Nothing,
@@ -251,8 +249,7 @@ incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId ride transpo
           newTotalEarning = Just (fromMaybe 0 s.totalEarning + fromMaybe 0.0 ride.fare)
       QFleetOpsDaily.updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate newTotalDistance newTotalEarning newTotalCompletedRides fleetOperatorId merchantLocalDate
     Nothing -> do
-      rowId <- generateGUIDText
-      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId rowId merchantLocalDate transporterConfig nowUTCTime
+      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId merchantLocalDate transporterConfig nowUTCTime
       QFleetOpsDaily.create
         initStats
           { DFODS.totalCompletedRides = Just 1,
@@ -273,6 +270,5 @@ incrementTotalRatingCountAndTotalRatingScoreDaily fleetOperatorId transporterCon
           newTotalRatingScore = Just (fromMaybe 0 s.totalRatingScore + ratingValue)
       QFleetOpsDaily.updateTotalRatingCountAndTotalRatingScoreByFleetOperatorIdAndDate newTotalRatingCount newTotalRatingScore fleetOperatorId merchantLocalDate
     Nothing -> do
-      rowId <- generateGUIDText
-      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId rowId merchantLocalDate transporterConfig nowUTCTime
+      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId merchantLocalDate transporterConfig nowUTCTime
       QFleetOpsDaily.create initStats {DFODS.totalRatingCount = Just 1, DFODS.totalRatingScore = Just ratingValue}

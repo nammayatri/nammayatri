@@ -20,7 +20,6 @@ data FleetOperatorDailyStatsT f = FleetOperatorDailyStatsT
     driverCancellationCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     driverFirstSubscription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     fleetOperatorId :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
     inspectionCompleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantLocalDate :: B.C f Data.Time.Calendar.Day,
     pulledRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -39,11 +38,11 @@ data FleetOperatorDailyStatsT f = FleetOperatorDailyStatsT
   deriving (Generic, B.Beamable)
 
 instance B.Table FleetOperatorDailyStatsT where
-  data PrimaryKey FleetOperatorDailyStatsT f = FleetOperatorDailyStatsId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = FleetOperatorDailyStatsId . id
+  data PrimaryKey FleetOperatorDailyStatsT f = FleetOperatorDailyStatsId (B.C f Kernel.Prelude.Text) (B.C f Data.Time.Calendar.Day) deriving (Generic, B.Beamable)
+  primaryKey = FleetOperatorDailyStatsId <$> fleetOperatorId <*> merchantLocalDate
 
 type FleetOperatorDailyStats = FleetOperatorDailyStatsT Identity
 
-$(enableKVPG ''FleetOperatorDailyStatsT ['id] [])
+$(enableKVPG ''FleetOperatorDailyStatsT ['fleetOperatorId, 'merchantLocalDate] [])
 
 $(mkTableInstances ''FleetOperatorDailyStatsT "fleet_operator_daily_stats")
