@@ -13,6 +13,7 @@ imports:
   Benefit: Domain.Types.Pass
   APISuccess: Kernel.Types.APISuccess
   Day: Data.Time
+  Language: Kernel.External.Types
 
 module: Pass
 types:
@@ -100,6 +101,8 @@ apis:
   - GET:
       endpoint: /multimodal/pass/availablePasses
       auth: TokenAuth
+      query:
+        language: Language
       response:
         type: "[PassInfoAPIEntity]"
 
@@ -122,6 +125,7 @@ apis:
         status: StatusType
         limit: Int
         offset: Int
+        language: Language
       mandatoryQuery:
         deviceId: Text
       response:

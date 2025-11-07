@@ -30,6 +30,7 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Types as Lang
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
@@ -50,6 +51,7 @@ import qualified Storage.Queries.PassVerifyTransaction as QPassVerifyTransaction
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
+import qualified Storage.Queries.TranslationsExtra as QT
 import Tools.Error
 import qualified Tools.Payment as TPayment
 
@@ -57,9 +59,10 @@ getMultimodalPassAvailablePasses ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
       Id.Id DM.Merchant
     ) ->
+    Kernel.Prelude.Maybe Lang.Language ->
     Environment.Flow [PassAPI.PassInfoAPIEntity]
   )
-getMultimodalPassAvailablePasses (mbPersonId, _merchantId) = do
+getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
@@ -77,7 +80,7 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) = do
 
     -- Flatten passes and build API entities
     let flatPasses = concatMap snd allPasses
-    passAPIEntities <- mapM (buildPassAPIEntity personId) flatPasses
+    passAPIEntities <- mapM (buildPassAPIEntity mbLanguage personId) flatPasses
 
     return $
       PassAPI.PassInfoAPIEntity
@@ -307,6 +310,10 @@ hasDocument person docType = case docType of
   DPass.ProfilePicture -> isJust person.profilePicture
   DPass.Aadhaar -> person.aadhaarVerified
 
+-- Construct message keys for Pass fields
+mkPassMessageKey :: Id.Id DPass.Pass -> Text -> Text
+mkPassMessageKey passId name = passId.getId <> "-" <> name
+
 buildPassCategoryAPIEntity :: DPassCategory.PassCategory -> PassAPI.PassCategoryAPIEntity
 buildPassCategoryAPIEntity category =
   PassAPI.PassCategoryAPIEntity
@@ -325,8 +332,13 @@ buildPassTypeAPIEntity passType =
       description = passType.description
     }
 
-buildPassAPIEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id DP.Person -> DPass.Pass -> m PassAPI.PassAPIEntity
-buildPassAPIEntity personId pass = do
+buildPassAPIEntity ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe Lang.Language ->
+  Id.Id DP.Person ->
+  DPass.Pass ->
+  m PassAPI.PassAPIEntity
+buildPassAPIEntity mbLanguage personId pass = do
   -- Get person details for eligibility check
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
@@ -348,27 +360,39 @@ buildPassAPIEntity personId pass = do
   -- Check purchase eligibility using JSON logic
   eligibility <- checkEligibility pass.purchaseEligibilityJsonLogic personData
 
+  let language = fromMaybe Lang.ENGLISH mbLanguage
+  nameTranslation <- QT.findByMsgKeyAndLang (mkPassMessageKey pass.id "name") language
+  benefitTranslation <- QT.findByMsgKeyAndLang (mkPassMessageKey pass.id "benefitDescription") language
+  descriptionTranslation <- QT.findByMsgKeyAndLang (mkPassMessageKey pass.id "description") language
+  let name = maybe pass.name (Just . (.message)) nameTranslation
+  let benefitDescription = maybe pass.benefitDescription (.message) benefitTranslation
+  let description = maybe pass.description (Just . (.message)) descriptionTranslation
   return $
     PassAPI.PassAPIEntity
       { id = pass.id,
         amount = pass.amount,
         savings = Nothing, -- TODO: Calculate based on benefit
         benefit = pass.benefit,
-        benefitDescription = pass.benefitDescription,
+        benefitDescription = benefitDescription,
         vehicleServiceTierType = pass.applicableVehicleServiceTiers,
         maxTrips = pass.maxValidTrips,
         maxDays = pass.maxValidDays,
         documentsRequired = pass.documentsRequired,
         eligibility = eligibility,
-        name = pass.name,
-        description = pass.description,
+        name = name,
+        description = description,
         code = pass.code,
         autoApply = pass.autoApply
       }
 
 -- Build Pass API Entity from PurchasedPass snapshot (for viewing purchased passes)
-buildPassAPIEntityFromPurchasedPass :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id DP.Person -> DPurchasedPass.PurchasedPass -> m PassAPI.PassAPIEntity
-buildPassAPIEntityFromPurchasedPass _personId purchasedPass = do
+buildPassAPIEntityFromPurchasedPass ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe Lang.Language ->
+  Id.Id DP.Person ->
+  DPurchasedPass.PurchasedPass ->
+  m PassAPI.PassAPIEntity
+buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
   -- Reconstruct Pass.Benefit from flattened benefitType and benefitValue
   let benefit = case (purchasedPass.benefitType, purchasedPass.benefitValue) of
         (Nothing, _) -> Nothing
@@ -377,20 +401,29 @@ buildPassAPIEntityFromPurchasedPass _personId purchasedPass = do
         (Just DPurchasedPass.PercentageSaving, Just value) -> Just (DPass.PercentageSaving value)
         _ -> Nothing
 
+  let language = fromMaybe Lang.ENGLISH mbLanguage
+  let passId = Id.cast purchasedPass.id :: Id.Id DPass.Pass
+  nameTranslation <- QT.findByMsgKeyAndLang (mkPassMessageKey passId "name") language
+  benefitTranslation <- QT.findByMsgKeyAndLang (mkPassMessageKey passId "benefitDescription") language
+  descriptionTranslation <- QT.findByMsgKeyAndLang (mkPassMessageKey passId "description") language
+
+  let name = maybe purchasedPass.passName (Just . (.message)) nameTranslation
+  let benefitDescription = maybe purchasedPass.benefitDescription (.message) benefitTranslation
+  let description = maybe purchasedPass.passDescription (Just . (.message)) descriptionTranslation
   return $
     PassAPI.PassAPIEntity
       { id = Id.cast purchasedPass.id,
         amount = purchasedPass.passAmount,
         savings = Nothing,
         benefit = benefit,
-        benefitDescription = purchasedPass.benefitDescription,
+        benefitDescription = benefitDescription,
         vehicleServiceTierType = purchasedPass.applicableVehicleServiceTiers,
         maxTrips = purchasedPass.maxValidTrips,
         maxDays = purchasedPass.maxValidDays,
-        description = purchasedPass.passDescription,
+        description = description,
         documentsRequired = [],
         eligibility = True,
-        name = purchasedPass.passName,
+        name = name,
         code = purchasedPass.passCode,
         autoApply = False -- Auto-apply not relevant for already purchased passes
       }
@@ -414,8 +447,15 @@ checkEligibility logics personData = do
       return $ and results
 
 -- Build PurchasedPass API Entity
-buildPurchasedPassAPIEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id DP.Person -> Text -> DT.Day -> DPurchasedPass.PurchasedPass -> m PassAPI.PurchasedPassAPIEntity
-buildPurchasedPassAPIEntity personId deviceId today purchasedPass = do
+buildPurchasedPassAPIEntity ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe Lang.Language ->
+  Id.Id DP.Person ->
+  Text ->
+  DT.Day ->
+  DPurchasedPass.PurchasedPass ->
+  m PassAPI.PurchasedPassAPIEntity
+buildPurchasedPassAPIEntity mbLanguage personId deviceId today purchasedPass = do
   let deviceMismatch = purchasedPass.deviceId /= deviceId
   passType <- B.runInReplica $ QPassType.findById purchasedPass.passTypeId >>= fromMaybeM (PassTypeNotFound purchasedPass.passTypeId.getId)
   passCategory <- B.runInReplica $ QPassCategory.findById passType.passCategoryId >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
@@ -425,7 +465,7 @@ buildPurchasedPassAPIEntity personId deviceId today purchasedPass = do
         Just maxTrips -> Just $ max 0 (maxTrips - fromMaybe 0 purchasedPass.usedTripCount)
         Nothing -> Nothing
 
-  passAPIEntity <- buildPassAPIEntityFromPurchasedPass personId purchasedPass
+  passAPIEntity <- buildPassAPIEntityFromPurchasedPass mbLanguage personId purchasedPass
   let passDetailsEntity =
         PassAPI.PassDetailsAPIEntity
           { category = buildPassCategoryAPIEntity passCategory,
@@ -439,7 +479,7 @@ buildPurchasedPassAPIEntity personId deviceId today purchasedPass = do
   return $
     PassAPI.PurchasedPassAPIEntity
       { id = purchasedPass.id,
-        passNumber = let s = show purchasedPass.passNumber in T.pack $ (replicate (8 - length s) '0') ++ s,
+        passNumber = let s = show purchasedPass.passNumber in T.pack $ replicate (8 - length s) '0' ++ s,
         passEntity = passDetailsEntity,
         tripsLeft = tripsLeft,
         lastVerifiedVehicleNumber,
@@ -499,13 +539,14 @@ getMultimodalPassList ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
       Id.Id DM.Merchant
     ) ->
+    Kernel.Prelude.Maybe Lang.Language ->
     Maybe Int ->
     Maybe Int ->
     Maybe DPurchasedPass.StatusType ->
     Text ->
     Environment.Flow [PassAPI.PurchasedPassAPIEntity]
   )
-getMultimodalPassList (mbCallerPersonId, merchantId) mbLimitParam mbOffsetParam mbStatusParam deviceId = do
+getMultimodalPassList (mbCallerPersonId, merchantId) mbLanguage mbLimitParam mbOffsetParam mbStatusParam deviceId = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
 
   let mbStatus = case mbStatusParam of
@@ -535,7 +576,7 @@ getMultimodalPassList (mbCallerPersonId, merchantId) mbLimitParam mbOffsetParam 
   let passWithSameDevice = filter (\pass -> pass.deviceId == deviceId) allActivePurchasedPasses
   let purchasedPasses = if null passWithSameDevice then allActivePurchasedPasses else passWithSameDevice
 
-  mapM (buildPurchasedPassAPIEntity personId deviceId today) purchasedPasses
+  mapM (buildPurchasedPassAPIEntity mbLanguage personId deviceId today) purchasedPasses
 
 postMultimodalPassVerify ::
   ( ( Maybe (Id.Id DP.Person),

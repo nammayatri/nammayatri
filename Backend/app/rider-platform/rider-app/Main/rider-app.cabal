@@ -589,6 +589,7 @@ library
       Storage.Queries.Transformers.TicketMerchantDetails
       Storage.Queries.Transformers.TripTerms
       Storage.Queries.Transformers.WhiteListOrg
+      Storage.Queries.TranslationsExtra
       Storage.Queries.UiRiderConfigExtra
       Storage.Queries.VehicleRouteMappingExtra
       Storage.Queries.WhiteListOrgExtra
@@ -888,6 +889,7 @@ library
       Domain.Types.TicketPlace
       Domain.Types.TicketService
       Domain.Types.TicketSubPlace
+      Domain.Types.Translations
       Domain.Types.TripTerms
       Domain.Types.UiRiderConfig
       Domain.Types.ValueAddNP
@@ -1032,6 +1034,7 @@ library
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
       Storage.Beam.TicketSubPlace
+      Storage.Beam.Translations
       Storage.Beam.TripTerms
       Storage.Beam.UiRiderConfig
       Storage.Beam.ValueAddNP
@@ -1182,6 +1185,7 @@ library
       Storage.Queries.OrphanInstances.TicketBookingService
       Storage.Queries.OrphanInstances.TicketBookingServiceCategory
       Storage.Queries.OrphanInstances.TicketService
+      Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.UiRiderConfig
       Storage.Queries.OrphanInstances.VehicleRouteMapping
       Storage.Queries.OrphanInstances.WhiteListOrg
@@ -1240,6 +1244,7 @@ library
       Storage.Queries.TicketPlace
       Storage.Queries.TicketService
       Storage.Queries.TicketSubPlace
+      Storage.Queries.Translations
       Storage.Queries.TripTerms
       Storage.Queries.UiRiderConfig
       Storage.Queries.ValueAddNP
