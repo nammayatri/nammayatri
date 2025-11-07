@@ -12,7 +12,7 @@ import Data.Int
 import Data.List (zip7)
 import Data.List.Extra (notNull)
 import Data.Maybe
-import Data.Time hiding (getCurrentTime)
+import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
@@ -236,14 +236,17 @@ getUpcomingOrActiveByDriverId (Id personId) =
 
 getActiveBookingAndRideByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [(Ride, Booking)]
 getActiveBookingAndRideByDriverId (Id personId) = do
-  mapMaybeM
-    ( \ride ->
-        maybeM
-          (return Nothing)
-          (\booking -> return $ Just (ride, booking))
-          (QBooking.findById ride.bookingId)
-    )
-    =<< mapMaybeM (\status' -> findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq status']]) [Ride.INPROGRESS, Ride.NEW]
+  now <- getCurrentTime
+  rideBooking <-
+    mapMaybeM
+      (\ride -> maybeM (pure Nothing) (\booking -> pure $ Just (ride, booking)) (QBooking.findById ride.bookingId))
+      =<< mapMaybeM (\status' -> findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq status']]) [Ride.INPROGRESS, Ride.NEW]
+  pure $ filter (not . stuckMeterRide now) rideBooking
+  where
+    stuckMeterRide now (ride, booking) =
+      let olderThanADay = diffUTCTime now ride.createdAt >= (secondsToNominalDiffTime $ Seconds 86400)
+          isMeterRide = booking.tripCategory == (DTC.OneWay DTC.MeterRide)
+       in olderThanADay && isMeterRide && ride.status == Ride.NEW
 
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
