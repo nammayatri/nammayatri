@@ -16,9 +16,9 @@ data BusLocation = BusLocation
     customerLocation :: Kernel.External.Maps.Types.LatLong,
     customerLocationTimestamp :: Kernel.Prelude.UTCTime,
     distanceToBus :: Kernel.Prelude.Double,
-    id :: Kernel.Prelude.Maybe Data.Text.Text,
+    id :: Data.Text.Text,
     locationAccuracy :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    timestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    timestamp :: Kernel.Prelude.UTCTime
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
