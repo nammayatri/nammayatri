@@ -9,7 +9,6 @@ FleetOperatorDailyStats:
   tableName: fleet_operator_daily_stats
 
   fields:
-    id : Text
     fleetOperatorId : Text
     merchantLocalDate : Day
     totalRatingCount : Maybe Int
@@ -39,7 +38,8 @@ FleetOperatorDailyStats:
     totalDistance: getTotalDistance
 
   constraints:
-    id: PrimaryKey
+    fleetOperatorId: PrimaryKey
+    merchantLocalDate: PrimaryKey
 
   queries:
     findByFleetOperatorIdAndDate:
