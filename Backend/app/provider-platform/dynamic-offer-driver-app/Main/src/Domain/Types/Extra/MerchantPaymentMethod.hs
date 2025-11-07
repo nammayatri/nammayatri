@@ -3,10 +3,16 @@
 
 module Domain.Types.Extra.MerchantPaymentMethod where
 
+import Control.Lens.Operators ((?~))
 import Data.Aeson.Types
 import qualified Data.List as List
+import Data.OpenApi
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DTE
 import Kernel.Prelude
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 import qualified Text.Show
+import qualified Text.Show as Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 -- Extra code goes here --
@@ -22,6 +28,9 @@ instance ToJSON PaymentInstrument where
 
 instance FromJSON PaymentInstrument where
   parseJSON = genericParseJSON paymentInstrumentOptions
+
+instance ToSchema PaymentInstrument where
+  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions paymentInstrumentOptions
 
 paymentInstrumentOptions :: Options
 paymentInstrumentOptions =
@@ -70,8 +79,29 @@ instance Read PaymentInstrument where
       app_prec = 10
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
 
+-- Using Read/Show instances instead of FromJSON/ToJSON to avoid json objects in query param
+instance FromHttpApiData PaymentInstrument where
+  parseUrlPiece = readEither . T.unpack
+  parseQueryParam = parseUrlPiece
+  parseHeader h = case DTE.decodeUtf8' h of
+    Left _err -> Left "Unable to decode PaymentInstrument"
+    Right res -> parseUrlPiece res
+
+instance ToHttpApiData PaymentInstrument where
+  toUrlPiece = T.pack . Show.show
+  toQueryParam = toUrlPiece
+  toHeader = DTE.encodeUtf8 . toUrlPiece
+
+instance ToParamSchema PaymentInstrument where
+  toParamSchema _ =
+    mempty
+      & title ?~ "PaymentInstrument"
+      & type_ ?~ OpenApiString
+      & format ?~ "Card_<CardType>,Wallet_<WalletType>,UPI,NetBanking,Cash"
+      & enum_ ?~ map (String . T.pack . show) [Card DefaultCardType, Wallet DefaultWalletType, UPI, NetBanking, Cash]
+
 data CardType = DefaultCardType
-  deriving (Show, Read, Eq, Ord)
+  deriving (Generic, Show, Read, Eq, ToSchema, Ord, ToParamSchema)
 
 -- Generic instances for type with single value will not work
 instance FromJSON CardType where
@@ -83,7 +113,7 @@ instance ToJSON CardType where
   toJSON = String . show
 
 data WalletType = DefaultWalletType
-  deriving (Show, Read, Eq, Ord)
+  deriving (Generic, Show, Read, Eq, ToSchema, Ord, ToParamSchema)
 
 -- Generic instances for type with single value will not work
 instance FromJSON WalletType where

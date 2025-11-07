@@ -125,6 +125,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                     autoAssignEnabled = True,
                     autoAssignEnabledV2 = Just True,
                     paymentMethodId = Nothing,
+                    paymentInstrument = Nothing,
                     otherSelectedEstimates = Nothing,
                     isAdvancedBookingEnabled = Nothing,
                     deliveryDetails = Nothing,

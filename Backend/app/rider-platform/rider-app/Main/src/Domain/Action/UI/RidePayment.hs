@@ -174,10 +174,11 @@ postPaymentMethodUpdate (mbPersonId, _) rideId newPaymentMethodId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- check if payment method exists for the customer
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  unless ride.onlinePayment $ throwError (InvalidRequest "Could not update payment method for Cash ride")
   checkIfPaymentMethodExists person newPaymentMethodId >>= \case
     False -> throwError $ InvalidRequest "Payment method doesn't belong to Customer"
     True -> do
-      ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
       booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
       unless (booking.riderId == personId) $ throwError $ InvalidRequest "Person is not the owner of the ride"
   order <- runInReplica $ QPaymentOrder.findById (Kernel.Types.Id.cast rideId) >>= fromMaybeM (InternalError $ "No payment order found for the ride " <> rideId.getId)
@@ -214,6 +215,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
     unless (ride.status == Domain.Types.RideStatus.COMPLETED) $
       throwError $ RideInvalidStatus ("Ride is not completed yet." <> Text.pack (show ride.status))
+    unless ride.onlinePayment $ throwError (InvalidRequest "Could not add tip for Cash ride")
     fareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
     when (any (\fb -> fb.description == tipFareBreakupTitle) fareBreakups) $ throwError $ InvalidRequest "Tip already added"
     if ride.paymentStatus == Domain.Types.Ride.NotInitiated
