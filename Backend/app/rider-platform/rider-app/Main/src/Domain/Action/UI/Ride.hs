@@ -185,7 +185,7 @@ editLocation rideId (personId, merchantId) req = do
       when (distance > distanceToHighPrecMeters merchant.editPickupDistanceThreshold) do
         throwError EditPickupLocationNotServiceable
 
-      res <- try @_ @SomeException (CallBPP.callGetDriverLocation ride.trackingUrl)
+      res <- withTryCatch "callGetDriverLocation:editLocation" (CallBPP.callGetDriverLocation ride.trackingUrl)
       case res of
         Right res' -> do
           let curDriverLocation = res'.currPoint

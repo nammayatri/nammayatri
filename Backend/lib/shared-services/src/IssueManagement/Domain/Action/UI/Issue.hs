@@ -421,7 +421,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
   _ <- QIR.create issueReport
   when shouldCreateTicket $ do
     ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config uploadedMediaFiles now issueHandle
-    ticketResponse <- try @_ @SomeException (issueHandle.createTicket merchantId mocId ticket)
+    ticketResponse <- withTryCatch "createTicket:issueReport" (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right ticketResponse' -> do
         QIR.updateTicketId issueReport.id ticketResponse'.ticketId
@@ -828,7 +828,8 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
     Nothing -> return ()
     Just ticketId -> do
       ticketResponse <-
-        try @_ @SomeException
+        withTryCatch
+          "updateTicket:updateIssue"
           (issueHandle.updateTicket merchantId merchantOperatingCityId (TIT.UpdateTicketReq comment ticketId status))
       case ticketResponse of
         Left err -> logTagInfo "Update Ticket API failed - " $ show err
@@ -861,7 +862,7 @@ processIssueReportTypeActions (personId, merchantId) mbIssueReportType mbRide mb
           whenJust mbLatestBooking $ \latestBooking -> do
             mbLatestRide <- findRideByBookingId latestBooking.id merchantId
             whenJust mbLatestRide $ \latestRide -> do
-              syncRes <- try @_ @SomeException $ syncRide latestRide.merchantId latestRide.id
+              syncRes <- withTryCatch "syncRide:processIssueReportTypeActions" $ syncRide latestRide.merchantId latestRide.id
               case syncRes of
                 Right _ -> pure ()
                 Left err -> logTagInfo "Failed to sync ride for rideId-" (latestRide.id.getId <> "-error-" <> show err)
@@ -876,7 +877,7 @@ processIssueReportTypeActions (personId, merchantId) mbIssueReportType mbRide mb
           (Just ride, Just counterPartyUrl, Just counterPartyApiKey, True) -> do
             whenJust ride.counterPartyRideId $ \counterPRideId -> do
               checkForExistingIssues issueReportType ride.id
-              reportIssueAPIRes <- try @_ @SomeException $ reportIssue counterPartyUrl counterPartyApiKey counterPRideId issueReportType
+              reportIssueAPIRes <- withTryCatch "reportIssue:processExternalIssueReporting" $ reportIssue counterPartyUrl counterPartyApiKey counterPRideId issueReportType
               case reportIssueAPIRes of
                 Right _ -> pure ()
                 Left err -> case issueReportType of
@@ -900,7 +901,7 @@ processIssueReportTypeActions (personId, merchantId) mbIssueReportType mbRide mb
     handleACIssueActions counterPartyUrl counterPartyApiKey iHandle =
       whenJust iHandle.mbReportACIssue $ \reportACIssue ->
         whenJust (mbRide >>= (.counterPartyRideId)) $ \counterPRideId -> do
-          acIssueApiRes <- try @_ @SomeException $ reportACIssue counterPartyUrl counterPartyApiKey counterPRideId
+          acIssueApiRes <- withTryCatch "reportACIssue:handleACIssueActions" $ reportACIssue counterPartyUrl counterPartyApiKey counterPRideId
           case acIssueApiRes of
             Right _ -> pure ()
             Left err -> logTagInfo "Report AC Issue API failed - " $ show err

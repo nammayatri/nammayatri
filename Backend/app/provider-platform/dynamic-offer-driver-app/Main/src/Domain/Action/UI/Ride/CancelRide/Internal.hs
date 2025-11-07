@@ -150,7 +150,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               CQM.findById merchantId
                 >>= fromMaybeM (MerchantNotFound merchantId.getId)
             transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-            noShowCharges <- try @_ @SomeException $ do
+            noShowCharges <- withTryCatch "noShowCharges:cancelRideImpl" $ do
               if transporterConfig.canAddCancellationFee
                 then do
                   rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
@@ -276,7 +276,7 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
             cancellationReason = bookingCReason,
             ..
           }
-  nammaTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)
+  nammaTags <- withTryCatch "computeNammaTags:RideCancel" (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)
   logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags) <> "| tagdata: " <> show tagData
   let allTags = ride.rideTags <> eitherToMaybe nammaTags
   QRide.updateRideTags allTags ride.id
@@ -332,7 +332,7 @@ getDistanceToPickup booking mbRide = do
   case mbRide of
     Just ride -> do
       mbLocation <- do
-        driverLocations <- try @_ @SomeException $ LF.driversLocation [ride.driverId]
+        driverLocations <- withTryCatch "driversLocation:getDistanceToPickup" $ LF.driversLocation [ride.driverId]
         case driverLocations of
           Left err -> do
             logError ("Failed to fetch Driver Location with error : " <> show err)
@@ -406,7 +406,7 @@ customerCancellationChargesCalculation booking ride riderDetails = do
     then do
       localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
       (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES localTime Nothing Nothing
-      response <- try @_ @SomeException $ LYTU.runLogics allLogics logicInput
+      response <- withTryCatch "runLogics:UserCancellationDues" $ LYTU.runLogics allLogics logicInput
       case response of
         Left e -> do
           logError $ "Error in running UserCancellationDuesLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics
@@ -467,7 +467,7 @@ buildPenaltyCheckContext booking ride point = do
   numberOfCallAttempts <- QCallStatus.countCallsByEntityId ride.id
 
   driverDistanceFromPickupNow <- do
-    distRes <- try @_ @SomeException $ driverDistanceToPickup booking (getCoordinates point) (getCoordinates booking.fromLocation)
+    distRes <- withTryCatch "driverDistanceToPickup:buildPenaltyCheckContext" $ driverDistanceToPickup booking (getCoordinates point) (getCoordinates booking.fromLocation)
     either
       ( \err -> do
           logError ("PenaltyCheckError: Failed to calculate Driver Distance to Pickup with error : " <> show err)

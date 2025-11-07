@@ -56,7 +56,7 @@ runProducer redisStreamCounter = do
   myShardId <- getMyShardKey
   Hedis.whenWithLockRedis (getShardedKey producerLockKey myShardId) 10 $ do
     someErr <-
-      try @_ @SomeException $ do
+      withTryCatch "produceMessages:producerFlow" $ do
         (_, diff) <- withTimeGeneric "producer" $ do
           producerTimestampKeyPrefix <- asks (.producerTimestampKey)
           let producerTimestampKey = getShardedKey producerTimestampKeyPrefix myShardId

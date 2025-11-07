@@ -178,7 +178,7 @@ orderStatusHandler ::
 orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
   refundStatusHandler paymentOrder paymentStatusResponse.refunds paymentService
   eitherPaymentFullfillmentStatusWithEntityId <-
-    try @_ @SomeException $
+    withTryCatch "orderStatusHandler:orderStatusHandler" $
       ( do
           case paymentService of
             DOrder.FRFSBooking -> FRFSTicketService.frfsOrderStatusHandler (cast paymentOrder.merchantId) paymentStatusResponse JMU.switchFRFSQuoteTierUtil

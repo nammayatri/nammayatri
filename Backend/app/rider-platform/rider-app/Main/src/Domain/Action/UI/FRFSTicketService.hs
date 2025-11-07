@@ -1517,7 +1517,7 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops integrate
       batchedResults <- fmap concat $
         forM stopBatches $ \batch -> do
           res <-
-            try @_ @SomeException $
+            withTryCatch "getFrfsAutocompleteDistances:tryStationsAPIWithOSRMDistances" $
               Maps.getFrfsAutocompleteDistances merchantId merchantOpCity.id Nothing $
                 GetDistancesReq
                   { origins = NonEmpty.fromList batch,

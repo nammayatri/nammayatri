@@ -713,7 +713,7 @@ getTaggedEstimate autoQar cabQar autoPrice nonACPrice userType localTime mocId e
             vehicleServiceTierType = estimate.vehicleServiceTierType
           }
   (allLogics, _mbVersion) <- DynamicLogic.getAppDynamicLogic (cast mocId) LYT.ESTIMATE_TAGS localTime Nothing Nothing
-  response <- try @_ @SomeException $ LYTU.runLogics allLogics logicInput
+  response <- withTryCatch "runLogics:EstimateTags" $ LYTU.runLogics allLogics logicInput
   res <- case response of
     Left e -> do
       logError $ "Error in running EstimateTagsLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics

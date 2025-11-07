@@ -706,13 +706,15 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
                               if not vehicleRouteMapping.blocked && vehicleRouteMapping.fleetOwnerId.getId /= fleetOwnerId
                                 then pure $ Just ("Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> "is linked to another fleet, please delink and try again.")
                                 else do
-                                  try @_ @SomeException
+                                  withTryCatch
+                                    "buildVehicleRouteMapping"
                                     (buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber route)
                                     >>= \case
                                       Left err -> return $ Just ("Failed to Add Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> ", Error: " <> (T.pack $ displayException err))
                                       Right _ -> pure Nothing
                             Nothing -> do
-                              try @_ @SomeException
+                              withTryCatch
+                                "buildVehicleRouteMapping"
                                 (buildVehicleRouteMapping (Id fleetOwnerId) merchant.id merchantOpCity.id registerRcReq.vehicleRegistrationCertNumber route)
                                 >>= \case
                                   Left err -> return $ Just ("Failed to Add Vehicle Route Mapping for Vehicle: " <> registerRcReq.vehicleRegistrationCertNumber <> ", Route: " <> route.code <> ", Error: " <> (T.pack $ displayException err))
@@ -771,7 +773,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
       Maybe Common.Role ->
       Flow (Either Text ())
     handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq phoneNo mbFleetNo mbRole = do
-      result <- try @_ @SomeException $ do
+      result <- withTryCatch "handleAddVehicleWithTry" $ do
         let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbCountryCode
         let addVehicleReq = convertToAddVehicleReq registerRcReq
         runRequestValidation Common.validateAddVehicleReq addVehicleReq
@@ -1820,7 +1822,7 @@ postDriverDashboardFleetWmbTripEnd _ _ tripTransactionId fleetOwnerId mbTerminat
   fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
   tripTransaction <- QTT.findByTransactionId (cast tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
   mbCurrentDriverLocation <-
-    try @_ @SomeException (LF.driversLocation [tripTransaction.driverId])
+    withTryCatch "driversLocation:postDriverDashboardFleetWmbTripEnd" (LF.driversLocation [tripTransaction.driverId])
       >>= \case
         Left _ -> do
           logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
@@ -1968,7 +1970,7 @@ getRoutesByLocation merchantId merchantOpCityId origin routes_ = do
       batchedResults <- fmap concat $
         forM routeBatches $ \batch -> do
           res <-
-            try @_ @SomeException $
+            withTryCatch "getDistances:getRoutesByLocation" $
               Maps.getDistances merchantId merchantOpCityId Nothing $
                 Maps.GetDistancesReq
                   { origins = fromList batch,
@@ -2040,7 +2042,8 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
         WMB.linkFleetBadge (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId conductorBadge DFBT.CONDUCTOR
         return $ Just conductorBadge
       Nothing -> pure Nothing
-  try @_ @SomeException
+  withTryCatch
+    "validateVehicleAssignment:postDriverFleetTripPlanner"
     ( do
         vehicleRC <- WMB.validateVehicleAssignment (cast req.driverId) req.vehicleNumber merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId
         WMB.linkVehicleToDriver (cast req.driverId) merchant.id merchantOpCity.id fleetConfig fleetOwnerId req.vehicleNumber vehicleRC
@@ -2245,7 +2248,8 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
   unprocessedEntities <-
     foldlM
       ( \unprocessedEntities (driver, driverMobileNumber, mbDriverBadgeName, mbConductorBadgeName, vehicleNumber, tripPlannerRequests) -> do
-          try @_ @SomeException
+          withTryCatch
+            "validateVehicleAssignment:postDriverFleetAddDriverBusRouteMapping"
             ( do
                 vehicleRC <- WMB.validateVehicleAssignment (cast driver.id) vehicleNumber merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId
                 driverBadge <-
@@ -2265,7 +2269,8 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to link vehicle to the Driver (" <> driverMobileNumber <> "): " <> (T.pack $ displayException err)]
               Right (vehicleRC, mbDriverBadge, mbConductorBadge) -> do
-                try @_ @SomeException
+                withTryCatch
+                  "linkVehicleToDriver:postDriverFleetAddDriverBusRouteMapping"
                   ( do
                       WMB.linkVehicleToDriver (cast driver.id) merchant.id merchantOpCity.id fleetConfig fleetConfig.fleetOwnerId.getId vehicleNumber vehicleRC
                       whenJust mbDriverBadge $ \driverBadge -> WMB.linkFleetBadge (cast driver.id) merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId driverBadge DFBT.DRIVER
@@ -2351,7 +2356,8 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
   let process func =
         foldlM
           ( \unprocessedEntities driverDetail -> do
-              try @_ @SomeException
+              withTryCatch
+                "process:postDriverFleetAddDrivers"
                 (func driverDetail)
                 >>= \case
                   Left err -> return $ unprocessedEntities <> ["Unable to add Driver (" <> driverDetail.driverPhoneNumber <> ") to the Fleet: " <> T.pack (displayException err)]

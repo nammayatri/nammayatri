@@ -352,7 +352,7 @@ processDriverFee paymentMode driverFee subscriptionConfig transporterConfig = do
   now <- getCurrentTime
   case paymentMode of
     MANUAL -> do
-      _ <- try @_ @SomeException $ makeVendorFeeForCancellationPenalty driverFee subscriptionConfig transporterConfig
+      _ <- withTryCatch "makeVendorFeeForCancellationPenalty:processDriverFee" $ makeVendorFeeForCancellationPenalty driverFee subscriptionConfig transporterConfig
       ( if subscriptionConfig.allowManualPaymentLinks
           then
             ( do
@@ -365,7 +365,7 @@ processDriverFee paymentMode driverFee subscriptionConfig transporterConfig = do
             )
         )
     AUTOPAY -> do
-      _ <- try @_ @SomeException $ splitCancellationPenaltyIntoDriverFees driverFee subscriptionConfig transporterConfig now
+      _ <- withTryCatch "splitCancellationPenaltyIntoDriverFees:processDriverFee" $ splitCancellationPenaltyIntoDriverFees driverFee subscriptionConfig transporterConfig now
       updateStatus PAYMENT_PENDING driverFee.id now
       updateFeeType RECURRING_EXECUTION_INVOICE driverFee.id
       invoice <- mkInvoiceAgainstDriverFee driverFee (False, True)
@@ -839,7 +839,7 @@ processAndSendManualPaymentLink driverPlansToProccess subscriptionConfigs mercha
     let mbDeepLinkData = if allowDeepLink then Just $ SPayment.DeepLinkData {sendDeepLink = Just True, expiryTimeInMinutes = mbDeepLinkExpiry} else Nothing
     if not $ null getPendingAndOverDueDriverFees
       then do
-        resp' <- try @_ @SomeException $ DDriver.clearDriverDues (driverId, merchantId, opCityId) serviceName Nothing mbDeepLinkData
+        resp' <- withTryCatch "clearDriverDues:processAndSendManualPaymentLink" $ DDriver.clearDriverDues (driverId, merchantId, opCityId) serviceName Nothing mbDeepLinkData
         errorCatchAndHandle
           driverId
           resp'
@@ -850,7 +850,7 @@ processAndSendManualPaymentLink driverPlansToProccess subscriptionConfigs mercha
               let mbPaymentLink = resp.orderResp.payment_links
                   payload = resp.orderResp.sdk_payload.payload
                   mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
-              whatsAppResp <- try @_ @SomeException $ SPayment.sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount (Just subscriptionConfigs.paymentLinkChannel) allowDeepLink WHATSAPP_SEND_MANUAL_PAYMENT_LINK
+              whatsAppResp <- withTryCatch "sendLinkTroughChannelProvided:processAndSendManualPaymentLink" $ SPayment.sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount (Just subscriptionConfigs.paymentLinkChannel) allowDeepLink WHATSAPP_SEND_MANUAL_PAYMENT_LINK
               errorCatchAndHandle driverId whatsAppResp subscriptionConfigs endTime now (\_ -> QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName (Just endTime) driverId serviceName)
           )
       else do

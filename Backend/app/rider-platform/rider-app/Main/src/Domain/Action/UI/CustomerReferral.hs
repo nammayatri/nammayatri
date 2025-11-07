@@ -68,7 +68,7 @@ getReferralVerifyVpa (mbPersonId, _mbMerchantId) vpa = do
             vpa = vpa
           }
       verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId Nothing TPayment.Normal (Just person.id.getId) person.clientSdkVersion
-  resp <- try @_ @SomeException $ DP.verifyVPAService verifyVPAReq verifyVpaCall
+  resp <- withTryCatch "verifyVPAService:postCrisChangeDevice" $ DP.verifyVPAService verifyVPAReq verifyVpaCall
   case resp of
     Left e -> throwError $ InvalidRequest $ "VPA Verification Failed: " <> show e
     Right response -> do
@@ -140,7 +140,7 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
           payoutServiceName <- TPayout.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
           let createPayoutOrderCall = TPayout.createPayoutOrder person.merchantId merchantOpCityId payoutServiceName (Just person.id.getId)
           merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+          mbPayoutOrderResp <- withTryCatch "createPayoutService:processBacklogReferralPayout" $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
           case mbPayoutOrderResp of
             Left err -> logError $ "Error in calling create order for backlog payout for riderId: " <> show person.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
             _ -> pure ()

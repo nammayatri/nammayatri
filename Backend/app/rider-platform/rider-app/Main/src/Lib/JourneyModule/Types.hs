@@ -570,7 +570,7 @@ getTaxiVehiclePosition :: GetStateFlow m r c => Maybe DRide.Ride -> m (Maybe Lat
 getTaxiVehiclePosition mRide = do
   case mRide of
     Just ride -> do
-      driverLocationResp <- try @_ @SomeException $ DARide.getDriverLoc ride.id
+      driverLocationResp <- withTryCatch "getDriverLoc:getTaxiVehiclePosition" $ DARide.getDriverLoc ride.id
       case driverLocationResp of
         Left err -> do
           logError $ "location fetch failed: " <> show err

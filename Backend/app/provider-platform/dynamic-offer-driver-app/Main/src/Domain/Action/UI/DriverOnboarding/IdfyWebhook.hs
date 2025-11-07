@@ -165,7 +165,7 @@ onVerify rsp respDump = do
       flip (maybe (retryFunc verificationReq)) mbRemPriorityList $
         \priorityList -> do
           logDebug $ "Idfy Source down trying with alternate service providers remaining !!!!!!" <> verificationReq.requestId
-          rsltresp' <- try @_ @SomeException $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just priorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = verificationReq.driverId.getId})
+          rsltresp' <- withTryCatch "verifyRC:handleIdfySourceDown" $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just priorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = verificationReq.driverId.getId})
           case rsltresp' of
             Left _ -> retryFunc verificationReq
             Right resp' -> do

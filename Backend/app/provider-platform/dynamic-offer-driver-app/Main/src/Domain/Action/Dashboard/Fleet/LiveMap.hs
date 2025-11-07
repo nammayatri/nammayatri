@@ -100,7 +100,7 @@ getLiveMapDrivers merchantShortId _opCity radius requestorId mbReqFleetOwnerId m
 getDriverCurrentLocation :: ID.Id DP.Person -> Environment.Flow LatLong
 getDriverCurrentLocation driverId = do
   mbCurrentDriverLocation <-
-    try @_ @SomeException (LF.driversLocation [driverId])
+    withTryCatch "driversLocation:getDriverCurrentLocation" (LF.driversLocation [driverId])
       >>= \case
         Left _ -> do
           logError $ "Drivers location api was falied for current driver: " <> driverId.getId

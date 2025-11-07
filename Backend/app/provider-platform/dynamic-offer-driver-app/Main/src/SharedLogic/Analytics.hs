@@ -772,7 +772,7 @@ handleCacheMissForAnalyticsAllTimeCommon role entityId allTimeKeysData = do
       if lockAcquired
         then do
           logTagInfo logTag $ "Acquired inProgress lock for " <> show role <> "Id: " <> entityId <> ". Running ClickHouse query."
-          res <- try @_ @SomeException $ fallbackFunc allTimeKeysData
+          res <- withTryCatch "fallbackFunc:handleCacheMissForAnalyticsAllTimeCommon" $ fallbackFunc allTimeKeysData
           Redis.del inProgressKey
           case res of
             Left err -> do
@@ -812,7 +812,7 @@ handleCacheMissForOperatorAnalyticsPeriod transporterConfig operatorId periodKey
       if lockAcquired
         then do
           logTagInfo "OperatorAnalyticsPeriod" $ "Acquired inProgress lock for operatorId: " <> operatorId <> ". Running ClickHouse query."
-          res <- try @_ @SomeException $ fallbackToClickHouseAndUpdateRedisForPeriod transporterConfig operatorId periodKeysData period fromDay toDay
+          res <- withTryCatch "fallbackToClickHouseAndUpdateRedisForPeriod:handleCacheMissForOperatorAnalyticsPeriod" $ fallbackToClickHouseAndUpdateRedisForPeriod transporterConfig operatorId periodKeysData period fromDay toDay
           Redis.del inProgressKey
           case res of
             Left err -> do

@@ -574,7 +574,7 @@ postDriverUpdateTagBulk merchantShortId opCity req = do
       return [Dashboard.Common.UpdateTagBulkRes "parse-error" False (Just $ T.pack err)]
     Right (_, v) -> do
       results <- forM (V.toList v) $ \row -> do
-        res <- try @_ @SomeException (processDriverTagUpdate merchantShortId opCity row)
+        res <- withTryCatch "processDriverTagUpdate" (processDriverTagUpdate merchantShortId opCity row)
         case res of
           Left err -> do
             let errorMsg = show err
@@ -850,7 +850,7 @@ postDriverBulkReviewRCVariant :: ShortId DM.Merchant -> Context.City -> [Common.
 postDriverBulkReviewRCVariant _ _ req = do
   mapM
     ( \rcReq -> do
-        res <- try @_ @SomeException (processRCReq rcReq)
+        res <- withTryCatch "processRCReq" (processRCReq rcReq)
         case res of
           Left err -> pure $ Common.ReviewRCVariantRes rcReq.rcId (show err)
           Right _ -> pure $ Common.ReviewRCVariantRes rcReq.rcId "Success"

@@ -196,7 +196,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
             mbEstimate <- QEstimate.findBySRIdAndStatusesInKV sReq.id [Estimate.DRIVER_QUOTE_REQUESTED, Estimate.GOT_DRIVER_QUOTE]
             case mbEstimate of
               Just estimate -> do
-                resp <- try @_ @SomeException $ CancelSearch.cancelSearch' (personId, merchantId) estimate.id
+                resp <- withTryCatch "cancelSearch:search" $ CancelSearch.cancelSearch' (personId, merchantId) estimate.id
                 case resp of
                   Left _ -> void $ handleBookingCancellation merchantId personId stuckRideAutoCancellationBuffer sReq.id req
                   Right _ -> pure ()
@@ -542,7 +542,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             then do
               -- Call OSRM for taxi/auto (car) distance/duration, fallback to proportional duration if it fails
               res <-
-                try @_ @SomeException $
+                withTryCatch "getMultimodalWalkDistance:calculateLegProportionalDuration" $
                   Maps.getMultimodalWalkDistance searchRequest.merchantId searchRequest.merchantOperatingCityId (Just searchRequest.id.getId) $
                     Maps.GetDistanceReq
                       { origin = Maps.LatLong {lat = leg.startLocation.latLng.latitude, lon = leg.startLocation.latLng.longitude},
@@ -827,7 +827,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
     getDistanceAndDuration :: Maps.LatLong -> Maps.LatLong -> Maps.TravelMode -> Flow (Maybe (Maps.GetDistanceResp Maps.LatLong Maps.LatLong))
     getDistanceAndDuration fromLocation toLocation travelMode = do
       resp <-
-        try @_ @SomeException $
+        withTryCatch "getMultimodalWalkDistance:getDistanceAndDuration" $
           Maps.getMultimodalWalkDistance searchRequest.merchantId searchRequest.merchantOperatingCityId (Just searchRequest.id.getId) $
             Maps.GetDistanceReq
               { origin = fromLocation,
@@ -934,7 +934,7 @@ searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClie
             mbEstimate <- QEstimate.findBySRIdAndStatusesInKV sReq.id [Estimate.DRIVER_QUOTE_REQUESTED, Estimate.GOT_DRIVER_QUOTE]
             case mbEstimate of
               Just estimate -> do
-                resp <- try @_ @SomeException $ JLT.cancelSearch' (personId, merchantId) estimate.id
+                resp <- withTryCatch "cancelSearch:searchTrigger" $ JLT.cancelSearch' (personId, merchantId) estimate.id
                 case resp of
                   Left _ -> void $ handleBookingCancellation' merchantId personId stuckRideAutoCancellationBuffer sReq.id req
                   Right _ -> pure ()

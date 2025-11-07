@@ -128,7 +128,7 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
             logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
             payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
             let createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
-            mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+            mbPayoutOrderResp <- withTryCatch "createPayoutService:metroIncentivePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
             errorCatchAndHandle booking.id person.id.getId uid mbPayoutOrderResp config statusForRetry (\_ -> pure ())
             pure ()
         Nothing -> do

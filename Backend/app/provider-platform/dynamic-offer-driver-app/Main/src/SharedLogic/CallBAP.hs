@@ -352,7 +352,6 @@ rideAssignedCommon booking ride driver veh = do
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
   rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
   let bookingDetails = ACL.BookingDetails {..}
-  -- resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
   image <- forM driver.faceImageId $ \mediaId -> do
     mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist ("Driver image does not exist for ride:" <> driver.id.getId))
     imagePath <- fromMaybeM (FileDoNotExist ("Driver image does not exist for ride:" <> driver.id.getId)) (getQueryParam "filePath" (Text.unpack mediaEntry.url))
@@ -378,7 +377,7 @@ rideAssignedCommon booking ride driver veh = do
   where
     refillKey = "REFILLED_" <> ride.driverId.getId
     updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
-    refillVehicleModel = try @_ @SomeException do
+    refillVehicleModel = withTryCatch "refillVehicleModel" do
       -- TODO: remove later
       mbIsRefilledToday :: Maybe Bool <- Hedis.get refillKey
       case mbIsRefilledToday of

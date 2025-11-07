@@ -160,7 +160,7 @@ cancel booking mRide req cancellationSource = do
   cancellationReason <-
     case mRide of
       Just ride -> do
-        res <- try @_ @SomeException (CallBPP.callGetDriverLocation ride.trackingUrl)
+        res <- withTryCatch "callGetDriverLocation:cancellationReason" (CallBPP.callGetDriverLocation ride.trackingUrl)
         case res of
           Right res' -> do
             let merchantOperatingCityId = booking.merchantOperatingCityId

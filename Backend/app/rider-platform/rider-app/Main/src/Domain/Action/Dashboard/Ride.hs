@@ -620,7 +620,7 @@ cancellationChargesWaiveOff merchantShortId _ reqRideId = do
           if charges > 0
             then do
               logInfo $ "CancellationChargesWaiveOff: Trying to waive off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges
-              result <- try @_ @SomeException $ CallBPPInternal.customerCancellationDuesWaiveOff merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId bppBookingId.getId ride.bppRideId.getId charges
+              result <- withTryCatch "customerCancellationDuesWaiveOff" $ CallBPPInternal.customerCancellationDuesWaiveOff merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId bppBookingId.getId ride.bppRideId.getId charges
               case result of
                 Right _ -> do
                   logInfo $ "CancellationChargesWaiveOff: Successfully waived off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges

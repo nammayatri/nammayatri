@@ -162,7 +162,7 @@ cancel req merchant booking mbActiveSearchTry = do
       then do
         return (isReallocated, Nothing)
       else do
-        cancellationCharges <- try @_ @SomeException $ do
+        cancellationCharges <- withTryCatch "cancellationCharges" $ do
           case mbRide of
             Just ride -> do
               rideTags <- updateNammaTagsForCancelledRide booking ride bookingCR transporterConfig
@@ -306,7 +306,7 @@ cancelSearch _merchantId searchTry = do
       Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId searchTry.tripCategory
   where
     callWithErrorHandling transactionId action = do
-      exep <- try @_ @SomeException action
+      exep <- withTryCatch "cancelSearch:callWithErrorHandling" action
       case exep of
         Left e -> do
           Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)

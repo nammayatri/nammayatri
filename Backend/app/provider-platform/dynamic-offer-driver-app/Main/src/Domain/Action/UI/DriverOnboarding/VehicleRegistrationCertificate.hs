@@ -474,7 +474,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       flip (maybe (logError "imageExtrationValidation flag or encryptedRC or registrationNumber is null in onVerifyRCHandler. Not proceeding with alternate service providers !!!!!!!!!" >> initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures)) ((,,,) <$> mbImageExtractionValidation <*> mbEncryptedRC <*> mbRemPriorityList <*> rcVerificationResponse.registrationNumber) $
         \(imageExtractionValidation, encryptedRC, remPriorityList, rcNum) -> do
           logDebug $ "Calling verify RC with another provider as current provider resulted in MANUAL_VERIFICATION_REQUIRED. Remaining providers in priorityList : " <> show remPriorityList
-          resVerifyRes <- try @_ @SomeException $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just remPriorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = person.id.getId})
+          resVerifyRes <- withTryCatch "verifyRC:onVerifyRCHandler" $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just remPriorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = person.id.getId})
           case resVerifyRes of
             Left _ -> initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures
             Right verifyRes -> do

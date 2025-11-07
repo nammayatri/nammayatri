@@ -394,7 +394,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       case req of
         CronJobReq _ -> do
           logTagInfo "cron job -> endRide : " "Do not call snapToRoad, return estimates as final values."
-          res <- try @_ @SomeException $ recalculateFareForDistance handle booking rideOld estimatedDistance thresholdConfig False tripEndPoint
+          res <- withTryCatch "recalculateFareForDistance:endRideHandler" $ recalculateFareForDistance handle booking rideOld estimatedDistance thresholdConfig False tripEndPoint
           (chargeableDistance, finalFare, mbUpdatedFareParams) <-
             case res of
               Left err -> do
@@ -484,7 +484,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                driverGoHomeRequestId = ghInfo.driverGoHomeRequestId,
                hasStops = Just (not $ null ride.stops)
               }
-    newRideTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
+    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (Yudhishthira.computeNammaTags Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     fork "updating time and latlong in advance ride if any" $ do
       whenJust advanceRide $ \advanceRide' -> do
@@ -553,7 +553,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         }
 
     withFallback defaultVal action = do
-      res <- try @_ @SomeException action
+      res <- withTryCatch "withFallback:endRideHandler" action
       case res of
         Left someException ->
           case fromException someException of

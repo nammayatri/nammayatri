@@ -122,7 +122,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                   merchantId = booking.providerId
                   merchantOperatingCityId = booking.merchantOperatingCityId
               mbCurrentDriverLocation <- do
-                driverLocations <- try @_ @SomeException $ LTF.driversLocation [driverId]
+                driverLocations <- withTryCatch "driversLocation:callPayout" $ LTF.driversLocation [driverId]
                 case driverLocations of
                   Left _err -> do
                     return Nothing
@@ -192,7 +192,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
               return $ Terminate "Job is Terminated and Ride is Reallocated because any one of the above values are Nothing"
             Just (dropLoc, merchantId, scheduledPickup, transporterConfig, _vehicle, scheduledPickupTime) -> do
               mbCurrentDriverLocation <- do
-                driverLocations <- try @_ @SomeException $ LTF.driversLocation [driverId]
+                driverLocations <- withTryCatch "driversLocation:sendScheduledRideAssignedOnUpdate" $ LTF.driversLocation [driverId]
                 case driverLocations of
                   Left _err -> do
                     return Nothing
@@ -335,7 +335,7 @@ errorCatchAndHandle reqs func = processRequests reqs
   where
     processRequests [] = return []
     processRequests (req : rest) = do
-      resp <- try @_ @SomeException $ func req
+      resp <- withTryCatch "DistanceResp:errorCatchAndHandle" $ func req
       case resp of
         Left _ -> return [APIFailed]
         Right result -> do

@@ -333,7 +333,7 @@ validateRequest merchantId req = do
       return $ ValidatedInitReq {searchRequest, quote = ValidatedQuote quote}
   where
     callWithErrorHandling transactionId action = do
-      exep <- try @_ @SomeException action
+      exep <- withTryCatch "init:validateRequest:callWithErrorHandling" action
       case exep of
         Left e -> do
           Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)

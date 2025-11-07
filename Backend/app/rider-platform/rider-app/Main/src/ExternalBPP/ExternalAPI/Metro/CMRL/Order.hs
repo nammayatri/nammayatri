@@ -116,7 +116,7 @@ generateQRTickets :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) =>
 generateQRTickets config qrReq = do
   let modifiedQrReq = qrReq {origin = getStationCode qrReq.origin, destination = getStationCode qrReq.destination}
       eulerClient = \accessToken -> ET.client generateQRAPI (Just $ "Bearer " <> accessToken) modifiedQrReq
-  result <- try @_ @SomeException $ callCMRLAPI config eulerClient "generateQRTickets" generateQRAPI
+  result <- withTryCatch "CMRL:generateQR" $ callCMRLAPI config eulerClient "generateQRTickets" generateQRAPI
   case result of
     Left err -> do
       let mCMRLError = fromException @CMRLError err

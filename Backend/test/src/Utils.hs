@@ -77,7 +77,7 @@ pollWithDescription description allDelays action = withFrozenCallStack $ go allD
             when (null remDelays) $ print ("Last error: " <> show err :: Text)
             return Nothing
       liftIO $ threadDelay delay
-      try @_ @SomeException action >>= either printLastError return >>= maybe (go remDelays) pure
+      withTryCatch "action:retryWithDelay" action >>= either printLastError return >>= maybe (go remDelays) pure
 
 expBackoff :: Int -> Int -> [Int]
 expBackoff startDelay maxDelay =

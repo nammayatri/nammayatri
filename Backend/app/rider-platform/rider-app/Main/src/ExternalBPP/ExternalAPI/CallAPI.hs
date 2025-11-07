@@ -133,7 +133,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
     callCRISAPI config' changeOver viaPoints = do
       let (_, startStop, endStop) = getRouteCodeAndStartAndStop
       routeFareReq <- JMU.getRouteFareRequest startStop endStop changeOver viaPoints riderId (config'.useRouteFareV4 /= Just True)
-      resp <- try @_ @SomeException $ if (config'.useRouteFareV4 == Just True) then CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq else CRISRouteFareV3.getRouteFare config' merchanOperatingCity.id routeFareReq True
+      resp <- withTryCatch "CRIS:getRouteFare" $ if (config'.useRouteFareV4 == Just True) then CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq else CRISRouteFareV3.getRouteFare config' merchanOperatingCity.id routeFareReq True
       case resp of
         Left err -> do
           logError $ "Error while calling CRIS API: " <> show err

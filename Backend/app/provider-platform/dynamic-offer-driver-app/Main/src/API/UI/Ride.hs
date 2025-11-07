@@ -212,7 +212,7 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
     validateOtpRideStartRestriction driverInfo mbOtpRideStartRestrictionRadius pickupLocation = do
       case mbOtpRideStartRestrictionRadius of
         Just otpRideStartRestrictionRadius -> do
-          driverLocation <- try @_ @SomeException $ LTF.driversLocation [driverInfo.driverId]
+          driverLocation <- withTryCatch "driversLocation:validateOtpRideStartRestriction" $ LTF.driversLocation [driverInfo.driverId]
           case driverLocation of
             Left _ -> throwError DriverLocationOutOfRestictionBounds
             Right locations -> do
