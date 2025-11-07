@@ -304,7 +304,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         DRB.MeterRideDetails details -> (details.toLocation, [])
       allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
       allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
-      onlinePayment = maybe False (.onlinePayment) mbMerchant
+      onlinePayment = SPayment.isOnlinePayment mbMerchant booking
   mfuPattern <- fromMaybeM (MerchantDoesNotExist ("BuildRide merchant:" <> booking.merchantId.getId)) (fmap DMerchant.mediaFileUrlPattern mbMerchant)
   let fileUrl =
         ( mfuPattern
@@ -668,7 +668,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              traveledDistance = convertHighPrecMetersToDistance distanceUnit <$> traveledDistance,
              tollConfidence,
              rideEndTime,
-             paymentStatus = maybe DRide.Completed (\m -> if m.onlinePayment then DRide.NotInitiated else DRide.Completed) mbMerchant,
+             paymentStatus = if SPayment.isOnlinePayment mbMerchant booking then DRide.NotInitiated else DRide.Completed,
              endOdometerReading
             }
   breakups <- traverse (buildFareBreakup ride.id) fareBreakups
@@ -697,7 +697,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       addOffersNammaTags updRide person
 
   -- we should create job for collecting money from customer
-  let onlinePayment = maybe False (.onlinePayment) mbMerchant
+  let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
   when onlinePayment $ do
     let applicationFeeAmount = applicationFeeAmountForRide fareBreakups
     let scheduleAfter = riderConfig.executePaymentDelay
@@ -1026,7 +1026,7 @@ validateRideAssignedReq ::
 validateRideAssignedReq RideAssignedReq {..} = do
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
   mbMerchant <- CQM.findById booking.merchantId
-  let onlinePayment = maybe False (.onlinePayment) mbMerchant
+  let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
   -- TODO: Should we put 'TRIP_ASSIGNED' status check in the 'isAssignable' function for normal booking Or Handle for crone Job in Different Way?
   unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
   onlinePaymentParameters <-

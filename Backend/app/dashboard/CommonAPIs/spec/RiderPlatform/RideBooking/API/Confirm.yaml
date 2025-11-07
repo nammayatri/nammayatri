@@ -3,11 +3,13 @@ imports:
   Quote: Domain.Types.Quote
   PaymentMethodId: Kernel.External.Payment.Interface
   ConfirmRes: API.UI.Confirm
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
 
 importPackageOverrides:
   Domain.Types.Person: "rider-app"
   Domain.Types.Quote: "rider-app"
   API.UI.Confirm: "rider-app"
+  Domain.Types.Extra.MerchantPaymentMethod: "rider-app"
 
 module: Confirm
 
@@ -21,6 +23,7 @@ apis:
         quoteId: Id Quote
       query:
         - paymentMethodId: PaymentMethodId
+        - paymentInstrument: PaymentInstrument
         - isAdvancedBookingEnabled: Bool
       response:
         type: ConfirmRes

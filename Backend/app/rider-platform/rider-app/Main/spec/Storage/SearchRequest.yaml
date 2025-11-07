@@ -19,6 +19,7 @@ imports:
   Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   PaymentMethodId: Kernel.External.Payment.Interface.Types
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   EncryptedHashedField: Kernel.External.Encryption
   DeliveryInitiation: BecknV2.OnDemand.Enums
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
@@ -66,6 +67,7 @@ SearchRequest:
     autoAssignEnabled: Maybe Bool
     autoAssignEnabledV2: Maybe Bool
     selectedPaymentMethodId: Maybe PaymentMethodId
+    selectedPaymentInstrument: Maybe PaymentInstrument
     riderPreferredOption: RiderPreferredOption
     createdAt: UTCTime
     clientBundleVersion: Maybe Version

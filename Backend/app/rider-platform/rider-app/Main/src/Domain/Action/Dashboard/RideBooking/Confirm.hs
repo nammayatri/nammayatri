@@ -1,6 +1,7 @@
 module Domain.Action.Dashboard.RideBooking.Confirm (postConfirmRideSearchQuotes) where
 
 import qualified "this" API.UI.Confirm
+import qualified "this" Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.Quote
@@ -17,8 +18,9 @@ postConfirmRideSearchQuotes ::
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
   Kernel.Types.Id.Id Domain.Types.Quote.Quote ->
   Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId ->
+  Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Environment.Flow API.UI.Confirm.ConfirmRes
-postConfirmRideSearchQuotes merchantShortId _opCity personId quoteId mbPaymentMethodId isAdvanceBookingEnabled = do
+postConfirmRideSearchQuotes merchantShortId _opCity personId quoteId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled = do
   m <- findMerchantByShortId merchantShortId
-  API.UI.Confirm.confirm' (personId, m.id) quoteId mbPaymentMethodId isAdvanceBookingEnabled
+  API.UI.Confirm.confirm' (personId, m.id) quoteId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled

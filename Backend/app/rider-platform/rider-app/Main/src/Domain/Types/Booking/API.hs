@@ -27,6 +27,7 @@ import Domain.Types.BookingStatus
 import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Journey as DJourney
@@ -103,6 +104,7 @@ data BookingAPIEntity = BookingAPIEntity
     specialLocationTag :: Maybe Text,
     specialLocationName :: Maybe Text,
     paymentMethodId :: Maybe Payment.PaymentMethodId,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument,
     paymentUrl :: Maybe Text,
     hasDisability :: Maybe Bool,
     sosStatus :: Maybe DSos.SosStatus,
@@ -305,6 +307,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         specialLocationTag = booking.specialLocationTag,
         specialLocationName = booking.specialLocationName,
         paymentMethodId = paymentMethodId,
+        paymentInstrument = booking.paymentInstrument,
         paymentUrl = booking.paymentUrl,
         createdAt = booking.createdAt,
         updatedAt = booking.updatedAt,

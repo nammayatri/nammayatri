@@ -9,6 +9,7 @@ import Domain.Action.UI.Pass as Pass
 import qualified Domain.Types.Booking as Booking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -352,3 +353,21 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
                   }
           createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just merchanOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
           logInfo $ "Scheduled refund status check job for " <> refundId <> " in 24 hours (initial check)"
+
+validatePaymentInstrument :: (MonadThrow m, Log m) => Merchant.Merchant -> Maybe DMPM.PaymentInstrument -> Maybe Payment.PaymentMethodId -> m ()
+validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do
+  if merchant.onlinePayment
+    then do
+      let paymentInstrument = fromMaybe (DMPM.Card DMPM.DefaultCardType) mbPaymentInstrument
+      case paymentInstrument of
+        DMPM.Card _ -> when (isNothing mbPaymentMethodId) $ throwError PaymentMethodRequired
+        DMPM.Cash -> pure ()
+        _ -> throwError (InvalidRequest "Only Card and Cash payment instruments supported")
+    else do
+      let paymentInstrument = fromMaybe DMPM.Cash mbPaymentInstrument
+      case paymentInstrument of
+        DMPM.Cash -> pure ()
+        _ -> throwError (InvalidRequest "Only Cash payment instrument supported")
+
+isOnlinePayment :: Maybe Merchant.Merchant -> Booking.Booking -> Bool
+isOnlinePayment mbMerchant booking = maybe False (.onlinePayment) mbMerchant && booking.paymentInstrument /= Just DMPM.Cash

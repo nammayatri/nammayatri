@@ -7,6 +7,7 @@ import qualified API.Types.UI.RiderLocation
 import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.Client
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -75,6 +76,7 @@ data SearchRequest = SearchRequest
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchMode :: Kernel.Prelude.Maybe Domain.Types.SearchRequest.SearchMode,
+    selectedPaymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     selectedPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     startTime :: Kernel.Prelude.UTCTime,
     stops :: [Domain.Types.Location.Location],

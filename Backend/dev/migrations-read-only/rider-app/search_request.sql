@@ -467,3 +467,9 @@ ALTER TABLE atlas_app.search_request ADD COLUMN multimodal_search_request_id tex
 
 ALTER TABLE atlas_app.search_request ADD COLUMN bus_location_data json ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN selected_payment_instrument text ;

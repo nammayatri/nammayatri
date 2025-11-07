@@ -322,7 +322,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
       when (searchRequest.isMeterRideSearch == Just True) $ do
         quoteForMeterRide <- listToMaybe quotes & fromMaybeM (InvalidRequest "Quote for meter ride doesn't exist")
-        void $ DConfirm.confirm' (searchRequest.riderId, merchant.id) quoteForMeterRide.id Nothing Nothing
+        void $ DConfirm.confirm' (searchRequest.riderId, merchant.id) quoteForMeterRide.id Nothing Nothing Nothing
 
       whenJust mbRequiredEstimate $ \requiredEstimate -> do
         shouldAutoSelect <- SLCF.createFares requestId.getId requiredEstimate.id.getId
@@ -354,6 +354,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
                 autoAssignEnabled = True,
                 autoAssignEnabledV2 = Just True,
                 paymentMethodId = Nothing,
+                paymentInstrument = Nothing,
                 otherSelectedEstimates = Nothing,
                 isAdvancedBookingEnabled = Nothing,
                 deliveryDetails = Nothing,
