@@ -840,8 +840,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
           (planBasedChecks, changeBasedChecks) <- do
             if isSubscriptionEnabledAtCategoryLevel
               then do
-                let isVehicleVariantDisabledForSubscription = maybe False (`elem` (fromMaybe [] vehicleVariantsDisabledForSubscription)) (mbVehicle <&> (.variant))
-                let planBasedChecks' = planMandatoryForCategory && isNothing autoPayStatus && commonSubscriptionChecks && isEnabledForCategory && (not isVehicleVariantDisabledForSubscription)
+                let planBasedChecks' = planMandatoryForCategory && isNothing autoPayStatus && commonSubscriptionChecks && isEnabledForCategory
                 let isSubscriptionEnabledAtCategoryLevelUI = (mbDriverPlan >>= (.isCategoryLevelSubscriptionEnabled)) == Just True
                 let changeBasedChecks' = (isSubscriptionVehicleCategoryChanged || isSubscriptionCityChanged) && commonSubscriptionChecks && isEnabledForCategory && isSubscriptionEnabledAtCategoryLevelUI
                 pure (planBasedChecks', changeBasedChecks')
@@ -849,7 +848,8 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                 let isEnableForVariant = maybe False (`elem` transporterConfig.variantsToEnableForSubscription) (mbVehicle <&> (.variant))
                 let planBasedChecks' = transporterConfig.isPlanMandatory && isNothing autoPayStatus && commonSubscriptionChecks && isEnableForVariant
                 pure (planBasedChecks', False)
-          when (planBasedChecks || changeBasedChecks) $ throwError (NoPlanSelected personId.getId)
+          let isVehicleVariantDisabledForSubscription = maybe False (`elem` (fromMaybe [] vehicleVariantsDisabledForSubscription)) (mbVehicle <&> (.variant))
+          when ((planBasedChecks || changeBasedChecks) && (not isVehicleVariantDisabledForSubscription)) $ throwError (NoPlanSelected personId.getId)
           when merchant.onlinePayment $ do
             driverBankAccount <- QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
             unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
