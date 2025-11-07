@@ -155,18 +155,18 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
           Just days -> DT.addDays (fromIntegral days) startDate
           Nothing -> startDate
 
-  mbActiveSamePass <- QPurchasedPass.findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId pass.passTypeId deviceId
+  mbSamePass <- QPurchasedPass.findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId pass.passTypeId deviceId
 
   let initialStatus = if pass.amount == 0 then DPurchasedPass.Active else DPurchasedPass.Pending
   purchasedPassId <-
-    case mbActiveSamePass of
-      Just activeSamePass -> do
+    case mbSamePass of
+      Just samePass -> do
         let overlaps (aStart, aEnd) (bStart, bEnd) = not (aEnd < bStart || bEnd < aStart)
             hasDateOverlap activePass =
               overlaps (activePass.startDate, activePass.endDate) (startDate, endDate)
-        when (hasDateOverlap activeSamePass) $
+        when (samePass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && hasDateOverlap samePass) $
           throwError (InvalidRequest "You already have an active pass of this type in the selected dates")
-        return activeSamePass.id
+        return samePass.id
       Nothing -> do
         newPurchasedPassId <- generateGUID
         let (benefitType, benefitValue) = case pass.benefit of
