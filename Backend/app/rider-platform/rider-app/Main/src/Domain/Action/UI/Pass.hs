@@ -508,12 +508,12 @@ getMultimodalPassList ::
 getMultimodalPassList (mbCallerPersonId, merchantId) mbLimitParam mbOffsetParam mbStatusParam deviceId = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
 
-  let statusPriority = case mbStatusParam of
-        Just DPurchasedPass.Active -> [(DPurchasedPass.Active, mbLimitParam, mbOffsetParam), (DPurchasedPass.PreBooked, mbLimitParam, mbOffsetParam), (DPurchasedPass.Expired, Just 1, Just 0)]
-        Just s -> [(s, mbLimitParam, mbOffsetParam)]
-        Nothing -> []
+  let mbStatus = case mbStatusParam of
+        Just DPurchasedPass.Active -> Just [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired]
+        Just s -> Just [s]
+        Nothing -> Nothing
 
-  passEntities <- getPurchasedPassesWithStatusPriority personId statusPriority
+  passEntities <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   let today = DT.utctDay istTime
   forM_ passEntities $ \purchasedPass -> do
@@ -531,18 +531,11 @@ getMultimodalPassList (mbCallerPersonId, merchantId) mbLimitParam mbOffsetParam 
         Nothing -> do
           QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
 
-  allPurchasedPasses <- getPurchasedPassesWithStatusPriority personId statusPriority
-  let passWithSameDevice = filter (\pass -> pass.deviceId == deviceId) allPurchasedPasses
-  let purchasedPasses = if null passWithSameDevice then allPurchasedPasses else passWithSameDevice
+  allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
+  let passWithSameDevice = filter (\pass -> pass.deviceId == deviceId) allActivePurchasedPasses
+  let purchasedPasses = if null passWithSameDevice then allActivePurchasedPasses else passWithSameDevice
 
   mapM (buildPurchasedPassAPIEntity personId deviceId today) purchasedPasses
-  where
-    getPurchasedPassesWithStatusPriority _ [] = return []
-    getPurchasedPassesWithStatusPriority personId ((status, limit, offset) : mbStatuses) = do
-      passEntities <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId (Just [status]) limit offset
-      if null passEntities
-        then getPurchasedPassesWithStatusPriority personId mbStatuses
-        else return passEntities
 
 postMultimodalPassVerify ::
   ( ( Maybe (Id.Id DP.Person),
