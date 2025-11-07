@@ -76,6 +76,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.MerchantPaymentMethod
+import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Quote
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as QM
@@ -123,6 +124,7 @@ data DSelectReq = DSelectReq
     autoAssignEnabledV2 :: Maybe Bool,
     isPetRide :: Maybe Bool,
     paymentMethodId :: Maybe Payment.PaymentMethodId,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument,
     otherSelectedEstimates :: Maybe [Id DEstimate.Estimate],
     isAdvancedBookingEnabled :: Maybe Bool,
     deliveryDetails :: Maybe DTDD.DeliveryDetails,
@@ -213,6 +215,9 @@ select personId estimateId req = do
 select2 :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> m DSelectRes
 select2 personId estimateId req@DSelectReq {..} = do
   runRequestValidation validateDSelectReq req
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  merchant <- QM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   Metrics.startGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST estimate.requestId.getId
   let searchRequestId = estimate.requestId
@@ -220,12 +225,10 @@ select2 personId estimateId req@DSelectReq {..} = do
   unless (all (\e -> e.requestId == searchRequestId) remainingEstimates) $ throwError (InvalidRequest "All selected estimate should belong to same search request")
   let remainingEstimateBppIds = remainingEstimates <&> (.bppEstimateId)
   isValueAddNP <- CQVNP.isValueAddNP estimate.providerId
-  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId (cast searchRequest.merchantOperatingCityId) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
-  merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
@@ -255,8 +258,6 @@ select2 personId estimateId req@DSelectReq {..} = do
             else return Nothing
       )
       person.deviceId
-  when merchant.onlinePayment $ do
-    when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
 
   mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchRequest.id.getId)
   mbJourney <- maybe (pure Nothing) (\leg -> QJourney.findByPrimaryKey leg.journeyId) mbJourneyLeg
@@ -268,7 +269,7 @@ select2 personId estimateId req@DSelectReq {..} = do
 
   -- Select Transaction
   -- TODO :: This Delivery transaction still throws error inside, can be refactored later upon scale.
-  when merchant.onlinePayment $ do
+  when (merchant.onlinePayment && paymentInstrument /= Just DMPM.Cash) $ do
     QP.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
   merchantPaymentMethod <- maybe (return Nothing) (QMPM.findById . Id) req.paymentMethodId
   let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
@@ -287,8 +288,8 @@ select2 personId estimateId req@DSelectReq {..} = do
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
   QDOffer.updateStatus DDO.INACTIVE estimateId
-  when (isJust mbCustomerExtraFee || isJust req.paymentMethodId) $ do
-    void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId
+  when (isJust mbCustomerExtraFee || isJust req.paymentMethodId || isJust req.paymentInstrument) $ do
+    void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId req.paymentInstrument
   when (isJust req.isPetRide) $ do
     QSearchRequest.updatePetRide req.isPetRide searchRequest.id
   if isJourneyNew

@@ -30,6 +30,7 @@ imports:
   ServiceTierType: Domain.Types.ServiceTierType
   HighPrecMoney: Kernel.Types.Common
   PaymentMethodId: Kernel.External.Payment.Interface.Types
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   TripParty: Domain.Types.Trip
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
@@ -184,6 +185,7 @@ Booking:
     bppBookingId: Maybe (Id BPPBooking)
     quoteId: Maybe (Id Quote)
     paymentMethodId: Maybe PaymentMethodId
+    paymentInstrument: Maybe PaymentInstrument
     paymentUrl: Maybe Text
     status: BookingStatus|NoRelation
     providerId: Text

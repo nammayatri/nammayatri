@@ -56,7 +56,6 @@ import SharedLogic.MerchantPaymentMethod
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
@@ -77,7 +76,9 @@ import TransactionLogs.Types
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
     quote :: DQuote.Quote,
-    paymentMethodId :: Maybe Payment.PaymentMethodId
+    paymentMethodId :: Maybe Payment.PaymentMethodId,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument,
+    merchant :: DM.Merchant
   }
 
 data DConfirmRes = DConfirmRes
@@ -136,8 +137,7 @@ confirm DConfirmReq {..} = do
   when (quote.validTill < now) $ throwError (InvalidRequest $ "Quote expired " <> show quote.id) -- init validation check
   (bppQuoteId, mbEsimateId) <- getBppQuoteId now quote.quoteDetails
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
-  merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
-  when merchant.onlinePayment $ do
+  when (merchant.onlinePayment && paymentInstrument /= Just DMPM.Cash) $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
     QPerson.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
   activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
@@ -154,7 +154,7 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions
+  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions
   -- check also for the booking parties
   checkIfActiveRidePresentForParties bookingParties
   when isScheduled $ do
@@ -284,11 +284,12 @@ buildBooking ::
   UTCTime ->
   Maybe Text ->
   Maybe Payment.PaymentMethodId ->
+  Maybe DMPM.PaymentInstrument ->
   Bool ->
   Maybe Text ->
   [LYT.ConfigVersionMap] ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled disabilityTag configInExperimentVersions = do
+buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   bookingParties <- buildPartiesLinks id

@@ -7,6 +7,7 @@ import qualified "this" API.UI.Confirm
 import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
+import qualified "this" Domain.Types.Extra.MerchantPaymentMethod
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.Quote
 import EulerHS.Prelude hiding (id, state)
@@ -30,6 +31,9 @@ type PostConfirmRideSearchQuotes =
            "paymentMethodId"
            Kernel.External.Payment.Interface.PaymentMethodId
       :> QueryParam
+           "paymentInstrument"
+           Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument
+      :> QueryParam
            "isAdvancedBookingEnabled"
            Kernel.Prelude.Bool
       :> Post
@@ -37,7 +41,7 @@ type PostConfirmRideSearchQuotes =
            API.UI.Confirm.ConfirmRes
   )
 
-newtype ConfirmAPIs = ConfirmAPIs {postConfirmRideSearchQuotes :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient API.UI.Confirm.ConfirmRes}
+newtype ConfirmAPIs = ConfirmAPIs {postConfirmRideSearchQuotes :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient API.UI.Confirm.ConfirmRes}
 
 mkConfirmAPIs :: (Client EulerHS.Types.EulerClient API -> ConfirmAPIs)
 mkConfirmAPIs confirmClient = (ConfirmAPIs {..})

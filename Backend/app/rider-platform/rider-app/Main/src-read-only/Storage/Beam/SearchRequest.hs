@@ -7,6 +7,7 @@ import qualified BecknV2.OnDemand.Enums
 import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.RefereeLink
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.Trip
@@ -78,6 +79,7 @@ data SearchRequestT f = SearchRequestT
     roundTrip :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     routeCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     searchMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequest.SearchMode),
+    selectedPaymentInstrument :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument),
     selectedPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
     startTime :: B.C f Kernel.Prelude.UTCTime,
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

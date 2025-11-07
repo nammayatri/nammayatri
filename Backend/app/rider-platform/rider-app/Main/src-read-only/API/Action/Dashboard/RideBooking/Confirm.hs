@@ -10,6 +10,7 @@ where
 import qualified API.Types.Dashboard.RideBooking.Confirm
 import qualified "this" API.UI.Confirm
 import qualified Domain.Action.Dashboard.RideBooking.Confirm
+import qualified "this" Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.Quote
@@ -26,5 +27,5 @@ import Tools.Auth
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.Dashboard.RideBooking.Confirm.API)
 handler merchantId city = postConfirmRideSearchQuotes merchantId city
 
-postConfirmRideSearchQuotes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.UI.Confirm.ConfirmRes)
-postConfirmRideSearchQuotes a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Confirm.postConfirmRideSearchQuotes a6 a5 a4 a3 a2 a1
+postConfirmRideSearchQuotes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.UI.Confirm.ConfirmRes)
+postConfirmRideSearchQuotes a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Confirm.postConfirmRideSearchQuotes a7 a6 a5 a4 a3 a2 a1

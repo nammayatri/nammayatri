@@ -24,6 +24,7 @@ import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingStatus as DRB
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import qualified Kernel.External.Payment.Interface.Types as Payment
@@ -38,7 +39,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.Confirm as SConfirm
+import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.BppDetails as CQBPP
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -66,10 +69,13 @@ confirm ::
   Id DP.Person ->
   Id DQuote.Quote ->
   Maybe Payment.PaymentMethodId ->
+  Maybe DMPM.PaymentInstrument ->
   Maybe Bool ->
   m SConfirm.DConfirmRes
-confirm personId quoteId paymentMethodId isAdvanceBookingEnabled = do
+confirm personId quoteId paymentMethodId paymentInstrument isAdvanceBookingEnabled = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
+  merchant <- CQM.findById quote.merchantId >>= fromMaybeM (MerchantNotFound quote.merchantId.getId)
+  SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId
   whenJust isAdvanceBookingEnabled $ \isAdvanceBookingEnabled' -> do
     QSR.updateAdvancedBookingEnabled (Just isAdvanceBookingEnabled') quote.requestId
   -- Lock Description: This is a Lock held between OnSelect which calls Confirm Internally to create Booking and UI Confirm for the Quote, if AutoAssign OnSelect's Confirm is OnGoing then the UI Confirm will fail with error `InvalidRequest`.

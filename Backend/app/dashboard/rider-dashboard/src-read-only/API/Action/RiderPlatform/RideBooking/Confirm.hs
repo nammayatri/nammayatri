@@ -11,6 +11,7 @@ import qualified API.Types.Dashboard.RideBooking
 import qualified "rider-app" API.Types.Dashboard.RideBooking.Confirm
 import qualified "rider-app" API.UI.Confirm
 import qualified Domain.Action.RiderPlatform.RideBooking.Confirm
+import qualified "rider-app" Domain.Types.Extra.MerchantPaymentMethod
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.Person
 import qualified "rider-app" Domain.Types.Quote
@@ -38,5 +39,5 @@ type PostConfirmRideSearchQuotes =
       :> API.Types.Dashboard.RideBooking.Confirm.PostConfirmRideSearchQuotes
   )
 
-postConfirmRideSearchQuotes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.UI.Confirm.ConfirmRes)
-postConfirmRideSearchQuotes merchantShortId opCity apiTokenInfo customerId quoteId paymentMethodId isAdvancedBookingEnabled = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Confirm.postConfirmRideSearchQuotes merchantShortId opCity apiTokenInfo customerId quoteId paymentMethodId isAdvancedBookingEnabled
+postConfirmRideSearchQuotes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.UI.Confirm.ConfirmRes)
+postConfirmRideSearchQuotes merchantShortId opCity apiTokenInfo customerId quoteId paymentMethodId paymentInstrument isAdvancedBookingEnabled = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Confirm.postConfirmRideSearchQuotes merchantShortId opCity apiTokenInfo customerId quoteId paymentMethodId paymentInstrument isAdvancedBookingEnabled

@@ -10,6 +10,7 @@ import qualified Domain.Types.Client
 import qualified Domain.Types.Common
 import Domain.Types.Extra.Booking as ReExport
 import qualified Domain.Types.Extra.Booking
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -68,6 +69,7 @@ data Booking = Booking
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     multimodalSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     paymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     paymentStatus :: Kernel.Prelude.Maybe Domain.Types.Extra.Booking.PaymentStatus,
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

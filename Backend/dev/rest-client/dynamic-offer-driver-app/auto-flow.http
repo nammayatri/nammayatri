@@ -141,7 +141,11 @@ token: {{app-token}}
         },
   "autoAssignEnabled" : false,
   "autoAssignEnabledV2" : false,
-  "paymentMethodId" : null
+  "paymentMethodId" : null,
+  "paymentInstrument" :
+    { "instrumentType": "Cash",
+      "instrumentName": null
+    }
 }
 
 ###
@@ -178,7 +182,7 @@ token: {{app-token}}
 
 # POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm?paymentMethodId={{paymentMethodId}}
 
-POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm
+POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm?paymentInstrument=Cash
 content-type: application/json
 token: {{app-token}}
 

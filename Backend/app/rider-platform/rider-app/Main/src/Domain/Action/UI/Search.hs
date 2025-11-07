@@ -636,6 +636,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         autoAssignEnabled = Nothing,
         autoAssignEnabledV2 = Nothing,
         selectedPaymentMethodId = Nothing,
+        selectedPaymentInstrument = Nothing,
         isPetRide = Nothing,
         isAdvanceBookingEnabled = Nothing,
         availablePaymentMethods = [],
