@@ -485,6 +485,7 @@ library
       Storage.CachedQueries.SavedReqLocationExtra
       Storage.CachedQueries.Sos
       Storage.CachedQueries.StationsExtraInformation
+      Storage.CachedQueries.Translations
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleConfig

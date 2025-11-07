@@ -29,6 +29,6 @@ instance B.Table TranslationsT where
 
 type Translations = TranslationsT Identity
 
-$(enableKVPG ''TranslationsT ['id] [['messageKey]])
+$(enableKVPG ''TranslationsT ['id] [['language], ['messageKey]])
 
 $(mkTableInstances ''TranslationsT "translations")

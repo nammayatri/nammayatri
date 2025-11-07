@@ -44,6 +44,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Translations as QT
 import qualified Storage.Queries.PassCategoryExtra as QPassCategory
 import qualified Storage.Queries.PassExtra as QPass
 import qualified Storage.Queries.PassTypeExtra as QPassType
@@ -51,7 +52,6 @@ import qualified Storage.Queries.PassVerifyTransaction as QPassVerifyTransaction
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
-import qualified Storage.Queries.TranslationsExtra as QT
 import Tools.Error
 import qualified Tools.Payment as TPayment
 
@@ -361,9 +361,10 @@ buildPassAPIEntity mbLanguage personId pass = do
   eligibility <- checkEligibility pass.purchaseEligibilityJsonLogic personData
 
   let language = fromMaybe Lang.ENGLISH mbLanguage
-  nameTranslation <- QT.findByMsgKeyAndLang (mkPassMessageKey pass.id "name") language
-  benefitTranslation <- QT.findByMsgKeyAndLang (mkPassMessageKey pass.id "benefitDescription") language
-  descriptionTranslation <- QT.findByMsgKeyAndLang (mkPassMessageKey pass.id "description") language
+  let moid = person.merchantOperatingCityId
+  nameTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "name") language
+  benefitTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "benefitDescription") language
+  descriptionTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "description") language
   let name = maybe pass.name (Just . (.message)) nameTranslation
   let benefitDescription = maybe pass.benefitDescription (.message) benefitTranslation
   let description = maybe pass.description (Just . (.message)) descriptionTranslation
@@ -403,9 +404,10 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
 
   let language = fromMaybe Lang.ENGLISH mbLanguage
   let passId = Id.cast purchasedPass.id :: Id.Id DPass.Pass
-  nameTranslation <- QT.findByMsgKeyAndLang (mkPassMessageKey passId "name") language
-  benefitTranslation <- QT.findByMsgKeyAndLang (mkPassMessageKey passId "benefitDescription") language
-  descriptionTranslation <- QT.findByMsgKeyAndLang (mkPassMessageKey passId "description") language
+  let moid = purchasedPass.merchantOperatingCityId
+  nameTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "name") language
+  benefitTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "benefitDescription") language
+  descriptionTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "description") language
 
   let name = maybe purchasedPass.passName (Just . (.message)) nameTranslation
   let benefitDescription = maybe purchasedPass.benefitDescription (.message) benefitTranslation

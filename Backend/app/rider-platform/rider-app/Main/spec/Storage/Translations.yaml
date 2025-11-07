@@ -23,10 +23,9 @@ Translations:
   constraints:
     id: PrimaryKey
     messageKey: "!SecondaryKey"
-
+    language: "!SecondaryKey"
 
   excludedFields: [merchantId]
 
   extraOperations:
     - EXTRA_QUERY_FILE
-
