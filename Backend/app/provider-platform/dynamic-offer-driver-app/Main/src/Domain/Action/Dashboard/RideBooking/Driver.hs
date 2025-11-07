@@ -80,7 +80,7 @@ import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.FeedbackExtra as QFeedbackExtra
+import qualified Storage.Queries.FeedbackExtra as QFeedback
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QPerson
@@ -370,7 +370,7 @@ getDriverFeedbackList merchantShortId _opCity mbPersonId mbMobileNumber mbMobile
       pure person.id
     _ -> throwError $ InvalidRequest "Either \"personId\" or \"mobileNumber\" is required"
 
-  feedbacks <- QFeedbackExtra.findOtherFeedbacks [] driverId (Just 500)
+  feedbacks <- QFeedback.findOtherFeedbacks [] driverId (Just 500)
   ratings <- QRatingExtra.findAllRatingsForPersonWithLimitOffset driverId (Just 500)
 
   let combinedFeedbacks = buildDriverFeedbackAPIEntity feedbacks ratings

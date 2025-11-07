@@ -414,3 +414,12 @@ findAllByDriverIds driverIds = do
   case res of
     Right driverInfoList -> catMaybes <$> mapM fromTType' driverInfoList
     Left _ -> pure []
+
+updateLastOfflineTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> UTCTime -> m ()
+updateLastOfflineTime driverId offlineTime = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.lastOfflineTime (Just offlineTime),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
