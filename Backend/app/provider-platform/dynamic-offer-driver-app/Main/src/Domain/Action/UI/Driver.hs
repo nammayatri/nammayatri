@@ -920,7 +920,7 @@ activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocatio
     checkIfGoToInDifferentGeometry merchant driverLoc = uncurry (liftM2 (\dl hl -> dl == hl && dl /= Context.AnyCity && hl /= Context.AnyCity)) . DTE.both ((((.city) . (.nearestOperatingCity)) <$>) . runInReplica . getNearestOperatingAndSourceCity merchant) . (driverLoc,)
 
     withLockDriverId driverId' = do
-      isLockSuccussful <- Redis.tryLockRedis (buildActivateGoHomeKey driverId') 10
+      isLockSuccussful <- Redis.tryLockRedis (buildActivateGoHomeKey driverId') 30
       return isLockSuccussful
 
     buildActivateGoHomeKey :: Id SP.Person -> Text
