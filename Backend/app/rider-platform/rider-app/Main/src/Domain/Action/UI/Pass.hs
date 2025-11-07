@@ -155,18 +155,18 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
           Just days -> DT.addDays (fromIntegral days) startDate
           Nothing -> startDate
 
-  mbActiveSamePass <- QPurchasedPass.findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId pass.passTypeId deviceId
+  mbSamePass <- QPurchasedPass.findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId pass.passTypeId deviceId
 
   let initialStatus = if pass.amount == 0 then DPurchasedPass.Active else DPurchasedPass.Pending
   purchasedPassId <-
-    case mbActiveSamePass of
-      Just activeSamePass -> do
+    case mbSamePass of
+      Just samePass -> do
         let overlaps (aStart, aEnd) (bStart, bEnd) = not (aEnd < bStart || bEnd < aStart)
             hasDateOverlap activePass =
               overlaps (activePass.startDate, activePass.endDate) (startDate, endDate)
-        when (hasDateOverlap activeSamePass) $
+        when (samePass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && hasDateOverlap samePass) $
           throwError (InvalidRequest "You already have an active pass of this type in the selected dates")
-        return activeSamePass.id
+        return samePass.id
       Nothing -> do
         newPurchasedPassId <- generateGUID
         let (benefitType, benefitValue) = case pass.benefit of
@@ -508,12 +508,12 @@ getMultimodalPassList ::
 getMultimodalPassList (mbCallerPersonId, merchantId) mbLimitParam mbOffsetParam mbStatusParam deviceId = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
 
-  let mbStatus = case mbStatusParam of
-        Just DPurchasedPass.Active -> Just [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired]
-        Just s -> Just [s]
-        Nothing -> Nothing
+  let statusPriority = case mbStatusParam of
+        Just DPurchasedPass.Active -> [(DPurchasedPass.Active, mbLimitParam, mbOffsetParam), (DPurchasedPass.PreBooked, mbLimitParam, mbOffsetParam), (DPurchasedPass.Expired, Just 1, Just 0)]
+        Just s -> [(s, mbLimitParam, mbOffsetParam)]
+        Nothing -> []
 
-  passEntities <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
+  passEntities <- getPurchasedPassesWithStatusPriority personId statusPriority
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   let today = DT.utctDay istTime
   forM_ passEntities $ \purchasedPass -> do
@@ -531,11 +531,18 @@ getMultimodalPassList (mbCallerPersonId, merchantId) mbLimitParam mbOffsetParam 
         Nothing -> do
           QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
 
-  allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
-  let passWithSameDevice = filter (\pass -> pass.deviceId == deviceId) allActivePurchasedPasses
-  let purchasedPasses = if null passWithSameDevice then allActivePurchasedPasses else passWithSameDevice
+  allPurchasedPasses <- getPurchasedPassesWithStatusPriority personId statusPriority
+  let passWithSameDevice = filter (\pass -> pass.deviceId == deviceId) allPurchasedPasses
+  let purchasedPasses = if null passWithSameDevice then allPurchasedPasses else passWithSameDevice
 
   mapM (buildPurchasedPassAPIEntity personId deviceId today) purchasedPasses
+  where
+    getPurchasedPassesWithStatusPriority _ [] = return []
+    getPurchasedPassesWithStatusPriority personId ((status, limit, offset) : mbStatuses) = do
+      passEntities <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId (Just [status]) limit offset
+      if null passEntities
+        then getPurchasedPassesWithStatusPriority personId mbStatuses
+        else return passEntities
 
 postMultimodalPassVerify ::
   ( ( Maybe (Id.Id DP.Person),
