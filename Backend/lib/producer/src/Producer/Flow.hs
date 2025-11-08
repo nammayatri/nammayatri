@@ -21,7 +21,7 @@ import Kernel.Types.Error
 import Kernel.Types.Flow ()
 import Kernel.Types.Id
 import Kernel.Types.MonadGuid
-import Kernel.Utils.Common (Forkable (fork), GuidLike (generateGUID), Milliseconds (Milliseconds), MonadTime (getCurrentTime), fromMaybeM, getCurrentTimestamp, logDebug, logError, threadDelayMilliSec)
+import Kernel.Utils.Common (Forkable (fork), GuidLike (generateGUID), Milliseconds (Milliseconds), MonadTime (getCurrentTime), fromMaybeM, getCurrentTimestamp, logDebug, logError, threadDelayMilliSec, withTryCatch)
 import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.Time ()
 import Lib.Scheduler.JobStorageType.DB.Queries (getPendingStuckJobs)
