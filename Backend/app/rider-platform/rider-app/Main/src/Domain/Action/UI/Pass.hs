@@ -164,7 +164,7 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
         let overlaps (aStart, aEnd) (bStart, bEnd) = not (aEnd < bStart || bEnd < aStart)
             hasDateOverlap activePass =
               overlaps (activePass.startDate, activePass.endDate) (startDate, endDate)
-        when (samePass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && hasDateOverlap samePass) $
+        when (samePass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && hasDateOverlap samePass) $
           throwError (InvalidRequest "You already have an active pass of this type in the selected dates")
         return samePass.id
       Nothing -> do
@@ -471,7 +471,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       whenJust mbPassStatus $ \passStatus -> do
         QPurchasedPassPayment.updateStatusById passStatus purchasedPassPayment.id
         when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
-          QPurchasedPass.updateStatusById passStatus purchasedPass.id
+          QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus
       case mbPassStatus of
         Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId)
         Just DPurchasedPass.PreBooked -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId)
