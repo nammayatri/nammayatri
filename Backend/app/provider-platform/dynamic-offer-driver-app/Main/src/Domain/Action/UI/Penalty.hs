@@ -50,7 +50,7 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
   (isApplicable, penaltyAmount) <- case booking.fareParams.driverCancellationPenaltyAmount of
     Just penaltyAmount -> do
       tagData <- CancelRideInternal.buildPenaltyCheckContext booking ride req.point
-      tagsE <- try @_ @SomeException $ Yudhishthira.computeNammaTags YA.PenaltyCheck tagData
+      tagsE <- withTryCatch "computeNammaTags:PenaltyCheck" $ Yudhishthira.computeNammaTags YA.PenaltyCheck tagData
       let tags = fromMaybe [] $ eitherToMaybe tagsE
           isPenaltyApplicable = validCancellationPenaltyApplicable `elem` tags
           existingTags = fromMaybe [] ride.rideTags

@@ -154,7 +154,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
         mbVehicle <- QVehicle.findById personId
         when (isNothing mbVehicle && allDriverVehicleDocsVerified) $
-          void $ try @_ @SomeException (SStatus.activateRCAutomatically personId merchantOpCity opHubReq.registrationNo)
+          void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity opHubReq.registrationNo)
   pure Success
 
 opsHubRequestLockKey :: Text -> Text

@@ -188,7 +188,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       handleDriverSearchBatch driverSearchBatchInput newBooking searchTry.estimateId True
 
     handleDriverSearchBatch driverSearchBatchInput newBooking estimateId isStatic = do
-      result <- try @_ @SomeException (initiateDriverSearchBatch driverSearchBatchInput)
+      result <- withTryCatch "initiateDriverSearchBatch:handleDriverSearchBatch" (initiateDriverSearchBatch driverSearchBatchInput)
       case result of
         Right _ ->
           if isValueAddNP

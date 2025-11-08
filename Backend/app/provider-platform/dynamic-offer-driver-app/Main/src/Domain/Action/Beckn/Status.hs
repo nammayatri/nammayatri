@@ -107,7 +107,7 @@ handler transporterId req = withDynamicLogLevel "bpp-status-domain" $ do
       bookingDetails <- SyncRide.fetchBookingDetails ride booking
       driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
       rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
-      resp <- try @_ @SomeException (Aadhaar.fetchAndCacheAadhaarImage bookingDetails.driver driverInfo)
+      resp <- withTryCatch "fetchAndCacheAadhaarImage" (Aadhaar.fetchAndCacheAadhaarImage bookingDetails.driver driverInfo)
       let image = join (eitherToMaybe resp)
       let isDriverBirthDay = False
       let isFreeRide = False

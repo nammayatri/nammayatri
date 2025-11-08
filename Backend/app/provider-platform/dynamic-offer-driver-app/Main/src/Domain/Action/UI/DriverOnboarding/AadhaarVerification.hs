@@ -215,7 +215,7 @@ backfillAadhaarImage person merchantOpCityId aadhaarVerification =
 uploadOriginalAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
 uploadOriginalAadhaarImage person image imageType = do
   orgImageFilePath <- S3.createFilePath "/driver-aadhaar-photo/" ("driver-" <> getId person.id) S3.Image (parseImageExtension imageType)
-  resultOrg <- try @_ @SomeException $ S3.put (unpack orgImageFilePath) image
+  resultOrg <- withTryCatch "S3:put:uploadOriginalAadhaarImage" $ S3.put (unpack orgImageFilePath) image
   pure (orgImageFilePath, resultOrg)
 
 uploadCompressedAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> ImageType -> m (Text, Either SomeException ())
@@ -224,7 +224,7 @@ uploadCompressedAadhaarImage person merchantOpCityId image imageType = do
   let mbconfig = transporterConfig.aadhaarImageResizeConfig
   compImageFilePath <- S3.createFilePath "/driver-aadhaar-photo-resized/" ("driver-" <> getId person.id) S3.Image (parseImageExtension imageType)
   compImage <- maybe (return image) (\cfg -> fromMaybe image <$> resizeImage cfg.height cfg.width image imageType) mbconfig
-  resultComp <- try @_ @SomeException $ S3.put (unpack compImageFilePath) compImage
+  resultComp <- withTryCatch "S3:put:uploadCompressedAadhaarImage" $ S3.put (unpack compImageFilePath) compImage
   case resultComp of
     Left err -> logDebug ("Failed to Upload Compressed Aadhaar Image to S3 : " <> show err)
     Right _ -> QDI.updateCompAadhaarImagePath (Just compImageFilePath) (cast person.id)

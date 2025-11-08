@@ -1691,7 +1691,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
   unprocessedEntities <-
     foldlM
       ( \unprocessedEntities specialLocationAndGates -> do
-          try @_ @SomeException
+          withTryCatch
+            "processSpecialLocationAndGatesGroup"
             (processSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates)
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to add special location : " <> show err]
@@ -2002,7 +2003,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- go home config
   mbGoHomeConfig <-
-    try @_ @SomeException (CGHC.findByMerchantOpCityId newMerchantOperatingCityId Nothing) >>= \case
+    withTryCatch "GoHomeConfig:findByMerchantOpCityId:postMerchantConfigOperatingCityCreate" (CGHC.findByMerchantOpCityId newMerchantOperatingCityId Nothing) >>= \case
       Left _ -> do
         goHomeConfig <- CGHC.findByMerchantOpCityId baseOperatingCityId Nothing
         let newGoHomeConfig = buildGoHomeConfig newMerchantId newMerchantOperatingCityId now goHomeConfig

@@ -202,7 +202,7 @@ createTicketForNewSos person ride riderConfig trackLink req = do
       ticketId <- do
         if riderConfig.enableSupportForSafety
           then do
-            ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
+            ticketResponse <- withTryCatch "createTicket:sosTrigger" (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
             case ticketResponse of
               Right ticketResponse' -> return (Just ticketResponse'.ticketId)
               Left _ -> return Nothing
@@ -306,7 +306,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
             s3FilePath = Just filePath,
             createdAt = now
           }
-  result <- try @_ @SomeException $ S3.put (T.unpack filePath) mediaFile
+  result <- withTryCatch "S3:put:uploadSosMedia" $ S3.put (T.unpack filePath) mediaFile
   case result of
     Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
     Right _ -> do
@@ -328,7 +328,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
               )
               riderConfig.dashboardMediaFileUrlPattern
       when riderConfig.enableSupportForSafety $
-        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber (["https://" <> trackLink] <> dashboardFileUrl) rideInfo DSos.AudioRecording riderConfig.kaptureConfig.disposition kaptureQueue))
+        void $ withTryCatch "createTicket:sendSosTracking" $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber (["https://" <> trackLink] <> dashboardFileUrl) rideInfo DSos.AudioRecording riderConfig.kaptureConfig.disposition kaptureQueue))
       return $ AddSosVideoRes {fileUrl = fileUrl}
 
 callUpdateTicket :: Person.Person -> DSos.Sos -> Maybe Text -> Flow APISuccess.APISuccess

@@ -540,7 +540,7 @@ postMultimodalJourneyFeedback (mbPersonId, merchantId) journeyId journeyFeedback
             case (mbRide, mbRatingValue) of
               (Just ride, Just ratingValue) -> do
                 let feedbackReq = Rating.FeedbackReq {rideId = ride.id, rating = ratingValue, wasRideSafe = Nothing, shouldFavDriver = Nothing, wasOfferedAssistance = Nothing, feedbackDetails = journeyFeedbackForm.additionalFeedBack, mbAudio = Nothing}
-                try @_ @SomeException (Rating.processRating (riderId, merchantId) feedbackReq)
+                withTryCatch "processRating:postFeedbackJourney" (Rating.processRating (riderId, merchantId) feedbackReq)
                   >>= \case
                     Right _ -> pure ()
                     Left err -> do
@@ -560,7 +560,7 @@ postMultimodalJourneyFeedback (mbPersonId, merchantId) journeyId journeyFeedback
       let feedbackDetails = if legFeedback.isExperienceGood == Just True then "Good Experience" else "Bad Experience"
       case mbBooking of
         Just booking -> do
-          try @_ @SomeException (FRFSTicketService.postFrfsBookingFeedback (mbPersonId, merchantId) booking.id (FRFSTicketService.BookingFeedback FRFSTicketService.BookingFeedbackReq {feedbackDetails = feedbackDetails}))
+          withTryCatch "postFrfsBookingFeedback:postFeedbackJourney" (FRFSTicketService.postFrfsBookingFeedback (mbPersonId, merchantId) booking.id (FRFSTicketService.BookingFeedback FRFSTicketService.BookingFeedbackReq {feedbackDetails = feedbackDetails}))
             >>= \case
               Right _ -> pure ()
               Left err -> do
@@ -787,7 +787,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
   let mkResponse stations routes routeStops bppConfig mbServiceType = do
         frfsServiceTier <- maybe (pure Nothing) (\serviceType -> CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceType person.merchantOperatingCityId bppConfig.id) mbServiceType
         gtfsVersion <-
-          try @_ @SomeException (OTPRest.getGtfsVersion bppConfig) >>= \case
+          withTryCatch "getGtfsVersion:mkResponse" (OTPRest.getGtfsVersion bppConfig) >>= \case
             Left _ -> return bppConfig.feedKey
             Right gtfsVersion -> return gtfsVersion
         pure
@@ -848,7 +848,8 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
   let fetchData mbRouteCodeAndServiceType bppConfig = do
         case mbRouteCodeAndServiceType of
           Just (routeCode, mbServiceType) -> do
-            try @_ @SomeException
+            withTryCatch
+              "getPublicTransportData:fetchData"
               ( do
                   routes <- maybeToList <$> OTPRest.getRouteByRouteId bppConfig routeCode
                   routeStopMappingInMem <- OTPRest.getRouteStopMappingByRouteCodeInMem routeCode bppConfig
@@ -870,7 +871,8 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
             mkResponse finalStations finalRoutes ([] :: [DRSM.RouteStopMapping]) bppConfig Nothing
 
   transportDataList <-
-    try @_ @SomeException
+    withTryCatch
+      "getOTPRestServiceReq:getPublicTransportData"
       ( mapM
           ( \config -> do
               baseUrl <- MM.getOTPRestServiceReq config.merchantId config.merchantOperatingCityId
@@ -903,7 +905,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           return (lst1 <> lst2)
 
   gtfsVersion <-
-    try @_ @SomeException (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
+    withTryCatch "getGtfsVersion:getPublicTransportData" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
       Left _ -> return (map (.feedKey) integratedBPPConfigs)
       Right gtfsVersions -> return gtfsVersions
   let transportData =
@@ -1788,7 +1790,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
           QJourney.updateJourneyExpiryTime journey.id $ fromMaybe newJourneyExpiry (max journey.journeyExpiryTime . Just $ newJourneyExpiry)
 
     tryGettingArray action = do
-      resp <- try @_ @SomeException action
+      resp <- withTryCatch "action:tryGettingArray" action
       case resp of
         Right rightResp -> return rightResp
         Left err -> do
@@ -1796,7 +1798,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
           return []
 
     tryGettingMaybe action = do
-      resp <- try @_ @SomeException action
+      resp <- withTryCatch "action:tryGettingMaybe" action
       case resp of
         Right rightResp -> return rightResp
         Left err -> do

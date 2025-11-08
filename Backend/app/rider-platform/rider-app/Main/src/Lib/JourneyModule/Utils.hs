@@ -254,7 +254,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
       logDebug $ "filteredBuses: " <> show (length filteredBuses) <> " busEtaData: " <> show (length busEtaData)
       vehicleRouteMappings <- forM filteredBuses $ \(vehicleNumber, etaData) -> do
         vrMapping <-
-          try @_ @SomeException (OTPRest.getVehicleServiceType integratedBppConfig vehicleNumber) >>= \case
+          withTryCatch "getVehicleServiceType:processRoute" (OTPRest.getVehicleServiceType integratedBppConfig vehicleNumber) >>= \case
             Left _ -> return Nothing
             Right mapping -> return mapping
         case vrMapping >>= (.schedule_no) of
@@ -1126,7 +1126,7 @@ buildTrainAllViaRoutes ::
   Text ->
   Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute])
 buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode processAllViaPoints personId searchReqId = do
-  eitherAllSubwayRoutes <- try @_ @SomeException (measureLatency getAllSubwayRoutes "getAllSubwayRoutes")
+  eitherAllSubwayRoutes <- withTryCatch "getAllSubwayRoutes:buildTrainAllViaRoutes" (measureLatency getAllSubwayRoutes "getAllSubwayRoutes")
   case eitherAllSubwayRoutes of
     Right allSubwayRoutes -> measureLatency (getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints) "getSubwayValidRoutes"
     Left err -> do
@@ -1324,7 +1324,7 @@ getDistanceAndDuration merchantId merchantOpCityId startLocation endLocation = d
   let origin = startLocation
       destination = endLocation
   distResp <-
-    try @_ @SomeException $
+    withTryCatch "getMultimodalWalkDistance:getDistanceAndDuration" $
       Maps.getMultimodalWalkDistance merchantId merchantOpCityId Nothing $
         Maps.GetDistanceReq
           { origin = origin,
@@ -1380,7 +1380,7 @@ getVehicleLiveRouteInfo ::
   Text ->
   m (Maybe (DIntegratedBPPConfig.IntegratedBPPConfig, VehicleLiveRouteInfo))
 getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber = do
-  eitherResult <- try @_ @SomeException (getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber)
+  eitherResult <- withTryCatch "getVehicleLiveRouteInfoUnsafe:getVehicleLiveRouteInfo" (getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber)
   case eitherResult of
     Left err -> do
       logError $ "Error getting vehicle live route info: " <> show err

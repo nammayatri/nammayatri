@@ -97,7 +97,7 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
       fork ("FRFS ONDC SearchReq for " <> show bapConfig.vehicleCategory) $ do
         case (fareCachingAllowed, networkHostUrl, networkId, mbFare) of
           (Just True, Just _, Just _, Just _) ->
-            try @_ @SomeException (Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig networkHostUrl networkId searchReq routeDetails)
+            withTryCatch "callExternalBPP:searchFlow" (Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig networkHostUrl networkId searchReq routeDetails)
               >>= \case
                 Left err -> do
                   logError $ "Error in calling ONDC Search: " <> show err
@@ -269,7 +269,7 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
         void $ CallFRFSBPP.confirm providerUrl bknConfirmReq merchant.id
     _ -> do
       fork "FRFS External Confirm Req" $ do
-        result <- try @_ @SomeException $ do
+        result <- withTryCatch "callExternalBPP:confirmFlow" $ do
           frfsConfig <-
             CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
               >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)

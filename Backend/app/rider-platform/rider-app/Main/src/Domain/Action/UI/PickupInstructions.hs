@@ -208,7 +208,7 @@ postPickupinstructions (mbPersonId, merchantId) req = do
       logDebug $ "PickupInstructions: File URL: " <> show fileUrl
 
       -- Upload to S3
-      result <- try @_ @SomeException $ S3.put (T.unpack filePath) audioData
+      result <- withTryCatch "S3:put:postPickupinstructions" $ S3.put (T.unpack filePath) audioData
       case result of
         Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
         Right _ -> pure ()

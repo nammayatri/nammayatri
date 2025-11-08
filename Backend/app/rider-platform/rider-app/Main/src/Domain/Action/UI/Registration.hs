@@ -75,7 +75,6 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess as AP
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as BC
 import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -787,7 +786,7 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
   pure person
   where
     addNammaTags person tagData = do
-      newPersonTags <- try @_ @SomeException (Yudhishthira.computeNammaTagsWithExpiry Yudhishthira.Login tagData)
+      newPersonTags <- withTryCatch "computeNammaTagsWithExpiry:Login" (Yudhishthira.computeNammaTagsWithExpiry Yudhishthira.Login tagData)
       let tags = nub (fromMaybe [] person.customerNammaTags <> fromMaybe [] (eitherToMaybe newPersonTags))
       Person.updateCustomerTags (Just tags) tagData.id
 

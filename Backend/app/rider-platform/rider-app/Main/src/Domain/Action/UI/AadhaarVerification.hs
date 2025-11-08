@@ -125,7 +125,7 @@ verifyAadhaarOtp mbMerchant personId req = do
 uploadOriginalAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
 uploadOriginalAadhaarImage person image imageType = do
   orgImageFilePath <- S3.createFilePath "/person-aadhaar-photo/" ("person-" <> person.id.getId) S3.Image (parseImageExtension imageType)
-  resultOrg <- try @_ @SomeException $ S3.put (unpack orgImageFilePath) image
+  resultOrg <- withTryCatch "S3:put:uploadOriginalAadhaarImage" $ S3.put (unpack orgImageFilePath) image
   pure (orgImageFilePath, resultOrg)
 
 getImageExtension :: Text -> ImageType

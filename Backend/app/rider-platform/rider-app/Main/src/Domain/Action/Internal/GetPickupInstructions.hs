@@ -93,7 +93,7 @@ getPickupInstructions bppRideId apiKey = do
             Just mediaFile -> case mediaFile.s3FilePath of
               Just s3Path -> do
                 logInfo $ "GetPickupInstructions: Found media file, fetching from S3: " <> s3Path
-                result <- try @_ @SomeException $ S3.get $ T.unpack s3Path
+                result <- withTryCatch "S3:get:getPickupInstructions" $ S3.get $ T.unpack s3Path
                 case result of
                   Left err -> do
                     logError $ "GetPickupInstructions: Failed to fetch audio from S3: " <> show err

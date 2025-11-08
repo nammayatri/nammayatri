@@ -549,7 +549,7 @@ multipleRideSync merchantShortId opCity rideSyncReq = do
     mapM
       ( \(ride, booking) ->
           mapLeft show
-            <$> ( try @_ @SomeException $
+            <$> ( withTryCatch "mkMultipleRideData:multipleRideSync" $
                     mkMultipleRideData ride.id <$> SyncRide.rideSync Nothing (Just ride) booking merchant
                 )
       )

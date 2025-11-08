@@ -336,7 +336,7 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
   where
     makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam = do
       gtfsVersion <-
-        try @_ @SomeException (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
+        withTryCatch "getGtfsVersion:getPersonDetails" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
           Left _ -> return (map (.feedKey) integratedBPPConfigs)
           Right gtfsVersions -> return gtfsVersions
       return $

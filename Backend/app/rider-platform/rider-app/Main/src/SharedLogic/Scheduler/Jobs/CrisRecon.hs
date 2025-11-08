@@ -63,7 +63,7 @@ crisReconJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
           (failedOnBothSidesList, failedButSuccessForCrisList) <-
             foldM
               ( \(failedOnBothSides, failedButSuccessForCris) booking -> do
-                  result <- try @_ @SomeException (getReconTicketEnquiry crisConfig booking)
+                  result <- withTryCatch "getReconTicketEnquiry:crisRecon" (getReconTicketEnquiry crisConfig booking)
                   case result of
                     Left err -> do
                       logError $ "CRIS recon failed for booking " <> booking.id.getId <> ": " <> show err

@@ -67,7 +67,7 @@ computeEligibleUpgradeTiers ride transporterConfig =
                 favRiderCount = driverStats.favRiderCount,
                 vehicleVariant = vehicle.variant
               }
-      nammaTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.UpgradeTier upgradeTierTagData)
+      nammaTags <- withTryCatch "computeNammaTags:UpgradeTier" (Yudhishthira.computeNammaTags Yudhishthira.UpgradeTier upgradeTierTagData)
       let newEligibleTiers = eligibleTiersFromTags $ fromMaybe [] $ eitherToMaybe nammaTags
           newUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] driverInfo.ruleBasedUpgradeTiers) newEligibleTiers
           vehicleNewUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] vehicle.ruleBasedUpgradeTiers) newEligibleTiers

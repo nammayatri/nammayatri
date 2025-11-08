@@ -24,7 +24,7 @@ import qualified EulerHS.Types as ET
 import GHC.Float (int2Double)
 import Kafka.Producer as KafkaProd
 import qualified Kernel.Beam.Types as KBT
-import Kernel.Types.Common
+import qualified Kernel.Types.Common as Common
 import Kernel.Types.Error
 import Kernel.Utils.Text
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
@@ -339,7 +339,7 @@ flushKafkaProducerAndPublishMetrics :: Flow ()
 flushKafkaProducerAndPublishMetrics = do
   Env {..} <- ask
   _beforeFlush <- EL.getCurrentDateInMillis
-  flushResult <- try @_ @SomeException $ EL.runIO $ KafkaProd.flushProducer _kafkaConnection
+  flushResult <- withTryCatch "flushProducer" $ EL.runIO $ KafkaProd.flushProducer _kafkaConnection
   case flushResult of
     Left err -> do
       EL.logError ("KAFKA_FLUSH_ERROR" :: Text) (T.pack $ show err)

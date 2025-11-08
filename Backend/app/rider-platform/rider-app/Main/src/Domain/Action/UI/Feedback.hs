@@ -138,7 +138,7 @@ feedback request personId = do
       let rideInfo = SIVR.buildRideInfo ride person phoneNumber
           queue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.l0FeedbackQueue
           ticketReq = mkTicket person phoneNumber rideInfo filePath riderConfig.kaptureConfig.disposition queue
-      createTicketResp <- try @_ @SomeException $ Ticket.createTicket merchant.id merchantOperatingCityId ticketReq
+      createTicketResp <- withTryCatch "createTicket:feedback" $ Ticket.createTicket merchant.id merchantOperatingCityId ticketReq
       case createTicketResp of
         Left err -> logTagError "Create Ticket API failed - " $ show err
         Right resp -> logTagInfo "Created Ticket for Customer L0 Feedback : TicketId - " resp.ticketId

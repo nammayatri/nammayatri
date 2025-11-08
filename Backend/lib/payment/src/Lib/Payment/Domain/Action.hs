@@ -58,7 +58,6 @@ import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value, isNothing)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -176,7 +175,7 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
           let newApplicationFeeAmount = createPaymentIntentReq.applicationFeeAmount -- changing application fee amount
           if newTransactionAmount > transaction.amount
             then do
-              resp <- try @_ @SomeException (updatePaymentIntentAmountCall paymentIntentId newTransactionAmount newApplicationFeeAmount)
+              resp <- withTryCatch "updatePaymentIntentAmountCall:updatePaymentIntentAmount" (updatePaymentIntentAmountCall paymentIntentId newTransactionAmount newApplicationFeeAmount)
               case resp of
                 Left err -> do
                   logError $ "Failed to update payment intent amount for paymentIntentId: " <> paymentIntentId <> " err: " <> show err
@@ -189,7 +188,7 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
 
     cancelOldTransaction :: DTransaction.PaymentTransaction -> Payment.PaymentIntentId -> m ()
     cancelOldTransaction transaction paymentIntentId = do
-      resp <- try @_ @SomeException $ withShortRetry $ cancelPaymentIntentCall paymentIntentId
+      resp <- withTryCatch "cancelPaymentIntentCall:cancelOldTransaction" $ withShortRetry $ cancelPaymentIntentCall paymentIntentId
       (errorCode', errorMessage') <- case resp of
         Left exec -> do
           let err = fromException @Payment.StripeError exec
@@ -332,7 +331,7 @@ cancelPaymentIntentService rideId cancelPaymentIntentCall = do
   case mbExistingOrder of
     Nothing -> logError $ "In cancel Payment Intent no order found for rideId : " <> rideId.getId
     Just existingOrder -> do
-      resp <- try @_ @SomeException $ cancelPaymentIntentCall existingOrder.paymentServiceOrderId
+      resp <- withTryCatch "cancelPaymentIntentCall:cancelPaymentIntent" $ cancelPaymentIntentCall existingOrder.paymentServiceOrderId
       case resp of
         Left exec -> do
           let err = fromException @Payment.StripeError exec
@@ -381,7 +380,7 @@ chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIn
   transaction <- QTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found: " <> paymentIntentId)
   if transaction.status `notElem` [Payment.CHARGED, Payment.CANCELLED, Payment.AUTO_REFUNDED] -- if not already charged or cancelled or auto refunded
     then do
-      resp <- try @_ @SomeException $ withShortRetry $ capturePaymentIntentCall paymentIntentId transaction.amount transaction.applicationFeeAmount
+      resp <- withTryCatch "capturePaymentIntentCall:chargePaymentIntentService" $ withShortRetry $ capturePaymentIntentCall paymentIntentId transaction.amount transaction.applicationFeeAmount
       case resp of
         Left exec -> do
           let err = fromException @Payment.StripeError exec
@@ -729,7 +728,7 @@ orderStatusService personId orderId orderStatusCall = do
         transactionUUID
       mapM_ updateRefundStatus refunds
       void $ QOrder.updateEffectiveAmount orderId effectiveAmount
-      res <- try @_ @SomeException $ buildOrderOffer orderId offers order.merchantId order.merchantOperatingCityId
+      res <- withTryCatch "buildOrderOffer:processPaymentStatus" $ buildOrderOffer orderId offers order.merchantId order.merchantOperatingCityId
       case res of
         Left e -> logError $ "buildOrderOffer failed for orderId=" <> orderId.getId <> " err=" <> show e
         Right _ -> pure ()
@@ -1016,7 +1015,7 @@ createRefundService orderShortId refundsCall = do
               }
       now <- getCurrentTime
       QRefunds.create $ mkRefundsEntry order.merchantId refundReq now
-      resp <- try @_ @SomeException (refundsCall refundReq)
+      resp <- withTryCatch "refundsCall:refundService" (refundsCall refundReq)
       case resp of
         Right response -> do
           mapM_ updateRefundStatus response.refunds

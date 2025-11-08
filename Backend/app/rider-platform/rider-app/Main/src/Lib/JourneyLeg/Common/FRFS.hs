@@ -302,7 +302,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
         >>= \case
           Just bapConfig -> do
             let fareRouteDetails = NE.fromList $ mapMaybe (\rd -> (\rc -> CallAPI.BasicRouteDetail {routeCode = rc, startStopCode = rd.startStationCode, endStopCode = rd.endStationCode}) <$> rd.routeCode) routeDetails
-            JMU.measureLatency (try @_ @SomeException $ Flow.getFares riderId merchant merchantOperatingCity integratedBPPConfig bapConfig fareRouteDetails vehicleCategory serviecType mbSearchReqId) ("getFares" <> show vehicleCategory <> " routeDetails: " <> show fareRouteDetails)
+            JMU.measureLatency (withTryCatch "getFares:getFaresForRouteDetails" $ Flow.getFares riderId merchant merchantOperatingCity integratedBPPConfig bapConfig fareRouteDetails vehicleCategory serviecType mbSearchReqId) ("getFares" <> show vehicleCategory <> " routeDetails: " <> show fareRouteDetails)
               >>= \case
                 Right (isFareMandatory, []) -> do
                   logError $ "Getting Empty Fares for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId

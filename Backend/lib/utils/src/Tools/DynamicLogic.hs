@@ -9,6 +9,7 @@ import Data.List (nub)
 import Kernel.Prelude
 import Kernel.Randomizer
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeBound
@@ -93,7 +94,7 @@ findAllConfigsWithCacheKey merchantOpCityId cfgDomain mbConfigInExperimentVersio
 processConfig :: forall a m r. (FromJSON a, ToJSON a, BeamFlow m r) => [A.Value] -> Maybe Int -> Maybe Value -> a -> m a
 processConfig allLogics mbVersion extraDimensions cfg = do
   let configWrapper = Config cfg extraDimensions 0
-  response <- try @_ @SomeException $ LYTU.runLogics allLogics configWrapper
+  response <- withTryCatch "runLogics:processConfig" $ LYTU.runLogics allLogics configWrapper
   case response of
     Left e -> do
       logError $ "Error in running logics for rider config for version: " <> show mbVersion <> " and error: " <> show e

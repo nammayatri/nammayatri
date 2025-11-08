@@ -1033,7 +1033,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
       mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
       return (Just mediaEntry.url, Just mediaEntry.createdAt)
     Nothing -> return (Nothing, Nothing)
-  aadhaarCardPhotoResp <- try @_ @SomeException (fetchAndCacheAadhaarImage person driverInfo)
+  aadhaarCardPhotoResp <- withTryCatch "fetchAndCacheAadhaarImage:buildDriverEntityRes" (fetchAndCacheAadhaarImage person driverInfo)
   let aadhaarCardPhoto = join (eitherToMaybe aadhaarCardPhotoResp)
   let rating =
         if transporterConfig.ratingAsDecimal
@@ -1536,7 +1536,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       Redis.unlockRedis (offerQuoteLockKeyWithCoolDown driverId)
       Redis.unlockRedis (editDestinationLockKey driverId)
     callWithErrorHandling func = do
-      exep <- try @_ @SomeException func
+      exep <- withTryCatch "callWithErrorHandling:respondQuote" func
       case exep of
         Left e -> do
           unlockRedisQuoteKeys
@@ -1864,7 +1864,7 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
           & T.replace "<DOMAIN>" domain
           & T.replace "<FILE_PATH>" filePath
 
-  result <- try @_ @SomeException $ S3.put (T.unpack filePath) image
+  result <- withTryCatch "S3:put:driverPhotoUpload" $ S3.put (T.unpack filePath) image
   case result of
     Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
     Right _ -> do
@@ -2506,7 +2506,7 @@ getCity req = do
   case req.merchantId of -- only for backward compatibility, Nothing part to be removed later
     Just mId -> do
       merchant <- CQM.findById mId >>= fromMaybeM (MerchantDoesNotExist mId.getId)
-      nearestAndSourceCity <- try @_ @SomeException $ getNearestOperatingAndSourceCity merchant latLng
+      nearestAndSourceCity <- withTryCatch "getNearestOperatingAndSourceCity:getCity" $ getNearestOperatingAndSourceCity merchant latLng
       case nearestAndSourceCity of
         Left _ -> return GetCityResp {city = Nothing, status = APISuccess.Success}
         Right nearestSourceCity -> return GetCityResp {city = Just $ show nearestSourceCity.nearestOperatingCity.city, status = APISuccess.Success}
@@ -2654,7 +2654,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
         _ -> pure $ ScheduledBookingRes []
   where
     getCurrentDriverLocUsingLTS driverId = do
-      result <- try @_ @SomeException $ LTF.driversLocation [driverId]
+      result <- withTryCatch "driversLocation:getCurrentDriverLocUsingLTS" $ LTF.driversLocation [driverId]
       return $ case result of
         Left _ -> Nothing
         Right locations -> listToMaybe locations >>= \x -> Just LatLong {lat = x.lat, lon = x.lon}

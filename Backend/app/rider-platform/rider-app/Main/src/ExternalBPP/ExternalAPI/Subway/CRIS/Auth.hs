@@ -109,7 +109,7 @@ callCRISAPI ::
 callCRISAPI config proxy clientFn description = do
   token <- getAuthToken config
   eitherResp <-
-    try @_ @SomeException $
+    withTryCatch "CRIS:auth" $
       callApiUnwrappingApiError
         (identity @CRISErrorUnhandled)
         (Just $ ET.ManagerSelector $ T.pack crisHttpManagerKey)
@@ -126,7 +126,7 @@ callCRISAPI config proxy clientFn description = do
           logInfo "Received 401 error, attempting token refresh with Redis lock"
           freshToken <- resetAuthToken config
           eitherRetryResp <-
-            try @_ @SomeException $
+            withTryCatch "callApiUnwrappingApiError:callCRISAPI:retry" $
               callApiUnwrappingApiError
                 (identity @CRISErrorUnhandled)
                 (Just $ ET.ManagerSelector $ T.pack crisHttpManagerKey)
