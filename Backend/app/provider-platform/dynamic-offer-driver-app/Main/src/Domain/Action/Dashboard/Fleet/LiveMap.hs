@@ -24,6 +24,7 @@ import Kernel.Types.Error
     RideError (RideNotFound),
   )
 import qualified Kernel.Types.Id as ID
+import Kernel.Utils.Common (withTryCatch)
 import Kernel.Utils.Error.Throwing (fromEitherM, fromMaybeM, throwError)
 import Kernel.Utils.Logging (logError, logWarning)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
