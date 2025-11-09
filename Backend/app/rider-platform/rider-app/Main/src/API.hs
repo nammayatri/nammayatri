@@ -19,6 +19,7 @@ module API
 where
 
 import qualified API.Beckn as Beckn
+import qualified API.Conductor as Conductor
 import qualified API.Dashboard as Dashboard
 import qualified API.FRFS as FRFS
 import qualified API.IGM as IGM
@@ -70,6 +71,7 @@ type MainAPI =
              :> "v2"
              :> JuspayPayout.JuspayPayoutWebhookAPI
          )
+    :<|> Conductor.API
 
 handler :: FlowServer API
 handler =
@@ -91,6 +93,7 @@ mainServer =
     :<|> Dashboard.handlerV2
     :<|> Internal.handler
     :<|> juspayPayoutWebhookHandlerV2
+    :<|> Conductor.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 

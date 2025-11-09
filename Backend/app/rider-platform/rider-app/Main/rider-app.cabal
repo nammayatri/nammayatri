@@ -45,6 +45,7 @@ library
       API.Beckn.OnStatus
       API.Beckn.OnTrack
       API.Beckn.OnUpdate
+      API.Conductor
       API.Dashboard
       API.Dashboard.Exotel
       API.FRFS
@@ -212,6 +213,7 @@ library
       Domain.Action.UI.CallEvent
       Domain.Action.UI.Cancel
       Domain.Action.UI.CancellationReason
+      Domain.Action.UI.Conductor.Stats
       Domain.Action.UI.Confirm
       Domain.Action.UI.CRIS
       Domain.Action.UI.CustomerReferral
@@ -492,6 +494,7 @@ library
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.Booking
       Storage.Clickhouse.BookingCancellationReason
+      Storage.Clickhouse.ConductorStats
       Storage.Clickhouse.EstimateBreakup
       Storage.Clickhouse.FareBreakup
       Storage.Clickhouse.Location
