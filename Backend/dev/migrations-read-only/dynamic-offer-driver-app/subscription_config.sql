@@ -105,3 +105,6 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN generic_next_j
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN waive_off_offer_title text ;
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN waive_off_offer_description text ;
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN disabled_variants_for_subscription text[] ;
