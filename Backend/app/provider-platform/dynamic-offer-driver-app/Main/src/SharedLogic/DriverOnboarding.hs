@@ -174,12 +174,14 @@ checkAndUpdateAirConditioned isDashboard isAirConditioned personId cityVehicleSe
     when (driverInfo.acUsageRestrictionType == DI.ToggleNotAllowed) $
       if isDashboard
         then do
-          DIQuery.removeAcUsageRestriction (Just 0.0) DI.ToggleNotAllowed (driverInfo.acRestrictionLiftCount + 1) personId
+          DIQuery.removeAcUsageRestriction (Just 0.0) DI.NoRestriction (driverInfo.acRestrictionLiftCount + 1) personId
           driver <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
           fork "Send AC Restriction Lifted Overlay" $ ACOverlay.sendACUsageRestrictionLiftedOverlay driver
         else throwError $ InvalidRequest "AC usage is restricted for the driver, please contact support"
-    when (driverInfo.acUsageRestrictionType `elem` [DI.ToggleAllowed, DI.NoRestriction]) $
+    when (driverInfo.acUsageRestrictionType == DI.ToggleAllowed) $
       DIQuery.updateAcUsageRestrictionAndScore DI.ToggleNotAllowed (Just 0.0) personId
+    when (driverInfo.acUsageRestrictionType == DI.NoRestriction) $
+      DIQuery.updateAcUsageRestrictionAndScore DI.ToggleAllowed (Just 0.0) personId
   mbRc <- runInReplica $ QRC.findLastVehicleRCWrapper vehicle.registrationNo
   QVehicle.updateAirConditioned (Just isAirConditioned) downgradeReason personId
   whenJust mbRc $ \rc -> QRC.updateAirConditioned (Just isAirConditioned) rc.id
