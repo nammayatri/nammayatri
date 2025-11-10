@@ -65,6 +65,7 @@ SubscriptionConfig:
     enableServiceUsageChargeDefault : Bool
     waiveOffOfferTitle : Text
     waiveOffOfferDescription : Text
+    disabledVariantsForSubscription: "Maybe [Domain.Types.VehicleVariant.VehicleVariant]"
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 
@@ -157,3 +158,4 @@ SubscriptionConfig:
    extWebhookConfigs: "json"
    webhookConfig:  "json"
    dataEntityToSend: text[]
+   disabledVariantsForSubscription: "text[]"

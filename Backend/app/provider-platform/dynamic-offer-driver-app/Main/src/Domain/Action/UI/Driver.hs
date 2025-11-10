@@ -829,7 +829,8 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                 let isEnableForVariant = maybe False (`elem` transporterConfig.variantsToEnableForSubscription) (mbVehicle <&> (.variant))
                 let planBasedChecks' = transporterConfig.isPlanMandatory && isNothing autoPayStatus && commonSubscriptionChecks && isEnableForVariant
                 pure (planBasedChecks', False)
-          when (planBasedChecks || changeBasedChecks) $ throwError (NoPlanSelected personId.getId)
+          let isVehicleVariantDisabledForSubscription = maybe False (`elem` (fromMaybe [] vehicleVariantsDisabledForSubscription)) (mbVehicle <&> (.variant))
+          when ((planBasedChecks || changeBasedChecks) && (not isVehicleVariantDisabledForSubscription)) $ throwError (NoPlanSelected personId.getId)
           when merchant.onlinePayment $ do
             driverBankAccount <- QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
             unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
@@ -2952,7 +2953,8 @@ data DriverSpecificSubscriptionData = DriverSpecificSubscriptionData
     freeTrialDays :: Int,
     freeTrialRides :: Int,
     totalRidesTaken :: Maybe Int,
-    subscriptionDown :: Maybe Bool
+    subscriptionDown :: Maybe Bool,
+    vehicleVariantsDisabledForSubscription :: Maybe [VehicleVariant]
   }
   deriving (Generic, Show, Eq, Ord)
 
@@ -2981,6 +2983,7 @@ getDriverSpecificSubscriptionDataWithSubsConfig (personId, _, opCityId) transpor
       Nothing -> return (True, Nothing, Nothing)
   let planMandatoryForCategory = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) mbVehicleCategory) vcList) (subscriptionConfig >>= (.executionEnabledForVehicleCategories))
       isEnabledForCategory = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) mbVehicleCategory) vcList) (subscriptionConfig >>= (.subscriptionEnabledForVehicleCategories))
+      vehicleVariantsDisabledForSubscription = subscriptionConfig >>= (.disabledVariantsForSubscription)
   return $ DriverSpecificSubscriptionData {..}
   where
     isFreeTrialEnabled subscriptionConfig = (subscriptionConfig <&> (.isFreeTrialDaysApplicable)) == Just True
