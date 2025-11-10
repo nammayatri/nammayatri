@@ -267,7 +267,7 @@ createOrder config integratedBPPConfig booking quoteCategories = do
     Just oid -> return oid
     Nothing -> getBppOrderId booking
   classCode <- getFRFSVehicleServiceTier quote
-  startTime <- fromMaybeM (CRISError "Start time not found") booking.startTime
+  currentTime <- getCurrentTime
   let tpBookType = if config.enableBookType == Just True && booking.isSingleMode == Just True then 1 else 0
 
   let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
@@ -287,7 +287,7 @@ createOrder config integratedBPPConfig booking quoteCategories = do
             classCode = classCode,
             trainType = trainTypeCode,
             tktType = config.ticketType,
-            journeyDate = T.pack $ formatTime defaultTimeLocale "%m-%d-%Y" (utcToIST startTime),
+            journeyDate = T.pack $ formatTime defaultTimeLocale "%m-%d-%Y" (utcToIST currentTime),
             adult = fromMaybe 0 adultQuantity,
             child = fromMaybe 0 childQuantity,
             seniorMen = 0,
