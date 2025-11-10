@@ -27,11 +27,6 @@ createMany = traverse_ create
 deleteByFleetOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ())
 deleteByFleetOperatorId fleetOperatorId = do deleteWithKV [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId]
 
-updateAcceptationRequestCountByFleetOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> m ())
-updateAcceptationRequestCountByFleetOperatorId acceptationRequestCount fleetOperatorId = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.acceptationRequestCount acceptationRequestCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId]
-
 updateCustomerCancellationCountByFleetOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> m ())
 updateCustomerCancellationCountByFleetOperatorId customerCancellationCount fleetOperatorId = do
   _now <- getCurrentTime
@@ -65,6 +60,18 @@ updateInspectionCompletedByFleetOperatorId inspectionCompleted fleetOperatorId =
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.inspectionCompleted inspectionCompleted, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId]
 
+updateRequestCountsByFleetOperatorId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> m ())
+updateRequestCountsByFleetOperatorId acceptationRequestCount totalRequestCount fleetOperatorId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.acceptationRequestCount acceptationRequestCount,
+      Se.Set Beam.totalRequestCount totalRequestCount,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId]
+
 updateTotalRatingCountAndTotalRatingScoreByFleetOperatorId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> m ())
@@ -76,11 +83,6 @@ updateTotalRatingCountAndTotalRatingScoreByFleetOperatorId totalRatingCount tota
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId]
-
-updateTotalRequestCountByFleetOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> m ())
-updateTotalRequestCountByFleetOperatorId totalRequestCount fleetOperatorId = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.totalRequestCount totalRequestCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.FleetOperatorStats.FleetOperatorStats))
 findByPrimaryKey fleetOperatorId = do findOneWithKV [Se.And [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId]]

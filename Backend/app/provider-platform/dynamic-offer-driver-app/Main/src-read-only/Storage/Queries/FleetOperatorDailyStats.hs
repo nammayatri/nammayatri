@@ -28,19 +28,6 @@ createMany = traverse_ create
 findByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m (Maybe Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats))
 findByFleetOperatorIdAndDate fleetOperatorId merchantLocalDate = do findOneWithKV [Se.And [Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId, Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
 
-updateAcceptationRequestCountByFleetOperatorIdAndDate ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateAcceptationRequestCountByFleetOperatorIdAndDate acceptationRequestCount fleetOperatorId merchantLocalDate = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [Se.Set Beam.acceptationRequestCount acceptationRequestCount, Se.Set Beam.updatedAt _now]
-    [ Se.And
-        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
-          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
-        ]
-    ]
-
 updateByFleetOperatorIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
@@ -135,22 +122,18 @@ updateInspectionCompletedByFleetOperatorIdAndDate inspectionCompleted fleetOpera
         ]
     ]
 
-updatePulledRequestCountByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updatePulledRequestCountByFleetOperatorIdAndDate pulledRequestCount fleetOperatorId merchantLocalDate = do
+updateRequestCountsByFleetOperatorIdAndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateRequestCountsByFleetOperatorIdAndDate rejectedRequestCount pulledRequestCount acceptationRequestCount totalRequestCount fleetOperatorId merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
-    [Se.Set Beam.pulledRequestCount pulledRequestCount, Se.Set Beam.updatedAt _now]
-    [ Se.And
-        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
-          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
-        ]
+    [ Se.Set Beam.rejectedRequestCount rejectedRequestCount,
+      Se.Set Beam.pulledRequestCount pulledRequestCount,
+      Se.Set Beam.acceptationRequestCount acceptationRequestCount,
+      Se.Set Beam.totalRequestCount totalRequestCount,
+      Se.Set Beam.updatedAt _now
     ]
-
-updateRejectedRequestCountByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateRejectedRequestCountByFleetOperatorIdAndDate rejectedRequestCount fleetOperatorId merchantLocalDate = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [Se.Set Beam.rejectedRequestCount rejectedRequestCount, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
           Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
@@ -167,17 +150,6 @@ updateTotalRatingCountAndTotalRatingScoreByFleetOperatorIdAndDate totalRatingCou
       Se.Set Beam.totalRatingScore totalRatingScore,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
-          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
-        ]
-    ]
-
-updateTotalRequestCountByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateTotalRequestCountByFleetOperatorIdAndDate totalRequestCount fleetOperatorId merchantLocalDate = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [Se.Set Beam.totalRequestCount totalRequestCount, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
           Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate

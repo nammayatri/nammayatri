@@ -117,23 +117,28 @@ incrementCustomerCancellationCount fleetOperatorId transporterConfig =
     QFleetOps.updateCustomerCancellationCountByFleetOperatorId
     (\s -> s {DFS.customerCancellationCount = Just 1})
 
-incrementAcceptationRequestCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementAcceptationRequestCount fleetOperatorId transporterConfig =
-  incrementOverallCount
-    fleetOperatorId
-    transporterConfig
-    (.acceptationRequestCount)
-    QFleetOps.updateAcceptationRequestCountByFleetOperatorId
-    (\s -> s {DFS.acceptationRequestCount = Just 1})
-
-incrementTotalRequestCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementTotalRequestCount fleetOperatorId transporterConfig =
-  incrementOverallCount
-    fleetOperatorId
-    transporterConfig
-    (.totalRequestCount)
-    QFleetOps.updateTotalRequestCountByFleetOperatorId
-    (\s -> s {DFS.totalRequestCount = Just 1})
+incrementRequestCounts ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Text ->
+  DTTC.TransporterConfig ->
+  Bool ->
+  Bool ->
+  m ()
+incrementRequestCounts fleetOperatorId transporterConfig incrementAcceptationCount incrementTotalCount = do
+  mbCurrent <- QFleetOps.findByPrimaryKey fleetOperatorId
+  case mbCurrent of
+    Just s -> do
+      let newAcceptationRequestCount = if incrementAcceptationCount then Just (fromMaybe 0 s.acceptationRequestCount + 1) else s.acceptationRequestCount
+          newTotalRequestCount = if incrementTotalCount then Just (fromMaybe 0 s.totalRequestCount + 1) else s.totalRequestCount
+      QFleetOps.updateRequestCountsByFleetOperatorId newAcceptationRequestCount newTotalRequestCount fleetOperatorId
+    Nothing -> do
+      initStats <- buildInitialFleetOperatorStats fleetOperatorId transporterConfig
+      let updatedStats =
+            initStats
+              { DFS.acceptationRequestCount = if incrementAcceptationCount then Just 1 else Nothing,
+                DFS.totalRequestCount = if incrementTotalCount then Just 1 else Nothing
+              }
+      QFleetOps.create updatedStats
 
 incrementTotalRatingCountAndTotalRatingScore :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> Int -> Bool -> m ()
 incrementTotalRatingCountAndTotalRatingScore fleetOperatorId transporterConfig ratingValue shouldIncrementCount = do
@@ -175,45 +180,37 @@ buildInitialFleetOperatorDailyStats fleetOperatorId merchantLocalDate transporte
         merchantOperatingCityId = Just transporterConfig.merchantOperatingCityId
       }
 
--- Daily: increment AcceptationRequestCount
-incrementAcceptationRequestCountDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementAcceptationRequestCountDaily fleetOperatorId transporterConfig =
-  incrementDailyCount
-    fleetOperatorId
-    transporterConfig
-    (.acceptationRequestCount)
-    QFleetOpsDaily.updateAcceptationRequestCountByFleetOperatorIdAndDate
-    (\s -> s {DFODS.acceptationRequestCount = Just 1})
-
--- Daily: increment TotalRequestCount
-incrementTotalRequestCountDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementTotalRequestCountDaily fleetOperatorId transporterConfig =
-  incrementDailyCount
-    fleetOperatorId
-    transporterConfig
-    (.totalRequestCount)
-    QFleetOpsDaily.updateTotalRequestCountByFleetOperatorIdAndDate
-    (\s -> s {DFODS.totalRequestCount = Just 1})
-
--- Daily: increment RejectedRequestCount
-incrementRejectedRequestCountDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementRejectedRequestCountDaily fleetOperatorId transporterConfig =
-  incrementDailyCount
-    fleetOperatorId
-    transporterConfig
-    (.rejectedRequestCount)
-    QFleetOpsDaily.updateRejectedRequestCountByFleetOperatorIdAndDate
-    (\s -> s {DFODS.rejectedRequestCount = Just 1})
-
--- Daily: increment PulledRequestCount
-incrementPulledRequestCountDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementPulledRequestCountDaily fleetOperatorId transporterConfig =
-  incrementDailyCount
-    fleetOperatorId
-    transporterConfig
-    (.pulledRequestCount)
-    QFleetOpsDaily.updatePulledRequestCountByFleetOperatorIdAndDate
-    (\s -> s {DFODS.pulledRequestCount = Just 1})
+incrementRequestCountsDaily ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Text ->
+  DTTC.TransporterConfig ->
+  Bool ->
+  Bool ->
+  Bool ->
+  Bool ->
+  m ()
+incrementRequestCountsDaily fleetOperatorId transporterConfig incrementAcceptationCount incrementTotalCount incrementRejectedCount incrementPulledCount = do
+  nowUTCTime <- getCurrentTime
+  let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
+  let merchantLocalDate = utctDay now
+  mbCurrent <- QFleetOpsDaily.findByFleetOperatorIdAndDate fleetOperatorId merchantLocalDate
+  case mbCurrent of
+    Just s -> do
+      let newRejectedRequestCount = if incrementRejectedCount then Just (fromMaybe 0 s.rejectedRequestCount + 1) else s.rejectedRequestCount
+          newPulledRequestCount = if incrementPulledCount then Just (fromMaybe 0 s.pulledRequestCount + 1) else s.pulledRequestCount
+          newAcceptationRequestCount = if incrementAcceptationCount then Just (fromMaybe 0 s.acceptationRequestCount + 1) else s.acceptationRequestCount
+          newTotalRequestCount = if incrementTotalCount then Just (fromMaybe 0 s.totalRequestCount + 1) else s.totalRequestCount
+      QFleetOpsDaily.updateRequestCountsByFleetOperatorIdAndDate newRejectedRequestCount newPulledRequestCount newAcceptationRequestCount newTotalRequestCount fleetOperatorId merchantLocalDate
+    Nothing -> do
+      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId merchantLocalDate transporterConfig nowUTCTime
+      let updatedStats =
+            initStats
+              { DFODS.rejectedRequestCount = if incrementRejectedCount then Just 1 else Nothing,
+                DFODS.pulledRequestCount = if incrementPulledCount then Just 1 else Nothing,
+                DFODS.acceptationRequestCount = if incrementAcceptationCount then Just 1 else Nothing,
+                DFODS.totalRequestCount = if incrementTotalCount then Just 1 else Nothing
+              }
+      QFleetOpsDaily.create updatedStats
 
 -- Daily: increment DriverCancellationCount
 incrementDriverCancellationCountDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()

@@ -58,16 +58,6 @@ FleetOperatorStats:
       params: [inspectionCompleted]
       where: fleetOperatorId
 
-    updateAcceptationRequestCountByFleetOperatorId:
-      kvFunction: updateOneWithKV
-      params: [acceptationRequestCount]
-      where: fleetOperatorId
-
-    updateTotalRequestCountByFleetOperatorId:
-      kvFunction: updateOneWithKV
-      params: [totalRequestCount]
-      where: fleetOperatorId
-
     updateCustomerCancellationCountByFleetOperatorId:
       kvFunction: updateOneWithKV
       params: [customerCancellationCount]
@@ -81,5 +71,10 @@ FleetOperatorStats:
     updateDistanceEarningAndCompletedRidesByFleetOperatorId:
       kvFunction: updateOneWithKV
       params: [totalDistance, totalEarning, totalCompletedRides]
+      where: fleetOperatorId
+
+    updateRequestCountsByFleetOperatorId:
+      kvFunction: updateOneWithKV
+      params: [acceptationRequestCount, totalRequestCount]
       where: fleetOperatorId
 
