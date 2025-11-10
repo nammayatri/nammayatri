@@ -50,7 +50,8 @@ data BusLegRequestCancelData = BusLegRequestCancelData
 
 data BusLegRequestGetInfoData = BusLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    journeyLegs :: [DJourneyLeg.JourneyLeg]
   }
 
 data BusLegRequestGetStateData = BusLegRequestGetStateData
