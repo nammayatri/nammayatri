@@ -50,6 +50,7 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PaymentOrderSplit.PaymentOrderSplit
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.paymentOrderId (Kernel.Types.Id.getId paymentOrderId),
+      Se.Set Beam.transactionId transactionId,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vendorId vendorId
     ]
@@ -68,6 +69,7 @@ instance FromTType' Beam.PaymentOrderSplit Lib.Payment.Domain.Types.PaymentOrder
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
             paymentOrderId = Kernel.Types.Id.Id paymentOrderId,
+            transactionId = transactionId,
             updatedAt = updatedAt,
             vendorId = vendorId
           }
@@ -84,6 +86,7 @@ instance ToTType' Beam.PaymentOrderSplit Lib.Payment.Domain.Types.PaymentOrderSp
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,
         Beam.paymentOrderId = Kernel.Types.Id.getId paymentOrderId,
+        Beam.transactionId = transactionId,
         Beam.updatedAt = updatedAt,
         Beam.vendorId = vendorId
       }

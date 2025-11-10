@@ -564,14 +564,15 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity 
   buildPaymentSplit req.orderId mkPaymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
   pure mkPaymentOrder
 
-mkPaymentOrderSplit :: (EncFlow m r, BeamFlow m r) => Text -> HighPrecMoney -> PInterface.MBY -> HighPrecMoney -> Text -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> m DPaymentOrderSplit.PaymentOrderSplit
-mkPaymentOrderSplit vendorId amount mdrBorneBy merchantCommission paymentOrderId merchantId merchantOperatingCityId = do
+mkPaymentOrderSplit :: (EncFlow m r, BeamFlow m r) => Text -> HighPrecMoney -> PInterface.MBY -> HighPrecMoney -> Maybe Text -> Text -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> m DPaymentOrderSplit.PaymentOrderSplit
+mkPaymentOrderSplit vendorId amount mdrBorneBy merchantCommission transactionId paymentOrderId merchantId merchantOperatingCityId = do
   id <- generateGUID
   now <- getCurrentTime
   return $
     DPaymentOrderSplit.PaymentOrderSplit
       { id = id,
         vendorId = vendorId,
+        transactionId = transactionId,
         merchantId = merchantId.getId,
         amount = mkPrice Nothing amount,
         mdrBorneBy = mdrBorneBy,
@@ -605,8 +606,8 @@ buildPaymentSplit paymentOrderId paymentOrder mbSplitSettlementDetails merchantI
     Nothing -> pure ()
   where
     createSplits marketplaceAmount mdrBorneBy vendorSplits = do
-      marketPlaceSplit <- mkPaymentOrderSplit "marketPlace" marketplaceAmount mdrBorneBy 0 paymentOrderId merchantId merchantOperatingCityId
-      vendorSplitEntries <- mapM (\vendor -> mkPaymentOrderSplit vendor.subMid vendor.amount mdrBorneBy vendor.merchantCommission paymentOrderId merchantId merchantOperatingCityId) vendorSplits
+      marketPlaceSplit <- mkPaymentOrderSplit "marketPlace" marketplaceAmount mdrBorneBy 0 Nothing paymentOrderId merchantId merchantOperatingCityId
+      vendorSplitEntries <- mapM (\vendor -> mkPaymentOrderSplit vendor.subMid vendor.amount mdrBorneBy vendor.merchantCommission (Just vendor.uniqueSplitId) paymentOrderId merchantId merchantOperatingCityId) vendorSplits
       let splits = marketPlaceSplit : vendorSplitEntries
       QPaymentOrderSplit.createMany splits
 
@@ -1042,7 +1043,7 @@ createRefundService orderShortId refundsCall = do
                       PInterface.RefundSplit
                         { refundAmount = split.amount.amount,
                           subMid = split.vendorId,
-                          uniqueSplitId = split.id.getId
+                          uniqueSplitId = fromMaybe split.id.getId split.transactionId
                         }
                   )
                   paymentSplits

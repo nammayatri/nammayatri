@@ -20,9 +20,10 @@ data PaymentOrderSplit = PaymentOrderSplit
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentOrderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
+    transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     vendorId :: Kernel.Prelude.Text
   }
   deriving (Generic)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''Kernel.External.Payment.Interface.Types.MBY))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''Kernel.External.Payment.Interface.Types.MBY)

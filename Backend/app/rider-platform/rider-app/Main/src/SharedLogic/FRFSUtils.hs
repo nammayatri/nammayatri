@@ -1237,6 +1237,7 @@ calculateFareParametersWithBookingFallback categories booking =
           currency
         }
 
+-- TODO :: To be deprecated, and unified with SharedLogic.PaymentVendorSplits.createVendorSplit
 createVendorSplitFromBookings ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
