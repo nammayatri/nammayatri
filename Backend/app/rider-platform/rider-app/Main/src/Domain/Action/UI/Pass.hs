@@ -11,6 +11,7 @@ where
 
 import qualified API.Types.UI.Pass as PassAPI
 import qualified BecknV2.OnDemand.Enums as Enums
+import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
@@ -44,6 +45,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Translations as QT
 import qualified Storage.Queries.PassCategoryExtra as QPassCategory
 import qualified Storage.Queries.PassExtra as QPass
@@ -461,7 +463,7 @@ buildPurchasedPassAPIEntity mbLanguage personId deviceId today purchasedPass = d
   let deviceMismatch = purchasedPass.deviceId /= deviceId
   passType <- B.runInReplica $ QPassType.findById purchasedPass.passTypeId >>= fromMaybeM (PassTypeNotFound purchasedPass.passTypeId.getId)
   passCategory <- B.runInReplica $ QPassCategory.findById passType.passCategoryId >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
-  futureRenewals <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan purchasedPass.id DPurchasedPass.PreBooked today
+  futureRenewals <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan Nothing Nothing purchasedPass.id DPurchasedPass.PreBooked purchasedPass.endDate
 
   let tripsLeft = case purchasedPass.maxValidTrips of
         Just maxTrips -> Just $ max 0 (maxTrips - fromMaybe 0 purchasedPass.usedTripCount)
@@ -511,7 +513,6 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       istTime <- getLocalCurrentTime (19800 :: Seconds)
       let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (purchasedPassPayment.startDate > DT.utctDay istTime) status
       whenJust mbPassStatus $ \passStatus -> do
-        QPurchasedPassPayment.updateStatusById passStatus purchasedPassPayment.id
         when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
           QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus
       case mbPassStatus of
@@ -561,18 +562,18 @@ getMultimodalPassList (mbCallerPersonId, merchantId) mbLanguage mbLimitParam mbO
   let today = DT.utctDay istTime
   forM_ passEntities $ \purchasedPass -> do
     when (purchasedPass.status == DPurchasedPass.PreBooked && purchasedPass.startDate <= today) $ do
-      QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id
+      QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id purchasedPass.startDate purchasedPass.endDate
 
     when (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && purchasedPass.endDate < today) $ do
       -- check if user has already renewed the pass
-      allPreBookedPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus purchasedPass.id DPurchasedPass.PreBooked today
+      allPreBookedPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPass.id DPurchasedPass.PreBooked today
       let mbFirstPreBookedPayment = listToMaybe allPreBookedPayments
       case mbFirstPreBookedPayment of
         Just firstPreBookedPayment -> do
           let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
           QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus
         Nothing -> do
-          QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
+          QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id purchasedPass.startDate purchasedPass.endDate
 
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
   let passWithSameDevice = filter (\pass -> pass.deviceId == deviceId) allActivePurchasedPasses
@@ -596,9 +597,15 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (InvalidRequest $ "Pass will be active from " <> show purchasedPass.startDate)
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-  (_, vehicleLiveRouteInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs passVerifyReq.vehicleNumber >>= fromMaybeM (InvalidRequest $ "Entered Bus OTP: " <> passVerifyReq.vehicleNumber <> " is invalid. Please check again.")
+  (integratedBPPConfig, vehicleLiveRouteInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs passVerifyReq.vehicleNumber >>= fromMaybeM (InvalidRequest $ "Entered Bus OTP: " <> passVerifyReq.vehicleNumber <> " is invalid. Please check again.")
   unless (vehicleLiveRouteInfo.serviceType `elem` purchasedPass.applicableVehicleServiceTiers) $
     throwError $ InvalidRequest ("This pass is only " <> purchasedPass.benefitDescription)
+  routeStopMapping <-
+    case vehicleLiveRouteInfo.routeCode of
+      Just routeCode -> OTPRest.getRouteStopMappingByRouteCodeInMem routeCode integratedBPPConfig
+      Nothing -> return []
+  let sourceStop = passVerifyReq.stopId <|> ((listToMaybe routeStopMapping) <&> (.stopCode))
+      destinationStop = (safeTail routeStopMapping) <&> (.stopCode)
   id <- generateGUID
   now <- getCurrentTime
   let passVerifyTransaction =
@@ -608,6 +615,8 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
             validTill = addUTCTime (intToNominalDiffTime (fromIntegral purchasedPass.verificationValidity)) now,
             verifiedAt = now,
             fleetId = passVerifyReq.vehicleNumber,
+            sourceStopCode = sourceStop,
+            destinationStopCode = destinationStop,
             createdAt = now,
             updatedAt = now,
             merchantId = Just merchantId,
@@ -615,6 +624,11 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
           }
   QPassVerifyTransaction.create passVerifyTransaction
   return APISuccess.Success
+  where
+    safeTail :: [a] -> Maybe a
+    safeTail [] = Nothing
+    safeTail [_] = Nothing
+    safeTail xs = Just (last xs)
 
 postMultimodalPassSwitchDeviceId ::
   ( ( Maybe (Id.Id DP.Person),

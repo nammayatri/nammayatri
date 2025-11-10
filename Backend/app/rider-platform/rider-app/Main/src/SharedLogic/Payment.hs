@@ -291,14 +291,14 @@ refundStatusHandler paymentOrder refunds paymentServiceType = do
       purchasedPass <- maybe (pure Nothing) (QPurchasedPass.findById . (.purchasedPassId)) mbPurchasedPassPayment >>= fromMaybeM (PurchasedPassNotFound paymentOrder.id.getId)
       case refund.status of
         Payment.REFUND_SUCCESS -> do
-          QPurchasedPass.updateStatusById DPurchasedPass.Refunded purchasedPass.id
+          QPurchasedPass.updateStatusById DPurchasedPass.Refunded purchasedPass.id purchasedPass.startDate purchasedPass.endDate
         Payment.REFUND_FAILURE -> do
-          QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id
+          QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id purchasedPass.startDate purchasedPass.endDate
         _ ->
           case refund.isApiCallSuccess of
-            Nothing -> QPurchasedPass.updateStatusById DPurchasedPass.RefundPending purchasedPass.id
-            Just True -> QPurchasedPass.updateStatusById DPurchasedPass.RefundInitiated purchasedPass.id
-            Just False -> QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id
+            Nothing -> QPurchasedPass.updateStatusById DPurchasedPass.RefundPending purchasedPass.id purchasedPass.startDate purchasedPass.endDate
+            Just True -> QPurchasedPass.updateStatusById DPurchasedPass.RefundInitiated purchasedPass.id purchasedPass.startDate purchasedPass.endDate
+            Just False -> QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id purchasedPass.startDate purchasedPass.endDate
 
 initiateRefundWithPaymentStatusRespSync ::
   ( EsqDBFlow m r,

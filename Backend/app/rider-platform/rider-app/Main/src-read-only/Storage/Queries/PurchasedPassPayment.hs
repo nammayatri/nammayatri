@@ -29,27 +29,33 @@ findAllByPurchasedPassId purchasedPassId = do findAllWithKV [Se.Is Beam.purchase
 
 findAllByPurchasedPassIdAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Domain.Types.PurchasedPass.StatusType -> Data.Time.Calendar.Day -> m [Domain.Types.PurchasedPassPayment.PurchasedPassPayment])
-findAllByPurchasedPassIdAndStatus purchasedPassId status endDate = do
-  findAllWithKV
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Domain.Types.PurchasedPass.StatusType -> Data.Time.Calendar.Day -> m [Domain.Types.PurchasedPassPayment.PurchasedPassPayment])
+findAllByPurchasedPassIdAndStatus limit offset purchasedPassId status endDate = do
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.purchasedPassId $ Se.Eq (Kernel.Types.Id.getId purchasedPassId),
           Se.Is Beam.status $ Se.Eq status,
           Se.Is Beam.endDate $ Se.GreaterThanOrEq endDate
         ]
     ]
+    (Se.Asc Beam.startDate)
+    limit
+    offset
 
 findAllByPurchasedPassIdAndStatusStartDateGreaterThan ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Domain.Types.PurchasedPass.StatusType -> Data.Time.Calendar.Day -> m [Domain.Types.PurchasedPassPayment.PurchasedPassPayment])
-findAllByPurchasedPassIdAndStatusStartDateGreaterThan purchasedPassId status startDate = do
-  findAllWithKV
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Domain.Types.PurchasedPass.StatusType -> Data.Time.Calendar.Day -> m [Domain.Types.PurchasedPassPayment.PurchasedPassPayment])
+findAllByPurchasedPassIdAndStatusStartDateGreaterThan limit offset purchasedPassId status startDate = do
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.purchasedPassId $ Se.Eq (Kernel.Types.Id.getId purchasedPassId),
           Se.Is Beam.status $ Se.Eq status,
           Se.Is Beam.startDate $ Se.GreaterThanOrEq startDate
         ]
     ]
+    (Se.Asc Beam.startDate)
+    limit
+    offset
 
 findAllWithPersonId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -63,6 +69,20 @@ findOneByPaymentOrderId orderId = do findOneWithKV [Se.Is Beam.orderId $ Se.Eq (
 
 updateStatusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PurchasedPass.StatusType -> Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> m ())
 updateStatusById status id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateStatusByPurchasedPassIdAndStartEndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.PurchasedPass.StatusType -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Data.Time.Calendar.Day -> Data.Time.Calendar.Day -> m ())
+updateStatusByPurchasedPassIdAndStartEndDate status purchasedPassId startDate endDate = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.status status, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.purchasedPassId $ Se.Eq (Kernel.Types.Id.getId purchasedPassId),
+          Se.Is Beam.startDate $ Se.Eq startDate,
+          Se.Is Beam.endDate $ Se.Eq endDate
+        ]
+    ]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -84,7 +104,6 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
       Se.Set Beam.status status,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

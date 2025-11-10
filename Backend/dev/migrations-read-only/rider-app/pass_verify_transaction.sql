@@ -10,3 +10,10 @@ ALTER TABLE atlas_app.pass_verify_transaction ADD COLUMN merchant_operating_city
 ALTER TABLE atlas_app.pass_verify_transaction ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.pass_verify_transaction ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.pass_verify_transaction ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass_verify_transaction ADD COLUMN source_stop_code text ;
+ALTER TABLE atlas_app.pass_verify_transaction ADD COLUMN destination_stop_code text ;

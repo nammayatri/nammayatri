@@ -113,26 +113,41 @@ PurchasedPassPayment:
       where: id
 
     findAllByPurchasedPassIdAndStatus:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where:
         and:
           - purchasedPassId
           - status
           - gte:
             - endDate
+      orderBy:
+        field: startDate
+        order: asc
 
     findAllByPurchasedPassIdAndStatusStartDateGreaterThan:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where:
         and:
           - purchasedPassId
           - status
           - gte:
             - startDate
+      orderBy:
+        field: startDate
+        order: asc
 
     findAllWithPersonId:
       kvFunction: findAllWithOptionsKV
       where: personId
+
+    updateStatusByPurchasedPassIdAndStartEndDate:
+      kvFunction: updateWithKV
+      params: [status]
+      where:
+        and:
+          - purchasedPassId
+          - startDate
+          - endDate
 
 PassVerifyTransaction:
   tableName: pass_verify_transaction
@@ -142,6 +157,8 @@ PassVerifyTransaction:
     purchasePassId: Id PurchasedPass
     validTill: UTCTime
     verifiedAt: UTCTime
+    sourceStopCode: Maybe Text
+    destinationStopCode: Maybe Text
     fleetId: Text
 
   constraints:
