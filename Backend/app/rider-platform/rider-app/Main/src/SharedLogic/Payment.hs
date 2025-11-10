@@ -221,6 +221,7 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
               DPayment.PaymentStatus {..} -> DPayment.PaymentStatus {DPayment.paymentFulfillmentStatus = Just paymentFulfillmentStatus', DPayment.domainEntityId = domainEntityId', ..}
               _ -> finalPaymentStatusResponse
           Left _ -> finalPaymentStatusResponse
+  QPaymentOrder.updatePaymentFulfillmentStatus paymentOrder.id paymentStatusResponseWithFulfillmentStatus.paymentFulfillmentStatus
   return paymentStatusResponseWithFulfillmentStatus
 
 refundStatusHandler ::

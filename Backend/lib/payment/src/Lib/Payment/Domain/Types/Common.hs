@@ -24,3 +24,5 @@ data PaymentFulfillmentStatus
   | FulfillmentRefundFailed
   | FulfillmentRefunded
   deriving (Eq, Ord, Read, Show, FromJSON, ToJSON, Generic, ToSchema, ToParamSchema)
+
+$(mkBeamInstancesForEnum ''PaymentFulfillmentStatus)

@@ -62,7 +62,8 @@ data PaymentOrderE e = PaymentOrder
     validTill :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
+    paymentFulfillmentStatus :: Maybe PaymentFulfillmentStatus
   }
   deriving (Generic)
 

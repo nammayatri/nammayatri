@@ -271,7 +271,8 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             validTill = Nothing,
             createdAt = now,
             updatedAt = now,
-            merchantOperatingCityId = mbMerchantOpCityId
+            merchantOperatingCityId = mbMerchantOpCityId,
+            paymentFulfillmentStatus = Nothing
           }
 
     buildTransaction ::
@@ -557,7 +558,8 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity 
             validTill = paymentOrderValidTill,
             createdAt = now,
             updatedAt = now,
-            merchantOperatingCityId = mbMerchantOpCityId
+            merchantOperatingCityId = mbMerchantOpCityId,
+            paymentFulfillmentStatus = Nothing
           }
   buildPaymentSplit req.orderId mkPaymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
   pure mkPaymentOrder
@@ -986,7 +988,8 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             validTill = Nothing,
             createdAt = now,
             updatedAt = now,
-            merchantOperatingCityId = mbMerchantOpCityId
+            merchantOperatingCityId = mbMerchantOpCityId,
+            paymentFulfillmentStatus = Nothing
           }
 
 --- refunds api ----

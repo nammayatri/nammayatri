@@ -65,6 +65,7 @@ data RiderJobType
   | NyRegularMaster
   | NyRegularInstance
   | CrisRecon
+  | PaymentOrderStatusCheck
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -102,6 +103,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SNyRegularMaster jobData = AnyJobInfo <$> restoreJobInfo SNyRegularMaster jobData
   restoreAnyJobInfo SNyRegularInstance jobData = AnyJobInfo <$> restoreJobInfo SNyRegularInstance jobData
   restoreAnyJobInfo SCrisRecon jobData = AnyJobInfo <$> restoreJobInfo SCrisRecon jobData
+  restoreAnyJobInfo SPaymentOrderStatusCheck jobData = AnyJobInfo <$> restoreJobInfo SPaymentOrderStatusCheck jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -360,3 +362,13 @@ data CrisReconJobData = CrisReconJobData
 instance JobInfoProcessor 'CrisRecon
 
 type instance JobContent 'CrisRecon = CrisReconJobData
+
+data PaymentOrderStatusCheckJobData = PaymentOrderStatusCheckJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'PaymentOrderStatusCheck
+
+type instance JobContent 'PaymentOrderStatusCheck = PaymentOrderStatusCheckJobData
