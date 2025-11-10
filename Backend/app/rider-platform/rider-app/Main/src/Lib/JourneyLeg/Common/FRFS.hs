@@ -378,8 +378,8 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
           )
           fares
 
-getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Id FRFSSearch -> DJourneyLeg.JourneyLeg -> m (Maybe JT.LegInfo)
-getInfo searchId journeyLeg = do
+getInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Id FRFSSearch -> DJourneyLeg.JourneyLeg -> [DJourneyLeg.JourneyLeg] -> m (Maybe JT.LegInfo)
+getInfo searchId journeyLeg journeyLegs = do
   mbBooking <- QTBooking.findBySearchId searchId
   case mbBooking of
     Just booking -> do
@@ -387,7 +387,7 @@ getInfo searchId journeyLeg = do
       return (Just legInfo)
     Nothing -> do
       searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
-      legInfo <- JT.mkLegInfoFromFrfsSearchRequest searchReq journeyLeg
+      legInfo <- JT.mkLegInfoFromFrfsSearchRequest searchReq journeyLeg journeyLegs
       return (Just legInfo)
 
 search :: JT.SearchRequestFlow m r c => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> Maybe (Id DRL.RecentLocation) -> Maybe Text -> (Text -> m ()) -> m JT.SearchResponse
