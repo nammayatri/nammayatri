@@ -30,6 +30,7 @@ import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.RecentLocation as DRL
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RouteDetails
@@ -85,6 +86,7 @@ import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Maps as Maps
@@ -1031,8 +1033,8 @@ castCategoryToMode Spec.METRO = DTrip.Metro
 castCategoryToMode Spec.SUBWAY = DTrip.Subway
 castCategoryToMode Spec.BUS = DTrip.Bus
 
-mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> DJourneyLeg.JourneyLeg -> m LegInfo
-mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
+mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> DJourneyLeg.JourneyLeg -> [DJourneyLeg.JourneyLeg] -> m LegInfo
+mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg journeyLegs = do
   let fallbackFare = journeyLeg.estimatedMinFare
   let distance = journeyLeg.distance
   let duration = journeyLeg.duration
@@ -1044,28 +1046,57 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
   let isPTBookingAllowedForUser = ("PTBookingAllowed#Yes" `elem` (maybe [] (map YTypes.getTagNameValueExpiry) person.customerNammaTags))
   let isPTBookingNotAllowedForUser = ("PTBookingAllowed#No" `elem` (maybe [] (map YTypes.getTagNameValueExpiry) person.customerNammaTags))
   let isSearchFailed = fromMaybe False onSearchFailed
+  let isCurrentLegBus = vehicleType == Spec.BUS
+  let journeyModes = map (.mode) journeyLegs
+  let busLegCount = length $ filter (== castCategoryToMode Spec.BUS) journeyModes
+  (mbServiceTier, mbQuote, quoteCategories, mbFareParameters) <- case journeyLeg.legPricingId of
+    Just quoteId -> do
+      mbQuote <- QFRFSQuote.findById (Id quoteId)
+      frfsQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId (Id quoteId)
+      let fareParameters = (calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromQuoteCategories frfsQuoteCategories)) <$> mbQuote
+      let mbSelectedServiceTier = getServiceTierFromQuote frfsQuoteCategories =<< mbQuote
+      pure (mbSelectedServiceTier, mbQuote, frfsQuoteCategories, fareParameters)
+    Nothing -> pure (Nothing, Nothing, [], Nothing)
+  let serviceTierType = fmap (.serviceTierType) mbServiceTier
+  let hasNonBusMode = any (\x -> x `elem` [DTrip.Subway, DTrip.Metro]) journeyModes
+  let totalTicketQuantity = maybe 0 (.totalQuantity) mbFareParameters
+  let shouldCheckPass = isCurrentLegBus && busLegCount == 1 && totalTicketQuantity == 1 && hasNonBusMode
+  userPasses <-
+    if shouldCheckPass
+      then
+        QPurchasedPass.findAllByPersonIdWithFilters
+          riderId
+          merchantId
+          (Just [DPurchasedPass.Active])
+          Nothing
+          Nothing
+      else pure []
+  let hasApplicablePass =
+        shouldCheckPass
+          && any
+            ( \p ->
+                maybe False (`elem` DPurchasedPass.applicableVehicleServiceTiers p) serviceTierType
+            )
+            userPasses
   let bookingAllowedForVehicleType =
         case vehicleType of
           Spec.METRO -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.metroBookingAllowed)) || isPTBookingAllowedForUser)
           Spec.SUBWAY -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed)) || isPTBookingAllowedForUser)
           Spec.BUS -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.busBookingAllowed)) || isPTBookingAllowedForUser)
-  let bookingAllowed = bookingAllowedForVehicleType && not isPTBookingNotAllowedForUser
+  let bookingAllowed = bookingAllowedForVehicleType && not isPTBookingNotAllowedForUser && not hasApplicablePass
   now <- getCurrentTime
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg Nothing
-  (mbEstimatedFare, mbChildFare, mbQuote, mbFareParameters, quoteCategories, categories) <-
+  (mbEstimatedFare, mbChildFare, categories) <-
     case journeyLeg.legPricingId of
-      Just quoteId -> do
-        mbQuote <- QFRFSQuote.findById (Id quoteId)
-        frfsQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId (Id quoteId)
-        let categories = map mkCategoryInfoResponse frfsQuoteCategories
-            fareParameters = (calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromQuoteCategories frfsQuoteCategories)) <$> mbQuote
-            estimatedPrice = fareParameters >>= (.adultItem) <&> (.unitPrice)
-            estimatedChildPrice = fareParameters >>= (.childItem) <&> (.unitPrice)
-        return (mkPriceAPIEntity <$> estimatedPrice, mkPriceAPIEntity <$> estimatedChildPrice, mbQuote, fareParameters, frfsQuoteCategories, categories)
+      Just _quoteId -> do
+        let categories = map mkCategoryInfoResponse quoteCategories
+            estimatedPrice = mbFareParameters >>= (.adultItem) <&> (.unitPrice)
+            estimatedChildPrice = mbFareParameters >>= (.childItem) <&> (.unitPrice)
+        return (mkPriceAPIEntity <$> estimatedPrice, mkPriceAPIEntity <$> estimatedChildPrice, categories)
       Nothing -> do
         if bookingAllowed
-          then do return (Nothing, Nothing, Nothing, Nothing, [], [])
-          else return (mkPriceAPIEntity . mkPrice Nothing <$> fallbackFare, Nothing, Nothing, Nothing, [], [])
+          then do return (Nothing, Nothing, [])
+          else return (mkPriceAPIEntity . mkPrice Nothing <$> fallbackFare, Nothing, [])
 
   journeyLegRouteInfo' <- getLegRouteInfo (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
   legExtraInfo <- mkLegExtraInfo mbQuote mbFareParameters quoteCategories categories journeyLegRouteInfo'
