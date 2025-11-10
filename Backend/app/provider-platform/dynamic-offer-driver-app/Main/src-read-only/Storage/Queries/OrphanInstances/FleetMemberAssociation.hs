@@ -16,7 +16,8 @@ instance FromTType' Beam.FleetMemberAssociation Domain.Types.FleetMemberAssociat
     pure $
       Just
         Domain.Types.FleetMemberAssociation.FleetMemberAssociation
-          { createdAt = createdAt,
+          { associatedTill = associatedTill,
+            createdAt = createdAt,
             enabled = enabled,
             fleetMemberId = fleetMemberId,
             fleetOwnerId = fleetOwnerId,
@@ -31,7 +32,8 @@ instance FromTType' Beam.FleetMemberAssociation Domain.Types.FleetMemberAssociat
 instance ToTType' Beam.FleetMemberAssociation Domain.Types.FleetMemberAssociation.FleetMemberAssociation where
   toTType' (Domain.Types.FleetMemberAssociation.FleetMemberAssociation {..}) = do
     Beam.FleetMemberAssociationT
-      { Beam.createdAt = createdAt,
+      { Beam.associatedTill = associatedTill,
+        Beam.createdAt = createdAt,
         Beam.enabled = enabled,
         Beam.fleetMemberId = fleetMemberId,
         Beam.fleetOwnerId = fleetOwnerId,

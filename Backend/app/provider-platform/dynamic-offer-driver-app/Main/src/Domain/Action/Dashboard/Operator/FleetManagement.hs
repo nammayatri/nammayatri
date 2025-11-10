@@ -208,7 +208,7 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = do
                 }
         let personAuth = DRegistrationV2.buildFleetOwnerAuthReq merchant.id opCity createReq
         deploymentVersion <- asks (.version)
-        personData <- DRegistrationV2.createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled
+        personData <- DRegistrationV2.createFleetOwnerDetails Nothing personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled DP.FLEET_OWNER
         pure personData
 
   existingFOAssociations <- QFOA.findAllByFleetOwnerId fleetOwner.id True
@@ -312,7 +312,8 @@ postFleetManagementFleetMemberAssociationCreate merchantShortId _opCity req = do
             groupCode = req.groupCode,
             createdAt = existingAssociation.createdAt,
             order = req.order,
-            updatedAt = now
+            updatedAt = now,
+            associatedTill = Nothing
           }
     Nothing -> do
       let fleetMemberAssociation =
@@ -326,7 +327,8 @@ postFleetManagementFleetMemberAssociationCreate merchantShortId _opCity req = do
                 groupCode = req.groupCode,
                 order = req.order,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                associatedTill = Nothing
               }
       QFMA.create fleetMemberAssociation
   pure Kernel.Types.APISuccess.Success

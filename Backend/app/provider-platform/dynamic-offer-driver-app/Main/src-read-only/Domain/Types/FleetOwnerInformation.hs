@@ -130,6 +130,6 @@ instance EncryptedItem' FleetOwnerInformation where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
-data FleetType = RENTAL_FLEET | NORMAL_FLEET | BUSINESS_FLEET deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FleetType = RENTAL_FLEET | NORMAL_FLEET | BUSINESS_FLEET | FLEET_MANAGER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FleetType)

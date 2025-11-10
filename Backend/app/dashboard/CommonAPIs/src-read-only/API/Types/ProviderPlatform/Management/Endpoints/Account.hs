@@ -32,6 +32,7 @@ data DashboardAccessType
   | TICKET_DASHBOARD_MERCHANT
   | TICKET_DASHBOARD_ADMIN
   | TICKET_DASHBOARD_APPROVER
+  | FLEET_MANAGER
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

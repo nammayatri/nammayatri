@@ -13,7 +13,7 @@ import qualified Storage.Queries.Person as QP
 getFleetOwnerId :: Text -> Maybe Text -> Flow Text
 getFleetOwnerId memberPersonId mbFleetOwnerId = do
   maybe
-    ( FMA.findAllActiveByfleetMemberId memberPersonId True
+    ( FMA.findAllActiveByfleetMemberId memberPersonId True Nothing
         >>= \case
           [] -> return memberPersonId
           [DFMA.FleetMemberAssociation {..}] -> return fleetOwnerId
@@ -26,7 +26,7 @@ getFleetOwnerId memberPersonId mbFleetOwnerId = do
 getFleetOwnerIds :: Text -> Maybe Text -> Flow [(Text, Text)]
 getFleetOwnerIds memberPersonId mbFleetOwnerId = do
   maybe
-    ( FMA.findAllActiveByfleetMemberId memberPersonId True
+    ( FMA.findAllActiveByfleetMemberId memberPersonId True Nothing
         >>= \case
           [] -> do
             person <- QP.findById (Id memberPersonId) >>= fromMaybeM (PersonNotFound memberPersonId)

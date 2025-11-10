@@ -1,6 +1,8 @@
 imports:
   Person: Dashboard.Common
+  UTCTime: Kernel.Prelude
   City: Kernel.Types.Beckn.Context
+  Summary: Dashboard.Common
 
 module: RegistrationV2
 apiPrefix: fleet
@@ -10,6 +12,8 @@ apis:
       endpoint: /v2/login/otp
       name: postRegistrationV2LoginOtp
       auth: NoAuth
+      query:
+        - fleetOwnerId: Text
       request:
         type: FleetOwnerLoginReqV2
       response:
@@ -20,6 +24,8 @@ apis:
             auth: NoAuth
             mandatoryQuery:
               - enabled: Bool
+            query:
+              - fleetOwnerId: Text
             request:
               type: FleetOwnerLoginReqV2
             response:
@@ -31,12 +37,16 @@ apis:
       auth: NoAuth
       request:
         type: FleetOwnerVerifyReqV2
+      query:
+        - fleetOwnerId: Text
       response:
         type: FleetOwnerVerifyResV2
       helperApi:
         - POST:
             endpoint: /v2/verify/otp
             auth: NoAuth
+            query:
+              - fleetOwnerId: Text
             request:
               type: FleetOwnerVerifyReqV2
             response:
@@ -60,6 +70,61 @@ apis:
               type: FleetOwnerRegisterReqV2
             response:
               type: FleetOwnerRegisterResV2
+  - GET: # Get all Fleet Members for a Fleet Owner
+      endpoint: /fleet/members
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - from: UTCTime
+        - to: UTCTime
+      response:
+        type: FleetMemberAssociationRes
+      helperApi:
+        - GET:
+            endpoint: /fleet/members/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - limit: Int
+              - offset: Int
+              - from: UTCTime
+              - to: UTCTime
+            response:
+              type: FleetMemberAssociationRes
+  - POST: # Unlink Fleet Member from Fleet Owner
+      endpoint: /fleet/members/{fleetMemberId}/unlink
+      auth: ApiAuthV2
+      params:
+        fleetMemberId: Text
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/members/{fleetMemberId}/unlink/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetMemberId: Text
+              fleetOwnerId: Text
+            response:
+              type: APISuccess
+  - DELETE: # Delete Fleet Member
+      endpoint: /fleet/member/{fleetMemberId}
+      auth: ApiAuthV2
+      params:
+        fleetMemberId: Text
+      response:
+        type: APISuccess
+      helperApi:
+        - DELETE:
+            endpoint: /fleet/members/{fleetMemberId}/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+              fleetMemberId: Text
+            response:
+              type: APISuccess
 
 types:
   FleetOwnerLoginReqV2:
@@ -95,10 +160,24 @@ types:
     - operatorReferralCode: Maybe Text
     - adminApprovalRequired: Maybe Bool
   FleetType:
-    - enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
+    - enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET,FLEET_MANAGER"
   FleetOwnerRegisterResV2:
     - enabled: Bool
     - recordType: NewType
+  FleetMemberAssociationRes:
+    - fleetOwnerId: Text
+    - listItem: [FleetMemberAssociation]
+    - summary: Summary
+  FleetMemberAssociation:
+    - fleetMemberId: Text
+    - fleetOwnerId: Text
+    - level: Maybe Int
+    - parentGroupCode: Maybe Text
+    - groupCode: Maybe Text
+    - order: Maybe Int
+    - isFleetOwner: Bool
+    - enabled: Bool
+    - associatedTill: Maybe UTCTime
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

@@ -12,6 +12,7 @@ FleetMemberAssociation:
     enabled: Bool
     createdAt: UTCTime
     updatedAt: UTCTime
+    associatedTill: Maybe UTCTime
 
   constraints:
     fleetMemberId: PrimaryKey
@@ -26,11 +27,17 @@ FleetMemberAssociation:
     findAllActiveByfleetMemberId:
       kvFunction: findAllWithKV
       where:
-        and: [fleetMemberId, enabled]
+        and: [fleetMemberId, enabled, associatedTill]
 
     updateFleetMemberActiveStatus:
       kvFunction: updateOneWithKV
       params: [enabled]
+      where:
+        and: [fleetMemberId, fleetOwnerId]
+
+    updateFleetMemberStatusAndAssociation:
+      kvFunction: updateOneWithKV
+      params: [enabled, associatedTill]
       where:
         and: [fleetMemberId, fleetOwnerId]
 
@@ -48,6 +55,11 @@ FleetMemberAssociation:
       where:
         and:
           - eq: [fleetMemberId, groupCode]
+
+    deleteFleetMemberAssociation:
+      kvFunction: deleteWithKV
+      where:
+        and: [fleetMemberId, fleetOwnerId]
 
     findAllWithOwnerIds:
       kvFunction: findAllWithKV

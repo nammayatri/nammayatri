@@ -113,6 +113,11 @@ verifyDashboardAccess requiredAccessType personId = do
       if role.dashboardAccessType == DRole.FLEET_OWNER
         then pure person.id
         else throwError AccessDenied
+    DRole.FLEET_MANAGER -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.FLEET_MANAGER
+        then pure person.id
+        else throwError AccessDenied
     DRole.RENTAL_FLEET_OWNER -> do
       role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
       if role.dashboardAccessType == DRole.RENTAL_FLEET_OWNER

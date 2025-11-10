@@ -11,7 +11,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FleetMemberAssociationT f = FleetMemberAssociationT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+  { associatedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
     enabled :: B.C f Kernel.Prelude.Bool,
     fleetMemberId :: B.C f Kernel.Prelude.Text,
     fleetOwnerId :: B.C f Kernel.Prelude.Text,
