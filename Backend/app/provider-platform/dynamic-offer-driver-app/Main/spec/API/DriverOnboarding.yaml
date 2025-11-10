@@ -22,6 +22,7 @@ imports:
   Minutes: Kernel.Types.Common
   Image: Domain.Types.Image
   PanType: Domain.Types.DriverPanCard
+  LinkedRC: Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 
 module: DriverOnboardingV2
 types:
@@ -158,6 +159,9 @@ types:
     transactionId : Maybe Text
     validationStatus : Maybe ValidationStatus
     verifiedBy : Maybe VerifiedBy
+  FleetRCListRes:
+    recordType: NewType
+    rcs: "[LinkedRC]"
 
 apis:
   - GET:
@@ -282,3 +286,11 @@ apis:
         type: CommonDocumentReq
       response:
         type: APISuccess
+  - GET:
+      endpoint: /driver/fleet/rcs
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: FleetRCListRes

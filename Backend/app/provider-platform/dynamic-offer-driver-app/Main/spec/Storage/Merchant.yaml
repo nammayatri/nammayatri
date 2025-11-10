@@ -1109,6 +1109,7 @@ TransporterConfig:
     cancellationFeeDisputeWindow: Maybe Seconds
     cancellationFeeVendor: Maybe Text
     upgradeTierDropRetentionTime: Maybe Seconds
+    allowDriverToUseFleetRcs: Maybe Bool
 
   beamType:
     currency: Maybe Currency
