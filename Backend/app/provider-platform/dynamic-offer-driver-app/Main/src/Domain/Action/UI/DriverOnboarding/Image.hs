@@ -20,6 +20,7 @@ import AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.Text as T hiding (length)
 import Data.Time.Format.ISO8601
+import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate (imageS3Lock)
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
 import qualified Domain.Types.Merchant as DM
@@ -300,6 +301,3 @@ getImage merchantId imageId = do
   case imageMetadata of
     Just img | img.merchantId == merchantId -> S3.get $ T.unpack img.s3Path
     _ -> pure T.empty
-
-imageS3Lock :: Text -> Text
-imageS3Lock path = "image-s3-lock-" <> path

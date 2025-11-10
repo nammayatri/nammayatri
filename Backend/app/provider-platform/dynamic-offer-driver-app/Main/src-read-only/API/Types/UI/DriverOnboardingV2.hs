@@ -3,6 +3,7 @@
 module API.Types.UI.DriverOnboardingV2 where
 
 import Data.OpenApi (ToSchema)
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
@@ -149,6 +150,10 @@ data FarePolicyHour
   | NonPeak
   | Night
   deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype FleetRCListRes = FleetRCListRes {rcs :: [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate.LinkedRC]}
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 newtype GetLiveSelfieResp = GetLiveSelfieResp {image :: Kernel.Prelude.Text}

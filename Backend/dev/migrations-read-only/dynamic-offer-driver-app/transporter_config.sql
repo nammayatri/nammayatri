@@ -516,3 +516,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fe
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN upgrade_tier_drop_retention_time integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN subscription_config SET DEFAULT '{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}' :: json;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_driver_to_use_fleet_rcs boolean ;

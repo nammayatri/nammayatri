@@ -44,6 +44,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     getDriverDocumentInfo,
     getDocumentImage,
     isNameComparePercentageValid,
+    imageS3Lock,
   )
 where
 
@@ -56,7 +57,6 @@ import qualified Data.List as DL
 import Data.Text as T hiding (elem, find, length, map, null, zip)
 import Data.Time (Day, utctDay)
 import Data.Time.Format
-import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
@@ -102,6 +102,7 @@ import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverPanCard as DPQuery
 import Storage.Queries.DriverRCAssociation (buildRcHM)
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
+import qualified Storage.Queries.FleetDriverAssociationExtra as FDA
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
@@ -146,7 +147,8 @@ type DriverRCRes = APISuccess
 
 data LinkedRC = LinkedRC
   { rcDetails :: VehicleRegistrationCertificateAPIEntity,
-    rcActive :: Bool
+    rcActive :: Bool,
+    isFleetRC :: Bool
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -274,7 +276,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_.getId)
       unless (imageMetadata.imageType == ODC.VehicleRegistrationCertificate) $
         throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) "")
-      Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
+      Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
 
     buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel =
@@ -303,6 +305,9 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
     makeVerifyRCHitsCountKey :: Text -> Text
     makeVerifyRCHitsCountKey rcNumber = "VerifyRC:rcNumberHits:" <> rcNumber <> ":hitsCount"
 
+imageS3Lock :: Text -> Text
+imageS3Lock path = "image-s3-lock-" <> path
+
 makeDocumentVerificationLockKey :: Text -> Text
 makeDocumentVerificationLockKey personId = "DocumentVerificationLock:" <> personId
 
@@ -327,7 +332,7 @@ getDocumentImage personId imageId_ expectedDocType = do
     throwError (ImageNotFound imageId_)
   unless (imageMetadata.imageType == expectedDocType) $
     throwError (ImageInvalidType (show expectedDocType) "")
-  Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
+  Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
     S3.get $ T.unpack imageMetadata.s3Path
 
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Flow ()
@@ -666,7 +671,15 @@ removeVehicle driverId = do
 validateRCActivation :: Id Person.Person -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Flow Bool
 validateRCActivation driverId transporterConfig rc = do
   now <- getCurrentTime
-  _ <- DAQuery.findLinkedByRCIdAndDriverId driverId rc.id now >>= fromMaybeM (InvalidRequest "RC not linked to driver. Please link.")
+  mAssoc <- DAQuery.findLinkedByRCIdAndDriverId driverId rc.id now
+  case mAssoc of
+    Just _ -> return ()
+    Nothing -> do
+      unless (transporterConfig.allowDriverToUseFleetRcs == Just True) $ throwError (InvalidRequest "RC is not associated with the driver")
+      fleetDriverAssociation <- FDA.findByDriverId driverId True >>= fromMaybeM (InvalidRequest "RC is not linked with the driver.")
+      let fleetOwnerId = fleetDriverAssociation.fleetOwnerId
+      unless (rc.fleetOwnerId == Just fleetOwnerId) $ throwError (InvalidRequest "RC does not belong to you or your fleet.")
+      createDriverRCAssociationIfPossible transporterConfig driverId rc
 
   -- check if rc is already active to other driver
   mActiveAssociation <- DAQuery.findActiveAssociationByRC rc.id True
@@ -777,9 +790,9 @@ deleteRC (driverId, _, merchantOpCityId) DeleteRCReq {..} isOldFlow = do
 
 getAllLinkedRCs :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow [LinkedRC]
 getAllLinkedRCs (driverId, _, _) = do
-  allLinkedRCs <- DAQuery.findAllLinkedByDriverId driverId
-  rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)
-  let activeRcs = buildRcHM allLinkedRCs
+  driverRCs <- DAQuery.findAllLinkedByDriverId driverId
+  rcs <- RCQuery.findAllById (map (.rcId) driverRCs)
+  let activeRcs = buildRcHM driverRCs
   mapM (getCombinedRcData activeRcs) rcs
   where
     getCombinedRcData activeRcs rc = do
@@ -787,7 +800,8 @@ getAllLinkedRCs (driverId, _, _) = do
       return $
         LinkedRC
           { rcActive = fromMaybe False $ HM.lookup rc.id.getId activeRcs <&> (.isRcActive),
-            rcDetails = makeRCAPIEntity rc rcNo
+            rcDetails = makeRCAPIEntity rc rcNo,
+            isFleetRC = isJust rc.fleetOwnerId
           }
 
 rcVerificationLockKey :: Text -> Text
