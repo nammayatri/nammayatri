@@ -230,15 +230,16 @@ getAllLegsInfo' ::
 getAllLegsInfo' personId journeyId checkSearch = do
   whenJourneyUpdateInProgress journeyId $ do
     allLegs <- QJourneyLeg.getJourneyLegs journeyId
-    mapMaybeM (getLegInfo personId checkSearch) allLegs
+    mapMaybeM (getLegInfo personId checkSearch allLegs) allLegs
 
 getLegInfo ::
   JL.GetStateFlow m r c =>
   Id DPerson.Person ->
   Bool ->
+  [DJourneyLeg.JourneyLeg] ->
   DJourneyLeg.JourneyLeg ->
   m (Maybe JL.LegInfo)
-getLegInfo personId checkSearch journeyLeg = do
+getLegInfo personId checkSearch journeyLegs journeyLeg = do
   case journeyLeg.legSearchId of
     Just legSearchIdText -> do
       let legSearchId = Id legSearchIdText
@@ -252,9 +253,9 @@ getLegInfo personId checkSearch journeyLeg = do
             void $ markJourneyComplete journey legs
           return legInfo
         DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {journeyLeg = journeyLeg, personId}
-        DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg}
-        DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg}
-        DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg}
+        DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg, journeyLegs = journeyLegs}
+        DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg, journeyLegs = journeyLegs}
+        DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg, journeyLegs = journeyLegs}
     Nothing -> return Nothing
 
 hasSignificantMovement :: [LatLong] -> Domain.Types.RiderConfig.BusTrackingConfig -> Bool

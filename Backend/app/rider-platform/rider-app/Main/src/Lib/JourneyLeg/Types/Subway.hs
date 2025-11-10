@@ -57,7 +57,8 @@ data SubwayLegRequestGetStateData = SubwayLegRequestGetStateData
 
 data SubwayLegRequestGetInfoData = SubwayLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    journeyLegs :: [DJourneyLeg.JourneyLeg]
   }
 
 data SubwayLegRequest
