@@ -71,30 +71,6 @@ FleetOperatorDailyStats:
       where:
         and: [fleetOperatorId, merchantLocalDate]
 
-    updateAcceptationRequestCountByFleetOperatorIdAndDate:
-      kvFunction: updateOneWithKV
-      params: [acceptationRequestCount]
-      where:
-        and: [fleetOperatorId, merchantLocalDate]
-
-    updateTotalRequestCountByFleetOperatorIdAndDate:
-      kvFunction: updateOneWithKV
-      params: [totalRequestCount]
-      where:
-        and: [fleetOperatorId, merchantLocalDate]
-
-    updateRejectedRequestCountByFleetOperatorIdAndDate:
-      kvFunction: updateOneWithKV
-      params: [rejectedRequestCount]
-      where:
-        and: [fleetOperatorId, merchantLocalDate]
-
-    updatePulledRequestCountByFleetOperatorIdAndDate:
-      kvFunction: updateOneWithKV
-      params: [pulledRequestCount]
-      where:
-        and: [fleetOperatorId, merchantLocalDate]
-
     updateCustomerCancellationCountByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
       params: [customerCancellationCount]
@@ -110,5 +86,11 @@ FleetOperatorDailyStats:
     updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
       params: [totalDistance, totalEarning, totalCompletedRides]
+      where:
+        and: [fleetOperatorId, merchantLocalDate]
+
+    updateRequestCountsByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [rejectedRequestCount, pulledRequestCount, acceptationRequestCount, totalRequestCount]
       where:
         and: [fleetOperatorId, merchantLocalDate]
