@@ -11,9 +11,11 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PassVerifyTransactionT f = PassVerifyTransactionT
-  { fleetId :: B.C f Kernel.Prelude.Text,
+  { destinationStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fleetId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     purchasePassId :: B.C f Kernel.Prelude.Text,
+    sourceStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     validTill :: B.C f Kernel.Prelude.UTCTime,
     verifiedAt :: B.C f Kernel.Prelude.UTCTime,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

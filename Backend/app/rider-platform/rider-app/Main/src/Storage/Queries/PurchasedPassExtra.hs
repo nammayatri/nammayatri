@@ -20,6 +20,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.PurchasedPass as Beam
 import Storage.Queries.OrphanInstances.PurchasedPass ()
+import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -92,13 +93,16 @@ updatePurchaseData purchasedPassId startDate endDate status = do
         <> (if status == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0)] else [])
     )
     [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
+  QPurchasedPassPayment.updateStatusByPurchasedPassIdAndStartEndDate status purchasedPassId startDate endDate
 
 updateStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   DPurchasedPass.StatusType ->
   Id DPurchasedPass.PurchasedPass ->
+  Day ->
+  Day ->
   m ()
-updateStatusById status purchasedPassId = do
+updateStatusById status purchasedPassId startDate endDate = do
   now <- getCurrentTime
   updateWithKV
     ( [ Se.Set Beam.status status,
@@ -107,6 +111,7 @@ updateStatusById status purchasedPassId = do
         <> (if status == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0)] else [])
     )
     [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
+  QPurchasedPassPayment.updateStatusByPurchasedPassIdAndStartEndDate status purchasedPassId startDate endDate
 
 updateDeviceIdById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

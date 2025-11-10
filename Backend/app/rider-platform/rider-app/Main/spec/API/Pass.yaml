@@ -56,6 +56,9 @@ types:
 
   PassVerifyReq:
     vehicleNumber: Text
+    currentLat: Maybe Double
+    currentLon: Maybe Double
+    stopId: Maybe Text
 
   PassSelectionAPIEntity:
     purchasedPassId: Id PurchasedPass
