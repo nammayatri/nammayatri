@@ -26,9 +26,11 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.PurchasedPassPayment as DPurchasedPassPayment
 import qualified Environment
+import qualified EulerHS.Prelude as EHS
 import qualified JsonLogic
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
+import Kernel.External.Maps.Types
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Types as Lang
@@ -37,6 +39,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Id as Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -513,6 +516,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       istTime <- getLocalCurrentTime (19800 :: Seconds)
       let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (purchasedPassPayment.startDate > DT.utctDay istTime) status
       whenJust mbPassStatus $ \passStatus -> do
+        QPurchasedPassPayment.updateStatusById passStatus purchasedPassPayment.id
         when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
           QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus
       case mbPassStatus of
@@ -602,9 +606,17 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
     throwError $ InvalidRequest ("This pass is only " <> purchasedPass.benefitDescription)
   routeStopMapping <-
     case vehicleLiveRouteInfo.routeCode of
-      Just routeCode -> OTPRest.getRouteStopMappingByRouteCodeInMem routeCode integratedBPPConfig
+      Just routeCode ->
+        withTryCatch
+          "passVerify:getRouteStopMappingByRouteCodeInMem"
+          (OTPRest.getRouteStopMappingByRouteCodeInMem routeCode integratedBPPConfig)
+          >>= \case
+            Left _ -> return []
+            Right rsm -> return rsm
       Nothing -> return []
-  let sourceStop = passVerifyReq.stopId <|> ((listToMaybe routeStopMapping) <&> (.stopCode))
+  let sourceStop =
+        getNearestStop routeStopMapping passVerifyReq.currentLat passVerifyReq.currentLon
+          <|> ((listToMaybe routeStopMapping) <&> (.stopCode))
       destinationStop = (safeTail routeStopMapping) <&> (.stopCode)
   id <- generateGUID
   now <- getCurrentTime
@@ -629,6 +641,20 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
     safeTail [] = Nothing
     safeTail [_] = Nothing
     safeTail xs = Just (last xs)
+
+    getNearestStop _ Nothing _ = Nothing
+    getNearestStop _ _ Nothing = Nothing
+    getNearestStop [] _ _ = Nothing
+    getNearestStop routeStopMapping (Just currentLat) (Just currentLon) =
+      let nearestStop =
+            minimumBy
+              ( EHS.comparing
+                  ( \rsm ->
+                      distanceBetweenInMeters (LatLong currentLat currentLon) rsm.stopPoint
+                  )
+              )
+              routeStopMapping
+       in Just nearestStop.stopCode
 
 postMultimodalPassSwitchDeviceId ::
   ( ( Maybe (Id.Id DP.Person),

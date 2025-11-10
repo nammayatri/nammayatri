@@ -549,7 +549,6 @@ library
       Storage.Queries.PlaceBasedServiceConfigExtra
       Storage.Queries.PopularLocationExtra
       Storage.Queries.PurchasedPassExtra
-      Storage.Queries.PurchasedPassPaymentExtra
       Storage.Queries.QueriesExtra.RideLite
       Storage.Queries.QuoteExtra
       Storage.Queries.RatingExtra
