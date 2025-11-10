@@ -353,7 +353,7 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
         routeStopFare <- QRouteStopFare.findByRouteStartAndStopCode farePolicy.id startStopCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Fare Not Found")
         return $
           Price
-            { amountInt = round routeStopFare.amount,
+            { amountInt = roundToIntegral routeStopFare.amount,
               amount = routeStopFare.amount,
               currency = routeStopFare.currency
             }
@@ -366,7 +366,7 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
         let amount = stageFare.amount + cessCharge
         return $
           Price
-            { amountInt = round amount,
+            { amountInt = roundToIntegral amount,
               amount = amount,
               currency = stageFare.currency
             }
@@ -436,7 +436,7 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
                 Nothing -> QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
               forM fares $ \fare -> do
                 vehicleServiceTier <- QFRFSVehicleServiceTier.findById fare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fare.vehicleServiceTierId.getId)
-                let price = Price {amountInt = round (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
+                let price = Price {amountInt = roundToIntegral (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
                 return $
                   FRFSFare
                     { farePolicyId = Nothing,
@@ -1126,7 +1126,7 @@ calculateFareParameters priceItems =
       totalPrice =
         Price
           { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount,
-            amountInt = round ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
+            amountInt = roundToIntegral ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
             currency
           }
       totalQuantity =
@@ -1169,7 +1169,7 @@ calculateFareParametersWithQuoteFallback categories quote =
       totalPrice =
         Price
           { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount,
-            amountInt = round ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
+            amountInt = roundToIntegral ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
             currency
           }
       totalQuantity =
@@ -1198,7 +1198,7 @@ calculateFareParametersWithBookingFallback categories booking =
                       unitPrice =
                         Price
                           { amount = unitPrice'.amount,
-                            amountInt = round unitPrice'.amount,
+                            amountInt = roundToIntegral unitPrice'.amount,
                             currency = unitPrice'.currency
                           },
                       totalPrice = modifyPrice totalPrice' $ \p -> HighPrecMoney $ ((p.getHighPrecMoney) / (toRational (adultQuantity + childQuantity))) * (toRational quantity)
@@ -1212,7 +1212,7 @@ calculateFareParametersWithBookingFallback categories booking =
                       unitPrice =
                         Price
                           { amount = unitPrice'.amount,
-                            amountInt = round unitPrice'.amount,
+                            amountInt = roundToIntegral unitPrice'.amount,
                             currency = unitPrice'.currency
                           },
                       totalPrice = modifyPrice totalPrice' $ \p -> HighPrecMoney $ ((p.getHighPrecMoney) / (toRational (adultQuantity + childQuantity))) * (toRational quantity)
@@ -1223,7 +1223,7 @@ calculateFareParametersWithBookingFallback categories booking =
       totalPrice =
         Price
           { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount,
-            amountInt = round ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
+            amountInt = roundToIntegral ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
             currency
           }
       totalQuantity =
