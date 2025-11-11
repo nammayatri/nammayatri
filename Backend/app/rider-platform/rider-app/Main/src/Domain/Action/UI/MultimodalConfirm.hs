@@ -1585,38 +1585,51 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
       _ -> pure []
   let frfsQuotes = fst <$> frfsQuotesAndCategories
 
-  case mbSourceOfServiceTier of
-    Just DRC.QUOTES -> do
-      let availableRoutes = mapMaybe convertFRFSQuoteToAvailableRoute frfsQuotes
-      return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
-    _ -> do
-      let availableServiceTiers = if null frfsQuotes then Nothing else Just (mapMaybe (\(quote, quoteCategories) -> JMU.getServiceTierFromQuote quoteCategories quote) frfsQuotesAndCategories)
-      case integratedBPPConfigs of
-        [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = []}
-        (integratedBPPConfig : _) -> do
-          (_, availableRoutesByTier, _) <-
-            JMU.findPossibleRoutes
-              availableServiceTiers
-              req.startStopCode
-              req.endStopCode
-              currentTime
-              integratedBPPConfig
-              merchantId
-              person.merchantOperatingCityId
-              vehicleCategory
-              True -- sendWithoutFare
-              True
-              False
+  let availableServiceTiers = if null frfsQuotes then Nothing else Just (mapMaybe (\(quote, quoteCategories) -> JMU.getServiceTierFromQuote quoteCategories quote) frfsQuotesAndCategories)
+  case integratedBPPConfigs of
+    [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = []}
+    (integratedBPPConfig : _) -> do
+      (_, availableRoutesByTier, _) <-
+        JMU.findPossibleRoutes
+          availableServiceTiers
+          req.startStopCode
+          req.endStopCode
+          currentTime
+          integratedBPPConfig
+          merchantId
+          person.merchantOperatingCityId
+          vehicleCategory
+          True -- sendWithoutFare
+          True
+          False
 
-          let (liveBuses, staticBuses) = partition (\route -> route.source == LIVE) availableRoutesByTier
-          let filteredRoutes =
-                if req.onlyLive
-                  then liveBuses
-                  else liveBuses <> staticBuses
-
+      let (liveBuses, staticBuses) = partition (\route -> route.source == LIVE) availableRoutesByTier
+      let filteredRoutes =
+            if req.onlyLive
+              then liveBuses
+              else liveBuses <> staticBuses
+      case mbSourceOfServiceTier of
+        Just DRC.QUOTES -> do
+          availableRoutes <- concatMapM (convertToAvailableRouteWithQuotes integratedBPPConfig person frfsQuotes) filteredRoutes
+          return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
+        _ -> do
           availableRoutes <- concatMapM (convertToAvailableRoute integratedBPPConfig person) filteredRoutes
           return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
   where
+    findQuoteIdByRouteCode :: [DFRFSQuote.FRFSQuote] -> [Text] -> Maybe (Id DFRFSQuote.FRFSQuote)
+    findQuoteIdByRouteCode quotes routeCodes =
+      listToMaybe $
+        catMaybes $
+          map
+            ( \quote -> do
+                routeStations <- decodeFromText =<< quote.routeStationsJson :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI]
+                let quoteRouteCodes = map (.code) routeStations
+                if any (`elem` quoteRouteCodes) routeCodes
+                  then Just quote.id
+                  else Nothing
+            )
+            quotes
+
     convertToAvailableRoute :: DIBC.IntegratedBPPConfig -> Domain.Types.Person.Person -> RD.AvailableRoutesByTier -> Environment.Flow [ApiTypes.AvailableRoute]
     convertToAvailableRoute integratedBPPConfig person routesByTier =
       mapM
@@ -1631,6 +1644,32 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
               ApiTypes.AvailableRoute
                 { source = routeInfo.source,
                   quoteId = routesByTier.quoteId,
+                  serviceTierName,
+                  serviceTierType = routesByTier.serviceTier,
+                  routeCode = routeInfo.routeCode,
+                  routeShortName = routeInfo.shortName,
+                  routeLongName = routeInfo.longName,
+                  routeTimings = routeInfo.routeTimings
+                }
+        )
+        routesByTier.availableRoutesInfo
+
+    convertToAvailableRouteWithQuotes :: DIBC.IntegratedBPPConfig -> Domain.Types.Person.Person -> [DFRFSQuote.FRFSQuote] -> RD.AvailableRoutesByTier -> Environment.Flow [ApiTypes.AvailableRoute]
+    convertToAvailableRouteWithQuotes integratedBPPConfig person quotes routesByTier =
+      mapM
+        ( \routeInfo -> do
+            serviceTierName <-
+              case routesByTier.serviceTierName of
+                Just _ -> return routesByTier.serviceTierName
+                Nothing -> do
+                  frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId routesByTier.serviceTier person.merchantOperatingCityId integratedBPPConfig.id
+                  return $ frfsServiceTier <&> (.shortName)
+            -- Find quoteId for this specific route by matching routeCode
+            let mbQuoteId = findQuoteIdByRouteCode quotes [routeInfo.routeCode]
+            return $
+              ApiTypes.AvailableRoute
+                { source = routeInfo.source,
+                  quoteId = mbQuoteId,
                   serviceTierName,
                   serviceTierType = routesByTier.serviceTier,
                   routeCode = routeInfo.routeCode,
@@ -1804,20 +1843,3 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         Left err -> do
           logError $ "SetOnboarding OTPRest failed: " <> show err
           return Nothing
-
-convertFRFSQuoteToAvailableRoute :: DFRFSQuote.FRFSQuote -> Maybe (ApiTypes.AvailableRoute)
-convertFRFSQuoteToAvailableRoute quote = do
-  let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-  routeInfo <- listToMaybe (fromMaybe [] routeStations)
-  serviceTier <- routeInfo.vehicleServiceTier
-  return $
-    ApiTypes.AvailableRoute
-      { source = GTFS,
-        quoteId = Just quote.id,
-        serviceTierName = Just serviceTier.shortName,
-        serviceTierType = serviceTier._type,
-        routeCode = routeInfo.code,
-        routeShortName = routeInfo.shortName,
-        routeLongName = routeInfo.longName,
-        routeTimings = []
-      }
