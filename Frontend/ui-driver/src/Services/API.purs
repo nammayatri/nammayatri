@@ -4523,6 +4523,9 @@ data ServiceTierType
   | DELIVERY_TRUCK_MEDIUM
   | DELIVERY_TRUCK_LARGE
   | DELIVERY_TRUCK_ULTRA_LARGE
+  | BIKE_PLUS
+  | AC_PRIORITY
+  | E_RICKSHAW
 
 data AirConditionedRestrictionType
   = ToggleAllowed
@@ -4602,6 +4605,9 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "DELIVERY_TRUCK_MEDIUM" -> except $ Right DELIVERY_TRUCK_MEDIUM
                   "DELIVERY_TRUCK_LARGE" -> except $ Right DELIVERY_TRUCK_LARGE
                   "DELIVERY_TRUCK_ULTRA_LARGE" -> except $ Right DELIVERY_TRUCK_ULTRA_LARGE
+                  "BIKE_PLUS"    -> except $ Right BIKE_PLUS
+                  "AC_PRIORITY"  -> except $ Right AC_PRIORITY
+                  "E_RICKSHAW"   -> except $ Right E_RICKSHAW
                   _              -> except $ Right COMFY
 instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
 instance eqServiceTierType :: Eq ServiceTierType where eq = genericEq
@@ -4632,6 +4638,9 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode DELIVERY_TRUCK_MEDIUM = standardEncode "DELIVERY_TRUCK_MEDIUM"
     standardEncode DELIVERY_TRUCK_LARGE = standardEncode "DELIVERY_TRUCK_LARGE"
     standardEncode DELIVERY_TRUCK_ULTRA_LARGE = standardEncode "DELIVERY_TRUCK_ULTRA_LARGE"
+    standardEncode BIKE_PLUS = standardEncode "BIKE_PLUS"
+    standardEncode AC_PRIORITY = standardEncode "AC_PRIORITY"
+    standardEncode E_RICKSHAW = standardEncode "E_RICKSHAW"
 
 derive instance genericAirConditionedRestrictionType :: Generic AirConditionedRestrictionType _
 instance showAirConditionedRestrictionType :: Show AirConditionedRestrictionType where show = genericShow
