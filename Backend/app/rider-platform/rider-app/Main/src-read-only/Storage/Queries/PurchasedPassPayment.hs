@@ -95,6 +95,8 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
   updateWithKV
     [ Se.Set Beam.amount amount,
       Se.Set Beam.endDate endDate,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.orderId (Kernel.Types.Id.getId orderId),
       Se.Set Beam.passCode passCode,
       Se.Set Beam.passName passName,
@@ -102,8 +104,6 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
       Se.Set Beam.purchasedPassId (Kernel.Types.Id.getId purchasedPassId),
       Se.Set Beam.startDate startDate,
       Se.Set Beam.status status,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -116,6 +116,8 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
           { amount = amount,
             endDate = endDate,
             id = Kernel.Types.Id.Id id,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             orderId = Kernel.Types.Id.Id orderId,
             passCode = passCode,
             passName = passName,
@@ -123,8 +125,6 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
             purchasedPassId = Kernel.Types.Id.Id purchasedPassId,
             startDate = startDate,
             status = status,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -135,6 +135,8 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
       { Beam.amount = amount,
         Beam.endDate = endDate,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.orderId = Kernel.Types.Id.getId orderId,
         Beam.passCode = passCode,
         Beam.passName = passName,
@@ -142,8 +144,6 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
         Beam.purchasedPassId = Kernel.Types.Id.getId purchasedPassId,
         Beam.startDate = startDate,
         Beam.status = status,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

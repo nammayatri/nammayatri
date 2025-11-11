@@ -17,6 +17,8 @@ data PurchasedPassPaymentT f = PurchasedPassPaymentT
   { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
     endDate :: B.C f Data.Time.Calendar.Day,
     id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     orderId :: B.C f Kernel.Prelude.Text,
     passCode :: B.C f Kernel.Prelude.Text,
     passName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -24,8 +26,6 @@ data PurchasedPassPaymentT f = PurchasedPassPaymentT
     purchasedPassId :: B.C f Kernel.Prelude.Text,
     startDate :: B.C f Data.Time.Calendar.Day,
     status :: B.C f Domain.Types.PurchasedPass.StatusType,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

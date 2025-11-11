@@ -263,7 +263,7 @@ buildReconTable merchant booking fareParameters _dOrder tickets mRiderNumber int
   let finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee -- FIXME
       finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / toRational fareParameters.totalQuantity
   tOrderPrice <- FRFSUtils.totalOrderValue paymentBookingStatus booking
-  let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / toRational fareParameters.totalQuantity
+  let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / toRational (length tickets)
   settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
   let reconEntry =
         Recon.FRFSRecon
@@ -274,7 +274,7 @@ buildReconTable merchant booking fareParameters _dOrder tickets mRiderNumber int
             Recon.collectorIFSC = bapConfig.bapIFSC,
             Recon.collectorSubscriberId = bapConfig.subscriberId,
             Recon.date = show now,
-            Recon.destinationStationCode = toStation.code,
+            Recon.destinationStationCode = Just toStation.code,
             Recon.differenceAmount = Nothing,
             Recon.fare = FRFSUtils.getUnitPriceFromPriceItem fareParameters.adultItem,
             Recon.frfsTicketBookingId = booking.id,
@@ -285,21 +285,24 @@ buildReconTable merchant booking fareParameters _dOrder tickets mRiderNumber int
             Recon.settlementAmount,
             Recon.settlementDate = Nothing,
             Recon.settlementReferenceNumber = Nothing,
-            Recon.sourceStationCode = fromStation.code,
+            Recon.sourceStationCode = Just fromStation.code,
             Recon.transactionUUID = txn.txnUUID,
-            Recon.ticketNumber = "",
-            Recon.ticketQty = fareParameters.totalQuantity,
+            Recon.ticketNumber = Just "",
+            Recon.ticketQty = Just fareParameters.totalQuantity,
             Recon.time = show now,
             Recon.txnId = txn.txnId,
             Recon.totalOrderValue = tOrderValue,
-            Recon.transactionRefNumber = transactionRefNumber,
+            Recon.transactionRefNumber = Just transactionRefNumber,
             Recon.merchantId = Just booking.merchantId,
             Recon.merchantOperatingCityId = Just booking.merchantOperatingCityId,
             Recon.createdAt = now,
             Recon.updatedAt = now,
             Recon.ticketStatus = Nothing,
             Recon.providerId = booking.providerId,
-            Recon.providerName = booking.providerName
+            Recon.providerName = booking.providerName,
+            Recon.entityType = Just Recon.FRFS_TICKET_BOOKING,
+            Recon.reconStatus = Just Recon.PENDING,
+            Recon.paymentGateway = Nothing
           }
 
   reconEntries <- mapM (buildRecon reconEntry) tickets
@@ -565,7 +568,7 @@ buildRecon recon ticket = do
   return
     recon
       { Recon.id = reconId,
-        Recon.ticketNumber = ticket.ticketNumber,
+        Recon.ticketNumber = Just ticket.ticketNumber,
         Recon.ticketStatus = Just ticket.status,
         Recon.createdAt = now,
         Recon.updatedAt = now

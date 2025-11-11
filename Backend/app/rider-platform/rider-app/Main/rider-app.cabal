@@ -1173,7 +1173,6 @@ library
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
       Storage.Queries.OrphanInstances.PopularLocation
       Storage.Queries.OrphanInstances.PurchasedPass
-      Storage.Queries.OrphanInstances.PurchasedPassPayment
       Storage.Queries.OrphanInstances.Quote
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.RecentLocation
