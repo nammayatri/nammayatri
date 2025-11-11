@@ -706,6 +706,9 @@ getVehicleVariantImage variant =
       "DELIVERY_TRUCK_LARGE" -> "ny_ic_large_truck," <> commonUrl <> "ny_ic_large_truck.png"
       "DELIVERY_TRUCK_ULTRA_LARGE" -> "ny_ic_ultra_large_truck," <> commonUrl <> "ny_ic_ultra_large_truck.png"
       "PREMIUM_SEDAN" ->  "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+      "BIKE_PLUS" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+      "AC_PRIORITY" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+      "E_RICKSHAW" -> "ny_ic_e_rickshaw," <> commonUrl <> "ny_ic_e_rickshaw.png"
       _ -> fetchImage FF_ASSET "ic_vehicle_front"
 
 isKeralaCity :: String -> Boolean
@@ -1081,6 +1084,9 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.DELIVERY_TRUCK_LARGE -> "DELIVERY_TRUCK_LARGE"
   SA.DELIVERY_TRUCK_ULTRA_LARGE -> "DELIVERY_TRUCK_ULTRA_LARGE"
   SA.HERITAGE_CAB_TIER -> "HERITAGE_CAB"
+  SA.BIKE_PLUS -> "BIKE_PLUS"
+  SA.AC_PRIORITY -> "AC_PRIORITY"
+  SA.E_RICKSHAW -> "E_RICKSHAW"
 
 getVehicleServiceTierImage :: SA.ServiceTierType -> String
 getVehicleServiceTierImage vehicleServiceTier = case vehicleServiceTier of

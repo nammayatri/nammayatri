@@ -245,6 +245,9 @@ tipConfigData city variant = do
         "DELIVERY_TRUCK_MEDIUM" -> config.deliveryTruckMedium
         "DELIVERY_TRUCK_LARGE" -> config.deliveryTruckLarge
         "DELIVERY_TRUCK_ULTRA_LARGE" -> config.deliveryTruckUltraLarge
+        "BIKE_PLUS" -> config.bike
+        "AC_PRIORITY" -> config.autoRickshaw
+        "E_RICKSHAW" -> config.autoRickshaw
         _ -> config.default
 
 defaultTipsConfig :: TipsConfig
