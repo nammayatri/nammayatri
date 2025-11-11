@@ -628,6 +628,8 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
       void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq
     createRCAssociation driverId rc = do
       transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      allLinkedRCs <- DAQuery.findAllLinkedByDriverId driverId
+      unless (length allLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
       createDriverRCAssociationIfPossible transporterConfig driverId rc
 
 endActiveRide :: Id DRide.Ride -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
