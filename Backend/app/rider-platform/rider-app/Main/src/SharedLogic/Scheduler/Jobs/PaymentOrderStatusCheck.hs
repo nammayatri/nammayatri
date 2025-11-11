@@ -65,12 +65,10 @@ paymentOrderStatusCheckJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
       merchantId' = jobData.merchantId
       merchantOperatingCityId' = jobData.merchantOperatingCityId
 
-  now <- getCurrentTime
-  let oneDayAgo = addUTCTime (intToNominalDiffTime (-86400)) now
-      notFailedPaymentStatuses = [Payment.NEW, Payment.PENDING_VBV, Payment.CHARGED, Payment.AUTHORIZING, Payment.COD_INITIATED, Payment.STARTED, Payment.AUTO_REFUNDED]
+  let notFailedPaymentStatuses = [Payment.NEW, Payment.PENDING_VBV, Payment.CHARGED, Payment.AUTHORIZING, Payment.COD_INITIATED, Payment.STARTED, Payment.AUTO_REFUNDED]
       notSuccessfulPaymentFulfillmentStatuses = [Just DPayment.FulfillmentPending, Just DPayment.FulfillmentFailed, Just DPayment.FulfillmentRefundPending, Just DPayment.FulfillmentRefundInitiated, Nothing]
 
-  allRecentOrders <- QPaymentOrder.findAllByCreatedAtAfter oneDayAgo notFailedPaymentStatuses notSuccessfulPaymentFulfillmentStatuses
+  allRecentOrders <- QPaymentOrder.findAllValidOrders notFailedPaymentStatuses notSuccessfulPaymentFulfillmentStatuses
   recentNotFailedOrNotChargedOrders <-
     filterM
       ( \order ->

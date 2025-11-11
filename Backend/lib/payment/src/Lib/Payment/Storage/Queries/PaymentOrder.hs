@@ -121,13 +121,11 @@ findAllByStatusAndCreatedAtAfter statuses createdAtAfter =
     Nothing
     Nothing
 
-findAllByCreatedAtAfter :: BeamFlow m r => UTCTime -> [Payment.TransactionStatus] -> [Maybe DPayment.PaymentFulfillmentStatus] -> m [DOrder.PaymentOrder]
-findAllByCreatedAtAfter createdAtAfter statuses paymentFulfillmentStatuses =
-  findAllWithOptionsKV
-    [Se.Is BeamPO.createdAt $ Se.GreaterThanOrEq createdAtAfter, Se.Is BeamPO.status $ Se.In statuses, Se.Is BeamPO.paymentFulfillmentStatus $ Se.In paymentFulfillmentStatuses]
-    (Se.Desc BeamPO.createdAt)
-    Nothing
-    Nothing
+findAllValidOrders :: BeamFlow m r => [Payment.TransactionStatus] -> [Maybe DPayment.PaymentFulfillmentStatus] -> m [DOrder.PaymentOrder]
+findAllValidOrders statuses paymentFulfillmentStatuses = do
+  now <- getCurrentTime
+  findAllWithKV
+    [Se.Is BeamPO.validTill $ Se.GreaterThanOrEq (Just now), Se.Is BeamPO.status $ Se.In statuses, Se.Is BeamPO.paymentFulfillmentStatus $ Se.In paymentFulfillmentStatuses]
 
 instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
   fromTType' orderT@BeamPO.PaymentOrderT {..} = do
