@@ -155,7 +155,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
     QFOA.create fleetOperatorAssData
     let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
     when allowCacheDriverFlowStatus $ do
-      DriverMode.incrementOperatorStatusKeyForFleetOwner referredOperatorId person.id.getId
+      DriverMode.incrementOperatorStatusKeyForFleetOwner referredOperatorId person.id.getId False
     DOR.incrementOnboardedCount DOR.FleetReferral (Id referredOperatorId) transporterConfig
   when (transporterConfig.generateReferralCodeForFleet == Just True) $ do
     void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (person.id, merchantId, merchantOpCityId)

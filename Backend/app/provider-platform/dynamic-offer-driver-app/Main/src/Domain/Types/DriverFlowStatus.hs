@@ -23,8 +23,8 @@ getStatusKey entityId status = "driver_status:" <> (T.pack . show) status <> ":"
 statusList :: [DriverFlowStatus]
 statusList = [ONLINE, OFFLINE, SILENT, ON_PICKUP, ON_RIDE, ACTIVE, INACTIVE]
 
-allKeys :: Text -> [Text]
-allKeys entityId = map (getStatusKey entityId) statusList
+allKeys :: Text -> Bool -> [Text]
+allKeys entityId computeOnlineStatusOnly = if computeOnlineStatusOnly then [getStatusKey entityId ONLINE] else map (getStatusKey entityId) statusList
 
 -- Returns the current ONLINE count/value for the given entity (e.g., fleet owner) from Redis
 getOnlineKeyValue :: (Redis.HedisFlow m r) => Text -> m (Maybe Int)

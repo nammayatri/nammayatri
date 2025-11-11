@@ -159,7 +159,7 @@ postFleetManagementFleetUnlink merchantShortId opCity fleetOwnerId requestorId =
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
   when allowCacheDriverFlowStatus $ do
     forM_ activeAssociations $ \assoc ->
-      DriverMode.decrementOperatorStatusKeyForFleetOwner assoc.operatorId assoc.fleetOwnerId
+      DriverMode.decrementOperatorStatusKeyForFleetOwner assoc.operatorId assoc.fleetOwnerId False
 
   decryptedMobileNumber <-
     mapM decrypt fleetOwner.mobileNumber
@@ -270,7 +270,7 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
   QFOA.create fleetOperatorAssociation
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
   when allowCacheDriverFlowStatus $ do
-    DriverMode.incrementOperatorStatusKeyForFleetOwner operator.id.getId fleetOwner.id.getId
+    DriverMode.incrementOperatorStatusKeyForFleetOwner operator.id.getId fleetOwner.id.getId False
 
   let phoneNumber = fromMaybe "+91" fleetOwner.mobileCountryCode <> decryptedMobileNumber
   smsCfg <- asks (.smsCfg)

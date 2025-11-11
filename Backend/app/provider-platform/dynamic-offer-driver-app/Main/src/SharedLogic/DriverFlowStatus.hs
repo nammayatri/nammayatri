@@ -26,8 +26,9 @@ handleCacheMissForDriverFlowStatus ::
   DP.Role ->
   Text ->
   [Text] ->
+  Bool ->
   m Common.DriverStatusRes
-handleCacheMissForDriverFlowStatus entityRole entityId allKeys = do
+handleCacheMissForDriverFlowStatus entityRole entityId allKeys computeOnlineStatusOnly = do
   let inProgressKey = getProgressKey entityId
   inProgress <- Redis.withMasterRedis $ Redis.get @Bool inProgressKey
   case inProgress of
@@ -55,7 +56,7 @@ handleCacheMissForDriverFlowStatus entityRole entityId allKeys = do
               DP.OPERATOR -> getFleetDriverIdsAndDriverIdsByOperatorId entityId
               _ -> throwError (InvalidRequest "Invalid Data")
             logTagInfo "DriverStatus" $ "Fetched driverIds from association: " <> show driverIds
-            driverModeInfo <- CDI.getModeCountsByDriverIds driverIds
+            driverModeInfo <- if computeOnlineStatusOnly then CDI.getOnlineCountByDriverIds driverIds else CDI.getModeCountsByDriverIds driverIds
             logTagInfo "DriverStatus" $ "ClickHouse returned: " <> show driverModeInfo <> ". Updating Redis."
             forM_ driverModeInfo $ \(mbStatus, count) -> do
               let k = DDF.getStatusKey entityId (fromMaybe DDF.INACTIVE mbStatus)
@@ -70,7 +71,7 @@ handleCacheMissForDriverFlowStatus entityRole entityId allKeys = do
             Right statusRes -> pure statusRes
         else do
           logTagInfo "DriverStatus" $ "inProgress lock already held for entityId: " <> entityId <> " (race detected in else). Waiting for it to clear."
-          handleCacheMissForDriverFlowStatus entityRole entityId allKeys
+          handleCacheMissForDriverFlowStatus entityRole entityId allKeys computeOnlineStatusOnly
 
 getFleetDriverIdsAndDriverIdsByOperatorId ::
   ( MonadFlow m,

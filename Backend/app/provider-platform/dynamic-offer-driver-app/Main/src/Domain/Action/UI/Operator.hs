@@ -52,11 +52,13 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
     driverOperatorAssociation.driverId
     Nothing
     ( \driverInfo -> do
+        -- This function called here also because when flow status will not enable but analytics will enable then we should only compute online status only. And if both the feature is enabled then we should called only one time which I called in flow status section.
+        when (not transporterConfig.analyticsConfig.allowCacheDriverFlowStatus) $ DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus True
         when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.id.getId
         Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.id.getId
     )
     ( \driverInfo -> do
-        DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus
+        DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus False
     )
   QDriverInfoInternal.updateOnboardingVehicleCategory mbOnboardingVehicleCategory driver.id
 

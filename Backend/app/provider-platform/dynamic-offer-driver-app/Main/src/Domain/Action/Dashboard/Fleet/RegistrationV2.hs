@@ -148,7 +148,7 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
       QFOA.create fleetOperatorAssocData
       let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
       when allowCacheDriverFlowStatus $ do
-        DriverMode.incrementOperatorStatusKeyForFleetOwner referredOperatorId fleetOwnerId.getId
+        DriverMode.incrementOperatorStatusKeyForFleetOwner referredOperatorId fleetOwnerId.getId False
       DOR.incrementOnboardedCount DOR.FleetReferral (Id referredOperatorId) transporterConfig
   when (transporterConfig.generateReferralCodeForFleet == Just True) $ do
     fleetReferral <- QDR.findById person.id

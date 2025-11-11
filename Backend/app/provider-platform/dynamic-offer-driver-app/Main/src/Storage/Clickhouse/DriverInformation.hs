@@ -46,6 +46,23 @@ getModeCountsByDriverIds driverIds =
         (\info -> info.driverId `CH.in_` driverIds)
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
 
+getOnlineCountByDriverIds ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  m [(Maybe DDF.DriverFlowStatus, Int)]
+getOnlineCountByDriverIds driverIds = do
+  res <-
+    CH.findAll $
+      CH.select_
+        ( \info -> CH.aggregate $ CH.count_ info.driverId
+        )
+        $ CH.filter_
+          (\info -> info.driverId `CH.in_` driverIds CH.&&. info.driverFlowStatus CH.==. Just DDF.ONLINE)
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
+  case listToMaybe res of
+    Just count -> pure [(Just DDF.ONLINE, count)]
+    Nothing -> pure []
+
 getEnabledDriverCountByDriverIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   [Id DP.Person] ->
