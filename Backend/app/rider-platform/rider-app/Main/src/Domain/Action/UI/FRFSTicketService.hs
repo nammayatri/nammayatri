@@ -813,7 +813,7 @@ frfsOrderStatusHandler ::
   Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
   DPayment.PaymentStatusResp ->
   (DJL.JourneyLeg -> Id DFRFSQuote.FRFSQuote -> m ()) ->
-  m (DPayment.PaymentFulfillmentStatus, Maybe Text)
+  m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
 frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
   orderShortId <- DPayment.getOrderShortId paymentStatusResponse
   logDebug $ "frfs ticket order bap webhookc call" <> orderShortId.getShortId
@@ -843,7 +843,8 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
           (Just DFRFSTicketBooking.FAILED, Just FRFSTicketService.SUCCESS, DPayment.FulfillmentFailed, any) -- Paid but Booking Failed
         ]
         bookingsStatus,
-      journeyId <&> (.getId)
+      journeyId <&> (.getId),
+      Nothing
     )
   where
     -- evaluateConditions :: Foldable t => [(Maybe DFRFSTicketBooking.FRFSTicketBookingStatus, Maybe FRFSTicketService.FRFSBookingPaymentStatusAPI, Payment.PaymentFulfillmentStatus, ((a -> Bool) -> t a -> Bool))] -> [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes] -> Payment.PaymentFulfillmentStatus

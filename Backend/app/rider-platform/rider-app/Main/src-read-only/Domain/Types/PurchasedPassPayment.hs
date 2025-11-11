@@ -19,6 +19,8 @@ data PurchasedPassPayment = PurchasedPassPayment
   { amount :: Kernel.Types.Common.HighPrecMoney,
     endDate :: Data.Time.Calendar.Day,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
     passCode :: Kernel.Prelude.Text,
     passName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -26,8 +28,6 @@ data PurchasedPassPayment = PurchasedPassPayment
     purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
     startDate :: Data.Time.Calendar.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

@@ -6,16 +6,20 @@ module Domain.Action.UI.Pass
     passOrderStatusHandler,
     postMultimodalPassSwitchDeviceId,
     getMultimodalPassTransactions,
+    createPassReconEntry,
   )
 where
 
 import qualified API.Types.UI.Pass as PassAPI
+import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.FRFS.Utils as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Time as DT
+import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Pass as DPass
@@ -50,8 +54,10 @@ import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Translations as QT
+import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.PassCategoryExtra as QPassCategory
 import qualified Storage.Queries.PassExtra as QPass
 import qualified Storage.Queries.PassTypeExtra as QPassType
@@ -230,8 +236,8 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
             amount = pass.amount,
             passCode = pass.code,
             passName = pass.name,
-            merchantId = Just pass.merchantId,
-            merchantOperatingCityId = Just pass.merchantOperatingCityId,
+            merchantId = pass.merchantId,
+            merchantOperatingCityId = pass.merchantOperatingCityId,
             createdAt = now,
             updatedAt = now
           }
@@ -516,7 +522,7 @@ passOrderStatusHandler ::
   Id.Id DOrder.PaymentOrder ->
   Id.Id DM.Merchant ->
   Payment.TransactionStatus ->
-  m (DPayment.PaymentFulfillmentStatus, Maybe Text)
+  m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
 passOrderStatusHandler paymentOrderId _merchantId status = do
   logInfo $ "Pass payment webhook handler called for paymentOrderId: " <> paymentOrderId.getId
   mbPurchasedPassPayment <- QPurchasedPassPayment.findOneByPaymentOrderId paymentOrderId
@@ -530,18 +536,18 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
         when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
           QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus
       case mbPassStatus of
-        Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId)
-        Just DPurchasedPass.PreBooked -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId)
-        Just DPurchasedPass.Expired -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId)
-        Just DPurchasedPass.Failed -> return (DPayment.FulfillmentFailed, Just purchasedPass.id.getId)
-        Just DPurchasedPass.RefundPending -> return (DPayment.FulfillmentRefundPending, Just purchasedPass.id.getId)
-        Just DPurchasedPass.RefundInitiated -> return (DPayment.FulfillmentRefundInitiated, Just purchasedPass.id.getId)
-        Just DPurchasedPass.RefundFailed -> return (DPayment.FulfillmentRefundFailed, Just purchasedPass.id.getId)
-        Just DPurchasedPass.Refunded -> return (DPayment.FulfillmentRefunded, Just purchasedPass.id.getId)
-        _ -> return (DPayment.FulfillmentPending, Just purchasedPass.id.getId)
+        Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+        Just DPurchasedPass.PreBooked -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+        Just DPurchasedPass.Expired -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+        Just DPurchasedPass.Failed -> return (DPayment.FulfillmentFailed, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+        Just DPurchasedPass.RefundPending -> return (DPayment.FulfillmentRefundPending, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+        Just DPurchasedPass.RefundInitiated -> return (DPayment.FulfillmentRefundInitiated, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+        Just DPurchasedPass.RefundFailed -> return (DPayment.FulfillmentRefundFailed, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+        Just DPurchasedPass.Refunded -> return (DPayment.FulfillmentRefunded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
+        _ -> return (DPayment.FulfillmentPending, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
     _ -> do
       logError $ "Purchased pass not found for paymentOrderId: " <> paymentOrderId.getId
-      return (DPayment.FulfillmentPending, Nothing)
+      return (DPayment.FulfillmentPending, Nothing, Nothing)
   where
     convertPaymentStatusToPurchasedPassStatus futureDatePass = \case
       Payment.CHARGED -> if futureDatePass then Just DPurchasedPass.PreBooked else Just DPurchasedPass.Active
@@ -551,6 +557,68 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       Payment.CANCELLED -> Just DPurchasedPass.Failed
       Payment.AUTO_REFUNDED -> Just DPurchasedPass.Refunded
       _ -> Nothing
+
+createPassReconEntry ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r
+  ) =>
+  DPayment.PaymentStatusResp ->
+  Text ->
+  m ()
+createPassReconEntry paymentStatusResponse transactionId = do
+  case paymentStatusResponse.status of
+    Payment.CHARGED -> do
+      purchasedPassPayment <- QPurchasedPassPayment.findByPrimaryKey (Id.Id transactionId) >>= fromMaybeM (InvalidRequest $ "Purchase pass payment not found for id: " <> transactionId)
+      bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback purchasedPassPayment.merchantOperatingCityId purchasedPassPayment.merchantId (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.BUS) >>= fromMaybeM (InternalError "Beckn Config not found")
+      mkPassReconEntry bapConfig purchasedPassPayment
+    _ -> return ()
+  where
+    mkPassReconEntry bapConfig purchasedPassPayment = do
+      let finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee
+      now <- getCurrentTime
+      reconId <- generateGUID
+      let reconEntry =
+            Recon.FRFSRecon
+              { Recon.id = reconId,
+                Recon.frfsTicketBookingId = Id.Id purchasedPassPayment.id.getId,
+                Recon.networkOrderId = purchasedPassPayment.id.getId,
+                Recon.collectorSubscriberId = bapConfig.subscriberId,
+                Recon.receiverSubscriberId = "MTC bus pass",
+                Recon.date = show now,
+                Recon.time = show now,
+                Recon.mobileNumber = Nothing,
+                Recon.sourceStationCode = Nothing,
+                Recon.destinationStationCode = Nothing,
+                Recon.ticketQty = Nothing,
+                Recon.ticketNumber = Nothing,
+                Recon.transactionRefNumber = Nothing,
+                Recon.transactionUUID = paymentStatusResponse.txnUUID,
+                Recon.txnId = Just paymentStatusResponse.orderShortId.getShortId,
+                Recon.fare = mkPrice Nothing purchasedPassPayment.amount,
+                Recon.buyerFinderFee = finderFee,
+                Recon.totalOrderValue = mkPrice Nothing purchasedPassPayment.amount,
+                Recon.settlementAmount = mkPrice Nothing purchasedPassPayment.amount,
+                Recon.beneficiaryIFSC = Nothing,
+                Recon.beneficiaryBankAccount = Nothing,
+                Recon.collectorIFSC = bapConfig.bapIFSC,
+                Recon.settlementReferenceNumber = Nothing,
+                Recon.settlementDate = Nothing,
+                Recon.differenceAmount = Nothing,
+                Recon.message = Nothing,
+                Recon.ticketStatus = Nothing,
+                Recon.providerId = "MTC Bus Pass",
+                Recon.providerName = "MTC Bus Pass Provider",
+                Recon.entityType = Just Recon.BUS_PASS,
+                Recon.reconStatus = Just Recon.PENDING,
+                Recon.paymentGateway = Nothing,
+                Recon.merchantId = Just purchasedPassPayment.merchantId,
+                Recon.merchantOperatingCityId = Just purchasedPassPayment.merchantOperatingCityId,
+                Recon.createdAt = now,
+                Recon.updatedAt = now
+              }
+      void $ QRecon.create reconEntry
 
 getMultimodalPassList ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),

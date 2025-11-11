@@ -606,11 +606,11 @@ FRFSRecon:
     date: Text # on_confirm date
     time: Text # on_confirm time
     mobileNumber: Maybe Text # customer number
-    sourceStationCode: Text # source station code
-    destinationStationCode: Text # destination station code
-    ticketQty: Int # ticket quantity
-    ticketNumber: Text
-    transactionRefNumber: Text # transactionId
+    sourceStationCode: Maybe Text # source station code
+    destinationStationCode: Maybe Text # destination station code
+    ticketQty: Maybe Int # ticket quantity
+    ticketNumber: Maybe Text
+    transactionRefNumber: Maybe Text # transactionId
     transactionUUID: Maybe Text # transaction uuid
     txnId: Maybe Text # transaction uuid
     fare: Price # per ticket price
@@ -627,6 +627,31 @@ FRFSRecon:
     ticketStatus: Maybe FRFSTicketStatus
     providerId: Text
     providerName: Text
+    entityType: Maybe EntityType
+    reconStatus: Maybe ReconStatus
+    paymentGateway: Maybe Text
+
+  default:
+    destinationStationCode: "'NA'" # Default For DSL
+    sourceStationCode: "'NA'" # Default For DSL
+    ticketQty: '0' # Default For DSL
+    ticketNumber: "'NA'" # Default For DSL
+    transactionRefNumber: "'NA'" # Default For DSL
+
+  types:
+    EntityType:
+      enum: "BUS_PASS,FRFS_TICKET_BOOKING"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+    ReconStatus:
+      enum: "PENDING,SETTLED,PARTIALLY_SETTLED,REFUNDED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <EntityType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <EntityType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ReconStatus>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <ReconStatus>
 
   queries:
     updateTOrderValueAndSettlementAmountById:

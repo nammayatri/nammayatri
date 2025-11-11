@@ -177,7 +177,7 @@ orderStatusHandler ::
   m DPayment.PaymentStatusResp
 orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
   refundStatusHandler paymentOrder paymentStatusResponse.refunds paymentService
-  eitherPaymentFullfillmentStatusWithEntityId <-
+  eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId <-
     withTryCatch "orderStatusHandler:orderStatusHandler" $
       ( do
           case paymentService of
@@ -189,17 +189,17 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
               Pass.passOrderStatusHandler paymentOrder.id (cast paymentOrder.merchantId) status
             DOrder.BBPS -> do
               paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler (cast paymentOrder.merchantId) paymentStatusResponse
-              return (paymentFulfillStatus, Nothing)
-            _ -> return (DPayment.FulfillmentPending, Nothing)
+              return (paymentFulfillStatus, Nothing, Nothing)
+            _ -> return (DPayment.FulfillmentPending, Nothing, Nothing)
       )
   finalPaymentStatusResponse <-
     case paymentStatusResponse.status of
       Payment.CHARGED -> do
-        case eitherPaymentFullfillmentStatusWithEntityId of
+        case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
           Right paymentFulfillmentStatus ->
             case paymentFulfillmentStatus of
-              (DPayment.FulfillmentFailed, _) -> initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
-              (DPayment.FulfillmentPending, _) -> do
+              (DPayment.FulfillmentFailed, _, _) -> initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
+              (DPayment.FulfillmentPending, _, _) -> do
                 now <- getCurrentTime
                 case paymentOrder.validTill of
                   Just orderValidTill -> do
@@ -215,12 +215,20 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
             return paymentStatusResponse
       _ -> return paymentStatusResponse
   let paymentStatusResponseWithFulfillmentStatus =
-        case eitherPaymentFullfillmentStatusWithEntityId of
-          Right (paymentFulfillmentStatus', domainEntityId') ->
+        case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
+          Right (paymentFulfillmentStatus', domainEntityId', _) ->
             case finalPaymentStatusResponse of
               DPayment.PaymentStatus {..} -> DPayment.PaymentStatus {DPayment.paymentFulfillmentStatus = Just paymentFulfillmentStatus', DPayment.domainEntityId = domainEntityId', ..}
               _ -> finalPaymentStatusResponse
           Left _ -> finalPaymentStatusResponse
+  case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
+    Right (newPaymentFulfillmentStatus, _, Just domainTransactionId) -> do
+      whenJust paymentOrder.paymentFulfillmentStatus $ \oldPaymentFulfillmentStatus -> do
+        when (newPaymentFulfillmentStatus == DPayment.FulfillmentSucceeded && newPaymentFulfillmentStatus /= oldPaymentFulfillmentStatus) $ do
+          case paymentService of
+            DOrder.FRFSPassPurchase -> Pass.createPassReconEntry paymentStatusResponse domainTransactionId
+            _ -> pure ()
+    _ -> pure ()
   QPaymentOrder.updatePaymentFulfillmentStatus paymentOrder.id paymentStatusResponseWithFulfillmentStatus.paymentFulfillmentStatus
   return paymentStatusResponseWithFulfillmentStatus
 

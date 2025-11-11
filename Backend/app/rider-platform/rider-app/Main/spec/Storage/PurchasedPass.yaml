@@ -92,6 +92,8 @@ PurchasedPassPayment:
     startDate: Day
     status: Domain.Types.PurchasedPass.StatusType
     endDate: Day
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
 
   constraints:
     id: PrimaryKey
