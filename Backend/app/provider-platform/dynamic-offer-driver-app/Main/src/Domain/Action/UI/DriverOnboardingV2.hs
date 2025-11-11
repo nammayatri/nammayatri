@@ -648,12 +648,15 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
     when (panInfo.verificationStatus == Documents.VALID) $ do
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "PAN"
-  verificationStatus <- case mbPanVerificationService of
-    Just VI.HyperVerge -> do
-      callHyperVerge
-    Just VI.Idfy -> do
-      callIdfy person.id.getId
-    _ -> pure Documents.VALID
+  verificationStatus <-
+    if req.verifiedBy == Just DPC.DIGILOCKER
+      then pure Documents.VALID
+      else case mbPanVerificationService of
+        Just VI.HyperVerge -> do
+          callHyperVerge
+        Just VI.Idfy -> do
+          callIdfy person.id.getId
+        _ -> pure Documents.VALID
 
   QDPC.upsertPanRecord =<< buildPanCard merchantId person req verificationStatus (Just merchantOpCityId)
   return Success

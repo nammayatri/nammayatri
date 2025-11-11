@@ -226,8 +226,17 @@ getDigiLockerFile ::
   Id DMOC.MerchantOperatingCity ->
   DigiTypes.DigiLockerGetFileReq ->
   m BSL.ByteString
-getDigiLockerFile _merchantId merchantOpCityId req =
-  callService merchantOpCityId DigiLocker Verification.getFile req
+getDigiLockerFile _merchantId merchantOpCityId req = do
+  logInfo $
+    "Tools.Verification.getDigiLockerFile - Request: merchantOpCityId="
+      <> merchantOpCityId.getId
+      <> ", uri="
+      <> req.uri
+  resp <- callService merchantOpCityId DigiLocker Verification.getFile req
+  logInfo $
+    "Tools.Verification.getDigiLockerFile - Response bytes: "
+      <> show (BSL.length resp)
+  pure resp
 
 -- | Pull Driving License from DigiLocker (requires DL number)
 pullDigiLockerDrivingLicense ::

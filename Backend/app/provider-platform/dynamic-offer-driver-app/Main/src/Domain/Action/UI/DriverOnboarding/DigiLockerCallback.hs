@@ -9,7 +9,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), utctDay)
-import Data.Time.Calendar (diffDays)
+import Data.Time.Calendar (Day, diffDays)
 import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DLModule
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
@@ -19,6 +19,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverPanCard as DPC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.VehicleCategory as VehicleCategory
 import Environment
 import Kernel.External.Encryption (encrypt)
 import qualified Kernel.External.SharedLogic.DigiLocker.Error as DigiLockerError
@@ -131,7 +132,12 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
     throwError $ InvalidRequest "DigiLocker verification is not enabled for this merchant operating city"
 
   -- Step 6: Get DigiLocker config and call tokenize API
-  digiLockerConfig <- getDigiLockerConfig person.merchantOperatingCityId
+  digiLockerConfig <- DriverOnboardingV2.getDigiLockerConfig person.merchantOperatingCityId
+  logInfo $
+    "DigiLocker callback - Loaded DigiLocker config for merchantOpCityId: "
+      <> person.merchantOperatingCityId.getId
+      <> ", baseUrl: "
+      <> show digiLockerConfig.url
 
   let tokenReq =
         InterfaceTypes.TokenizationReq
@@ -150,6 +156,10 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
             redirectUri = digiLockerConfig.redirectUri
           }
 
+  logInfo $
+    "DigiLocker callback - Calling Tokenize.tokenize with codeVerifier present: "
+      <> show (isJust tokenReq.codeVerifier)
+      <> ", state: present"
   tokenResp <-
     Tokenize.tokenize (InterfaceTypes.DigilockerTokenizationServiceConfig tokenizeConfig) tokenReq
       `catchAny` \err -> do
@@ -157,7 +167,9 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
         QDV.updateSessionStatus DDV.FAILED (Just "TOKEN_API_FAILED") (Just $ T.pack $ show err) session.id
         throwError $ InternalError "Failed to obtain access token from DigiLocker"
 
-  logInfo $ "DigiLocker callback - Token API success. Access token obtained"
+  logInfo $
+    "DigiLocker callback - Token API success. Access token obtained, scope: "
+      <> show tokenResp.scope
 
   -- Step 7: Update session with access token, scope, and expiry
   let accessToken = tokenResp.token
@@ -167,7 +179,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
   QDV.updateAccessToken (Just accessToken) expiresAt (Just code) scope stateParam
 
   -- Step 8: Get required documents and already verified documents
-  requiredDocs <- getRequiredDocuments person.merchantOperatingCityId
+  requiredDocs <- getRequiredDocuments person.merchantOperatingCityId session.vehicleCategory
   alreadyVerifiedDocs <- getAlreadyVerifiedDocuments driverId
   let unavailableDocs = filter (`notElem` alreadyVerifiedDocs) (map (.documentType) requiredDocs)
 
@@ -219,18 +231,31 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
 -- | Get DigiLocker config from merchant service config
 -- Assumes digilockerEnabled check is already done by caller
 -- TODO: Implement proper config retrieval from MerchantServiceConfig table
-getDigiLockerConfig :: Id DMOC.MerchantOperatingCity -> Flow DigilockerTypes.DigiLockerCfg
-getDigiLockerConfig _merchantOpCityId = do
-  -- TODO: Fetch DigiLocker credentials from MerchantServiceConfig
-  -- The config should contain: clientId, clientSecret, redirectUri, url
-  -- For now, throwing error as this integration needs to be added
-  throwError $ InternalError "DigiLocker service config retrieval not yet implemented. Please configure DigiLocker in merchant_service_config table."
+-- getDigiLockerConfig :: Id DMOC.MerchantOperatingCity -> Flow DigilockerTypes.DigiLockerCfg
+-- getDigiLockerConfig _merchantOpCityId = do
+--   -- TODO: Fetch DigiLocker credentials from MerchantServiceConfig
+--   -- The config should contain: clientId, clientSecret, redirectUri, url
+--   -- For now, throwing error as this integration needs to be added
+--   throwError $ InternalError "DigiLocker service config retrieval not yet implemented. Please configure DigiLocker in merchant_service_config table."
 
 -- | Get list of required (mandatory) documents for a merchant operating city
-getRequiredDocuments :: Id DMOC.MerchantOperatingCity -> Flow [DVC.DocumentVerificationConfig]
-getRequiredDocuments merchantOpCityId = do
-  allDocs <- CQDVC.findAllByMerchantOpCityId merchantOpCityId Nothing
-  return $ filter (.isMandatory) allDocs
+getRequiredDocuments ::
+  Id DMOC.MerchantOperatingCity ->
+  VehicleCategory.VehicleCategory ->
+  Flow [DVC.DocumentVerificationConfig]
+getRequiredDocuments merchantOpCityId vehicleCategory = do
+  docsForCategory <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory Nothing
+  let digiLockerSupportedDocs =
+        [ DVC.PanCard,
+          DVC.AadhaarCard,
+          DVC.DriverLicense
+        ]
+  return $
+    docsForCategory
+      & filter (.isMandatory)
+      & filter
+        ( (\config -> config.documentType `elem` digiLockerSupportedDocs)
+        )
 
 -- | Get list of already verified documents for a driver
 -- Only returns documents that exist AND have verificationStatus == VALID
@@ -301,7 +326,8 @@ parseDigiLockerScope scopeText =
       -- Issued document with URI: issued/in.gov.pan-PANCR-ABCDE1234F
       | "issued/" `T.isPrefixOf` token = do
         docType <- extractDocType token
-        return (docType, Issued token)
+        let uri = fromMaybe token (T.stripPrefix "issued/" token)
+        return (docType, Issued uri)
       -- Pull required: file.partners/DRVLC
       | "file.partners/" `T.isPrefixOf` token = do
         docType <- extractDocTypeFromPartners token
@@ -310,17 +336,21 @@ parseDigiLockerScope scopeText =
 
     extractDocType :: Text -> Maybe DVC.DocumentType
     extractDocType uri
-      | "PANCR" `T.isInfixOf` uri = Just DVC.PanCard
-      | "AADHAAR" `T.isInfixOf` uri = Just DVC.AadhaarCard
-      | "DRVLC" `T.isInfixOf` uri = Just DVC.DriverLicense
+      | "PANCR" `T.isInfixOf` tokenUpper = Just DVC.PanCard
+      | any (`T.isInfixOf` tokenUpper) ["AADHAAR", "ADHAR"] = Just DVC.AadhaarCard
+      | "DRVLC" `T.isInfixOf` tokenUpper = Just DVC.DriverLicense
       | otherwise = Nothing
+      where
+        tokenUpper = T.toUpper uri
 
     extractDocTypeFromPartners :: Text -> Maybe DVC.DocumentType
     extractDocTypeFromPartners token
-      | "PANCR" `T.isInfixOf` token = Just DVC.PanCard
-      | "DRVLC" `T.isInfixOf` token = Just DVC.DriverLicense
-      | "AADHAAR" `T.isInfixOf` token = Just DVC.AadhaarCard
+      | "PANCR" `T.isInfixOf` tokenUpper = Just DVC.PanCard
+      | "DRVLC" `T.isInfixOf` tokenUpper = Just DVC.DriverLicense
+      | any (`T.isInfixOf` tokenUpper) ["AADHAAR", "ADHAR"] = Just DVC.AadhaarCard
       | otherwise = Nothing
+      where
+        tokenUpper = T.toUpper token
 
 -- | Check which required documents have consent and which don't
 checkDocumentConsent ::
@@ -440,7 +470,22 @@ processIssuedDocument session person accessToken docType uri = do
                     { accessToken = accessToken,
                       uri = uri
                     }
+            logInfo $
+              "DigiLocker - Calling getDigiLockerFile with uri: "
+                <> uri
+                <> ", merchantOpCityId: "
+                <> person.merchantOperatingCityId.getId
+            logInfo $
+              "DigiLocker - getDigiLockerFile input: merchantId="
+                <> person.merchantId.getId
+                <> ", merchantOpCityId="
+                <> person.merchantOperatingCityId.getId
+                <> ", uri="
+                <> uri
             pdfBytes <- Verification.getDigiLockerFile person.merchantId person.merchantOperatingCityId fileReq
+            logInfo $
+              "DigiLocker - getDigiLockerFile output bytes: "
+                <> show (BSL.length pdfBytes)
             logInfo $ "DigiLocker - Successfully fetched PDF for " <> show docType
             return $ Just pdfBytes
         )
@@ -462,6 +507,9 @@ processIssuedDocument session person accessToken docType uri = do
                   DigiTypes.DigiLockerExtractAadhaarReq
                     { accessToken = accessToken
                     }
+            logInfo $
+              "DigiLocker - Calling getVerifiedAadhaarXML for merchantOpCityId: "
+                <> person.merchantOperatingCityId.getId
             xmlText <- Verification.getVerifiedAadhaarXML person.merchantId person.merchantOperatingCityId extractReq
             logInfo $ "DigiLocker - Successfully fetched Aadhaar XML"
             return $ Just xmlText
@@ -486,6 +534,9 @@ processIssuedDocument session person accessToken docType uri = do
                   DigiTypes.DigiLockerExtractAadhaarReq
                     { accessToken = accessToken
                     }
+            logInfo $
+              "DigiLocker - Calling fetchAndExtractVerifiedAadhaar for merchantOpCityId: "
+                <> person.merchantOperatingCityId.getId
             extractedResp <- Verification.fetchAndExtractVerifiedAadhaar person.merchantId person.merchantOperatingCityId extractReq
             logInfo $ "DigiLocker - Successfully extracted Aadhaar data"
             return $ Just (ExtractedAadhaar extractedResp)
@@ -504,6 +555,11 @@ processIssuedDocument session person accessToken docType uri = do
                   { accessToken = accessToken,
                     uri = uri
                   }
+          logInfo $
+            "DigiLocker - Calling fetchAndExtractVerifiedPan with uri: "
+              <> uri
+              <> ", merchantOpCityId: "
+              <> person.merchantOperatingCityId.getId
           extractedResp <- Verification.fetchAndExtractVerifiedPan person.merchantId person.merchantOperatingCityId extractReq
           logInfo $ "DigiLocker - Successfully extracted PAN data"
           return $ Just (ExtractedPan extractedResp)
@@ -521,6 +577,11 @@ processIssuedDocument session person accessToken docType uri = do
                   { accessToken = accessToken,
                     uri = uri
                   }
+          logInfo $
+            "DigiLocker - Calling fetchAndExtractVerifiedDL with uri: "
+              <> uri
+              <> ", merchantOpCityId: "
+              <> person.merchantOperatingCityId.getId
           extractedResp <- Verification.fetchAndExtractVerifiedDL person.merchantId person.merchantOperatingCityId extractReq
           logInfo $ "DigiLocker - Successfully extracted DL data"
           return $ Just (ExtractedDL extractedResp)
@@ -743,8 +804,9 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
       & fromMaybeM (InternalError "DL number not found in DigiLocker XML")
 
   dlExpiry <-
-    dlFlow.expiryDate
-      & fromMaybeM (InternalError "DL expiry not found in DigiLocker XML")
+    case dlFlow.expiryDate of
+      Just val -> pure val
+      Nothing -> throwError $ InternalError "DL expiry not found in DigiLocker XML"
 
   logInfo $ "DigiLocker - Extracted DL data: DL=" <> dlNumber <> ", Name=" <> show dlFlow.name <> ", Expiry=" <> show dlExpiry
 
@@ -809,8 +871,15 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
   -- Step 7: Convert extracted data to format expected by onVerifyDLHandler
   -- Convert COVs from [Text] to [Idfy.CovDetail]
   let covDetails = createCovDetails <$> dlFlow.classOfVehicles
-  -- DigiLocker returns all dates as Text in DD-MM-YYYY format, no conversion needed for display
-  let dlExpiryText = dlExpiry
+  -- DigiLocker returns dates as DD-MM-YYYY; normalize to YYYY-MM-DD
+  normalizedExpiryDay <-
+    case parseTimeM True defaultTimeLocale "%d-%m-%Y" (T.unpack dlExpiry) :: Maybe Day of
+      Just day -> pure day
+      Nothing -> do
+        logError $ "DigiLocker - Unable to normalize DL expiry; original value: " <> dlExpiry
+        throwError $ InternalError "Unable to parse DigiLocker DL expiry date"
+  let normalizedExpiryText = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d" normalizedExpiryDay
+  logInfo $ "DigiLocker - Normalized DL expiry to: " <> normalizedExpiryText
   let dobText = dlFlow.dob
 
   -- Parse dateOfIssue from Text to UTCTime (onVerifyDLHandler expects Maybe UTCTime)
@@ -825,7 +894,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
   DLModule.onVerifyDLHandler
     person
     (Just dlNumber)
-    (Just dlExpiryText)
+    (Just normalizedExpiryText)
     covDetails
     dlFlow.name
     dobText
