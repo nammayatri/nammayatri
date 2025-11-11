@@ -58,13 +58,17 @@ findActiveVolunteerByIdAndVendorId volunteerId vendorId = do
 updateIsActiveById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id.Id DV.Volunteer ->
+  Maybe Text ->
   Maybe Bool ->
   m ()
-updateIsActiveById volunteerId isActive = do
+updateIsActiveById volunteerId vendorId isActive = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.isActive isActive,
       Se.Set Beam.updatedAt now
     ]
-    [ Se.Is Beam.id $ Se.Eq (Id.getId volunteerId)
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq (Id.getId volunteerId),
+          Se.Is Beam.vendorId $ Se.Eq vendorId
+        ]
     ]

@@ -98,5 +98,5 @@ postVolunteerUpdate merchantShortId opCity volunteerId vendorId req = do
   unless (volunteer.merchantOperatingCityId == Just merchantOpCityId) $
     throwError (InvalidRequest "Volunteer does not belong to this merchant operating city")
 
-  when (isJust req.isActive && req.isActive /= volunteer.isActive) $ QVolunteerExtra.updateIsActiveById volunteer.id req.isActive
+  when (isJust req.isActive && req.isActive /= volunteer.isActive) $ QVolunteerExtra.updateIsActiveById volunteer.id volunteer.vendorId req.isActive
   pure Success
