@@ -2743,13 +2743,12 @@ postDriverFleetGetDriverDetails ::
   Text ->
   Common.DriverDetailsReq ->
   Environment.Flow Common.DriverDetailsResp
-postDriverFleetGetDriverDetails _ _ fleetOwnerId req = do
+postDriverFleetGetDriverDetails _ _ _fleetOwnerId req = do
   respArray <-
     for req.driverIds $ \driverId -> do
       let personId = cast @Common.Driver @DP.Person driverId
       person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       mbVehicle <- B.runInReplica $ QVehicle.findById person.id
-      validateFleetDriverAssociation fleetOwnerId person
       decryptedMobileNumber <- mapM decrypt person.mobileNumber
       pure $
         Common.DriverDetails
