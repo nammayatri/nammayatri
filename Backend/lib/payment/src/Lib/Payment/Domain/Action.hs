@@ -272,7 +272,7 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = mbMerchantOpCityId,
-            paymentFulfillmentStatus = Nothing
+            paymentFulfillmentStatus = Just DPayment.FulfillmentPending
           }
 
     buildTransaction ::
@@ -559,7 +559,7 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity 
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = mbMerchantOpCityId,
-            paymentFulfillmentStatus = Nothing
+            paymentFulfillmentStatus = Just DPayment.FulfillmentPending
           }
   buildPaymentSplit req.orderId mkPaymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
   pure mkPaymentOrder
@@ -753,7 +753,7 @@ orderStatusService personId orderId orderStatusCall = do
             offers = offers,
             paymentServiceType = order.paymentServiceType,
             validTill = order.validTill,
-            paymentFulfillmentStatus = Nothing, -- To be filled by Domain
+            paymentFulfillmentStatus = order.paymentFulfillmentStatus,
             domainEntityId = Nothing, -- To be filled by Domain
             ..
           }
@@ -990,7 +990,7 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = mbMerchantOpCityId,
-            paymentFulfillmentStatus = Nothing
+            paymentFulfillmentStatus = Just DPayment.FulfillmentPending
           }
 
 --- refunds api ----
