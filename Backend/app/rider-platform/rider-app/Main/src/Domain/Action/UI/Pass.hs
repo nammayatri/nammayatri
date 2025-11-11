@@ -532,7 +532,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       istTime <- getLocalCurrentTime (19800 :: Seconds)
       let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (purchasedPassPayment.startDate > DT.utctDay istTime) status
       whenJust mbPassStatus $ \passStatus -> do
-        QPurchasedPassPayment.updateStatusById passStatus purchasedPassPayment.id
+        QPurchasedPassPayment.updateStatusByOrderId passStatus paymentOrderId
         when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
           QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus
       case mbPassStatus of

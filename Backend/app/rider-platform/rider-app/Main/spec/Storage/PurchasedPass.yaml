@@ -109,10 +109,10 @@ PurchasedPassPayment:
       kvFunction: findAllWithKV
       where: purchasedPassId
 
-    updateStatusById:
-      kvFunction: updateWithKV
+    updateStatusByOrderId:
+      kvFunction: updateOneWithKV
       params: [status]
-      where: id
+      where: orderId
 
     findAllByPurchasedPassIdAndStatus:
       kvFunction: findAllWithOptionsKV
