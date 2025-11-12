@@ -75,6 +75,7 @@ import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Variant
 import qualified Domain.Types.VendorFee as DVF
+import qualified Domain.Types.VendorSplitDetails as DVSD
 import EulerHS.Prelude hiding (elem, foldr, id, length, map, mapM_, null)
 import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
@@ -769,16 +770,19 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
             createWithMbSibling driverFee lastElderSiblingDriverFee driverFee
             return 1
         fork "Updating vendor fees" $
-          when (fromMaybe False (subscriptionConfig >>= (.isVendorSplitEnabled))) $ do
+          when (fromMaybe False (subscriptionConfig >>= (.isVendorSplitEnabled)) && (fromMaybe DSC.RIDE_END (subscriptionConfig >>= (.vendorSplitApplicableAt)) == DSC.RIDE_END)) $ do
             let vehicleVariant = Variant.castServiceTierToVariant booking.vehicleServiceTier
             allVendorSplitDetails <- CQVSD.findAllByAreaIncludingDefaultAndCityAndVariant booking.area merchantOpCityId vehicleVariant
-            let vendorSplitDetails = case booking.area of
+            -- IMPORTANT: Only process FIXED split type at ride end. PERCENTAGE split type should be handled in CalculateDriverFees job.
+            -- If you add PERCENTAGE support here, ensure you update the logic to calculate percentage-based splits correctly.
+            let fixedSplitDetails = DL.filter (\detail -> detail.splitType == DVSD.FIXED) allVendorSplitDetails
+                vendorSplitDetails = case booking.area of
                   Just area ->
-                    let areaDetails = DL.filter (\detail -> detail.area == area) allVendorSplitDetails
+                    let areaDetails = DL.filter (\detail -> detail.area == area) fixedSplitDetails
                      in if null areaDetails
-                          then DL.filter (\detail -> detail.area == Default) allVendorSplitDetails
+                          then DL.filter (\detail -> detail.area == Default) fixedSplitDetails
                           else areaDetails
-                  Nothing -> DL.filter (\detail -> detail.area == Default) allVendorSplitDetails
+                  Nothing -> DL.filter (\detail -> detail.area == Default) fixedSplitDetails
             unless (null vendorSplitDetails) $ do
               let vendorAmounts = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue)) vendorSplitDetails
                   vendorFees = DL.map (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now) vendorAmounts

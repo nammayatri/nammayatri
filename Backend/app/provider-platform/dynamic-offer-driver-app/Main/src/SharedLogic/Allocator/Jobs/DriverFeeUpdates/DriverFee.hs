@@ -43,7 +43,10 @@ import Domain.Types.Person
 import Domain.Types.Plan (BasedOnEntity (..), PaymentMode (AUTOPAY, MANUAL), Plan (..), PlanBaseAmount (..), ServiceNames (..))
 import Domain.Types.SubscriptionConfig
 import Domain.Types.TransporterConfig (TransporterConfig)
+import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleVariant as DV
 import qualified Domain.Types.VendorFee as DVF
+import qualified Domain.Types.VendorSplitDetails as DVSD
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
@@ -67,6 +70,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
 import Storage.Queries.DriverFee as QDF
 import Storage.Queries.DriverInformation (updatePendingPayment, updateSubscription)
 import Storage.Queries.DriverPlan as QDPlan
@@ -522,7 +526,12 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
   let amountForSpiltting = if isNothing mbCoinAmountUsed then Just $ roundToHalf driverFee.currency totalFee else roundToHalf driverFee.currency <$> (mandate <&> (.maxAmount))
       coinAmountUsed = fromMaybe 0 mbCoinAmountUsed
       totalFeeWithCoinDeduction = roundToHalf driverFee.currency $ totalFee - coinAmountUsed
-  vendorFees <- QVF.findAllByDriverFeeId driverFee.id
+  -- Create percentage vendor fees in-memory using fee after coin discount for fair vendor split calculation
+  mbPercentageVendorFees <- createPercentageVendorFees subscriptionConfigs driverFee totalFeeWithCoinDeduction now
+  vendorFees <-
+    if isJust mbPercentageVendorFees
+      then pure $ fromMaybe [] mbPercentageVendorFees -- Calculate percentage vendor fees in-memory and persist later to avoid master-slave replication race condition
+      else QVF.findAllByDriverFeeId driverFee.id -- Query existing vendor fees from database
   splittedFeesWithRespectiveVendorFee <- splitPlatformFee feeWithoutDiscount totalFeeWithCoinDeduction plan driverFee amountForSpiltting mbCoinAmountUsed vendorFees now
   case splittedFeesWithRespectiveVendorFee of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
@@ -533,7 +542,9 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
           else do
             -- Reset The Original Fee Amount & adjust the vendor fee amount by subtracting sums of child vendor fees
             resetFee dfee.id dfee.govtCharges dfee.platformFee (Just feeWithoutDiscount) dfee.amountPaidByCoin now
-            QVF.resetVendorFee dfee.merchantOperatingCityId vfee
+            if isJust mbPercentageVendorFees
+              then mapM_ QVF.create vfee -- Persist in-memory calculated percentage vendor fees to DB
+              else QVF.resetVendorFee dfee.merchantOperatingCityId vfee -- Reset existing vendor fees from DB
 
 getRescheduledTime :: (MonadFlow m) => NominalDiffTime -> m UTCTime
 getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
@@ -923,3 +934,48 @@ updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchant
           amountWithGst = penaltyAmount * 1.18
       QDF.moveCancellationPenaltyToPaymentPending penalty.id amountWithGst
   logInfo $ "updateCancellationPenaltyAccumulationFees: Processed cancellation penalty status changes for service: " <> show serviceName <> " merchant: " <> merchantId.getId <> " operatingCity: " <> merchantOperatingCityId.getId
+
+getDefaultVehicleVariantFromCategory :: (MonadFlow m) => Id DriverFee -> DVC.VehicleCategory -> m DV.VehicleVariant
+getDefaultVehicleVariantFromCategory driverFeeId vehicleCategory = case vehicleCategory of
+  DVC.CAR -> pure DV.SEDAN
+  DVC.AUTO_CATEGORY -> pure DV.AUTO_RICKSHAW
+  DVC.MOTORCYCLE -> pure DV.BIKE
+  DVC.AMBULANCE -> pure DV.AMBULANCE_TAXI
+  DVC.TRUCK -> pure DV.DELIVERY_LIGHT_GOODS_VEHICLE
+  DVC.BUS -> pure DV.BUS_NON_AC
+  DVC.BOAT -> pure DV.BOAT
+  _ -> do
+    logError $ "Unsupported VehicleCategory: " <> show vehicleCategory <> " for DriverFeeId: " <> driverFeeId.getId <> ". Defaulting to DELIVERY_LIGHT_GOODS_VEHICLE"
+    pure DV.DELIVERY_LIGHT_GOODS_VEHICLE
+
+createPercentageVendorFees ::
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  SubscriptionConfig ->
+  DriverFee ->
+  HighPrecMoney ->
+  UTCTime ->
+  m (Maybe [DVF.VendorFee])
+createPercentageVendorFees subscriptionConfigs driverFee totalFeeWithCoinDeduction now = do
+  case (subscriptionConfigs.enableVendorPercentageSplit, subscriptionConfigs.vendorSplitApplicableAt) of
+    (Just True, Just DRIVER_FEE_CALCULATION) -> do
+      vehicleVariant <- getDefaultVehicleVariantFromCategory driverFee.id driverFee.vehicleCategory
+      percentageVendorSplitDetails <- CQVSD.findAllByVariantSplitTypeAreaAndCity vehicleVariant DVSD.PERCENTAGE Nothing driverFee.merchantOperatingCityId
+      let vendorFees = map (mkPercentageVendorFee driverFee.id totalFeeWithCoinDeduction now) percentageVendorSplitDetails
+          totalVendorAmount = sum $ map (\vf -> vf.amount) vendorFees
+      -- Log error but don't fail the job - proceed without vendor fees to avoid blocking driver payment
+      if totalVendorAmount > totalFeeWithCoinDeduction
+        then do
+          logError $ "Vendor fee percentages exceed total fee. Total vendor amount: " <> show totalVendorAmount <> ", Total fee: " <> show totalFeeWithCoinDeduction <> " for DriverFeeId: " <> driverFee.id.getId <> ". Skipping vendor fee creation."
+          return $ Just [] -- Return empty list to skip vendor fees but allow job to proceed
+        else return $ Just vendorFees
+    _ -> return Nothing
+
+mkPercentageVendorFee :: Id DriverFee -> HighPrecMoney -> UTCTime -> DVSD.VendorSplitDetails -> DVF.VendorFee
+mkPercentageVendorFee driverFeeId totalFeeWithCoinDeduction now splitDetails =
+  DVF.VendorFee
+    { driverFeeId = driverFeeId,
+      vendorId = splitDetails.vendorId,
+      amount = HighPrecMoney $ toRational totalFeeWithCoinDeduction * (toRational splitDetails.splitValue / 100.0),
+      createdAt = now,
+      updatedAt = now
+    }

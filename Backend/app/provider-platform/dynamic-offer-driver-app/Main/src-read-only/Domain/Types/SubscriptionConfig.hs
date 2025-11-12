@@ -29,6 +29,7 @@ data SubscriptionConfig = SubscriptionConfig
     defaultCityVehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     enableCityBasedFeeSwitch :: Kernel.Prelude.Bool,
     enableServiceUsageChargeDefault :: Kernel.Prelude.Bool,
+    enableVendorPercentageSplit :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     eventsEnabledForWebhook :: [Domain.Types.WebhookExtra.WebhookEvent],
     executionEnabledForVehicleCategories :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
     extWebhookConfigs :: Kernel.Prelude.Maybe Domain.Types.WebhookExtra.ExternalWebhookConfigs,
@@ -56,6 +57,7 @@ data SubscriptionConfig = SubscriptionConfig
     subscriptionDown :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     subscriptionEnabledForVehicleCategories :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
     useOverlayService :: Kernel.Prelude.Bool,
+    vendorSplitApplicableAt :: Kernel.Prelude.Maybe Domain.Types.SubscriptionConfig.VendorSplitApplicableAt,
     waiveOffOfferDescription :: Kernel.Prelude.Text,
     waiveOffOfferTitle :: Kernel.Prelude.Text,
     webhookConfig :: Kernel.Prelude.Maybe Domain.Types.SubscriptionConfig.WebhookConfig,
@@ -68,6 +70,8 @@ data SubscriptionConfig = SubscriptionConfig
 
 data CurrentPlanEntites = SAFETY_PLUS deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read)
 
+data VendorSplitApplicableAt = RIDE_END | DRIVER_FEE_CALCULATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data WebhookConfig = WebhookConfig
   { batchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     nextJobScheduleTimeThreshold :: Kernel.Prelude.Int,
@@ -76,5 +80,7 @@ data WebhookConfig = WebhookConfig
     webhookDeliveryMode :: Domain.Types.WebhookExtra.WebhookDeliveryType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VendorSplitApplicableAt)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''CurrentPlanEntites)

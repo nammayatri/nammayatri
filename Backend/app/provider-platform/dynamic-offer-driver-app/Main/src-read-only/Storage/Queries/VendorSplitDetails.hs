@@ -36,6 +36,19 @@ findAllByAreasCityAndVariant area merchantOperatingCityId vehicleVariant = do
         ]
     ]
 
+findAllByVariantSplitTypeAreaAndCity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Lib.Types.SpecialLocation.Area] -> Domain.Types.VendorSplitDetails.SplitType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleVariant.VehicleVariant -> m [Domain.Types.VendorSplitDetails.VendorSplitDetails])
+findAllByVariantSplitTypeAreaAndCity area splitType merchantOperatingCityId vehicleVariant = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.area $ Se.In area,
+          Se.Is Beam.splitType $ Se.Eq splitType,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant
+        ]
+    ]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Lib.Types.SpecialLocation.Area -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleVariant.VehicleVariant -> Data.Text.Text -> m (Maybe Domain.Types.VendorSplitDetails.VendorSplitDetails))

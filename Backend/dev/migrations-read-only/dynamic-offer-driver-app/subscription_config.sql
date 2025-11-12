@@ -114,3 +114,9 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN autopay_enable
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN show_manual_plans_in_ui boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN vendor_split_applicable_at text  default 'RIDE_END';
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN enable_vendor_percentage_split boolean  default false;
