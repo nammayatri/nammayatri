@@ -207,10 +207,20 @@ type API =
       :> Post
            '[JSON]
            API.Types.UI.DriverOnboardingV2.DigiLockerInitiateResp
+      :<|> TokenAuth
+      :> "driver"
+      :> "digilocker"
+      :> "pullDocuments"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.PullDrivingLicenseReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> postDriverDigilockerInitiate
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> postDriverDigilockerInitiate :<|> postDriverDigilockerPullDocuments
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -389,3 +399,13 @@ postDriverDigilockerInitiate ::
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DigiLockerInitiateResp
   )
 postDriverDigilockerInitiate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverDigilockerInitiate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postDriverDigilockerPullDocuments ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.PullDrivingLicenseReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postDriverDigilockerPullDocuments a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverDigilockerPullDocuments (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
