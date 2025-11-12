@@ -2375,7 +2375,7 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               planAmountWithCurrency = PriceAPIEntity (fromMaybe 0 driverFee.feeWithoutDiscount) driverFee.currency,
               isSplit = length driverFeesInWindow > 1,
-              rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) driverFee.createdAt, --- when we fix ist issue we will remove this,
+              rideTakenOn = driverFee.startTime,
               offerAndPlanDetails = driverFee.planOfferTitle,
               isCoinCleared = driverFee.status == DDF.CLEARED_BY_YATRI_COINS,
               coinDiscountAmount = driverFee.amountPaidByCoin,
