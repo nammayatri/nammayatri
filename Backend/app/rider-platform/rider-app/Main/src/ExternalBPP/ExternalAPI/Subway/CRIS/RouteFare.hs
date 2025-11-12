@@ -37,8 +37,8 @@ type RouteFareAPI =
 mkRouteFareKey :: Text -> Text -> Text -> Text
 mkRouteFareKey startStopCode endStopCode searchReqId = "CRIS:" <> searchReqId <> "-" <> startStopCode <> "-" <> endStopCode
 
-mkRouteFareCacheKey :: Text -> Text -> Text -> Text
-mkRouteFareCacheKey startStopCode endStopCode changeOver = "CRIS:" <> startStopCode <> "-" <> endStopCode <> "-" <> changeOver
+mkRouteFareCacheKey :: Text -> Text -> Text -> Bool -> Text
+mkRouteFareCacheKey startStopCode endStopCode changeOver getAllFares = "CRIS:" <> startStopCode <> "-" <> endStopCode <> "-" <> changeOver <> "-" <> T.pack (show getAllFares)
 
 getRouteFare ::
   ( CoreMetrics m,
@@ -53,7 +53,7 @@ getRouteFare ::
   Bool ->
   m ([FRFSUtils.FRFSFare], Maybe Text)
 getRouteFare config merchantOperatingCityId request getAllFares = do
-  let redisKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
+  let redisKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver getAllFares
   redisResp <- Hedis.safeGet redisKey
   case redisResp of
     Just fares -> do
@@ -122,7 +122,7 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
               fares'' = filter (\fare -> fare.via == " ") allFares
           let fares =
                 if request.changeOver == " "
-                  then if null fares'' then fares' else fares''
+                  then if null fares'' || getAllFares then fares' else fares''
                   else filter (\fare -> fare.via == request.changeOver) allFares
           fares `forM` \fare -> do
             let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
@@ -197,7 +197,7 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
                         isAirConditioned = serviceTier.isAirConditioned
                       }
                 }
-      let fareCacheKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
+      let fareCacheKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver getAllFares
       let fares = concat frfsDetails
       Hedis.setExp fareCacheKey fares 3600
       return $ (fares, Nothing)
