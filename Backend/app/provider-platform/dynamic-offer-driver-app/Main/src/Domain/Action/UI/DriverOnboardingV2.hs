@@ -17,6 +17,7 @@ import Data.Time (defaultTimeLocale, formatTime)
 import qualified Data.Time as DT
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
+import qualified Domain.Action.UI.DriverOnboarding.PullDocument as PullDocument
 import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
 import Domain.Types.Common
@@ -1456,3 +1457,18 @@ constructDigiLockerAuthUrl config digiLockerState codeChallenge =
     encodeURIComponent :: Text -> Text
     encodeURIComponent txt =
       TE.decodeUtf8 $ URI.urlEncode True $ TE.encodeUtf8 txt
+
+----------- PULL DOCUMENTS FROM DIGILOCKER -----------
+
+-- | Pull driving license document from DigiLocker
+-- This endpoint is called when user submits DL details within 1 hour of starting DigiLocker session
+postDriverDigilockerPullDocuments ::
+  ( Maybe (Id Domain.Types.Person.Person),
+    Id Domain.Types.Merchant.Merchant,
+    Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  APITypes.PullDrivingLicenseReq ->
+  Environment.Flow APISuccess
+postDriverDigilockerPullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
+  logInfo $ "PullDocuments - Starting pull operation for DocType: " <> show req.docType
+  PullDocument.pullDrivingLicenseDocument (mbDriverId, merchantId, merchantOpCityId) req
