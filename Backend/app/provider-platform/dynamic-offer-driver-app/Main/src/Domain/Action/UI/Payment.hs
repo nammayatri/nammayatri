@@ -182,6 +182,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
             paymentMethodType = Nothing,
             authIdCode = Nothing,
             txnUUID = Nothing,
+            txnId = Nothing,
             effectAmount = Nothing,
             offers = Nothing,
             validTill = order.validTill,
