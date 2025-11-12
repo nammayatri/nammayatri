@@ -1231,13 +1231,16 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             payoutProgramThresholdChecks = (dailyPayoutCount < riderConfig.payoutReferralThresholdPerDay) && (monthlyPayoutCount < riderConfig.payoutReferralThresholdPerMonth) && deviceIdCheck
         when (isConsideredForPayout && payoutProgramThresholdChecks && fromMaybe False isValidRide && riderConfig.payoutReferralProgram && payoutConfig.isPayoutEnabled) $ do
           personStats <- getPersonStats person_.id
-          QPersonStats.updateReferredByEarning (personStats.referredByEarnings + payoutConfig.referredByRewardAmount) person_.id
-
-          referredByPerson <- QP.findById (Id referredByCustomerId) >>= fromMaybeM (PersonNotFound referredByCustomerId)
-          sendPNToPerson referredByPerson True
-          sendPNToPerson person_ False
-          handlePayout person_ payoutConfig.referredByRewardAmount payoutConfig False referredByPersonStats DLP.REFERRED_BY_AWARD dailyPayoutCount
-          handlePayout referredByPerson payoutConfig.referralRewardAmountPerRide payoutConfig True referredByPersonStats DLP.REFERRAL_AWARD_RIDE dailyPayoutCount
+          let shouldProcessRefereePayout = payoutConfig.referredByRewardAmount > 0.0
+              shouldProcessReferrerPayout = payoutConfig.referralRewardAmountPerRide > 0.0
+          when shouldProcessRefereePayout $ do
+            QPersonStats.updateReferredByEarning (personStats.referredByEarnings + payoutConfig.referredByRewardAmount) person_.id
+            sendPNToPerson person_ False
+            handlePayout person_ payoutConfig.referredByRewardAmount payoutConfig False referredByPersonStats DLP.REFERRED_BY_AWARD dailyPayoutCount
+          when shouldProcessReferrerPayout $ do
+            referredByPerson <- QP.findById (Id referredByCustomerId) >>= fromMaybeM (PersonNotFound referredByCustomerId)
+            sendPNToPerson referredByPerson True
+            handlePayout referredByPerson payoutConfig.referralRewardAmountPerRide payoutConfig True referredByPersonStats DLP.REFERRAL_AWARD_RIDE dailyPayoutCount
     Nothing -> logTagError "Payout Config Error" $ "PayoutConfig Not Found for cityId: " <> merchantOperatingCityId.getId <> " and category: " <> show vehicleCategory
   where
     handlePayout person amount payoutConfig isReferredByPerson referredByPersonStats entity dailyPayoutCount = do
