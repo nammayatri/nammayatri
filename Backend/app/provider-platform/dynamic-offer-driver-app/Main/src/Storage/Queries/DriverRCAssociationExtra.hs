@@ -77,7 +77,16 @@ fetchRcIdFromAssocs :: [DriverRCAssociation] -> [Id VehicleRegistrationCertifica
 fetchRcIdFromAssocs = map (.rcId)
 
 getRcAssocs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe UTCTime -> m [DriverRCAssociation]
-getRcAssocs (Id driverId) mbNow = findAllWithOptionsKV [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ mbNow] (Se.Desc BeamDRCA.associatedOn) Nothing Nothing
+getRcAssocs (Id driverId) mbNow =
+  findAllWithOptionsKV
+    [ Se.And
+        ( [Se.Is BeamDRCA.driverId $ Se.Eq driverId]
+            <> [Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ mbNow | isJust mbNow]
+        )
+    ]
+    (Se.Desc BeamDRCA.associatedOn)
+    Nothing
+    Nothing
 
 endAssociationForRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> m ()
 endAssociationForRC (Id driverId) (Id rcId) = do
