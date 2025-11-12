@@ -1132,8 +1132,10 @@ apis:
       mandatoryQuery:
         - from: Day
         - to: Day
+      query:
+        responseType: FleetAnalyticsResponseType
       response:
-        type: FilteredFleetAnalyticsRes
+        type: FleetAnalyticsRes
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/dashboard/analytics
@@ -1143,8 +1145,10 @@ apis:
             mandatoryQuery:
               - from: Day
               - to: Day
+            query:
+              responseType: FleetAnalyticsResponseType
             response:
-              type: FilteredFleetAnalyticsRes
+              type: FleetAnalyticsRes
 types:
   NearbyDriverReq:
     - point: LatLong
@@ -1674,6 +1678,17 @@ types:
     - rejectedRequest: Int
     - driverCancelled: Int
     - customerCancelled: Int
+  EarningFleetAnalyticsRes:
+    - grossEarnings: PriceAPIEntity
+    - platformFees: PriceAPIEntity
+    - netEarnings: PriceAPIEntity
+    - grossEarningsPerHour: PriceAPIEntity
+    - netEarningsPerHour: PriceAPIEntity
+  FleetAnalyticsResponseType:
+    enum: FILTERED | EARNINGS
+    derive: "HttpInstance"
+  FleetAnalyticsRes:
+    - enum: "Filtered FilteredFleetAnalyticsRes | Earnings EarningFleetAnalyticsRes"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

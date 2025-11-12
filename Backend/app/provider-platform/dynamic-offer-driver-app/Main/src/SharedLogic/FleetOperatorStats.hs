@@ -7,6 +7,7 @@ import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.TransporterConfig as DTTC
 import Kernel.Prelude hiding (getField)
 import Kernel.Utils.Common
+import qualified Storage.Queries.FareParameters as QFareParameters
 import qualified Storage.Queries.FleetOperatorDailyStats as QFleetOpsDaily
 import qualified Storage.Queries.FleetOperatorStats as QFleetOps
 
@@ -172,6 +173,9 @@ buildInitialFleetOperatorDailyStats fleetOperatorId merchantLocalDate transporte
         totalDistance = Nothing,
         totalCompletedRides = Nothing,
         totalEarning = Nothing,
+        cashPlatformFees = Nothing,
+        onlinePlatformFees = Nothing,
+        onlineDuration = Nothing,
         currency = Just transporterConfig.currency,
         distanceUnit = Just transporterConfig.distanceUnit,
         createdAt = now,
@@ -238,20 +242,40 @@ incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId ride transpo
   nowUTCTime <- getCurrentTime
   let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
   let merchantLocalDate = utctDay now
+
+  -- Get platform fees from FareParameters if available
+  platformFeeTotal <- case ride.fareParametersId of
+    Just fareParamsId -> do
+      mbFareParams <- QFareParameters.findById fareParamsId
+      pure $ case mbFareParams of
+        Just fareParams -> fromMaybe 0 fareParams.platformFee
+        Nothing -> 0
+    Nothing -> pure 0
+
+  -- Determine cash vs online platform fees based on onlinePayment field
+  let (cashPlatformFeeIncrement, onlinePlatformFeeIncrement) =
+        if ride.onlinePayment
+          then (0, platformFeeTotal)
+          else (platformFeeTotal, 0)
+
   mbCurrent <- QFleetOpsDaily.findByFleetOperatorIdAndDate fleetOperatorId merchantLocalDate
   case mbCurrent of
     Just s -> do
       let newTotalCompletedRides = Just (fromMaybe 0 s.totalCompletedRides + 1)
           newTotalDistance = Just (fromMaybe 0 s.totalDistance + fromMaybe 0 ride.chargeableDistance)
           newTotalEarning = Just (fromMaybe 0 s.totalEarning + fromMaybe 0.0 ride.fare)
-      QFleetOpsDaily.updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate newTotalDistance newTotalEarning newTotalCompletedRides fleetOperatorId merchantLocalDate
+          newCashPlatformFees = Just (fromMaybe 0 s.cashPlatformFees + cashPlatformFeeIncrement)
+          newOnlinePlatformFees = Just (fromMaybe 0 s.onlinePlatformFees + onlinePlatformFeeIncrement)
+      QFleetOpsDaily.updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate newTotalDistance newTotalEarning newTotalCompletedRides newCashPlatformFees newOnlinePlatformFees fleetOperatorId merchantLocalDate
     Nothing -> do
       initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId merchantLocalDate transporterConfig nowUTCTime
       QFleetOpsDaily.create
         initStats
           { DFODS.totalCompletedRides = Just 1,
             DFODS.totalDistance = Just (fromMaybe 0 ride.chargeableDistance),
-            DFODS.totalEarning = Just (fromMaybe 0.0 ride.fare)
+            DFODS.totalEarning = Just (fromMaybe 0.0 ride.fare),
+            DFODS.cashPlatformFees = if cashPlatformFeeIncrement > 0 then Just cashPlatformFeeIncrement else Nothing,
+            DFODS.onlinePlatformFees = if onlinePlatformFeeIncrement > 0 then Just onlinePlatformFeeIncrement else Nothing
           }
 
 -- Daily: increment total rating count and total rating score
@@ -269,3 +293,13 @@ incrementTotalRatingCountAndTotalRatingScoreDaily fleetOperatorId transporterCon
     Nothing -> do
       initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId merchantLocalDate transporterConfig nowUTCTime
       QFleetOpsDaily.create initStats {DFODS.totalRatingCount = Just 1, DFODS.totalRatingScore = Just ratingValue}
+
+-- Daily: increment online duration (in seconds)
+updateOnlineDurationDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> Seconds -> Maybe DFODS.FleetOperatorDailyStats -> Day -> m ()
+updateOnlineDurationDaily fleetOperatorId transporterConfig newOnlineDuration mbFleetOperatorDailyStats merchantLocalDate = do
+  case mbFleetOperatorDailyStats of
+    Just _fleetOperatorDailyStats -> QFleetOpsDaily.updateOnlineDurationByFleetOperatorIdAndDate (Just newOnlineDuration) fleetOperatorId merchantLocalDate
+    Nothing -> do
+      nowUTCTime <- getCurrentTime
+      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId merchantLocalDate transporterConfig nowUTCTime
+      QFleetOpsDaily.create initStats {DFODS.onlineDuration = Just newOnlineDuration}

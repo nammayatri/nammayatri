@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Storage.Clickhouse.FleetOperatorDailyStats where
 
 import Data.Time.Calendar (Day)
@@ -8,8 +10,7 @@ import Kernel.Types.Common
 
 -- Minimal ClickHouse mapping for the query we need
 data FleetOperatorDailyStatsT f = FleetOperatorDailyStatsT
-  { id :: C f Text,
-    fleetOperatorId :: C f Text,
+  { fleetOperatorId :: C f Text,
     merchantLocalDate :: C f Day,
     rejectedRequestCount :: C f (Maybe Int),
     pulledRequestCount :: C f (Maybe Int),
@@ -19,7 +20,10 @@ data FleetOperatorDailyStatsT f = FleetOperatorDailyStatsT
     driverCancellationCount :: C f (Maybe Int),
     totalDistance :: C f (Maybe Meters),
     totalCompletedRides :: C f (Maybe Int),
-    totalEarning :: C f (Maybe HighPrecMoney)
+    totalEarning :: C f (Maybe HighPrecMoney),
+    cashPlatformFees :: C f (Maybe HighPrecMoney),
+    onlinePlatformFees :: C f (Maybe HighPrecMoney),
+    onlineDuration :: C f (Maybe Seconds)
   }
   deriving (Generic)
 
@@ -28,8 +32,7 @@ deriving instance Show FleetOperatorDailyStats
 fleetOperatorDailyStatsTTable :: FleetOperatorDailyStatsT (FieldModification FleetOperatorDailyStatsT)
 fleetOperatorDailyStatsTTable =
   FleetOperatorDailyStatsT
-    { id = "id",
-      fleetOperatorId = "fleet_operator_id",
+    { fleetOperatorId = "fleet_operator_id",
       merchantLocalDate = "merchant_local_date",
       rejectedRequestCount = "rejected_request_count",
       pulledRequestCount = "pulled_request_count",
@@ -39,10 +42,16 @@ fleetOperatorDailyStatsTTable =
       driverCancellationCount = "driver_cancellation_count",
       totalDistance = "total_distance",
       totalCompletedRides = "total_completed_rides",
-      totalEarning = "total_earning"
+      totalEarning = "total_earning",
+      cashPlatformFees = "cash_platform_fees",
+      onlinePlatformFees = "online_platform_fees",
+      onlineDuration = "online_duration"
     }
 
 type FleetOperatorDailyStats = FleetOperatorDailyStatsT Identity
+
+instance CH.ClickhouseValue Seconds where
+  fromClickhouseValue = parseAsStringOrNumber @Seconds
 
 $(TH.mkClickhouseInstances ''FleetOperatorDailyStatsT 'SELECT_FINAL_MODIFIER)
 
@@ -115,3 +124,53 @@ sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorDailyStatsTTable)
   pure $ maybe (DailyFleetMetricsAggregated Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing) mkDailyFleetMetricsAggregated (listToMaybe res)
+
+data DailyFleetEarningsAggregated = DailyFleetEarningsAggregated
+  { totalEarningSum :: Maybe HighPrecMoney,
+    cashPlatformFeesSum :: Maybe HighPrecMoney,
+    onlinePlatformFeesSum :: Maybe HighPrecMoney,
+    onlineDurationSum :: Maybe Seconds
+  }
+  deriving (Show, Generic)
+
+mkDailyFleetEarningsAggregated ::
+  ( Maybe HighPrecMoney,
+    Maybe HighPrecMoney,
+    Maybe HighPrecMoney,
+    Maybe Seconds
+  ) ->
+  DailyFleetEarningsAggregated
+mkDailyFleetEarningsAggregated (te, cpf, opf, od) =
+  DailyFleetEarningsAggregated
+    { totalEarningSum = te,
+      cashPlatformFeesSum = cpf,
+      onlinePlatformFeesSum = opf,
+      onlineDurationSum = od
+    }
+
+sumFleetEarningsByFleetOwnerIdAndDateRange ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Text ->
+  Day ->
+  Day ->
+  m DailyFleetEarningsAggregated
+sumFleetEarningsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
+  res <-
+    CH.findAll $
+      CH.select_
+        ( \fos ->
+            CH.aggregate
+              ( CH.sum_ fos.totalEarning,
+                CH.sum_ fos.cashPlatformFees,
+                CH.sum_ fos.onlinePlatformFees,
+                CH.sum_ fos.onlineDuration
+              )
+        )
+        $ CH.filter_
+          ( \fos ->
+              fos.fleetOperatorId CH.==. fleetOwnerId
+                CH.&&. fos.merchantLocalDate CH.>=. fromDay
+                CH.&&. fos.merchantLocalDate CH.<=. toDay
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorDailyStatsTTable)
+  pure $ maybe (DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing) mkDailyFleetEarningsAggregated (listToMaybe res)

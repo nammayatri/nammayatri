@@ -302,6 +302,16 @@ data DrivertoVehicleAssociationResT = DrivertoVehicleAssociationResT {fleetOwner
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data EarningFleetAnalyticsRes = EarningFleetAnalyticsRes
+  { grossEarnings :: Kernel.Types.Common.PriceAPIEntity,
+    platformFees :: Kernel.Types.Common.PriceAPIEntity,
+    netEarnings :: Kernel.Types.Common.PriceAPIEntity,
+    grossEarningsPerHour :: Kernel.Types.Common.PriceAPIEntity,
+    netEarningsPerHour :: Kernel.Types.Common.PriceAPIEntity
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FilteredFleetAnalyticsRes = FilteredFleetAnalyticsRes
   { totalEarnings :: Kernel.Types.Common.PriceAPIEntity,
     completedRides :: Kernel.Prelude.Int,
@@ -315,6 +325,18 @@ data FilteredFleetAnalyticsRes = FilteredFleetAnalyticsRes
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetAnalyticsRes
+  = Filtered FilteredFleetAnalyticsRes
+  | Earnings EarningFleetAnalyticsRes
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetAnalyticsResponseType
+  = FILTERED
+  | EARNINGS
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 newtype FleetBadgeRes = FleetBadgeRes {fleetBadgeInfos :: [FleetBadgesAPIEntity]}
   deriving stock (Generic)
@@ -1697,19 +1719,22 @@ type GetDriverFleetDashboardAnalyticsAllTime = ("fleet" :> "dashboard" :> "analy
 type GetDriverFleetDashboardAnalyticsAllTimeHelper = (Capture "fleetOwnerId" Kernel.Prelude.Text :> "fleet" :> "dashboard" :> "analytics" :> "allTime" :> Get '[JSON] AllTimeFleetAnalyticsRes)
 
 type GetDriverFleetDashboardAnalytics =
-  ( "fleet" :> "dashboard" :> "analytics" :> MandatoryQueryParam "from" Data.Time.Day :> MandatoryQueryParam "to" Data.Time.Day
-      :> Get
-           '[JSON]
-           FilteredFleetAnalyticsRes
-  )
-
-type GetDriverFleetDashboardAnalyticsHelper =
-  ( Capture "fleetOwnerId" Kernel.Prelude.Text :> "fleet" :> "dashboard" :> "analytics"
+  ( "fleet" :> "dashboard" :> "analytics" :> QueryParam "responseType" FleetAnalyticsResponseType
       :> MandatoryQueryParam
            "from"
            Data.Time.Day
       :> MandatoryQueryParam "to" Data.Time.Day
-      :> Get '[JSON] FilteredFleetAnalyticsRes
+      :> Get '[JSON] FleetAnalyticsRes
+  )
+
+type GetDriverFleetDashboardAnalyticsHelper =
+  ( Capture "fleetOwnerId" Kernel.Prelude.Text :> "fleet" :> "dashboard" :> "analytics"
+      :> QueryParam
+           "responseType"
+           FleetAnalyticsResponseType
+      :> MandatoryQueryParam "from" Data.Time.Day
+      :> MandatoryQueryParam "to" Data.Time.Day
+      :> Get '[JSON] FleetAnalyticsRes
   )
 
 data DriverAPIs = DriverAPIs
@@ -1760,7 +1785,7 @@ data DriverAPIs = DriverAPIs
     postDriverFleetGetDriverDetails :: Kernel.Prelude.Text -> DriverDetailsReq -> EulerHS.Types.EulerClient DriverDetailsResp,
     postDriverFleetGetNearbyDriversV2 :: Kernel.Prelude.Text -> NearbyDriversReqV2 -> EulerHS.Types.EulerClient NearbyDriversRespV2,
     getDriverFleetDashboardAnalyticsAllTime :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient AllTimeFleetAnalyticsRes,
-    getDriverFleetDashboardAnalytics :: Kernel.Prelude.Text -> Data.Time.Day -> Data.Time.Day -> EulerHS.Types.EulerClient FilteredFleetAnalyticsRes
+    getDriverFleetDashboardAnalytics :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe FleetAnalyticsResponseType -> Data.Time.Day -> Data.Time.Day -> EulerHS.Types.EulerClient FleetAnalyticsRes
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
@@ -1821,6 +1846,8 @@ data DriverUserActionType
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 $(mkHttpInstancesForEnum ''DriverMode)
+
+$(mkHttpInstancesForEnum ''FleetAnalyticsResponseType)
 
 $(mkHttpInstancesForEnum ''FleetVehicleStatus)
 

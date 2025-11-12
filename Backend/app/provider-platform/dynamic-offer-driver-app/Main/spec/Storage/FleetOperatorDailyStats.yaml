@@ -24,6 +24,9 @@ FleetOperatorDailyStats:
     totalDistance : Maybe Meters
     totalCompletedRides : Maybe Int
     totalEarning : Maybe HighPrecMoney
+    cashPlatformFees : Maybe HighPrecMoney
+    onlinePlatformFees : Maybe HighPrecMoney
+    onlineDuration : Maybe Seconds
     currency : Maybe Currency
     distanceUnit : Maybe DistanceUnit
 
@@ -49,7 +52,7 @@ FleetOperatorDailyStats:
 
     updateByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
-      params: [totalRatingCount, totalRatingScore, driverFirstSubscription, inspectionCompleted, rejectedRequestCount, pulledRequestCount, acceptationRequestCount, totalRequestCount, customerCancellationCount, driverCancellationCount, totalDistance, totalCompletedRides, totalEarning]
+      params: [totalRatingCount, totalRatingScore, driverFirstSubscription, inspectionCompleted, rejectedRequestCount, pulledRequestCount, acceptationRequestCount, totalRequestCount, customerCancellationCount, driverCancellationCount, totalDistance, totalCompletedRides, totalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration]
       where:
         and: [fleetOperatorId, merchantLocalDate]
 
@@ -85,12 +88,18 @@ FleetOperatorDailyStats:
 
     updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
-      params: [totalDistance, totalEarning, totalCompletedRides]
+      params: [totalDistance, totalEarning, totalCompletedRides, cashPlatformFees, onlinePlatformFees]
       where:
         and: [fleetOperatorId, merchantLocalDate]
 
     updateRequestCountsByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
       params: [rejectedRequestCount, pulledRequestCount, acceptationRequestCount, totalRequestCount]
+      where:
+        and: [fleetOperatorId, merchantLocalDate]
+
+    updateOnlineDurationByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [onlineDuration]
       where:
         and: [fleetOperatorId, merchantLocalDate]

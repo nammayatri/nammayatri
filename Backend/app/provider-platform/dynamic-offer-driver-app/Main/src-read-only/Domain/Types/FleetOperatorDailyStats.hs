@@ -14,6 +14,7 @@ import qualified Tools.Beam.UtilsTH
 
 data FleetOperatorDailyStats = FleetOperatorDailyStats
   { acceptationRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    cashPlatformFees :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     currency :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency,
     customerCancellationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     distanceUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit,
@@ -22,6 +23,8 @@ data FleetOperatorDailyStats = FleetOperatorDailyStats
     fleetOperatorId :: Kernel.Prelude.Text,
     inspectionCompleted :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantLocalDate :: Data.Time.Calendar.Day,
+    onlineDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    onlinePlatformFees :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     pulledRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rejectedRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalCompletedRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
