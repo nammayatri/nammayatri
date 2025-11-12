@@ -394,16 +394,16 @@ search :: JT.SearchRequestFlow m r c => Spec.VehicleCategory -> Id DPerson.Perso
 search vehicleCategory personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId upsertJourneyLegAction = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency (journeyLeg.agency <&> (.name)) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
-  frfsSearchReq <- buildFRFSSearchReq
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
+  frfsSearchReq <- buildFRFSSearchReq frfsRouteDetails
   let mbFare = journeyLeg.estimatedMinFare <|> journeyLeg.estimatedMaxFare
   res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing mbFare multimodalSearchRequestId upsertJourneyLegAction
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
-    buildFRFSSearchReq = do
+    buildFRFSSearchReq frfsRouteDetails = do
       fromStationCode <- ((journeyLeg.fromStopDetails >>= (.stopCode)) <|> ((journeyLeg.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
       toStationCode <- ((journeyLeg.toStopDetails >>= (.stopCode)) <|> ((journeyLeg.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
-      let routeCode = Nothing
+      let routeCode = listToMaybe frfsRouteDetails >>= (.routeCode)
           searchAsParentStops = Nothing
       return $ API.FRFSSearchAPIReq {..}
 
