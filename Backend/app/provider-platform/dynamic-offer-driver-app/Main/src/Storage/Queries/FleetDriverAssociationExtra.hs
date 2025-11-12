@@ -87,6 +87,22 @@ findAllByDriverIds driverIds = do
   now <- getCurrentTime
   findAllWithKV [Se.And [Se.Is BeamFDVA.driverId $ Se.In (getId <$> driverIds), Se.Is BeamFDVA.isActive $ Se.Eq True, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]]
 
+getActiveDriverIdsByFleetOwnerId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Text ->
+  m [Id Person]
+getActiveDriverIdsByFleetOwnerId fleetOwnerId = do
+  now <- getCurrentTime
+  associations <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId,
+            Se.Is BeamFDVA.isActive $ Se.Eq True,
+            Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)
+          ]
+      ]
+  pure $ map (.driverId) associations
+
 findByDriverIdAndFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Id Person -> Text -> Bool -> m (Maybe FleetDriverAssociation))
