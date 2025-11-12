@@ -506,6 +506,7 @@ startJourneyLeg legInfo isSingleMode = do
 backfillFRFSQuoteCategory :: Id DFRFSQuote.FRFSQuote -> Maybe Int -> Maybe Int -> [APITypes.FRFSCategorySelectionReq] -> Flow [APITypes.FRFSCategorySelectionReq]
 backfillFRFSQuoteCategory quoteId adultTicketQuantity childTicketQuantity categorySelectionReq = do
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
+
   moreCategorySelectionReq <-
     catMaybes
       <$> sequence
@@ -514,7 +515,11 @@ backfillFRFSQuoteCategory quoteId adultTicketQuantity childTicketQuantity catego
               return $
                 case find (\category' -> category'.quoteCategoryId == category.id) categorySelectionReq of
                   Just _ -> Nothing
-                  Nothing -> adultTicketQuantity <&> \adultTicketQuantity' -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.id, quantity = adultTicketQuantity'}
+                  Nothing -> do
+                    let femaleQuoteCategoryId = find (\c -> c.category == FEMALE) quoteCategories <&> (.id)
+                    if length categorySelectionReq == 1 && isJust femaleQuoteCategoryId
+                      then Nothing
+                      else adultTicketQuantity <&> \adultTicketQuantity' -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.id, quantity = adultTicketQuantity'}
             Nothing -> createFRFSQuoteCategory quoteId adultTicketQuantity ADULT,
           case find (\category -> category.category == CHILD) quoteCategories of
             Just category ->
