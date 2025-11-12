@@ -56,7 +56,8 @@ data CoinEarnHistoryItem = CoinEarnHistoryItem
     expirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     coinsUsed :: Kernel.Prelude.Int,
     status :: CoinStatus,
-    bulkUploadTitle :: Kernel.Prelude.Maybe Translations
+    bulkUploadTitle :: Kernel.Prelude.Maybe Translations,
+    rideId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
