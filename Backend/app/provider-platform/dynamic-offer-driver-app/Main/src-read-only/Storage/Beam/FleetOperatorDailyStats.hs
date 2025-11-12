@@ -14,6 +14,7 @@ import Tools.Beam.UtilsTH
 
 data FleetOperatorDailyStatsT f = FleetOperatorDailyStatsT
   { acceptationRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    cashPlatformFees :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     customerCancellationCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
@@ -22,6 +23,8 @@ data FleetOperatorDailyStatsT f = FleetOperatorDailyStatsT
     fleetOperatorId :: B.C f Kernel.Prelude.Text,
     inspectionCompleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantLocalDate :: B.C f Data.Time.Calendar.Day,
+    onlineDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    onlinePlatformFees :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     pulledRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rejectedRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalCompletedRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

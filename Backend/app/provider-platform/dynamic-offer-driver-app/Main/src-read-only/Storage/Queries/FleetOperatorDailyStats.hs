@@ -30,8 +30,8 @@ findByFleetOperatorIdAndDate fleetOperatorId merchantLocalDate = do findOneWithK
 
 updateByFleetOperatorIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateByFleetOperatorIdAndDate totalRatingCount totalRatingScore driverFirstSubscription inspectionCompleted rejectedRequestCount pulledRequestCount acceptationRequestCount totalRequestCount customerCancellationCount driverCancellationCount totalDistance totalCompletedRides totalEarning fleetOperatorId merchantLocalDate = do
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.Seconds -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateByFleetOperatorIdAndDate totalRatingCount totalRatingScore driverFirstSubscription inspectionCompleted rejectedRequestCount pulledRequestCount acceptationRequestCount totalRequestCount customerCancellationCount driverCancellationCount totalDistance totalCompletedRides totalEarning cashPlatformFees onlinePlatformFees onlineDuration fleetOperatorId merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.totalRatingCount totalRatingCount,
@@ -47,6 +47,9 @@ updateByFleetOperatorIdAndDate totalRatingCount totalRatingScore driverFirstSubs
       Se.Set Beam.totalDistance (getTotalDistance totalDistance),
       Se.Set Beam.totalCompletedRides totalCompletedRides,
       Se.Set Beam.totalEarning totalEarning,
+      Se.Set Beam.cashPlatformFees cashPlatformFees,
+      Se.Set Beam.onlinePlatformFees onlinePlatformFees,
+      Se.Set Beam.onlineDuration onlineDuration,
       Se.Set Beam.updatedAt _now
     ]
     [ Se.And
@@ -70,13 +73,15 @@ updateCustomerCancellationCountByFleetOperatorIdAndDate customerCancellationCoun
 
 updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate totalDistance totalEarning totalCompletedRides fleetOperatorId merchantLocalDate = do
+  (Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate totalDistance totalEarning totalCompletedRides cashPlatformFees onlinePlatformFees fleetOperatorId merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.totalDistance (getTotalDistance totalDistance),
       Se.Set Beam.totalEarning totalEarning,
       Se.Set Beam.totalCompletedRides totalCompletedRides,
+      Se.Set Beam.cashPlatformFees cashPlatformFees,
+      Se.Set Beam.onlinePlatformFees onlinePlatformFees,
       Se.Set Beam.updatedAt _now
     ]
     [ Se.And
@@ -116,6 +121,19 @@ updateInspectionCompletedByFleetOperatorIdAndDate inspectionCompleted fleetOpera
   _now <- getCurrentTime
   updateOneWithKV
     [Se.Set Beam.inspectionCompleted inspectionCompleted, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
+          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
+        ]
+    ]
+
+updateOnlineDurationByFleetOperatorIdAndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateOnlineDurationByFleetOperatorIdAndDate onlineDuration fleetOperatorId merchantLocalDate = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.onlineDuration onlineDuration, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
           Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
@@ -164,12 +182,15 @@ updateByPrimaryKey (Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.acceptationRequestCount acceptationRequestCount,
+      Se.Set Beam.cashPlatformFees cashPlatformFees,
       Se.Set Beam.currency currency,
       Se.Set Beam.customerCancellationCount customerCancellationCount,
       Se.Set Beam.distanceUnit distanceUnit,
       Se.Set Beam.driverCancellationCount driverCancellationCount,
       Se.Set Beam.driverFirstSubscription driverFirstSubscription,
       Se.Set Beam.inspectionCompleted inspectionCompleted,
+      Se.Set Beam.onlineDuration onlineDuration,
+      Se.Set Beam.onlinePlatformFees onlinePlatformFees,
       Se.Set Beam.pulledRequestCount pulledRequestCount,
       Se.Set Beam.rejectedRequestCount rejectedRequestCount,
       Se.Set Beam.totalCompletedRides totalCompletedRides,
@@ -190,6 +211,7 @@ instance FromTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDaily
       Just
         Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats
           { acceptationRequestCount = acceptationRequestCount,
+            cashPlatformFees = cashPlatformFees,
             currency = currency,
             customerCancellationCount = customerCancellationCount,
             distanceUnit = distanceUnit,
@@ -198,6 +220,8 @@ instance FromTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDaily
             fleetOperatorId = fleetOperatorId,
             inspectionCompleted = inspectionCompleted,
             merchantLocalDate = merchantLocalDate,
+            onlineDuration = onlineDuration,
+            onlinePlatformFees = onlinePlatformFees,
             pulledRequestCount = pulledRequestCount,
             rejectedRequestCount = rejectedRequestCount,
             totalCompletedRides = totalCompletedRides,
@@ -216,6 +240,7 @@ instance ToTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDailySt
   toTType' (Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats {..}) = do
     Beam.FleetOperatorDailyStatsT
       { Beam.acceptationRequestCount = acceptationRequestCount,
+        Beam.cashPlatformFees = cashPlatformFees,
         Beam.currency = currency,
         Beam.customerCancellationCount = customerCancellationCount,
         Beam.distanceUnit = distanceUnit,
@@ -224,6 +249,8 @@ instance ToTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDailySt
         Beam.fleetOperatorId = fleetOperatorId,
         Beam.inspectionCompleted = inspectionCompleted,
         Beam.merchantLocalDate = merchantLocalDate,
+        Beam.onlineDuration = onlineDuration,
+        Beam.onlinePlatformFees = onlinePlatformFees,
         Beam.pulledRequestCount = pulledRequestCount,
         Beam.rejectedRequestCount = rejectedRequestCount,
         Beam.totalCompletedRides = totalCompletedRides,

@@ -175,8 +175,8 @@ postDriverFleetGetNearbyDriversV2 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Do
 getDriverFleetDashboardAnalyticsAllTime :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.Driver.AllTimeFleetAnalyticsRes)
 getDriverFleetDashboardAnalyticsAllTime a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.Driver.getDriverFleetDashboardAnalyticsAllTime a3 a2 a1
 
-getDriverFleetDashboardAnalytics :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Data.Time.Day -> Data.Time.Day -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.Driver.FilteredFleetAnalyticsRes)
-getDriverFleetDashboardAnalytics a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.Driver.getDriverFleetDashboardAnalytics a5 a4 a3 a2 a1
+getDriverFleetDashboardAnalytics :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Driver.FleetAnalyticsResponseType -> Data.Time.Day -> Data.Time.Day -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.Driver.FleetAnalyticsRes)
+getDriverFleetDashboardAnalytics a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.Driver.getDriverFleetDashboardAnalytics a6 a5 a4 a3 a2 a1
 
 postDriverDashboardFleetEstimateRoute :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.Driver.EstimateRouteReq -> Environment.FlowHandler Kernel.External.Maps.GetRoutesResp)
 postDriverDashboardFleetEstimateRoute a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.Driver.postDriverDashboardFleetEstimateRoute a4 a3 a2 a1
