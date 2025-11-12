@@ -97,6 +97,7 @@ data PaymentStatusResp
         paymentMethodType :: Maybe Text,
         authIdCode :: Maybe Text,
         txnUUID :: Maybe Text,
+        txnId :: Maybe Text, -- <mid>-<shortId>-<attemptNo>
         effectAmount :: Maybe HighPrecMoney,
         offers :: Maybe [Payment.Offer],
         paymentServiceType :: Maybe DOrder.PaymentServiceType,
@@ -753,6 +754,7 @@ orderStatusService personId orderId orderStatusCall = do
             payerVpa = (payerVpa <|> ((.payerVpa) =<< upi)),
             authIdCode = ((.authIdCode) =<< paymentGatewayResponse),
             txnUUID = transactionUUID,
+            txnId = txnId,
             effectAmount = effectiveAmount,
             offers = offers,
             paymentServiceType = order.paymentServiceType,
