@@ -129,6 +129,8 @@ data RiderConfigT f = RiderConfigT
     specialVehicleNotificationConfigs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     specialZoneRadius :: B.C f Kernel.Prelude.Int,
     suburbanBookingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    subwayRestrictionEndTime :: B.C f (Kernel.Prelude.Maybe Data.Time.TimeOfDay),
+    subwayRestrictionStartTime :: B.C f (Kernel.Prelude.Maybe Data.Time.TimeOfDay),
     subwayTransitTypes :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
     thresholdCancellationPercentageToBlock :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     ticketAssetDomain :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
