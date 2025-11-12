@@ -234,6 +234,7 @@ library
       Domain.Action.UI.DriverOnboarding.IdfyWebhook
       Domain.Action.UI.DriverOnboarding.Image
       Domain.Action.UI.DriverOnboarding.PanVerification
+      Domain.Action.UI.DriverOnboarding.PullDocument
       Domain.Action.UI.DriverOnboarding.Referral
       Domain.Action.UI.DriverOnboarding.Status
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate

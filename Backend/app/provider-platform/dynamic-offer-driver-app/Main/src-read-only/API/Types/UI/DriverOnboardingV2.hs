@@ -64,6 +64,13 @@ data DigiLockerInitiateResp = DigiLockerInitiateResp {authorizationUrl :: Kernel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PullDrivingLicenseReq = PullDrivingLicenseReq
+  { docType :: Domain.Types.DocumentVerificationConfig.DocumentType,
+    drivingLicenseNumber :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
   { applicableTo :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
     checkExpiry :: Kernel.Prelude.Bool,

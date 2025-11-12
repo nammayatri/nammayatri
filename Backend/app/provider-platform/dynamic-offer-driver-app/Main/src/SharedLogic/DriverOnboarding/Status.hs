@@ -16,6 +16,8 @@ module SharedLogic.DriverOnboarding.Status
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.Aeson as A
+import qualified Data.HashMap.Strict as HM
 import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
@@ -49,6 +51,7 @@ import qualified SharedLogic.DriverOnboarding as SDO
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
+import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGST
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverInformation.Internal as DIIQuery
@@ -78,7 +81,9 @@ import qualified Tools.Verification as Verification
 -- UNAUTHORIZED is used when a driver is not eligible to be onboarded to the platform
 -- INVALID is the state
 --   which the doc switches to when, for example, it's expired or when it is invalidated from dashboard.
-data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
+-- PULL_REQUIRED is used when a document needs to be pulled from DigiLocker
+-- CONSENT_DENIED is used when user denies consent for DigiLocker verification
+data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED | PULL_REQUIRED | CONSENT_DENIED
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data StatusRes' = StatusRes'
@@ -87,7 +92,8 @@ data StatusRes' = StatusRes'
     enabled :: Bool,
     manualVerificationRequired :: Maybe Bool,
     driverLicenseDetails :: Maybe [DLDetails],
-    vehicleRegistrationCertificateDetails :: Maybe [RCDetails]
+    vehicleRegistrationCertificateDetails :: Maybe [RCDetails],
+    digilockerResponseCode :: Maybe Text
   }
 
 data VehicleDocumentItem = VehicleDocumentItem
@@ -107,7 +113,8 @@ data DocumentStatusItem = DocumentStatusItem
   { documentType :: DDVC.DocumentType,
     verificationStatus :: ResponseStatus,
     verificationMessage :: Maybe Text,
-    verificationUrl :: Maybe BaseUrl
+    verificationUrl :: Maybe BaseUrl,
+    responseCode :: Maybe Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -249,6 +256,8 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC
       driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
       return driverInfo.enabled
 
+  digilockerResponseCode <- getDigilockerResponseCode personId
+
   return $
     StatusRes'
       { driverDocuments,
@@ -256,7 +265,8 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC
         enabled = enabled,
         manualVerificationRequired = transporterConfig.requiresOnboardingInspection,
         driverLicenseDetails = dlDetails,
-        vehicleRegistrationCertificateDetails = rcDetails
+        vehicleRegistrationCertificateDetails = rcDetails,
+        digilockerResponseCode = digilockerResponseCode
       }
   where
     getVehicleDocuments allDocumentVerificationConfigs driverDocuments role vehicleDocumentsUnverified requiresOnboardingInspection = do
@@ -326,17 +336,22 @@ fetchDriverDocuments ::
   Flow [DocumentStatusItem]
 fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories role language useHVSdkForDL onlyMandatoryDocs = do
   let merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
+      driverId = driverImagesInfo.driverId
+
+  digilockerDocStatusMap <- getDigilockerDocStatusMap driverId
+
   driverDocumentTypes <- getDriverDocTypes merchantOpCityId allDocumentVerificationConfigs possibleVehicleCategories role onlyMandatoryDocs
   driverDocumentTypes `forM` \docType -> do
     (mbStatus, mbProcessedReason, mbProcessedUrl) <- getProcessedDriverDocuments driverImagesInfo docType useHVSdkForDL
+    let responseCode = getResponseCode docType digilockerDocStatusMap
     case mbStatus of
       Just status -> do
         message <- documentStatusMessage status Nothing docType mbProcessedUrl language
-        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
+        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl, responseCode = responseCode}
       Nothing -> do
         (status, mbReason, mbUrl) <- getInProgressDriverDocuments driverImagesInfo docType
         message <- documentStatusMessage status mbReason docType mbUrl language
-        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
+        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl, responseCode = responseCode}
 
 fetchVehicleDocuments ::
   IQuery.DriverImagesInfo ->
@@ -460,11 +475,11 @@ fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationCon
         case mbStatus of
           Just status -> do
             message <- documentStatusMessage status Nothing docType mbProcessedUrl language
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl, responseCode = Nothing}
           Nothing -> do
             (status, mbReason, mbUrl) <- getInProgressVehicleDocuments driverImagesInfo (Just rcImagesInfo) docType
             message <- documentStatusMessage status mbReason docType mbUrl language
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl, responseCode = Nothing}
     return
       VehicleDocumentItem
         { registrationNo,
@@ -503,7 +518,7 @@ fetchProcessedVehicleDocumentsWithoutRC driverImagesInfo allDocumentVerification
 
           documents <-
             vehicleDocumentTypes `forM` \docType -> do
-              return $ DocumentStatusItem {documentType = docType, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing}
+              return $ DocumentStatusItem {documentType = docType, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing, responseCode = Nothing}
           return
             [ VehicleDocumentItem
                 { registrationNo = vehicle.registrationNo,
@@ -567,7 +582,7 @@ fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs 
                     vehicleDocumentTypes `forM` \docType -> do
                       (status, mbReason, mbUrl) <- getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo docType
                       message <- documentStatusMessage status mbReason docType mbUrl language
-                      return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
+                      return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl, responseCode = Nothing}
                   return
                     [ VehicleDocumentItem
                         { registrationNo,
@@ -866,6 +881,8 @@ documentStatusMessage status mbReason docType mbVerificationUrl language = do
     (MANUAL_VERIFICATION_REQUIRED, _, _) -> toVerificationMessage UnderManualReview language
     (PENDING, DDVC.BackgroundVerification, Just _) -> toVerificationMessage VerificationPendingOnUserInput language
     (PENDING, _, _) -> toVerificationMessage VerificationInProgress language
+    (PULL_REQUIRED, _, _) -> toVerificationMessage PullRequired language
+    (CONSENT_DENIED, _, _) -> toVerificationMessage ConsentDenied language
     (LIMIT_EXCEED, _, _) -> toVerificationMessage LimitExceed language
     (NO_DOC_AVAILABLE, _, _) -> toVerificationMessage NoDcoumentFound language
     (INVALID, DDVC.DriverLicense, _) -> do
@@ -970,7 +987,7 @@ mapStatus = \case
   Documents.VALID -> VALID
   Documents.INVALID -> INVALID
   Documents.UNAUTHORIZED -> UNAUTHORIZED
-  Documents.PULL_REQUIRED -> PENDING
+  Documents.PULL_REQUIRED -> PULL_REQUIRED
 
 verificationStatusCheck :: ResponseStatus -> Language -> DVC.DocumentType -> Maybe [Text] -> Flow Text
 verificationStatusCheck status language img mbReasons = do
@@ -1061,6 +1078,8 @@ data VerificationMessage
   | VerificationPendingOnUserInput
   | UnderManualReview
   | Unauthorized
+  | PullRequired
+  | ConsentDenied
   | Other
   | Reasons
   deriving (Show, Eq, Ord)
@@ -1084,3 +1103,27 @@ getLatestVerificationRecord mbIdfyVerificationReq mbHvVerificationReq = do
     (Nothing, Just _) -> SDO.makeHVVerificationReqRecord <$> mbHvVerificationReq
     (Just _, Nothing) -> SDO.makeIdfyVerificationReqRecord <$> mbIdfyVerificationReq
     (Nothing, Nothing) -> Nothing
+
+getDigilockerResponseCode :: Id DP.Person -> Flow (Maybe Text)
+getDigilockerResponseCode driverId = do
+  mbSession <- listToMaybe <$> QDV.findLatestByDriverId (Just 1) (Just 0) driverId
+  pure $ mbSession >>= (.responseCode)
+
+getDigilockerDocStatusMap :: Id DP.Person -> Flow (HM.HashMap Text (HM.HashMap Text A.Value))
+getDigilockerDocStatusMap driverId = do
+  mbSession <- listToMaybe <$> QDV.findLatestByDriverId (Just 1) (Just 0) driverId
+  pure $ maybe HM.empty parseDocStatus (mbSession <&> (.docStatus))
+
+getResponseCode :: DDVC.DocumentType -> HM.HashMap Text (HM.HashMap Text A.Value) -> Maybe Text
+getResponseCode docType docStatusMap = do
+  docMap <- HM.lookup (show docType) docStatusMap
+  case HM.lookup "responseCode" docMap of
+    Just (A.String code) -> Just code
+    _ -> Nothing
+
+-- Parse JSON docStatus into a map
+parseDocStatus :: A.Value -> HM.HashMap Text (HM.HashMap Text A.Value)
+parseDocStatus val =
+  case A.fromJSON val of
+    A.Success docMap -> docMap
+    A.Error _ -> HM.empty

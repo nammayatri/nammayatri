@@ -18,6 +18,7 @@ module Domain.Action.UI.DriverOnboarding.Status
   )
 where
 
+import qualified Domain.Types.DigilockerVerification as DDV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -30,6 +31,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
+import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as QPerson
 import Utils.Common.Cac.KeyNameConstants
@@ -47,7 +49,9 @@ data StatusRes = StatusRes
     enabled :: Bool,
     manualVerificationRequired :: Maybe Bool,
     driverLicenseDetails :: Maybe [SStatus.DLDetails],
-    vehicleRegistrationCertificateDetails :: Maybe [SStatus.RCDetails]
+    vehicleRegistrationCertificateDetails :: Maybe [SStatus.RCDetails],
+    digilockerStatus :: Maybe DDV.SessionStatus,
+    digilockerResponseCode :: Maybe Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -66,6 +70,13 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
   (aadhaarStatus, _) <- SStatus.getAadhaarStatus personId
   let shouldActivateRc = True
   SStatus.StatusRes' {..} <- SStatus.statusHandler' (Just person) driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs
+
+  -- Check if DigiLocker is enabled for this merchant+city
+  digilockerStatus <-
+    if transporterConfig.digilockerEnabled == Just True
+      then getDigilockerOverallStatus personId
+      else pure Nothing
+
   pure $
     StatusRes
       { dlVerificationStatus = dlStatus,
@@ -73,5 +84,14 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
         rcVerificationStatus = rcStatus,
         rcVerficationMessage = rcVerficationMessage,
         aadhaarVerificationStatus = aadhaarStatus,
+        digilockerStatus = digilockerStatus,
+        digilockerResponseCode = digilockerResponseCode,
         ..
       }
+
+-- Helper function to get DigiLocker session status
+-- Returns the sessionStatus directly from the latest DigilockerVerification record
+getDigilockerOverallStatus :: Id SP.Person -> Flow (Maybe DDV.SessionStatus)
+getDigilockerOverallStatus driverId = do
+  latestSessions <- QDV.findLatestByDriverId (Just 1) (Just 0) driverId
+  return $ fmap (.sessionStatus) (listToMaybe latestSessions)
