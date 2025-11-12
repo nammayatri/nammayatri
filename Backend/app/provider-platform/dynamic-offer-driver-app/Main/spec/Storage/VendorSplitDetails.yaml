@@ -10,7 +10,7 @@ VendorSplitDetails:
 
   types:
     SplitType:
-      enum: "FIXED" # add PERCENTAGE later
+      enum: "FIXED, PERCENTAGE"
 
   fields:
     merchantOperatingCityId : Id MerchantOperatingCity
@@ -35,3 +35,10 @@ VendorSplitDetails:
         and:
           - in: [area]
           - eq: [merchantOperatingCityId, vehicleVariant]
+
+    findAllByVariantSplitTypeAreaAndCity:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [area]
+          - eq: [splitType, merchantOperatingCityId, vehicleVariant]
