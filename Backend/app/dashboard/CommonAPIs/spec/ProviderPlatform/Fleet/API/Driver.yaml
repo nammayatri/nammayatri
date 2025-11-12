@@ -554,6 +554,38 @@ apis:
             response:
               type: DrivertoVehicleAssociationRes
 
+  - GET: # GetFleetDriverListStatsAPI
+      endpoint: /fleet/driver/list/stats
+      auth: ApiAuthV2
+      query:
+        - from: Day
+        - to: Day
+        - search: Text
+        - limit: Int
+        - offset: Int
+        - sortDesc: Bool
+        - SortOn: FleetDriverListStatsSortOn
+        - responseType: FleetDriverStatsResponseType
+      response:
+        type: FleetDriverStatsListRes
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/driver/list/stats
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - from: Day
+              - to: Day
+              - search: Text
+              - limit: Int
+              - offset: Int
+              - sortDesc: Bool
+              - SortOn: FleetDriverListStatsSortOn
+              - responseType: FleetDriverStatsResponseType
+            response:
+              type: FleetDriverStatsListRes
+
   - GET: # GetFleetDriverAssociationAPI
       endpoint: /fleet/driverAssociation
       auth: ApiAuthV2
@@ -1158,8 +1190,10 @@ apis:
       mandatoryQuery:
         - from: Day
         - to: Day
+      query:
+        responseType: FleetAnalyticsResponseType
       response:
-        type: FilteredFleetAnalyticsRes
+        type: FleetAnalyticsRes
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/dashboard/analytics
@@ -1169,8 +1203,10 @@ apis:
             mandatoryQuery:
               - from: Day
               - to: Day
+            query:
+              responseType: FleetAnalyticsResponseType
             response:
-              type: FilteredFleetAnalyticsRes
+              type: FleetAnalyticsRes
   - POST:
       endpoint: /dashboard/fleet/estimateRoute
       auth: ApiAuthV2
@@ -1473,6 +1509,40 @@ types:
   FleetEarningListRes:
     - fleetEarningRes: [FleetEarningRes]
     - summary: Summary
+  FleetDriverStatsListRes:
+    - driverStats: [FleetDriverStatsRes]
+    - summary: Summary
+  FleetDriverStatsRes:
+    - enum: "EarningsList FleetDriverEarningsStatsRes | MetricsList FleetDriverMetricsStatsRes"
+  FleetDriverEarningsStatsRes:
+    - driverName: Text
+    - totalEarningGross: HighPrecMoney
+    - inAppEarningGross: HighPrecMoney
+    - cashEarningGross: HighPrecMoney
+    - platformFeeTotal: HighPrecMoney
+    - totalEarningNet: HighPrecMoney
+    - inAppEarningNet: HighPrecMoney
+    - cashEarningNet: HighPrecMoney
+  FleetDriverMetricsStatsRes:
+    - driverName: Text
+    - rating: Maybe Double
+    - acceptedRideRequests: Int
+    - rejectedRideRequests: Int
+    - passedRideRequests: Int
+    - acceptanceRate: Double
+    - completedRides: Int
+    - driverCanceledRides: Int
+    - customerCanceledRides: Int
+    - completionRate: Double
+    - onlineHrs: Double
+    - rideTime: Double
+    - utilization: Double
+    - distance: Meters
+    - earnings: PriceAPIEntity
+    - earningPerKm: PriceAPIEntity
+  FleetDriverStatsResponseType:
+    enum: EARNINGS_LIST | METRICS_LIST
+    derive: "HttpInstance"
   FleetBookingsInformationResponse:
     - bookings: [FleetBookingItem]
     - summary: Summary
@@ -1510,6 +1580,9 @@ types:
     - paymentMethod: Maybe Text
   SortOn:
     - enum: "COMPLETED_RIDES, CANCELLED_RIDES"
+    - derive: "HttpInstance"
+  FleetDriverListStatsSortOn:
+    - enum: "TOTAL_RATING_COUNT, TOTAL_RATING_SCORE, DRIVER_FIRST_SUBSCRIPTION, INSPECTION_COMPLETED, REJECTED_REQUEST_COUNT, PULLED_REQUEST_COUNT, ACCEPTATION_REQUEST_COUNT, TOTAL_REQUEST_COUNT, CUSTOMER_CANCELLATION_COUNT, DRIVER_CANCELLATION_COUNT, TOTAL_DISTANCE, TOTAL_COMPLETED_RIDES, ONLINE_TOTAL_EARNING, CASH_TOTAL_EARNING, CASH_PLATFORM_FEES, ONLINE_PLATFORM_FEES, ONLINE_DURATION, RIDE_DURATION"
     - derive: "HttpInstance"
   FleetEarningRes:
     - totalRides: Int
@@ -1837,6 +1910,17 @@ types:
     - rejectedRequest: Int
     - driverCancelled: Int
     - customerCancelled: Int
+  EarningFleetAnalyticsRes:
+    - grossEarnings: PriceAPIEntity
+    - platformFees: PriceAPIEntity
+    - netEarnings: PriceAPIEntity
+    - grossEarningsPerHour: PriceAPIEntity
+    - netEarningsPerHour: PriceAPIEntity
+  FleetAnalyticsResponseType:
+    enum: FILTERED | EARNINGS
+    derive: "HttpInstance"
+  FleetAnalyticsRes:
+    - enum: "Filtered FilteredFleetAnalyticsRes | Earnings EarningFleetAnalyticsRes"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

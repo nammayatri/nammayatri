@@ -567,3 +567,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN feedback_notifi
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN feedback_notification_config TYPE json;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_db_for_analytics boolean  default false;

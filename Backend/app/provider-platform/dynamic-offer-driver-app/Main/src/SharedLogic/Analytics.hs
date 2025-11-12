@@ -293,7 +293,7 @@ updateOperatorAnalyticsCancelCount transporterConfig driverId = do
   whenJust mbFleetOwner $ \fleetOwner -> do
     Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
       SFleetOperatorStats.incrementDriverCancellationCount fleetOwner.fleetOwnerId transporterConfig
-      SFleetOperatorStats.incrementDriverCancellationCountDaily fleetOwner.fleetOwnerId transporterConfig
+      SFleetOperatorStats.incrementDriverCancellationCountDaily fleetOwner.fleetOwnerId driverId.getId transporterConfig
 
 updateFleetOwnerAnalyticsCustomerCancelCount ::
   ( MonadFlow m,
@@ -312,7 +312,7 @@ updateFleetOwnerAnalyticsCustomerCancelCount driverId transporterConfig = do
   whenJust mbFleetOwner $ \fleetOwner -> do
     Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
       SFleetOperatorStats.incrementCustomerCancellationCount fleetOwner.fleetOwnerId transporterConfig
-      SFleetOperatorStats.incrementCustomerCancellationCountDaily fleetOwner.fleetOwnerId transporterConfig
+      SFleetOperatorStats.incrementCustomerCancellationCountDaily fleetOwner.fleetOwnerId driverId.getId transporterConfig
 
 updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount ::
   ( MonadFlow m,
@@ -358,6 +358,7 @@ updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporte
         -- Update daily stats
         SFleetOperatorStats.incrementRequestCountsDaily
           fleetOwner.fleetOwnerId
+          driverId.getId
           (transporterConfig :: TC.TransporterConfig)
           incrementAcceptationCount
           incrementTotalRequestCount
@@ -403,7 +404,7 @@ updateOperatorAnalyticsRatingScoreKey driverId transporterConfig ratingValue sho
   whenJust mbFLeetOwner $ \fleetOwner -> do
     Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
       SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore fleetOwner.fleetOwnerId transporterConfig ratingValue shouldIncrementCount
-      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScoreDaily fleetOwner.fleetOwnerId transporterConfig ratingValue shouldIncrementCount
+      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScoreDaily fleetOwner.fleetOwnerId driverId.getId transporterConfig ratingValue shouldIncrementCount
 
 updateOperatorAnalyticsTotalRideCount ::
   ( MonadFlow m,

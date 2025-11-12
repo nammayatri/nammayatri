@@ -249,6 +249,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     upgradeTierDropRetentionTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     upwardsRecomputeBuffer :: Kernel.Types.Common.HighPrecMeters,
     upwardsRecomputeBufferPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    useDBForAnalytics :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     useOfferListCache :: Kernel.Prelude.Bool,
     useSilentFCMForForwardBatch :: Kernel.Prelude.Bool,
     useWithSnapToRoadFallback :: Kernel.Prelude.Bool,
