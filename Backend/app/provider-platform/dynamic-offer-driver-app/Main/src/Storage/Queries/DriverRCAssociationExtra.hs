@@ -29,7 +29,8 @@ findAllByDriverId ::
   Id Person ->
   m [(DriverRCAssociation, VehicleRegistrationCertificate)]
 findAllByDriverId driverId = do
-  rcAssocs <- getRcAssocs driverId Nothing
+  now <- getCurrentTime
+  rcAssocs <- getRcAssocs driverId (Just now)
   regCerts <- getRegCerts rcAssocs
   return $ linkDriversRC rcAssocs regCerts
 
