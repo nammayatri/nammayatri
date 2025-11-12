@@ -59,7 +59,7 @@ handler hnd = do
   schedulerType <- asks (.schedulerType)
   maxThreads <- asks (.maxThreads)
   case schedulerType of
-    RedisBased -> loopGracefully $ concatMap (\_ -> map (\streamIndex -> runnerIterationRedis hnd streamIndex runTask) [1 .. 16]) [1 .. maxThreads]
+    RedisBased -> loopGracefully $ concatMap (\_ -> map (\streamIndex -> runnerIterationRedis hnd streamIndex runTask) ([Nothing] ++ [Just streamIndex | streamIndex <- [1 .. 16]])) [1 .. maxThreads]
     DbBased -> loopGracefully $ replicate maxThreads (dbBasedHandlerLoop hnd runTask)
   where
     runTask :: AnyJob t -> SchedulerM ()
@@ -91,11 +91,14 @@ dbBasedHandlerLoop hnd runTask = do
 mapConcurrently :: Traversable t => (a -> SchedulerM ()) -> t a -> SchedulerM ()
 mapConcurrently action = mapM_ (fork "mapThread" . action)
 
-runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> Int -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
+runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> (Maybe Int) -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
 runnerIterationRedis SchedulerHandle {..} streamNumber runTask = do
   logInfo "Starting runner iteration"
   key' <- asks (.streamName)
-  let key = key' <> "_" <> show streamNumber
+  let key =
+        case streamNumber of
+          Just numb -> key' <> "_" <> show numb
+          Nothing -> key'
   groupName <- asks (.groupName)
   readyTasks <- getReadyTask key
   logTagDebug "Available tasks - Count" . show $ length readyTasks
