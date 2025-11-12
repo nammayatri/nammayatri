@@ -631,13 +631,15 @@ unlinkVehicleFromDriver merchant personId vehicleNo opCity role = do
   driver <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mbVehicle <- QVehicle.findById driver.id
+  let isNotVipOfficer = maybe True ((/=) DV.VIP_OFFICER . (.variant)) mbVehicle
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (RCNotFound vehicleNo)
   driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (transporterConfig.deactivateRCOnUnlink == Just True) $ DomainRC.deactivateCurrentRC transporterConfig personId
-  when (driverInfo.onboardingVehicleCategory /= Just DVC.BUS && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId False (Just False)
+  when ((driverInfo.onboardingVehicleCategory /= Just DVC.BUS || isNotVipOfficer) && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId False (Just False)
   _ <- QRCAssociation.endAssociationForRC personId rc.id
   logTagInfo (show role <> " -> unlinkVehicle : ") (show personId)
 
@@ -2900,13 +2902,12 @@ postDriverFleetGetDriverDetails ::
   Text ->
   Common.DriverDetailsReq ->
   Environment.Flow Common.DriverDetailsResp
-postDriverFleetGetDriverDetails _ _ fleetOwnerId req = do
+postDriverFleetGetDriverDetails _ _ _fleetOwnerId req = do
   respArray <-
     for req.driverIds $ \driverId -> do
       let personId = cast @Common.Driver @DP.Person driverId
       person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       mbVehicle <- B.runInReplica $ QVehicle.findById person.id
-      validateFleetDriverAssociation fleetOwnerId person
       decryptedMobileNumber <- mapM decrypt person.mobileNumber
       pure $
         Common.DriverDetails
