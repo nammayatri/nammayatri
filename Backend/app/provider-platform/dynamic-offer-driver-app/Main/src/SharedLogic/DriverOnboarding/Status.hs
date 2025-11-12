@@ -16,6 +16,8 @@ module SharedLogic.DriverOnboarding.Status
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.Aeson as A
+import qualified Data.HashMap.Strict as HM
 import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
@@ -49,6 +51,7 @@ import qualified SharedLogic.DriverOnboarding as SDO
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
+import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGST
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverInformation.Internal as DIIQuery
@@ -78,7 +81,9 @@ import qualified Tools.Verification as Verification
 -- UNAUTHORIZED is used when a driver is not eligible to be onboarded to the platform
 -- INVALID is the state
 --   which the doc switches to when, for example, it's expired or when it is invalidated from dashboard.
-data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
+-- PULL_REQUIRED is used when a document needs to be pulled from DigiLocker
+-- CONSENT_DENIED is used when user denies consent for DigiLocker verification
+data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED | PULL_REQUIRED | CONSENT_DENIED
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data StatusRes' = StatusRes'
@@ -107,7 +112,8 @@ data DocumentStatusItem = DocumentStatusItem
   { documentType :: DDVC.DocumentType,
     verificationStatus :: ResponseStatus,
     verificationMessage :: Maybe Text,
-    verificationUrl :: Maybe BaseUrl
+    verificationUrl :: Maybe BaseUrl,
+    isPullRequired :: Maybe Bool
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -326,17 +332,23 @@ fetchDriverDocuments ::
   Flow [DocumentStatusItem]
 fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories role language useHVSdkForDL onlyMandatoryDocs = do
   let merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
+      driverId = driverImagesInfo.driverId
+
+  -- Get DigiLocker docStatus map for this driver
+  digilockerDocStatusMap <- getDigilockerDocStatusMap driverId
+
   driverDocumentTypes <- getDriverDocTypes merchantOpCityId allDocumentVerificationConfigs possibleVehicleCategories role onlyMandatoryDocs
   driverDocumentTypes `forM` \docType -> do
     (mbStatus, mbProcessedReason, mbProcessedUrl) <- getProcessedDriverDocuments driverImagesInfo docType useHVSdkForDL
+    let isPullReq = checkIfPullRequired docType digilockerDocStatusMap
     case mbStatus of
       Just status -> do
         message <- documentStatusMessage status Nothing docType mbProcessedUrl language
-        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
+        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl, isPullRequired = isPullReq}
       Nothing -> do
         (status, mbReason, mbUrl) <- getInProgressDriverDocuments driverImagesInfo docType
         message <- documentStatusMessage status mbReason docType mbUrl language
-        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
+        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl, isPullRequired = isPullReq}
 
 fetchVehicleDocuments ::
   IQuery.DriverImagesInfo ->
@@ -460,11 +472,11 @@ fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationCon
         case mbStatus of
           Just status -> do
             message <- documentStatusMessage status Nothing docType mbProcessedUrl language
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl, isPullRequired = Nothing}
           Nothing -> do
             (status, mbReason, mbUrl) <- getInProgressVehicleDocuments driverImagesInfo (Just rcImagesInfo) docType
             message <- documentStatusMessage status mbReason docType mbUrl language
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl, isPullRequired = Nothing}
     return
       VehicleDocumentItem
         { registrationNo,
@@ -503,7 +515,7 @@ fetchProcessedVehicleDocumentsWithoutRC driverImagesInfo allDocumentVerification
 
           documents <-
             vehicleDocumentTypes `forM` \docType -> do
-              return $ DocumentStatusItem {documentType = docType, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing}
+              return $ DocumentStatusItem {documentType = docType, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing, isPullRequired = Nothing}
           return
             [ VehicleDocumentItem
                 { registrationNo = vehicle.registrationNo,
@@ -567,7 +579,7 @@ fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs 
                     vehicleDocumentTypes `forM` \docType -> do
                       (status, mbReason, mbUrl) <- getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo docType
                       message <- documentStatusMessage status mbReason docType mbUrl language
-                      return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
+                      return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl, isPullRequired = Nothing}
                   return
                     [ VehicleDocumentItem
                         { registrationNo,
@@ -866,6 +878,8 @@ documentStatusMessage status mbReason docType mbVerificationUrl language = do
     (MANUAL_VERIFICATION_REQUIRED, _, _) -> toVerificationMessage UnderManualReview language
     (PENDING, DDVC.BackgroundVerification, Just _) -> toVerificationMessage VerificationPendingOnUserInput language
     (PENDING, _, _) -> toVerificationMessage VerificationInProgress language
+    (PULL_REQUIRED, _, _) -> toVerificationMessage PullRequired language
+    (CONSENT_DENIED, _, _) -> toVerificationMessage ConsentDenied language
     (LIMIT_EXCEED, _, _) -> toVerificationMessage LimitExceed language
     (NO_DOC_AVAILABLE, _, _) -> toVerificationMessage NoDcoumentFound language
     (INVALID, DDVC.DriverLicense, _) -> do
@@ -1061,6 +1075,8 @@ data VerificationMessage
   | VerificationPendingOnUserInput
   | UnderManualReview
   | Unauthorized
+  | PullRequired
+  | ConsentDenied
   | Other
   | Reasons
   deriving (Show, Eq, Ord)
@@ -1084,3 +1100,31 @@ getLatestVerificationRecord mbIdfyVerificationReq mbHvVerificationReq = do
     (Nothing, Just _) -> SDO.makeHVVerificationReqRecord <$> mbHvVerificationReq
     (Just _, Nothing) -> SDO.makeIdfyVerificationReqRecord <$> mbIdfyVerificationReq
     (Nothing, Nothing) -> Nothing
+
+-- Helper function to get DigiLocker docStatus map for a driver
+getDigilockerDocStatusMap :: Id DP.Person -> Flow (HM.HashMap Text (HM.HashMap Text A.Value))
+getDigilockerDocStatusMap driverId = do
+  latestSessions <- QDV.findLatestByDriverId (Just 1) (Just 0) driverId
+  case listToMaybe latestSessions of
+    Nothing -> return HM.empty
+    Just session -> return $ parseDocStatus session.docStatus
+
+-- Parse JSON docStatus into a map
+parseDocStatus :: A.Value -> HM.HashMap Text (HM.HashMap Text A.Value)
+parseDocStatus val =
+  case A.fromJSON val of
+    A.Success docMap -> docMap
+    A.Error _ -> HM.empty
+
+-- Check if a specific document type has PULL_REQUIRED status in DigiLocker
+checkIfPullRequired :: DDVC.DocumentType -> HM.HashMap Text (HM.HashMap Text A.Value) -> Maybe Bool
+checkIfPullRequired docType docStatusMap =
+  case HM.lookup (show docType) docStatusMap of
+    Nothing -> Nothing
+    Just docDetails ->
+      case HM.lookup "status" docDetails of
+        Just (A.String status) ->
+          if status == "PULL_REQUIRED"
+            then Just True
+            else Just False
+        _ -> Nothing
