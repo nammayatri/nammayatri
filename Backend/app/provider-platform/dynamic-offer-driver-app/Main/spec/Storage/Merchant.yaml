@@ -971,6 +971,7 @@ TransporterConfig:
     openMarketUnBlocked: Bool
     cacheOfferListByDriverId: Bool
     useOfferListCache: Bool
+    useDBForAnalytics: Maybe Bool
     ratingAsDecimal: Bool
     coinFeature: Bool
     coinConversionRate: HighPrecMoney
@@ -1497,6 +1498,7 @@ TransporterConfig:
     bookAnyVehicleDowngradeLevel: "-1"
     canSwitchToInterCity: "true"
     acStatusCheckGap: "7"
+    useDBForAnalytics: "true"
     automaticRCActivationCutOff: "432000"
     crossTravelCities: "'{}'"
     driverAutoPayExecutionTimeFallBack: "93600"

@@ -1,6 +1,6 @@
 module Domain.Action.Internal.ProcessingChangeOnline (processingChangeOnline, updateOnlineDurationDuringFetchingDailyStats) where
 
-import Data.Time (DiffTime, UTCTime (..), addUTCTime, diffUTCTime)
+import Data.Time (Day, DiffTime, UTCTime (..), addUTCTime, diffUTCTime)
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -14,10 +14,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (Seconds (..), generateGUIDText, getCurrentTime, secondsToNominalDiffTime)
 import Kernel.Utils.Error.Throwing (fromMaybeM)
 import Kernel.Utils.Logging (logDebug, logError, logInfo)
+import qualified SharedLogic.FleetOperatorStats as FOS
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
+import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFleetOpsDailyExtra
 import Tools.Error
 
 processingChangeOnline ::
@@ -79,13 +82,14 @@ updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCal
       startDayTimeLocal = UTCTime (utctDay localTime) 0
       twoDaysInSeconds = Seconds 172800
   mbDailyStats <- QDS.findByDriverIdAndDate driverId merchantLocalDate
-  let newOnlineDurationDaily = calcOnlineDuration localTime mbDailyStats lastOnlineFromLocalLimited
+  let newOnlineDurationDaily = calcOnlineDuration localTime (mbDailyStats >>= (.onlineDuration)) lastOnlineFromLocalLimited
       newOnlineDuration = diffUTCTimeInSeconds localTime $ fromMaybe localTime mbLastOnlineFromLocal
   when (newOnlineDuration > twoDaysInSeconds) $
     logInfo $ "Online duration more than 2 days. DriverId: " <> driverId.getId <> "; duration: " <> show newOnlineDuration
   when (lastOnlineFromLocalLimited == limitNumDaysAgoLocal) . logError $
     "The limit of " <> show numDaysAgo <> " days has been reached during the calculation of onlineDuration. DriverId: " <> driverId.getId <> "; duration: " <> show newOnlineDuration
   whenNothing_ driverInfo.onlineDurationRefreshedAt . logDebug $ "OnlineDurationRefreshedAt is Nothing. DriverId: " <> driverId.getId
+  calcAndUpdateOnlineDurationForFleetOwner transporterConfig localTime driverId merchantLocalDate lastOnlineFromLocalLimited
   addDataToDailyStats mbDailyStats merchantLocalDate newOnlineDurationDaily
   QDI.updateOnlineDurationRefreshedAt driverId now
   when (lastOnlineFromLocalLimited < startDayTimeLocal) $ setOnlineDurationInDailyStatsForPrevDays merchantLocalDate lastOnlineFromLocalLimited
@@ -151,17 +155,19 @@ updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCal
 updateDriverOnlineDurationLockKey :: Id DP.Person -> Text
 updateDriverOnlineDurationLockKey id = "DriveOnlineDuration:PersonId-" <> id.getId
 
+updateFleetOnlineDurationLockKey :: Text -> Text
+updateFleetOnlineDurationLockKey fleetOwnerId = "FleetOnlineDuration:FleetOwnerId-" <> fleetOwnerId
+
 calcOnlineDuration ::
   UTCTime ->
-  Maybe DDS.DailyStats ->
+  Maybe Seconds ->
   UTCTime ->
   Seconds
-calcOnlineDuration localTime mbDailyStats lastOnlineFrom =
+calcOnlineDuration localTime mbOnlineDuration lastOnlineFrom =
   let lastOnlineTo = localTime
       startDayTime = UTCTime (utctDay localTime) 0
       lastOnlineFrom' = max startDayTime lastOnlineFrom
-      mbLastOnlineDuration = mbDailyStats >>= (.onlineDuration)
-      onlineDuration = if lastOnlineFrom < startDayTime then Seconds 0 else fromMaybe (Seconds 0) mbLastOnlineDuration
+      onlineDuration = if lastOnlineFrom < startDayTime then Seconds 0 else fromMaybe (Seconds 0) mbOnlineDuration
    in onlineDuration + diffUTCTimeInSeconds lastOnlineTo lastOnlineFrom'
 
 calcPreviousDayOnlineDuration ::
@@ -179,3 +185,22 @@ diffUTCTimeInSeconds to from = Seconds (round $ diffUTCTime (roundUTCTimeToSecon
 
 roundUTCTimeToSecond :: UTCTime -> UTCTime
 roundUTCTimeToSecond (UTCTime day dt) = UTCTime day (fromIntegral $ floor @DiffTime @Integer dt)
+
+calcAndUpdateOnlineDurationForFleetOwner ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  DTC.TransporterConfig ->
+  UTCTime ->
+  Id DP.Person ->
+  Day ->
+  UTCTime ->
+  m ()
+calcAndUpdateOnlineDurationForFleetOwner transporterConfig localTime driverId merchantLocalDate lastOnlineFromLocalLimited = do
+  mbFleetDriverAssociation <- QFDA.findByDriverId driverId True
+  whenJust mbFleetDriverAssociation $ \fleetDriverAssociation -> do
+    let fleetOwnerId = fleetDriverAssociation.fleetOwnerId
+    Redis.whenWithLockRedis (updateFleetOnlineDurationLockKey fleetOwnerId) 60 $ do
+      statsList <- QFleetOpsDailyExtra.findByFleetOperatorIdAndDateWithDriverIds fleetOwnerId driverId.getId merchantLocalDate
+      let (mbFleetStats, mbDriverStats) = FOS.separateFleetAndDriverStats fleetOwnerId driverId.getId statsList
+      let newOnlineDurationFleet = calcOnlineDuration localTime (mbFleetStats >>= (.onlineDuration)) lastOnlineFromLocalLimited
+      let newOnlineDurationDriver = calcOnlineDuration localTime (mbDriverStats >>= (.onlineDuration)) lastOnlineFromLocalLimited
+      FOS.updateOnlineDurationDaily fleetOwnerId driverId.getId transporterConfig newOnlineDurationFleet newOnlineDurationDriver mbFleetStats mbDriverStats merchantLocalDate
