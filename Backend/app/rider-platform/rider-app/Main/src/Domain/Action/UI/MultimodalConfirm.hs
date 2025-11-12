@@ -1671,7 +1671,7 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
 
     convertToAvailableRouteWithQuotes :: DIBC.IntegratedBPPConfig -> Domain.Types.Person.Person -> [DFRFSQuote.FRFSQuote] -> RD.AvailableRoutesByTier -> Environment.Flow [ApiTypes.AvailableRoute]
     convertToAvailableRouteWithQuotes integratedBPPConfig person quotes routesByTier =
-      mapM
+      mapMaybeM
         ( \routeInfo -> do
             serviceTierName <-
               case routesByTier.serviceTierName of
@@ -1681,17 +1681,21 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
                   return $ frfsServiceTier <&> (.shortName)
             -- Find quoteId for this specific route by matching routeCode
             let mbQuoteId = findQuoteIdByRouteCode quotes [routeInfo.routeCode]
-            return $
-              ApiTypes.AvailableRoute
-                { source = routeInfo.source,
-                  quoteId = mbQuoteId,
-                  serviceTierName,
-                  serviceTierType = routesByTier.serviceTier,
-                  routeCode = routeInfo.routeCode,
-                  routeShortName = routeInfo.shortName,
-                  routeLongName = routeInfo.longName,
-                  routeTimings = routeInfo.routeTimings
-                }
+            case mbQuoteId of
+              Just quoteId ->
+                return $
+                  Just $
+                    ApiTypes.AvailableRoute
+                      { source = routeInfo.source,
+                        quoteId = Just quoteId,
+                        serviceTierName,
+                        serviceTierType = routesByTier.serviceTier,
+                        routeCode = routeInfo.routeCode,
+                        routeShortName = routeInfo.shortName,
+                        routeLongName = routeInfo.longName,
+                        routeTimings = routeInfo.routeTimings
+                      }
+              Nothing -> return Nothing
         )
         routesByTier.availableRoutesInfo
 
