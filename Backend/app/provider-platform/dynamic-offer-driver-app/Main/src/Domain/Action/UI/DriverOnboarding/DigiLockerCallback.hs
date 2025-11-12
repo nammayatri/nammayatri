@@ -302,7 +302,12 @@ data DocStatus
 
 -- | Convert DocStatus to Text for JSON
 docStatusToText :: DocStatus -> Text
-docStatusToText = T.pack . show
+docStatusToText status = case status of
+  DOC_PENDING -> "PENDING"
+  DOC_SUCCESS -> "SUCCESS"
+  DOC_FAILED -> "FAILED"
+  DOC_CONSENT_DENIED -> "CONSENT_DENIED"
+  DOC_PULL_REQUIRED -> "PULL_REQUIRED"
 
 -- | Type to represent extracted document data from DigiLocker
 data ExtractedDocumentData
