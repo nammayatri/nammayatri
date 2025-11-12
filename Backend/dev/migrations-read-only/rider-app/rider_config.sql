@@ -489,3 +489,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN offer_list_cache_version text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN email_business_verification_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN subway_restriction_start_time time without time zone ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN subway_restriction_end_time time without time zone ;

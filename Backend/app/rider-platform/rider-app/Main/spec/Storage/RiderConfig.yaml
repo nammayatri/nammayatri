@@ -179,6 +179,8 @@ RiderConfig:
     nearbyBusMaxTimeThreshold: Maybe Int
     specialVehicleNotificationConfigs: "Maybe [SpecialVehicleNotificationConfig]"
     offerListCacheVersion: Maybe Text
+    subwayRestrictionStartTime: Maybe TimeOfDay
+    subwayRestrictionEndTime: Maybe TimeOfDay
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

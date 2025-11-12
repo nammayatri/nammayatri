@@ -55,7 +55,8 @@ data ServiceabilityRes = ServiceabilityRes
     geoJson :: Maybe Text,
     hotSpotInfo :: [DHotSpot.HotSpotInfo],
     blockRadius :: Maybe Int,
-    isMetroServiceable :: Maybe Bool
+    isMetroServiceable :: Maybe Bool,
+    isSubwayServiceable :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -83,6 +84,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
       riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
       now <- getCurrentTime
       let isOutsideMetroBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.qrTicketRestrictionStartTime riderConfig.qrTicketRestrictionEndTime now riderConfig.timeDiffFromUtc
+      let isOutsideSubwayBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.subwayRestrictionStartTime riderConfig.subwayRestrictionEndTime now riderConfig.timeDiffFromUtc
       return
         ServiceabilityRes
           { serviceable = True,
@@ -90,6 +92,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
             specialLocation = filteredSpecialLocationBody,
             geoJson = (.geoJson) =<< filteredSpecialLocationBody,
             isMetroServiceable = Just (not isOutsideMetroBusinessHours),
+            isSubwayServiceable = Just (not isOutsideSubwayBusinessHours),
             ..
           }
     Nothing ->
@@ -101,6 +104,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
             specialLocation = Nothing,
             geoJson = Nothing,
             isMetroServiceable = Nothing,
+            isSubwayServiceable = Nothing,
             ..
           }
 

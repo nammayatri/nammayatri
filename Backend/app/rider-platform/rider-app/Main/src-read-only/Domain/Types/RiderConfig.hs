@@ -130,6 +130,8 @@ data RiderConfig = RiderConfig
     specialVehicleNotificationConfigs :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.SpecialVehicleNotificationConfig],
     specialZoneRadius :: Kernel.Prelude.Int,
     suburbanBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    subwayRestrictionEndTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
+    subwayRestrictionStartTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
     subwayTransitTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     thresholdCancellationPercentageToBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     ticketAssetDomain :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
