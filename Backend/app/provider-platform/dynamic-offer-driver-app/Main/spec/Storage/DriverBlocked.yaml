@@ -33,3 +33,8 @@ DriverBlockTransactions:
     findByDriverId:
       kvFunction: findAllWithKV
       where: driverId
+
+    blockCountByDriverId:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId , actionType]
