@@ -73,6 +73,7 @@ data DSelectReq = DSelectReq
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
 handler :: DM.Merchant -> DSelectReq -> DSR.SearchRequest -> [DEst.Estimate] -> Flow ()
 handler merchant sReq searchReq estimates = do
+  logDebug $ "DSelectReq: select request billingCategory: " <> show sReq.billingCategory <> "transactionId: " <> sReq.transactionId
   now <- getCurrentTime
   riderId <- case sReq.customerPhoneNum of
     Just number -> do
