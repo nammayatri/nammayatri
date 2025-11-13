@@ -16,7 +16,6 @@
 module App (startProducer) where
 
 import Data.Function hiding (id)
-import Data.List (splitAt)
 import Debug.Trace as T
 import Environment
 import EulerHS.Interpreters (runFlow)

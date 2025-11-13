@@ -59,7 +59,22 @@ handler hnd = do
   schedulerType <- asks (.schedulerType)
   maxThreads <- asks (.maxThreads)
   case schedulerType of
-    RedisBased -> loopGracefully $ concatMap (\_ -> map (\streamIndex -> runnerIterationRedis hnd streamIndex runTask) [1 .. 16]) [1 .. maxThreads]
+    RedisBased -> do
+      let totalShards = 16
+          allShards = [1 .. totalShards]
+          -- Divide shards evenly among threads
+          divideShards :: [Int] -> Int -> [[Int]]
+          divideShards [] _ = []
+          divideShards shards numParts
+            | numParts <= 0 = [shards]
+            | otherwise =
+              let chunkSize = (length shards + numParts - 1) `div` numParts -- Ceiling division
+                  (chunk, rest) = splitAt chunkSize shards
+               in chunk : divideShards rest (numParts - 1)
+          shardChunks = divideShards allShards maxThreads
+          -- Each thread handles its assigned shards
+          redisBasedHandlers = concatMap (\shardChunk -> map (\streamIndex -> runnerIterationRedis hnd streamIndex runTask) shardChunk) shardChunks
+      loopGracefully redisBasedHandlers
     DbBased -> loopGracefully $ replicate maxThreads (dbBasedHandlerLoop hnd runTask)
   where
     runTask :: AnyJob t -> SchedulerM ()
