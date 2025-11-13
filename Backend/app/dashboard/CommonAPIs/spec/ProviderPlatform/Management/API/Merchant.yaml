@@ -803,6 +803,7 @@ types:
     - freeWaitingTime: Maybe Minutes
     - nightShiftCharge: Maybe NightShiftChargeAPIEntity
     - petCharges: Maybe HighPrecMoney
+    - businessDiscountPercentage: Maybe Double
     - derive: "'HideSecrets"
   WaitingChargeInfoAPIEntity:
     - freeWaitingTime: Minutes

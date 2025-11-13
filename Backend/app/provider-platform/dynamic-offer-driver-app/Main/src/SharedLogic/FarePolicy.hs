@@ -341,6 +341,7 @@ calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration mercha
             estimatedCongestionCharge = Nothing,
             timeDiffFromUtc = Nothing,
             petCharges = Nothing, ----------check
+            shouldApplyBusinessDiscount = False,
             tollCharges = Nothing, ------fix it in future
             noOfStops = 0, ------fix it in future
             currency,
@@ -378,6 +379,9 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
 
       petChargesCaption = show Tags.PET_CHARGES
       petChargesItem = mkBreakupItem petChargesCaption . (mkValue . show) <$> farePolicy.petCharges
+
+      businessDiscountCaption = show Tags.BUSINESS_DISCOUNT
+      businessDiscountItem = mkBreakupItem businessDiscountCaption . (mkValue . show) <$> farePolicy.businessDiscountPercentage
 
       priorityChargesCaption = show Tags.PRIORITY_CHARGES
       priorityChargesItem = mkBreakupItem priorityChargesCaption . (mkValue . show) <$> farePolicy.priorityCharges
@@ -432,6 +436,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       parkingChargeItem,
       governmentChargeItem,
       driverMinExtraFeeItem,
+      businessDiscountItem,
       driverMaxExtraFeeItem,
       petChargesItem,
       priorityChargesItem,

@@ -30,6 +30,7 @@ data FarePolicyT f = FarePolicyT
     parkingCharge :: B.C f (Maybe HighPrecMoney),
     perStopCharge :: B.C f (Maybe HighPrecMoney),
     petCharges :: B.C f (Maybe HighPrecMoney),
+    businessDiscountPercentage :: B.C f (Maybe Double),
     priorityCharges :: B.C f (Maybe HighPrecMoney),
     tollCharges :: B.C f (Maybe HighPrecMoney),
     pickupBufferInSecsForNightShiftCal :: B.C f (Maybe Seconds),

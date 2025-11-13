@@ -63,6 +63,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate
+import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -201,6 +202,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               stopWaitingTimes = [],
               actualRideDuration = Nothing,
               petCharges = tripQuoteDetail.petCharges,
+              shouldApplyBusinessDiscount = if searchTry.billingCategory == SLT.BUSINESS then True else False,
               noOfStops = length searchReq.stops,
               estimatedRideDuration = searchReq.estimatedDuration,
               estimatedCongestionCharge = Nothing,
