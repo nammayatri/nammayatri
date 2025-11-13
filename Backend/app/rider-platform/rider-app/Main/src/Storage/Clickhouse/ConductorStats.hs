@@ -4,12 +4,13 @@
 
 module Storage.Clickhouse.ConductorStats where
 
+import Data.Time.Calendar (Day)
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 
 data ConductorStatsT f = ConductorStatsT
-  { bookingDate :: C f UTCTime,
+  { bookingDate :: C f Day,
     conductorTokenNo :: C f Text,
     numberTicketsBooked :: C f Int,
     totalRevenueInADay :: C f Double
