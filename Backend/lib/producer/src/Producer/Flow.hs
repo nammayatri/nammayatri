@@ -50,7 +50,7 @@ getMyShardKey = do
 getShardedKey :: Text -> Text -> Text
 getShardedKey key shardId = key <> "{" <> shardId <> "}"
 
-runProducer :: Int -> Flow ()
+runProducer :: Maybe Int -> Flow ()
 runProducer redisStreamCounter = do
   logDebug $ "StreamName is now: " <> show redisStreamCounter
   myShardId <- getMyShardKey
@@ -76,7 +76,7 @@ runProducer redisStreamCounter = do
       Left err -> logError $ show err
       Right _ -> pure ()
 
-runReviver :: ProducerType -> Int -> Flow ()
+runReviver :: ProducerType -> Maybe Int -> Flow ()
 runReviver producerType redisStreamCounter = do
   reviverInterval <- asks (.reviverInterval)
   T.UTCTime _ todaysDiffTime <- getCurrentTime
@@ -88,7 +88,7 @@ runReviver producerType redisStreamCounter = do
 mkRunningJobKey :: Text -> Text
 mkRunningJobKey jobId = "RunnningJob:" <> jobId
 
-runReviver' :: ProducerType -> Int -> Flow ()
+runReviver' :: ProducerType -> Maybe Int -> Flow ()
 runReviver' producerType redisStreamCounter = do
   logDebug "Reviver is Running "
   case producerType of
@@ -165,10 +165,13 @@ runReviver' producerType redisStreamCounter = do
       result <- insertIntoStream newJobsToExecute_ redisStreamCounter
       logDebug $ "Job Revived and inserted into stream with timestamp" <> show result
 
-insertIntoStream :: [B.ByteString] -> Int -> Flow ()
+insertIntoStream :: [B.ByteString] -> Maybe Int -> Flow ()
 insertIntoStream jobs streamNumber = do
   streamName' <- asks (.streamName)
-  let streamName = streamName' <> "_" <> show streamNumber
+  streamName <- case streamNumber of
+    Just numb -> pure $ streamName' <> "_" <> show numb
+    Nothing -> pure streamName'
+  -- let streamName = streamName' <> "_" <> show streamNumber
   logDebug $ "StreamName is now: " <> show streamName
   entryId <- asks (.entryId)
   forM_ jobs $ \job -> fork "putting into stream" $ do
