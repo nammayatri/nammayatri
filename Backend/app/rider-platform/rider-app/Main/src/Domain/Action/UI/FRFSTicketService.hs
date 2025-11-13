@@ -677,7 +677,9 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCatego
       unless (quote.validTill > now) $ throwError $ FRFSQuoteExpired quote.id.getId
       unless (personId == quote.riderId) $ throwError AccessDenied
       -- TODO :: Kept for Backward Compatibility, (ticketQuantity, childQuantity, updatedQuote) can be removed post Category Release is done 100%.
-      let ticketQuantity = fareParameters.adultItem <&> (.quantity)
+      let adultTicketQuantity = fareParameters.adultItem <&> (.quantity)
+          femaleTicketQuantity = fareParameters.femaleItem <&> (.quantity)
+          ticketQuantity = liftA2 (+) adultTicketQuantity femaleTicketQuantity
           childTicketQuantity = fareParameters.childItem <&> (.quantity)
           totalPrice = fareParameters.totalPrice
       updatedQuote <-
@@ -738,7 +740,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCatego
                 isFareChanged = Just isFareChanged,
                 integratedBppConfigId = quote.integratedBppConfigId,
                 googleWalletJWTUrl = Nothing,
-                quantity = fareParameters.adultItem <&> (.quantity),
+                quantity = liftA2 (+) (fareParameters.adultItem <&> (.quantity)) (fareParameters.femaleItem <&> (.quantity)),
                 childTicketQuantity = fareParameters.childItem <&> (.quantity),
                 bookingAuthCode = crisSdkResponse <&> (.bookAuthCode),
                 osType = crisSdkResponse <&> (.osType),
@@ -1647,5 +1649,7 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote sel
   let fareParameters = FRFSUtils.calculateFareParametersWithQuoteFallback (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories) quote
       ticketQuantity = fareParameters.adultItem <&> (.quantity)
       childTicketQuantity = fareParameters.childItem <&> (.quantity)
-  void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity
+      femaleTicketQuantity = fareParameters.femaleItem <&> (.quantity)
+      ticketQuantity' = liftA2 (+) ticketQuantity femaleTicketQuantity
+  void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity' childTicketQuantity
   CallExternalBPP.select processOnSelectHandler merchant merchantOperatingCity bapConfig quote updatedQuoteCategories isSingleMode mbEnableOffer

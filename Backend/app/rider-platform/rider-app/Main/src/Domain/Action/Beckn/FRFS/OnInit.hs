@@ -15,6 +15,7 @@
 module Domain.Action.Beckn.FRFS.OnInit where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative (liftA2)
 import Domain.Action.Beckn.FRFS.Common (DCategorySelect, DFareBreakUp)
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
@@ -96,15 +97,16 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
           onInitReq.categories
       )
       quoteCategories
-  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories) oldBooking
+  let fareParameters = calculateFareParameters (mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)
       adultTicketQuantity = fareParameters.adultItem <&> (.quantity)
       childTicketQuantity = fareParameters.childItem <&> (.quantity)
-
+      femaleTicketQuantity = fareParameters.femaleItem <&> (.quantity)
+      ticketQuantity = liftA2 (+) adultTicketQuantity femaleTicketQuantity
   when (totalPrice /= fareParameters.totalPrice) $ do
     throwError $ CategoriesAndTotalPriceMismatch (show fareParameters.totalPrice) (show totalPrice)
 
   -- TODO :: Remove Quantity update Booking Table post release of FRFSQuoteCategory
-  void $ QFRFSTicketBooking.updateTotalPriceAndQuantityById totalPrice adultTicketQuantity childTicketQuantity (Just isFareChanged) oldBooking.id -- Full Ticket Price (Multiplied By Quantity)
+  void $ QFRFSTicketBooking.updateTotalPriceAndQuantityById totalPrice ticketQuantity childTicketQuantity (Just isFareChanged) oldBooking.id -- Full Ticket Price (Multiplied By Quantity)
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) oldBooking.id
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId oldBooking.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
   whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) oldBooking.id)
