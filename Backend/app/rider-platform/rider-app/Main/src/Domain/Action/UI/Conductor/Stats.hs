@@ -31,6 +31,7 @@ statsHandler conductorToken = withFlowHandlerAPI $ do
   let monthStart = Time.UTCTime (Time.fromGregorian year month 1) 0
 
   allStats <- CHConductor.findConductorStatsByToken conductorToken
+  logDebug $ "allStats: " <> show allStats
 
   let yesterdayStats =
         filter
@@ -39,12 +40,15 @@ statsHandler conductorToken = withFlowHandlerAPI $ do
           )
           allStats
 
+  logDebug $ "yesterdayStats: " <> show yesterdayStats
+
   let mtdStats =
         filter
           ( \stat ->
               stat.bookingDate >= monthStart && stat.bookingDate < yesterdayEnd
           )
           allStats
+  logDebug $ "mtdStats: " <> show mtdStats
 
   let yesterdayTickets = sum $ map (.numberTicketsBooked) yesterdayStats
       mtdTickets = sum $ map (.numberTicketsBooked) mtdStats
