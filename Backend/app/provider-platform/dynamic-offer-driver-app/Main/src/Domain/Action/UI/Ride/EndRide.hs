@@ -87,6 +87,7 @@ import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
+import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.TransporterConfig as QTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -632,6 +633,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               currency = booking.currency,
               noOfStops = length ride.stops,
               distanceUnit = booking.distanceUnit,
+              shouldApplyBusinessDiscount = booking.billingCategory == SLT.BUSINESS,
               merchantOperatingCityId = Just booking.merchantOperatingCityId,
               mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
               numberOfLuggages = booking.numberOfLuggages

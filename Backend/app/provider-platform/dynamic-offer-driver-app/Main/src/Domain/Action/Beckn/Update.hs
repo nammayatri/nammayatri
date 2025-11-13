@@ -56,6 +56,7 @@ import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
 import SharedLogic.TollsDetector
+import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -285,6 +286,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     estimatedDistance = Just estimatedDistance,
                     estimatedRideDuration = Just duration,
                     timeDiffFromUtc = Nothing,
+                    shouldApplyBusinessDiscount = booking.billingCategory == SLT.BUSINESS,
                     tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _) -> tollCharges),
                     currency = booking.currency,
                     distanceUnit = booking.distanceUnit,

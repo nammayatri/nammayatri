@@ -310,6 +310,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   timeDiffFromUtc = transporterConfig <&> (.timeDiffFromUtc),
                   currency,
                   distanceUnit,
+                  shouldApplyBusinessDiscount = False,
                   tollCharges = Nothing,
                   merchantOperatingCityId = Just merchantOperatingCityId,
                   mbAdditonalChargeCategories = Nothing,

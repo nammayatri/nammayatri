@@ -43,6 +43,7 @@ data FareParameters = FareParameters
     tollCharges :: Maybe HighPrecMoney,
     congestionCharge :: Maybe HighPrecMoney,
     petCharges :: Maybe HighPrecMoney,
+    businessDiscount :: Maybe HighPrecMoney,
     priorityCharges :: Maybe HighPrecMoney,
     congestionChargeViaDp :: Maybe HighPrecMoney,
     insuranceCharge :: Maybe HighPrecMoney,
@@ -59,6 +60,7 @@ data FareParameters = FareParameters
     merchantId :: Maybe (Id DM.Merchant),
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     conditionalCharges :: [DAC.ConditionalCharges],
+    shouldApplyBusinessDiscount :: Bool,
     driverCancellationPenaltyAmount :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)

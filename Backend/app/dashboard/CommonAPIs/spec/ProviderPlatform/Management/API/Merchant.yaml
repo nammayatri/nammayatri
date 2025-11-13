@@ -298,6 +298,7 @@ apis:
         farePolicyId: Id FarePolicy
       request:
         type: UpdateFarePolicyReq
+      validation: Dashboard.ProviderPlatform.Management.Merchant.validateUpdateFarePolicyReq
       response:
         type: APISuccess
       migrate:
@@ -803,6 +804,7 @@ types:
     - freeWaitingTime: Maybe Minutes
     - nightShiftCharge: Maybe NightShiftChargeAPIEntity
     - petCharges: Maybe HighPrecMoney
+    - businessDiscountPercentage: Maybe Double
     - derive: "'HideSecrets"
   WaitingChargeInfoAPIEntity:
     - freeWaitingTime: Minutes
