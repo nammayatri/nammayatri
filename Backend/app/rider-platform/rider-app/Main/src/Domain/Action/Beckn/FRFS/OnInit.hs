@@ -19,6 +19,7 @@ import Domain.Action.Beckn.FRFS.Common (DCategorySelect, DFareBreakUp)
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
+import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -40,6 +41,7 @@ import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
@@ -122,7 +124,7 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
         Just _ -> do
           Just <$> createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
         Nothing -> return Nothing
-      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer
+      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
   where
     getPaymentType vehicleType mbJourneyId = do
       case mbJourneyId of
@@ -150,25 +152,28 @@ createPayments ::
   [Payment.VendorSplitDetails] ->
   Maybe [Payment.Basket] ->
   Maybe Bool ->
+  Maybe (Id DJ.Journey) ->
   m ()
-createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer = do
+createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer mbJourneyId = do
   ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
-  isPaymentOrderProcessed <-
+  mbPaymentOrder <-
     if and ticketBookingPaymentsExist
       then do
         paymentOrder <- createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket
-        return $ isJust paymentOrder
+        return paymentOrder
       else do
         updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer
-        return $ isJust updatedPaymentOrder
-  if isPaymentOrderProcessed
-    then markBookingApproved `mapM_` bookings
-    else do
+        return updatedPaymentOrder
+  case mbPaymentOrder of
+    Just paymentOrder -> mapM_ (markBookingApproved paymentOrder) bookings
+    Nothing -> do
       markBookingFailed `mapM_` bookings
       throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
   where
-    markBookingApproved booking = do
+    markBookingApproved paymentOrder booking = do
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
       -- TODO :: Remove Final Price update Booking Table post release of FRFSQuoteCategory
       void $ QFRFSTicketBooking.updateFinalPriceById (Just booking.totalPrice) booking.id
+      whenJust mbJourneyId $ \journeyId -> do
+        void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) Nothing journeyId
     markBookingFailed booking = void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id

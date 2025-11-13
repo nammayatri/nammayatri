@@ -43,6 +43,7 @@ imports:
   SourceType: Domain.Types.RouteStopTimeTable
   FRFSCategorySelectionReq: API.Types.UI.FRFSTicketService
   FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
+  PaymentStatusResp: Lib.Payment.Domain.Action
 
 module: MultimodalConfirm
 
@@ -188,6 +189,11 @@ types:
     crisSdkResponse: Maybe CrisSdkResponse
     categorySelectionReq: Maybe [FRFSCategorySelectionReq]
 
+  JourneyConfirmResp:
+    result: Text
+    orderSdkPayload: Maybe CreateOrderResp
+    gatewayReferenceId: Maybe Text
+
   CrisSdkResponse:
     osType: Text
     osBuildVersion: Text
@@ -324,7 +330,7 @@ apis:
       query:
         forceBookLegOrder: Int
       response:
-        type: Kernel.Types.APISuccess.APISuccess
+        type: JourneyConfirmResp
   - GET:
       endpoint: /multimodal/{journeyId}/booking/info
       params:

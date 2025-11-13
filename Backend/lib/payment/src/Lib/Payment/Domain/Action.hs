@@ -432,7 +432,7 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
       QOrder.create paymentOrder
       return $ Just createOrderResp
     Just existingOrder -> do
-      isOrderExpired <- maybe (pure True) checkIfExpired existingOrder.clientAuthTokenExpiry
+      isOrderExpired <- maybe (pure True) (checkIfExpired existingOrder) existingOrder.clientAuthTokenExpiry
       if isOrderExpired
         then do
           QOrder.updateStatusToExpired existingOrder.id
@@ -453,10 +453,10 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
                     }
             Nothing -> return Nothing
   where
-    checkIfExpired expiry = do
+    checkIfExpired order expiry = do
       now <- getCurrentTime
       let buffer = secondsToNominalDiffTime 150 -- 2.5 mins of buffer
-      return (expiry < addUTCTime buffer now)
+      return (order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED] && expiry < addUTCTime buffer now)
 
 buildSDKPayload :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m (Maybe Juspay.SDKPayload)
 buildSDKPayload req order = do
@@ -818,7 +818,7 @@ updateOrderTransaction order resp respDump = do
       Nothing -> QTransaction.findNewTransactionByOrderId order.id
   let updOrder = order{status = resp.transactionStatus, isRetargeted = fromMaybe order.isRetargeted resp.isRetargeted, isRetried = fromMaybe order.isRetried resp.isRetried, retargetLink = resp.retargetLink}
   case mbTransaction of
-    Nothing -> when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatusAndError updOrder errorMessage errorCode
+    Nothing -> when (order.status /= updOrder.status && order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QOrder.updateStatusAndError updOrder errorMessage errorCode
     -- Nothing -> runInReplica $ QTransaction.findNewTransactionByOrderId order.id
     Just transaction -> do
       let updTransaction =
@@ -844,8 +844,8 @@ updateOrderTransaction order resp respDump = do
                        }
 
       -- Avoid updating status if already in CHARGED state to handle race conditions
-      when (transaction.status /= Payment.CHARGED) $ QTransaction.updateMultiple updTransaction
-      when (order.status /= updOrder.status && order.status /= Payment.CHARGED) $ QOrder.updateStatusAndError updOrder errorMessage errorCode
+      when (transaction.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QTransaction.updateMultiple updTransaction
+      when (order.status /= updOrder.status && order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED]) $ QOrder.updateStatusAndError updOrder errorMessage errorCode
 
 buildPaymentTransaction :: MonadFlow m => DOrder.PaymentOrder -> OrderTxn -> Maybe Text -> m DTransaction.PaymentTransaction
 buildPaymentTransaction order OrderTxn {..} respDump = do
