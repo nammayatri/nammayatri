@@ -99,9 +99,9 @@ pullDrivingLicenseDocument (mbDriverId, merchantId, merchantOpCityId) req = do
   accessToken <- session.accessToken & fromMaybeM (InvalidRequest "DigiLocker session not authorized. Access token missing.")
 
   -- Step 8: Get DigiLocker config
-  _digiLockerConfig <- getDigiLockerConfig person.merchantOperatingCityId
+  digiLockerConfig <- getDigiLockerConfig person.merchantOperatingCityId
 
-  let orgId = "000048" -- TODO: Get from config
+  let orgId = digiLockerConfig.dlOrgId
   -- Step 9: Construct pull request with orgid from config
   let pullReq =
         DigiTypes.DigiLockerPullDrivingLicenseReq
