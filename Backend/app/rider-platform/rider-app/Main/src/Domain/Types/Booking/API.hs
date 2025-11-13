@@ -53,6 +53,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import SharedLogic.Booking (getfareBreakups)
+import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Sos as CQSos
@@ -116,6 +117,7 @@ data BookingAPIEntity = BookingAPIEntity
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
     vehicleIconUrl :: Maybe Text,
+    billingCategory :: SLT.BillingCategory,
     isAirConditioned :: Maybe Bool,
     serviceTierName :: Maybe Text,
     serviceTierShortDesc :: Maybe Text,
@@ -334,6 +336,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         isSafetyPlus = fromMaybe False $ activeRide <&> (.isSafetyPlus),
         isInsured = Just booking.isInsured,
         insuredAmount = booking.insuredAmount,
+        billingCategory = booking.billingCategory,
         mbJourneyId = mbJourneyLeg <&> (.journeyId)
       }
   where

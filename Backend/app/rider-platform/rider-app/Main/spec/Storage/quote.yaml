@@ -26,6 +26,7 @@ imports:
   Version: Kernel.Types.Version
   Device : Kernel.Types.Version
   DeviceType: Kernel.Types.Version
+  BillingCategory: SharedLogic.Type
 
 Quote:
   dataName: quote
@@ -101,6 +102,7 @@ Quote:
     isBlockedRoute: Maybe Bool
     tollChargesInfo: Maybe TollChargesInfo
     quoteBreakupList : "[QuoteBreakup]"
+    billingCategory: BillingCategory
     createdAt : UTCTime
     updatedAt : UTCTime
     validTill : UTCTime
@@ -152,6 +154,7 @@ Quote:
     clientManufacturer: Maybe Text
     vehicleIconUrl: Maybe Text
     isSafetyPlus: Maybe Bool
+    billingCategory: Maybe BillingCategory
 
 
   fromTType:
@@ -173,6 +176,7 @@ Quote:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
     isSafetyPlus : Kernel.Prelude.fromMaybe False isSafetyPlus | E
+    billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -205,6 +209,7 @@ Quote:
     distanceUnit: Kernel.Prelude.Just|I
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
     isSafetyPlus: Kernel.Prelude.Just|I
+    billingCategory: Kernel.Prelude.Just|I
 
   sqlType:
     requestId: character varying(255)

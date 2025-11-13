@@ -332,6 +332,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           isScheduled = isScheduled,
           createdAt = now,
           updatedAt = now,
+          billingCategory = quote.billingCategory,
           serviceTierName = quote.serviceTierName,
           vehicleServiceTierType = quote.vehicleServiceTierType,
           vehicleServiceTierSeatingCapacity = quote.vehicleServiceTierSeatingCapacity,

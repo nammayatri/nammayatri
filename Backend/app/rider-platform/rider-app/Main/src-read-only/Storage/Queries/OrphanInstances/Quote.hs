@@ -14,6 +14,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
+import qualified SharedLogic.Type
 import qualified Storage.Beam.Quote as Beam
 import qualified Storage.Queries.QuoteBreakup
 import Storage.Queries.Transformers.Quote
@@ -36,6 +37,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
         Domain.Types.Quote.Quote
           { backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
+            billingCategory = Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
             clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
@@ -79,6 +81,7 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
     Beam.QuoteT
       { Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
+        Beam.billingCategory = Kernel.Prelude.Just billingCategory,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
         Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),

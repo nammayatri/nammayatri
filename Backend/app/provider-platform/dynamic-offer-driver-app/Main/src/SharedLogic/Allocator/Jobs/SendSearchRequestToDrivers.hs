@@ -136,6 +136,7 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
             messageId = searchTry.messageId,
             isRepeatSearch = False,
             isAllocatorBatch = True,
+            billingCategory = searchTry.billingCategory,
             paymentMethodInfo = Nothing
           }
   (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg

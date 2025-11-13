@@ -78,6 +78,7 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Quote
+import SharedLogic.Type
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -129,6 +130,7 @@ data DSelectReq = DSelectReq
     isAdvancedBookingEnabled :: Maybe Bool,
     deliveryDetails :: Maybe DTDD.DeliveryDetails,
     disabilityDisable :: Maybe Bool,
+    billingCategory :: Maybe BillingCategory,
     preferSafetyPlus :: Maybe Bool
   }
   deriving stock (Generic, Show)
@@ -167,6 +169,7 @@ data DSelectRes = DSelectRes
     customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     merchant :: DM.Merchant,
     city :: Context.City,
+    billingCategory :: BillingCategory,
     autoAssignEnabled :: Bool,
     isPetRide :: Maybe Bool,
     phoneNumber :: Maybe Text,
@@ -310,6 +313,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         preferSafetyPlus = fromMaybe False preferSafetyPlus,
         mbJourneyId = Just journey.id,
         paymentMethodInfo = paymentMethodInfo,
+        billingCategory = fromMaybe PERSONAL billingCategory,
         ..
       }
   where

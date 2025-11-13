@@ -6,6 +6,7 @@ imports:
   TripCategory: Domain.Types.Common
   Money: Kernel.Types.Common
   VehicleCategory: Domain.Types.VehicleCategory
+  BillingCategory: SharedLogic.Type
 
 SearchTry:
   tableName: search_try
@@ -37,6 +38,7 @@ SearchTry:
     petCharges : Maybe HighPrecMoney
     currency: Currency
     status: SearchTryStatus
+    billingCategory: BillingCategory
     searchRepeatCounter: Int
     searchRepeatType: SearchRepeatType
     tripCategory: TripCategory
@@ -57,6 +59,7 @@ SearchTry:
     isAdvancedBookingEnabled: Maybe Bool
     serviceTierArray: "Maybe [Text]"
     preferSafetyPlus: Maybe Bool
+    billingCategory: Maybe BillingCategory
 
   beamFields:
     vehicleServiceTier:
@@ -93,6 +96,7 @@ SearchTry:
     isAdvancedBookingEnabled: fromMaybe False isAdvancedBookingEnabled|E
     serviceTierArray: fromMaybe (catMaybes [vehicleServiceTierName]) serviceTierArray|E
     preferSafetyPlus: fromMaybe False preferSafetyPlus|E
+    billingCategory: fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
 
   toTType:
     estimateIds: Kernel.Prelude.Just|I
@@ -111,6 +115,9 @@ SearchTry:
     isAdvancedBookingEnabled: Kernel.Prelude.Just|I
     serviceTierArray: Kernel.Prelude.Just|I
     preferSafetyPlus: Kernel.Prelude.Just|I
+    billingCategory: Kernel.Prelude.Just|I
+
+
   constraints:
     id: PrimaryKey
     requestId: "!SecondaryKey" # forcing to be a secondary key

@@ -30,6 +30,7 @@ import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Type as SLT
 import Tools.Error
 
 buildOnSelectReqV2 ::
@@ -91,6 +92,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
   let mbVariant = Utils.parseVehicleVariant vehicle.vehicleCategory vehicle.vehicleVariant
   let serviceTierName = Utils.getServiceTierName item
   let serviceTierShortDesc = Utils.getServiceTierShortDesc item
+  let billingCategory = getBillingCategoryTag item.itemTags
   let serviceTierType = Utils.getServiceTierType item
   vehicleVariant <- mbVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicleCategory:-" <> show vehicle.vehicleCategory <> ",vehicleVariant:-" <> show vehicle.vehicleVariant)
   let specialLocationTag = Utils.getTagV2 Tag.GENERAL_INFO Tag.SPECIAL_LOCATION_TAG =<< (Just item.itemTags)
@@ -108,6 +110,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
             quoteValidTill = validTill,
             isCustomerPrefferedSearchRoute = Nothing,
             isBlockedRoute = Nothing,
+            billingCategory = billingCategory,
             ..
           }
   where
@@ -191,3 +194,11 @@ getIsSafetyPlusV2 tagGroups = do
   tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.IS_SAFETY_PLUS tagGroups
   isSafetyPlus <- readMaybe $ T.unpack tagValue
   Just $ isSafetyPlus
+
+getBillingCategoryTag :: Maybe [Spec.TagGroup] -> SLT.BillingCategory
+getBillingCategoryTag tagGroups = do
+  let tagValue = Utils.getTagV2 Tag.BILLING_CATEGORY_INFO Tag.BILLING_CATEGORY tagGroups
+  case T.toLower $ fromMaybe "" tagValue of
+    "personal" -> SLT.PERSONAL
+    "business" -> SLT.BUSINESS
+    _ -> SLT.PERSONAL

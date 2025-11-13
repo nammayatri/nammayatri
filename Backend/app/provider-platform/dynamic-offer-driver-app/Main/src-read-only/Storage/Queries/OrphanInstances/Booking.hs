@@ -14,6 +14,7 @@ import qualified Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.JSON
+import qualified SharedLogic.Type
 import qualified Storage.Beam.Booking as Beam
 import qualified Storage.CachedQueries.Merchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity
@@ -39,6 +40,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             bapCountry = bapCountry,
             bapId = bapId,
             bapUri = bapUri,
+            billingCategory = fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRide,
             configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions),
             createdAt = createdAt,
@@ -109,6 +111,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.bapCountry = bapCountry,
         Beam.bapId = bapId,
         Beam.bapUri = bapUri,
+        Beam.billingCategory = Just billingCategory,
         Beam.coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRide,
         Beam.configInExperimentVersions = Just $ toJSON configInExperimentVersions,
         Beam.createdAt = createdAt,

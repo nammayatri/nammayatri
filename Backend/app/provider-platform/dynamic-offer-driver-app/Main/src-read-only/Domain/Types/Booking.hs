@@ -23,6 +23,7 @@ import qualified Kernel.Utils.Common
 import Kernel.Utils.TH
 import qualified Lib.Types.SpecialLocation
 import qualified Lib.Yudhishthira.Types
+import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
 
 data Booking = Booking
@@ -31,6 +32,7 @@ data Booking = Booking
     bapCountry :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country,
     bapId :: Kernel.Prelude.Text,
     bapUri :: Kernel.Prelude.Text,
+    billingCategory :: SharedLogic.Type.BillingCategory,
     coinsRewardedOnGoldTierRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
     createdAt :: Kernel.Prelude.UTCTime,

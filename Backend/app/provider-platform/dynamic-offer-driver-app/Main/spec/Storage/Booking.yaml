@@ -19,6 +19,7 @@ imports:
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
   ParcelType: Domain.Types.ParcelType
+  BillingCategory: SharedLogic.Type
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -48,6 +49,7 @@ Booking:
     toLocGeohash: Maybe Text
     primaryExophone: Text
     bapId: Text
+    billingCategory: BillingCategory
     bapUri: Text
     bapCity: Maybe City
     bapCountry: Maybe Country
@@ -116,6 +118,8 @@ Booking:
     isSafetyPlus : Maybe Bool
     isInsured: Maybe Bool
     isPetRide: Maybe Bool
+    billingCategory: Maybe BillingCategory
+
   beamFields:
     tripCategory:
       tripCategory: Maybe TripCategory
@@ -163,6 +167,7 @@ Booking:
     isSafetyPlus : Just isSafetyPlus|E
     isInsured: Just isInsured|E
     isPetRide: Just isPetRide|E
+    billingCategory: Just billingCategory|E
 
   intermediateTransformers:
     fromTType:
@@ -191,6 +196,8 @@ Booking:
     isSafetyPlus: fromMaybe False isSafetyPlus|E
     isInsured: fromMaybe False isInsured|E
     isPetRide: fromMaybe False isPetRide|E
+    billingCategory: fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
+
   sqlType:
     status: character varying(255)
     bapId: character varying(255)

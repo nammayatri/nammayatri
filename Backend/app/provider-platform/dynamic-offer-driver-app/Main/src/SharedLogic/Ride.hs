@@ -265,6 +265,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         tripEndTime = Nothing,
         tripStartPos = Nothing,
         tripEndPos = Nothing,
+        billingCategory = booking.billingCategory,
         rideEndedBy = Nothing,
         isDriverSpecialLocWarrior = fromMaybe False (dinfo <&> (.isSpecialLocWarrior)),
         previousRideTripEndPos = LatLong <$> (previousRideToLocation <&> (.lat)) <*> (previousRideToLocation <&> (.lon)),

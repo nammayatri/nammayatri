@@ -185,6 +185,7 @@ handler merchant req validatedQuote = do
                 tripQuoteDetails = [tripQuoteDetail],
                 customerExtraFee = Nothing,
                 messageId = booking.id.getId,
+                billingCategory = booking.billingCategory,
                 isRepeatSearch = False,
                 isAllocatorBatch = False,
                 paymentMethodInfo = paymentMethodInfo
