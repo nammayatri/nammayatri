@@ -21,6 +21,7 @@ module Domain.Action.Dashboard.Management.DriverCoins
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as Common
+import Data.Coerce (coerce)
 import Data.Time (UTCTime (UTCTime, utctDay))
 import qualified Domain.Types.Coins.CoinHistory as DTCC
 import qualified Domain.Types.DriverStats as DDS
@@ -28,6 +29,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.PurchaseHistory as PurchaseHistory
+import Domain.Types.Ride as Ride
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleVariant as VecVarient
 import Environment
@@ -48,6 +50,7 @@ import Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.DriverStats as QDriverStats
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 
@@ -205,8 +208,9 @@ getDriverCoinsCoinHistory merchantShortId opCity reqDriverId mbLimit mbOffset = 
       coinExpired_ = totalCoinsEarned_ - (coinBalance_ + coinUsed_)
   coinEarnSummary <- B.runInReplica $ CHistory.totalCoinEarnHistory driverId mbLimit mbOffset
   coinBurnSummary <- B.runInReplica $ PHistory.getPurchasedHistory driverId mbLimit mbOffset
-  let coinEarnHistory = map toEarnHistoryItem coinEarnSummary
-      coinBurnHistory = map toBurnHistoryItem coinBurnSummary
+  coinEarnHistory <- B.runInReplica $ mapM toEarnHistoryItem coinEarnSummary
+  let coinBurnHistory = map toBurnHistoryItem coinBurnSummary
+
   pure
     Common.CoinHistoryRes
       { coinBalance = coinBalance_,
@@ -217,18 +221,25 @@ getDriverCoinsCoinHistory merchantShortId opCity reqDriverId mbLimit mbOffset = 
         coinBurnHistory = coinBurnHistory
       }
   where
-    toEarnHistoryItem :: DTCC.CoinHistory -> Common.CoinEarnHistoryItem
-    toEarnHistoryItem DTCC.CoinHistory {driverId = _driverId, ..} =
-      Common.CoinEarnHistoryItem
-        { coins = coins,
-          status = status,
-          eventFunction = eventFunction,
-          createdAt = createdAt,
-          expirationAt = expirationAt,
-          coinsUsed = coinsUsed,
-          bulkUploadTitle = bulkUploadTitle,
-          rideId = entityId
-        }
+    toEarnHistoryItem :: DTCC.CoinHistory -> Flow Common.CoinEarnHistoryItem
+    toEarnHistoryItem DTCC.CoinHistory {driverId = _driverId, ..} = do
+      mbRideShortId <- case entityId of
+        Just rideIdText -> do
+          mbRide <- QRide.findById (Id rideIdText :: Id Ride.Ride)
+          pure $ fmap (\ride -> coerce @(ShortId Ride.Ride) @(ShortId Common.Ride) ride.shortId) mbRide
+        Nothing -> pure Nothing
+      pure $
+        Common.CoinEarnHistoryItem
+          { coins = coins,
+            status = status,
+            eventFunction = eventFunction,
+            createdAt = createdAt,
+            expirationAt = expirationAt,
+            coinsUsed = coinsUsed,
+            bulkUploadTitle = bulkUploadTitle,
+            rideId = entityId,
+            rideShortId = mbRideShortId
+          }
 
     toBurnHistoryItem :: PurchaseHistory -> Common.CoinBurnHistoryItem
     toBurnHistoryItem PurchaseHistory {driverId = _driverId, ..} =

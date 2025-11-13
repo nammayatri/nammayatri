@@ -1,6 +1,7 @@
 imports:
   Driver: Dashboard.Common
   DriverCoinsFunctionType: Dashboard.Common.DriverCoins
+  Ride: Dashboard.Common
 
 module: DriverCoins # module: Driver.Coins TODO Driver.Coins.yaml should generate Driver.Coins.hs
 apiPrefix: coins
@@ -95,6 +96,7 @@ types:
   - status: CoinStatus
   - bulkUploadTitle: Maybe Translations
   - rideId: Maybe Text
+  - rideShortId: Maybe (ShortId Ride)
   CoinBurnHistoryItem:
   - numCoins: Int
   - cash: HighPrecMoney
