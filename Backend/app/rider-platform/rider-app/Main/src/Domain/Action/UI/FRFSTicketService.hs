@@ -1127,7 +1127,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
           when (booking.quoteId /= paymentBookingQuoteId) $ do
             switchFRFSQuoteTier journeyLeg paymentBookingQuoteId
         void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) (Just True) journeyId
-        void $ QJourney.updateStatus (if booking.status `elem` DFRFSTicketBooking.FAILED then DJ.FAILED else DJ.INPROGRESS) journeyId
+        void $ QJourney.updateStatus (if booking.status == DFRFSTicketBooking.FAILED then DJ.FAILED else DJ.INPROGRESS) journeyId
 
     mkPaymentSuccessLockKey bookingId = "frfsPaymentSuccess:" <> bookingId.getId
 
