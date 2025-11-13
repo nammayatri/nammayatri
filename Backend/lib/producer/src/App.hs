@@ -16,6 +16,7 @@
 module App (startProducer) where
 
 import Data.Function hiding (id)
+import Data.List (splitAt)
 import Debug.Trace as T
 import Environment
 import EulerHS.Interpreters (runFlow)
@@ -70,8 +71,21 @@ startProducerWithEnv flowRt appCfg appEnv producerType = do
         >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
     )
 
-  let producersWithCounter = concatMap (\_ -> map (\streamIndex -> PF.runProducer streamIndex) [1 .. 16]) [1 .. appCfg.producersPerPod]
-  let reviverWithCounter = map (\streamIndex -> PF.runReviver producerType streamIndex) [1 .. 16]
+  let totalShards = 16
+      numThreads = appCfg.producersPerPod
+      allShards = [1 .. totalShards]
+      divideShards :: [Int] -> Int -> [[Int]]
+      divideShards [] _ = []
+      divideShards shards numParts
+        | numParts <= 0 = [shards]
+        | otherwise =
+          let chunkSize = (length shards + numParts - 1) `div` numParts -- Ceiling division
+              (chunk, rest) = splitAt chunkSize shards
+           in chunk : divideShards rest (numParts - 1)
+      shardChunks = divideShards allShards numThreads
+      -- Each thread handles its assigned shards
+      producersWithCounter = concatMap (\shardChunk -> map (\streamIndex -> PF.runProducer streamIndex) shardChunk) shardChunks
+  let reviverWithCounter = map (\streamIndex -> PF.runReviver producerType streamIndex) [1 .. totalShards]
   putStrLn $ ("StreamName is now: " :: String)
   runFlowR flowRt appEnv $ do
     loopGracefully $
