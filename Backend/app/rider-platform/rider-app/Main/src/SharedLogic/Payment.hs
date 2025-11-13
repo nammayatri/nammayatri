@@ -211,9 +211,9 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
               _ -> return paymentStatusResponse
           Left err -> do
             logError $ "Error in payment fullfillment status handler: " <> show err
-            -- TODO :: Handle refund if some retry thresholds passed.
-            -- initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
-            return paymentStatusResponse
+            case paymentOrder.paymentFulfillmentStatus of
+              Just DPayment.FulfillmentPending -> initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
+              _ -> return paymentStatusResponse
       _ -> return paymentStatusResponse
   let paymentStatusResponseWithFulfillmentStatus =
         case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
