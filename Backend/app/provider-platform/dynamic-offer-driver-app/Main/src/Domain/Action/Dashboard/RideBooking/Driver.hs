@@ -394,6 +394,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let email = person.email
   driverLicenseDetails <- traverse buildDriverLicenseAPIEntity mbDriverLicense
   let blockDetails = map buildBlockedListAPIEntity blockHistory
+  blockedCount <- B.runInReplica $ QDBT.blockCountByDriverId person.id (Just DTDBT.BLOCK)
   vehicleRegistrationDetails <- traverse buildRCAssociationAPIEntity rcAssociationHistory
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
   unencryptedAlternateMobileNumber <- mapM decrypt person.alternateMobileNumber
@@ -470,6 +471,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         driverTag = fmap Yudhishthira.removeTagExpiry <$> person.driverTag,
         driverTagObject = fmap Yudhishthira.convertToTagObject <$> person.driverTag,
         blockedInfo = blockDetails,
+        blockCount = Just (length blockedCount),
         email,
         softBlockStiers = info.softBlockStiers >>= (pure . map show),
         softBlockExpiryTime = info.softBlockExpiryTime,
@@ -547,8 +549,14 @@ buildBlockedListAPIEntity DTDBT.DriverBlockTransactions {..} =
   Common.DriverBlockTransactions
     { blockedBy = show blockedBy,
       blockReasonFlag = show <$> blockReasonFlag,
+      actionType = toCommonActionType <$> actionType,
       ..
     }
+
+toCommonActionType :: DTDBT.ActionType -> Common.ActionType
+toCommonActionType = \case
+  DTDBT.BLOCK -> Common.BLOCK
+  DTDBT.UNBLOCK -> Common.UNBLOCK
 
 buildRCAssociationAPIEntity ::
   EncFlow m r =>
