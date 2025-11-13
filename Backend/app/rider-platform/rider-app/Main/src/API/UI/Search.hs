@@ -106,6 +106,7 @@ import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
 import Tools.Error
 import qualified Tools.Maps as Maps
+import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.MultiModal as TMultiModal
 import TransactionLogs.Types
 
@@ -295,6 +296,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       DSearch.PTSearch ptSearchDetails -> do
         case (mbIntegratedBPPConfig, ptSearchDetails.vehicleNumber, ptSearchDetails.routeCode) of
           (Just integratedBPPConfig, Just userPassedVehicleNumber, Just userPassedRouteCode) -> do
+            fork "getVehicleLiveRouteInfo" $ Metrics.incrementBusScanSearchRequestCount "ANNA_APP" merchantOperatingCityId.getId
             mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo userPassedVehicleNumber
             mbRouteLiveInfo <-
               case mbVehicleOverrideInfo of

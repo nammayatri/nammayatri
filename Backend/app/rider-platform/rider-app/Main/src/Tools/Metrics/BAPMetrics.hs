@@ -88,6 +88,13 @@ incrementSearchRequestCount' bmContainer merchantName merchantOperatingCityId ve
   let searchRequestCounter = bmContainer.searchRequestCounter
   liftIO $ P.withLabel searchRequestCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId) P.incCounter
 
+incrementBusScanSearchRequestCount :: HasBAPMetrics m r => Text -> Text -> m ()
+incrementBusScanSearchRequestCount merchantName merchantOperatingCityId = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let busScanSearchRequestCounter = bmContainer.busScanSearchRequestCounter
+  liftIO $ P.withLabel busScanSearchRequestCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId) P.incCounter
+
 incrementBusScannetCounterMetric :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
 incrementBusScannetCounterMetric merchantName merchantOperatingCityId vehicleNumber = do
   bmContainer <- asks (.bapMetrics)
