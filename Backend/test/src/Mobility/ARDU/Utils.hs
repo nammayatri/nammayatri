@@ -182,6 +182,7 @@ select bapToken quoteId =
         paymentInstrument = Nothing,
         deliveryDetails = Nothing,
         disabilityDisable = Nothing,
+        billingCategory = Nothing,
         preferSafetyPlus = Nothing
       }
 
