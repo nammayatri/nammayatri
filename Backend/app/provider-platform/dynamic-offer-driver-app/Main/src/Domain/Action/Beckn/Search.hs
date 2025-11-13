@@ -651,6 +651,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           tollCharges = tollCharges,
           currency = searchRequest.currency,
           noOfStops = length searchRequest.stops,
+          shouldApplyBusinessDiscount = False,
           distanceUnit = searchRequest.distanceUnit,
           merchantOperatingCityId = Just merchantOpCityId,
           mbAdditonalChargeCategories = Nothing,
@@ -737,6 +738,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               noOfStops,
               currency,
               distanceUnit,
+              shouldApplyBusinessDiscount = False,
               merchantOperatingCityId = Just merchantOperatingCityId,
               mbAdditonalChargeCategories = Nothing,
               numberOfLuggages = mbSearchReq >>= (.numberOfLuggages)

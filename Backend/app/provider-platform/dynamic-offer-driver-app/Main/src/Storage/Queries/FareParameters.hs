@@ -148,6 +148,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 congestionCharge = mkAmountWithDefault congestionChargeAmount <$> congestionCharge,
                 tollCharges = tollCharges,
                 petCharges = petCharges,
+                shouldApplyBusinessDiscount = fromMaybe False shouldApplyBusinessDiscount,
                 insuranceCharge,
                 cardCharge =
                   Just $
@@ -190,6 +191,7 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.nightShiftChargeAmount = nightShiftCharge,
         BeamFP.fareParametersType = getFareParametersType $ FareParameters {..},
         BeamFP.customerCancellationDues = customerCancellationDues,
+        BeamFP.shouldApplyBusinessDiscount = Just shouldApplyBusinessDiscount,
         BeamFP.tollCharges = tollCharges,
         BeamFP.congestionCharge = roundToIntegral <$> congestionCharge,
         BeamFP.congestionChargeAmount = congestionCharge,

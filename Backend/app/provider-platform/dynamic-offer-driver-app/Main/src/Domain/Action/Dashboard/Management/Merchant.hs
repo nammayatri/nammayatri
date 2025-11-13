@@ -1063,6 +1063,7 @@ postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
             tollCharges = req.tollCharges <|> tollCharges,
             petCharges = req.petCharges <|> petCharges,
             priorityCharges = req.priorityCharges <|> priorityCharges,
+            businessDiscountPercentage = req.businessDiscountPercentage <|> businessDiscountPercentage,
             pickupBufferInSecsForNightShiftCal = req.pickupBufferInSecsForNightShiftCal <|> pickupBufferInSecsForNightShiftCal,
             farePolicyDetails = fPDetails,
             congestionChargeMultiplier = FarePolicy.mkCongestionChargeMultiplier <$> req.congestionChargeMultiplier <|> congestionChargeMultiplier,
@@ -1123,6 +1124,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     serviceCharge :: Text,
     tollCharges :: Text,
     petCharges :: Text,
+    businessDiscountPercentage :: Text,
     priorityCharges :: Text,
     tipOptions :: Text,
     govtCharges :: Text,
@@ -1218,6 +1220,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "service_charge"
       <*> r .: "toll_charges"
       <*> r .: "pet_charges"
+      <*> r .: "business_discount_percentage"
       <*> r .: "priority_charges"
       <*> r .: "tip_options"
       <*> r .: "govt_charges"
@@ -1497,6 +1500,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let driverCancellationPenaltyAmount :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.driverCancellationPenaltyAmount "Driver Cancellation Penalty Amount"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
       let petCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.petCharges "Pet Charges"
+      let businessDiscountPercentage :: (Maybe Double) = readMaybeCSVField idx row.businessDiscountPercentage "Business Discount Percentage"
       let priorityCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.priorityCharges "Priority Charges"
       let pickupBufferInSecsForNightShiftCal :: (Maybe Seconds) = readMaybeCSVField idx row.pickupBufferInSecsForNightShiftCal "Pickup Buffer In Secs For Night Shift Cal"
       let tipOptions :: (Maybe [Int]) = readMaybeCSVField idx row.tipOptions "Tip Options"

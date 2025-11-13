@@ -535,7 +535,8 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     waitingChargeInfo :: Kernel.Prelude.Maybe WaitingChargeInfoAPIEntity,
     freeWaitingTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
     nightShiftCharge :: Kernel.Prelude.Maybe NightShiftChargeAPIEntity,
-    petCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
+    petCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    businessDiscountPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

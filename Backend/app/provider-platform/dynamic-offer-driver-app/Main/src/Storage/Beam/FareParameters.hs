@@ -31,6 +31,8 @@ data FareParametersT f = FareParametersT
     nightShiftCharge :: B.C f (Maybe Money),
     baseFareAmount :: B.C f (Maybe HighPrecMoney),
     petCharges :: B.C f (Maybe HighPrecMoney),
+    businessDiscount :: B.C f (Maybe HighPrecMoney),
+    shouldApplyBusinessDiscount :: B.C f (Maybe Bool),
     priorityCharges :: B.C f (Maybe HighPrecMoney),
     driverSelectedFareAmount :: B.C f (Maybe HighPrecMoney),
     customerExtraFeeAmount :: B.C f (Maybe HighPrecMoney),

@@ -194,6 +194,15 @@ validateSlidingWindowOptions SWC.SlidingWindowOptions {..} =
   validateField "period" period $ Min @Integer 0
 
 ---------------------------------------------------------
+-- fare policy update ------------------------------------
+
+validateUpdateFarePolicyReq :: Validate UpdateFarePolicyReq
+validateUpdateFarePolicyReq UpdateFarePolicyReq {..} =
+  sequenceA_
+    [ validateField "businessDiscountPercentage" businessDiscountPercentage $ InMaybe $ InRange @Double 1.0 100.0
+    ]
+
+---------------------------------------------------------
 -- merchant onboarding document config update -----------
 
 --- Upsert fare policy using csv file ----
