@@ -42,6 +42,14 @@ type ExampleTripAPI = "example-trip" :> Capture "gtfs_id" Text :> Capture "route
 
 type VehicleInfoAPI = "vehicle" :> Capture "gtfs_id" Text :> Capture "vehicle_no" Text :> "info" :> Get '[JSON] VehicleInfoResponse
 
+type DepotNamesAPI = "depotNames" :> Get '[JSON] [Text]
+
+type DepotIdsAPI = "depotIds" :> Get '[JSON] [Kernel.Prelude.Int]
+
+type GetVehiclesFromDepotNameAPI = "getVehiclesFrom" :> QueryParam "depotName" Text :> Get '[JSON] [DepotVehicle]
+
+type GetVehiclesFromDepotIdAPI = "getVehiclesFrom" :> QueryParam "depotId" Kernel.Prelude.Int :> Get '[JSON] [DepotVehicle]
+
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
 
@@ -96,6 +104,18 @@ nandiExampleTripAPI = Proxy
 nandiVehicleInfoAPI :: Proxy VehicleInfoAPI
 nandiVehicleInfoAPI = Proxy
 
+nandiDepotNamesAPI :: Proxy DepotNamesAPI
+nandiDepotNamesAPI = Proxy
+
+nandiDepotIdsAPI :: Proxy DepotIdsAPI
+nandiDepotIdsAPI = Proxy
+
+nandiGetVehiclesFromDepotNameAPI :: Proxy GetVehiclesFromDepotNameAPI
+nandiGetVehiclesFromDepotNameAPI = Proxy
+
+nandiGetVehiclesFromDepotIdAPI :: Proxy GetVehiclesFromDepotIdAPI
+nandiGetVehiclesFromDepotIdAPI = Proxy
+
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
@@ -149,3 +169,15 @@ getNandiExampleTrip = ET.client nandiExampleTripAPI
 
 getNandiVehicleInfo :: Text -> Text -> ET.EulerClient VehicleInfoResponse
 getNandiVehicleInfo = ET.client nandiVehicleInfoAPI
+
+getNandiDepotNames :: ET.EulerClient [Text]
+getNandiDepotNames = ET.client nandiDepotNamesAPI
+
+getNandiDepotIds :: ET.EulerClient [Kernel.Prelude.Int]
+getNandiDepotIds = ET.client nandiDepotIdsAPI
+
+getNandiGetVehiclesFromByDepotName :: Maybe Text -> ET.EulerClient [DepotVehicle]
+getNandiGetVehiclesFromByDepotName = ET.client nandiGetVehiclesFromDepotNameAPI
+
+getNandiGetVehiclesFromByDepotId :: Maybe Kernel.Prelude.Int -> ET.EulerClient [DepotVehicle]
+getNandiGetVehiclesFromByDepotId = ET.client nandiGetVehiclesFromDepotIdAPI
