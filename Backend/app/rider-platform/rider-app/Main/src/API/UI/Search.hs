@@ -314,10 +314,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 ( \routeLiveInfo@(JMU.VehicleLiveRouteInfo {..}) ->
                     if routeCode == Just userPassedRouteCode
                       then Just routeLiveInfo
-                      else
-                        if ptSearchDetails.routeCodeEditedManually == Just True
-                          then Just (JMU.VehicleLiveRouteInfo {routeCode = Just userPassedRouteCode, ..})
-                          else Nothing
+                      else Just (JMU.VehicleLiveRouteInfo {routeCode = Just userPassedRouteCode, ..})
                 )
                 (snd <$> mbRouteLiveInfo)
           _ -> return Nothing
