@@ -258,13 +258,14 @@ refundStatusHandler ::
 refundStatusHandler paymentOrder refunds paymentServiceType = do
   mapM_
     ( \refund -> do
-        refundEntry <- QRefunds.findById (Id refund.requestId) >>= fromMaybeM (InvalidRequest "Refund entry not found")
-        case paymentServiceType of
-          DOrder.FRFSBooking -> bookingsRefundStatusHandler refundEntry
-          DOrder.FRFSBusBooking -> bookingsRefundStatusHandler refundEntry
-          DOrder.FRFSMultiModalBooking -> bookingsRefundStatusHandler refundEntry
-          DOrder.FRFSPassPurchase -> passesRefundStatusHandler refundEntry
-          _ -> pure ()
+        mbRefundEntry <- QRefunds.findById (Id refund.requestId)
+        whenJust mbRefundEntry $ \refundEntry -> do
+          case paymentServiceType of
+            DOrder.FRFSBooking -> bookingsRefundStatusHandler refundEntry
+            DOrder.FRFSBusBooking -> bookingsRefundStatusHandler refundEntry
+            DOrder.FRFSMultiModalBooking -> bookingsRefundStatusHandler refundEntry
+            DOrder.FRFSPassPurchase -> passesRefundStatusHandler refundEntry
+            _ -> pure ()
     )
     refunds
   where
