@@ -16,6 +16,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as Ride
+import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
@@ -47,6 +48,7 @@ import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import Tools.Error
 import Tools.Metrics.BAPMetrics
+import qualified Tools.Notifications as TNotifications
 import qualified Tools.Payment as TPayment
 import TransactionLogs.Types
 import qualified UrlShortner.Common as UrlShortner
@@ -230,6 +232,14 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
             DOrder.FRFSPassPurchase -> Pass.createPassReconEntry paymentStatusResponse domainTransactionId
             _ -> pure ()
     _ -> pure ()
+  fork "refund notifications" $ do
+    when (paymentOrder.paymentFulfillmentStatus /= paymentStatusResponseWithFulfillmentStatus.paymentFulfillmentStatus) $ do
+      let personId = cast @DPayment.Person @Person.Person paymentOrder.personId
+      case paymentStatusResponseWithFulfillmentStatus.paymentFulfillmentStatus of
+        Just DPayment.FulfillmentRefundInitiated -> TNotifications.notifyRefundNotification Notification.REFUND_PENDING paymentOrder.id personId paymentService
+        Just DPayment.FulfillmentRefundFailed -> TNotifications.notifyRefundNotification Notification.REFUND_FAILED paymentOrder.id personId paymentService
+        Just DPayment.FulfillmentRefunded -> TNotifications.notifyRefundNotification Notification.REFUND_SUCCESS paymentOrder.id personId paymentService
+        _ -> pure ()
   QPaymentOrder.updatePaymentFulfillmentStatus paymentOrder.id paymentStatusResponseWithFulfillmentStatus.paymentFulfillmentStatus
   return paymentStatusResponseWithFulfillmentStatus
 
