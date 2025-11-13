@@ -24,6 +24,12 @@ import qualified Lib.Yudhishthira.Types
 import Servant
 import Servant.Client
 
+data ActionType
+  = BLOCK
+  | UNBLOCK
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverBlockTransactions = DriverBlockTransactions
   { reasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blockReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -32,7 +38,8 @@ data DriverBlockTransactions = DriverBlockTransactions
     blockLiftTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     blockedBy :: Kernel.Prelude.Text,
     requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    blockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    blockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    actionType :: Kernel.Prelude.Maybe ActionType
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -95,6 +102,7 @@ data DriverInfoRes = DriverInfoRes
     driverTagObject :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagObject],
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blockedInfo :: [DriverBlockTransactions],
+    blockCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     softBlockStiers :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     softBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
