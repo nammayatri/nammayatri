@@ -975,6 +975,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 DFRFSTicketBookingPayment.REFUNDED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUNDED
                 _ ->
                   case paymentBookingStatus of
+                    FRFSTicketService.REFUNDED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUNDED
                     FRFSTicketService.FAILURE -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.FAILED
                     FRFSTicketService.SUCCESS -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.FAILED
                     FRFSTicketService.PENDING -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.PENDING
@@ -1034,7 +1035,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         bookingApiResp <-
           if paymentBookingStatus == FRFSTicketService.FAILURE
             then do
-              logInfo $ "payment failed in payment pending: " <> show booking
+              logInfo $ "payment failed in payment pending: " <> show booking <> ", status: " <> show paymentBookingStatus
               QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
               QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
@@ -1067,18 +1068,27 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                         void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking quoteCategories
                       buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentSuccess
                     else do
-                      logInfo $ "payment success in payment pending: " <> show booking
-                      paymentOrder_ <- buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCity.id booking
-                      txn <- QPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
-                      let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
-                          paymentObj =
-                            Just
-                              FRFSTicketService.FRFSBookingPaymentAPI
-                                { status = paymentStatus_,
-                                  paymentOrder = paymentOrder_,
-                                  transactionId = Nothing
-                                }
-                      buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
+                      if paymentBookingStatus == FRFSTicketService.REFUNDED
+                        then do
+                          logInfo $ "payment failed in payment pending: " <> show booking <> ", status: " <> show paymentBookingStatus
+                          QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
+                          QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUNDED paymentBooking.id
+                          let paymentStatusAPI = Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUNDED
+                          let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing, transactionId = Nothing}
+                          buildFRFSTicketBookingStatusAPIRes booking quoteCategories mbPaymentObj
+                        else do
+                          logInfo $ "payment success in payment pending: " <> show booking
+                          paymentOrder_ <- buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCity.id booking
+                          txn <- QPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
+                          let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
+                              paymentObj =
+                                Just
+                                  FRFSTicketService.FRFSBookingPaymentAPI
+                                    { status = paymentStatus_,
+                                      paymentOrder = paymentOrder_,
+                                      transactionId = Nothing
+                                    }
+                          buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
         when (isMultiModalBooking && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
           riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
           becknConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId merchantId_ "FRFS" merchantOperatingCity.id
