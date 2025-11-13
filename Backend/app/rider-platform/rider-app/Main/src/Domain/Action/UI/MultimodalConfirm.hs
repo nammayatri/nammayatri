@@ -741,8 +741,9 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
           Just METRO -> [Enums.METRO]
           Just SUBWAY -> [Enums.SUBWAY]
           _ -> [Enums.BUS, Enums.METRO, Enums.SUBWAY]
-  whenJust mbVehicleNumber $ \vehicleNumber -> do
-    Metrics.incrementBusScannetCounterMetric "ANNA_APP" merchantOperatingCityId.getId vehicleNumber
+  fork "incrementBusScannetCounterMetric" $
+    whenJust mbVehicleNumber $ \vehicleNumber -> do
+      Metrics.incrementBusScannetCounterMetric "ANNA_APP" merchantOperatingCityId.getId vehicleNumber
 
   integratedBPPConfigs <-
     concatMapM
