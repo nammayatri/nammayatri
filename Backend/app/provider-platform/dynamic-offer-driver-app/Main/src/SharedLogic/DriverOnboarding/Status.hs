@@ -113,8 +113,7 @@ data DocumentStatusItem = DocumentStatusItem
   { documentType :: DDVC.DocumentType,
     verificationStatus :: ResponseStatus,
     verificationMessage :: Maybe Text,
-    verificationUrl :: Maybe BaseUrl,
-    responseCode :: Maybe Text
+    verificationUrl :: Maybe BaseUrl
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -347,11 +346,13 @@ fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVeh
     case mbStatus of
       Just status -> do
         message <- documentStatusMessage status Nothing docType mbProcessedUrl language
-        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl, responseCode = responseCode}
+        let finalMessage = responseCode <|> mbProcessedReason <|> Just message
+        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbProcessedUrl}
       Nothing -> do
         (status, mbReason, mbUrl) <- getInProgressDriverDocuments driverImagesInfo docType
         message <- documentStatusMessage status mbReason docType mbUrl language
-        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl, responseCode = responseCode}
+        let finalMessage = responseCode <|> mbReason <|> Just message
+        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl}
 
 fetchVehicleDocuments ::
   IQuery.DriverImagesInfo ->
@@ -475,11 +476,11 @@ fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationCon
         case mbStatus of
           Just status -> do
             message <- documentStatusMessage status Nothing docType mbProcessedUrl language
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl, responseCode = Nothing}
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
           Nothing -> do
             (status, mbReason, mbUrl) <- getInProgressVehicleDocuments driverImagesInfo (Just rcImagesInfo) docType
             message <- documentStatusMessage status mbReason docType mbUrl language
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl, responseCode = Nothing}
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
     return
       VehicleDocumentItem
         { registrationNo,
@@ -518,7 +519,7 @@ fetchProcessedVehicleDocumentsWithoutRC driverImagesInfo allDocumentVerification
 
           documents <-
             vehicleDocumentTypes `forM` \docType -> do
-              return $ DocumentStatusItem {documentType = docType, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing, responseCode = Nothing}
+              return $ DocumentStatusItem {documentType = docType, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing}
           return
             [ VehicleDocumentItem
                 { registrationNo = vehicle.registrationNo,
@@ -582,7 +583,7 @@ fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs 
                     vehicleDocumentTypes `forM` \docType -> do
                       (status, mbReason, mbUrl) <- getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo docType
                       message <- documentStatusMessage status mbReason docType mbUrl language
-                      return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl, responseCode = Nothing}
+                      return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
                   return
                     [ VehicleDocumentItem
                         { registrationNo,
