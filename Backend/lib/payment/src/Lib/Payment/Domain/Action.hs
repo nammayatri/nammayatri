@@ -702,7 +702,9 @@ orderStatusService personId orderId orderStatusCall = do
       maybe
         (updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
-            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn Nothing
+            Redis.withCrossAppRedis $
+              Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $
+                updateOrderTransaction order orderTxn Nothing
         )
         transactionUUID -- should we put it in fork ?
       return $
@@ -731,7 +733,9 @@ orderStatusService personId orderId orderStatusCall = do
       maybe
         (updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
-            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn Nothing
+            Redis.withCrossAppRedis $
+              Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $
+                updateOrderTransaction order orderTxn Nothing
         )
         transactionUUID
       mapM_ updateRefundStatus refunds
@@ -897,7 +901,9 @@ juspayWebhookService resp respDump = do
       maybe
         (updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
-            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
+            Redis.withCrossAppRedis $
+              Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $
+                updateOrderTransaction order orderTxn $ Just respDump
         )
         transactionUUID
     Payment.OrderStatusResp {..} -> do
@@ -919,7 +925,9 @@ juspayWebhookService resp respDump = do
       maybe
         (updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
-            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
+            Redis.withCrossAppRedis $
+              Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $
+                updateOrderTransaction order orderTxn $ Just respDump
         )
         transactionUUID
       mapM_ updateRefundStatus refunds
@@ -958,7 +966,9 @@ stripeWebhookService resp respDump = do
         maybe
           (updateOrderTransaction order orderTxn Nothing)
           ( \transactionUUID' ->
-              Redis.whenWithLockRedis (txnStripeProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
+              Redis.withCrossAppRedis $
+                Redis.whenWithLockRedis (txnStripeProccessingKey transactionUUID') 60 $
+                  updateOrderTransaction order orderTxn $ Just respDump
           )
           orderTxn.transactionUUID
       Nothing -> throwError (InvalidRequest $ "orderShortId not found for eventId: " <> resp.id.getId)
