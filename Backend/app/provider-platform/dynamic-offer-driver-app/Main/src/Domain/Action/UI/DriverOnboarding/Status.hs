@@ -50,7 +50,8 @@ data StatusRes = StatusRes
     manualVerificationRequired :: Maybe Bool,
     driverLicenseDetails :: Maybe [SStatus.DLDetails],
     vehicleRegistrationCertificateDetails :: Maybe [SStatus.RCDetails],
-    digilockerStatus :: Maybe DDV.SessionStatus
+    digilockerStatus :: Maybe DDV.SessionStatus,
+    digilockerResponseCode :: Maybe Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -84,6 +85,7 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
         rcVerficationMessage = rcVerficationMessage,
         aadhaarVerificationStatus = aadhaarStatus,
         digilockerStatus = digilockerStatus,
+        digilockerResponseCode = digilockerResponseCode,
         ..
       }
 
