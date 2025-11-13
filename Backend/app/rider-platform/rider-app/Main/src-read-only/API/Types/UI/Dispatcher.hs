@@ -8,6 +8,10 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
+data DepotVehicle = DepotVehicle {fleet_no :: Kernel.Prelude.Text, status :: Kernel.Prelude.Text, vehicle_no :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DispatcherReq = DispatcherReq {reason :: ScheduleUpdateReasons, sourceFleetId :: Kernel.Prelude.Text, updatedFleetId :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
