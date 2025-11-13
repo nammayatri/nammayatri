@@ -35,8 +35,9 @@ statsHandler conductorToken = withFlowHandlerAPI $ do
 
   let yesterdayStats =
         filter
-          ( \stat ->
-              stat.bookingDate >= yesterdayStart && stat.bookingDate < yesterdayEnd
+          ( \stat -> do
+              let statDay = Time.UTCTime stat.bookingDate 0
+              statDay >= yesterdayStart && statDay < yesterdayEnd
           )
           allStats
 
@@ -44,8 +45,9 @@ statsHandler conductorToken = withFlowHandlerAPI $ do
 
   let mtdStats =
         filter
-          ( \stat ->
-              stat.bookingDate >= monthStart && stat.bookingDate < yesterdayEnd
+          ( \stat -> do
+              let statDay = Time.UTCTime stat.bookingDate 0
+              statDay >= monthStart && statDay < yesterdayEnd
           )
           allStats
   logDebug $ "mtdStats: " <> show mtdStats
