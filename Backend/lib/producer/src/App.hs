@@ -70,9 +70,8 @@ startProducerWithEnv flowRt appCfg appEnv producerType = do
         >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
     )
 
-  let producersWithCounter = concatMap (\_ -> map (\streamIndex -> PF.runProducer streamIndex) [1 .. 16]) [1 .. appCfg.producersPerPod]
-  let reviverWithCounter = map (\streamIndex -> PF.runReviver producerType streamIndex) [1 .. 16]
-  putStrLn $ ("StreamName is now: " :: String)
+  let producersWithCounter = concatMap (\_ -> map (\streamIndex -> PF.runProducer streamIndex) ([Nothing] ++ [Just streamIndex | streamIndex <- [1 .. 16]])) [1 .. appCfg.producersPerPod]
+  let reviverWithCounter = map (\streamIndex -> PF.runReviver producerType streamIndex) ([Nothing] ++ [Just streamIndex | streamIndex <- [1 .. 16]])
   runFlowR flowRt appEnv $ do
     loopGracefully $
       bool producersWithCounter (reviverWithCounter ++ producersWithCounter) appEnv.runReviver
