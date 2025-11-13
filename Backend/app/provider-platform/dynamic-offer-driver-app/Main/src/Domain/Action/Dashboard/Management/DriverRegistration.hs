@@ -285,7 +285,8 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
           validationStatus = Nothing,
           workflowTransactionId = Nothing,
           vehicleCategory = Nothing,
-          sdkFailureReason = Nothing
+          sdkFailureReason = Nothing,
+          fileExtension = Nothing
         }
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
 

@@ -691,7 +691,8 @@ verifyAndStorePAN _session person pdfBytes extractedPan = do
             validationStatus = Nothing, -- DigiLocker docs don't need SDK validation
             workflowTransactionId = Nothing,
             vehicleCategory = Nothing,
-            sdkFailureReason = Nothing
+            sdkFailureReason = Nothing,
+            fileExtension = Just "pdf"
           }
 
   Image.ImageValidateResponse {imageId} <- Image.validateImage False (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
@@ -759,7 +760,8 @@ verifyAndStoreAadhaar _session person xmlBytes extractedAadhaar = do
             validationStatus = Nothing, -- DigiLocker docs don't need SDK validation
             workflowTransactionId = Nothing,
             vehicleCategory = Nothing,
-            sdkFailureReason = Nothing
+            sdkFailureReason = Nothing,
+            fileExtension = Just "xml"
           }
 
   Image.ImageValidateResponse {imageId} <- Image.validateImage False (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
@@ -851,7 +853,8 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
             validationStatus = Nothing, -- DigiLocker docs don't need SDK validation
             workflowTransactionId = Nothing,
             vehicleCategory = Nothing,
-            sdkFailureReason = Nothing
+            sdkFailureReason = Nothing,
+            fileExtension = Just "pdf"
           }
 
   Image.ImageValidateResponse {imageId} <- Image.validateImage False (person.id, person.merchantId, person.merchantOperatingCityId) imageReq

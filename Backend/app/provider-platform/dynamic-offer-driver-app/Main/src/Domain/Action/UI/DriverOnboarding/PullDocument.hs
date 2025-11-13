@@ -271,7 +271,8 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
             validationStatus = Just APITypes.AUTO_APPROVED, -- Skip Idfy verification for DigiLocker docs
             workflowTransactionId = Nothing,
             vehicleCategory = Nothing,
-            sdkFailureReason = Nothing
+            sdkFailureReason = Nothing,
+            fileExtension = Just "pdf"
           }
 
   Image.ImageValidateResponse {imageId} <- Image.validateImage False (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
