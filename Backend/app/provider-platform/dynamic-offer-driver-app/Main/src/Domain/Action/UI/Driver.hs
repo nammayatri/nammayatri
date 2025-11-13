@@ -251,6 +251,7 @@ import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Pricing
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
+import qualified SharedLogic.Type as SLT
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
 import qualified Storage.Cac.GoHomeConfig as CGHC
@@ -558,6 +559,7 @@ data BookingAPIEntity = BookingAPIEntity
     estimatedDuration :: Maybe Seconds,
     fareParams :: FareParameters,
     tollNames :: Maybe [Text],
+    billingCategory :: SLT.BillingCategory,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     stopLocationId :: Maybe (Id DLoc.Location),

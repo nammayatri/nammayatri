@@ -27,11 +27,13 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import qualified Lib.Yudhishthira.Types
+import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
 
 data Booking = Booking
   { backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    billingCategory :: SharedLogic.Type.BillingCategory,
     bookingDetails :: Domain.Types.Booking.BookingDetails,
     bppBookingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Booking.BPPBooking),
     bppEstimateId :: Kernel.Prelude.Text,

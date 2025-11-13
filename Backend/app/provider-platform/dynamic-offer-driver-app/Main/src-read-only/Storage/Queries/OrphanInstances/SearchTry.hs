@@ -12,6 +12,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified SharedLogic.Type
 import qualified Storage.Beam.SearchTry as Beam
 import qualified Storage.Queries.Transformers.SearchRequestForDriver
 import Storage.Queries.Transformers.SearchTry
@@ -23,6 +24,7 @@ instance FromTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
       Just
         Domain.Types.SearchTry.SearchTry
           { baseFare = Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare,
+            billingCategory = fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             createdAt = createdAt,
             currency = fromMaybe Kernel.Types.Common.INR currency,
             customerExtraFee = Kernel.Types.Common.mkAmountWithDefault customerExtraFeeAmount <$> customerExtraFee,
@@ -55,6 +57,7 @@ instance ToTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
     Beam.SearchTryT
       { Beam.baseFare = Kernel.Prelude.roundToIntegral baseFare,
         Beam.baseFareAmount = Kernel.Prelude.Just baseFare,
+        Beam.billingCategory = Kernel.Prelude.Just billingCategory,
         Beam.createdAt = createdAt,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.customerExtraFee = Kernel.Prelude.roundToIntegral <$> customerExtraFee,

@@ -12,11 +12,13 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
 
 data SearchTryT f = SearchTryT
   { baseFare :: B.C f Kernel.Types.Common.Money,
     baseFareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     customerExtraFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),

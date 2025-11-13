@@ -48,3 +48,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN vehicle_category text ;
 
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN pet_charges_amount double precision ;
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN pet_charges integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN billing_category text ;

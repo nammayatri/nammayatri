@@ -15,6 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils
+import qualified SharedLogic.Type
 import qualified Storage.Beam.Ride as Beam
 import Storage.Queries.Transformers.Ride
 import qualified Storage.Queries.Transformers.Ride
@@ -36,6 +37,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
         Domain.Types.Ride.Ride
           { backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
+            billingCategory = Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             bookingId = Kernel.Types.Id.Id bookingId,
             cancellationChargesOnCancel = cancellationChargesOnCancel,
             cancellationFeeIfCancelled = cancellationFeeIfCancelled,
@@ -126,6 +128,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
     Beam.RideT
       { Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
+        Beam.billingCategory = Kernel.Prelude.Just billingCategory,
         Beam.bookingId = Kernel.Types.Id.getId bookingId,
         Beam.cancellationChargesOnCancel = cancellationChargesOnCancel,
         Beam.cancellationFeeIfCancelled = cancellationFeeIfCancelled,
