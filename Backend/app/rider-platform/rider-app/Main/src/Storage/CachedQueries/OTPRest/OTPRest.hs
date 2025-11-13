@@ -421,7 +421,7 @@ getExampleTrip ::
   IntegratedBPPConfig ->
   Text ->
   m (Maybe TripDetails)
-getExampleTrip integratedBPPConfig routeId = IM.withInMemCache ["ExampleTrip", integratedBPPConfig.id.getId, routeId] 86400 $ do
+getExampleTrip integratedBPPConfig routeId = IM.withInMemCache ["ExampleTrip", integratedBPPConfig.id.getId, routeId] 1800 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getExampleTrip baseUrl integratedBPPConfig.feedKey routeId
 

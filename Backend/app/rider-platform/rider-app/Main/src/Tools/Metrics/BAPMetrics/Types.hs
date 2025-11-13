@@ -30,6 +30,7 @@ type HasBAPMetrics m r = HasFlowEnv m r ["bapMetrics" ::: BAPMetricsContainer, "
 data BAPMetricsContainer = BAPMetricsContainer
   { searchRequestCounter :: SearchRequestCounterMetric,
     rideCreatedCounter :: RideCreatedCounterMetric,
+    busScanSearchRequestCounter :: BusScanSearchRequestCounterMetric,
     searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric,
     searchDurationFRFS :: DurationMetric,
@@ -53,10 +54,13 @@ type SearchDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.
 
 type DurationMetric = (P.Vector P.Label3 P.Histogram, P.Vector P.Label3 P.Counter)
 
+type BusScanSearchRequestCounterMetric = P.Vector P.Label3 P.Counter
+
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
   busScannerCounter <- registerBusScannetCounterMetric
+  busScanSearchRequestCounter <- registerBusScanSearchRequestCounterMetric
   rideCreatedCounter <- registerRideCreatedCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   searchDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_search_frfs_round_trip" "beckn_search_frfs_round_trip_failure_counter"
@@ -74,6 +78,9 @@ registerSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "ve
 
 registerBusScannetCounterMetric :: IO BusScannetCounterMetric
 registerBusScannetCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "vehicle_number") $ P.counter $ P.Info "scanned_bus_counter" ""
+
+registerBusScanSearchRequestCounterMetric :: IO BusScanSearchRequestCounterMetric
+registerBusScanSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "bus_scan_search_request_count" ""
 
 registerRideCreatedCounterMetric :: IO RideCreatedCounterMetric
 registerRideCreatedCounterMetric = P.register $ P.vector ("merchant_id", "version", "category", "merchantOperatingCityId") $ P.counter $ P.Info "ride_created_count" ""
