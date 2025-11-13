@@ -62,6 +62,8 @@ buildSelectReqV2 subscriber req = do
   item <- case order.orderItems of
     Just [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
+  logDebug $ "item: select request" <> show item <> "transactionId: " <> transactionId
+  logDebug $ "item.itemTags: select request" <> show item.itemTags <> "transactionId: " <> transactionId
   let customerExtraFee = getCustomerExtraFeeV2 item.itemTags
       autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
       isAdvancedBoookingEnabled = getAdvancedBookingEnabled item.itemTags
@@ -72,6 +74,7 @@ buildSelectReqV2 subscriber req = do
       (toUpdateDeviceIdInfo, isMultipleOrNoDeviceIdExist) = getDeviceIdInfo item.itemTags
       parcelDetails = getParcelDetails item.itemTags
       preferSafetyPlus = getPeferSafetyPlus item.itemTags
+  logDebug $ "billingCategory: select request" <> show billingCategory <> "transactionId: " <> transactionId
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure $ Just fulfillment
     _ -> pure Nothing
