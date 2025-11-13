@@ -1046,6 +1046,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                   logInfo $ "booking is expired in payment success and booking is expired: " <> show booking
                   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
                   let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+                  markJourneyPaymentSuccess updatedBooking paymentOrder paymentBooking
                   buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
                 else
                   if paymentBookingStatus == FRFSTicketService.SUCCESS
@@ -1072,10 +1073,12 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                         then do
                           logInfo $ "payment failed in payment pending: " <> show booking <> ", status: " <> show paymentBookingStatus
                           QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
+                          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
                           QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUNDED paymentBooking.id
+                          markJourneyPaymentSuccess updatedBooking paymentOrder paymentBooking
                           let paymentStatusAPI = Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUNDED
                           let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing, transactionId = Nothing}
-                          buildFRFSTicketBookingStatusAPIRes booking quoteCategories mbPaymentObj
+                          buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories mbPaymentObj
                         else do
                           logInfo $ "payment success in payment pending: " <> show booking
                           paymentOrder_ <- buildCreateOrderResp paymentOrder commonPersonId merchantOperatingCity.id booking
@@ -1124,7 +1127,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
           when (booking.quoteId /= paymentBookingQuoteId) $ do
             switchFRFSQuoteTier journeyLeg paymentBookingQuoteId
         void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) (Just True) journeyId
-        void $ QJourney.updateStatus DJ.INPROGRESS journeyId
+        void $ QJourney.updateStatus (if booking.status `elem` DFRFSTicketBooking.FAILED then DJ.FAILED else DJ.INPROGRESS) journeyId
 
     mkPaymentSuccessLockKey bookingId = "frfsPaymentSuccess:" <> bookingId.getId
 
