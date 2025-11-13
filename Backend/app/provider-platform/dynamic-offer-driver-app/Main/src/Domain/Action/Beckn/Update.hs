@@ -201,7 +201,11 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                 then do
                   currentLocationPointsBatch <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
                   editDestinationWaypoints <- getEditDestinationWaypoints ride.driverId
-                  (snapToRoadFailed, editDestinationPoints) <- getLatlongsViaSnapToRoad (editDestinationWaypoints <> currentLocationPointsBatch.loc) merchantOperatingCity.merchantId merchantOperatingCity.id
+                  let rawWaypoints = editDestinationWaypoints <> currentLocationPointsBatch.loc
+                  (snapToRoadFailed, editDestinationPoints) <-
+                    if null rawWaypoints
+                      then return (False, [])
+                      else getLatlongsViaSnapToRoad rawWaypoints merchantOperatingCity.merchantId merchantOperatingCity.id
                   let (currentLocPoint :: Maps.LatLong) =
                         fromMaybe (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon) $
                           (if not $ null currentLocationPointsBatch.loc then Just (last currentLocationPointsBatch.loc) else Nothing)
