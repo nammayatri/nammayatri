@@ -41,6 +41,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Confirm as SConfirm
+import SharedLogic.Type
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Estimate as QEstimate
@@ -78,6 +79,7 @@ data QuoteInfo = QuoteInfo
     isCustomerPrefferedSearchRoute :: Maybe Bool,
     isBlockedRoute :: Maybe Bool,
     quoteValidTill :: UTCTime,
+    billingCategory :: BillingCategory,
     tripCategory :: TripCategory
   }
 
@@ -203,6 +205,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             tripCategory = Just tripCategory,
             vehicleIconUrl = estimate.vehicleIconUrl,
             isSafetyPlus = quoteDetails.isSafetyPlus,
+            billingCategory = billingCategory,
             ..
           }
   pure quote

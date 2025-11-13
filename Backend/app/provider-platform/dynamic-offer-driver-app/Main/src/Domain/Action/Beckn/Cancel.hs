@@ -202,6 +202,7 @@ cancel req merchant booking mbActiveSearchTry = do
           Right (charges :: Maybe HighPrecMoney) -> do
             void $ case mbRide of
               Just ride -> do
+                logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation charges onCancel: " <> show charges)
                 QRide.updateCancellationChargesOnCancel charges ride.id
               Nothing -> return ()
             return ((\chargess -> Just PriceAPIEntity {amount = chargess, currency = booking.currency}) =<< charges)

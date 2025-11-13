@@ -350,6 +350,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       pickupRouteCallCount = Just 0
       talkedWithDriver = Nothing
       isSafetyPlus = booking.preferSafetyPlus
+      billingCategory = booking.billingCategory
       isInsured = booking.isInsured
       insuredAmount = booking.insuredAmount
       cancellationChargesOnCancel = Nothing

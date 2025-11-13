@@ -442,6 +442,7 @@ library
       SharedLogic.TicketRule.Apply
       SharedLogic.TicketRule.Core
       SharedLogic.TicketUtils
+      SharedLogic.Type
       Storage.Beam.BecknRequest
       Storage.Beam.Common
       Storage.Beam.EstimateBreakup

@@ -23,6 +23,7 @@ imports:
   VehicleVariant: Domain.Types.VehicleVariant
   ServiceTierType: Domain.Types.Common
   TagNameValue: Lib.Yudhishthira.Types
+  BillingCategory: SharedLogic.Type
 
 Ride:
   tableName: ride
@@ -81,6 +82,7 @@ Ride:
     endOdometerReading: Maybe OdometerReading
     createdAt: UTCTime
     updatedAt: UTCTime
+    billingCategory: BillingCategory
     driverDeviatedToTollRoute: Maybe Bool
     driverDeviatedFromRoute: Maybe Bool
     numberOfSnapToRoadCalls: Maybe Int
@@ -215,6 +217,7 @@ Ride:
     estimatedEndTimeRange: Storage.Queries.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
     rideTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
     isInsured: Kernel.Prelude.fromMaybe False isInsured|E
+    billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -250,6 +253,7 @@ Ride:
     estimatedEndTimeRangeEnd: Kernel.Prelude.fmap (.end)|I
     rideTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
     isInsured: Kernel.Prelude.Just|I
+    billingCategory: Kernel.Prelude.Just billingCategory|E
 
   beamType:
     trackingUrl: Text
@@ -268,6 +272,7 @@ Ride:
     clientManufacturer: Maybe Text
     rideTags: "Maybe [Text]"
     isInsured: Maybe Bool
+    billingCategory: Maybe BillingCategory
 
   constraints:
     id: PrimaryKey

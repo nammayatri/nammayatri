@@ -721,7 +721,8 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
       def{Tags.itemTags =
             [ (Tags.DISTANCE_TO_NEAREST_DRIVER_METER, Just $ show driverQuote.distanceToPickup.getMeters),
               (Tags.ETA_TO_NEAREST_DRIVER_MIN, Just . show $ driverQuote.durationToPickup.getSeconds `div` 60),
-              (Tags.UPGRADE_TO_CAB, show <$> srfd.upgradeCabRequest)
+              (Tags.UPGRADE_TO_CAB, show <$> srfd.upgradeCabRequest),
+              (Tags.BILLING_CATEGORY, Just $ show searchTry.billingCategory)
             ]
               <> if (isJust driverQuote.specialLocationTag && isValueAddNP)
                 then [(Tags.SPECIAL_LOCATION_TAG, driverQuote.specialLocationTag)]

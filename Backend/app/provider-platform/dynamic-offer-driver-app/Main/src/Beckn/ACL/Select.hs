@@ -30,6 +30,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import SharedLogic.CallBAP (mkTxnIdKey)
+import qualified SharedLogic.Type as SLT
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
@@ -66,6 +67,7 @@ buildSelectReqV2 subscriber req = do
       isAdvancedBoookingEnabled = getAdvancedBookingEnabled item.itemTags
       disabilityDisable = buildDisableDisabilityTag item.itemTags
       isPetRide = fromMaybe False $ buildPetRideTag item.itemTags
+      billingCategory = buildBillingCategoryTag item.itemTags
       bookAnyEstimates = getBookAnyEstimates item.itemTags
       (toUpdateDeviceIdInfo, isMultipleOrNoDeviceIdExist) = getDeviceIdInfo item.itemTags
       parcelDetails = getParcelDetails item.itemTags
@@ -92,6 +94,7 @@ buildSelectReqV2 subscriber req = do
         toUpdateDeviceIdInfo = toUpdateDeviceIdInfo,
         preferSafetyPlus = preferSafetyPlus,
         paymentMethodInfo = paymentMethodInfo,
+        billingCategory = billingCategory,
         ..
       }
 
@@ -128,6 +131,14 @@ buildPetRideTag tagGroups = do
         Just "True" -> Just True
         Just "False" -> Just False
         _ -> Nothing
+
+buildBillingCategoryTag :: Maybe [Spec.TagGroup] -> SLT.BillingCategory
+buildBillingCategoryTag tagGroups = do
+  let tagValue = Utils.getTagV2 Tag.BILLING_CATEGORY_INFO Tag.BILLING_CATEGORY tagGroups
+   in case T.toLower $ fromMaybe "" tagValue of
+        "personal" -> SLT.PERSONAL
+        "business" -> SLT.BUSINESS
+        _ -> SLT.PERSONAL
 
 getAdvancedBookingEnabled :: Maybe [Spec.TagGroup] -> Bool
 getAdvancedBookingEnabled tagGroups =

@@ -99,3 +99,8 @@ ALTER TABLE atlas_app.quote ADD COLUMN is_safety_plus boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.quote ADD COLUMN static_bpp_quote_id character(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN billing_category text ;

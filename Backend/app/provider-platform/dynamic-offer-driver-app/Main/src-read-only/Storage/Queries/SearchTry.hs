@@ -38,6 +38,8 @@ updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
   updateWithKV
     [ Se.Set Beam.baseFare (Kernel.Prelude.roundToIntegral baseFare),
       Se.Set Beam.baseFareAmount (Kernel.Prelude.Just baseFare),
+      Se.Set Beam.billingCategory (Kernel.Prelude.Just billingCategory),
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.customerExtraFee (Kernel.Prelude.roundToIntegral <$> customerExtraFee),
       Se.Set Beam.customerExtraFeeAmount customerExtraFee,

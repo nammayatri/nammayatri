@@ -14,6 +14,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
+import qualified SharedLogic.Type
 import qualified Storage.Beam.Ride as Beam
 import qualified Storage.Queries.Extra.Transformers.Ride
 
@@ -34,6 +35,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             allowedEditPickupLocationAttempts = allowedEditPickupLocationAttempts,
             backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
+            billingCategory = Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             bookingId = Kernel.Types.Id.Id bookingId,
             bppRideId = Kernel.Types.Id.Id bppRideId,
             cancellationChargesOnCancel = cancellationChargesOnCancel,
@@ -113,6 +115,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.allowedEditPickupLocationAttempts = allowedEditPickupLocationAttempts,
         Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
+        Beam.billingCategory = Kernel.Prelude.Just billingCategory,
         Beam.bookingId = Kernel.Types.Id.getId bookingId,
         Beam.bppRideId = Kernel.Types.Id.getId bppRideId,
         Beam.cancellationChargesOnCancel = cancellationChargesOnCancel,

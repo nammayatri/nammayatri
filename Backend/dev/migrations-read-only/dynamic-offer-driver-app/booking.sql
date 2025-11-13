@@ -157,3 +157,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_pet_ride boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN exotel_declined_call_status_receiving_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN billing_category text ;

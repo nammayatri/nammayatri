@@ -130,6 +130,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                     isAdvancedBookingEnabled = Nothing,
                     deliveryDetails = Nothing,
                     disabilityDisable = Nothing,
+                    billingCategory = Nothing,
                     preferSafetyPlus = Nothing
                   }
           void $ DSelect.select2' (req.personId, req.merchantId) estimate.id selectReq

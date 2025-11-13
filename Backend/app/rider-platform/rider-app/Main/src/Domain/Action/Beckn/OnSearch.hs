@@ -82,6 +82,7 @@ import qualified SharedLogic.CallBPPInternal as Est
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.EstimateTags as SEST
 import qualified SharedLogic.Search as SLS
+import qualified SharedLogic.Type as SLT
 import Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
@@ -359,6 +360,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
                 isAdvancedBookingEnabled = Nothing,
                 deliveryDetails = Nothing,
                 disabilityDisable = Nothing,
+                billingCategory = Nothing,
                 preferSafetyPlus = Nothing
               }
       void $ DSelect.select2' (personId, merchant.id) estimateId selectReq
@@ -577,6 +579,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
         distanceUnit = searchRequest.distanceUnit,
         tripCategory = Just tripCategory,
         isSafetyPlus = False,
+        billingCategory = SLT.PERSONAL,
         ..
       }
 

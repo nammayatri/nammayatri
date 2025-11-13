@@ -16,6 +16,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.JSON
 import qualified Kernel.Utils.Version
+import qualified SharedLogic.Type
 import qualified Storage.Beam.Booking as Beam
 import qualified Storage.Queries.LocationMapping
 import Storage.Queries.Transformers.Booking
@@ -40,6 +41,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
         Domain.Types.Booking.Booking
           { backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
+            billingCategory = Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             bookingDetails = snd toBookingDetailsAndFromLocation',
             bppBookingId = Kernel.Types.Id.Id <$> bppBookingId,
             bppEstimateId = itemId,
@@ -112,6 +114,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
     Beam.BookingT
       { Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = Kernel.Utils.Version.versionToText <$> backendConfigVersion,
+        Beam.billingCategory = Kernel.Prelude.Just billingCategory,
         Beam.distance = Kernel.Utils.Common.distanceToHighPrecMeters <$> distance,
         Beam.fareProductType = getFareProductType bookingDetails,
         Beam.isUpgradedToCab = getIsUpgradedToCab bookingDetails,

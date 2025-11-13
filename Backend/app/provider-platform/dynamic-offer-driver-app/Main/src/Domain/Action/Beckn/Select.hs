@@ -41,6 +41,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestT
 import SharedLogic.DriverPool
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
+import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
@@ -65,6 +66,7 @@ data DSelectReq = DSelectReq
     disabilityDisable :: Maybe Bool,
     parcelDetails :: (Maybe Text, Maybe Int),
     preferSafetyPlus :: Bool,
+    billingCategory :: SLT.BillingCategory,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }
 
@@ -122,6 +124,7 @@ handler merchant sReq searchReq estimates = do
             customerExtraFee = sReq.customerExtraFee,
             messageId = sReq.messageId,
             isRepeatSearch = False,
+            billingCategory = sReq.billingCategory,
             isAllocatorBatch = False,
             paymentMethodInfo = sReq.paymentMethodInfo
           }

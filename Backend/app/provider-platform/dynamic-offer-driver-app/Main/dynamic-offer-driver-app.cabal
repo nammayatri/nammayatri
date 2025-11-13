@@ -448,6 +448,7 @@ library
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
       SharedLogic.TollsDetector
+      SharedLogic.Type
       SharedLogic.UserCancellationDues
       SharedLogic.VehicleServiceTier
       SharedLogic.WMB

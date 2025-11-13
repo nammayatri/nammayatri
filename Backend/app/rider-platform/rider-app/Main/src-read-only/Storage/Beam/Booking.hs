@@ -21,11 +21,13 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Version
 import qualified Kernel.Utils.Common
+import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
 
 data BookingT f = BookingT
   { backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     fareProductType :: B.C f Domain.Types.FarePolicy.FareProductType.FareProductType,
     isUpgradedToCab :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

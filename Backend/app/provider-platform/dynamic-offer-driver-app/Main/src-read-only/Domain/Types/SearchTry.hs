@@ -14,10 +14,12 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.TH
+import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
 
 data SearchTry = SearchTry
   { baseFare :: Kernel.Types.Common.HighPrecMoney,
+    billingCategory :: SharedLogic.Type.BillingCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     customerExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

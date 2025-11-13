@@ -42,6 +42,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Beckn.Common as DTS
+import qualified SharedLogic.Type as SLT
 import Tools.Maps as Google
 
 type PoolBatchNum = Int
@@ -275,5 +276,6 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     messageId :: Text,
     isRepeatSearch :: Bool,
     isAllocatorBatch :: Bool,
-    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    billingCategory :: SLT.BillingCategory
   }

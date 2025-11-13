@@ -147,7 +147,7 @@ mkItemTags res =
   let itemTags = [mkAutoAssignEnabledTagGroup res] <> mkSelectResDetailsTagGroup res
       itemTags' = if isJust res.customerExtraFee then mkCustomerTipTagGroup res : itemTags else itemTags
       itemTags'' = if not (null res.remainingEstimateBppIds) then mkOtheEstimatesTagGroup res : itemTags' else itemTags'
-      itemTags''' = [mkAdvancedBookingEnabledTagGroup res, mkDeviceIdTagGroup res, mkDisabilityDisableTagGroup res, mkSafetyPlusTagGroup res, mkPetRideTagGroup res] <> itemTags''
+      itemTags''' = [mkAdvancedBookingEnabledTagGroup res, mkDeviceIdTagGroup res, mkDisabilityDisableTagGroup res, mkSafetyPlusTagGroup res, mkPetRideTagGroup res, mkBillingCategoryTagGroup res] <> itemTags''
    in itemTags'''
 
 mkCustomerTipTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
@@ -346,6 +346,33 @@ mkPetRideTagGroup res =
                       },
                 tagDisplay = Just False,
                 tagValue = (Just . T.pack . show) =<< res.isPetRide
+              }
+          ]
+    }
+
+mkBillingCategoryTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
+mkBillingCategoryTagGroup res =
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.BILLING_CATEGORY_INFO,
+              descriptorName = Just "Billing Category Info",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList =
+        Just
+          [ Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.BILLING_CATEGORY,
+                        descriptorName = Just "Billing Category",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = Just $ show res.billingCategory
               }
           ]
     }
