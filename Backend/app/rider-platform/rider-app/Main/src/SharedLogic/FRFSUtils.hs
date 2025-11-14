@@ -1123,14 +1123,18 @@ calculateFareParameters priceItems =
       childItem = find (\category -> category.categoryType == CHILD) priceItems <&> mkPriceItem
       femaleItem = find (\category -> category.categoryType == FEMALE) priceItems <&> mkPriceItem
       currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem <|> femaleItem)
+
+      adultTotalAmount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem femaleItem).amount
       totalPrice =
         Price
-          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount,
-            amountInt = roundToIntegral ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
+          { amount = adultTotalAmount + (getAmountFromPriceItem childItem).amount,
+            amountInt = roundToIntegral (adultTotalAmount + (getAmountFromPriceItem childItem).amount),
             currency
           }
+
+      adultTotalQuantity = getQuantityFromPriceItem adultItem + getQuantityFromPriceItem femaleItem
       totalQuantity =
-        getQuantityFromPriceItem adultItem + getQuantityFromPriceItem childItem
+        adultTotalQuantity + getQuantityFromPriceItem childItem
    in FRFSFareParameters
         { adultItem = adultItem,
           childItem = childItem,
