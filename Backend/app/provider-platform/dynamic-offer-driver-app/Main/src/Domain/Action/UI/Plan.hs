@@ -1015,7 +1015,7 @@ mkDueDriverFeeInfoEntity serviceName driverFees transporterConfig = do
               planAmountWithCurrency = PriceAPIEntity (fromMaybe 0.0 driverFee.feeWithoutDiscount) driverFee.currency,
               isSplit = length driverFeesInWindow > 1,
               offerAndPlanDetails = driverFee.planOfferTitle,
-              rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) driverFee.createdAt, --- when we fix ist issue we will remove this
+              rideTakenOn = driverFee.startTime,
               driverFeeAmount,
               driverFeeAmountWithCurrency = PriceAPIEntity driverFeeAmount driverFee.currency,
               createdAt,
