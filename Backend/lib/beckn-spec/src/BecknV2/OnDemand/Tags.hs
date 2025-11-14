@@ -329,6 +329,8 @@ data BecknTag
   | BUYER_FINDER_FEES_TYPE
   | BUYER_FINDER_FEES_PERCENTAGE
   | BUYER_FINDER_FEES_AMOUNT
+  | LUGGAGE_CHARGE
+  | NUMBER_OF_LUGGAGE
   | -- ## Payment tags ##
     -- SETTLEMENT_TERMS
     SETTLEMENT_WINDOW
@@ -358,6 +360,10 @@ data BecknTag
   | PER_KM_RATE
   | PER_DAY_MAX_HOUR_ALLOWANCE
   | PER_DAY_MAX_ALLOWANCE_IN_MINS
+  | RETURN_FEE
+  | BOOTH_CHARGE
+  | RETURN_FEE_PERCENTAGE
+  | BOOTH_CHARGE_PERCENTAGE
   | -- | SETTLEMENT_DETAILS
     INSURANCE_CHARGE_PER_METER
   | INSURANCE_CHARGE_PER_MILE
@@ -487,6 +493,7 @@ instance CompleteTag BecknTag where
 
   -- getDescriptor :: tags -> (description, shortDescription)
   getTagDescriptor tag = uncurry (Spec.Descriptor . Just . T.pack $ show tag) $ case tag of
+    NUMBER_OF_LUGGAGE -> (Just "Luggage Count", Nothing)
     DISTANCE_INFO_IN_M -> (Just "Distance Information In Meters", Nothing)
     DURATION_INFO_IN_S -> (Just "Duration Information In Seconds", Nothing)
     RETURN_TIME -> (Just "Return time in UTC", Nothing)
@@ -540,6 +547,7 @@ instance CompleteTag BecknTag where
     ROUND_TRIP -> ROUTE_INFO
     WAYPOINTS -> ROUTE_INFO
     MULTIPLE_ROUTES -> ROUTE_INFO
+    NUMBER_OF_LUGGAGE -> SEARCH_REQUEST_INFO
     DRIVER_IDENTITY -> DRIVER_IDENTIFIER
     BUYER_FINDER_FEES_PERCENTAGE -> BUYER_FINDER_FEES
     SETTLEMENT_AMOUNT -> SETTLEMENT_TERMS

@@ -116,6 +116,15 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       rideStopChargeCaption = show Enums.RIDE_STOP_CHARGES
       mbRideStopChargeItem = mkBreakupItem rideStopChargeCaption . mkPrice <$> fareParams.stopCharges
 
+      luggageChargeCaption = show Enums.LUGGAGE_CHARGE
+      mbLuggageChargeItem = mkBreakupItem luggageChargeCaption . mkPrice <$> fareParams.luggageCharge
+
+      returnFeeChargeCaption = show Enums.RETURN_FEE
+      mbReturnFeeChargeItem = mkBreakupItem returnFeeChargeCaption . mkPrice <$> fareParams.returnFeeCharge
+
+      boothChargeCaption = show Enums.BOOTH_CHARGE
+      mbBoothChargeItem = mkBreakupItem boothChargeCaption . mkPrice <$> fareParams.boothCharge
+
       detailsBreakups = processFareParamsDetails fareParams.fareParametersDetails
       additionalChargesBreakup = map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToEnum addCharges.chargeCategory) $ mkPrice addCharges.charge) fareParams.conditionalCharges
   catMaybes
@@ -136,7 +145,10 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbInsuranceChargeItem,
       mbCardChargesFareItem,
       mbCardChargesFixedItem,
-      mbRideStopChargeItem
+      mbRideStopChargeItem,
+      mbLuggageChargeItem,
+      mbReturnFeeChargeItem,
+      mbBoothChargeItem
     ]
     <> detailsBreakups
     <> additionalChargesBreakup
@@ -248,6 +260,9 @@ pureFareSum fareParams conditionalChargeCategories = do
     + platformFee
     + (fromMaybe 0.0 fareParams.customerCancellationDues + fromMaybe 0.0 fareParams.tollCharges + fromMaybe 0.0 fareParams.parkingCharge)
     + fromMaybe 0.0 fareParams.insuranceCharge
+    + fromMaybe 0.0 fareParams.luggageCharge
+    + fromMaybe 0.0 fareParams.returnFeeCharge
+    + fromMaybe 0.0 fareParams.boothCharge
     + fromMaybe 0.0 (fareParams.cardCharge >>= (.onFare))
     + fromMaybe 0.0 (fareParams.cardCharge >>= (.fixed))
     + (sum $ map (.charge) (filter (\addCharges -> maybe True (KP.elem addCharges.chargeCategory) conditionalChargeCategories) fareParams.conditionalCharges))
@@ -294,7 +309,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     distanceUnit :: DistanceUnit,
     petCharges :: Maybe HighPrecMoney,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
-    mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories]
+    mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
+    numberOfLuggages :: Maybe Int
   }
 
 calculateFareParameters :: MonadFlow m => CalculateFareParametersParams -> m FareParameters
@@ -336,6 +352,17 @@ calculateFareParameters params = do
       finalCongestionCharge = fromMaybe 0.0 (params.estimatedCongestionCharge <|> Just congestionChargeResultWithAddition)
       insuranceChargeResult = countInsuranceChargeForDistance fp.distanceUnit params.actualDistance fp.perDistanceUnitInsuranceCharge
       -- petCharges = if params.isPetRide then fp.petCharges else Nothing
+      luggageCharge = case (fp.perLuggageCharge, params.numberOfLuggages) of
+        (Just perLuggageCharge, Just numberOfLuggages) -> Just $ perLuggageCharge * fromIntegral numberOfLuggages
+        _ -> Nothing
+      returnFeeCharge = case fp.returnFee of
+        Just (DFP.ReturnFeeFixed fee) -> Just fee
+        Just (DFP.ReturnFeePercentage p) -> Just $ partOfNightShiftCharge * fromRational (toRational p / 100)
+        _ -> Nothing
+      boothCharge = case fp.boothCharges of
+        Just (DFP.BoothChargeFixed fee) -> Just fee
+        Just (DFP.BoothChargePercentage p) -> Just $ partOfNightShiftCharge * fromRational (toRational p / 100)
+        _ -> Nothing
       fullRideCostN {-without govtCharges, platformFee, cardChargeOnFare and fixedCharge-} =
         fullRideCost
           + fromMaybe 0.0 resultNightShiftCharge
@@ -397,6 +424,9 @@ calculateFareParameters params = do
             customerCancellationDues = params.customerCancellationDues,
             tollCharges = addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing),
             insuranceCharge = insuranceChargeResult,
+            luggageCharge = luggageCharge,
+            returnFeeCharge = returnFeeCharge,
+            boothCharge = boothCharge,
             cardCharge =
               Just
                 DFParams.CardCharge

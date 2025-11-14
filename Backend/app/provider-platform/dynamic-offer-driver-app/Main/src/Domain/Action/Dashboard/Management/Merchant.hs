@@ -1121,7 +1121,10 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     disableRecompute :: Text,
     stateEntryPermitCharges :: Text,
     conditionalCharges :: Text,
-    driverCancellationPenaltyAmount :: Text
+    driverCancellationPenaltyAmount :: Text,
+    perLuggageCharge :: Text,
+    returnFee :: Text,
+    boothCharges :: Text
   }
   deriving (Show)
 
@@ -1214,6 +1217,9 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "state_entry_permit_charges"
       <*> r .: "additional_charges"
       <*> r .: "driver_cancellation_penalty_amount"
+      <*> r .: "per_luggage_charge"
+      <*> r .: "return_fee"
+      <*> r .: "booth_charges"
 
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
@@ -1439,6 +1445,9 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                   else Just $ FarePolicy.ExtraDistanceFare congestionChargeMultiplierValue
       let parkingCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.parkingCharge "Parking Charge"
       let perStopCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perStopCharge "Per Stop Charge"
+      let perLuggageCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perLuggageCharge "Per Luggage Charge"
+      let returnFee :: (Maybe FarePolicy.ReturnFee) = readMaybeCSVField idx row.returnFee "Return Fee"
+      let boothCharges :: (Maybe FarePolicy.BoothCharge) = readMaybeCSVField idx row.boothCharges "Booth Charges"
       let additionalChargesJson :: (Maybe DAT.Value) = readMaybeCSVField idx row.conditionalCharges "Additional Charges"
       let conditionalCharges' = maybe (DAT.Success []) DAT.fromJSON additionalChargesJson
       conditionalCharges <- do
@@ -1626,7 +1635,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, ..})
+      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, perLuggageCharge = perLuggageCharge, returnFee = returnFee, boothCharges = boothCharges, ..})
 
     validateFarePolicyType farePolicyType = \case
       InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"

@@ -113,7 +113,8 @@ data OneWaySearchReq = OneWaySearchReq
     platformType :: Maybe DIBPC.PlatformType,
     isReserveRide :: Maybe Bool,
     subscriptionId :: Maybe (Id DNyRegularSubscription.NyRegularSubscription),
-    verifyBeforeCancellingOldBooking :: Maybe Bool
+    verifyBeforeCancellingOldBooking :: Maybe Bool,
+    numberOfLuggages :: Maybe Int
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -145,7 +146,8 @@ data RentalSearchReq = RentalSearchReq
     isReallocationEnabled :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
     placeNameSource :: Maybe Text,
-    recentLocationId :: Maybe (Id DTRL.RecentLocation)
+    recentLocationId :: Maybe (Id DTRL.RecentLocation),
+    numberOfLuggages :: Maybe Int
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -164,7 +166,8 @@ data InterCitySearchReq = InterCitySearchReq
     fareParametersInRateCard :: Maybe Bool,
     placeNameSource :: Maybe Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
-    platformType :: Maybe DIBPC.PlatformType
+    platformType :: Maybe DIBPC.PlatformType,
+    numberOfLuggages :: Maybe Int
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -192,6 +195,7 @@ data SearchDetails = SearchDetails
     quotesUnifiedFlow :: Maybe Bool,
     placeNameSource :: Maybe Text,
     -- isPetRide :: Maybe Bool,
+    numberOfLuggages :: Maybe Int,
     driverIdentifier_ :: Maybe DRL.DriverIdentifier,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     routeCode :: Maybe Text,

@@ -54,6 +54,7 @@ data SearchRequest = SearchRequest
     isScheduled :: Kernel.Prelude.Bool,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    numberOfLuggages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelType :: Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType,
     pickupZoneGateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
