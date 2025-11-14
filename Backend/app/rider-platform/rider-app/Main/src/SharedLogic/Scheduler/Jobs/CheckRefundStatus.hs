@@ -119,7 +119,7 @@ processRefundStatus refundEntry person paymentOrder = do
         Just refund -> do
           let newStatus = refund.status
           when (newStatus /= refundEntry.status) $ do
-            DPayment.updateRefundStatus refund
+            void $ DPayment.upsertRefundStatus paymentOrder refund
             logInfo $ "Updated refund status for " <> refundEntry.id.getId <> " to " <> show newStatus
 
           when (newStatus `notElem` nonTerminalStatuses) $ do

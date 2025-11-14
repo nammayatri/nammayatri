@@ -34,7 +34,6 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
-import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
@@ -227,19 +226,23 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
     Right (newPaymentFulfillmentStatus, _, Just domainTransactionId) -> do
       whenJust paymentOrder.paymentFulfillmentStatus $ \oldPaymentFulfillmentStatus -> do
-        when (newPaymentFulfillmentStatus == DPayment.FulfillmentSucceeded && newPaymentFulfillmentStatus /= oldPaymentFulfillmentStatus) $ do
-          case paymentService of
-            DOrder.FRFSPassPurchase -> Pass.createPassReconEntry paymentStatusResponse domainTransactionId
-            _ -> pure ()
+        when (newPaymentFulfillmentStatus /= oldPaymentFulfillmentStatus) $ do
+          -- Recon Entry
+          void $
+            withTryCatch "createReconEntry" $ do
+              when (newPaymentFulfillmentStatus == DPayment.FulfillmentSucceeded) $ do
+                case paymentService of
+                  DOrder.FRFSPassPurchase -> Pass.createPassReconEntry paymentStatusResponse domainTransactionId
+                  _ -> pure ()
+          -- Refund Notify
+          fork "Process Refunds Notifications" $ do
+            let personId = cast @DPayment.Person @Person.Person paymentOrder.personId
+            case newPaymentFulfillmentStatus of
+              DPayment.FulfillmentRefundInitiated -> TNotifications.notifyRefundNotification Notification.REFUND_PENDING paymentOrder.id personId paymentService
+              DPayment.FulfillmentRefundFailed -> TNotifications.notifyRefundNotification Notification.REFUND_FAILED paymentOrder.id personId paymentService
+              DPayment.FulfillmentRefunded -> TNotifications.notifyRefundNotification Notification.REFUND_SUCCESS paymentOrder.id personId paymentService
+              _ -> pure ()
     _ -> pure ()
-  fork "refund notifications" $ do
-    when (paymentOrder.paymentFulfillmentStatus /= paymentStatusResponseWithFulfillmentStatus.paymentFulfillmentStatus) $ do
-      let personId = cast @DPayment.Person @Person.Person paymentOrder.personId
-      case paymentStatusResponseWithFulfillmentStatus.paymentFulfillmentStatus of
-        Just DPayment.FulfillmentRefundInitiated -> TNotifications.notifyRefundNotification Notification.REFUND_PENDING paymentOrder.id personId paymentService
-        Just DPayment.FulfillmentRefundFailed -> TNotifications.notifyRefundNotification Notification.REFUND_FAILED paymentOrder.id personId paymentService
-        Just DPayment.FulfillmentRefunded -> TNotifications.notifyRefundNotification Notification.REFUND_SUCCESS paymentOrder.id personId paymentService
-        _ -> pure ()
   QPaymentOrder.updatePaymentFulfillmentStatus paymentOrder.id paymentStatusResponseWithFulfillmentStatus.paymentFulfillmentStatus
   return paymentStatusResponseWithFulfillmentStatus
 
@@ -258,7 +261,7 @@ refundStatusHandler ::
 refundStatusHandler paymentOrder refunds paymentServiceType = do
   mapM_
     ( \refund -> do
-        mbRefundEntry <- QRefunds.findById (Id refund.requestId)
+        mbRefundEntry <- DPayment.upsertRefundStatus paymentOrder refund
         whenJust mbRefundEntry $ \refundEntry -> do
           case paymentServiceType of
             DOrder.FRFSBooking -> bookingsRefundStatusHandler refundEntry
