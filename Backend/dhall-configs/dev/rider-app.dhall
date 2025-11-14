@@ -435,4 +435,6 @@ in  { esqDBCfg
     , inMemConfig
     , disableViaPointTimetableCheck
     , parkingApiKey = sec.parkingApiKey
+    , frfsMetricsRateLimitHits = +100
+    , frfsMetricsRateLimitWindowSec = +60
     }
