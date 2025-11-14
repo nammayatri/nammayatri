@@ -469,6 +469,10 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
             ticketQuantity = mElement >>= (.ticketQuantity)
             childTicketQuantity = mElement >>= (.childTicketQuantity)
             bookLater = fromMaybe False (mElement <&> (.skipBooking))
+        let totalTicketQuantity =
+              fromMaybe 0 ticketQuantity + fromMaybe 0 childTicketQuantity
+        let bookingAllowed' = totalTicketQuantity == 1 && leg.bookingAllowed
+        let updatedLeg = leg {JL.bookingAllowed = bookingAllowed'}
         let forcedBooking = Just leg.order == forcedBookedLegOrder
         let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
         categorySelectionReq <- do
@@ -476,7 +480,7 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
           if leg.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]
             then maybe (pure categorySelectionReq') (\pricingId -> backfillFRFSQuoteCategory (Id pricingId) ticketQuantity childTicketQuantity categorySelectionReq') leg.pricingId
             else return categorySelectionReq'
-        JLI.confirm forcedBooking bookLater leg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer
+        JLI.confirm forcedBooking bookLater updatedLeg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer
     )
     allLegs
 
