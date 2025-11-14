@@ -19,7 +19,7 @@ types:
     distanceToBus: Double
     timestamp: Maybe UTCTime
     customerLocation: LatLong
-    customerLocationTimestamp: UTCTime
+    customerLocationTimestamp: Maybe UTCTime
     locationAccuracy: Maybe Double
     derive: "Show"
 
