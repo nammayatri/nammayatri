@@ -73,6 +73,29 @@ updateImeiNumber imeiNumber id = do
     ]
     [Se.Is BeamP.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateMobileNumberByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Kernel.External.Encryption.EncryptedHashedField 'AsEncrypted Text -> DbHash -> Text -> m ()
+updateMobileNumberByPersonId (Id personId) encMobile mobileNumberHash mobileCountryCode = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.mobileNumberEncrypted (Just $ unEncrypted (encMobile.encrypted)),
+      Se.Set BeamP.mobileNumberHash (Just mobileNumberHash),
+      Se.Set BeamP.mobileCountryCode (Just mobileCountryCode)
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateEmailByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Kernel.External.Encryption.EncryptedHashedField 'AsEncrypted Text -> m ()
+updateEmailByPersonId (Id personId) encEmail = do
+  now <- getCurrentTime
+  let encVal = unEncrypted (encEmail.encrypted)
+      emailHash = encEmail.hash
+  updateWithKV
+    [ Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.emailEncrypted (Just encVal),
+      Se.Set BeamP.emailHash (Just emailHash)
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 updatePersonVersions :: (MonadFlow m, EsqDBFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Device -> Text -> Maybe Text -> m ()
 updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice deploymentVersion mbRnVersion =
   when
