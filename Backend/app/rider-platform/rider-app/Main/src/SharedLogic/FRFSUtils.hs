@@ -1119,18 +1119,29 @@ mkCategoryPriceItemFromDCategorySelect quoteCategories = mapMaybe mkPriceItem qu
 
 calculateFareParameters :: [CategoryPriceItem] -> FRFSFareParameters
 calculateFareParameters priceItems =
-  let adultItem = find (\category -> category.categoryType == ADULT) priceItems <&> mkPriceItem
+  let adultCategoryItem = find (\category -> category.categoryType == ADULT) priceItems
+      femaleCategoryItem = find (\category -> category.categoryType == FEMALE) priceItems
+      adultItem = (adultCategoryItem <|> femaleCategoryItem) <&> mkPriceItem
       childItem = find (\category -> category.categoryType == CHILD) priceItems <&> mkPriceItem
-      femaleItem = find (\category -> category.categoryType == FEMALE) priceItems <&> mkPriceItem
+      femaleItem = femaleCategoryItem <&> mkPriceItem
       currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem <|> femaleItem)
+
+      adultTotalAmount = case (adultCategoryItem, femaleCategoryItem) of
+        (Just _, Just _) -> (getAmountFromPriceItem (adultCategoryItem <&> mkPriceItem)).amount + (getAmountFromPriceItem femaleItem).amount
+        _ -> (getAmountFromPriceItem adultItem).amount
+
       totalPrice =
         Price
-          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount,
-            amountInt = roundToIntegral ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
+          { amount = adultTotalAmount + (getAmountFromPriceItem childItem).amount,
+            amountInt = roundToIntegral (adultTotalAmount + (getAmountFromPriceItem childItem).amount),
             currency
           }
+
+      adultTotalQuantity = case (adultCategoryItem, femaleCategoryItem) of
+        (Just _, Just _) -> getQuantityFromPriceItem (adultCategoryItem <&> mkPriceItem) + getQuantityFromPriceItem femaleItem
+        _ -> getQuantityFromPriceItem adultItem
       totalQuantity =
-        getQuantityFromPriceItem adultItem + getQuantityFromPriceItem childItem
+        adultTotalQuantity + getQuantityFromPriceItem childItem
    in FRFSFareParameters
         { adultItem = adultItem,
           childItem = childItem,
