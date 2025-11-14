@@ -42,7 +42,8 @@ defaultSearchReq =
         platformType = Nothing,
         subscriptionId = Nothing,
         isReserveRide = Nothing,
-        verifyBeforeCancellingOldBooking = Just True
+        verifyBeforeCancellingOldBooking = Just True,
+        numberOfLuggages = Nothing
       }
 
 defaultSearchReqAddress :: LocationAddress
@@ -115,7 +116,8 @@ searchReqFromUpdatesList updList =
               platformType = Nothing,
               subscriptionId = Nothing,
               isReserveRide = Nothing,
-              verifyBeforeCancellingOldBooking = Just True
+              verifyBeforeCancellingOldBooking = Just True,
+              numberOfLuggages = Nothing
             }
    in (origin, destination, req)
 
@@ -142,7 +144,8 @@ mkSearchReqFromLocations origin destination =
               platformType = Nothing,
               subscriptionId = Nothing,
               isReserveRide = Nothing,
-              verifyBeforeCancellingOldBooking = Just True
+              verifyBeforeCancellingOldBooking = Just True,
+              numberOfLuggages = Nothing
             }
    in (origin, destination, req)
 

@@ -997,6 +997,9 @@ getConfigValue language issueConfig mbRideInfoRes key = do
       tipAdded = maybe 0.0 (.amount.amount) (getFareFromArray "CUSTOMER_SELECTED_FARE" fareBreakup)
       driverAdditions = maybe 0.0 (.amount.amount) (getFareFromArray "DRIVER_SELECTED_FARE" fareBreakup)
       rideStopCharges = maybe 0.0 (.amount.amount) (getFareFromArray "RIDE_STOP_CHARGES" fareBreakup)
+      luggageCharges = maybe 0.0 (.amount.amount) (getFareFromArray "LUGGAGE_CHARGE" fareBreakup)
+      boothCharges = maybe 0.0 (.amount.amount) (getFareFromArray "BOOTH_CHARGE" fareBreakup)
+      returnCharges = maybe 0.0 (.amount.amount) (getFareFromArray "RETURN_FEE" fareBreakup)
       vehicleNo = maybe "" (formatVehicleNo . (.vehicleNo)) mbRideInfoRes
       driverName = maybe "" (.driverName) mbRideInfoRes
       driverPhoneNo = fromMaybe "" $ (.driverPhoneNo) =<< mbRideInfoRes
@@ -1025,6 +1028,9 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "TIP_ADDED" -> show tipAdded
         "DRIVER_ADDITIONS" -> show driverAdditions
         "RIDE_STOP_CHARGES" -> show rideStopCharges
+        "LUGGAGE_CHARGE" -> show luggageCharges
+        "BOOTH_CHARGE" -> show boothCharges
+        "RETURN_FEE" -> show returnCharges
         "HEADING" -> "{SUBPART}{HEADING}{!!!}"
         "BODY" -> "{SUBPART}{BODY}{!!!}"
         "VEHICLE_NUMBER" -> vehicleNo

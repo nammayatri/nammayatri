@@ -80,6 +80,7 @@ SearchRequest:
     parcelQuantity: Maybe Int
     preferSafetyPlus: Bool
     isReserveRide: Maybe Bool
+    numberOfLuggages: Maybe Int
   beamType:
     startTime: Maybe UTCTime
     validTill: Maybe UTCTime
