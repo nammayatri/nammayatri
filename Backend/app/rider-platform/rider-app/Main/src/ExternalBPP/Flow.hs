@@ -75,13 +75,13 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                     endStopCode = endStationCode,
                     travelTime = Nothing
                   }
-          mkQuote searchReq.vehicleType [routeInfo]
+          mkQuote serviceTier searchReq.vehicleType [routeInfo]
         Nothing -> do
           routesInfo <- bool getPossibleRoutesBetweenTwoStops getPossibleRoutesBetweenTwoParentStops (fromMaybe False searchReq.searchAsParentStops) startStationCode endStationCode integratedBPPConfig
           quotes <-
             mapM
               ( \routeInfo -> do
-                  mkQuote searchReq.vehicleType [routeInfo]
+                  mkQuote Nothing searchReq.vehicleType [routeInfo]
               )
               routesInfo
           return $ concat quotes
@@ -105,15 +105,15 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                       }
               )
               routesDetails
-          mkQuote searchReq.vehicleType routesInfo
+          mkQuote Nothing searchReq.vehicleType routesInfo
 
-    mkQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Spec.VehicleCategory -> [RouteStopInfo] -> m [DQuote]
-    mkQuote _vehicleType [] = return []
-    mkQuote vehicleType routesInfo = do
+    mkQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Maybe Spec.ServiceTierType -> Spec.VehicleCategory -> [RouteStopInfo] -> m [DQuote]
+    mkQuote _serviceTier _vehicleType [] = return []
+    mkQuote serviceTier vehicleType routesInfo = do
       let fareRouteDetails = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode}) routesInfo
       stations <- CallAPI.buildStations fareRouteDetails integratedBPPConfig
       let nonEmptyFareRouteDetails = NE.fromList fareRouteDetails
-      (_, fares) <- CallAPI.getFares searchReq.riderId merchant merchantOperatingCity integratedBPPConfig nonEmptyFareRouteDetails vehicleType Nothing searchReq.multimodalSearchRequestId
+      (_, fares) <- CallAPI.getFares searchReq.riderId merchant merchantOperatingCity integratedBPPConfig nonEmptyFareRouteDetails vehicleType serviceTier searchReq.multimodalSearchRequestId
       return $
         map
           ( \FRFSFare {..} ->

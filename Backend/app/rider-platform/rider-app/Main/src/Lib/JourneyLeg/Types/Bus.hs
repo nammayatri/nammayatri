@@ -25,6 +25,7 @@ data BusLegRequestSearchData = BusLegRequestSearchData
     journeyLeg :: DJourneyLeg.JourneyLeg,
     multimodalSearchRequestId :: Maybe Text,
     recentLocationId :: Maybe (Id DRecentLocation.RecentLocation),
+    serviceTier :: Maybe Spec.ServiceTierType,
     upsertJourneyLegAction :: forall m r c. JL.SearchRequestFlow m r c => Text -> m ()
   }
 

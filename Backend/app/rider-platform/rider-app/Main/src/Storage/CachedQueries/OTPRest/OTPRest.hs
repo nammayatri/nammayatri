@@ -393,7 +393,7 @@ getStopCodeFromProviderCode ::
   IntegratedBPPConfig ->
   Text ->
   m (Maybe Text)
-getStopCodeFromProviderCode integratedBPPConfig providerStopCode = do
+getStopCodeFromProviderCode integratedBPPConfig providerStopCode = IM.withInMemCache ["SCFPC", integratedBPPConfig.id.getId, providerStopCode] 3600 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   resp <- Flow.getStopCode baseUrl integratedBPPConfig.feedKey providerStopCode
   return (resp <&> (.stop_code))

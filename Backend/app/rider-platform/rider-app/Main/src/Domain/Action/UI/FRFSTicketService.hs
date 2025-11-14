@@ -491,7 +491,8 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId vehicleTy
         [ FRFSRouteDetails
             { routeCode = req.routeCode,
               startStationCode = req.fromStationCode,
-              endStationCode = req.toStationCode
+              endStationCode = req.toStationCode,
+              serviceTier = Nothing -- TODO: pass this for optimization
             }
         ]
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
