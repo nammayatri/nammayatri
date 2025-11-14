@@ -11,6 +11,7 @@ import qualified Domain.Types.RiderConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -25,6 +26,9 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RiderConfig.RiderConfig] -> m ())
 createMany = traverse_ create
+
+findByFrfsMetricsApiKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.RiderConfig.RiderConfig))
+findByFrfsMetricsApiKey frfsMetricsApiKey = do findOneWithKV [Se.Is Beam.frfsMetricsApiKey $ Se.Eq frfsMetricsApiKey]
 
 findByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -87,6 +91,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.fareCacheRentalsConfig (fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.feedbackAlertRatingThreshold (Just feedbackAlertRatingThreshold),
       Se.Set Beam.filterWalkAndUnspecifiedTransitModes (Just filterWalkAndUnspecifiedTransitModes),
+      Se.Set Beam.frfsMetricsApiKey frfsMetricsApiKey,
       Se.Set Beam.hardLimitForSafetyJobs (Just $ Kernel.Types.Common.Seconds hardLimitForSafetyJobs),
       Se.Set Beam.incidentReportSupport (Just incidentReportSupport),
       Se.Set Beam.initiateFirstMultimodalJourney (Just initiateFirstMultimodalJourney),
@@ -219,6 +224,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             fareCacheRentalsConfig = fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe,
             feedbackAlertRatingThreshold = fromMaybe 3 feedbackAlertRatingThreshold,
             filterWalkAndUnspecifiedTransitModes = fromMaybe False filterWalkAndUnspecifiedTransitModes,
+            frfsMetricsApiKey = frfsMetricsApiKey,
             hardLimitForSafetyJobs = fromMaybe 21600 ((.getSeconds) <$> hardLimitForSafetyJobs),
             incidentReportSupport = fromMaybe False incidentReportSupport,
             initiateFirstMultimodalJourney = fromMaybe False initiateFirstMultimodalJourney,
@@ -348,6 +354,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.fareCacheRentalsConfig = fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON,
         Beam.feedbackAlertRatingThreshold = Just feedbackAlertRatingThreshold,
         Beam.filterWalkAndUnspecifiedTransitModes = Just filterWalkAndUnspecifiedTransitModes,
+        Beam.frfsMetricsApiKey = frfsMetricsApiKey,
         Beam.hardLimitForSafetyJobs = Just $ Kernel.Types.Common.Seconds hardLimitForSafetyJobs,
         Beam.incidentReportSupport = Just incidentReportSupport,
         Beam.initiateFirstMultimodalJourney = Just initiateFirstMultimodalJourney,
