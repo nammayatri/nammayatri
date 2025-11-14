@@ -11,7 +11,7 @@ Volunteer:
 
   fields:
     id : Id Volunteer
-    vendorId : Maybe Text
+    vendorId : Text
     isActive: Maybe Bool
     place : Text
     createdAt : UTCTime
@@ -19,6 +19,7 @@ Volunteer:
 
   beamType:
     isActive: Maybe Bool
+    vendorId: Text
 
   constraints:
     id: PrimaryKey
@@ -27,6 +28,7 @@ Volunteer:
 
   default:
     isActive: "true"
+    vendorId: "'DEFAULT_VENDOR'"
 
   fromTType:
     isActive : Kernel.Prelude.Just . Kernel.Prelude.fromMaybe True|I

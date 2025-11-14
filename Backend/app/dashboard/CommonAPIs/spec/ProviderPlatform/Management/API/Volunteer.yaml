@@ -46,7 +46,7 @@ types:
   VolunteerListItem:
     - volunteerId: Text
     - place: Text
-    - vendorId: Maybe Text
+    - vendorId: Text
     - isActive: Maybe Bool
   UpdateVolunteerReq:
     - isActive: Maybe Bool

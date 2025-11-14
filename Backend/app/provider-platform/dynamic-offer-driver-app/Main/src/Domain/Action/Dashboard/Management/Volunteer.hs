@@ -33,7 +33,7 @@ postVolunteerCreate merchantShortId opCity req = do
   let volunteerId = Id req.personId :: Id DV.Volunteer
 
   -- Check if volunteer already exists with this volunteerId and vendorId to handle error if table enabled in KV
-  mbExistingVolunteer <- QVolunteer.findByIdAndVendorId volunteerId (Just req.vendorId)
+  mbExistingVolunteer <- QVolunteer.findByIdAndVendorId volunteerId req.vendorId
   whenJust mbExistingVolunteer $ \_ ->
     throwError (InvalidRequest "Volunteer already exists with this volunteerId and vendorId")
 
@@ -41,7 +41,7 @@ postVolunteerCreate merchantShortId opCity req = do
         DV.Volunteer
           { id = volunteerId,
             place = req.place,
-            vendorId = Just req.vendorId,
+            vendorId = req.vendorId,
             isActive = req.isActive,
             merchantId = Just merchant.id,
             merchantOperatingCityId = Just merchantOpCityId,
@@ -92,11 +92,11 @@ postVolunteerUpdate merchantShortId opCity volunteerId vendorId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
-  volunteer <- QVolunteer.findByIdAndVendorId (Id volunteerId) (Just vendorId) >>= fromMaybeM (InvalidRequest $ "Volunteer not found with volunteerId: " <> volunteerId <> " and vendorId: " <> vendorId)
+  volunteer <- QVolunteer.findByIdAndVendorId (Id volunteerId) vendorId >>= fromMaybeM (InvalidRequest $ "Volunteer not found with volunteerId: " <> volunteerId <> " and vendorId: " <> vendorId)
 
   -- Verify volunteer belongs to this merchant operating city
   unless (volunteer.merchantOperatingCityId == Just merchantOpCityId) $
     throwError (InvalidRequest "Volunteer does not belong to this merchant operating city")
 
-  when (isJust req.isActive && req.isActive /= volunteer.isActive) $ QVolunteerExtra.updateIsActiveById volunteer.id volunteer.vendorId req.isActive
+  when (isJust req.isActive && req.isActive /= volunteer.isActive) $ QVolunteerExtra.updateIsActiveById (Id volunteerId) vendorId req.isActive
   pure Success
