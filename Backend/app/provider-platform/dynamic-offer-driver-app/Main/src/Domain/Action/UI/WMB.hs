@@ -345,8 +345,8 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
       pure (distance, True) -- Always allow ending for PILOT
     _ -> do
       route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
-      let distanceLeft = KU.distanceBetweenInMeters req.location route.endPoint
-      pure (distance, fleetConfig.allowEndingMidRoute || distanceLeft <= fleetConfig.endRideDistanceThreshold)
+      let distance = KU.distanceBetweenInMeters req.location route.endPoint
+      pure (distance, fleetConfig.allowEndingMidRoute || distance <= fleetConfig.endRideDistanceThreshold)
 
   unless rideEndEligibility $
     throwError $ RideNotEligibleForEnding

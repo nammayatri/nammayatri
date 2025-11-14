@@ -87,7 +87,7 @@ mkFareParamsBreakupItem = FareParamsBreakupItem
 mkPayment :: DM.Merchant -> DBC.BecknConfig -> Maybe Text -> [Spec.Payment]
 mkPayment merchant bppConfig mbPaymentId = do
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
-  List.singleton $ OUP.mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  List.singleton $ OUP.mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False
 
 mkItemTags :: DTC.TransporterConfig -> CUtils.Pricing -> Bool -> Maybe Bool -> Maybe [Spec.TagGroup]
 mkItemTags transporterConfig pricing isValueAddNP fareParametersInRateCard = do

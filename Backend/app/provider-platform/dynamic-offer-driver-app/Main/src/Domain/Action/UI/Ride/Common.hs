@@ -30,6 +30,7 @@ import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
@@ -157,7 +158,8 @@ data DriverRideRes = DriverRideRes
     isInsured :: Maybe Bool,
     insuredAmount :: Maybe Text,
     isPetRide :: Bool,
-    riderMobileNumber :: Maybe Text
+    riderMobileNumber :: Maybe Text,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -274,7 +276,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         isInsured = Just $ ride.isInsured,
         insuredAmount = ride.insuredAmount,
         isPetRide = booking.isPetRide,
-        riderMobileNumber = mbRiderMobileNumber
+        riderMobileNumber = mbRiderMobileNumber,
+        paymentInstrument = booking.paymentInstrument
       }
 
 -- calculateLocations moved from UI.Ride

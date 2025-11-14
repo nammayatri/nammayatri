@@ -136,7 +136,8 @@ mkUpdateMessage req (UPaymentCompletedBuildReqDetails details) = do
                       paymentStatus = Just "PAID",
                       paymentId = Nothing,
                       paymentParams = Nothing,
-                      paymentTags = Nothing
+                      paymentTags = Nothing,
+                      paymentTlMethod = Nothing
                     }
                 ],
             orderFulfillments =

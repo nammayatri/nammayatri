@@ -1,10 +1,11 @@
 module Beckn.OnDemand.Utils.Init where
 
+import qualified BecknV2.OnDemand.Enums as Spec
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.Utils as Utils
 import Data.Text as T
-import qualified Domain.Types.MerchantPaymentMethod as DMPM (PaymentCollector (..), PaymentInstrument (..), PaymentMethodInfo (..), PaymentType (..))
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.VehicleVariant as VehVar
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -67,6 +68,12 @@ getMaxEstimateDistance tagGroups = do
   Just $ HighPrecMeters maxEstimatedDistance
 
 mkPaymentMethodInfo :: MonadFlow m => Spec.Payment -> m (Maybe DMPM.PaymentMethodInfo)
+mkPaymentMethodInfo Spec.Payment {..}
+  | isStripePayment =
+    -- only this payment method supported for Stripe
+    return $ Just $ DMPM.PaymentMethodInfo {paymentInstrument = DMPM.Card DMPM.DefaultCardType, collectedBy = DMPM.BAP, paymentType = DMPM.ON_FULFILLMENT}
+  where
+    isStripePayment = (paymentTlMethod >>= decodeFromText) == Just Spec.StripeSdk
 mkPaymentMethodInfo Spec.Payment {..} = do
   _params <- paymentParams & fromMaybeM (InvalidRequest "Payment Params not found")
   collectedBy <- paymentCollectedBy & fromMaybeM (InvalidRequest "Payment Params not found") >>= castPaymentCollector

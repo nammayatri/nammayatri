@@ -132,13 +132,13 @@ handler merchantId req validatedReq = do
   (booking, driverName, driverId) <-
     case validatedReq.quote of
       ValidatedEstimate driverQuote searchTry -> do
-        booking <- buildBooking searchRequest driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide
+        booking <- buildBooking searchRequest driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now mbPaymentMethod paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
         QST.updateStatus DST.COMPLETED (searchTry.id)
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
-        booking <- buildBooking searchRequest quote SLT.PERSONAL quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing -------------TO DO --------RITIKA
+        booking <- buildBooking searchRequest quote SLT.PERSONAL quote.id.getId quote.tripCategory now mbPaymentMethod paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing -------------TO DO --------RITIKA
         QRB.createBooking booking
         when booking.isScheduled $ void $ addScheduledBookingInRedis booking
         return (booking, Nothing, Nothing)
@@ -171,14 +171,14 @@ handler merchantId req validatedReq = do
       Text ->
       TripCategory ->
       UTCTime ->
-      Maybe (Id DMPM.MerchantPaymentMethod) ->
+      Maybe DMPM.MerchantPaymentMethod ->
       Maybe Text ->
       Maybe Meters ->
       Maybe InitReqDetails ->
       [LYT.ConfigVersionMap] ->
       Maybe Int ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote billingCategory quoteId tripCategory now mbPaymentMethodId paymentUrl distanceToPickup initReqDetails configInExperimentVersions coinsRewardedOnGoldTierRide = do
+    buildBooking searchRequest driverQuote billingCategory quoteId tripCategory now mbPaymentMethod paymentUrl distanceToPickup initReqDetails configInExperimentVersions coinsRewardedOnGoldTierRide = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
@@ -228,7 +228,8 @@ handler merchantId req validatedReq = do
             disabilityTag = searchRequest.disabilityTag,
             area = searchRequest.area,
             isScheduled = searchRequest.isScheduled,
-            paymentMethodId = mbPaymentMethodId,
+            paymentMethodId = mbPaymentMethod <&> (.id),
+            paymentInstrument = mbPaymentMethod <&> (.paymentInstrument),
             distanceToPickup = distanceToPickup,
             stopLocationId = (.id) <$> toLocation,
             startTime = searchRequest.startTime,

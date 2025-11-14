@@ -49,8 +49,9 @@ mkPayment ::
   Maybe SettlementWindow ->
   Maybe BaseUrl ->
   Maybe BuyerFinderFee ->
+  Bool ->
   Spec.Payment
-mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettlementType mSettlementWindow mSettlementTermsUrl mbff = do
+mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettlementType mSettlementWindow mSettlementTermsUrl mbff isStripe = do
   let mAmount = show . (.amount) <$> mPrice
   let mCurrency = show . (.currency) <$> mPrice
   Spec.Payment
@@ -62,10 +63,14 @@ mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettle
           else Nothing,
       paymentStatus = encodeToText' paymentStatus,
       paymentTags = Just $ mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff,
+      paymentTlMethod = mkTlMethod isStripe >>= encodeToText',
       paymentType = encodeToText' Spec.ON_FULFILLMENT
     }
   where
     anyTrue = or
+
+mkTlMethod :: Bool -> Maybe Spec.TLMethod
+mkTlMethod isStripe = if isStripe then Just Spec.StripeSdk else Nothing
 
 mkPayment' ::
   Tag.TagList ->
@@ -87,6 +92,7 @@ mkPayment' allPaymentTags collectedBy paymentStatus mPrice mTxnId mPaymentParams
           else Nothing,
       paymentStatus = encodeToText' paymentStatus,
       paymentTags = Tag.convertToTagGroup allPaymentTags,
+      paymentTlMethod = Nothing,
       paymentType = encodeToText' Spec.ON_FULFILLMENT
     }
   where
