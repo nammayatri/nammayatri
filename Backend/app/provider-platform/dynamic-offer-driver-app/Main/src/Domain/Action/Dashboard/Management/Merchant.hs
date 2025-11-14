@@ -652,9 +652,46 @@ castDVehicleClassCheckType = \case
 
 castDDocumentType :: DVC.DocumentType -> Common.DocumentType
 castDDocumentType = \case
-  DVC.VehicleRegistrationCertificate -> Common.RC
   DVC.DriverLicense -> Common.DL
-  _ -> Common.RC -- fix later
+  DVC.VehicleRegistrationCertificate -> Common.RC
+  DVC.VehiclePUC -> Common.VehiclePUC
+  DVC.VehiclePermit -> Common.VehiclePermit
+  DVC.VehicleInsurance -> Common.VehicleInsurance
+  DVC.VehicleFitnessCertificate -> Common.VehicleFitnessCertificate
+  DVC.VehicleInspectionForm -> Common.VehicleInspectionForm
+  DVC.InspectionHub -> Common.InspectionHub
+  DVC.ProfilePhoto -> Common.ProfilePhoto
+  DVC.PanCard -> Common.PanCard
+  DVC.VehicleNOC -> Common.VehicleNOC
+  DVC.BusinessLicense -> Common.BusinessLicense
+  DVC.Odometer -> Common.Odometer
+  DVC.AadhaarCard -> Common.AadhaarCard
+  DVC.GSTCertificate -> Common.GSTCertificate
+  DVC.Permissions -> Common.Permissions
+  DVC.SubscriptionPlan -> Common.SubscriptionPlan
+  DVC.ProfileDetails -> Common.ProfileDetails
+  DVC.SocialSecurityNumber -> Common.SocialSecurityNumber
+  DVC.BackgroundVerification -> Common.BackgroundVerification
+  DVC.UploadProfile -> Common.UploadProfile
+  DVC.VehicleFront -> Common.VehicleFront
+  DVC.VehicleBack -> Common.VehicleBack
+  DVC.VehicleRight -> Common.VehicleRight
+  DVC.VehicleLeft -> Common.VehicleLeft
+  DVC.VehicleFrontInterior -> Common.VehicleFrontInterior
+  DVC.VehicleBackInterior -> Common.VehicleBackInterior
+  DVC.KIWADriverCard -> Common.KIWADriverCard
+  DVC.KIWATaxiPermit -> Common.KIWATaxiPermit
+  DVC.KvKChamberOfCommerceRegistration -> Common.KvKChamberOfCommerceRegistration
+  DVC.TAXDetails -> Common.TAXDetails
+  DVC.BankingDetails -> Common.BankingDetails
+  DVC.VehicleDetails -> Common.VehicleDetails
+  DVC.SchipolAirportAgreement -> Common.SchipolAirportAgreement
+  DVC.SchipolSmartcardProof -> Common.SchipolSmartcardProof
+  DVC.TXQualityMark -> Common.TXQualityMark
+  DVC.TaxiDriverPermit -> Common.TaxiDriverPermit
+  DVC.TaxiTransportLicense -> Common.TaxiTransportLicense
+  DVC.FinnishIDResidencePermit -> Common.FinnishIDResidencePermit
+  DVC.BusinessRegistrationExtract -> Common.BusinessRegistrationExtract
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -704,8 +741,46 @@ castVehicleClassCheckType = \case
 
 castDocumentType :: Common.DocumentType -> DVC.DocumentType
 castDocumentType = \case
-  Common.RC -> DVC.VehicleRegistrationCertificate
   Common.DL -> DVC.DriverLicense
+  Common.RC -> DVC.VehicleRegistrationCertificate
+  Common.VehiclePUC -> DVC.VehiclePUC
+  Common.VehiclePermit -> DVC.VehiclePermit
+  Common.VehicleInsurance -> DVC.VehicleInsurance
+  Common.VehicleFitnessCertificate -> DVC.VehicleFitnessCertificate
+  Common.VehicleInspectionForm -> DVC.VehicleInspectionForm
+  Common.ProfilePhoto -> DVC.ProfilePhoto
+  Common.PanCard -> DVC.PanCard
+  Common.VehicleNOC -> DVC.VehicleNOC
+  Common.BusinessLicense -> DVC.BusinessLicense
+  Common.Odometer -> DVC.Odometer
+  Common.InspectionHub -> DVC.InspectionHub
+  Common.AadhaarCard -> DVC.AadhaarCard
+  Common.GSTCertificate -> DVC.GSTCertificate
+  Common.Permissions -> DVC.Permissions
+  Common.SubscriptionPlan -> DVC.SubscriptionPlan
+  Common.ProfileDetails -> DVC.ProfileDetails
+  Common.SocialSecurityNumber -> DVC.SocialSecurityNumber
+  Common.BackgroundVerification -> DVC.BackgroundVerification
+  Common.UploadProfile -> DVC.UploadProfile
+  Common.VehicleFront -> DVC.VehicleFront
+  Common.VehicleBack -> DVC.VehicleBack
+  Common.VehicleRight -> DVC.VehicleRight
+  Common.VehicleLeft -> DVC.VehicleLeft
+  Common.VehicleFrontInterior -> DVC.VehicleFrontInterior
+  Common.VehicleBackInterior -> DVC.VehicleBackInterior
+  Common.KIWADriverCard -> DVC.KIWADriverCard
+  Common.KIWATaxiPermit -> DVC.KIWATaxiPermit
+  Common.KvKChamberOfCommerceRegistration -> DVC.KvKChamberOfCommerceRegistration
+  Common.TAXDetails -> DVC.TAXDetails
+  Common.BankingDetails -> DVC.BankingDetails
+  Common.VehicleDetails -> DVC.VehicleDetails
+  Common.SchipolAirportAgreement -> DVC.SchipolAirportAgreement
+  Common.SchipolSmartcardProof -> DVC.SchipolSmartcardProof
+  Common.TXQualityMark -> DVC.TXQualityMark
+  Common.TaxiDriverPermit -> DVC.TaxiDriverPermit
+  Common.TaxiTransportLicense -> DVC.TaxiTransportLicense
+  Common.FinnishIDResidencePermit -> DVC.FinnishIDResidencePermit
+  Common.BusinessRegistrationExtract -> DVC.BusinessRegistrationExtract
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::

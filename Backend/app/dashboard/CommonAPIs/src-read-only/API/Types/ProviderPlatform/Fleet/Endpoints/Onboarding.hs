@@ -20,6 +20,13 @@ import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
+data DocumentApplicableType
+  = FLEET
+  | INDIVIDUAL
+  | FLEET_AND_INDIVIDUAL
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DocumentCategory
   = Driver
   | Vehicle
@@ -38,12 +45,14 @@ data DocumentStatusItem = DocumentStatusItem
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
-  { checkExpiry :: Kernel.Prelude.Bool,
+  { applicableTo :: DocumentApplicableType,
+    checkExpiry :: Kernel.Prelude.Bool,
     checkExtraction :: Kernel.Prelude.Bool,
     dependencyDocumentType :: [API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType],
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     documentCategory :: Kernel.Prelude.Maybe DocumentCategory,
+    documentFields :: Kernel.Prelude.Maybe [FieldInfo],
     documentType :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
@@ -67,6 +76,17 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
     trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity]
   }
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FieldInfo = FieldInfo {_type :: FieldType, isMandatory :: Kernel.Prelude.Bool, name :: Kernel.Prelude.Text, regexValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FieldType
+  = FieldText
+  | FieldInt
+  | FieldDouble
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ReferralInfoRes = ReferralInfoRes {name :: Kernel.Prelude.Text, personId :: Kernel.Types.Id.Id Dashboard.Common.Driver}

@@ -123,6 +123,8 @@ types:
     boat: Maybe [DocumentVerificationConfigAPIEntity]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
+    applicableTo: DocumentApplicableType
+    documentFields: Maybe [FieldInfo]
     title: Text
     description: Maybe Text
     isMandatory: Bool
@@ -138,6 +140,15 @@ types:
     documentCategory: Maybe DocumentCategory
   DocumentCategory:
     enum: "Driver,Vehicle,Permission,Training"
+  FieldType:
+    enum: "FieldText,FieldInt,FieldDouble"
+  FieldInfo:
+    name: Text
+    _type: FieldType
+    isMandatory: Bool
+    regexValidation: Maybe Text
+  DocumentApplicableType:
+    enum: "FLEET,INDIVIDUAL,FLEET_AND_INDIVIDUAL"
   StatusRes:
     driverDocuments: [DocumentStatusItem]
     vehicleDocuments: [VehicleDocumentItem]
