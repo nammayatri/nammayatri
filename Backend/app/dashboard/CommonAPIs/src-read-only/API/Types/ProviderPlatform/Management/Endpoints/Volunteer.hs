@@ -32,7 +32,7 @@ data UpdateVolunteerReq = UpdateVolunteerReq {isActive :: Kernel.Prelude.Maybe K
 instance Kernel.Types.HideSecrets.HideSecrets UpdateVolunteerReq where
   hideSecrets = Kernel.Prelude.identity
 
-data VolunteerListItem = VolunteerListItem {volunteerId :: Kernel.Prelude.Text, place :: Kernel.Prelude.Text, vendorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, isActive :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
+data VolunteerListItem = VolunteerListItem {volunteerId :: Kernel.Prelude.Text, place :: Kernel.Prelude.Text, vendorId :: Kernel.Prelude.Text, isActive :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
