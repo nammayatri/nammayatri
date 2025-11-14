@@ -1188,16 +1188,29 @@ types:
   TripStatus:
     - enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED, UPCOMING"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+  TripType:
+    - enum: "PILOT,WIMB"
+    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
   RoundTripDetail:
     - frequency: Int
   TripDetails:
     - routeCode: Text
     - roundTrip: Maybe RoundTripDetail
+    - scheduledTripTime: Maybe UTCTime
+    - vipName: Maybe Text
+    - dutyType: Maybe Text
+    - startAddress: Maybe Address
+    - endAddress: Maybe Address
+    - tripType: Maybe TripType
+  Address:
+    - point: LatLong
+    - address: Maybe Text
   TripPlannerReq:
     - driverId: Id Driver
     - badgeName: Maybe Text # TODO :: To be deprecated, and replaced with driverBadgeName
     - driverBadgeName: Maybe Text
     - conductorBadgeName: Maybe Text
+    - pilotBadgeName: Maybe Text
     - vehicleNumber: Text
     - trips: [TripDetails]
     - derive: "'HideSecrets"
@@ -1643,7 +1656,7 @@ types:
     - rideId: Maybe Text
     - rideInfo: Maybe RideInfo
   RideInfo:
-    - enum: "Bus BusRideInfo | Car CarRideInfo"
+    - enum: "Bus BusRideInfo | Car CarRideInfo | Pilot PilotRideInfo"
   BusRideInfo:
     busNumber: Text
     routeCode: Text
@@ -1653,6 +1666,17 @@ types:
     driverName: Maybe Text
     groupId : Maybe Text
     derive: "'HideSecrets"
+  PilotRideInfo:
+    pilotNumber: Text
+    startAddress: Maybe Text
+    endAddress: Maybe Text
+    source: LatLong
+    destination: LatLong
+    driverName: Maybe Text
+    dutyType: Maybe Text
+    vipName: Maybe Text
+    scheduledTripTime: Maybe UTCTime
+    groupId: Maybe Text
   CarRideInfo:
     pickupLocation: LatLong
     minDistanceBetweenTwoPoints: Maybe Int
