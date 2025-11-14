@@ -308,6 +308,7 @@ types:
     - driverTagObject: Maybe [TagObject]
     - email: Maybe Text
     - blockedInfo : [DriverBlockTransactions]
+    - blockCount : Maybe Int
     - softBlockStiers: Maybe [Text]
     - softBlockExpiryTime: Maybe UTCTime
     - softBlockReasonFlag: Maybe Text
@@ -335,6 +336,8 @@ types:
     - consentTimestamp: UTCTime
     # - createdAt: UTCTime # do we need it?
     # - updatedAt UTCTime
+  ActionType:
+          enum: "BLOCK, UNBLOCK"
   DriverBlockTransactions:
     - reasonCode :  Maybe Text
     - blockReason : Maybe Text
@@ -344,6 +347,7 @@ types:
     - blockedBy : Text
     - requestorId : Maybe Text
     - blockReasonFlag : Maybe Text
+    - actionType: Maybe ActionType
   DriverRCAssociationAPIEntity:
     - associatedOn: UTCTime
     - associatedTill: Maybe UTCTime
