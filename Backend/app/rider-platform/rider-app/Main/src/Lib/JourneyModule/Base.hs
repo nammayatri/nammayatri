@@ -557,7 +557,7 @@ addAllLegs journeyId mbOldJourneyLegs newJourneyLegs = do
         DTrip.Walk ->
           upsertJourneyLegAction journeyLeg journeyLeg.id.getId
         DTrip.Bus -> do
-          void $ addBusLeg journey journeyLeg (upsertJourneyLegAction journeyLeg)
+          void $ addBusLeg journey journeyLeg journeyLeg.userBookedBusServiceTierType (upsertJourneyLegAction journeyLeg)
   where
     upsertJourneyLegAction :: JL.SearchRequestFlow m r c => DJourneyLeg.JourneyLeg -> Text -> m ()
     upsertJourneyLegAction journeyLeg searchId = upsertJourneyLeg (journeyLeg {DJourneyLeg.legSearchId = Just searchId})
@@ -762,9 +762,10 @@ addBusLeg ::
   JL.SearchRequestFlow m r c =>
   DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
+  Maybe Spec.ServiceTierType ->
   (forall m1 r1 c1. JL.SearchRequestFlow m1 r1 c1 => Text -> m1 ()) ->
   m JL.SearchResponse
-addBusLeg journey journeyLeg upsertJourneyLegAction = do
+addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let busSearchReq = mkBusLegReq merchantOperatingCity.city
   JL.search busSearchReq
@@ -779,7 +780,8 @@ addBusLeg journey journeyLeg upsertJourneyLegAction = do
             multimodalSearchRequestId = Just journey.searchRequestId,
             city,
             journeyLeg,
-            upsertJourneyLegAction
+            upsertJourneyLegAction,
+            serviceTier = mbServiceTier
           }
 
 getUnifiedQR :: DJourney.Journey -> [JL.LegInfo] -> Maybe JL.UnifiedTicketQR

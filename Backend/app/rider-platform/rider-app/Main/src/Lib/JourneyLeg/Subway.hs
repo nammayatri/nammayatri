@@ -12,7 +12,7 @@ import Lib.JourneyLeg.Types.Subway
 import qualified Lib.JourneyModule.Types as JT
 
 instance JT.JourneyLeg SubwayLegRequest m where
-  search (SubwayLegRequestSearch SubwayLegRequestSearchData {..}) = CFRFS.search Spec.SUBWAY personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId upsertJourneyLegAction
+  search (SubwayLegRequestSearch SubwayLegRequestSearchData {..}) = CFRFS.search Spec.SUBWAY personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId Nothing upsertJourneyLegAction
   search _ = throwError (InternalError "Not supported")
 
   confirm (SubwayLegRequestConfirm SubwayLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId bookLater bookingAllowed crisSdkResponse Spec.SUBWAY categorySelectionReq isSingleMode mbEnableOffer

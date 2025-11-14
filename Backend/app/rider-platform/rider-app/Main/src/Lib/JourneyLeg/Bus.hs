@@ -12,7 +12,7 @@ import Lib.JourneyLeg.Types.Bus
 import qualified Lib.JourneyModule.Types as JT
 
 instance JT.JourneyLeg BusLegRequest m where
-  search (BusLegRequestSearch BusLegRequestSearchData {..}) = CFRFS.search Spec.BUS personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId upsertJourneyLegAction
+  search (BusLegRequestSearch BusLegRequestSearchData {..}) = CFRFS.search Spec.BUS personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId serviceTier upsertJourneyLegAction
   search _ = throwError (InternalError "Not supported")
 
   confirm (BusLegRequestConfirm BusLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId bookLater bookingAllowed Nothing Spec.BUS categorySelectionReq isSingleMode mbEnableOffer

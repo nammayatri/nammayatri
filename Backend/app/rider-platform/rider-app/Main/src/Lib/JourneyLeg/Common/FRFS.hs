@@ -390,8 +390,8 @@ getInfo searchId journeyLeg = do
       legInfo <- JT.mkLegInfoFromFrfsSearchRequest searchReq journeyLeg
       return (Just legInfo)
 
-search :: JT.SearchRequestFlow m r c => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> Maybe (Id DRL.RecentLocation) -> Maybe Text -> (Text -> m ()) -> m JT.SearchResponse
-search vehicleCategory personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId upsertJourneyLegAction = do
+search :: JT.SearchRequestFlow m r c => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> Maybe (Id DRL.RecentLocation) -> Maybe Text -> Maybe Spec.ServiceTierType -> (Text -> m ()) -> m JT.SearchResponse
+search vehicleCategory personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId mbServiceTier upsertJourneyLegAction = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency (journeyLeg.agency <&> (.name)) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
@@ -414,7 +414,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
             startStationCode <- (rd.fromStopCode <|> (rd.fromStopGtfsId <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
             endStationCode <- (rd.toStopCode <|> (rd.toStopGtfsId <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
             routeCode <- (rd.routeGtfsId <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "Route gtfsId not found")
-            return $ FRFSRouteDetails {routeCode = Just routeCode, ..}
+            return $ FRFSRouteDetails {routeCode = Just routeCode, serviceTier = mbServiceTier, ..}
         )
         routeDetails
 

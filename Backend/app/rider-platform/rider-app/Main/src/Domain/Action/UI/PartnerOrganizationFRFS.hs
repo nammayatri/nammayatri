@@ -482,7 +482,8 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
         [ FRFSRouteDetails
             { routeCode = routeCode,
               startStationCode = fromStation.code,
-              endStationCode = toStation.code
+              endStationCode = toStation.code,
+              serviceTier = Nothing -- TODO: pass this for optimization
             }
         ]
   searchReq <- mkSearchReq bapConfig frfsVehicleType partnerOrgTransactionId partnerOrg fromStation toStation route

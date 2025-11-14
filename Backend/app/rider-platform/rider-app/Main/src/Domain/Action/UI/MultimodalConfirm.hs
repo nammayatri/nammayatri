@@ -171,7 +171,7 @@ postMultimodalInitiate (_personId, _merchantId) journeyId = do
       if journeyId.getId == ""
         then action
         else do
-          Redis.withWaitAndLockRedis lockKey 10 60 $
+          Redis.withWaitAndLockRedis lockKey 10 100 $
             action
     lockKey = "infoLock-" <> journeyId.getId
 
