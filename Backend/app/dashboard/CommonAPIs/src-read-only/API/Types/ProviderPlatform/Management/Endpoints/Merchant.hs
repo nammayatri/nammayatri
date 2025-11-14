@@ -93,6 +93,44 @@ instance Kernel.Types.HideSecrets.HideSecrets CreateFPDriverExtraFeeReq where
 data DocumentType
   = RC
   | DL
+  | Permissions
+  | SubscriptionPlan
+  | ProfilePhoto
+  | AadhaarCard
+  | PanCard
+  | VehiclePermit
+  | VehicleFitnessCertificate
+  | VehicleInsurance
+  | VehiclePUC
+  | ProfileDetails
+  | SocialSecurityNumber
+  | VehicleInspectionForm
+  | UploadProfile
+  | GSTCertificate
+  | BackgroundVerification
+  | VehicleFront
+  | VehicleBack
+  | VehicleRight
+  | VehicleLeft
+  | VehicleFrontInterior
+  | VehicleBackInterior
+  | VehicleNOC
+  | BusinessLicense
+  | Odometer
+  | InspectionHub
+  | KIWADriverCard
+  | KIWATaxiPermit
+  | KvKChamberOfCommerceRegistration
+  | TAXDetails
+  | BankingDetails
+  | VehicleDetails
+  | SchipolAirportAgreement
+  | SchipolSmartcardProof
+  | TXQualityMark
+  | TaxiDriverPermit
+  | TaxiTransportLicense
+  | FinnishIDResidencePermit
+  | BusinessRegistrationExtract
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
