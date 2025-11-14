@@ -14,6 +14,7 @@
 
 module Storage.Clickhouse.Person where
 
+import Data.Time
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMC
 import qualified Domain.Types.Person as DP
@@ -31,6 +32,7 @@ data PersonT f = PersonT
     totalRidesCount :: C f (Maybe Int),
     merchantId :: C f (Id DM.Merchant),
     merchantOperatingCityId :: C f (Maybe (Id DMC.MerchantOperatingCity)),
+    clientOsType :: C f (Maybe Text),
     createdAt :: C f UTCTime,
     updatedAt :: C f UTCTime
   }
@@ -47,6 +49,7 @@ personTTable =
       totalRidesCount = "total_rides_count",
       merchantId = "merchant_id",
       merchantOperatingCityId = "merchant_operating_city_id",
+      clientOsType = "client_os_type",
       createdAt = "created_at",
       updatedAt = "updated_at"
     }
@@ -69,3 +72,47 @@ findTotalRidesCountByPersonId personId = do
           (\person -> person.id CH.==. personId)
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE personTTable)
   return $ listToMaybe (catMaybes personRideCount)
+
+-- Aggregated registration metrics result
+data RegistrationMetrics = RegistrationMetrics
+  { metricsClientOsType :: Maybe Text,
+    metricsUserCount :: Int
+  }
+  deriving (Generic, Show)
+
+-- Get aggregated registration metrics by date range using GROUP BY
+getRegistrationMetricsByDateRange ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DMC.MerchantOperatingCity ->
+  Day -> -- Target date for IST
+  m [RegistrationMetrics]
+getRegistrationMetricsByDateRange merchantOpCityId targetDate = do
+  let istOffset = 19800 :: NominalDiffTime -- 5 hours 30 minutes in seconds
+      startOfDayUTC = addUTCTime (negate istOffset) (UTCTime targetDate 0)
+      endOfDayUTC = addUTCTime (86400 - istOffset) (UTCTime targetDate 0) -- 24 hours later in IST
+  results <-
+    CH.findAll $
+      CH.select_
+        ( \person ->
+            CH.groupBy person.clientOsType $ \osType ->
+              let userCount = CH.count_ person.id
+               in (osType, userCount)
+        )
+        $ CH.filter_
+          ( \person ->
+              person.merchantOperatingCityId CH.==. Just merchantOpCityId
+                CH.&&. person.createdAt >=. startOfDayUTC
+                CH.&&. person.createdAt <. endOfDayUTC
+                CH.&&. CH.isNotNull person.clientOsType
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE personTTable)
+
+  pure $
+    map
+      ( \(osType, count) ->
+          RegistrationMetrics
+            { metricsClientOsType = osType,
+              metricsUserCount = count
+            }
+      )
+      results

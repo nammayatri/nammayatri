@@ -175,6 +175,7 @@ RiderConfig:
     nearbyBusMaxTimeThreshold: Maybe Int
     specialVehicleNotificationConfigs: "Maybe [SpecialVehicleNotificationConfig]"
     offerListCacheVersion: Maybe Text
+    frfsMetricsApiKey: Maybe Text
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -227,6 +228,7 @@ RiderConfig:
 
   constraints:
     merchantOperatingCityId: PrimaryKey
+    frfsMetricsApiKey: !SecondaryKey
 
   intermediateTransformers:
     fromTType:
@@ -384,6 +386,9 @@ RiderConfig:
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
+    findByFrfsMetricsApiKey:
+      kvFunction: findOneWithKV
+      where: frfsMetricsApiKey
 
   beamInstance:
     - MakeTableInstances
