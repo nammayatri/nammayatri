@@ -50,9 +50,8 @@ getMyShardKey = do
 getShardedKey :: Text -> Text -> Text
 getShardedKey key shardId = key <> "{" <> shardId <> "}"
 
-runProducer :: Int -> Flow ()
-runProducer redisStreamCounter = do
-  logDebug $ "StreamName is now: " <> show redisStreamCounter
+runProducer :: Flow ()
+runProducer = do
   myShardId <- getMyShardKey
   Hedis.whenWithLockRedis (getShardedKey producerLockKey myShardId) 10 $ do
     someErr <-
@@ -66,7 +65,7 @@ runProducer redisStreamCounter = do
           let myShardSetKey = getShardedKey setName myShardId
           currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScoreByCount myShardSetKey startTime endTime 0 10000 -- 10,000 limit is good enough for a poor pod
           logDebug $ "Job chunks produced to be inserted into stream : " <> show currentJobs
-          result <- insertIntoStream currentJobs redisStreamCounter
+          result <- insertIntoStream currentJobs
           Hedis.set producerTimestampKey endTime
           logDebug $ "Jobs inserted into stream with timeStamp :" <> show result
           Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore myShardSetKey startTime endTime
@@ -76,20 +75,20 @@ runProducer redisStreamCounter = do
       Left err -> logError $ show err
       Right _ -> pure ()
 
-runReviver :: ProducerType -> Int -> Flow ()
-runReviver producerType redisStreamCounter = do
+runReviver :: ProducerType -> Flow ()
+runReviver producerType = do
   reviverInterval <- asks (.reviverInterval)
   T.UTCTime _ todaysDiffTime <- getCurrentTime
   let secondsTillNow = T.diffTimeToPicoseconds todaysDiffTime `div` 1000000000000
       shouldRunReviver = secondsTillNow `mod` (fromIntegral reviverInterval.getMinutes) == 0
-  when shouldRunReviver $ Hedis.whenWithLockRedis reviverLockKey 300 (runReviver' producerType redisStreamCounter)
+  when shouldRunReviver $ Hedis.whenWithLockRedis reviverLockKey 300 (runReviver' producerType)
   threadDelayMilliSec 60000
 
 mkRunningJobKey :: Text -> Text
 mkRunningJobKey jobId = "RunnningJob:" <> jobId
 
-runReviver' :: ProducerType -> Int -> Flow ()
-runReviver' producerType redisStreamCounter = do
+runReviver' :: ProducerType -> Flow ()
+runReviver' producerType = do
   logDebug "Reviver is Running "
   case producerType of
     Driver -> do
@@ -126,7 +125,7 @@ runReviver' producerType redisStreamCounter = do
           pure (AnyJob newJob)
       let newJobsToExecute_ = map (BSL.toStrict . Ae.encode) newJobsToExecute
       logDebug $ "Job produced to be inserted into stream of reviver: " <> show newJobsToExecute_
-      result <- insertIntoStream newJobsToExecute_ redisStreamCounter
+      result <- insertIntoStream newJobsToExecute_
       logDebug $ "Job Revived and inserted into stream with timestamp" <> show result
     Rider -> do
       pendingJobs :: [AnyJob RiderJobType] <- getAllPendingJobs
@@ -162,14 +161,12 @@ runReviver' producerType redisStreamCounter = do
           pure (AnyJob newJob)
       let newJobsToExecute_ = map (BSL.toStrict . Ae.encode) newJobsToExecute
       logDebug $ "Job produced to be inserted into stream of reviver: " <> show newJobsToExecute_
-      result <- insertIntoStream newJobsToExecute_ redisStreamCounter
+      result <- insertIntoStream newJobsToExecute_
       logDebug $ "Job Revived and inserted into stream with timestamp" <> show result
 
-insertIntoStream :: [B.ByteString] -> Int -> Flow ()
-insertIntoStream jobs streamNumber = do
-  streamName' <- asks (.streamName)
-  let streamName = streamName' <> "_" <> show streamNumber
-  logDebug $ "StreamName is now: " <> show streamName
+insertIntoStream :: [B.ByteString] -> Flow ()
+insertIntoStream jobs = do
+  streamName <- asks (.streamName)
   entryId <- asks (.entryId)
   forM_ jobs $ \job -> fork "putting into stream" $ do
     eqId <- generateGUID
