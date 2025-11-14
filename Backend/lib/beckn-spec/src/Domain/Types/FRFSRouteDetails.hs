@@ -18,6 +18,7 @@
 
 module Domain.Types.FRFSRouteDetails where
 
+import qualified BecknV2.FRFS.Enums as Spec
 import Data.Aeson
 import Data.OpenApi hiding (name)
 import qualified Data.Text as T
@@ -26,7 +27,8 @@ import EulerHS.Prelude hiding (length, map, readMaybe)
 data FRFSRouteDetails = FRFSRouteDetails
   { startStationCode :: Text,
     endStationCode :: Text,
-    routeCode :: Maybe Text
+    routeCode :: Maybe Text,
+    serviceTier :: Maybe Spec.ServiceTierType
   }
   deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
 
