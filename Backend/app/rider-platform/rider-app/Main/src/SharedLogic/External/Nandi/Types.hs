@@ -345,7 +345,7 @@ data VehicleInfoResponse = VehicleInfoResponse
 
 data DepotVehicle = DepotVehicle
   { fleet_no :: Kernel.Prelude.Text,
-    status :: Kernel.Prelude.Text,
-    vehicle_no :: Kernel.Prelude.Text
+    status :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicle_no :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
