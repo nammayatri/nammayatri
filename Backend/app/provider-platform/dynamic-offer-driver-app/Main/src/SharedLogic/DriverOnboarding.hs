@@ -623,14 +623,37 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
     API.Types.ProviderPlatform.Fleet.Onboarding.DocumentVerificationConfigAPIEntity
       { title = maybe title (.message) mbTitle,
         description = maybe description (Just . (.message)) mbDescription,
+        applicableTo = API.Types.ProviderPlatform.Fleet.Onboarding.FLEET,
         filterForOldApks = Nothing,
         rcNumberPrefixList = [],
         documentType = castDocumentType documentType,
         dependencyDocumentType = map castDocumentType dependencyDocumentType,
         documentCategory = castDocumentCategory <$> documentCategory,
         isMandatoryForEnabling = isMandatory,
+        documentFields = Nothing,
         ..
       }
+
+castDocumentApplicableType :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType -> API.Types.ProviderPlatform.Fleet.Onboarding.DocumentApplicableType
+castDocumentApplicableType = \case
+  Domain.Types.DocumentVerificationConfig.FLEET -> API.Types.ProviderPlatform.Fleet.Onboarding.FLEET
+  Domain.Types.DocumentVerificationConfig.INDIVIDUAL -> API.Types.ProviderPlatform.Fleet.Onboarding.INDIVIDUAL
+  Domain.Types.DocumentVerificationConfig.FLEET_AND_INDIVIDUAL -> API.Types.ProviderPlatform.Fleet.Onboarding.FLEET_AND_INDIVIDUAL
+
+castDocumentFieldInfo :: Domain.Types.DocumentVerificationConfig.FieldInfo -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldInfo
+castDocumentFieldInfo Domain.Types.DocumentVerificationConfig.FieldInfo {..} =
+  API.Types.ProviderPlatform.Fleet.Onboarding.FieldInfo
+    { name = name,
+      _type = castDocumentFieldType _type,
+      isMandatory = isMandatory,
+      regexValidation = regexValidation
+    }
+
+castDocumentFieldType :: Domain.Types.DocumentVerificationConfig.FieldType -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldType
+castDocumentFieldType = \case
+  Domain.Types.DocumentVerificationConfig.FieldText -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldText
+  Domain.Types.DocumentVerificationConfig.FieldInt -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldInt
+  Domain.Types.DocumentVerificationConfig.FieldDouble -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldDouble
 
 castDocumentCategory :: Domain.Types.DocumentVerificationConfig.DocumentCategory -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.DocumentCategory
 castDocumentCategory = \case

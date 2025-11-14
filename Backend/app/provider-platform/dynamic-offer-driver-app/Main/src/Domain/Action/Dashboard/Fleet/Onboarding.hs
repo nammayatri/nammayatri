@@ -77,10 +77,22 @@ getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadha
 castDocumentVerificationConfigAPIEntity :: Onboarding.DocumentVerificationConfigAPIEntity -> CommonOnboarding.DocumentVerificationConfigAPIEntity
 castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPIEntity {..} =
   CommonOnboarding.DocumentVerificationConfigAPIEntity
-    { dependencyDocumentType = SDO.castDocumentType <$> dependencyDocumentType,
-      documentType = SDO.castDocumentType documentType,
+    { title = title,
+      description = description,
+      checkExpiry = checkExpiry,
+      checkExtraction = checkExtraction,
+      dependencyDocumentType = SDO.castDocumentType <$> dependencyDocumentType,
+      disableWarning = disableWarning,
       documentCategory = SDO.castDocumentCategory <$> documentCategory,
-      ..
+      documentType = SDO.castDocumentType documentType,
+      filterForOldApks = filterForOldApks,
+      isDisabled = isDisabled,
+      isHidden = isHidden,
+      isMandatory = isMandatory,
+      isMandatoryForEnabling = isMandatoryForEnabling,
+      rcNumberPrefixList = rcNumberPrefixList,
+      applicableTo = SDO.castDocumentApplicableType applicableTo,
+      documentFields = fmap (map SDO.castDocumentFieldInfo) documentFields
     }
 
 getOnboardingGetReferralDetails ::

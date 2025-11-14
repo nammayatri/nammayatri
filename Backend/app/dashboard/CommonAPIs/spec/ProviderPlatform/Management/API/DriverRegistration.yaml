@@ -155,6 +155,15 @@ apis:
         endpoint: DriverRegistrationAPI UpdateDocumentEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DOCUMENT
+  - POST: # CreateCommonDocumentAPI
+      endpoint: /{driverId}/documents/common
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: CommonDocumentCreateReq
+      response:
+        type: APISuccess
   - POST: #UnlinkDocumentAPI
       endpoint: /{personId}/unlink/document/{documentType}
       auth: ApiAuthV2
@@ -234,6 +243,7 @@ types:
     - odometer: [Text]
     - aadhaar: [Text]
     - gstCertificate: [Text]
+    - commonDocuments: [CommonDocumentItem]
   GetDocumentResponse:
     - imageBase64: Text
     - status: Maybe VerificationStatus # TODO(Rupak): status of the document
@@ -339,6 +349,20 @@ types:
     - documentId: Id CommonDriverOnboardingDocuments
   RejectDetails:
     - enum: "SSNReject SSNRejectDetails, ImageDocuments ImageDocumentsRejectDetails, CommonDocumentReject CommonDocumentRejectDetails"
+  CommonDocumentItem:
+    - documentId: Id CommonDriverOnboardingDocuments
+    - documentType: DocumentType
+    - documentData: Text
+    - verificationStatus: VerificationStatus
+    - rejectReason: Maybe Text
+    - documentImageId: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  CommonDocumentCreateReq:
+    - documentType: DocumentType
+    - documentData: Text
+    - imageId: Maybe (Id Image)
+    - derive: "'HideSecrets"
   FitnessApproveDetails:
     - applicationNumber: Text
     - categoryOfVehicle: Maybe Text

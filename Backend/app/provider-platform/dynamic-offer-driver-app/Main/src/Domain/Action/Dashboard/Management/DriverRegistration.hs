@@ -16,6 +16,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
   ( getDriverRegistrationDocumentsList,
     getDriverRegistrationGetDocument,
     postDriverRegistrationDocumentUpload,
+    postDriverRegistrationDocumentsCommon,
     postDriverRegistrationRegisterDl,
     postDriverRegistrationRegisterRc,
     postDriverRegistrationRegisterGenerateAadhaarOtp,
@@ -65,11 +66,13 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Documents
+import Kernel.Types.Documents (VerificationStatus (..))
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Analytics as Analytics
+import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -123,6 +126,8 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   businessLicenseImgs <- getDriverImages merchant.id Domain.BusinessLicense
   aadhaarImgs <- getDriverImages merchant.id Domain.AadhaarCard
   vehicleNOCImgs <- getDriverImages merchant.id Domain.VehicleNOC
+  commonDocumentsData <- runInReplica (QCommonDriverOnboardingDocuments.findByDriverId (Just (cast driverId)))
+  let commonDocuments = map toCommonDocumentItem commonDocumentsData
   allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) $ mapMaybe listToMaybe dlImgs))
   allRCImgs <- runInReplica (QRC.findAllByImageId (map (Id) vehRegImgs))
   allDLDetails <- mapM convertDLToDLDetails allDlImgs
@@ -158,7 +163,8 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
         aadhaar = aadhaarImgs,
         vehicleNOC = vehicleNOCImgs,
         odometer = odometerImg,
-        gstCertificate = gstImgs
+        gstCertificate = gstImgs,
+        commonDocuments = commonDocuments
       }
   where
     getVehicleImages merchantId imageType = case mbRcId of
@@ -204,6 +210,19 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
             vehicleModelYear = rc.vehicleModelYear,
             failedRules = rc.failedRules
           }
+
+    toCommonDocumentItem :: DCommonDoc.CommonDriverOnboardingDocuments -> Common.CommonDocumentItem
+    toCommonDocumentItem doc =
+      Common.CommonDocumentItem
+        { documentId = cast doc.id,
+          documentType = SDO.castDocumentType doc.documentType,
+          documentData = doc.documentData,
+          verificationStatus = DCommon.castVerificationStatus doc.verificationStatus,
+          rejectReason = doc.rejectReason,
+          documentImageId = getId <$> doc.documentImageId,
+          createdAt = doc.createdAt,
+          updatedAt = doc.updatedAt
+        }
 
 getDriverRegistrationGetDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Flow Common.GetDocumentResponse
 getDriverRegistrationGetDocument merchantShortId _ imageId = do
@@ -288,6 +307,38 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
           sdkFailureReason = Nothing
         }
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
+
+postDriverRegistrationDocumentsCommon ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Driver ->
+  Common.CommonDocumentCreateReq ->
+  Flow APISuccess
+postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.CommonDocumentCreateReq {..} = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let driverPersonId = cast @Common.Driver @DP.Person driverId
+  void $ QPerson.findById driverPersonId >>= fromMaybeM (PersonNotFound driverPersonId.getId)
+  whenJust imageId $ \imgId -> do
+    void $ QImage.findById (cast imgId) >>= fromMaybeM (InvalidRequest "Image not found")
+  documentId <- generateGUID
+  now <- getCurrentTime
+  let documentEntry =
+        DCommonDoc.CommonDriverOnboardingDocuments
+          { id = documentId,
+            documentImageId = cast <$> imageId,
+            documentType = mapDocumentType documentType,
+            driverId = Just driverPersonId,
+            documentData = documentData,
+            rejectReason = Nothing,
+            verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
+            merchantOperatingCityId = merchantOpCityId,
+            merchantId = merchant.id,
+            createdAt = now,
+            updatedAt = now
+          }
+  QCommonDriverOnboardingDocuments.create documentEntry
+  pure Success
 
 postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentType -> Maybe Text -> Flow Common.UnlinkDocumentResp
 postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentType mbRequestorId = do
