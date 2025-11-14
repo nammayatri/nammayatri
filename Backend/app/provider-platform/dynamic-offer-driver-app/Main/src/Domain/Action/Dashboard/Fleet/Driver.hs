@@ -1467,20 +1467,19 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
       driverNameMap = Map.fromList $ map (\(_, person) -> (person.id.getId, person.firstName <> maybe "" (" " <>) person.lastName)) allDrivers
 
   -- Query stats based on response type
-  statsList <- case responseType of
+  driverStats <- case responseType of
     Common.EARNINGS_LIST -> do
       earningsStats <- QFODSExtra.sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
-      pure $ map buildEarningsResponse earningsStats
+      let statsList = map buildEarningsResponse earningsStats
+      forM statsList $ \(driverId, statRes) -> do
+        let driverName = fromMaybe "Unknown" $ Map.lookup driverId driverNameMap
+        pure $ Common.EarningsList $ statRes {Common.driver_name = driverName}
     Common.METRICS_LIST -> do
       metricsStats <- QFODSExtra.sumDriverMetricsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
-      pure $ map (buildMetricsResponse transporterConfig fromDay toDay) metricsStats
-
-  -- Build driver stats with names
-  driverStats <- forM statsList $ \(driverId, statRes) -> do
-    let driverName = fromMaybe "Unknown" $ Map.lookup driverId driverNameMap
-    case responseType of
-      Common.EARNINGS_LIST -> pure $ Common.EarningsList $ statRes {Common.driver_name = driverName}
-      Common.METRICS_LIST -> pure $ Common.MetricsList $ statRes {Common.driver_name = driverName}
+      let statsList = map (buildMetricsResponse transporterConfig fromDay toDay) metricsStats
+      forM statsList $ \(driverId, statRes) -> do
+        let driverName = fromMaybe "Unknown" $ Map.lookup driverId driverNameMap
+        pure $ Common.MetricsList $ statRes {Common.driver_name = driverName}
 
   let count = length driverStats
       summary = Common.Summary {totalCount = length allDrivers, count}
@@ -1513,7 +1512,8 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
           )
 
     buildMetricsResponse :: DTC.TransporterConfig -> Day -> Day -> QFODSExtra.DriverMetricsAggregated -> (Text, Common.FleetDriverMetricsStatsRes)
-    buildMetricsResponse config fromDay' toDay' agg =
+    buildMetricsResponse config _ _ agg =
+      -- commenting for compilation
       let onlineEarning = fromMaybe (HighPrecMoney 0.0) agg.onlineTotalEarningSum
           cashEarning = fromMaybe (HighPrecMoney 0.0) agg.cashTotalEarningSum
           totalEarning = onlineEarning + cashEarning
@@ -1534,8 +1534,8 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
           rideTime = fromIntegral (getSeconds rideDuration) / 3600.0
           -- Utilization: how many hours driver utilize from the onlineHours for ride (rideTime / onlineHrs)
           utilization = if onlineHrs > 0 then rideTime / onlineHrs else 0.0
-          distanceKm = fromIntegral (getMeters distance) / 1000.0
-          earningPerKm = if distanceKm > 0 then totalEarning / HighPrecMoney (toRational distanceKm) else HighPrecMoney 0.0
+          -- distanceKm = fromIntegral (getMeters distance) / 1000.0
+          earningPerKm = HighPrecMoney 0.0 --  if distanceKm > 0 then totalEarning / HighPrecMoney (toRational distanceKm) else
           -- Rating: totalRatingScore / completedRides
           rating = if completed > 0 && totalRatingScore > 0 then Just (fromIntegral totalRatingScore / fromIntegral completed) else Nothing
        in ( agg.driverId,

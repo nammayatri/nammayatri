@@ -2,7 +2,6 @@ module Storage.Queries.FleetOperatorDailyStatsExtra where
 
 import Data.Time.Calendar (Day)
 import qualified Database.Beam as B
-import Database.Beam.Postgres (Postgres)
 import qualified Domain.Types.FleetOperatorDailyStats as DFODS
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -67,7 +66,8 @@ sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
         B.select $
           B.aggregate_
             ( \stats ->
-                ( B.group_ (Beam.fleetDriverId stats), -- Need to do group by with fleetOperatorId and fleetDriverId to get the correct stats
+                ( B.group_ (Beam.fleetOperatorId stats), -- Need to do group by with fleetOperatorId and fleetDriverId to get the correct stats
+                  B.group_ (Beam.fleetDriverId stats),
                   B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlineTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
                   B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
                   B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashPlatformFees stats] (B.val_ (HighPrecMoney 0.0))),
@@ -84,7 +84,7 @@ sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
               )
               $ B.all_ (BeamCommon.fleetOperatorDailyStats BeamCommon.atlasDB)
   case res of
-    Right results -> pure $ map (\(driverId, te, ct, cpf, opf, od) -> mkDriverEarningsAggregated (driverId, te, ct, cpf, opf, od)) results
+    Right results -> pure $ map (\(_, fleetDriverId, te, ct, cpf, opf, od) -> mkDriverEarningsAggregated (fleetDriverId, te, ct, cpf, opf, od)) results
     Left _ -> pure []
 
 -- Aggregate metrics by driverId for a fleet owner
@@ -107,23 +107,15 @@ data DriverMetricsAggregated = DriverMetricsAggregated
   deriving (Show, Generic)
 
 mkDriverMetricsAggregated ::
-  ( Text,
-    Maybe HighPrecMoney,
-    Maybe HighPrecMoney,
-    Maybe Int,
-    Maybe Double,
-    Maybe Int,
-    Maybe Int,
-    Maybe Int,
-    Maybe Int,
-    Maybe Int,
-    Maybe Int,
-    Maybe Seconds,
-    Maybe Int,
+  ( Text, -- fleetOperatorId
+    Text,
+    (Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe Int, Maybe Double),
+    (Maybe Int, Maybe Int, Maybe Int, Maybe Int),
+    (Maybe Int, Maybe Int, Maybe Seconds, Maybe Int),
     Maybe Seconds
   ) ->
   DriverMetricsAggregated
-mkDriverMetricsAggregated (driverId, te, ct, cr, td, tr, rr, pr, ar, dc, cc, od, trs, rd) =
+mkDriverMetricsAggregated (_, driverId, (te, ct, cr, td), (tr, rr, pr, ar), (dc, cc, od, trs), rd) =
   DriverMetricsAggregated
     { driverId = driverId,
       onlineTotalEarningSum = te,
@@ -141,7 +133,7 @@ mkDriverMetricsAggregated (driverId, te, ct, cr, td, tr, rr, pr, ar, dc, cc, od,
       rideDurationSum = rd
     }
 
-sumDriverMetricsByFleetOwnerIdAndDriverIds ::
+sumDriverMetricsByFleetOwnerIdAndDriverIds :: -- Should we use clickhouse?
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Text ->
   [Text] ->
@@ -156,19 +148,23 @@ sumDriverMetricsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay 
         B.select $
           B.aggregate_
             ( \stats ->
-                ( B.group_ (Beam.fleetDriverId stats), -- Need to do group by with fleetOperatorId and fleetDriverId to get the correct stats
-                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlineTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
-                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
-                  B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.totalCompletedRides stats] (B.val_ 0)),
-                  B.as_ @(Maybe Double) $ B.sum_ (B.coalesce_ [Beam.totalDistance stats] (B.val_ 0.0)),
-                  B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.totalRequestCount stats] (B.val_ 0)),
-                  B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.rejectedRequestCount stats] (B.val_ 0)),
-                  B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.pulledRequestCount stats] (B.val_ 0)),
-                  B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.acceptationRequestCount stats] (B.val_ 0)),
-                  B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.driverCancellationCount stats] (B.val_ 0)),
-                  B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.customerCancellationCount stats] (B.val_ 0)),
-                  B.as_ @(Maybe Seconds) $ B.sum_ (B.coalesce_ [Beam.onlineDuration stats] (B.val_ (Seconds 0))),
-                  B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.totalRatingScore stats] (B.val_ 0)),
+                ( B.group_ (Beam.fleetOperatorId stats), -- Need to do group by with fleetOperatorId and fleetDriverId to get the correct stats
+                  B.group_ (Beam.fleetDriverId stats),
+                  ( B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlineTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
+                    B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
+                    B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.totalCompletedRides stats] (B.val_ 0)),
+                    B.as_ @(Maybe Double) $ B.sum_ (B.coalesce_ [Beam.totalDistance stats] (B.val_ 0.0))
+                  ),
+                  ( B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.totalRequestCount stats] (B.val_ 0)),
+                    B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.rejectedRequestCount stats] (B.val_ 0)),
+                    B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.pulledRequestCount stats] (B.val_ 0)),
+                    B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.acceptationRequestCount stats] (B.val_ 0))
+                  ),
+                  ( B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.driverCancellationCount stats] (B.val_ 0)),
+                    B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.customerCancellationCount stats] (B.val_ 0)),
+                    B.as_ @(Maybe Seconds) $ B.sum_ (B.coalesce_ [Beam.onlineDuration stats] (B.val_ (Seconds 0))),
+                    B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.totalRatingScore stats] (B.val_ 0))
+                  ),
                   B.as_ @(Maybe Seconds) $ B.sum_ (B.coalesce_ [Beam.rideDuration stats] (B.val_ (Seconds 0)))
                 )
             )
@@ -181,5 +177,5 @@ sumDriverMetricsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay 
               )
               $ B.all_ (BeamCommon.fleetOperatorDailyStats BeamCommon.atlasDB)
   case res of
-    Right results -> pure $ map (\(driverId, te, ct, cr, td, tr, rr, pr, ar, dc, cc, od, trs, rd) -> mkDriverMetricsAggregated (driverId, te, ct, cr, td, tr, rr, pr, ar, dc, cc, od, trs, rd)) results
+    Right results -> pure $ map mkDriverMetricsAggregated results
     Left _ -> pure []
