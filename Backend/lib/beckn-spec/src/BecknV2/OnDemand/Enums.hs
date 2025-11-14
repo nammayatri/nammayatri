@@ -15,7 +15,7 @@
 module BecknV2.OnDemand.Enums where
 
 import Data.Aeson
-import Data.Aeson.Types (typeMismatch)
+import Data.Aeson.Types (parseFail, typeMismatch)
 import Kernel.Prelude
 import Kernel.Utils.JSON
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
@@ -253,3 +253,21 @@ instance Read SafetyReasonCode where
     "DEVIATION" -> [(DEVIATION, "")]
     "RIDE_STOPPAGE" -> [(RIDE_STOPPAGE, "")]
     _ -> []
+
+data TLMethod
+  = HttpGet
+  | HttpPost
+  | StripeSdk -- custom method for Stripe SDK
+  deriving (Eq, Generic, Show, ToSchema)
+
+instance FromJSON TLMethod where
+  parseJSON (String "http/get") = pure HttpGet
+  parseJSON (String "http/post") = pure HttpPost
+  parseJSON (String "stripe/sdk") = pure StripeSdk
+  parseJSON (String _) = parseFail "Invalid tl_method"
+  parseJSON e = typeMismatch "tl_method string" e
+
+instance ToJSON TLMethod where
+  toJSON HttpGet = String "http/get"
+  toJSON HttpPost = String "http/post"
+  toJSON StripeSdk = String "stripe/sdk"

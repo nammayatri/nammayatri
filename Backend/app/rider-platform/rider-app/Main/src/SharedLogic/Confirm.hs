@@ -98,6 +98,7 @@ data DConfirmRes = DConfirmRes
     city :: Context.City,
     maxEstimatedDistance :: Maybe Distance,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    isStripe :: Bool,
     confirmResDetails :: Maybe DConfirmResDetails,
     isAdvanceBookingEnabled :: Maybe Bool,
     isInsured :: Maybe Bool,
@@ -180,8 +181,21 @@ confirm DConfirmReq {..} = do
   confirmResDetails <- case quote.tripCategory of
     Just (Trip.Delivery _) -> Just <$> makeDeliveryDetails booking bookingParties
     _ -> return Nothing
-  merchantPaymentMethod <- maybe (return Nothing) (QMPM.findById . Id) paymentMethodId
-  let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
+
+  -- FIXME Currently paymentMethodId used in two different ways. Find better way to differentiate between these two
+  (paymentMethodInfo, isStripe) <- case paymentMethodId of
+    Nothing -> pure (Nothing, False)
+    Just paymentMethodId' -> do
+      QMPM.findById (Id paymentMethodId') >>= \case
+        Just merchantPaymentMethod -> do
+          -- 1. merchantPaymentMethod.id from db
+          pure (Just $ mkPaymentMethodInfo merchantPaymentMethod, False)
+        Nothing -> do
+          -- 2. paymentMethodId which provided by Stripe SDK
+          if merchant.onlinePayment && paymentInstrument /= Just DMPM.Cash
+            then pure (Nothing, True)
+            else pure (Nothing, False)
+
   return $
     DConfirmRes
       { booking,

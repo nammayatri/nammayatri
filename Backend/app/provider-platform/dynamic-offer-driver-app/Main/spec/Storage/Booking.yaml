@@ -20,6 +20,7 @@ imports:
   Value: Data.Aeson
   ParcelType: Domain.Types.ParcelType
   BillingCategory: SharedLogic.Type
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -98,6 +99,7 @@ Booking:
     insuredAmount: Maybe Text
     exotelDeclinedCallStatusReceivingTime: Maybe UTCTime
     numberOfLuggages: Maybe Int
+    paymentInstrument: Maybe PaymentInstrument
 
   excludedFields:
     - merchantId
