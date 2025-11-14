@@ -633,7 +633,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               noOfStops = length ride.stops,
               distanceUnit = booking.distanceUnit,
               merchantOperatingCityId = Just booking.merchantOperatingCityId,
-              mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges
+              mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
+              numberOfLuggages = booking.numberOfLuggages
             }
       let finalFare = Fare.fareSum fareParams Nothing
           distanceDiff = recalcDistance - oldDistance

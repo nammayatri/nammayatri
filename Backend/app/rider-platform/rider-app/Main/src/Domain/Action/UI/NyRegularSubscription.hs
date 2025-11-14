@@ -159,7 +159,8 @@ transformToSearchReq req subscriptionId =
             placeNameSource = Nothing,
             isReserveRide = Just True,
             subscriptionId = Just subscriptionId,
-            verifyBeforeCancellingOldBooking = Just True
+            verifyBeforeCancellingOldBooking = Just True,
+            numberOfLuggages = Nothing -- Not applicable for NY Regular as of now
           }
 
 getNyRegularSubscriptionsEstimate ::

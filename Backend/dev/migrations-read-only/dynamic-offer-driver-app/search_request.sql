@@ -121,6 +121,10 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_reserve_ride boo
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_multimodal_search boolean ;
 
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN number_of_luggages integer ;
+
 
 ------- SQL updates -------
 
