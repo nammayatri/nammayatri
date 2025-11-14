@@ -27,6 +27,8 @@ data TripTransaction = TripTransaction
     driverFleetBadgeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FleetBadge.FleetBadge),
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     driverName :: Kernel.Prelude.Maybe Data.Text.Text,
+    dutyType :: Kernel.Prelude.Maybe Data.Text.Text,
+    endAddress :: Kernel.Prelude.Maybe Data.Text.Text,
     endLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest),
     endStopCode :: Data.Text.Text,
@@ -35,8 +37,12 @@ data TripTransaction = TripTransaction
     isCurrentlyDeviated :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    pilotDestination :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    pilotSource :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     roundRouteCode :: Kernel.Prelude.Maybe Data.Text.Text,
     routeCode :: Data.Text.Text,
+    scheduledTripTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    startAddress :: Kernel.Prelude.Maybe Data.Text.Text,
     startLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     startedNearStopCode :: Kernel.Prelude.Maybe Data.Text.Text,
     status :: Domain.Types.TripTransaction.TripStatus,
@@ -45,9 +51,11 @@ data TripTransaction = TripTransaction
     tripStartSource :: Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource,
     tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripTerminationSource :: Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource,
+    tripType :: Kernel.Prelude.Maybe Domain.Types.TripTransaction.TripType,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleNumber :: Data.Text.Text,
-    vehicleServiceTierType :: Domain.Types.Common.ServiceTierType
+    vehicleServiceTierType :: Domain.Types.Common.ServiceTierType,
+    vipName :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -63,6 +71,8 @@ data ActionSource
 
 data TripStatus = TRIP_ASSIGNED | CANCELLED | IN_PROGRESS | PAUSED | COMPLETED | UPCOMING deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+data TripType = PILOT | WIMB deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TripStatus)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''TripStatus)
@@ -70,3 +80,7 @@ $(Kernel.Utils.TH.mkHttpInstancesForEnum ''TripStatus)
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''ActionSource)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''ActionSource)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''TripType)
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''TripType)

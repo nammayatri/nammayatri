@@ -132,7 +132,21 @@ data CarRideInfo = CarRideInfo
   }
   deriving (Show, Eq, Generic, ToSchema)
 
-data RideInfo = Bus BusRideInfo | Car CarRideInfo
+data PilotRideInfo = PilotRideInfo
+  { destination :: LatLong,
+    driverName :: Maybe Text,
+    dutyType :: Maybe Text,
+    endAddress :: Maybe Text,
+    groupId :: Maybe Text,
+    pilotNumber :: Text,
+    scheduledTripTime :: Maybe UTCTime,
+    source :: LatLong,
+    startAddress :: Maybe Text,
+    vipName :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToSchema)
+
+data RideInfo = Bus BusRideInfo | Car CarRideInfo | Pilot PilotRideInfo
   deriving (Show, Eq, Generic, ToSchema)
 
 instance FromJSON RideInfo where
@@ -153,6 +167,20 @@ instance FromJSON RideInfo where
                       CarRideInfo <$> carObj .: "pickupLocation"
                         <*> carObj .:? "minDistanceBetweenTwoPoints"
                         <*> carObj .:? "rideStops"
+                  )
+          )
+      <|> ( Pilot
+              <$> ( obj .: "pilot" >>= \pilotObj ->
+                      PilotRideInfo <$> pilotObj .: "destination"
+                        <*> pilotObj .:? "driverName"
+                        <*> pilotObj .:? "dutyType"
+                        <*> pilotObj .:? "endAddress"
+                        <*> pilotObj .:? "groupId"
+                        <*> pilotObj .: "pilotNumber"
+                        <*> pilotObj .:? "scheduledTripTime"
+                        <*> pilotObj .: "source"
+                        <*> pilotObj .:? "startAddress"
+                        <*> pilotObj .:? "vipName"
                   )
           )
 
@@ -178,5 +206,21 @@ instance ToJSON RideInfo where
               [ "pickupLocation" .= pickupLocation,
                 "minDistanceBetweenTwoPoints" .= minDistanceBetweenTwoPoints,
                 "rideStops" .= rideStops
+              ]
+        ]
+    Pilot (PilotRideInfo {..}) ->
+      object
+        [ "pilot"
+            .= object
+              [ "destination" .= destination,
+                "driverName" .= driverName,
+                "dutyType" .= dutyType,
+                "endAddress" .= endAddress,
+                "groupId" .= groupId,
+                "pilotNumber" .= pilotNumber,
+                "scheduledTripTime" .= scheduledTripTime,
+                "source" .= source,
+                "startAddress" .= startAddress,
+                "vipName" .= vipName
               ]
         ]

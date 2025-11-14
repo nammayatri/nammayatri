@@ -62,6 +62,10 @@ data AddVehicleReq = AddVehicleReq
 instance Kernel.Types.HideSecrets.HideSecrets AddVehicleReq where
   hideSecrets = Kernel.Prelude.identity
 
+data Address = Address {point :: Kernel.External.Maps.Types.LatLong, address :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data AllTimeFleetAnalyticsRes = AllTimeFleetAnalyticsRes
   { activeVehicle :: Kernel.Prelude.Int,
     completedRides :: Kernel.Prelude.Int,
@@ -593,6 +597,21 @@ data NearbyDriversRespV2 = NearbyDriversRespV2 {drivers :: [NearbyDriverDetails]
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PilotRideInfo = PilotRideInfo
+  { destination :: Kernel.External.Maps.Types.LatLong,
+    driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dutyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    endAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    groupId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pilotNumber :: Kernel.Prelude.Text,
+    scheduledTripTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    source :: Kernel.External.Maps.Types.LatLong,
+    startAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vipName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RCStatusReq = RCStatusReq
   { rcNo :: Kernel.Prelude.Text,
     isActivate :: Kernel.Prelude.Bool,
@@ -615,6 +634,7 @@ instance Kernel.Types.HideSecrets.HideSecrets RequestRespondReq where
 data RideInfo
   = Bus BusRideInfo
   | Car CarRideInfo
+  | Pilot PilotRideInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -697,7 +717,16 @@ newtype TrackDriverLocationsRes = TrackDriverLocationsRes {driverLocations :: [T
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TripDetails = TripDetails {routeCode :: Kernel.Prelude.Text, roundTrip :: Kernel.Prelude.Maybe RoundTripDetail}
+data TripDetails = TripDetails
+  { routeCode :: Kernel.Prelude.Text,
+    roundTrip :: Kernel.Prelude.Maybe RoundTripDetail,
+    scheduledTripTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    vipName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dutyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    startAddress :: Kernel.Prelude.Maybe Address,
+    endAddress :: Kernel.Prelude.Maybe Address,
+    tripType :: Kernel.Prelude.Maybe TripType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -706,6 +735,7 @@ data TripPlannerReq = TripPlannerReq
     badgeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverBadgeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     conductorBadgeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pilotBadgeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
     trips :: [TripDetails]
   }
@@ -754,6 +784,12 @@ data TripTransactionResp = TripTransactionResp {trips :: [TripTransactionDetail]
 data TripTransactionRespT = TripTransactionRespT {trips :: [TripTransactionDetailT], totalTrips :: Kernel.Prelude.Int, summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TripType
+  = PILOT
+  | WIMB
+  deriving stock (Show, Eq, Ord, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data UpdateFleetOwnerInfoReq = UpdateFleetOwnerInfoReq
   { firstName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

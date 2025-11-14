@@ -53,6 +53,21 @@ data NearbyDriverRes = NearbyDriverRes {buckets :: [NearByDriversBucket], servic
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PilotRideInfo = PilotRideInfo
+  { destination :: Kernel.External.Maps.Types.LatLong,
+    driverName :: Kernel.Prelude.Maybe Data.Text.Text,
+    dutyType :: Kernel.Prelude.Maybe Data.Text.Text,
+    endAddress :: Kernel.Prelude.Maybe Data.Text.Text,
+    groupId :: Kernel.Prelude.Maybe Data.Text.Text,
+    pilotNumber :: Data.Text.Text,
+    scheduledTripTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    source :: Kernel.External.Maps.Types.LatLong,
+    startAddress :: Kernel.Prelude.Maybe Data.Text.Text,
+    vipName :: Kernel.Prelude.Maybe Data.Text.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RideDetails = RideDetails {rideId :: Data.Text.Text, rideInfo :: Kernel.Prelude.Maybe RideInfo}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -60,5 +75,6 @@ data RideDetails = RideDetails {rideId :: Data.Text.Text, rideInfo :: Kernel.Pre
 data RideInfo
   = Bus BusRideInfo
   | Car CarRideInfo
+  | Pilot PilotRideInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
