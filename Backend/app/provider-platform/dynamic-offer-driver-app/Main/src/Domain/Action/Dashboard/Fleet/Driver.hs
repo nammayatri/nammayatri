@@ -639,7 +639,7 @@ unlinkVehicleFromDriver merchant personId vehicleNo opCity role = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (transporterConfig.deactivateRCOnUnlink == Just True) $ DomainRC.deactivateCurrentRC transporterConfig personId
-  when ((driverInfo.onboardingVehicleCategory /= Just DVC.BUS || isNotVipOfficer) && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId False (Just False)
+  when ((driverInfo.onboardingVehicleCategory /= Just DVC.BUS && isNotVipOfficer) && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId False (Just False)
   _ <- QRCAssociation.endAssociationForRC personId rc.id
   logTagInfo (show role <> " -> unlinkVehicle : ") (show personId)
 
