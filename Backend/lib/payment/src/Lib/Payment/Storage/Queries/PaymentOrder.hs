@@ -125,7 +125,7 @@ findAllValidOrders :: BeamFlow m r => [Payment.TransactionStatus] -> [Maybe DPay
 findAllValidOrders statuses paymentFulfillmentStatuses = do
   now <- getCurrentTime
   findAllWithKV
-    [Se.Is BeamPO.validTill $ Se.GreaterThanOrEq (Just now), Se.Is BeamPO.status $ Se.In statuses, Se.Is BeamPO.paymentFulfillmentStatus $ Se.In paymentFulfillmentStatuses]
+    [Se.Is BeamPO.validTill $ Se.GreaterThanOrEq (Just now), Se.Is BeamPO.validTill $ Se.Not $ Se.Eq Nothing, Se.Is BeamPO.status $ Se.In statuses, Se.Is BeamPO.paymentFulfillmentStatus $ Se.In paymentFulfillmentStatuses]
 
 instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
   fromTType' orderT@BeamPO.PaymentOrderT {..} = do
