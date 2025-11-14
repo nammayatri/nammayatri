@@ -553,6 +553,34 @@ apis:
             response:
               type: DrivertoVehicleAssociationRes
 
+  - GET: # GetFleetDriverListStatsAPI
+      endpoint: /fleet/driver/list/stats
+      auth: ApiAuthV2
+      query:
+        - from: Day
+        - to: Day
+        - search: Text
+        - limit: Int
+        - offset: Int
+        - responseType: FleetDriverStatsResponseType
+      response:
+        type: FleetDriverStatsListRes
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/driver/list/stats
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - from: Day
+              - to: Day
+              - search: Text
+              - limit: Int
+              - offset: Int
+              - responseType: FleetDriverStatsResponseType
+            response:
+              type: FleetDriverStatsListRes
+
   - GET: # GetFleetDriverAssociationAPI
       endpoint: /fleet/driverAssociation
       auth: ApiAuthV2
@@ -1412,6 +1440,40 @@ types:
   FleetEarningListRes:
     - fleetEarningRes: [FleetEarningRes]
     - summary: Summary
+  FleetDriverStatsListRes:
+    - driverStats: [FleetDriverStatsRes]
+    - summary: Summary
+  FleetDriverStatsRes:
+    - enum: "EarningsList FleetDriverEarningsStatsRes | MetricsList FleetDriverMetricsStatsRes"
+  FleetDriverEarningsStatsRes:
+    - driver_name: Text
+    - total_earning_gross: HighPrecMoney
+    - in_app_earning_gross: HighPrecMoney
+    - cash_earning_gross: HighPrecMoney
+    - platform_fee_total: HighPrecMoney
+    - total_earning_net: HighPrecMoney
+    - in_app_earning_net: HighPrecMoney
+    - cash_earning_net: HighPrecMoney
+  FleetDriverMetricsStatsRes:
+    - driver_name: Text
+    - rating: Maybe Double
+    - accepted: Int
+    - rejected: Int
+    - passed: Int
+    - acceptance_rate: Double
+    - completed: Int
+    - driver_canceled: Int
+    - customer_canceled: Int
+    - compilation_rate: Double
+    - online_hrs: Double
+    - ride_time: Double
+    - utilization: Double
+    - distance: Meters
+    - earnings: PriceAPIEntity
+    - earning_per_km: PriceAPIEntity
+  FleetDriverStatsResponseType:
+    enum: EARNINGS_LIST | METRICS_LIST
+    derive: "HttpInstance"
   FleetBookingsInformationResponse:
     - bookings: [FleetBookingItem]
     - summary: Summary

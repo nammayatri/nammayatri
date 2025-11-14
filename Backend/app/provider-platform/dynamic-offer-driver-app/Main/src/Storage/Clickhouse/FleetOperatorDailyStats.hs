@@ -11,6 +11,7 @@ import Kernel.Types.Common
 -- Minimal ClickHouse mapping for the query we need
 data FleetOperatorDailyStatsT f = FleetOperatorDailyStatsT
   { fleetOperatorId :: C f Text,
+    fleetDriverId :: C f Text,
     merchantLocalDate :: C f Day,
     rejectedRequestCount :: C f (Maybe Int),
     pulledRequestCount :: C f (Maybe Int),
@@ -33,6 +34,7 @@ fleetOperatorDailyStatsTTable :: FleetOperatorDailyStatsT (FieldModification Fle
 fleetOperatorDailyStatsTTable =
   FleetOperatorDailyStatsT
     { fleetOperatorId = "fleet_operator_id",
+      fleetDriverId = "fleet_driver_id",
       merchantLocalDate = "merchant_local_date",
       rejectedRequestCount = "rejected_request_count",
       pulledRequestCount = "pulled_request_count",
@@ -119,6 +121,7 @@ sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
         $ CH.filter_
           ( \fos ->
               fos.fleetOperatorId CH.==. fleetOwnerId
+                CH.&&. fos.fleetDriverId CH.==. fleetOwnerId
                 CH.&&. fos.merchantLocalDate CH.>=. fromDay
                 CH.&&. fos.merchantLocalDate CH.<=. toDay
           )
@@ -169,6 +172,7 @@ sumFleetEarningsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
         $ CH.filter_
           ( \fos ->
               fos.fleetOperatorId CH.==. fleetOwnerId
+                CH.&&. fos.fleetDriverId CH.==. fleetOwnerId
                 CH.&&. fos.merchantLocalDate CH.>=. fromDay
                 CH.&&. fos.merchantLocalDate CH.<=. toDay
           )

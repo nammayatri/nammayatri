@@ -20,7 +20,7 @@ import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
-import qualified Storage.Queries.FleetOperatorDailyStats as QFODS
+import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFleetOpsDailyExtra
 import Tools.Error
 
 processingChangeOnline ::
@@ -196,15 +196,17 @@ calcAndUpdateOnlineDurationForFleetOwner transporterConfig localTime driverId me
   mbFleetDriverAssociation <- QFDA.findByDriverId driverId True
   whenJust mbFleetDriverAssociation $ \fleetDriverAssociation -> do
     let fleetOwnerId = fleetDriverAssociation.fleetOwnerId
-    mbFleetOperatorDailyStats <- QFODS.findByFleetOperatorIdAndDate fleetOwnerId merchantLocalDate
-    let newOnlineDuration = calculateOnlineDurationForFleetOwner mbFleetOperatorDailyStats
-    FOS.updateOnlineDurationDaily fleetOwnerId transporterConfig newOnlineDuration mbFleetOperatorDailyStats merchantLocalDate
+    statsList <- QFleetOpsDailyExtra.findByFleetOperatorIdAndDateWithDriverIds fleetOwnerId driverId.getId merchantLocalDate
+    let (mbFleetStats, mbDriverStats) = FOS.separateFleetAndDriverStats fleetOwnerId driverId.getId statsList
+    let newOnlineDurationFleet = calculateOnlineDuration mbFleetStats
+    let newOnlineDurationDriver = calculateOnlineDuration mbDriverStats
+    FOS.updateOnlineDurationDaily fleetOwnerId driverId.getId transporterConfig newOnlineDurationFleet newOnlineDurationDriver mbFleetStats mbDriverStats merchantLocalDate
   where
-    calculateOnlineDurationForFleetOwner mbFleetOperatorDailyStats =
+    calculateOnlineDuration mbStats =
       let lastOnlineTo = localTime
           startDayTime = UTCTime (utctDay localTime) 0
           lastOnlineFrom' = max startDayTime lastOnlineFromLocalLimited
-          mbLastOnlineDuration = mbFleetOperatorDailyStats >>= (.onlineDuration)
+          mbLastOnlineDuration = mbStats >>= (.onlineDuration)
           onlineDuration = if lastOnlineFromLocalLimited < startDayTime then Seconds 0 else fromMaybe (Seconds 0) mbLastOnlineDuration
           newOnlineDuration = onlineDuration + diffUTCTimeInSeconds lastOnlineTo lastOnlineFrom'
        in newOnlineDuration

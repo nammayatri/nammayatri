@@ -635,6 +635,7 @@ library
       Storage.Queries.FleetDriverAssociationExtra
       Storage.Queries.FleetMemberAssociationExtra
       Storage.Queries.FleetOperatorAssociationExtra
+      Storage.Queries.FleetOperatorDailyStatsExtra
       Storage.Queries.FleetOwnerInformationExtra
       Storage.Queries.FleetRCAssociationExtra
       Storage.Queries.Geometry

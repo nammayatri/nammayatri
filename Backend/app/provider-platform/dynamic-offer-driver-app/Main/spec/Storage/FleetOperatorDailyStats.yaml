@@ -10,6 +10,7 @@ FleetOperatorDailyStats:
 
   fields:
     fleetOperatorId : Text
+    fleetDriverId : Text
     merchantLocalDate : Day
     totalRatingCount : Maybe Int
     totalRatingScore : Maybe Int
@@ -23,16 +24,17 @@ FleetOperatorDailyStats:
     driverCancellationCount : Maybe Int
     totalDistance : Maybe Meters
     totalCompletedRides : Maybe Int
-    totalEarning : Maybe HighPrecMoney
+    onlineTotalEarning : Maybe HighPrecMoney
+    cashTotalEarning : Maybe HighPrecMoney
     cashPlatformFees : Maybe HighPrecMoney
     onlinePlatformFees : Maybe HighPrecMoney
     onlineDuration : Maybe Seconds
+    rideDuration : Maybe Seconds
     currency : Maybe Currency
     distanceUnit : Maybe DistanceUnit
 
   beamType:
     totalDistance: Maybe Double
-    totalEarning: Maybe HighPrecMoney
 
   fromTType:
     totalDistance: Kernel.Prelude.fmap (Kernel.Types.Common.Meters . GHC.Float.double2Int) totalDistance|E
@@ -42,64 +44,65 @@ FleetOperatorDailyStats:
 
   constraints:
     fleetOperatorId: PrimaryKey
+    fleetDriverId: PrimaryKey
     merchantLocalDate: PrimaryKey
 
   queries:
     findByFleetOperatorIdAndDate:
       kvFunction: findOneWithKV
       where:
-        and: [fleetOperatorId, merchantLocalDate]
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
 
     updateByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
-      params: [totalRatingCount, totalRatingScore, driverFirstSubscription, inspectionCompleted, rejectedRequestCount, pulledRequestCount, acceptationRequestCount, totalRequestCount, customerCancellationCount, driverCancellationCount, totalDistance, totalCompletedRides, totalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration]
+      params: [totalRatingCount, totalRatingScore, driverFirstSubscription, inspectionCompleted, rejectedRequestCount, pulledRequestCount, acceptationRequestCount, totalRequestCount, customerCancellationCount, driverCancellationCount, totalDistance, totalCompletedRides, onlineTotalEarning, cashTotalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration, rideDuration]
       where:
-        and: [fleetOperatorId, merchantLocalDate]
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
 
     updateTotalRatingCountAndTotalRatingScoreByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
       params: [totalRatingCount, totalRatingScore]
       where:
-        and: [fleetOperatorId, merchantLocalDate]
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
 
     updateDriverFirstSubscriptionByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
       params: [driverFirstSubscription]
       where:
-        and: [fleetOperatorId, merchantLocalDate]
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
 
     updateInspectionCompletedByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
       params: [inspectionCompleted]
       where:
-        and: [fleetOperatorId, merchantLocalDate]
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
 
     updateCustomerCancellationCountByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
       params: [customerCancellationCount]
       where:
-        and: [fleetOperatorId, merchantLocalDate]
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
 
     updateDriverCancellationCountByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
       params: [driverCancellationCount]
       where:
-        and: [fleetOperatorId, merchantLocalDate]
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
 
     updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
-      params: [totalDistance, totalEarning, totalCompletedRides, cashPlatformFees, onlinePlatformFees]
+      params: [totalDistance, onlineTotalEarning, cashTotalEarning, totalCompletedRides, cashPlatformFees, onlinePlatformFees, rideDuration]
       where:
-        and: [fleetOperatorId, merchantLocalDate]
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
 
     updateRequestCountsByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
       params: [rejectedRequestCount, pulledRequestCount, acceptationRequestCount, totalRequestCount]
       where:
-        and: [fleetOperatorId, merchantLocalDate]
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
 
     updateOnlineDurationByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
       params: [onlineDuration]
       where:
-        and: [fleetOperatorId, merchantLocalDate]
+        and: [fleetOperatorId, fleetDriverId, merchantLocalDate]
