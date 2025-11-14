@@ -159,6 +159,7 @@ import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DTM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Person)
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as Plan
@@ -569,7 +570,8 @@ data BookingAPIEntity = BookingAPIEntity
     isScheduled :: Bool,
     coinsRewardedOnGoldTierRide :: Maybe Int,
     isInsured :: Maybe Bool,
-    insuredAmount :: Maybe Text
+    insuredAmount :: Maybe Text,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
