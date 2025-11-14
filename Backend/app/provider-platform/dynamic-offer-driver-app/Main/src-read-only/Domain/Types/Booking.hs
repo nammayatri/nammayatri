@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.DeliveryPersonDetails
 import qualified Domain.Types.Estimate
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
@@ -67,6 +68,7 @@ data Booking = Booking
     parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelType :: Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType,
     paymentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     paymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod),
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     primaryExophone :: Kernel.Prelude.Text,

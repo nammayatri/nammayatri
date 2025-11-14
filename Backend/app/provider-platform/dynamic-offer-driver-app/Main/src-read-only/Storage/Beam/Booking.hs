@@ -8,6 +8,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Booking
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.ParcelType
 import qualified Domain.Types.Trip
 import Kernel.External.Encryption
@@ -61,6 +62,7 @@ data BookingT f = BookingT
     parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType),
     paymentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    paymentInstrument :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument),
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     primaryExophone :: B.C f Kernel.Prelude.Text,

@@ -90,10 +90,10 @@ mkStops origin mDestination mStartOtp intermediateStops =
           ]
           <> (map (\(location, order) -> UCommon.mkIntermediateStop location order (order - 1)) $ zip intermediateStops [1 ..])
 
-mkPayment :: Maybe DMPM.PaymentMethodInfo -> DBC.BecknConfig -> DRC.RiderConfig -> Context.City -> [Spec.Payment]
-mkPayment mbPaymentMethodInfo bapConfig riderConfig city = do
+mkPayment :: Maybe DMPM.PaymentMethodInfo -> DBC.BecknConfig -> DRC.RiderConfig -> Context.City -> Bool -> [Spec.Payment]
+mkPayment mbPaymentMethodInfo bapConfig riderConfig city isStripe = do
   let mkParams = SLMPM.mkBknPaymentParams mbPaymentMethodInfo bapConfig riderConfig
-  singleton $ OUP.mkPayment (show city) (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
+  singleton $ OUP.mkPayment (show city) (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee isStripe
 
 castDPaymentType :: DMPM.PaymentType -> Text
 castDPaymentType DMPM.ON_FULFILLMENT = show Enums.ON_FULFILLMENT

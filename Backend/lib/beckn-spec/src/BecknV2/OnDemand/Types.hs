@@ -1395,6 +1395,8 @@ data Payment = Payment
     -- |
     paymentTags :: Maybe [TagGroup],
     -- |
+    paymentTlMethod :: Maybe Text,
+    -- |
     paymentType :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data, Read)
@@ -1418,6 +1420,7 @@ optionsPayment =
         ("paymentParams", "params"),
         ("paymentStatus", "status"),
         ("paymentTags", "tags"),
+        ("paymentTlMethod", "tl_method"),
         ("paymentType", "type")
       ]
 
