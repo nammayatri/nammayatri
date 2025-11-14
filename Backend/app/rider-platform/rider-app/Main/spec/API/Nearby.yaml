@@ -37,7 +37,7 @@ types:
     rideInfo: Maybe RideInfo
 
   RideInfo:
-    enum: "Bus BusRideInfo | Car CarRideInfo"
+    enum: "Bus BusRideInfo | Car CarRideInfo | Pilot PilotRideInfo"
 
   BusRideInfo:
     routeCode: Text
@@ -46,6 +46,18 @@ types:
     routeLongName: Maybe Text
     driverName: Maybe Text
     groupId : Maybe Text
+
+  PilotRideInfo:
+    pilotNumber: Text
+    startAddress: Maybe Text
+    endAddress: Maybe Text
+    source: LatLong
+    destination: LatLong
+    driverName: Maybe Text
+    dutyType: Maybe Text
+    vipName: Maybe Text
+    scheduledTripTime: Maybe UTCTime
+    groupId: Maybe Text
 
   CarRideInfo:
     pickupLocation: LatLong

@@ -85,13 +85,17 @@ data TripTransactionDetails = TripTransactionDetails
   { conductorName :: Kernel.Prelude.Maybe Data.Text.Text,
     destination :: StopInfo,
     driverName :: Kernel.Prelude.Maybe Data.Text.Text,
+    dutyType :: Kernel.Prelude.Maybe Data.Text.Text,
     endRideApprovalRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest),
     routeInfo :: RouteInfo,
+    scheduledTripTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     source :: StopInfo,
     status :: Domain.Types.TripTransaction.TripStatus,
     tripTransactionId :: Kernel.Types.Id.Id Domain.Types.TripTransaction.TripTransaction,
+    tripType :: Kernel.Prelude.Maybe Domain.Types.TripTransaction.TripType,
     vehicleNumber :: Data.Text.Text,
-    vehicleType :: Domain.Types.Common.ServiceTierType
+    vehicleType :: Domain.Types.Common.ServiceTierType,
+    vipName :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

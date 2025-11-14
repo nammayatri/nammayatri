@@ -2047,6 +2047,13 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
         WMB.linkFleetBadge (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId conductorBadge DFBT.CONDUCTOR
         return $ Just conductorBadge
       Nothing -> pure Nothing
+  mbPilotBadge <-
+    case req.pilotBadgeName of
+      Just pilotBadgeName -> do
+        pilotBadge <- WMB.validateBadgeAssignment (cast req.driverId) merchant.id merchantOpCity.id fleetConfig.fleetOwnerId.getId pilotBadgeName DFBT.OFFICER
+        WMB.linkFleetBadge (cast req.driverId) merchant.id merchantOpCity.id fleetOwnerId pilotBadge DFBT.OFFICER
+        return $ Just pilotBadge
+      Nothing -> pure Nothing
   withTryCatch
     "validateVehicleAssignment:postDriverFleetTripPlanner"
     ( do
@@ -2059,7 +2066,7 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
         _ <- WMB.unlinkFleetBadgeFromDriver (cast req.driverId)
         throwError (InternalError $ "Something went wrong while linking vehicle to driver. Error: " <> (T.pack $ displayException err))
       Right vehicleRC -> do
-        createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC mbDriverBadge mbConductorBadge req.trips
+        createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC (mbDriverBadge <|> mbPilotBadge) mbConductorBadge req.trips
         pure Success
 
 createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> Maybe DFB.FleetBadge -> Maybe DFB.FleetBadge -> [Common.TripDetails] -> Flow ()
@@ -2088,34 +2095,49 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
       Nothing -> do
         QTT.createMany allTransactions
         whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
-          route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
-          (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
-          WMB.postAssignTripTransaction tripTransaction route True routeSourceStopInfo.point routeSourceStopInfo.point routeDestinationStopInfo.point True
+          case tripTransaction.tripType of
+            Just DTT.PILOT -> do
+              psource <- maybe (throwError (InternalError "Pilot source not found")) pure tripTransaction.pilotSource
+              pdestination <- maybe (throwError (InternalError "Pilot destination not found")) pure tripTransaction.pilotDestination
+              WMB.postAssignTripTransaction tripTransaction Nothing True psource psource pdestination True
+            _ -> do
+              route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
+              (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
+              WMB.postAssignTripTransaction tripTransaction (Just route) True routeSourceStopInfo.point routeSourceStopInfo.point routeDestinationStopInfo.point True
   where
+    pilotCode :: Text
+    pilotCode = "PILOT"
+
     makeTripTransactions :: Common.TripDetails -> DTT.TripStatus -> Flow [DTT.TripTransaction]
     makeTripTransactions trip tripStatus = do
-      route <- QRoute.findByRouteCode trip.routeCode >>= fromMaybeM (RouteNotFound trip.routeCode)
-      (_, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
-      case (trip.roundTrip, route.roundRouteCode) of
-        (Just _, Nothing) -> throwError (RoundTripNotAllowedForRoute route.code)
-        (Just roundTrip, Just roundRouteCode) -> do
-          when (roundTrip.frequency == 0) $ throwError RoundTripFrequencyShouldBeGreaterThanZero
-          roundRoute <- QRoute.findByRouteCode roundRouteCode >>= fromMaybeM (RouteNotFound trip.routeCode)
-          (_, roundRouteDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo roundRoute roundRouteCode
-          foldM
-            ( \accTransactions freqIdx -> do
-                let (routeCode, roundRouteCode_, endStopCode) = bool (roundRouteCode, route.code, roundRouteDestinationStopInfo.code) (route.code, roundRouteCode, routeDestinationStopInfo.code) (freqIdx `mod` 2 == 0)
-                tripTransaction <- mkTransaction routeCode (Just roundRouteCode_) endStopCode tripStatus
-                pure $ accTransactions <> [tripTransaction]
-            )
-            []
-            [0 .. (2 * roundTrip.frequency) -1]
-        (_, _) -> do
-          tripTransaction <- mkTransaction route.code route.roundRouteCode routeDestinationStopInfo.code tripStatus
+      let tripType' = fromMaybe Common.WIMB trip.tripType
+      case tripType' of
+        Common.WIMB -> do
+          route <- QRoute.findByRouteCode trip.routeCode >>= fromMaybeM (RouteNotFound trip.routeCode)
+          (_, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
+          case (trip.roundTrip, route.roundRouteCode) of
+            (Just _, Nothing) -> throwError (RoundTripNotAllowedForRoute route.code)
+            (Just roundTrip, Just roundRouteCode) -> do
+              when (roundTrip.frequency == 0) $ throwError RoundTripFrequencyShouldBeGreaterThanZero
+              roundRoute <- QRoute.findByRouteCode roundRouteCode >>= fromMaybeM (RouteNotFound trip.routeCode)
+              (_, roundRouteDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo roundRoute roundRouteCode
+              foldM
+                ( \accTransactions freqIdx -> do
+                    let (routeCode, roundRouteCode_, endStopCode) = bool (roundRouteCode, route.code, roundRouteDestinationStopInfo.code) (route.code, roundRouteCode, routeDestinationStopInfo.code) (freqIdx `mod` 2 == 0)
+                    tripTransaction <- mkTransaction routeCode (Just roundRouteCode_) endStopCode tripStatus trip
+                    pure $ accTransactions <> [tripTransaction]
+                )
+                []
+                [0 .. (2 * roundTrip.frequency) -1]
+            (_, _) -> do
+              tripTransaction <- mkTransaction route.code route.roundRouteCode routeDestinationStopInfo.code tripStatus trip
+              pure [tripTransaction]
+        Common.PILOT -> do
+          tripTransaction <- mkTransaction pilotCode Nothing pilotCode tripStatus trip
           pure [tripTransaction]
 
-    mkTransaction :: Text -> Maybe Text -> Text -> DTT.TripStatus -> Flow DTT.TripTransaction
-    mkTransaction routeCode roundRouteCode endStopCode tripStatus = do
+    mkTransaction :: Text -> Maybe Text -> Text -> DTT.TripStatus -> Common.TripDetails -> Flow DTT.TripTransaction
+    mkTransaction routeCode roundRouteCode endStopCode tripStatus trip = do
       transactionId <- generateGUID
       now <- getCurrentTime
       vehicleNumber <- decrypt vehicleRC.certificateNumber
@@ -2150,8 +2172,20 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             driverFleetBadgeId = mbDriverBadge <&> (.id),
             conductorName = mbConductorBadge <&> (.badgeName),
             conductorFleetBadgeId = mbConductorBadge <&> (.id),
+            dutyType = trip.dutyType,
+            vipName = trip.vipName,
+            startAddress = trip.startAddress >>= (.address),
+            endAddress = trip.endAddress >>= (.address),
+            scheduledTripTime = trip.scheduledTripTime,
+            pilotSource = trip.startAddress <&> (.point),
+            pilotDestination = trip.endAddress <&> (.point),
+            tripType = castTripType <$> trip.tripType,
             ..
           }
+
+    castTripType = \case
+      Common.WIMB -> DTT.WIMB
+      Common.PILOT -> DTT.PILOT
 
 ---------------------------------------------------------------------
 getDriverFleetTripTransactions :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe UTCTime -> Maybe UTCTime -> Maybe Text -> Maybe Text -> Maybe Text -> Int -> Int -> Flow Common.TripTransactionRespT
@@ -2312,7 +2346,13 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
     makeTripPlannerReq driverGroup =
       Common.TripDetails
         { routeCode = driverGroup.routeCode,
-          roundTrip = fmap (\freq -> Common.RoundTripDetail {frequency = freq}) driverGroup.roundTripFreq
+          roundTrip = fmap (\freq -> Common.RoundTripDetail {frequency = freq}) driverGroup.roundTripFreq,
+          scheduledTripTime = Nothing,
+          vipName = Nothing,
+          dutyType = Nothing,
+          startAddress = Nothing,
+          endAddress = Nothing,
+          tripType = Nothing
         }
 
 ---------------------------------------------------------------------
