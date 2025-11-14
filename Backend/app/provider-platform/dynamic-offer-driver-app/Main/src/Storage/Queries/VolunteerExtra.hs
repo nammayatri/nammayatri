@@ -33,7 +33,7 @@ findAllWithFilters merchantOpCityId limit offset mbVolunteerId mbVendorId mbIsAc
         ]
           <> catMaybes
             [ mbVolunteerId <&> \volunteerId -> Se.Is Beam.id $ Se.Eq volunteerId,
-              mbVendorId <&> \vendorId -> Se.Is Beam.vendorId $ Se.Eq (Just vendorId),
+              mbVendorId <&> \vendorId -> Se.Is Beam.vendorId $ Se.Eq vendorId,
               mbIsActive <&> \isActive -> Se.Is Beam.isActive $ Se.Eq (Just isActive)
             ]
     ]
@@ -50,7 +50,7 @@ findActiveVolunteerByIdAndVendorId volunteerId vendorId = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Id.getId volunteerId),
-          Se.Is Beam.vendorId $ Se.Eq (Just vendorId),
+          Se.Is Beam.vendorId $ Se.Eq vendorId,
           Se.Is Beam.isActive $ Se.Eq (Just True)
         ]
     ]
@@ -58,7 +58,7 @@ findActiveVolunteerByIdAndVendorId volunteerId vendorId = do
 updateIsActiveById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id.Id DV.Volunteer ->
-  Maybe Text ->
+  Text ->
   Maybe Bool ->
   m ()
 updateIsActiveById volunteerId vendorId isActive = do

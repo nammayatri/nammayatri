@@ -82,7 +82,7 @@ buildVolunteerListItem volunteer =
   Common.VolunteerListItem
     { volunteerId = getId volunteer.id,
       place = volunteer.place,
-      vendorId = volunteer.vendorId,
+      vendorId = fromMaybe "DEFAULT_VENDOR" volunteer.vendorId,
       isActive = volunteer.isActive
     }
 
@@ -98,5 +98,5 @@ postVolunteerUpdate merchantShortId opCity volunteerId vendorId req = do
   unless (volunteer.merchantOperatingCityId == Just merchantOpCityId) $
     throwError (InvalidRequest "Volunteer does not belong to this merchant operating city")
 
-  when (isJust req.isActive && req.isActive /= volunteer.isActive) $ QVolunteerExtra.updateIsActiveById volunteer.id volunteer.vendorId req.isActive
+  when (isJust req.isActive && req.isActive /= volunteer.isActive) $ QVolunteerExtra.updateIsActiveById (Id volunteerId) vendorId req.isActive
   pure Success
