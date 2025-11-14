@@ -49,6 +49,7 @@ library
       API.Dashboard
       API.Dashboard.Exotel
       API.FRFS
+      API.FRFSMetrics
       API.IGM
       API.Internal
       API.Internal.Cac
@@ -231,6 +232,7 @@ library
       Domain.Action.UI.FollowRide
       Domain.Action.UI.FRFSTicketService
       Domain.Action.UI.Frontend
+      Domain.Action.UI.GetDailyMetrics
       Domain.Action.UI.HotSpot
       Domain.Action.UI.IGM
       Domain.Action.UI.Insurance
@@ -499,6 +501,7 @@ library
       Storage.Clickhouse.ConductorStats
       Storage.Clickhouse.EstimateBreakup
       Storage.Clickhouse.FareBreakup
+      Storage.Clickhouse.FRFSTicketBooking
       Storage.Clickhouse.Location
       Storage.Clickhouse.Person
       Storage.Clickhouse.QuoteBreakup
