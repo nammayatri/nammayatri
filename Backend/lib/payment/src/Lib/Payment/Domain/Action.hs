@@ -34,7 +34,7 @@ module Lib.Payment.Domain.Action
     verifyVPAService,
     mkCreatePayoutOrderReq,
     buildPaymentOrder,
-    updateRefundStatus,
+    upsertRefundStatus,
     buildOrderOffer,
     getOrderShortId,
     getTransactionStatus,
@@ -738,7 +738,7 @@ orderStatusService personId orderId orderStatusCall = do
                 updateOrderTransaction order orderTxn Nothing
         )
         transactionUUID
-      mapM_ updateRefundStatus refunds
+      mapM_ (void . upsertRefundStatus order) refunds
       void $ QOrder.updateEffectiveAmount orderId effectiveAmount
       res <- withTryCatch "buildOrderOffer:processPaymentStatus" $ buildOrderOffer orderId offers order.merchantId order.merchantOperatingCityId
       case res of
@@ -930,7 +930,7 @@ juspayWebhookService resp respDump = do
                 updateOrderTransaction order orderTxn $ Just respDump
         )
         transactionUUID
-      mapM_ updateRefundStatus refunds
+      mapM_ (void . upsertRefundStatus order) refunds
     _ -> return ()
   return Ack
 
@@ -1119,35 +1119,44 @@ createRefundService ::
   ShortId DOrder.PaymentOrder ->
   (Payment.AutoRefundReq -> m Payment.AutoRefundResp) ->
   m (Maybe Payment.AutoRefundResp)
-createRefundService orderShortId refundsCall = do
-  order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderDoesNotExist orderShortId.getShortId)
-  exisitingOrderRefunds <- QRefunds.findAllByOrderId order.shortId
-  if null exisitingOrderRefunds
-    then do
-      paymentSplits <- QPaymentOrderSplit.findByPaymentOrder order.id
-      splitSettlementDetails <- mkSplitSettlementDetails paymentSplits
-      refundId <- generateGUID
-      let refundReq =
-            PInterface.AutoRefundReq
-              { orderId = order.shortId.getShortId,
-                requestId = refundId,
-                amount = order.amount,
-                splitSettlementDetails
-              }
-      now <- getCurrentTime
-      QRefunds.create $ mkRefundsEntry order.merchantId refundReq now
-      resp <- withTryCatch "refundsCall:refundService" (refundsCall refundReq)
-      case resp of
-        Right response -> do
-          mapM_ updateRefundStatus response.refunds
-          QRefunds.updateIsApiCallSuccess (Just True) (Id refundReq.requestId)
-          return $ Just response
-        Left err -> do
-          logError $ "Refund API Call Failure with Error: " <> show err
-          QRefunds.updateIsApiCallSuccess (Just False) (Id refundReq.requestId)
-          return Nothing
-    else return Nothing
+createRefundService orderShortId refundsCall =
+  do
+    order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderDoesNotExist orderShortId.getShortId)
+    Redis.withCrossAppRedis $
+      Redis.whenWithLockRedisAndReturnValue (refundProccessingKey orderShortId.getShortId) 60 $ do
+        processRefund order
+    >>= \case
+      Left _ -> return Nothing
+      Right response -> return response
   where
+    -- processRefund :: DOrder.PaymentOrder -> m (Maybe Payment.AutoRefundResp)
+    processRefund order = do
+      exisitingOrderRefunds <- QRefunds.findAllByOrderId order.shortId
+      if null exisitingOrderRefunds
+        then do
+          paymentSplits <- QPaymentOrderSplit.findByPaymentOrder order.id
+          splitSettlementDetails <- mkSplitSettlementDetails paymentSplits
+          refundId <- generateGUID
+          let refundReq =
+                PInterface.AutoRefundReq
+                  { orderId = order.shortId.getShortId,
+                    requestId = refundId,
+                    amount = order.amount,
+                    splitSettlementDetails
+                  }
+          refundsEntry <- mkRefundsEntry order.merchantId refundReq.requestId order.shortId order.amount REFUND_PENDING
+          QRefunds.create refundsEntry
+          resp <- withTryCatch "refundsCall:refundService" (refundsCall refundReq)
+          case resp of
+            Right response -> do
+              mapM_ (void . upsertRefundStatus order) response.refunds
+              QRefunds.updateIsApiCallSuccess (Just True) (Id refundReq.requestId)
+              return $ Just response
+            Left err -> do
+              logError $ "Refund API Call Failure with Error: " <> show err
+              QRefunds.updateIsApiCallSuccess (Just False) (Id refundReq.requestId)
+              return Nothing
+        else return Nothing
     mkSplitSettlementDetails :: MonadFlow m => [DPaymentOrderSplit.PaymentOrderSplit] -> m (Maybe PInterface.RefundSplitSettlementDetails)
     mkSplitSettlementDetails paymentSplits = do
       if null paymentSplits
@@ -1172,34 +1181,53 @@ createRefundService orderShortId refundsCall = do
                   mdrBorneBy,
                   vendor = PInterface.RefundVendor vendorSplits
                 }
+    refundProccessingKey :: Text -> Text
+    refundProccessingKey refundId = "Refund:Processing:RefundId" <> refundId
 
-    mkRefundsEntry merchantId refundReq now =
-      Refunds
-        { id = Id refundReq.requestId,
-          merchantId = merchantId.getId,
-          shortId = ShortId refundReq.requestId,
-          status = REFUND_PENDING,
-          isApiCallSuccess = Nothing,
-          orderId = ShortId refundReq.orderId,
-          refundAmount = refundReq.amount,
-          errorMessage = Nothing,
-          errorCode = Nothing,
-          idAssignedByServiceProvider = Nothing,
-          initiatedBy = Nothing,
-          createdAt = now,
-          updatedAt = now
-        }
+mkRefundsEntry :: (BeamFlow m r) => Id Merchant -> Text -> ShortId DOrder.PaymentOrder -> HighPrecMoney -> RefundStatus -> m Refunds
+mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
+  now <- getCurrentTime
+  return $
+    Refunds
+      { id = Id requestId,
+        merchantId = merchantId.getId,
+        shortId = ShortId requestId,
+        status = refundStatus,
+        isApiCallSuccess = if refundStatus == REFUND_PENDING then Nothing else Just True,
+        orderId = orderShortId,
+        refundAmount = amount,
+        errorMessage = Nothing,
+        errorCode = Nothing,
+        idAssignedByServiceProvider = Nothing,
+        initiatedBy = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }
 
-updateRefundStatus :: (BeamFlow m r) => Payment.RefundsData -> m ()
-updateRefundStatus Payment.RefundsData {..} = do
-  Redis.whenWithLockRedis (refundProccessingKey requestId) 60 $
-    QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status (Kernel.Types.Id.Id requestId)
+upsertRefundStatus :: (BeamFlow m r) => DOrder.PaymentOrder -> Payment.RefundsData -> m (Maybe Refunds)
+upsertRefundStatus order Payment.RefundsData {..} =
+  do
+    Redis.withCrossAppRedis $
+      Redis.whenWithLockRedisAndReturnValue upsertRefundProcessingKey 60 $
+        ( do
+            QRefunds.findById (Id requestId)
+              >>= \case
+                Just refundEntry -> do
+                  QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status (Id requestId)
+                  return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode}
+                Nothing -> do
+                  refundEntry <- mkRefundsEntry order.merchantId requestId order.shortId order.amount status
+                  QRefunds.create refundEntry
+                  return refundEntry
+        )
+    >>= \case
+      Left _ -> return Nothing
+      Right refundEntry -> return $ Just refundEntry
+  where
+    upsertRefundProcessingKey = "RefundUpsert:Processing:RequestId:" <> requestId
 
 txnProccessingKey :: Text -> Text
 txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid
-
-refundProccessingKey :: Text -> Text
-refundProccessingKey refundId = "Refund:Processing:RefundId" <> refundId
 
 -- payout APIs ---
 
