@@ -14,8 +14,8 @@ types:
     conductorCode: Text
   DepotVehicle:
     fleet_no: Text
-    status: Text
-    vehicle_no: Text
+    status: Maybe Text
+    vehicle_no: Maybe Text
 
 apis:
   - GET:
