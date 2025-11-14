@@ -483,3 +483,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN offer_list_cache_version text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.rider_config ADD COLUMN frfs_metrics_api_key text ;
+
+
+
+------- SQL updates -------

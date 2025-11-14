@@ -434,4 +434,6 @@ in  { esqDBCfg
     , nearByDriverAPIRateLimitOptions
     , inMemConfig
     , disableViaPointTimetableCheck
+    , frfsMetricsRateLimitHits = +100
+    , frfsMetricsRateLimitWindowSec = +60
     }
