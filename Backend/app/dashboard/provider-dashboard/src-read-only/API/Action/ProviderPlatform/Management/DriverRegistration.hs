@@ -23,10 +23,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("driver" :> (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> GetDriverRegistrationVerificationStatus :<|> PostDriverRegistrationDocumentsUpdate :<|> PostDriverRegistrationUnlinkDocument))
+type API = ("driver" :> (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> GetDriverRegistrationVerificationStatus :<|> PostDriverRegistrationDocumentsUpdate :<|> PostDriverRegistrationDocumentsCommon :<|> PostDriverRegistrationUnlinkDocument))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getDriverRegistrationDocumentsList merchantId city :<|> getDriverRegistrationGetDocument merchantId city :<|> postDriverRegistrationDocumentUpload merchantId city :<|> postDriverRegistrationRegisterDl merchantId city :<|> postDriverRegistrationRegisterRc merchantId city :<|> postDriverRegistrationRegisterAadhaar merchantId city :<|> postDriverRegistrationRegisterGenerateAadhaarOtp merchantId city :<|> postDriverRegistrationRegisterVerifyAadhaarOtp merchantId city :<|> getDriverRegistrationUnderReviewDrivers merchantId city :<|> getDriverRegistrationDocumentsInfo merchantId city :<|> getDriverRegistrationVerificationStatus merchantId city :<|> postDriverRegistrationDocumentsUpdate merchantId city :<|> postDriverRegistrationUnlinkDocument merchantId city
+handler merchantId city = getDriverRegistrationDocumentsList merchantId city :<|> getDriverRegistrationGetDocument merchantId city :<|> postDriverRegistrationDocumentUpload merchantId city :<|> postDriverRegistrationRegisterDl merchantId city :<|> postDriverRegistrationRegisterRc merchantId city :<|> postDriverRegistrationRegisterAadhaar merchantId city :<|> postDriverRegistrationRegisterGenerateAadhaarOtp merchantId city :<|> postDriverRegistrationRegisterVerifyAadhaarOtp merchantId city :<|> getDriverRegistrationUnderReviewDrivers merchantId city :<|> getDriverRegistrationDocumentsInfo merchantId city :<|> getDriverRegistrationVerificationStatus merchantId city :<|> postDriverRegistrationDocumentsUpdate merchantId city :<|> postDriverRegistrationDocumentsCommon merchantId city :<|> postDriverRegistrationUnlinkDocument merchantId city
 
 type GetDriverRegistrationDocumentsList =
   ( ApiAuth
@@ -124,6 +124,14 @@ type PostDriverRegistrationDocumentsUpdate =
       :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationDocumentsUpdate
   )
 
+type PostDriverRegistrationDocumentsCommon =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REGISTRATION / 'API.Types.ProviderPlatform.Management.DriverRegistration.POST_DRIVER_REGISTRATION_DOCUMENTS_COMMON)
+      :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationDocumentsCommon
+  )
+
 type PostDriverRegistrationUnlinkDocument =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
@@ -167,6 +175,9 @@ getDriverRegistrationVerificationStatus merchantShortId opCity apiTokenInfo driv
 
 postDriverRegistrationDocumentsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DriverRegistration.UpdateDocumentRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverRegistrationDocumentsUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverRegistration.postDriverRegistrationDocumentsUpdate merchantShortId opCity apiTokenInfo req
+
+postDriverRegistrationDocumentsCommon :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.CommonDocumentCreateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDriverRegistrationDocumentsCommon merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverRegistration.postDriverRegistrationDocumentsCommon merchantShortId opCity apiTokenInfo driverId req
 
 postDriverRegistrationUnlinkDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.DocumentType -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverRegistrationUnlinkDocument merchantShortId opCity apiTokenInfo personId documentType = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverRegistration.postDriverRegistrationUnlinkDocument merchantShortId opCity apiTokenInfo personId documentType
