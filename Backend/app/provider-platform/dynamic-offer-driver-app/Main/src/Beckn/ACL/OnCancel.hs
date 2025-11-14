@@ -219,7 +219,7 @@ tfPayments :: Price -> DM.Merchant -> DBC.BecknConfig -> Maybe Text -> Maybe [Sp
 tfPayments estimatedFare merchant bppConfig mbPaymentId = do
   let mPrice = Just estimatedFare
   let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
-  Just . L.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+  Just . L.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False
 
 tfItems :: DRB.Booking -> DM.Merchant -> Maybe FarePolicyD.FullFarePolicy -> Maybe [Spec.Item]
 tfItems booking merchant mbFarePolicy =
