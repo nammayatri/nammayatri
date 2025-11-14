@@ -8,7 +8,7 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
-data DepotVehicle = DepotVehicle {fleet_no :: Kernel.Prelude.Text, status :: Kernel.Prelude.Text, vehicle_no :: Kernel.Prelude.Text}
+data DepotVehicle = DepotVehicle {fleet_no :: Kernel.Prelude.Text, status :: Kernel.Prelude.Maybe Kernel.Prelude.Text, vehicle_no :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
