@@ -38,7 +38,8 @@ data MerchantT f = MerchantT
     requireAdminApprovalForFleetOnboarding :: B.C f (Maybe Bool),
     verifyFleetWhileLogin :: B.C f (Maybe Bool),
     hasFleetMemberHierarchy :: B.C f (Maybe Bool),
-    isStrongNameCheckRequired :: B.C f (Maybe Bool)
+    isStrongNameCheckRequired :: B.C f (Maybe Bool),
+    singleActiveSessionOnly :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 
