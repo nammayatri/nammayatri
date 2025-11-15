@@ -33,6 +33,7 @@ import Storage.Beam.FleetBookingAssignments
 import Storage.Beam.FleetBookingInformation
 import Storage.Beam.FleetDriverAssociation
 import Storage.Beam.FleetOperatorAssociation
+import Storage.Beam.FleetOperatorDailyStats
 import Storage.Beam.FleetOwnerInformation
 import Storage.Beam.Geometry
 import Storage.Beam.IdfyVerification
@@ -89,6 +90,7 @@ atlasDB =
         driverReferral = driverReferralTable,
         fleetDriverAssociation = fleetDriverAssociationTable,
         fleetOperatorAssociation = fleetOperatorAssociationTable,
+        fleetOperatorDailyStats = fleetOperatorDailyStatsTable,
         driverOperatorAssociation = driverOperatorAssociationTable,
         route = routeTable,
         operationHub = operationHubTable,
@@ -131,6 +133,7 @@ data AtlasDB f = AtlasDB
     invoice :: f (B.TableEntity InvoiceT),
     fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT),
     fleetOperatorAssociation :: f (B.TableEntity FleetOperatorAssociationT),
+    fleetOperatorDailyStats :: f (B.TableEntity FleetOperatorDailyStatsT),
     driverOperatorAssociation :: f (B.TableEntity DriverOperatorAssociationT),
     route :: f (B.TableEntity RouteT),
     operationHub :: f (B.TableEntity OperationHubT),

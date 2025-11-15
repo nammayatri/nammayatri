@@ -31,6 +31,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetDriverVehicleAssociation,
     getDriverFleetDriverAssociation,
     getDriverFleetVehicleAssociation,
+    getDriverFleetDriverListStats,
     postDriverFleetVehicleDriverRcStatus,
     postDriverUpdateFleetOwnerInfo,
     getDriverFleetOwnerInfo,
@@ -172,9 +173,11 @@ import qualified Storage.Queries.FleetBookingInformation as QFBI
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
+import qualified Storage.Queries.FleetDriverAssociationExtra as FDVE
 import qualified Storage.Queries.FleetMemberAssociation as FMA
 import qualified Storage.Queries.FleetOperatorAssociation as FOV
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssociation
+import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFODSExtra
 import qualified Storage.Queries.FleetOperatorStats as QFleetOperatorStats
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
@@ -1428,6 +1431,130 @@ getDriverFleetVehicleAssociation merchantShortId _opCity mbLimit mbOffset mbVehi
                   ..
                 }
         pure ls
+
+---------------------------------------------------------------------
+getDriverFleetDriverListStats ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Day ->
+  Maybe Day ->
+  Maybe Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Common.FleetDriverStatsResponseType ->
+  Flow Common.FleetDriverStatsListRes
+getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mbSearch mbLimit mbOffset mbResponseType = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+
+  now <- getCurrentTime
+  let fromDay = fromMaybe (utctDay now) mbFrom
+      toDay = fromMaybe (utctDay now) mbTo
+      limit = min 10 . fromMaybe 10 $ mbLimit
+      offset = fromMaybe 0 mbOffset
+      responseType = fromMaybe Common.METRICS_LIST mbResponseType
+
+  -- Get all drivers with names filtered
+  allDrivers <- FDVE.findAllDriverByFleetOwnerIds [fleetOwnerId] (Just limit) (Just offset) Nothing Nothing mbSearch
+
+  -- Extract driverIds and create name map
+  let driverIds = map (\(_, person) -> person.id.getId) allDrivers
+      driverNameMap = Map.fromList $ map (\(_, person) -> (person.id.getId, person.firstName <> maybe "" (" " <>) person.lastName)) allDrivers
+
+  -- Query stats based on response type
+  driverStats <- case responseType of
+    Common.EARNINGS_LIST -> do
+      earningsStats <- QFODSExtra.sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
+      let statsList = map buildEarningsResponse earningsStats
+      forM statsList $ \(driverId, statRes) -> do
+        let driverName = fromMaybe "Unknown" $ Map.lookup driverId driverNameMap
+        pure $ Common.EarningsList $ statRes {Common.driver_name = driverName}
+    Common.METRICS_LIST -> do
+      metricsStats <- QFODSExtra.sumDriverMetricsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
+      let statsList = map (buildMetricsResponse transporterConfig fromDay toDay) metricsStats
+      forM statsList $ \(driverId, statRes) -> do
+        let driverName = fromMaybe "Unknown" $ Map.lookup driverId driverNameMap
+        pure $ Common.MetricsList $ statRes {Common.driver_name = driverName}
+
+  let count = length driverStats
+      summary = Common.Summary {totalCount = length allDrivers, count}
+
+  pure $ Common.FleetDriverStatsListRes {driverStats, summary}
+  where
+    buildEarningsResponse :: QFODSExtra.DriverEarningsAggregated -> (Text, Common.FleetDriverEarningsStatsRes)
+    buildEarningsResponse agg =
+      let onlineEarningGross = fromMaybe (HighPrecMoney 0.0) agg.onlineTotalEarningSum
+          cashEarningGross = fromMaybe (HighPrecMoney 0.0) agg.cashTotalEarningSum
+          totalEarningGross = onlineEarningGross + cashEarningGross
+          cashPlatformFees = fromMaybe (HighPrecMoney 0.0) agg.cashPlatformFeesSum
+          onlinePlatformFees = fromMaybe (HighPrecMoney 0.0) agg.onlinePlatformFeesSum
+          platformFeeTotal = cashPlatformFees + onlinePlatformFees
+          totalEarningNet = totalEarningGross - platformFeeTotal
+          inAppEarningGross = onlineEarningGross
+          inAppEarningNet = inAppEarningGross - onlinePlatformFees
+          cashEarningNet = cashEarningGross - cashPlatformFees
+       in ( agg.driverId,
+            Common.FleetDriverEarningsStatsRes
+              { driver_name = "", -- Will be set later
+                total_earning_gross = totalEarningGross,
+                in_app_earning_gross = inAppEarningGross,
+                cash_earning_gross = cashEarningGross,
+                platform_fee_total = platformFeeTotal,
+                total_earning_net = totalEarningNet,
+                in_app_earning_net = inAppEarningNet,
+                cash_earning_net = cashEarningNet
+              }
+          )
+
+    buildMetricsResponse :: DTC.TransporterConfig -> Day -> Day -> QFODSExtra.DriverMetricsAggregated -> (Text, Common.FleetDriverMetricsStatsRes)
+    buildMetricsResponse config _ _ agg =
+      -- commenting for compilation
+      let onlineEarning = fromMaybe (HighPrecMoney 0.0) agg.onlineTotalEarningSum
+          cashEarning = fromMaybe (HighPrecMoney 0.0) agg.cashTotalEarningSum
+          totalEarning = onlineEarning + cashEarning
+          completed = fromMaybe 0 agg.totalCompletedRidesSum
+          accepted = fromMaybe 0 agg.acceptationRequestCountSum
+          rejected = fromMaybe 0 agg.rejectedRequestCountSum
+          passed = fromMaybe 0 agg.pulledRequestCountSum
+          driverCanceled = fromMaybe 0 agg.driverCancellationCountSum
+          customerCanceled = fromMaybe 0 agg.customerCancellationCountSum
+          distance = fromMaybe (Meters 0) agg.totalDistanceSum
+          onlineDuration = fromMaybe (Seconds 0) agg.onlineDurationSum
+          rideDuration = fromMaybe (Seconds 0) agg.rideDurationSum
+          totalRatingScore = fromMaybe 0 agg.totalRatingScoreSum
+          totalRequests = accepted + rejected + passed
+          acceptanceRate = if totalRequests > 0 then fromIntegral accepted / fromIntegral totalRequests else 0.0
+          compilationRate = if totalRequests > 0 then fromIntegral completed / fromIntegral totalRequests else 0.0
+          onlineHrs = fromIntegral (getSeconds onlineDuration) / 3600.0
+          rideTime = fromIntegral (getSeconds rideDuration) / 3600.0
+          -- Utilization: how many hours driver utilize from the onlineHours for ride (rideTime / onlineHrs)
+          utilization = if onlineHrs > 0 then rideTime / onlineHrs else 0.0
+          -- distanceKm = fromIntegral (getMeters distance) / 1000.0
+          earningPerKm = HighPrecMoney 0.0 --  if distanceKm > 0 then totalEarning / HighPrecMoney (toRational distanceKm) else
+          -- Rating: totalRatingScore / completedRides
+          rating = if completed > 0 && totalRatingScore > 0 then Just (fromIntegral totalRatingScore / fromIntegral completed) else Nothing
+       in ( agg.driverId,
+            Common.FleetDriverMetricsStatsRes
+              { driver_name = "", -- Will be set later
+                rating = rating,
+                accepted = accepted,
+                rejected = rejected,
+                passed = passed,
+                acceptance_rate = acceptanceRate,
+                completed = completed,
+                driver_canceled = driverCanceled,
+                customer_canceled = customerCanceled,
+                compilation_rate = compilationRate,
+                online_hrs = onlineHrs,
+                ride_time = rideTime,
+                utilization = utilization,
+                distance = distance,
+                earnings = PriceAPIEntity totalEarning config.currency,
+                earning_per_km = PriceAPIEntity earningPerKm config.currency
+              }
+          )
 
 ---------------------------------------------------------------------
 
@@ -3056,21 +3183,47 @@ getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId = do
       averageDriverRatings = if completedRides > 0 then realToFrac ratingSum / realToFrac completedRides else 0.0
   pure $ Common.AllTimeFleetAnalyticsRes {activeVehicle = activeVehicleCount, completedRides = completedRides, totalActiveDrivers = activeDriverCount, currentOnlineDrivers = currentOnlineDriverCount, averageDriverRatings = averageDriverRatings}
 
-getDriverFleetDashboardAnalytics :: ShortId DM.Merchant -> Context.City -> Text -> Data.Time.Day -> Data.Time.Day -> Flow Common.FilteredFleetAnalyticsRes
-getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId fromDay toDay = do
+getDriverFleetDashboardAnalytics :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Common.FleetAnalyticsResponseType -> Data.Time.Day -> Data.Time.Day -> Flow Common.FleetAnalyticsRes
+getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId mbResponseType fromDay toDay = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
-  -- Aggregate period metrics from ClickHouse
-  agg <- CFODS.sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay
-  let totalEarnings = PriceAPIEntity (fromMaybe (HighPrecMoney 0.0) agg.totalEarningSum) transporterConfig.currency
-      totalDistance = fromMaybe (Meters 0) agg.totalDistanceSum
-      completedRides = fromMaybe 0 agg.totalCompletedRidesSum
-      totalRideRequest = fromMaybe 0 agg.totalRequestCountSum
-      acceptedRequest = fromMaybe 0 agg.acceptationRequestCountSum
-      rejectedRequest = fromMaybe 0 agg.rejectedRequestCountSum
-      pulledRequest = fromMaybe 0 agg.pulledRequestCountSum
-      driverCancelled = fromMaybe 0 agg.driverCancellationCountSum
-      customerCancelled = fromMaybe 0 agg.customerCancellationCountSum
-  pure $ Common.FilteredFleetAnalyticsRes {..}
+
+  case mbResponseType of
+    Just Common.EARNINGS -> do
+      -- Get earnings data from ClickHouse using aggregated daily stats
+      earningsAgg <- CFODS.sumFleetEarningsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay
+      let grossEarningsAmount = fromMaybe (HighPrecMoney 0.0) earningsAgg.totalEarningSum
+          cashPlatformFeesAmount = fromMaybe (HighPrecMoney 0.0) earningsAgg.cashPlatformFeesSum
+          onlinePlatformFeesAmount = fromMaybe (HighPrecMoney 0.0) earningsAgg.onlinePlatformFeesSum
+          totalPlatformFeesAmount = cashPlatformFeesAmount + onlinePlatformFeesAmount
+          onlineDurationInHours :: Rational = maybe 0 (\(Seconds sec) -> fromIntegral sec / 3600) earningsAgg.onlineDurationSum
+          netEarningsAmount = grossEarningsAmount - totalPlatformFeesAmount
+          grossEarningsPerHourAmount = if onlineDurationInHours > 0 then grossEarningsAmount / HighPrecMoney onlineDurationInHours else HighPrecMoney 0.0
+          netEarningsPerHourAmount = if onlineDurationInHours > 0 then netEarningsAmount / HighPrecMoney onlineDurationInHours else HighPrecMoney 0.0
+
+      pure $
+        Common.Earnings $
+          Common.EarningFleetAnalyticsRes
+            { grossEarnings = PriceAPIEntity grossEarningsAmount transporterConfig.currency,
+              platformFees = PriceAPIEntity totalPlatformFeesAmount transporterConfig.currency,
+              netEarnings = PriceAPIEntity netEarningsAmount transporterConfig.currency,
+              grossEarningsPerHour = PriceAPIEntity grossEarningsPerHourAmount transporterConfig.currency,
+              netEarningsPerHour = PriceAPIEntity netEarningsPerHourAmount transporterConfig.currency
+            }
+    _ -> do
+      -- Default behavior - return FilteredFleetAnalyticsRes
+      agg <- CFODS.sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay
+      let totalEarnings = PriceAPIEntity (fromMaybe (HighPrecMoney 0.0) agg.totalEarningSum) transporterConfig.currency
+          totalDistance = fromMaybe (Meters 0) agg.totalDistanceSum
+          completedRides = fromMaybe 0 agg.totalCompletedRidesSum
+          totalRideRequest = fromMaybe 0 agg.totalRequestCountSum
+          acceptedRequest = fromMaybe 0 agg.acceptationRequestCountSum
+          rejectedRequest = fromMaybe 0 agg.rejectedRequestCountSum
+          pulledRequest = fromMaybe 0 agg.pulledRequestCountSum
+          driverCancelled = fromMaybe 0 agg.driverCancellationCountSum
+          customerCancelled = fromMaybe 0 agg.customerCancellationCountSum
+      pure $
+        Common.Filtered $
+          Common.FilteredFleetAnalyticsRes {..}
