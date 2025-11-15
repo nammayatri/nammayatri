@@ -113,6 +113,6 @@ instance B.Table DriverInformationT where
 
 type DriverInformation = DriverInformationT Identity
 
-$(enableKVPG ''DriverInformationT ['driverId] [])
+$(enableKVPG (''DriverInformationT) [('driverId)] [])
 
-$(mkTableInstances ''DriverInformationT "driver_information")
+$(mkTableInstances (''DriverInformationT) "driver_information")

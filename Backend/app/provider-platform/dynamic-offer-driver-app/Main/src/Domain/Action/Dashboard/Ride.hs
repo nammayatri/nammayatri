@@ -38,6 +38,7 @@ import Domain.Action.UI.Ride.StartRide as SRide
 import qualified Domain.Types as DTC
 import Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.Location as DLoc
@@ -68,6 +69,7 @@ import qualified Storage.Clickhouse.BppTransactionJoin as BppT
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
+import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.DriverQuote as DQ
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FareParameters as SQFP
@@ -356,6 +358,16 @@ rideInfo merchantId merchantOpCityId reqRideId = do
   driverEdaKafkaList <- CHDriverEda.findAllTuple firstDate lastDate ride.driverId (Just ride.id)
   let driverEdaKafka = listToMaybe driverEdaKafkaList
   let driverStartLocation = (\(lat, lon, _, _, _) -> KEMT.LatLong <$> lat <*> lon) =<< driverEdaKafka
+  mbIsDestinationEdited <- case ride.isPickupOrDestinationEdited of
+    Just True -> do
+      mbBookingUpdateReq <- runInReplica $ QBUR.findByBookingId ride.bookingId
+      case mbBookingUpdateReq of
+        Just bookingUpdateReq ->
+          if (bookingUpdateReq.status == DBUR.DRIVER_ACCEPTED)
+            then return $ Just True
+            else return Nothing
+        Nothing -> return Nothing
+    _ -> pure Nothing
   pure
     Common.RideInfoRes
       { rideId = cast @DRide.Ride @Common.Ride ride.id,
@@ -417,7 +429,9 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         rideStatus = mkCommonRideStatus ride.status,
         roundTrip = booking.roundTrip,
         deliveryParcelImageId = ride.deliveryFileIds >>= lastMay & fmap getId,
-        estimatedReservedDuration = timeDiffInMinutes <$> booking.returnTime <*> (Just booking.startTime)
+        estimatedReservedDuration = timeDiffInMinutes <$> booking.returnTime <*> (Just booking.startTime),
+        isPetRide = Just ride.isPetRide,
+        isDestinationEdited = mbIsDestinationEdited
       }
 
 -- TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`
