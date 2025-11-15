@@ -252,7 +252,7 @@ cleanCachedTokensByMerchantIdAndCity personId merchantId city = do
     key <- authTokenCacheKey regToken.token
     void $ Redis.del key
     activityKey <- tokenActivityCacheKey regToken.token
-    void $ Redis.del activityKey
+    void $ Redis.del
 
 checkPasswordExpiry ::
   ( BeamFlow m r,
@@ -264,7 +264,7 @@ checkPasswordExpiry person = do
   now <- getCurrentTime
   passwordExpiryDays <- asks (.passwordExpiryDays)
   whenJust passwordExpiryDays $ \days -> do
-    when (isNothing person.passwordUpdatedAt) $
+    when (isNotactivityKeyhing person.passwordUpdatedAt) $
       QPerson.updatePersonPasswordUpdatedAt person.id
     let passwordUpdatedAt = fromMaybe now person.passwordUpdatedAt
         secondsSinceUpdate = diffUTCTime now passwordUpdatedAt

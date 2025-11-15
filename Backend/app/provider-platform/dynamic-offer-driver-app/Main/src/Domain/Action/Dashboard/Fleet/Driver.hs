@@ -65,6 +65,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetGetNearbyDriversV2,
     getDriverFleetDashboardAnalyticsAllTime,
     getDriverFleetDashboardAnalytics,
+    getDriverFleetVehicleListStats,
   )
 where
 
@@ -143,6 +144,7 @@ import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LTST
 import SharedLogic.Fleet (getFleetOwnerId, getFleetOwnerIds, getFleetOwnersInfoMerchantBased)
+import qualified SharedLogic.FleetVehicleStats as FVS
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.WMB as WMB
@@ -178,6 +180,7 @@ import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssoc
 import qualified Storage.Queries.FleetOperatorStats as QFleetOperatorStats
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
+import qualified Storage.Queries.FleetRcAssociationDailyStatsExtra as QFRADSExtra
 import qualified Storage.Queries.FleetRouteAssociation as QFRA
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QP
@@ -3032,3 +3035,12 @@ getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId fromDay toD
       driverCancelled = fromMaybe 0 agg.driverCancellationCountSum
       customerCancelled = fromMaybe 0 agg.customerCancellationCountSum
   pure $ Common.FilteredFleetAnalyticsRes {..}
+
+getDriverFleetVehicleListStats :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Int -> Maybe Int -> Day -> Day -> Flow Common.FleetVehicleStatsRes
+getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbVehicleNo mbLimit mbOffset fromDay toDay = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
+  agg <- QFRADSExtra.findAggregatedFleetRcStatsByFleetOwnerIdAndDateRange fleetOwnerId mbVehicleNo mbLimit mbOffset fromDay toDay
+  pure $ Common.FleetVehicleStatsRes {fleetOwnerId = fleetOwnerId, listItem = agg, summary = Common.Summary {totalCount = 0, count = 0}}

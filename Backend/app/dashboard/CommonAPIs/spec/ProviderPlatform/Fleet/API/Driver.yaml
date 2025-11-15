@@ -1145,6 +1145,34 @@ apis:
               - to: Day
             response:
               type: FilteredFleetAnalyticsRes
+  - GET:
+      endpoint: /fleet/vehicle/list/stats
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - from: Day
+        - to: Day
+      query:
+        - vehicleNo: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: FleetVehicleStatsRes
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/vehicle/list/stats
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              - from: Day
+              - to: Day
+            query:
+              - vehicleNo: Text
+              - limit: Int
+              - offset: Int
+            response:
+              type: FleetVehicleStatsRes
+
 types:
   NearbyDriverReq:
     - point: LatLong
@@ -1674,6 +1702,19 @@ types:
     - rejectedRequest: Int
     - driverCancelled: Int
     - customerCancelled: Int
+  FleetVehicleStatsRes:
+    - fleetOwnerId: Text
+    - listItem: [FleetVehicleStatsItem]
+    - summary: Summary
+  FleetVehicleStatsItem:
+    - vehicleNo: Maybe Text
+    - vehicleModel: Maybe Text
+    - rcId: Maybe Text
+    - totalEarnings: PriceAPIEntity
+    - completedRides: Int
+    - rideDistance: Meters
+    - rideDuration: Seconds
+    - earningPerKm: Double
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
