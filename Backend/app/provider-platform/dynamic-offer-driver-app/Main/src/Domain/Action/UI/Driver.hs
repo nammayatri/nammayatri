@@ -2893,6 +2893,7 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
             validDays = Nothing,
             cancellationPenaltyAmount = Nothing,
             addedToFeeId = Nothing,
+            collectedAtVendorId = Nothing,
             currency
           }
     mkClearDuesResp (orderResp, orderId) = ClearDuesRes {orderId = orderId, orderResp}
