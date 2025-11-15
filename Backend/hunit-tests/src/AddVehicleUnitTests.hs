@@ -172,7 +172,8 @@ createTestApiTokenInfo =
             DM.verifyFleetWhileLogin = Just True,
             DM.requireAdminApprovalForFleetOnboarding = Just False,
             DM.isStrongNameCheckRequired = Just True,
-            DM.createdAt = UTCTime (fromGregorian 2023 1 1) 0
+            DM.createdAt = UTCTime (fromGregorian 2023 1 1) 0,
+            DM.singleActiveSessionOnly = Just False
           },
       Tools.Auth.Api.city = Context.Delhi,
       Tools.Auth.Api.userActionType = DMatrix.PROVIDER_FLEET (FleetTypes.DRIVER FleetAPI.POST_DRIVER_FLEET_ADD_VEHICLE),
