@@ -101,6 +101,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       petChargesCaption = show Enums.PET_CHARGES
       mbPetChargesItem = mkBreakupItem petChargesCaption . mkPrice <$> fareParams.petCharges
 
+      mkBusinessDiscountCaption = show Enums.BUSINESS_DISCOUNT
+      mbBusinessDiscountItem = mkBreakupItem mkBusinessDiscountCaption . mkPrice <$> fareParams.businessDiscount
+
       priorityChargesCaption = show Enums.PRIORITY_CHARGES
       mbPriorityChargesItem = mkBreakupItem priorityChargesCaption . mkPrice <$> fareParams.priorityCharges
 
@@ -124,6 +127,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbNightShiftChargeItem,
       mbParkingChargeItem,
       mbWaitingChargesItem,
+      mbBusinessDiscountItem,
       mbFixedGovtRateItem,
       mbPetChargesItem,
       mbPriorityChargesItem,
@@ -228,6 +232,7 @@ fareSum fareParams conditionalChargeCategories = do
   pureFareSum fareParams conditionalChargeCategories
     + fromMaybe 0.0 fareParams.driverSelectedFare
     + fromMaybe 0.0 fareParams.customerExtraFee
+    - if fareParams.shouldApplyBusinessDiscount then fromMaybe 0.0 fareParams.businessDiscount else 0.0
 
 -- Pure fare without customerExtraFee and driverSelectedFare
 pureFareSum :: FareParameters -> Maybe [DAC.ConditionalChargesCategories] -> HighPrecMoney
@@ -293,6 +298,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     currency :: Currency,
     distanceUnit :: DistanceUnit,
     petCharges :: Maybe HighPrecMoney,
+    shouldApplyBusinessDiscount :: Bool,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories]
   }
@@ -356,11 +362,14 @@ calculateFareParameters params = do
         fullRideCostN
           + fromMaybe 0 govtCharges
       cardChargeOnFare = countCardChargeOnFare fullCompleteRideCost <$> (fp.cardCharge >>= (.perDistanceUnitMultiplier))
+      rideCostForBusinessDiscount = fullRideCost + fromMaybe 0.0 resultNightShiftCharge + finalCongestionCharge + notPartOfNightShiftCharge ------------Business Discount includes Base Fare, Night Shift Charge, Congestion Charge, pickup charges, Duration Fare and distance Fare
+      businessDiscount = maybe Nothing (\discountPercentage -> Just $ HighPrecMoney $ (rideCostForBusinessDiscount.getHighPrecMoney * toRational discountPercentage) / 100) fp.businessDiscountPercentage
       fareParams =
         FareParameters
           { id,
             driverSelectedFare = params.driverSelectedFare,
             customerExtraFee = params.customerExtraFee,
+            shouldApplyBusinessDiscount = params.shouldApplyBusinessDiscount,
             serviceCharge = fp.serviceCharge,
             parkingCharge = fp.parkingCharge,
             petCharges = params.petCharges,
