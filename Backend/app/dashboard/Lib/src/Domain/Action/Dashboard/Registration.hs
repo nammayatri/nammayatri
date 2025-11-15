@@ -202,7 +202,7 @@ generateLoginRes person merchant otp city = do
   (isToken, msg) <- check2FA _merchantAccess merchant otp
   token <-
     if isToken
-      then generateToken person.id merchant.id city
+      then generateToken person.id merchant city
       else pure ""
   pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled msg city merchant.shortId
 
@@ -253,23 +253,17 @@ generateToken ::
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   Id DP.Person ->
-  Id DMerchant.Merchant ->
+  DMerchant.Merchant ->
   City.City ->
   m Text
-generateToken personId merchantId city = do
-  merchant <-
-    B.runInReplica $
-      QMerchant.findById merchantId
-        >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  token <-
-    case merchant.singleActiveSessionOnly of
-      Just True -> generateNewToken personId merchantId city
-      _ -> do
-        findPreviousToken <- QR.findByPersonIdAndMerchantIdAndCity personId merchantId city
-        case findPreviousToken of
-          Just token -> pure token.token
-          Nothing -> generateNewToken personId merchantId city
-  pure token
+generateToken personId merchant city = do
+  case merchant.singleActiveSessionOnly of
+    Just True -> generateNewToken personId merchant.id city
+    _ -> do
+      findPreviousToken <- QR.findByPersonIdAndMerchantIdAndCity personId merchant.id city
+      case findPreviousToken of
+        Just token -> pure token.token
+        Nothing -> generateNewToken personId merchant.id city
 
 generateNewToken ::
   ( BeamFlow m r,
