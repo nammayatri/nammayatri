@@ -50,3 +50,9 @@ ALTER TABLE atlas_app.ticket_service ADD COLUMN sub_place_id character varying(3
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_service ADD COLUMN max_selection integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN priority integer ;
+ALTER TABLE atlas_app.ticket_service ADD COLUMN note text ;

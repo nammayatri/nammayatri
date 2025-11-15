@@ -1188,6 +1188,8 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 isClosed = False,
                 serviceDetails = Nothing,
                 maxSelection = Nothing,
+                note = Nothing,
+                priority = Nothing,
                 ..
               }
 

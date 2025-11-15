@@ -192,6 +192,8 @@ TicketService:
     rules: "Maybe [Rule]"
     isClosed: Bool
     maxSelection: Maybe Int
+    note: Maybe Text
+    priority: Maybe Int
   types:
     ExpiryType:
       enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay,ValidityDays Kernel.Prelude.Int"
