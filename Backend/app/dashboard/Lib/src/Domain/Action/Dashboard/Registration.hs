@@ -149,9 +149,6 @@ login LoginReq {..} = do
               defaultCityPresent = elem merchant.defaultOperatingCity merchantWithCityList
               city' = if defaultCityPresent then merchant.defaultOperatingCity else head merchantWithCityList
           pure (merchant, city')
-  -- Remove existing registration token from cache and DB if found
-  Auth.cleanCachedTokensByMerchantIdAndCity person.id merchant'.id city'
-  QR.deleteAllByPersonIdAndMerchantIdAndCity person.id merchant'.id city'
   generateLoginRes person merchant' otp city'
 
 makeEmailHitsCountKey :: Maybe Text -> Text
@@ -260,15 +257,11 @@ generateToken ::
   City.City ->
   m Text
 generateToken personId merchantId city = do
-  findPreviousToken <- QR.findByPersonIdAndMerchantIdAndCity personId merchantId city
-  case findPreviousToken of
-    Just regToken -> pure $ regToken.token
-    Nothing -> do
-      regToken <- buildRegistrationToken personId merchantId city
-      Auth.cleanCachedTokensByMerchantIdAndCity personId merchantId city
-      QR.deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city
-      QR.create regToken
-      pure $ regToken.token
+  Auth.cleanCachedTokensByMerchantIdAndCity personId merchantId city
+  QR.deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city
+  regToken <- buildRegistrationToken personId merchantId city
+  QR.create regToken
+  pure regToken.token
 
 logout ::
   ( BeamFlow m r,
