@@ -111,6 +111,13 @@ findNextEligibleTripTransactionByDriverIdStatus fleetOwnerId driverId status = d
     (trip : _) -> pure (Just trip)
     [] -> pure Nothing
 
+findNextEligibleTripTransactionByDriverIdStatusForPilot :: Text -> Id Person -> TripStatus -> Flow (Maybe TripTransaction)
+findNextEligibleTripTransactionByDriverIdStatusForPilot fleetOwnerId driverId status = do
+  let sortType = if isNonTerminalTripStatus status then QTT.SortAsc else QTT.SortDesc
+  QTT.findAllTripTransactionByDriverIdStatusForPilot (Id fleetOwnerId) driverId (Just 1) (Just 0) (Just status) sortType >>= \case
+    (trip : _) -> pure (Just trip)
+    [] -> pure Nothing
+
 isNonTerminalTripStatus :: TripStatus -> Bool
 isNonTerminalTripStatus status = any (== status) [TRIP_ASSIGNED, IN_PROGRESS, UPCOMING]
 
@@ -231,9 +238,15 @@ endOngoingTripTransaction fleetConfig tripTransaction currentLocation tripTermin
           Just PILOT -> do
             -- For PILOT, just update driver status
             QDI.updateOnRide False tripTransaction.driverId
-            when fleetConfig.unlinkDriverAndVehicleOnTripTermination $
-              unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
-            unlinkFleetBadgeFromDriver tripTransaction.driverId
+            findNextEligibleTripTransactionByDriverIdStatusForPilot tripTransaction.fleetOwnerId.getId tripTransaction.driverId TRIP_ASSIGNED >>= \case
+              Just advancedTripTransaction -> do
+                psource <- maybe (throwError (InternalError "Pilot source not found")) pure tripTransaction.pilotSource
+                pdestination <- maybe (throwError (InternalError "Pilot destination not found")) pure tripTransaction.pilotDestination
+                postAssignTripTransaction advancedTripTransaction Nothing False currentLocation psource pdestination True
+              Nothing -> do
+                findNextEligibleTripTransactionByDriverIdStatusForPilot tripTransaction.fleetOwnerId.getId tripTransaction.driverId UPCOMING >>= \case
+                  Just advancedTripTransaction -> void $ assignUpcomingTripTransaction advancedTripTransaction currentLocation
+                  Nothing -> pure ()
           _ -> do
             -- Existing WIMB logic for finding next trip
             findNextEligibleTripTransactionByDriverIdStatus tripTransaction.fleetOwnerId.getId tripTransaction.driverId TRIP_ASSIGNED >>= \case
@@ -288,8 +301,15 @@ cancelTripTransaction fleetConfig tripTransaction currentLocation tripTerminatio
                         case tripTransaction.tripType of
                           Just PILOT -> do
                             QDI.updateOnRide False tripTransaction.driverId
-                            when fleetConfig.unlinkDriverAndVehicleOnTripTermination $ unlinkVehicleToDriver tripTransaction.driverId tripTransaction.merchantId tripTransaction.merchantOperatingCityId tripTransaction.vehicleNumber
-                            unlinkFleetBadgeFromDriver tripTransaction.driverId
+                            findNextEligibleTripTransactionByDriverIdStatusForPilot tripTransaction.fleetOwnerId.getId tripTransaction.driverId TRIP_ASSIGNED >>= \case
+                              Just advancedTripTransaction -> do
+                                psource <- maybe (throwError (InternalError "Pilot source not found")) pure tripTransaction.pilotSource
+                                pdestination <- maybe (throwError (InternalError "Pilot destination not found")) pure tripTransaction.pilotDestination
+                                postAssignTripTransaction advancedTripTransaction Nothing False currentLocation psource pdestination True
+                              Nothing -> do
+                                findNextEligibleTripTransactionByDriverIdStatusForPilot tripTransaction.fleetOwnerId.getId tripTransaction.driverId UPCOMING >>= \case
+                                  Just advancedTripTransaction -> void $ assignUpcomingTripTransaction advancedTripTransaction currentLocation
+                                  Nothing -> pure ()
                           _ -> do
                             findNextEligibleTripTransactionByDriverIdStatus tripTransaction.fleetOwnerId.getId tripTransaction.driverId TRIP_ASSIGNED >>= \case
                               Just advancedTripTransaction -> do
@@ -682,9 +702,15 @@ updateAlertRequestStatus status reason alertRequestId = do
 assignUpcomingTripTransaction :: TripTransaction -> LatLong -> Flow TripTransaction
 assignUpcomingTripTransaction tripTransaction currentLocation = do
   unless (tripTransaction.status == UPCOMING) $ throwError (InvalidTripStatus $ show tripTransaction.status)
-  route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
-  (sourceStopInfo, destinationStopInfo) <- getSourceAndDestinationStopInfo route tripTransaction.routeCode
   let tripTransactionT = tripTransaction {DTT.status = TRIP_ASSIGNED}
   QTT.updateStatus tripTransactionT.status tripTransaction.id
-  postAssignTripTransaction tripTransactionT (Just route) False currentLocation sourceStopInfo.point destinationStopInfo.point True
+  case tripTransaction.tripType of
+    Just PILOT -> do
+      psource <- maybe (throwError (InternalError "Pilot source not found")) pure tripTransaction.pilotSource
+      pdestination <- maybe (throwError (InternalError "Pilot destination not found")) pure tripTransaction.pilotDestination
+      postAssignTripTransaction tripTransactionT Nothing False currentLocation psource pdestination True
+    _ -> do
+      route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
+      (sourceStopInfo, destinationStopInfo) <- getSourceAndDestinationStopInfo route tripTransaction.routeCode
+      postAssignTripTransaction tripTransactionT (Just route) False currentLocation sourceStopInfo.point destinationStopInfo.point True
   return tripTransactionT

@@ -47,6 +47,38 @@ findAllTripTransactionByDriverIdStatus fleetOwnerId driverId mbLimit mbOffset mb
       (Just offsetVal)
   pure transactions
 
+findAllTripTransactionByDriverIdStatusForPilot ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+  Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+  Maybe Domain.Types.TripTransaction.TripStatus ->
+  SortType ->
+  m [Domain.Types.TripTransaction.TripTransaction]
+findAllTripTransactionByDriverIdStatusForPilot fleetOwnerId driverId mbLimit mbOffset mbStatus sortType = do
+  let limitVal = case mbLimit of
+        Just val -> val
+        Nothing -> 10
+  let offsetVal = case mbOffset of
+        Just val -> val
+        Nothing -> 0
+  let statusFilter =
+        case mbStatus of
+          Just status -> [Se.Is BeamT.status $ Se.Eq status]
+          Nothing -> []
+  let filterSort =
+        case sortType of
+          SortAsc -> Se.Asc BeamT.scheduledTripTime
+          SortDesc -> Se.Desc BeamT.scheduledTripTime
+  transactions <-
+    findAllWithOptionsKV
+      [Se.And ([Se.Is BeamT.driverId $ Se.Eq driverId.getId, Se.Is BeamT.fleetOwnerId $ Se.Eq fleetOwnerId.getId, Se.Is BeamT.tripType $ Se.Eq (Just PILOT)] <> statusFilter)]
+      filterSort
+      (Just limitVal)
+      (Just offsetVal)
+  pure transactions
+
 findAllTripTransactionByDriverIdActiveStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
