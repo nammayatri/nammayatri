@@ -218,7 +218,7 @@ postTicketsTicketdashboardLoginVerify merchantShortId opCity req = do
   person <- QP.findByMobileNumberAndRoleIdsWithType @'PT.TicketDashboard req.mobileNumber req.mobileCountryCode ticketDashboardRoleIds >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   _ <- API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsTicketdashboardLoginVerify) req
-  token <- DR.generateToken person.id merchant.id merchant.defaultOperatingCity
+  token <- DR.generateToken person.id merchant merchant.defaultOperatingCity
   unless (person.verified == Just True) $ QP.updatePersonVerifiedStatus person.id True
   pure $ API.Types.Dashboard.AppManagement.Tickets.TicketDashboardLoginResp {authToken = Just token}
 
