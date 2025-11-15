@@ -211,7 +211,8 @@ testPostRegistrationV2RegisterWithRealExecution =
                         DM.verifyFleetWhileLogin = Just True,
                         DM.requireAdminApprovalForFleetOnboarding = Just False,
                         DM.isStrongNameCheckRequired = Just True,
-                        DM.createdAt = UTCTime (fromGregorian 2020 1 1) 0
+                        DM.createdAt = UTCTime (fromGregorian 2020 1 1) 0,
+                        DM.singleActiveSessionOnly = Just False
                       },
                   Tools.Auth.Api.city = Context.Bangalore,
                   Tools.Auth.Api.userActionType = DMatrix.PROVIDER_FLEET (FleetAPI.REGISTRATION_V2 Common.POST_REGISTRATION_V2_REGISTER),
@@ -263,7 +264,8 @@ testPostRegistrationV2RegisterWithRealExecution =
                         DM.verifyFleetWhileLogin = Just True,
                         DM.requireAdminApprovalForFleetOnboarding = Just False,
                         DM.isStrongNameCheckRequired = Just True,
-                        DM.createdAt = UTCTime (fromGregorian 2020 1 1) 0
+                        DM.createdAt = UTCTime (fromGregorian 2020 1 1) 0,
+                        DM.singleActiveSessionOnly = Just False
                       },
                   Tools.Auth.Api.city = Context.Bangalore,
                   Tools.Auth.Api.userActionType = DMatrix.PROVIDER_FLEET (FleetAPI.REGISTRATION_V2 Common.POST_REGISTRATION_V2_REGISTER),
