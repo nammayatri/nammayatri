@@ -368,6 +368,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         isInsured = booking.isInsured,
         insuredAmount = booking.insuredAmount,
         cancellationChargesOnCancel = Nothing,
+        pickupEtaLogicVersion = Nothing,
         ..
       }
 
