@@ -83,7 +83,7 @@ fleetOwnerVerfiy req = withFlowHandlerAPI' $ do
   unless (req.city `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   void $ Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerVerify) req
-  token <- DR.generateToken person.id merchant.id req.city
+  token <- DR.generateToken person.id merchant req.city
   when (person.verified /= Just True && (merchant.verifyFleetWhileLogin == Just True) && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
   pure $ DP.FleetOwnerVerifyRes {authToken = token}
 
@@ -97,7 +97,7 @@ fleetOwnerRegister req = withFlowHandlerAPI' $ do
       enabled = not $ fromMaybe False merchant.requireAdminApprovalForFleetOnboarding
   res <- Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerRegister) (Just enabled) req
   void $ registerFleetOwner req' (Id res.personId)
-  token <- DR.generateToken (Id res.personId) merchant.id req.city
+  token <- DR.generateToken (Id res.personId) merchant req.city
   pure $ FleetOwnerRegisterResp "Success" (Just token)
 
 buildFleetOwnerRegisterReq :: DP.FleetOwnerRegisterReq -> FleetRegisterReq

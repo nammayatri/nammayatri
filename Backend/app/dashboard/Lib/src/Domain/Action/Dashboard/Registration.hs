@@ -149,9 +149,6 @@ login LoginReq {..} = do
               defaultCityPresent = elem merchant.defaultOperatingCity merchantWithCityList
               city' = if defaultCityPresent then merchant.defaultOperatingCity else head merchantWithCityList
           pure (merchant, city')
-  -- Remove existing registration token from cache and DB if found
-  Auth.cleanCachedTokensByMerchantIdAndCity person.id merchant'.id city'
-  QR.deleteAllByPersonIdAndMerchantIdAndCity person.id merchant'.id city'
   generateLoginRes person merchant' otp city'
 
 makeEmailHitsCountKey :: Maybe Text -> Text
@@ -205,7 +202,7 @@ generateLoginRes person merchant otp city = do
   (isToken, msg) <- check2FA _merchantAccess merchant otp
   token <-
     if isToken
-      then generateToken person.id merchant.id city
+      then generateToken person.id merchant city
       else pure ""
   pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled msg city merchant.shortId
 
@@ -256,19 +253,33 @@ generateToken ::
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   Id DP.Person ->
+  DMerchant.Merchant ->
+  City.City ->
+  m Text
+generateToken personId merchant city = do
+  case merchant.singleActiveSessionOnly of
+    Just True -> generateNewToken personId merchant.id city
+    _ -> do
+      findPreviousToken <- QR.findByPersonIdAndMerchantIdAndCity personId merchant.id city
+      case findPreviousToken of
+        Just token -> pure token.token
+        Nothing -> generateNewToken personId merchant.id city
+
+generateNewToken ::
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  Id DP.Person ->
   Id DMerchant.Merchant ->
   City.City ->
   m Text
-generateToken personId merchantId city = do
-  findPreviousToken <- QR.findByPersonIdAndMerchantIdAndCity personId merchantId city
-  case findPreviousToken of
-    Just regToken -> pure $ regToken.token
-    Nothing -> do
-      regToken <- buildRegistrationToken personId merchantId city
-      Auth.cleanCachedTokensByMerchantIdAndCity personId merchantId city
-      QR.deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city
-      QR.create regToken
-      pure $ regToken.token
+generateNewToken personId merchantId city = do
+  regToken <- buildRegistrationToken personId merchantId city
+  Auth.cleanCachedTokensByMerchantIdAndCity personId merchantId city
+  QR.deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city
+  QR.create regToken
+  pure $ regToken.token
 
 logout ::
   ( BeamFlow m r,

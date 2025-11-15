@@ -78,7 +78,7 @@ postRegistrationV2VerifyOtp merchantShortId opCity req = do
   unless (opCity `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   void $ Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2VerifyOtp) req
-  token <- DDR.generateToken person.id merchant.id opCity
+  token <- DDR.generateToken person.id merchant opCity
   when (person.verified /= Just True && (merchant.verifyFleetWhileLogin == Just True) && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
   pure $ Common.FleetOwnerVerifyResV2 {authToken = token}
 
