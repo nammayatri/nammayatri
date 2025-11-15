@@ -5,6 +5,9 @@ module Domain.Action.ProviderPlatform.Fleet.RegistrationV2
     postRegistrationV2Register',
     RegisterClientCall,
     buildFleetOwnerRegisterReqV2,
+    getRegistrationV2FleetMembers,
+    postRegistrationV2FleetMembersUnlink,
+    deleteRegistrationV2FleetMember,
   )
 where
 
@@ -37,9 +40,10 @@ import "lib-dashboard" Tools.Error
 postRegistrationV2LoginOtp ::
   ShortId DM.Merchant ->
   City.City ->
+  Maybe Text ->
   Common.FleetOwnerLoginReqV2 ->
   Flow APISuccess
-postRegistrationV2LoginOtp merchantShortId opCity req = do
+postRegistrationV2LoginOtp merchantShortId opCity requestorId req = do
   runRequestValidation Common.validateInitiateLoginReqV2 req
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let enabled = fromMaybe False merchant.verifyFleetWhileLogin
@@ -49,7 +53,7 @@ postRegistrationV2LoginOtp merchantShortId opCity req = do
   mbPerson <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
   let req' = buildFleetOwnerRegisterReqV2 merchantShortId opCity req
   fleetOwnerRole <- QRole.findByDashboardAccessType DRole.FLEET_OWNER >>= fromMaybeM (RoleNotFound $ show DRole.FLEET_OWNER)
-  res <- Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2LoginOtp) enabled req
+  res <- Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2LoginOtp) requestorId enabled req
   when (isNothing mbPerson) $ do
     let personId = cast @Common.Person @DP.Person res.personId
     createFleetOwnerDashboardOnly fleetOwnerRole merchant req' personId
@@ -70,14 +74,15 @@ buildFleetOwnerRegisterReqV2 merchantShortId opCity Common.FleetOwnerLoginReqV2 
 postRegistrationV2VerifyOtp ::
   ShortId DM.Merchant ->
   City.City ->
+  Maybe Text ->
   Common.FleetOwnerVerifyReqV2 ->
   Flow Common.FleetOwnerVerifyResV2
-postRegistrationV2VerifyOtp merchantShortId opCity req = do
+postRegistrationV2VerifyOtp merchantShortId opCity requestorId req = do
   person <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   unless (opCity `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  void $ Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2VerifyOtp) req
+  void $ Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2VerifyOtp) requestorId req
   token <- DDR.generateToken person.id merchant.id opCity
   when (person.verified /= Just True && (merchant.verifyFleetWhileLogin == Just True) && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
   pure $ Common.FleetOwnerVerifyResV2 {authToken = token}
@@ -150,4 +155,22 @@ postRegistrationV2Register' clientCall merchantShortId opCity apiTokenInfo req =
       Just Common.RENTAL_FLEET -> DRole.RENTAL_FLEET_OWNER
       Just Common.NORMAL_FLEET -> DRole.FLEET_OWNER
       Just Common.BUSINESS_FLEET -> DRole.FLEET_OWNER
+      Just Common.FLEET_MANAGER -> DRole.FLEET_MANAGER
       Nothing -> DRole.FLEET_OWNER
+
+getRegistrationV2FleetMembers :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Flow Common.FleetMemberAssociationRes)
+getRegistrationV2FleetMembers merchantShortId opCity apiTokenInfo limit offset from to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.getRegistrationV2FleetMembers) apiTokenInfo.personId.getId limit offset from to
+
+postRegistrationV2FleetMembersUnlink :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Flow APISuccess)
+postRegistrationV2FleetMembersUnlink merchantShortId opCity apiTokenInfo fleetMemberId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing T.emptyRequest
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2FleetMembersUnlink) apiTokenInfo.personId.getId fleetMemberId
+
+deleteRegistrationV2FleetMember :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Flow APISuccess)
+deleteRegistrationV2FleetMember merchantShortId opCity apiTokenInfo fleetMemberId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing T.emptyRequest
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.deleteRegistrationV2FleetMember) apiTokenInfo.personId.getId fleetMemberId

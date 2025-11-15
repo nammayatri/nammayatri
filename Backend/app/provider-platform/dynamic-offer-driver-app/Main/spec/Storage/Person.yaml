@@ -23,7 +23,7 @@ Person:
       recordType: Type
       derive': ""
     Role:
-      enum: "DRIVER, ADMIN, FLEET_OWNER, FLEET_BUSINESS, OPERATOR"
+      enum: "DRIVER, ADMIN, FLEET_OWNER, FLEET_BUSINESS, OPERATOR, FLEET_MANAGER"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     IdentifierType:

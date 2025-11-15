@@ -39,6 +39,7 @@ import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import Domain.Utils
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (encrypt, getDbHash)
@@ -60,6 +61,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetMemberAssociation as FMA
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
@@ -276,17 +278,18 @@ fleetOwnerVerify ::
   Flow APISuccess
 fleetOwnerVerify req = do
   let h = FleetOwnerVerifyHandle {mkMobileNumberOtpKey = makeMobileNumberOtpKey}
-  fleetOwnerVerifyHandler h req
+  fleetOwnerVerifyHandler Nothing h req
 
 newtype FleetOwnerVerifyHandle = FleetOwnerVerifyHandle
   { mkMobileNumberOtpKey :: Text -> Text
   }
 
 fleetOwnerVerifyHandler ::
+  Maybe Text ->
   FleetOwnerVerifyHandle ->
   FleetOwnerLoginReq ->
   Flow APISuccess
-fleetOwnerVerifyHandler h req = do
+fleetOwnerVerifyHandler mbFleetOwnerId h req = do
   case req.otp of
     Just otp -> do
       mobileNumberOtpKey <- Redis.safeGet $ h.mkMobileNumberOtpKey req.mobileNumber
@@ -300,8 +303,13 @@ fleetOwnerVerifyHandler h req = do
           mobileNumberHash <- getDbHash req.mobileNumber
           person <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR] >>= fromMaybeM (PersonNotFound req.mobileNumber)
           -- currently we don't create fleetOwnerInfo for operator
-          when (person.role == DP.FLEET_OWNER) $
-            void $ QFOI.updateFleetOwnerVerifiedStatus True person.id
+          case person.role of
+            DP.FLEET_OWNER -> do
+              void $ QFOI.updateFleetOwnerVerifiedStatus True person.id
+            DP.FLEET_MANAGER -> do
+              fleetOwnerId <- maybe (throwM $ InvalidRequest "Fleet Owner ID is required") pure mbFleetOwnerId
+              void $ FMA.updateFleetMemberStatusAndAssociation True (convertTextToUTC (Just "2099-12-12")) person.id.getId fleetOwnerId
+            _ -> pure ()
           pure Success
         Nothing -> throwError InvalidAuthData
     _ -> throwError InvalidAuthData

@@ -18,3 +18,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_member_association ADD PRIMARY KEY ( fl
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_member_association DROP CONSTRAINT fleet_member_association_pkey;
 ALTER TABLE atlas_driver_offer_bpp.fleet_member_association ADD PRIMARY KEY ( fleet_member_id, fleet_owner_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_member_association ADD COLUMN associated_till timestamp with time zone ;

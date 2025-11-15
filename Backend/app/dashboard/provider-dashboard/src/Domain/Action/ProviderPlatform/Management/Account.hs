@@ -99,6 +99,7 @@ castDashboardAccessType = \case
   DRole.TICKET_DASHBOARD_MERCHANT -> Common.TICKET_DASHBOARD_MERCHANT
   DRole.TICKET_DASHBOARD_ADMIN -> Common.TICKET_DASHBOARD_ADMIN
   DRole.TICKET_DASHBOARD_APPROVER -> Common.TICKET_DASHBOARD_APPROVER
+  DRole.FLEET_MANAGER -> Common.FLEET_MANAGER
 
 postAccountVerifyAccount ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

@@ -39,7 +39,7 @@ FleetOwnerInformation:
   excludedFields: [merchantOperatingCityId]
   types:
     FleetType:
-      enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
+      enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET,FLEET_MANAGER"
   beamType:
     isEligibleForSubscription: Maybe Bool
 
