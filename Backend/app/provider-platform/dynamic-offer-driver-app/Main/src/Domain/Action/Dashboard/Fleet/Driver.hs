@@ -2072,26 +2072,38 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
 createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> Maybe DFB.FleetBadge -> Maybe DFB.FleetBadge -> [Common.TripDetails] -> Flow ()
 createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC mbDriverBadge mbConductorBadge trips = do
   initialActiveTrip <- WMB.findNextActiveTripTransaction fleetOwnerId (cast driverId)
-  let isActive = case initialActiveTrip of
-        Just _ -> True
-        Nothing -> False
-  (allTransactions, _) <-
+  let (isActive, mbScheduledTripTime) = case initialActiveTrip of
+        Just tripTransaction -> (True, if tripTransaction.status == DTT.TRIP_ASSIGNED then tripTransaction.scheduledTripTime else Nothing)
+        Nothing -> (False, Nothing)
+  (allTransactions, _, mbLeastScheduledTripTime) <-
     foldM
-      ( \(accTransactions, updatedIsActive) trip -> do
+      ( \(accTransactions, updatedIsActive, mbScheduledTripTime') trip -> do
           ( if updatedIsActive
               then do
-                tripTransactions <- makeTripTransactions trip DTT.UPCOMING
-                return (accTransactions <> tripTransactions, updatedIsActive)
+                case trip.tripType of
+                  Just Common.PILOT -> do
+                    if fromMaybe False ((>) <$> mbScheduledTripTime' <*> trip.scheduledTripTime)
+                      then do
+                        tripTransactions <- makeTripTransactions trip DTT.TRIP_ASSIGNED
+                        return (accTransactions <> tripTransactions, updatedIsActive, trip.scheduledTripTime)
+                      else do
+                        tripTransactions <- makeTripTransactions trip DTT.UPCOMING
+                        return (accTransactions <> tripTransactions, updatedIsActive, mbScheduledTripTime')
+                  _ -> do
+                    tripTransactions <- makeTripTransactions trip DTT.UPCOMING
+                    return (accTransactions <> tripTransactions, updatedIsActive, mbScheduledTripTime')
               else do
                 tripTransactions <- makeTripTransactions trip DTT.TRIP_ASSIGNED
-                return (accTransactions <> tripTransactions, True)
+                return (accTransactions <> tripTransactions, True, mbScheduledTripTime')
             )
       )
-      ([], isActive)
-      trips
+      ([], isActive, mbScheduledTripTime)
+      (sortOn (.scheduledTripTime) trips)
   WMB.findNextActiveTripTransaction fleetOwnerId (cast driverId)
     >>= \case
-      Just _ -> QTT.createMany allTransactions
+      Just tTran -> do
+        when (fromMaybe False ((<) <$> mbLeastScheduledTripTime <*> tTran.scheduledTripTime)) $ QTT.updateStatus DTT.UPCOMING tTran.id
+        QTT.createMany allTransactions
       Nothing -> do
         QTT.createMany allTransactions
         whenJust (listToMaybe allTransactions) $ \tripTransaction -> do
