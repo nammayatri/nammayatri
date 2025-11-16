@@ -182,6 +182,7 @@ fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> pure vsc
     Just (DMSC.PassPaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.ParkingPaymentServiceConfig vsc) -> pure vsc
     _ -> throwError $ InternalError "Unknown Service Config"
   where
     getPaymentServiceByType = \case
@@ -191,6 +192,7 @@ fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service
       Just Payment.FRFSBusBooking -> DMSC.BusPaymentService service
       Just Payment.FRFSMultiModalBooking -> DMSC.MultiModalPaymentService service
       Just Payment.FRFSPassPurchase -> DMSC.PassPaymentService service
+      Just Payment.ParkingBooking -> DMSC.ParkingPaymentService service
       Nothing -> DMSC.PaymentService service
 
 juspayWebhookHandler ::

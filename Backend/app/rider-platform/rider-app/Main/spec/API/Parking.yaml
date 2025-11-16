@@ -1,0 +1,32 @@
+imports:
+  Text: Data.Text
+  HighPrecMoney: Kernel.Types.Common
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+
+module: ParkingBooking
+types:
+  ParkingBookingReq:
+    amount: HighPrecMoney
+    entityId: Text
+    parkingStartTime: UTCTime
+    parkingEndTime: UTCTime
+    slotNumber: Text
+    vehicleNumber: Text
+    derive: "Show"
+
+  ParkingBookingResponse:
+    parkingLotId: Text
+    paymentLink: Text
+    orderId: Id PaymentOrder
+    derive: "Show"
+
+apis:
+  - POST:
+      endpoint: /multimodal/parking/book
+      headers:
+        api-key: Text
+      request:
+        type: ParkingBookingReq
+      response:
+        type: ParkingBookingResponse
+

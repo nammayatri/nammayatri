@@ -35,4 +35,5 @@ in  { dbUserId = "atlas_app_user"
     , locationTrackingServiceKey = "ae288466-2add-11ee-be56-0242ac120002"
     , ondcTokenMap
     , googleSAPrivateKey
+    , parkingApiKey = "test-parking-api-key"
     }

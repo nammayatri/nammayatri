@@ -5,6 +5,7 @@ import qualified Data.HashMap.Strict as HM
 import Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.Cancel as DCancel
 import Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import Domain.Action.UI.ParkingBooking as ParkingBooking
 import Domain.Action.UI.Pass as Pass
 import qualified Domain.Types.Booking as Booking
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -13,6 +14,7 @@ import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.ParkingTransaction as DPT
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as Ride
@@ -42,6 +44,7 @@ import qualified SharedLogic.JobScheduler as JobScheduler
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.ParkingTransaction as QPT
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
@@ -189,6 +192,9 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
             DOrder.FRFSPassPurchase -> do
               status <- DPayment.getTransactionStatus paymentStatusResponse
               Pass.passOrderStatusHandler paymentOrder.id (cast paymentOrder.merchantId) status
+            DOrder.ParkingBooking -> do
+              status <- DPayment.getTransactionStatus paymentStatusResponse
+              ParkingBooking.parkingBookingOrderStatusHandler paymentOrder.id (cast paymentOrder.merchantId) status
             DOrder.BBPS -> do
               paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler (cast paymentOrder.merchantId) paymentStatusResponse
               return (paymentFulfillStatus, Nothing, Nothing)
@@ -268,6 +274,7 @@ refundStatusHandler paymentOrder refunds paymentServiceType = do
             DOrder.FRFSBusBooking -> bookingsRefundStatusHandler refundEntry
             DOrder.FRFSMultiModalBooking -> bookingsRefundStatusHandler refundEntry
             DOrder.FRFSPassPurchase -> passesRefundStatusHandler refundEntry
+            DOrder.ParkingBooking -> parkingBookingRefundStatusHandler refundEntry
             _ -> pure ()
     )
     refunds
@@ -323,6 +330,29 @@ refundStatusHandler paymentOrder refunds paymentServiceType = do
             Nothing -> QPurchasedPass.updateStatusById DPurchasedPass.RefundPending purchasedPass.id purchasedPass.startDate purchasedPass.endDate
             Just True -> QPurchasedPass.updateStatusById DPurchasedPass.RefundInitiated purchasedPass.id purchasedPass.startDate purchasedPass.endDate
             Just False -> QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id purchasedPass.startDate purchasedPass.endDate
+
+    parkingBookingRefundStatusHandler ::
+      ( EsqDBFlow m r,
+        CacheFlow m r,
+        MonadFlow m,
+        EsqDBReplicaFlow m r,
+        ServiceFlow m r,
+        EncFlow m r
+      ) =>
+      DRefunds.Refunds ->
+      m ()
+    parkingBookingRefundStatusHandler refund = do
+      parkingTransaction <- QPT.findByPaymentOrderId paymentOrder.id >>= fromMaybeM (InvalidRequest "Parking transaction not found")
+      case refund.status of
+        Payment.REFUND_SUCCESS -> do
+          QPT.updateStatusById DPT.Refunded parkingTransaction.id
+        Payment.REFUND_FAILURE -> do
+          QPT.updateStatusById DPT.RefundFailed parkingTransaction.id
+        _ ->
+          case refund.isApiCallSuccess of
+            Nothing -> QPT.updateStatusById DPT.RefundPending parkingTransaction.id
+            Just True -> QPT.updateStatusById DPT.RefundInitiated parkingTransaction.id
+            Just False -> QPT.updateStatusById DPT.RefundFailed parkingTransaction.id
 
 initiateRefundWithPaymentStatusRespSync ::
   ( EsqDBFlow m r,

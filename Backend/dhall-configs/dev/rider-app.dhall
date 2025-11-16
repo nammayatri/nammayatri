@@ -434,4 +434,5 @@ in  { esqDBCfg
     , nearByDriverAPIRateLimitOptions
     , inMemConfig
     , disableViaPointTimetableCheck
+    , parkingApiKey = sec.parkingApiKey
     }

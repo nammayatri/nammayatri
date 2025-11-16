@@ -60,6 +60,7 @@ data MerchantT f = MerchantT
     scheduleRideBufferTime :: B.C f Kernel.Types.Common.Seconds,
     shortId :: B.C f Kernel.Prelude.Text,
     signatureExpiry :: B.C f Kernel.Prelude.Int,
+    signingPrivateKey :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
     signingPublicKey :: B.C f Kernel.Types.Base64.Base64,
     stuckRideAutoCancellationBuffer :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     subscriberId :: B.C f Kernel.Prelude.Text,

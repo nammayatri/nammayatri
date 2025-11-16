@@ -247,6 +247,7 @@ library
       Domain.Action.UI.NearbyBuses
       Domain.Action.UI.NearbyDrivers
       Domain.Action.UI.NyRegularSubscription
+      Domain.Action.UI.ParkingBooking
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Pass
       Domain.Action.UI.Payment
@@ -621,6 +622,7 @@ library
       Tools.Payout
       Tools.Schema
       Tools.SignatureAuth
+      Tools.SignatureResponseBody
       Tools.SMS
       Tools.Streaming.Kafka
       Tools.Ticket
@@ -679,6 +681,7 @@ library
       API.Action.UI.NearbyBuses
       API.Action.UI.NearbyDrivers
       API.Action.UI.NyRegularSubscription
+      API.Action.UI.ParkingBooking
       API.Action.UI.Pass
       API.Action.UI.PickupInstructions
       API.Action.UI.Places
@@ -747,6 +750,7 @@ library
       API.Types.UI.NearbyBuses
       API.Types.UI.NearbyDrivers
       API.Types.UI.NyRegularSubscription
+      API.Types.UI.ParkingBooking
       API.Types.UI.Pass
       API.Types.UI.PickupInstructions
       API.Types.UI.Places
@@ -841,6 +845,7 @@ library
       Domain.Types.NyRegularSubscription
       Domain.Types.OnSearchEvent
       Domain.Types.ParcelDetails
+      Domain.Types.ParkingTransaction
       Domain.Types.PartnerOrganization
       Domain.Types.PartnerOrgConfig
       Domain.Types.PartnerOrgStation
@@ -987,6 +992,7 @@ library
       Storage.Beam.NyRegularSubscription
       Storage.Beam.OnSearchEvent
       Storage.Beam.ParcelDetails
+      Storage.Beam.ParkingTransaction
       Storage.Beam.PartnerOrganization
       Storage.Beam.PartnerOrgConfig
       Storage.Beam.PartnerOrgStation
@@ -1197,6 +1203,7 @@ library
       Storage.Queries.OrphanInstances.VehicleRouteMapping
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.ParcelDetails
+      Storage.Queries.ParkingTransaction
       Storage.Queries.PartnerOrganization
       Storage.Queries.PartnerOrgConfig
       Storage.Queries.PartnerOrgStation

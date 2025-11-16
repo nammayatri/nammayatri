@@ -69,6 +69,9 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.PassPaymentService Payment.Juspay -> Domain.PassPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
     Domain.PassPaymentService Payment.AAJuspay -> Domain.PassPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
     Domain.PassPaymentService Payment.Stripe -> Domain.PassPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
+    Domain.ParkingPaymentService Payment.Juspay -> Domain.ParkingPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
+    Domain.ParkingPaymentService Payment.AAJuspay -> Domain.ParkingPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
+    Domain.ParkingPaymentService Payment.Stripe -> Domain.ParkingPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
     Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.JourneyMonitoring -> Domain.TokenizationServiceConfig . Tokenize.JourneyMonitoringTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.HyperVerge -> Domain.TokenizationServiceConfig . Tokenize.HyperVergeTokenizationServiceConfig <$> valueToMaybe configJSON
@@ -141,6 +144,9 @@ getServiceNameConfigJson = \case
       Just Juspay.AA -> (Domain.PassPaymentService Payment.AAJuspay, toJSON cfg)
       _ -> (Domain.PassPaymentService Payment.Juspay, toJSON cfg)
     Payment.StripeConfig cfg -> (Domain.PassPaymentService Payment.Juspay, toJSON cfg)
+  Domain.ParkingPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.ParkingPaymentService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.ParkingPaymentService Payment.Stripe, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
   Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
