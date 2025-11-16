@@ -2,6 +2,7 @@ module Lib.JourneyLeg.Interface where
 
 import API.Types.UI.FRFSTicketService
 import API.Types.UI.MultimodalConfirm
+import qualified BecknV2.FRFS.Enums as Spec
 import Control.Applicative ((<|>))
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Merchant as DM
@@ -77,7 +78,7 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
     mkBusGetFareReq = do
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-      let routeDetails = catMaybes $ map mkRouteDetails leg.routeDetails
+      let routeDetails = catMaybes $ map (mkRouteDetails (mbRouteLiveInfo <&> (.serviceType))) leg.routeDetails
       if length routeDetails /= length leg.routeDetails
         then do
           logError "Unable to Map Route Details for all Bus Route Sub Legs"
@@ -98,7 +99,7 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
     mkMetroGetFareReq = do
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-      let routeDetails = catMaybes $ map mkRouteDetails leg.routeDetails
+      let routeDetails = catMaybes $ map (mkRouteDetails Nothing) leg.routeDetails
       if length routeDetails /= length leg.routeDetails
         then do
           logError "Unable to Map Route Details for all Metro Route Sub Legs"
@@ -118,7 +119,7 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
     mkSubwayGetFareReq = do
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-      let routeDetails = catMaybes $ map mkRouteDetails leg.routeDetails
+      let routeDetails = catMaybes $ map (mkRouteDetails Nothing) leg.routeDetails
       if length routeDetails /= length leg.routeDetails
         then do
           logError "Unable to Map Route Details for all Subway Route Sub Legs"
@@ -140,18 +141,18 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
       return $
         (WalkLegRequestGetFare WalkLegRequestGetFareData)
 
-    mkRouteDetails :: EMInterface.MultiModalRouteDetails -> Maybe FRFSRouteDetails
-    mkRouteDetails routeDetails =
+    mkRouteDetails :: Maybe Spec.ServiceTierType -> EMInterface.MultiModalRouteDetails -> Maybe FRFSRouteDetails
+    mkRouteDetails serviceTier routeDetails =
       let mbRouteCode = gtfsIdtoDomainCode <$> routeDetails.gtfsId
           mbFromStationCode = gtfsIdtoDomainCode <$> ((routeDetails.fromStopDetails >>= (.stopCode)) <|> gtfsIdtoDomainCode <$> (routeDetails.fromStopDetails >>= (.gtfsId)))
           mbToStationCode = gtfsIdtoDomainCode <$> ((routeDetails.toStopDetails >>= (.stopCode)) <|> gtfsIdtoDomainCode <$> (routeDetails.toStopDetails >>= (.gtfsId)))
        in case (mbRouteCode, mbFromStationCode, mbToStationCode) of
             (Just routeCode, Just startStationCode, Just endStationCode) ->
-              Just $ FRFSRouteDetails {routeCode = Just routeCode, ..}
+              Just $ FRFSRouteDetails {routeCode = Just routeCode, serviceTier = serviceTier, ..}
             _ -> Nothing
 
-confirm :: JL.ConfirmFlow m r c => Bool -> Maybe Int -> Maybe Int -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> Maybe [FRFSCategorySelectionReq] -> Maybe Bool -> m ()
-confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode =
+confirm :: JL.ConfirmFlow m r c => Bool -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> [FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> m ()
+confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode mbEnableOffer =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -197,9 +198,9 @@ confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..
               personId,
               merchantId,
               merchantOperatingCityId,
-              quantity = ticketQuantity,
-              childTicketQuantity,
-              isSingleMode
+              isSingleMode,
+              mbEnableOffer,
+              categorySelectionReq
             }
     mkSubwayLegConfirmReq :: JL.ConfirmFlow m r c => m SubwayLegRequest
     mkSubwayLegConfirmReq = do
@@ -214,9 +215,9 @@ confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..
               merchantId,
               merchantOperatingCityId,
               crisSdkResponse,
-              quantity = ticketQuantity,
-              childTicketQuantity,
-              isSingleMode
+              isSingleMode,
+              mbEnableOffer,
+              categorySelectionReq
             }
     mkBusLegConfirmReq :: JL.ConfirmFlow m r c => m BusLegRequest
     mkBusLegConfirmReq = do
@@ -230,8 +231,7 @@ confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..
               personId,
               merchantId,
               merchantOperatingCityId,
-              quantity = ticketQuantity,
-              childTicketQuantity,
               categorySelectionReq,
-              isSingleMode
+              isSingleMode,
+              mbEnableOffer
             }

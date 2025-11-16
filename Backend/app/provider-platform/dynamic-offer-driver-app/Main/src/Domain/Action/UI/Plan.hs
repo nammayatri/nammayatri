@@ -15,7 +15,7 @@
 
 module Domain.Action.UI.Plan where
 
-import Data.List (intersect, nubBy)
+import Data.List (intersect, nub, nubBy)
 import qualified Data.List as DL
 import qualified Data.Map as M
 import Data.Maybe (listToMaybe)
@@ -23,6 +23,7 @@ import Data.OpenApi (ToSchema (..))
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
@@ -105,7 +106,8 @@ data PlanEntity = PlanEntity
     dueBoothChargesWithCurrency :: PriceAPIEntity,
     dues :: [DriverDuesEntity],
     coinEntity :: Maybe CoinEntity,
-    bankErrors :: [ErrorEntity]
+    bankErrors :: [ErrorEntity],
+    cancellationPenalties :: [CancellationPenaltyInformation]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -215,6 +217,18 @@ data ServicesEntity = ServicesEntity
 data SafetyPlusData = SafetyPlusData
   { safetyPlusTrips :: Int,
     safetyPlusEarnings :: PriceAPIEntity
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data CancellationPenaltyInformation = CancellationPenaltyInformation
+  { id :: Text,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    paymentMode :: Maybe PaymentMode,
+    numRideCancelled :: Int,
+    amount :: HighPrecMoney,
+    gst :: HighPrecMoney,
+    isBilled :: Bool
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
@@ -364,9 +378,12 @@ getSubsriptionConfigAndPlanGeneric ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe DriverPlan ->
   m (SubscriptionConfig, [Plan])
-getSubsriptionConfigAndPlanGeneric serviceName (_, _, merchantOpCityId) mbDPlan = do
+getSubsriptionConfigAndPlanGeneric serviceName (personId, _, merchantOpCityId) mbDPlan = do
   subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
-  plans <- if subscriptionConfig.showManualPlansInUI == Just True then QPDE.findByMerchantOpCityIdAndServiceName merchantOpCityId serviceName (Just False) else QPD.findByMerchantOpCityIdAndPaymentModeWithServiceName merchantOpCityId (maybe AUTOPAY (.planType) mbDPlan) serviceName (Just False)
+  person <- QPerson.findById (cast personId) >>= fromMaybeM (InvalidRequest ("Person id " <> personId.getId <> " is not found"))
+  let isFleetOwner = DCommon.checkFleetOwnerRole person.role
+  let mbIsFleetOwnerPlan = if isFleetOwner then Just True else Nothing
+  plans <- if subscriptionConfig.showManualPlansInUI == Just True then QPDE.findByMerchantOpCityIdAndServiceName merchantOpCityId serviceName (Just False) mbIsFleetOwnerPlan else QPD.findByMerchantOpCityIdAndPaymentModeWithServiceName merchantOpCityId (maybe AUTOPAY (.planType) mbDPlan) serviceName (Just False) mbIsFleetOwnerPlan
   return (subscriptionConfig, plans)
 
 getSubsriptionConfigAndPlanSubscription ::
@@ -390,19 +407,27 @@ planList ::
   Maybe Int ->
   Maybe Vehicle.VehicleVariant ->
   Flow PlanListAPIRes
-planList (driverId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset _mbVariant = do
-  driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  mDriverPlan <- B.runInReplica $ QDPlan.findByDriverIdWithServiceName driverId serviceName
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  (_, plans) <- getSubscriptionConfigAndPlan serviceName (driverId, merchantId, merchantOpCityId) mDriverPlan
+planList (personId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset _mbVariant = do
+  person <- QPerson.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  isAutoPayActive <-
+    if DCommon.checkFleetOwnerRole person.role
+      then pure False -- prepaid subscription is only for fleet owners
+      else do
+        driverInfo <-
+          DI.findById (cast personId)
+            >>= fromMaybeM (PersonNotFound personId.getId)
+        pure (driverInfo.autoPayStatus == Just DI.ACTIVE)
+  mDriverPlan <- B.runInReplica $ QDPlan.findByDriverIdWithServiceName personId serviceName
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  (_, plans) <- getSubscriptionConfigAndPlan serviceName (personId, merchantId, merchantOpCityId) mDriverPlan
   now <- getCurrentTime
   let mandateSetupDate = fromMaybe now ((.mandateSetupDate) =<< mDriverPlan)
   plansList <-
     mapM
       ( \plan' ->
-          if driverInfo.autoPayStatus == Just DI.ACTIVE
-            then do convertPlanToPlanEntity driverId mandateSetupDate False Nothing Nothing serviceName plan'
-            else do convertPlanToPlanEntity driverId now False Nothing Nothing serviceName plan'
+          if isAutoPayActive
+            then do convertPlanToPlanEntity personId mandateSetupDate False Nothing Nothing serviceName plan'
+            else do convertPlanToPlanEntity personId now False Nothing Nothing serviceName plan'
       )
       $ sortOn (.listingPriority) plans
   return $
@@ -749,7 +774,9 @@ mkDriverFee driverId merchantId merchantOpCityId serviceName plan currency mbCur
         siblingFeeId = Nothing,
         splitOfDriverFeeId = Nothing,
         vehicleCategory = plan.vehicleCategory,
-        validDays = validDays
+        validDays = validDays,
+        cancellationPenaltyAmount = Nothing,
+        addedToFeeId = Nothing
       }
 
 getLatestRegistrationFeeAndInvoice ::
@@ -925,6 +952,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   paymentCurrency <- case currency of
     INR -> pure INR
+    EUR -> pure EUR
     _ -> throwError $ InvalidRequest "Invalid currency" -- is it correct?
   offers <- SPayment.offerListCache merchantId driverId merchantOpCityId plan.serviceName =<< makeOfferReq paymentCurrency applicationDate plan.paymentMode transporterConfig_
   let allPendingAndOverDueDriverfee = dueDriverFees <> pendingRegistrationDfee
@@ -949,7 +977,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
   let currentDues = sum $ map (.driverFeeAmount) dues
   let autopayDues = sum $ map (.driverFeeAmount) $ filter (\due -> due.feeType == DF.RECURRING_EXECUTION_INVOICE) dues
   let dueBoothCharges = roundToHalf currency $ sum $ map (.specialZoneAmount) (nubBy (\x y -> (x.startTime == y.startTime) && (x.endTime == y.endTime)) dueDriverFees)
-
+  cancellationPenalties <- getCancellationPenalties (cast driverId) serviceNameParam
   return
     PlanEntity
       { id = plan.id.getId,
@@ -1222,3 +1250,30 @@ updateWaiveOffByDriver merchantOpCityId waiveOffEntities = do
   if (length waiveOffEntities) > transporterConfig.bulkWaiveOffLimit
     then throwError $ InvalidRequest "Length entities exceeds bulk update limit"
     else QDPlan.updateAllWithWaiveOffPercantageAndType waiveOffEntities
+
+getCancellationPenalties :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Driver -> ServiceNames -> m [CancellationPenaltyInformation]
+getCancellationPenalties driverId serviceName = do
+  unbilledDriverFees <- QDF.findUnbilledCancellationPenaltiesForDriver driverId serviceName
+  let unbilledPenalties = map (mkCancellationPenaltyInfo False Nothing) unbilledDriverFees
+  billedDriverFees <- QDF.findSubscriptionFeesWithCancellationPenalties driverId serviceName
+  let rPenalties = filter (\billedDriverFee -> billedDriverFee.feeType == DF.RECURRING_INVOICE) billedDriverFees
+      rEPenaltiesSplitOfDriverFeeIds = mapMaybe (.splitOfDriverFeeId) $ filter (\billedDriverFee -> billedDriverFee.feeType == DF.RECURRING_EXECUTION_INVOICE && billedDriverFee.splitOfDriverFeeId /= Nothing) billedDriverFees
+  parentRecurringExecution <- QDF.findParentRecurringExecutionBySplitOfDriverFeeIds rEPenaltiesSplitOfDriverFeeIds
+  let allManualFeeIds = nub $ (.id) <$> rPenalties
+      allExecutionFeeIds = nub $ (.id) <$> parentRecurringExecution
+  let allSubscriptionFeeIds = allManualFeeIds <> allExecutionFeeIds
+  originalPenalties <- nub <$> QDF.findOriginalCancellationPenaltiesForSubscriptionFee allSubscriptionFeeIds
+  let billedPenalties = map (\penalty -> let payType = penalty.addedToFeeId >>= \feeId -> if feeId `elem` allManualFeeIds then Just MANUAL else if feeId `elem` allExecutionFeeIds then Just AUTOPAY else Nothing in mkCancellationPenaltyInfo True payType penalty) originalPenalties
+  return $ nubBy (\a b -> a.id == b.id) $ filter (\p -> p.amount > 0) $ unbilledPenalties <> billedPenalties
+  where
+    mkCancellationPenaltyInfo isBilled payType driverFee =
+      CancellationPenaltyInformation
+        { id = driverFee.id.getId,
+          startTime = driverFee.startTime,
+          endTime = driverFee.endTime,
+          paymentMode = payType,
+          numRideCancelled = driverFee.numRides,
+          amount = fromMaybe 0.0 driverFee.cancellationPenaltyAmount,
+          gst = if isBilled then (fromMaybe 0.0 driverFee.cancellationPenaltyAmount) * 0.18 / 1.18 else 0.0,
+          ..
+        }

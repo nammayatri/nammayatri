@@ -59,6 +59,7 @@ data FareParametersT f = FareParametersT
     platformFeeChargesBy :: B.C f (Maybe FP.PlatformFeeMethods),
     conditionalCharges :: B.C f (Maybe Value),
     currency :: B.C f (Maybe Currency),
+    driverCancellationPenaltyAmount :: B.C f (Maybe HighPrecMoney),
     updatedAt :: B.C f (Maybe UTCTime),
     merchantId :: B.C f (Maybe Text),
     merchantOperatingCityId :: B.C f (Maybe Text)

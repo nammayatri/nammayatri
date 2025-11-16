@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
+import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDoc
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as QPerson
 import Utils.Common.Cac.KeyNameConstants
@@ -44,6 +45,7 @@ data StatusRes = StatusRes
     --- use these fields
     driverDocuments :: [SStatus.DocumentStatusItem],
     vehicleDocuments :: [SStatus.VehicleDocumentItem],
+    commonDocuments :: [SStatus.CommonDocumentItem],
     enabled :: Bool,
     manualVerificationRequired :: Maybe Bool,
     driverLicenseDetails :: Maybe [SStatus.DLDetails],
@@ -66,6 +68,11 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
   (aadhaarStatus, _) <- SStatus.getAadhaarStatus personId
   let shouldActivateRc = True
   SStatus.StatusRes' {..} <- SStatus.statusHandler' (Just person) driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs
+
+  -- Fetch common documents
+  commonDocumentsData <- QCommonDoc.findByDriverId (Just personId)
+  let commonDocuments = map SStatus.mkCommonDocumentItem commonDocumentsData
+
   pure $
     StatusRes
       { dlVerificationStatus = dlStatus,
@@ -73,5 +80,6 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
         rcVerificationStatus = rcStatus,
         rcVerficationMessage = rcVerficationMessage,
         aadhaarVerificationStatus = aadhaarStatus,
+        commonDocuments = commonDocuments,
         ..
       }

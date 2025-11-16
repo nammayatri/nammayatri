@@ -138,7 +138,6 @@ updateByPrimaryKey (Domain.Types.PersonStats.PersonStats {..}) = do
     [ Se.Set Beam.backlogPayoutAmount (Kernel.Prelude.Just backlogPayoutAmount),
       Se.Set Beam.backlogPayoutStatus backlogPayoutStatus,
       Se.Set Beam.completedRides completedRides,
-      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.driverCancelledRides driverCancelledRides,
       Se.Set Beam.eveningPeakRides eveningPeakRides,
       Se.Set Beam.isBackfilled isBackfilled,

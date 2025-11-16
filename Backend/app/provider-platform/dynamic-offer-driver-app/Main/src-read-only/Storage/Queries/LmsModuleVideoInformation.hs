@@ -40,8 +40,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.moduleId (Kernel.Types.Id.getId moduleId),
+    [ Se.Set Beam.moduleId (Kernel.Types.Id.getId moduleId),
       Se.Set Beam.rank rank,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.videoStatus videoStatus

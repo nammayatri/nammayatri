@@ -53,7 +53,6 @@ updateByPrimaryKey (Lib.Yudhishthira.Types.TagActionNotificationConfig.TagAction
       Se.Set Beam.notificationKey notificationKey,
       Se.Set Beam.notificationType notificationType,
       Se.Set Beam.notifyAt notifyAt,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

@@ -26,6 +26,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDriverCorrelation as RDCD
+import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -33,11 +34,14 @@ import IssueManagement.Domain.Types.MediaFile as D
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (encrypt)
+import qualified Kernel.Storage.Clickhouse.Config as CH
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import qualified SharedLogic.Analytics as Analytics
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -121,7 +125,7 @@ handler merchantId req ride = do
 
   rating' <- B.runInReplica $ QRating.checkIfRatingExistsForDriver ride.driverId
   driverStats <- runInReplica $ QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
-
+  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   -- backfilling rating for the old driver entries
   (ratingCount, ratingsSum) <- do
     if ((not $ null rating') && (isNothing driverStats.totalRatings) && (isNothing driverStats.totalRatingScore) && (isNothing driverStats.isValidRating))
@@ -135,37 +139,57 @@ handler merchantId req ride = do
       else return (driverStats.totalRatings, driverStats.totalRatingScore)
 
   rating <- B.runInReplica $ QRating.findRatingForRide ride.id
-  mediaId <- audioFeedbackUpload mbBooking req.filePath
-  _ <- case rating of
+  mediaId <- audioFeedbackUpload mbBooking req.filePath transporterConfig
+  (netRatingValue, shouldIncrementCount) <- case rating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
       newRating <- buildRating ride.merchantId (Just ride.merchantOperatingCityId) ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver mediaId
       QRating.create newRating
+      pure (ratingValue, True)
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
-  calculateAverageRating driverId merchant.minimumDriverRatesCount ratingValue ratingCount ratingsSum
+      let oldRatingValue = rideRating.ratingValue
+      let newRatingValue = ratingValue
+      QRating.updateRating newRatingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
+      pure (newRatingValue - oldRatingValue, False)
+  calculateAverageRating driverId merchant.minimumDriverRatesCount shouldIncrementCount netRatingValue ratingCount ratingsSum transporterConfig
 
 calculateAverageRating ::
-  (CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
   Id DP.Person ->
   Int ->
+  Bool ->
   Int ->
   Maybe Int ->
   Maybe Int ->
+  DTC.TransporterConfig ->
   m ()
-calculateAverageRating personId minimumDriverRatesCount ratingValue mbtotalRatings mbtotalRatingScore = do
+calculateAverageRating personId minimumDriverRatesCount shouldIncrementCount ratingValue mbtotalRatings mbtotalRatingScore transporterConfig = do
   logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
   let totalRatings = fromMaybe 0 mbtotalRatings
   let totalRatingScore = fromMaybe 0 mbtotalRatingScore
-  let newRatingsCount = totalRatings + 1
-  let newTotalRatingScore = totalRatingScore + ratingValue
+  let newRatingsCount = totalRatings + if shouldIncrementCount then 1 else 0
+  let newTotalRatingScore = totalRatingScore + ratingValue -- old + (new - old) = new (This type of calculation only executes when rating will be updated)
+  when (newTotalRatingScore < 0) $
+    logTagError "PersonAPI" $
+      "Negative total rating score detected; person="
+        +|| personId
+        ||+ ", ratingValue="
+        +|| ratingValue
+        ||+ ", previousTotal="
+        +|| totalRatingScore
+        ||+ ", newTotal="
+        +|| newTotalRatingScore
+        ||+ ", ratingCount="
+        +|| newRatingsCount
+        ||+ ". Investigate rating accumulation logic."
   when (totalRatings == 0) $
     logTagInfo "PersonAPI" "No rating found to calculate"
   let isValidRating = newRatingsCount >= minimumDriverRatesCount
   logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
+  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsRatingScoreKey personId transporterConfig ratingValue shouldIncrementCount
   void $ QDriverStats.updateAverageRating personId (Just newRatingsCount) (Just newTotalRatingScore) (Just isValidRating)
 
 buildRating ::
@@ -199,11 +223,10 @@ validateRequest req = do
     throwError $ RideInvalidStatus ("Ride is not ready for rating." <> Text.pack (show ride.status))
   return ride
 
-audioFeedbackUpload :: Maybe DBooking.Booking -> Maybe Text -> Flow (Maybe (Id D.MediaFile))
-audioFeedbackUpload mbBooking mbFilePath = do
+audioFeedbackUpload :: Maybe DBooking.Booking -> Maybe Text -> DTC.TransporterConfig -> Flow (Maybe (Id D.MediaFile))
+audioFeedbackUpload mbBooking mbFilePath transporterConfig = do
   case (mbBooking, mbFilePath) of
-    (Just booking, Just filePath) -> do
-      transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (MerchantNotFound booking.merchantOperatingCityId.getId)
+    (Just _booking, Just filePath) -> do
       let fileType = S3.Audio
       let fileUrl =
             transporterConfig.mediaFileUrlPattern

@@ -56,7 +56,8 @@ data ONDCBecknConfig = ONDCBecknConfig
     singleTicketForMultiplePassengers :: Maybe Bool,
     mergeQuoteCriteria :: Maybe MergeQuoteCriteria,
     routeBasedQuoteSelection :: Maybe Bool,
-    providerInfo :: Maybe ProviderLevelInfo
+    providerInfo :: Maybe ProviderLevelInfo,
+    routeBasedVehicleTracking :: Maybe Bool
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -80,7 +81,10 @@ data CRISConfig = CRISConfig
     agentDataDecryptionKey :: EncryptedField 'AsEncrypted Text,
     utsDataKey :: EncryptedField 'AsEncrypted Text,
     routeSortingCriteria :: Maybe CRISRouteSortingCriteria,
-    reconDuration :: Maybe Int
+    reconDuration :: Maybe Int,
+    singleModeWalkThreshold :: Maybe Int,
+    useRouteFareV4 :: Maybe Bool,
+    enableBookType :: Maybe Bool
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

@@ -21,7 +21,7 @@ tryCancellationLock ::
 tryCancellationLock transactionId action = do
   isLockAcquired <- Redis.withCrossAppRedis $ Redis.tryLockRedis (mkCancellationLockKey transactionId) 30
   unless isLockAcquired $ throwError ActiveCancellationOngoing
-  exep <- try @_ @SomeException action
+  exep <- withTryCatch "action:cancelTransaction" action
   case exep of
     Left e -> do
       releaseCancellationLock transactionId

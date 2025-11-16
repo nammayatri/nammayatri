@@ -6,6 +6,7 @@ import qualified Data.Text as T
 import qualified Data.Time as Time
 import Data.Time.Format
 import qualified Data.UUID as UU
+import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig as DIBC
 import EulerHS.Types as ET hiding (Log)
@@ -18,6 +19,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Utils.Common
 import Servant hiding (route, throwError)
+import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
 import Tools.JSON
@@ -84,14 +86,14 @@ type SaveMobTicketAPI =
 saveMobTicketAPI :: Proxy SaveMobTicketAPI
 saveMobTicketAPI = Proxy
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, MonadReader r m, HasKafkaProducer r) => EBIXConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> m ProviderOrder
-createOrder config integratedBPPConfig qrTtl booking = do
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, MonadReader r m, HasKafkaProducer r) => EBIXConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
+createOrder config integratedBPPConfig qrTtl booking quoteCategories = do
   orderId <- case booking.bppOrderId of
     Just oid -> return oid
     Nothing -> getBppOrderId booking
   let mbRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
   routeStations <- mbRouteStations & fromMaybeM (InternalError "Route Stations Not Found.")
-  tickets <- mapM (getTicketDetail config integratedBPPConfig qrTtl booking) routeStations
+  tickets <- mapM (getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories) routeStations
   return ProviderOrder {..}
 
 getBppOrderId :: (MonadFlow m) => FRFSTicketBooking -> m Text
@@ -118,8 +120,8 @@ getBppOrderId booking = do
 -- 15. UDF5
 -- 16. UDF6
 -- {tt: [{t: "37001,37017,1,0,5,10-10-2024 19:04:54,2185755416,13,5185,,,,,130,,,"}]}
-getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, HasKafkaProducer r) => EBIXConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> FRFSRouteStationsAPI -> m ProviderTicket
-getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
+getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, HasKafkaProducer r) => EBIXConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> [FRFSQuoteCategory] -> FRFSRouteStationsAPI -> m ProviderTicket
+getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeStation = do
   busTypeId <- routeStation.vehicleServiceTier <&> (.providerCode) & fromMaybeM (InternalError "Bus Provider Code Not Found.")
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
   let startStation = head routeStation.stations
@@ -135,18 +137,19 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
     id <- generateGUID
     uuid <- UU.fromText id & fromMaybeM (InternalError "Not being able to parse into UUID")
     return $ show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) :: Integer)
-  let amount = routeStation.priceWithCurrency.amount
   let qrValidityIST = addUTCTime (secondsToNominalDiffTime 19800) qrValidity
-      adultQuantity = booking.quantity
-      childQuantity :: Int = 0
+      fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
+      singleAdultTicketPrice = (getUnitPriceFromPriceItem fareParameters.adultItem).amount
+      adultQuantity = maybe 0 (.quantity) fareParameters.adultItem
+      childQuantity = maybe 0 (.quantity) fareParameters.childItem
   let ticketReq =
         SaveMobTicketReq
           { frRouteStopSrlNo = fromRoute.providerCode,
             toRouteStopSrlNo = toRoute.providerCode,
-            noAdult = show booking.quantity,
-            noChild = "0",
+            noAdult = show adultQuantity,
+            noChild = show childQuantity,
             btypeId = busTypeId,
-            tktAmt = amount,
+            tktAmt = singleAdultTicketPrice,
             transNo = ticketNumber,
             transDate = T.pack $ formatTime Time.defaultTimeLocale "%Y-%m-%d %H:%M:%S" now,
             agentId = config.agentId
@@ -155,7 +158,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
   ticketOder <-
     callAPI config.networkHostUrl (ET.client saveMobTicketAPI (Just token) ticketReq) "saveMobTicket" saveMobTicketAPI
       >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_SAVE_MOB_TICKET_API") config.networkHostUrl)
-  let ticket = fromRoute.providerCode <> "," <> toRoute.providerCode <> "," <> show adultQuantity <> "," <> show childQuantity <> "," <> busTypeId <> "," <> (T.pack $ formatTime Time.defaultTimeLocale "%d-%m-%Y %H:%M:%S" qrValidityIST) <> "," <> ticketNumber <> "," <> show amount <> "," <> config.agentId <> ",,,,," <> ticketOder._data.mbTktId <> ",,,"
+  let ticket = fromRoute.providerCode <> "," <> toRoute.providerCode <> "," <> show adultQuantity <> "," <> show childQuantity <> "," <> busTypeId <> "," <> (T.pack $ formatTime Time.defaultTimeLocale "%d-%m-%Y %H:%M:%S" qrValidityIST) <> "," <> ticketNumber <> "," <> show singleAdultTicketPrice <> "," <> config.agentId <> ",,,,," <> ticketOder._data.mbTktId <> ",,,"
   qrData <- generateQR config ticket
   return $
     ProviderTicket

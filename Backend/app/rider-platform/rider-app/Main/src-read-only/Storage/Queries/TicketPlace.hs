@@ -94,7 +94,6 @@ updateByPrimaryKey (Domain.Types.TicketPlace.TicketPlace {..}) = do
       Se.Set Beam.ticketMerchantId ticketMerchantId,
       Se.Set Beam.venue venue,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

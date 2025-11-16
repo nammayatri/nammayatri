@@ -23,6 +23,7 @@ imports:
   AccountId: Kernel.External.Payment.Interface.Types
   Months: Kernel.Types.Time
   DbHash: Kernel.External.Encryption
+  BillingCategory: SharedLogic.Type
 
 Ride:
   tableName: ride
@@ -70,6 +71,7 @@ Ride:
     vehicleNumber: Text
     vehicleModel: Text
     vehicleColor: Maybe Text
+    cancellationChargesOnCancel : Maybe HighPrecMoney
     vehicleVariant: VehicleVariant|NoRelation
     vehicleServiceTierType: Maybe ServiceTierType
     otp: Text
@@ -90,6 +92,7 @@ Ride:
     driversPreviousRideDropLoc : Maybe LatLong
     startOdometerReading: Maybe Centesimal
     endOdometerReading: Maybe Centesimal
+    billingCategory: BillingCategory
     vehicleAge: Maybe Months
     isFreeRide: Maybe Bool
     isPetRide: Bool
@@ -217,6 +220,7 @@ Ride:
     isInsured: Kernel.Prelude.fromMaybe False isInsured|E
     isSafetyPlus: Kernel.Prelude.fromMaybe False isSafetyPlus| E
     isPetRide: Kernel.Prelude.fromMaybe False isPetRide|E
+    billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -253,6 +257,7 @@ Ride:
     isSafetyPlus:  Kernel.Prelude.Just isSafetyPlus|E
     isInsured: Kernel.Prelude.Just isInsured|E
     isPetRide: Kernel.Prelude.Just isPetRide|E
+    billingCategory: Kernel.Prelude.Just billingCategory|E
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
@@ -271,6 +276,7 @@ Ride:
     isSafetyPlus: Maybe Bool
     isInsured: Maybe Bool
     isPetRide: Maybe Bool
+    billingCategory: Maybe BillingCategory
 
   constraints:
     id: PrimaryKey
@@ -322,6 +328,10 @@ Ride:
     updateTalkedWithDriver:
       kvFunction: updateOneWithKV
       params: [talkedWithDriver]
+      where: id
+    updateCancellationChargesOnCancel:
+      kvFunction: updateOneWithKV
+      params: [cancellationChargesOnCancel]
       where: id
 
   excludedDefaultQueries:

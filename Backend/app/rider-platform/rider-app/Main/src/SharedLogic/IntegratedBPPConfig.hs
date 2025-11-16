@@ -97,7 +97,7 @@ fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs handler =
     ( \integratedBPPConfig result ->
         if isNothing result
           then do
-            try @_ @SomeException (handler integratedBPPConfig) >>= \case
+            withTryCatch "handler:fetchFirstIntegratedBPPConfigRightResult" (handler integratedBPPConfig) >>= \case
               Left _ -> return Nothing
               Right res' -> return (Just res')
           else return result
@@ -115,7 +115,7 @@ fetchFirstIntegratedBPPConfigRightResultWithConfig integratedBPPConfigs handler 
     ( \integratedBPPConfig result ->
         if isNothing result
           then do
-            try @_ @SomeException (handler integratedBPPConfig) >>= \case
+            withTryCatch "handler:fetchFirstIntegratedBPPConfigRightResultWithConfig" (handler integratedBPPConfig) >>= \case
               Left _ -> return Nothing
               Right res' -> return $ Just (integratedBPPConfig, res')
           else return result
@@ -133,7 +133,7 @@ fetchFirstIntegratedBPPConfigResult integratedBPPConfigs handler =
     ( \integratedBPPConfig result ->
         if null result
           then do
-            try @_ @SomeException (handler integratedBPPConfig) >>= \case
+            withTryCatch "handler:fetchFirstIntegratedBPPConfigResult" (handler integratedBPPConfig) >>= \case
               Left _ -> return []
               Right res' -> return res'
           else return result
@@ -151,7 +151,7 @@ fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs handler =
     ( \integratedBPPConfig result ->
         if isNothing result
           then do
-            try @_ @SomeException (handler integratedBPPConfig) >>= \case
+            withTryCatch "handler:fetchFirstIntegratedBPPConfigMaybeResult" (handler integratedBPPConfig) >>= \case
               Left _ -> return Nothing
               Right res' -> return res'
           else return result
@@ -168,7 +168,7 @@ fetchAllIntegratedBPPConfigResult integratedBPPConfigs handler = do
   result <-
     mapM
       ( \integratedBPPConfig ->
-          try @_ @SomeException (handler integratedBPPConfig) >>= \case
+          withTryCatch "handler:fetchAllIntegratedBPPConfigResult" (handler integratedBPPConfig) >>= \case
             Left _ -> return []
             Right res' -> return res'
       )

@@ -412,6 +412,7 @@ calculateFareParameters params = do
             merchantId = Just params.farePolicy.merchantId,
             merchantOperatingCityId = params.merchantOperatingCityId,
             conditionalCharges = filter (\addCharges -> maybe True (\chargesCategories -> addCharges.chargeCategory `elem` chargesCategories) params.mbAdditonalChargeCategories) params.farePolicy.conditionalCharges,
+            driverCancellationPenaltyAmount = fp.driverCancellationPenaltyAmount,
             ..
           }
   KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)
@@ -690,6 +691,9 @@ calculateFareParameters params = do
             BOAT -> avgSpeedOfVehicle.boat.getKilometers
             VIP_ESCORT -> avgSpeedOfVehicle.vipEscort.getKilometers
             VIP_OFFICER -> avgSpeedOfVehicle.vipOfficer.getKilometers
+            AC_PRIORITY -> avgSpeedOfVehicle.sedan.getKilometers
+            BIKE_PLUS -> avgSpeedOfVehicle.bikeplus.getKilometers
+            E_RICKSHAW -> avgSpeedOfVehicle.erickshaw.getKilometers
       if avgSpeedOfVehicle' > 0
         then do
           let distanceInKilometer = realToFrac @_ @Double distance.getMeters / 1000

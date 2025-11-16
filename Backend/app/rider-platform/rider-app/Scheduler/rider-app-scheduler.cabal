@@ -99,6 +99,7 @@ library
     , servant-openapi3
     , servant-server
     , sessionizer-metrics
+    , shared-services
     , singletons
     , stm
     , string-conversions
@@ -185,6 +186,7 @@ executable rider-app-scheduler-exe
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , shared-services
     , singletons
     , stm
     , string-conversions

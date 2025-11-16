@@ -24,6 +24,7 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Data.Tuple.Extra as Tuple
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.Driver as DADriver
 import qualified Domain.Action.UI.Payout as PayoutA
 import qualified Domain.Action.UI.Plan as ADPlan
@@ -91,6 +92,7 @@ import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverWallet as QDW
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Notification as QNTF
@@ -152,31 +154,40 @@ getStatus ::
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Id DOrder.PaymentOrder ->
   m DPayment.PaymentStatusResp
-getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
+getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId -- api call
-  order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
   now <- getCurrentTime
-  invoices <- QIN.findById (cast orderId)
+  invoices <- QIN.findById (cast paymentOrderId)
   let firstInvoice = listToMaybe invoices
   let mbServiceName = firstInvoice <&> (.serviceName)
   if order.status == Juspay.CHARGED -- Consider CHARGED status as terminal status
     then do
       return $
         DPayment.PaymentStatus
-          { status = order.status,
+          { orderId = order.id,
+            orderShortId = order.shortId,
+            paymentServiceType = order.paymentServiceType,
+            status = order.status,
             bankErrorCode = firstInvoice >>= (.bankErrorCode),
             bankErrorMessage = firstInvoice >>= (.bankErrorMessage),
             isRetried = Just $ order.isRetried,
             isRetargeted = Just $ order.isRetargeted,
             retargetLink = order.retargetLink,
+            amount = order.amount,
             refunds = [],
             payerVpa = Nothing,
             card = Nothing,
             paymentMethodType = Nothing,
             authIdCode = Nothing,
             txnUUID = Nothing,
-            effectAmount = Nothing
+            txnId = Nothing,
+            effectAmount = Nothing,
+            offers = Nothing,
+            validTill = order.validTill,
+            paymentFulfillmentStatus = Nothing,
+            domainEntityId = Nothing
           }
     else do
       let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
@@ -185,7 +196,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
           >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
       paymentServiceName <- Payment.decidePaymentService serviceConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
-      paymentStatus <- DPayment.orderStatusService commonPersonId orderId (orderStatusCall paymentServiceName (Just order.personId.getId))
+      paymentStatus <- DPayment.orderStatusService commonPersonId paymentOrderId (orderStatusCall paymentServiceName (Just order.personId.getId))
       case paymentStatus of
         DPayment.MandatePaymentStatus {..} -> do
           unless (status /= Payment.CHARGED) $ do
@@ -371,26 +382,18 @@ processNonClearedDriverFees ::
   UTCTime ->
   DriverFee ->
   m ()
-processNonClearedDriverFees merchantId driver now driverFee = do
-  when (driverFee.feeType == PREPAID_RECHARGE) $ do
-    Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey driver.id.getId) 10 10 $ do
-      driverInfo <- QDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
-      let currentExpiry = fromMaybe now driverInfo.planExpiryDate
-          newExpiry = addUTCTime (fromIntegral (fromMaybe 0 driverFee.validDays) * 24 * 60 * 60) now
-          finalExpiry = max currentExpiry newExpiry
-          newBalance = fromMaybe 0.0 driverInfo.prepaidSubscriptionBalance + driverFee.totalEarnings
-      QDIExtra.updatePrepaidSubscriptionBalanceAndExpiry driverFee.driverId newBalance (Just finalExpiry)
-      logInfo $ "Prepaid recharge completed " <> show driver.id.getId
-      let prepaidRechargeMessage = "Your recharge worth Rs." <> show (SPayment.roundToTwoDecimalPlaces driverFee.totalEarnings) <> " is successful"
-          prepaidRechargeTitle = "Recharge Successful!"
-      sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage driver driver.deviceToken
+processNonClearedDriverFees merchantId person now driverFee = do
+  when (driverFee.feeType == PREPAID_RECHARGE) $
+    Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey person.id.getId) 10 10 $ do
+      (newBalance, mbFleetOwnerId) <- updatePrepaidBalanceAndExpiry person now driverFee
       id <- generateGUID
       let transaction =
             SubscriptionTransaction.SubscriptionTransaction
               { id = id,
                 merchantId = Just merchantId,
-                merchantOperatingCityId = driver.merchantOperatingCityId,
-                driverId = driver.id,
+                fleetOwnerId = mbFleetOwnerId,
+                merchantOperatingCityId = person.merchantOperatingCityId,
+                driverId = person.id,
                 entityId = (.getId) <$> driverFee.planId,
                 transactionType = SubscriptionTransaction.PLAN_PURCHASE,
                 amount = driverFee.totalEarnings,
@@ -401,7 +404,51 @@ processNonClearedDriverFees merchantId driver now driverFee = do
                 createdAt = now,
                 updatedAt = now
               }
+
       QSubscriptionTransaction.create transaction
+
+updatePrepaidBalanceAndExpiry ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r
+  ) =>
+  DP.Person ->
+  UTCTime ->
+  DriverFee ->
+  m (HighPrecMoney, Maybe (Id DP.Person))
+updatePrepaidBalanceAndExpiry person now driverFee = do
+  if DCommon.checkFleetOwnerRole person.role
+    then do
+      fleetOwnerInfo <- QFOI.findByPrimaryKey (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
+      let (finalExpiry, newBalance) = computeExpiryAndBalance now fleetOwnerInfo.planExpiryDate fleetOwnerInfo.prepaidSubscriptionBalance driverFee
+      QFOI.updatePrepaidSubscriptionBalanceAndExpiry (Just newBalance) (Just finalExpiry) driverFee.driverId
+      pure (newBalance, Just person.id)
+    else do
+      driverInfo <- QDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
+      let (finalExpiry, newBalance) = computeExpiryAndBalance now driverInfo.planExpiryDate driverInfo.prepaidSubscriptionBalance driverFee
+      QDIExtra.updatePrepaidSubscriptionBalanceAndExpiry driverFee.driverId newBalance (Just finalExpiry)
+      logInfo $ "Prepaid recharge completed " <> show person.id.getId
+      let prepaidRechargeMessage =
+            "Your recharge worth Rs."
+              <> show (SPayment.roundToTwoDecimalPlaces driverFee.totalEarnings)
+              <> " is successful"
+          prepaidRechargeTitle = "Recharge Successful!"
+      sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
+      pure (newBalance, Nothing)
+
+computeExpiryAndBalance ::
+  UTCTime ->
+  Maybe UTCTime ->
+  Maybe HighPrecMoney ->
+  DriverFee ->
+  (UTCTime, HighPrecMoney)
+computeExpiryAndBalance now mbExpiry mbBalance driverFee =
+  let currentExpiry = fromMaybe now mbExpiry
+      newExpiry = addUTCTime (fromIntegral (fromMaybe 0 driverFee.validDays) * 24 * 60 * 60) now
+      finalExpiry = max currentExpiry newExpiry
+      newBalance = fromMaybe 0.0 mbBalance + driverFee.totalEarnings
+   in (finalExpiry, newBalance)
 
 updatePaymentStatus ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>

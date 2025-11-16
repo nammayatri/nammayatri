@@ -1,5 +1,6 @@
 module Lib.JourneyModule.Utils where
 
+import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
@@ -16,6 +17,8 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Data.Time.LocalTime as LocalTime
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
+import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
@@ -27,11 +30,13 @@ import Domain.Types.Person
 import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RiderConfig as RCTypes
 import Domain.Types.RouteDetails
+import qualified Domain.Types.RouteDetails as DRouteDetails
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
-import Domain.Utils (mapConcurrently)
+import Domain.Utils (castTravelModeToVehicleCategory, mapConcurrently)
 import Environment
 import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
+import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as CRISRouteFareV3
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.Types as CRISTypes
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
@@ -52,7 +57,6 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
-import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -65,10 +69,14 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
+import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RecentLocation as SQRL
+import qualified Storage.Queries.RouteDetails as QRouteDetails
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import System.Environment (lookupEnv)
 import Tools.Error
@@ -152,7 +160,7 @@ data LegServiceTier = LegServiceTier
     serviceTierDescription :: Text,
     via :: Maybe Text,
     trainTypeCode :: Maybe Text,
-    fare :: PriceAPIEntity,
+    fare :: Maybe PriceAPIEntity,
     quoteId :: Id DFRFSQuote.FRFSQuote
   }
   deriving stock (Show, Generic)
@@ -227,11 +235,14 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
     if useLiveBusData
       then do
         allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
-        let routesWithoutBuses = map (.routeId) $ filter (\route -> null route.buses) allRouteWithBuses
         liveRouteStopTimes <- mapConcurrently processRoute allRouteWithBuses
         let flattenedLiveRouteStopTimes = concat liveRouteStopTimes
+        let liveRouteCodes = nub $ map (.routeCode) flattenedLiveRouteStopTimes
+        -- Pass only routeCodes which don't have route.buses and also don't serve our source stop
+        let routesWithoutBuses = map (.routeId) $ filter (\route -> null route.buses) allRouteWithBuses
+        let routesWithoutLiveTimings = filter (`notElem` liveRouteCodes) routeCodes
         logDebug $ "allRouteWithBuses: " <> show (length allRouteWithBuses) <> " flattenedLiveRouteStopTimes: " <> show (length flattenedLiveRouteStopTimes)
-        return (flattenedLiveRouteStopTimes, routesWithoutBuses)
+        return (flattenedLiveRouteStopTimes, nub $ routesWithoutLiveTimings ++ routesWithoutBuses)
       else do
         return ([], routeCodes)
   staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode False False) "fetch route stop timing through graphql"
@@ -243,7 +254,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
       logDebug $ "filteredBuses: " <> show (length filteredBuses) <> " busEtaData: " <> show (length busEtaData)
       vehicleRouteMappings <- forM filteredBuses $ \(vehicleNumber, etaData) -> do
         vrMapping <-
-          try @_ @SomeException (OTPRest.getVehicleServiceType integratedBppConfig vehicleNumber) >>= \case
+          withTryCatch "getVehicleServiceType:processRoute" (OTPRest.getVehicleServiceType integratedBppConfig vehicleNumber) >>= \case
             Left _ -> return Nothing
             Right mapping -> return mapping
         case vrMapping >>= (.schedule_no) of
@@ -542,7 +553,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
                     serviceTierDescription = availableServiceTier <&> (.serviceTierDescription)
                     via = availableServiceTier >>= (.via)
                     trainTypeCode = availableServiceTier >>= (.trainTypeCode)
-                    mbFare = availableServiceTier <&> (.fare)
+                    mbFare = availableServiceTier >>= (.fare)
                 return (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode)
               Nothing -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
@@ -870,8 +881,9 @@ buildMultimodalRouteDetails ::
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
   Bool ->
+  Bool ->
   m (Maybe MultiModalTypes.MultiModalRouteDetails, Maybe HighPrecMeters)
-buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc calledForSubwaySingleMode = do
+buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc fetchTimings calledForSubwaySingleMode = do
   mbFromStop <- OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBppConfig
   mbToStop <- OTPRest.getStationByGtfsIdAndStopCode destinationStopCode integratedBppConfig
   currentTime <- getCurrentTime
@@ -879,7 +891,34 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
 
   case (mbFromStop >>= (.lat), mbFromStop >>= (.lon), mbToStop >>= (.lat), mbToStop >>= (.lon)) of
     (Just fromStopLat, Just fromStopLon, Just toStopLat, Just toStopLon) -> do
-      (nextAvailableRouteCode, possibleRoutes, originStopTimings) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True True calledForSubwaySingleMode) "findPossibleRoutes"
+      (nextAvailableRouteCode, possibleRoutes, originStopTimings) <-
+        measureLatency
+          ( bool
+              ( do
+                  validRoutes <- getRouteCodesFromTo originStopCode destinationStopCode integratedBppConfig
+                  validRouteDetails <- OTPRest.getRoutesByRouteIds integratedBppConfig validRoutes
+                  let availableRoutesByTier =
+                        [ AvailableRoutesByTier
+                            { availableRoutes = nub $ map (.shortName) validRouteDetails,
+                              availableRoutesInfo = map (\routeDetail -> AvailableRoutesInfo {shortName = routeDetail.shortName, longName = routeDetail.longName, routeCode = routeDetail.code, routeTimings = [], isLiveTrackingAvailable = False, source = GTFS}) validRouteDetails,
+                              fare = PriceAPIEntity {amount = 0.0, currency = INR},
+                              nextAvailableBuses = [],
+                              nextAvailableTimings = [],
+                              quoteId = Nothing,
+                              serviceTier = Spec.ORDINARY,
+                              serviceTierDescription = Nothing,
+                              serviceTierName = Nothing,
+                              source = GTFS,
+                              trainTypeCode = Nothing,
+                              via = Nothing
+                            }
+                        ]
+                  return (listToMaybe validRoutes, availableRoutesByTier, [])
+              )
+              (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True True calledForSubwaySingleMode)
+              fetchTimings
+          )
+          "findPossibleRoutesMaybeFetchTimings"
       let originStopTripId = listToMaybe originStopTimings >>= (\timing -> Just timing.tripId)
       let distance = distanceBetweenInMeters (LatLong fromStopLat fromStopLon) (LatLong toStopLat toStopLon)
       let routeCode = mbRouteCode <|> nextAvailableRouteCode
@@ -1005,7 +1044,7 @@ buildSingleModeDirectRoutes ::
   MultiModalTypes.GeneralVehicleType ->
   Flow [MultiModalTypes.MultiModalRoute]
 buildSingleModeDirectRoutes getPreliminaryLeg mbRouteCode (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode = do
-  (mbRouteDetails, _) <- buildMultimodalRouteDetails 1 mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc False
+  (mbRouteDetails, _) <- buildMultimodalRouteDetails 1 mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc True False
   case mbRouteDetails of
     Just routeDetails -> do
       currentTime <- getCurrentTime
@@ -1037,12 +1076,20 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
       go allSubwayRoutes
   where
     processRoute viaRoutes = do
+      disableViaPointTimetableCheck <- asks (.disableViaPointTimetableCheck)
       let viaPoints = viaRoutes.viaPoints
           routeDistance = metersToHighPrecMeters viaRoutes.distance
-      routeDetailsWithDistance <- mapM (\(osc, dsc) -> measureLatency (buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc True) "buildMultimodalRouteDetails") viaPoints
+      routeDetailsWithDistance <- mapM (\(osc, dsc) -> measureLatency (buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc disableViaPointTimetableCheck True) "buildMultimodalRouteDetails") viaPoints
       logDebug $ "buildTrainAllViaRoutes routeDetailsWithDistance: " <> show routeDetailsWithDistance
       -- ensure that atleast one train route is possible or two stops are less than 1km apart so that user can walk to other station e.g. Chennai Park to Central station
-      let isRoutePossible = all (\(mbRouteDetails, mbDistance) -> isJust mbRouteDetails || (isJust mbDistance && mbDistance < Just (HighPrecMeters 1000))) routeDetailsWithDistance
+      let singleModeWalkThreshold =
+            fromMaybe
+              1000
+              ( case integratedBppConfig.providerConfig of
+                  DIntegratedBPPConfig.CRIS config -> fromIntegral <$> config.singleModeWalkThreshold
+                  _ -> Nothing
+              )
+      let isRoutePossible = all (\(mbRouteDetails, mbDistance) -> isJust mbRouteDetails || (isJust mbDistance && mbDistance < Just (HighPrecMeters singleModeWalkThreshold))) routeDetailsWithDistance
       if isRoutePossible
         then do
           let routeDetails = mapMaybe (\(mbRouteDetails, _) -> mbRouteDetails) routeDetailsWithDistance
@@ -1079,7 +1126,7 @@ buildTrainAllViaRoutes ::
   Text ->
   Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute])
 buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode processAllViaPoints personId searchReqId = do
-  eitherAllSubwayRoutes <- try @_ @SomeException (measureLatency getAllSubwayRoutes "getAllSubwayRoutes")
+  eitherAllSubwayRoutes <- withTryCatch "getAllSubwayRoutes:buildTrainAllViaRoutes" (measureLatency getAllSubwayRoutes "getAllSubwayRoutes")
   case eitherAllSubwayRoutes of
     Right allSubwayRoutes -> measureLatency (getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints) "getSubwayValidRoutes"
     Left err -> do
@@ -1090,12 +1137,19 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
     getAllSubwayRoutes = do
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
-          routeFareReq <- getRouteFareRequest originStopCode destinationStopCode " " " " personId
-          fares <- CRISRouteFare.getRouteFare crisConfig mocid routeFareReq
+          routeFareReq <- getRouteFareRequest originStopCode destinationStopCode " " " " personId (crisConfig.useRouteFareV4 /= Just True)
+          (fares, _) <- if crisConfig.useRouteFareV4 == Just True then CRISRouteFare.getRouteFare crisConfig mocid routeFareReq True else CRISRouteFareV3.getRouteFare crisConfig mocid routeFareReq True True
           let redisKey = CRISRouteFare.mkRouteFareKey originStopCode destinationStopCode searchReqId
           unless (null fares) $ Hedis.setExp redisKey fares 1800
           let sortedFares = case crisConfig.routeSortingCriteria of
-                Just DIntegratedBPPConfig.FARE -> sortBy (comparing (\fare -> fare.price.amount)) fares
+                Just DIntegratedBPPConfig.FARE ->
+                  sortBy
+                    ( comparing
+                        ( \fare ->
+                            fromMaybe (HighPrecMoney 0.0) ((find ((== ADULT) . (.category)) fare.categories) <&> (.price.amount))
+                        )
+                    )
+                    fares
                 Just DIntegratedBPPConfig.DISTANCE ->
                   sortBy
                     ( comparing
@@ -1184,15 +1238,17 @@ createRecentLocationForMultimodal journey = do
           SQRL.create recentLocation
     _ -> return ()
 
-postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> m (Maybe DOrder.PaymentOrder)
-postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings = do
+postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> m (Maybe DOrder.PaymentOrder)
+postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer = do
   frfsConfig <-
     CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
   frfsBookingsPayments <- mapMaybeM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
-  (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
+  (vendorSplitDetails, amountUpdated) <- createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
   isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing paymentType -- TODO :: You can be moved inside :)
-  splitDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails False
+  isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId merchantOperatingCityId Nothing paymentType
+  splitDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails isPercentageSplitEnabled
+  baskets <- createBasketFromBookings bookings merchantId merchantOperatingCityId paymentType mbEnableOffer
   let splitDetailsAmount = TPayment.extractSplitSettlementDetailsAmount splitDetails
   if frfsConfig.canUpdateExistingPaymentOrder
     then do
@@ -1211,7 +1267,7 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
           let updatedOrder :: DOrder.PaymentOrder
               updatedOrder = paymentOrder {DOrder.amount = amountUpdated}
           return $ Just updatedOrder
-    else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails Nothing
+    else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails (Just baskets)
 
 makePossibleRoutesKey :: Text -> Text -> Id DIntegratedBPPConfig.IntegratedBPPConfig -> Text
 makePossibleRoutesKey fromCode toCode integratedBPPConfig = "PossibleRoutes:" <> fromCode <> ":" <> toCode <> ":" <> integratedBPPConfig.getId
@@ -1268,7 +1324,7 @@ getDistanceAndDuration merchantId merchantOpCityId startLocation endLocation = d
   let origin = startLocation
       destination = endLocation
   distResp <-
-    try @_ @SomeException $
+    withTryCatch "getMultimodalWalkDistance:getDistanceAndDuration" $
       Maps.getMultimodalWalkDistance merchantId merchantOpCityId Nothing $
         Maps.GetDistanceReq
           { origin = origin,
@@ -1285,22 +1341,25 @@ getDistanceAndDuration merchantId merchantOpCityId startLocation endLocation = d
       -- Return Nothing instead of throwing error to allow graceful fallback
       return (Nothing, Nothing)
 
-getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Id Person -> m CRISTypes.CRISFareRequest
-getRouteFareRequest sourceCode destCode changeOver viaPoints personId = do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbMobileNumber <- mapM decrypt person.mobileNumber
-  mbImeiNumber <- mapM decrypt person.imeiNumber
-  sessionId <- getRandomInRange (1, 1000000 :: Int)
-  return $
-    CRISTypes.CRISFareRequest
-      { mobileNo = mbMobileNumber,
-        imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
-        appSession = sessionId,
-        sourceCode = sourceCode,
-        destCode = destCode,
-        changeOver = changeOver,
-        via = viaPoints
-      }
+getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Id Person -> Bool -> m CRISTypes.CRISFareRequest
+getRouteFareRequest sourceCode destCode changeOver viaPoints personId useDummy = do
+  if useDummy
+    then getDummyRouteFareRequest sourceCode destCode changeOver viaPoints
+    else do
+      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      mbMobileNumber <- mapM decrypt person.mobileNumber
+      mbImeiNumber <- mapM decrypt person.imeiNumber
+      sessionId <- getRandomInRange (1, 1000000 :: Int)
+      return $
+        CRISTypes.CRISFareRequest
+          { mobileNo = mbMobileNumber,
+            imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
+            appSession = sessionId,
+            sourceCode = sourceCode,
+            destCode = destCode,
+            changeOver = changeOver,
+            via = viaPoints
+          }
 
 data VehicleLiveRouteInfo = VehicleLiveRouteInfo
   { routeCode :: Maybe Text,
@@ -1321,12 +1380,23 @@ getVehicleLiveRouteInfo ::
   Text ->
   m (Maybe (DIntegratedBPPConfig.IntegratedBPPConfig, VehicleLiveRouteInfo))
 getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber = do
-  eitherResult <- try @_ @SomeException (getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber)
+  eitherResult <- withTryCatch "getVehicleLiveRouteInfoUnsafe:getVehicleLiveRouteInfo" (getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber)
   case eitherResult of
     Left err -> do
       logError $ "Error getting vehicle live route info: " <> show err
       return Nothing
     Right result -> return result
+
+getVehicleServiceTypeFromInMem ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  [DIntegratedBPPConfig.IntegratedBPPConfig] ->
+  Text ->
+  m (Maybe Spec.ServiceTierType)
+getVehicleServiceTypeFromInMem integratedBPPConfigs vehicleNumber = IM.withInMemCache ["CACHED_VEHICLE_TYPE", vehicleNumber] 43200 $ do
+  res <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber
+  case res of
+    Just (_, VehicleLiveRouteInfo {serviceType}) -> return $ Just serviceType
+    Nothing -> return Nothing
 
 getVehicleLiveRouteInfoUnsafe ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -1391,3 +1461,156 @@ secondsToTime seconds =
       minutes :: Int = (totalSeconds `mod` 3600) `div` 60
       secs = fromIntegral $ totalSeconds `mod` 60
    in LocalTime.TimeOfDay hours minutes secs
+
+getServiceTierFromQuote :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> DFRFSQuote.FRFSQuote -> Maybe LegServiceTier
+getServiceTierFromQuote quoteCategories quote = do
+  let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+      mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
+      fareParameters = calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) quote
+  mbServiceTier <&> \serviceTier -> do
+    LegServiceTier
+      { fare = mkPriceAPIEntity <$> (fareParameters.adultItem <&> (.unitPrice)),
+        quoteId = quote.id,
+        serviceTierName = serviceTier.shortName,
+        serviceTierType = serviceTier._type,
+        serviceTierDescription = serviceTier.description,
+        via = quote.fareDetails <&> (.via),
+        trainTypeCode = quote.fareDetails <&> (.trainTypeCode)
+      }
+
+switchFRFSQuoteTierUtil ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  DJourneyLeg.JourneyLeg ->
+  Id DFRFSQuote.FRFSQuote ->
+  m ()
+switchFRFSQuoteTierUtil journeyLeg quoteId = do
+  whenJust journeyLeg.legSearchId $ \legSearchId -> do
+    mbAlternateShortNames <- getAlternateRouteInfo
+    let searchId = Id legSearchId
+    QJourneyLeg.updateLegPricingIdByLegSearchId (Just quoteId.getId) journeyLeg.legSearchId
+    mbBooking <- QFRFSTicketBooking.findBySearchId searchId
+    whenJust mbBooking $ \booking -> do
+      quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Quote not found")
+      oldQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+      newQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
+      quantitySyncedQuoteCategories <-
+        mergeQuoteCategoriesWithQuantitySelections
+          ( mapMaybe
+              ( \category -> do
+                  selectedQuantity <- category.selectedQuantity
+                  return (category.category, selectedQuantity)
+              )
+              oldQuoteCategories
+          )
+          newQuoteCategories
+      let fareParameters = calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromQuoteCategories quantitySyncedQuoteCategories) quote
+          totalPriceForSwitchLeg =
+            Price
+              { amount = fareParameters.totalPrice.amount,
+                amountInt = fareParameters.totalPrice.amountInt,
+                currency = fareParameters.currency
+              }
+          updatedBooking =
+            booking
+              { DFRFSTicketBooking.quoteId = quoteId,
+                DFRFSTicketBooking.stationsJson = quote.stationsJson,
+                DFRFSTicketBooking.routeStationsJson = quote.routeStationsJson,
+                DFRFSTicketBooking.totalPrice = totalPriceForSwitchLeg,
+                DFRFSTicketBooking.estimatedPrice = Just totalPriceForSwitchLeg
+              }
+      void $ QFRFSTicketBooking.updateByPrimaryKey updatedBooking
+    whenJust mbAlternateShortNames $ \(alternateShortNames, alternateRouteIds) -> do
+      QRouteDetails.updateAlternateShortNamesAndRouteIds alternateShortNames (Just alternateRouteIds) journeyLeg.id.getId
+  where
+    getAlternateRouteInfo ::
+      ( CacheFlow m r,
+        EsqDBFlow m r,
+        EsqDBReplicaFlow m r,
+        EncFlow m r,
+        Monad m,
+        HasField "ltsHedisEnv" r Hedis.HedisEnv,
+        HasKafkaProducer r,
+        HasShortDurationRetryCfg r c
+      ) =>
+      m (Maybe ([Text], [Text]))
+    getAlternateRouteInfo = do
+      options <- getLegTierOptionsUtil journeyLeg
+      let mbSelectedOption = find (\option -> option.quoteId == Just quoteId) options
+      return $ mbSelectedOption <&> (\option -> unzip $ map (\a -> (a.shortName, a.routeCode)) option.availableRoutesInfo)
+
+    mergeQuoteCategoriesWithQuantitySelections ::
+      (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+      [(FRFSQuoteCategoryType, Int)] ->
+      [DFRFSQuoteCategory.FRFSQuoteCategory] ->
+      m [DFRFSQuoteCategory.FRFSQuoteCategory]
+    mergeQuoteCategoriesWithQuantitySelections categories quoteCategories = do
+      updatedQuoteCategories <- mapM updateCategory quoteCategories
+      return updatedQuoteCategories
+      where
+        updateCategory category =
+          case find (\(categoryType, _) -> categoryType == category.category) categories of
+            Just (_, quantity) -> do
+              QFRFSQuoteCategory.updateQuantityByQuoteCategoryId (Just quantity) category.id
+              return category {DFRFSQuoteCategory.selectedQuantity = Just quantity}
+            Nothing -> do
+              QFRFSQuoteCategory.updateQuantityByQuoteCategoryId Nothing category.id
+              return category {DFRFSQuoteCategory.selectedQuantity = Nothing}
+
+getLegTierOptionsUtil ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  DJourneyLeg.JourneyLeg ->
+  m [DRouteDetails.AvailableRoutesByTier]
+getLegTierOptionsUtil journeyLeg = do
+  now <- getCurrentTime
+  let mbAgencyId = journeyLeg.agency >>= (.gtfsId)
+  let vehicleCategory = castTravelModeToVehicleCategory journeyLeg.mode
+  quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLeg.legSearchId
+  availableServiceTiers <-
+    mapMaybeM
+      ( \quote -> do
+          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+          return $ getServiceTierFromQuote quoteCategories quote
+      )
+      quotes
+  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId journeyLeg.merchantOperatingCityId vehicleCategory DIntegratedBPPConfig.MULTIMODAL
+  let mbRouteDetail = journeyLeg.routeDetails & listToMaybe
+  let mbFomStopCode = mbRouteDetail >>= (.fromStopCode)
+  let mbToStopCode = mbRouteDetail >>= (.toStopCode)
+  let mbArrivalTime = mbRouteDetail >>= (.fromArrivalTime)
+  let arrivalTime = fromMaybe now mbArrivalTime
+
+  case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
+    (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
+      (_, availableRoutesByTiers, _) <- findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig journeyLeg.merchantId journeyLeg.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY) False False
+      return availableRoutesByTiers
+    _ -> return []
+
+getDummyRouteFareRequest :: MonadFlow m => Text -> Text -> Text -> Text -> m CRISTypes.CRISFareRequest
+getDummyRouteFareRequest sourceCode destCode changeOver viaPoints = do
+  sessionId <- getRandomInRange (1, 1000000 :: Int)
+  return $
+    CRISTypes.CRISFareRequest
+      { mobileNo = Just "1111111111",
+        imeiNo = "abcdefgh",
+        appSession = sessionId,
+        sourceCode = sourceCode,
+        destCode = destCode,
+        changeOver = changeOver,
+        via = viaPoints
+      }

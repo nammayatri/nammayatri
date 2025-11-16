@@ -91,6 +91,7 @@ dependencies:
   - extra
   - singletons
   - unordered-containers
+  - shared-services
 
 ghc-options:
   - -fwrite-ide-info

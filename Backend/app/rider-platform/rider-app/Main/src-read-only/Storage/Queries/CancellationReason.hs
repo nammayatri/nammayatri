@@ -9,7 +9,6 @@ import qualified Domain.Types.Extra.CancellationReason
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
@@ -30,8 +29,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.CancellationReason.CancellationReason {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.description description,
+    [ Se.Set Beam.description description,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.onAssign onAssign,
       Se.Set Beam.onConfirm onConfirm,

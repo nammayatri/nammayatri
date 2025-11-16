@@ -340,6 +340,61 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd _bo
         [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
     Nothing -> pure ()
 
+updateCancellationPenaltyAmount ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DriverFee ->
+  HighPrecMoney ->
+  UTCTime ->
+  m ()
+updateCancellationPenaltyAmount driverFeeId newAmount now = do
+  updateOneWithKV
+    [ Se.Set BeamDF.cancellationPenaltyAmount (Just newAmount),
+      Se.Set BeamDF.updatedAt now
+    ]
+    [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
+
+updateCancellationPenaltyAmountAndNumRides ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DriverFee ->
+  HighPrecMoney ->
+  Int ->
+  UTCTime ->
+  m ()
+updateCancellationPenaltyAmountAndNumRides driverFeeId newAmount numRides now = do
+  updateOneWithKV
+    [ Se.Set BeamDF.cancellationPenaltyAmount (Just newAmount),
+      Se.Set BeamDF.numRides numRides,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
+
+findOngoingCancellationPenaltyFeeByDriverIdAndServiceName ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Driver ->
+  ServiceNames ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  m (Maybe DriverFee)
+findOngoingCancellationPenaltyFeeByDriverIdAndServiceName (Id driverId) serviceName merchantId merchantOperatingCityId now = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [ Se.Is BeamDF.driverId (Se.Eq driverId),
+            Se.Is BeamDF.feeType (Se.Eq CANCELLATION_PENALTY),
+            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+            Se.Is BeamDF.status (Se.Eq ONGOING),
+            Se.Is BeamDF.merchantId (Se.Eq merchantId.getId),
+            Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+            Se.Is BeamDF.startTime $ Se.LessThanOrEq now,
+            Se.Is BeamDF.endTime $ Se.GreaterThanOrEq now
+          ]
+        )
+    ]
+    (Se.Desc BeamDF.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
+
 resetFee ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DriverFee ->
@@ -749,3 +804,161 @@ updateHasSiblingInDriverFee driverFeeId = do
       Se.Set BeamDF.updatedAt now
     ]
     [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]
+
+-- | Find all PAYMENT_PENDING cancellation penalties for a driver
+findPendingCancellationPenaltiesForDriver ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Driver ->
+  ServiceNames ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  m [DriverFee]
+findPendingCancellationPenaltiesForDriver (Id driverId) serviceName merchantId merchantOperatingCityId =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
+          Se.Is BeamDF.feeType $ Se.Eq CANCELLATION_PENALTY,
+          Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING,
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId,
+          Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId)
+        ]
+    ]
+
+-- | Update status to ADDED_TO_INVOICE and link to parent DriverFee
+updateStatusAndAddedToFeeId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Domain.DriverFeeStatus ->
+  Maybe (Id DriverFee) ->
+  [Id DriverFee] ->
+  UTCTime ->
+  m ()
+updateStatusAndAddedToFeeId newStatus addedToFeeId driverFeeIds now =
+  updateWithKV
+    [ Se.Set BeamDF.status newStatus,
+      Se.Set BeamDF.addedToFeeId ((.getId) <$> addedToFeeId),
+      Se.Set BeamDF.updatedAt now
+    ]
+    [Se.Is BeamDF.id (Se.In ((.getId) <$> driverFeeIds))]
+
+-- | Find all cancellation penalties that were added to a specific DriverFee
+findAllByAddedToFeeId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DriverFee ->
+  m [DriverFee]
+findAllByAddedToFeeId driverFeeId =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.addedToFeeId $ Se.Eq (Just driverFeeId.getId),
+          Se.Is BeamDF.feeType $ Se.Eq CANCELLATION_PENALTY
+        ]
+    ]
+
+findUnbilledCancellationPenaltiesForDriver ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Driver ->
+  ServiceNames ->
+  m [DriverFee]
+findUnbilledCancellationPenaltiesForDriver (Id driverId) serviceName =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
+          Se.Is BeamDF.feeType $ Se.Eq CANCELLATION_PENALTY,
+          Se.Is BeamDF.status $ Se.In [ONGOING, IN_DISPUTE_WINDOW, PAYMENT_PENDING],
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
+        ]
+    ]
+
+findSubscriptionFeesWithCancellationPenalties ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Driver ->
+  ServiceNames ->
+  m [DriverFee]
+findSubscriptionFeesWithCancellationPenalties (Id driverId) serviceName =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
+          Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE],
+          Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE],
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.cancellationPenaltyAmount $ Se.Not $ Se.Eq Nothing
+        ]
+    ]
+
+findOriginalCancellationPenaltiesForSubscriptionFee ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id DriverFee] ->
+  m [DriverFee]
+findOriginalCancellationPenaltiesForSubscriptionFee subscriptionFeeIds =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.addedToFeeId $ Se.In (map pure $ (.getId) <$> subscriptionFeeIds),
+          Se.Is BeamDF.feeType $ Se.Eq CANCELLATION_PENALTY
+        ]
+    ]
+
+findParentRecurringExecutionBySplitOfDriverFeeIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id DriverFee] ->
+  m [DriverFee]
+findParentRecurringExecutionBySplitOfDriverFeeIds splitOfDriverFeeIds =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.id $ Se.In ((.getId) <$> splitOfDriverFeeIds),
+          Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE
+        ]
+    ]
+
+moveCancellationPenaltiesToIndisputeWindow ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  ServiceNames ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  m ()
+moveCancellationPenaltiesToIndisputeWindow serviceName merchantId merchantOperatingCityId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDF.status IN_DISPUTE_WINDOW,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamDF.feeType $ Se.Eq CANCELLATION_PENALTY,
+          Se.Is BeamDF.status $ Se.Eq ONGOING,
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId,
+          Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq now
+        ]
+    ]
+
+moveCancellationPenaltyToPaymentPending ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DriverFee ->
+  HighPrecMoney ->
+  m ()
+moveCancellationPenaltyToPaymentPending driverFeeId amountWithGst = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDF.status PAYMENT_PENDING,
+      Se.Set BeamDF.updatedAt now,
+      Se.Set BeamDF.cancellationPenaltyAmount (Just amountWithGst)
+    ]
+    [ Se.Is BeamDF.id $ Se.Eq driverFeeId.getId
+    ]
+
+findAllCancellationPenaltiesInDisputeWindow ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  ServiceNames ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  m [DriverFee]
+findAllCancellationPenaltiesInDisputeWindow serviceName merchantId merchantOperatingCityId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.feeType $ Se.Eq CANCELLATION_PENALTY,
+          Se.Is BeamDF.status $ Se.Eq IN_DISPUTE_WINDOW,
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId,
+          Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId)
+        ]
+    ]

@@ -52,7 +52,6 @@ updateByPrimaryKey (Domain.Types.ClientPersonInfo.ClientPersonInfo {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.clientId (Kernel.Types.Id.getId <$> clientId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),

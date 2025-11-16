@@ -25,6 +25,7 @@ import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (..))
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
@@ -41,6 +42,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Beckn.Common as DTS
+import qualified SharedLogic.Type as SLT
 import Tools.Maps as Google
 
 type PoolBatchNum = Int
@@ -64,10 +66,11 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     rideFare :: Maybe HighPrecMoney,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument,
     currentSearchInfo :: DTS.CurrentSearchInfo,
     transporterConfig :: DTC.TransporterConfig,
     configsInExperimentVersions :: [LYT.ConfigVersionMap],
-    enforceSufficientDriverBalance :: Bool
+    prepaidSubscriptionAndWalletEnabled :: Bool
   }
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
@@ -272,5 +275,7 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     customerExtraFee :: Maybe HighPrecMoney,
     messageId :: Text,
     isRepeatSearch :: Bool,
-    isAllocatorBatch :: Bool
+    isAllocatorBatch :: Bool,
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    billingCategory :: SLT.BillingCategory
   }

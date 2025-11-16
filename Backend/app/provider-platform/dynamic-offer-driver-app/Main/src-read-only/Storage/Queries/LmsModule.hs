@@ -54,7 +54,6 @@ updateByPrimaryKey (Domain.Types.LmsModule.LmsModule {..}) = do
     [ Se.Set Beam.bonusCoinEventFunction bonusCoinEventFunction,
       Se.Set Beam.category category,
       Se.Set Beam.certificationEnabled certificationEnabled,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.duration duration,
       Se.Set Beam.languagesAvailableForQuiz languagesAvailableForQuiz,
       Se.Set Beam.languagesAvailableForVideos languagesAvailableForVideos,

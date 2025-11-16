@@ -3,11 +3,13 @@
 
 module Storage.Queries.OrphanInstances.Vehicle where
 
+import qualified Data.Aeson
 import qualified Domain.Types.Vehicle
 import qualified Domain.Types.VehicleVariant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -33,6 +35,7 @@ instance FromTType' Beam.Vehicle Domain.Types.Vehicle.Vehicle where
             oxygen = oxygen,
             registrationCategory = registrationCategory,
             registrationNo = registrationNo,
+            ruleBasedUpgradeTiers = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< ruleBasedUpgradeTiers,
             selectedServiceTiers = selectedServiceTiers,
             size = size,
             variant = variant,
@@ -64,6 +67,7 @@ instance ToTType' Beam.Vehicle Domain.Types.Vehicle.Vehicle where
         Beam.oxygen = oxygen,
         Beam.registrationCategory = registrationCategory,
         Beam.registrationNo = registrationNo,
+        Beam.ruleBasedUpgradeTiers = Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers,
         Beam.selectedServiceTiers = selectedServiceTiers,
         Beam.size = size,
         Beam.variant = variant,

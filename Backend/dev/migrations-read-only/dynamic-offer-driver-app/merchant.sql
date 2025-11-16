@@ -53,7 +53,6 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN fleet_owner_enabled_check
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN media_file_document_link_expires integer ;
 
 
-
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN enforce_sufficient_driver_balance boolean ;
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN prepaid_subscription_and_wallet_enabled boolean ;

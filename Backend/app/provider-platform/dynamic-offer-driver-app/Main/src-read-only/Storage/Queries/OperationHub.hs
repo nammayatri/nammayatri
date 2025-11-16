@@ -40,7 +40,6 @@ updateByPrimaryKey (Domain.Types.OperationHub.OperationHub {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.mobileNumber mobileNumber,
       Se.Set Beam.name name,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

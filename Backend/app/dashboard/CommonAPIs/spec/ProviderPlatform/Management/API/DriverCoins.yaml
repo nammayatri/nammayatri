@@ -94,6 +94,7 @@ types:
   - coinsUsed: Int
   - status: CoinStatus
   - bulkUploadTitle: Maybe Translations
+  - rideId: Maybe Text
   CoinBurnHistoryItem:
   - numCoins: Int
   - cash: HighPrecMoney

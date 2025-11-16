@@ -14,6 +14,7 @@
 
 module Beckn.ACL.Select (buildSelectReqV2) where
 
+import Beckn.OnDemand.Utils.Init
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
@@ -29,6 +30,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import SharedLogic.CallBAP (mkTxnIdKey)
+import qualified SharedLogic.Type as SLT
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
@@ -60,20 +62,25 @@ buildSelectReqV2 subscriber req = do
   item <- case order.orderItems of
     Just [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
+  logDebug $ "item: select request" <> show item <> "transactionId: " <> transactionId
+  logDebug $ "item.itemTags: select request" <> show item.itemTags <> "transactionId: " <> transactionId
   let customerExtraFee = getCustomerExtraFeeV2 item.itemTags
       autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
       isAdvancedBoookingEnabled = getAdvancedBookingEnabled item.itemTags
       disabilityDisable = buildDisableDisabilityTag item.itemTags
       isPetRide = fromMaybe False $ buildPetRideTag item.itemTags
+      billingCategory = buildBillingCategoryTag item.itemTags
       bookAnyEstimates = getBookAnyEstimates item.itemTags
       (toUpdateDeviceIdInfo, isMultipleOrNoDeviceIdExist) = getDeviceIdInfo item.itemTags
       parcelDetails = getParcelDetails item.itemTags
       preferSafetyPlus = getPeferSafetyPlus item.itemTags
+  logDebug $ "billingCategory: select request" <> show billingCategory <> "transactionId: " <> transactionId
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure $ Just fulfillment
     _ -> pure Nothing
   estimateIdText <- getEstimateId fulfillment item & fromMaybeM (InvalidRequest "Missing item_id")
   let customerPhoneNum = getCustomerPhoneNumber fulfillment
+  paymentMethodInfo <- order.orderPayments >>= Kernel.Prelude.listToMaybe & Kernel.Prelude.mapM Beckn.OnDemand.Utils.Init.mkPaymentMethodInfo <&> Kernel.Prelude.join
   pure
     DSelect.DSelectReq
       { messageId = messageId,
@@ -89,6 +96,8 @@ buildSelectReqV2 subscriber req = do
         isMultipleOrNoDeviceIdExist = isMultipleOrNoDeviceIdExist,
         toUpdateDeviceIdInfo = toUpdateDeviceIdInfo,
         preferSafetyPlus = preferSafetyPlus,
+        paymentMethodInfo = paymentMethodInfo,
+        billingCategory = billingCategory,
         ..
       }
 
@@ -125,6 +134,14 @@ buildPetRideTag tagGroups = do
         Just "True" -> Just True
         Just "False" -> Just False
         _ -> Nothing
+
+buildBillingCategoryTag :: Maybe [Spec.TagGroup] -> SLT.BillingCategory
+buildBillingCategoryTag tagGroups = do
+  let tagValue = Utils.getTagV2 Tag.BILLING_CATEGORY_INFO Tag.BILLING_CATEGORY tagGroups
+   in case T.toLower $ fromMaybe "" tagValue of
+        "personal" -> SLT.PERSONAL
+        "business" -> SLT.BUSINESS
+        _ -> SLT.PERSONAL
 
 getAdvancedBookingEnabled :: Maybe [Spec.TagGroup] -> Bool
 getAdvancedBookingEnabled tagGroups =

@@ -27,8 +27,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.CallbackRequest.CallbackRequest {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.customerMobileCountryCode customerMobileCountryCode,
+    [ Se.Set Beam.customerMobileCountryCode customerMobileCountryCode,
       Se.Set Beam.customerName customerName,
       Se.Set Beam.customerPhoneEncrypted (customerPhone & unEncrypted . encrypted),
       Se.Set Beam.customerPhoneHash (customerPhone & hash),

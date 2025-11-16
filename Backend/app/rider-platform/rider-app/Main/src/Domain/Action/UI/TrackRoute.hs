@@ -5,18 +5,18 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils (frfsVehicleCategoryToBecknVehicleCategory)
 import Data.Function
 import qualified Data.List as List
+import qualified Data.Map as M
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
-import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Utils as JMU
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
@@ -40,82 +40,52 @@ getTrackVehicles ::
     Kernel.Prelude.Maybe Spec.VehicleCategory ->
     Environment.Flow TrackRoute.TrackingResp
   )
-getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mbIntegratedBPPConfigId mbMaxBuses mbPlatformType mbSelectedSourceStopId mbSelectedDestinationStopId mbVehicleType = do
+getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon mbIntegratedBPPConfigId mbMaxBuses mbPlatformType mbSelectedDestinationStopId mbSelectedSourceStopId mbVehicleType = do
   let vehicleType = fromMaybe Spec.BUS mbVehicleType
-      maxBuses = fromMaybe 5 mbMaxBuses
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId personCityInfo.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) (fromMaybe DIBC.APPLICATION mbPlatformType)
+  logInfo $ "mbSelectedSourceStopId: " <> show mbSelectedSourceStopId <> " and mbSelectedDestinationStopId: " <> show mbSelectedDestinationStopId
   routeIdsToTrack <-
     case (mbSelectedSourceStopId, mbSelectedDestinationStopId) of
       (Just sourceStopId, Just destinationStopId) -> do
-        possibleRoutes <- getPossibleRoutesBetweenTwoStops sourceStopId destinationStopId integratedBPPConfig
-        let routeCodes = map (.route.code) possibleRoutes
-        pure $ if null routeCodes then [routeCode] else routeCodes
+        if isRouteBasedVehicleTracking integratedBPPConfig
+          then pure [routeCode]
+          else do
+            routeCodes <- JMU.getRouteCodesFromTo sourceStopId destinationStopId integratedBPPConfig
+            logInfo $ "possibleRoutes between two stops: " <> show routeCodes
+            pure $ List.nub $ [routeCode] <> routeCodes
       _ -> pure [routeCode]
-  logInfo $ "routeIdsToTrack: " <> show routeIdsToTrack
   riderConfig <- CQRC.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist personCityInfo.merchantOperatingCityId.getId)
-  case (mbCurrentLat, mbCurrentLon) of
-    (Just lat, Just lon) -> do
-      let currentLocation = LatLong lat lon
-      routeStops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
-      let nearestStopRaw = getNearestFromList (comparing (distanceBetweenInMeters currentLocation . (.stopPoint))) routeStops
-          nearestStop =
-            case nearestStopRaw of
-              Just stop
-                | Just thresholdInt <- riderConfig.distanceToNearestStopThreshold,
-                  distanceBetweenInMeters currentLocation stop.stopPoint
-                    <= fromIntegral thresholdInt ->
-                  Just stop
-              _ -> Nothing
+  let maxBuses = fromMaybe 5 $ mbMaxBuses <|> riderConfig.maxNearbyBuses
+  mbSourceStop <- maybe (pure Nothing) (\stopCode -> OTPRest.getStationByGtfsIdAndStopCode stopCode integratedBPPConfig) mbSelectedSourceStopId
+  let currentLocation = (\ss -> LatLong <$> ss.lat <*> ss.lon) =<< mbSourceStop
+  vehicleTrackingWithRoutes <- concatMapM (\routeIdToTrack -> map (routeIdToTrack,) <$> trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeIdToTrack (fromMaybe DIBC.APPLICATION mbPlatformType) currentLocation (Just integratedBPPConfig.id)) routeIdsToTrack
+  let deduplicatedVehicles = List.nubBy (\a b -> (snd a).vehicleId == (snd b).vehicleId) vehicleTrackingWithRoutes
+  logInfo $ "deduplicatedVehicles: " <> show deduplicatedVehicles
+  let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop deduplicatedVehicles
+  let (confirmedHighBuses, ghostBuses) = List.partition (\a -> ((snd a).vehicleInfo >>= (.routeState)) == Just CQMMB.ConfirmedHigh) vehiclesYetToReachSelectedStop
+  let sortedTracking = sortOn (distanceToStop currentLocation . snd) ghostBuses
+  let sortedConfirmed = sortOn (distanceToStop currentLocation . snd) confirmedHighBuses
+  let (nearestXBuses, restOfBuses) = splitAt maxBuses $ sortedConfirmed <> sortedTracking
+  serviceTiersOfSelectedBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] <- mapM (\vehicle -> (,vehicle) <$> JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig] (snd vehicle).vehicleId) nearestXBuses
+  serviceTiersOfRemainingBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] <- mapM (\vehicle -> (,vehicle) <$> JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig] (snd vehicle).vehicleId) restOfBuses
+  let alreadySelectedServiceTiers :: [Maybe Spec.ServiceTierType] = List.nub $ map fst serviceTiersOfSelectedBuses
+  let oneFromEachRemaining :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] = filter (\(st, _) -> not $ st `elem` alreadySelectedServiceTiers) . M.toList $ M.fromList serviceTiersOfRemainingBuses
+  let allBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] = serviceTiersOfSelectedBuses <> oneFromEachRemaining
 
-      case nearestStop of
-        Nothing -> getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig routeIdsToTrack
-        Just stop -> do
-          vehicleTrackingWithRoutes <- concatMapM (\routeIdToTrack -> map (routeIdToTrack,) <$> trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeIdToTrack (fromMaybe DIBC.APPLICATION mbPlatformType) (Just currentLocation) (Just integratedBPPConfig.id)) routeIdsToTrack
-          let deduplicatedVehicles = List.nubBy (\a b -> (snd a).vehicleId == (snd b).vehicleId) vehicleTrackingWithRoutes
-          let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop deduplicatedVehicles
-          let (confirmedHighBuses, ghostBuses) = List.partition (\a -> ((snd a).vehicleInfo >>= (.routeState)) == Just CQMMB.ConfirmedHigh) vehiclesYetToReachSelectedStop
-          let sortedTracking = sortOn (distanceToStop stop . snd) ghostBuses
-          pure $
-            TrackRoute.TrackingResp
-              { vehicleTrackingInfo =
-                  map (uncurry mkVehicleTrackingResponse) (confirmedHighBuses <> take maxBuses sortedTracking)
-              }
-    _ -> getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig routeIdsToTrack
+  pure $
+    TrackRoute.TrackingResp
+      { vehicleTrackingInfo =
+          map (uncurry mkVehicleTrackingResponse) allBuses
+      }
   where
     filterVehiclesYetToReachSelectedStop vehicleTracking =
       case mbSelectedSourceStopId of
         Just selectedStopId -> filter (\(_, vt) -> any (\u -> u.stopCode == selectedStopId) vt.upcomingStops) vehicleTracking
         Nothing -> vehicleTracking
-    getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig routeIdsToTrack = do
-      -- Track vehicles for all routes and deduplicate
-      vehicleTrackingWithRoutes <- concatMapM (\routeIdToTrack -> map (routeIdToTrack,) <$> trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeIdToTrack (fromMaybe DIBC.APPLICATION mbPlatformType) Nothing mbIntegratedBPPConfigId) routeIdsToTrack
-      let deduplicatedVehicles = List.nubBy (\a b -> (snd a).vehicleId == (snd b).vehicleId) vehicleTrackingWithRoutes
 
-      -- Create cache key based on source/destination stops or route codes
-      let trackVehicleKey = case (mbSelectedSourceStopId, mbSelectedDestinationStopId) of
-            (Just sourceStopId, Just destStopId) -> mkTrackVehicleKeyByStops sourceStopId destStopId vehicleType
-            _ -> mkTrackVehicleKey routeCode vehicleType
-
-      cachedResp :: Maybe [Text] <- Redis.safeGet trackVehicleKey
-      response <-
-        map (uncurry mkVehicleTrackingResponse)
-          <$> case cachedResp of
-            Just resp -> do
-              let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop deduplicatedVehicles
-              pure $ filter (\(_, vt) -> vt.vehicleId `elem` resp) vehiclesYetToReachSelectedStop
-            Nothing -> do
-              let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop deduplicatedVehicles
-              let vehiclesToShow = take maxBuses vehiclesYetToReachSelectedStop
-              Redis.setExp trackVehicleKey (map ((.vehicleId) . snd) vehiclesToShow) (fromMaybe 900 riderConfig.trackVehicleKeyExpiry)
-              pure vehiclesToShow
-      pure $
-        TrackRoute.TrackingResp
-          { vehicleTrackingInfo = response
-          }
-
-    mkVehicleTrackingResponse actualRouteCode VehicleTracking {..} =
+    mkVehicleTrackingResponse serviceTierType (actualRouteCode, VehicleTracking {..}) =
       TrackRoute.VehicleInfo
         { vehicleId = vehicleId,
           nextStop = nextStop,
@@ -128,23 +98,19 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
               (TrackRoute.VehicleInfoForRoute Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
               mkVehicleInfo
               vehicleInfo,
-          routeCode = actualRouteCode
+          routeCode = actualRouteCode,
+          routeShortName = routeShortName,
+          serviceTierType = serviceTierType
         }
 
     mkVehicleInfo VehicleInfo {..} = TrackRoute.VehicleInfoForRoute {..}
 
-    distanceToStop :: RouteStopMapping.RouteStopMapping -> VehicleTracking -> Double
-    distanceToStop stop vt =
-      case find (\u -> u.stopCode == stop.stopCode) vt.upcomingStops of
-        Just u -> maybe (1 / 0) (fromIntegral . getMeters) u.travelDistance
-        Nothing -> 1 / 0
+    distanceToStop :: Maybe LatLong -> VehicleTracking -> Maybe HighPrecMeters
+    distanceToStop mbSourceStopLocation vt = do
+      let mbVehicleLocation = (vt.vehicleInfo >>= \a -> LatLong <$> (a.latitude) <*> (a.longitude))
+      distanceBetweenInMeters <$> mbVehicleLocation <*> mbSourceStopLocation
 
-    getNearestFromList :: (a -> a -> Ordering) -> [a] -> Maybe a
-    getNearestFromList _ [] = Nothing
-    getNearestFromList cmp xs = Just (List.minimumBy cmp xs)
-
-mkTrackVehicleKey :: Text -> Spec.VehicleCategory -> Text
-mkTrackVehicleKey routeCode vehicleType = "trackVehicles:busNumber:" <> routeCode <> ":" <> show vehicleType
-
-mkTrackVehicleKeyByStops :: Text -> Text -> Spec.VehicleCategory -> Text
-mkTrackVehicleKeyByStops sourceStopCode destStopCode vehicleType = "trackVehicles:stops:" <> sourceStopCode <> ":" <> destStopCode <> ":" <> show vehicleType
+    isRouteBasedVehicleTracking :: DIBC.IntegratedBPPConfig -> Bool
+    isRouteBasedVehicleTracking config = case config.providerConfig of
+      DIBC.ONDC DIBC.ONDCBecknConfig {routeBasedVehicleTracking} -> fromMaybe False routeBasedVehicleTracking
+      _ -> False

@@ -1400,7 +1400,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
   unprocessedEntities <-
     foldlM
       ( \unprocessedEntities specialLocationAndGates -> do
-          try @_ @SomeException
+          withTryCatch
+            "processSpecialLocationAndGatesGroup"
             (processSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates)
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to add special location : " <> show err]

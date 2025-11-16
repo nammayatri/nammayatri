@@ -67,8 +67,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Suspect.Suspect {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.dl dl,
+    [ Se.Set Beam.dl dl,
       Se.Set Beam.firstName firstName,
       Se.Set Beam.flagUpdatedAt flagUpdatedAt,
       Se.Set Beam.flaggedBy (convertFlaggedByToTable flaggedBy),

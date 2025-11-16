@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Utils where
 
@@ -29,6 +30,7 @@ import HSpec
 import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Types.Id (Id (Id))
+import Kernel.Types.TryException
 import Kernel.Utils.Common
 import Network.HTTP.Client (Manager)
 import qualified Network.HTTP.Client as Client
@@ -63,7 +65,7 @@ runClient' clientEnv x = do
 --
 -- The second argument describes attempted delays prior to running an action,
 -- in mcs.
-pollWithDescription :: (HasCallStack, MonadIO m, MonadCatch m) => Text -> [Int] -> m (Maybe a) -> m a
+pollWithDescription :: (HasCallStack, MonadIO m, MonadCatch m, TryException m) => Text -> [Int] -> m (Maybe a) -> m a
 pollWithDescription description allDelays action = withFrozenCallStack $ go allDelays
   where
     go [] =
@@ -77,7 +79,7 @@ pollWithDescription description allDelays action = withFrozenCallStack $ go allD
             when (null remDelays) $ print ("Last error: " <> show err :: Text)
             return Nothing
       liftIO $ threadDelay delay
-      try @_ @SomeException action >>= either printLastError return >>= maybe (go remDelays) pure
+      withTryCatch "action:retryWithDelay" action >>= either printLastError return >>= maybe (go remDelays) pure
 
 expBackoff :: Int -> Int -> [Int]
 expBackoff startDelay maxDelay =
@@ -86,20 +88,20 @@ expBackoff startDelay maxDelay =
 -- | 'pollWith' with default timing.
 --
 -- Optimized for requesting a server for a result of async action.
-poll :: (HasCallStack, MonadIO m, MonadCatch m) => m (Maybe a) -> m a
+poll :: (HasCallStack, MonadIO m, MonadCatch m, TryException m) => m (Maybe a) -> m a
 poll = pollDesc ""
 
-pollDesc :: (HasCallStack, MonadIO m, MonadCatch m) => Text -> m (Maybe a) -> m a
+pollDesc :: (HasCallStack, MonadIO m, MonadCatch m, TryException m) => Text -> m (Maybe a) -> m a
 pollDesc description = pollWithDescription description (expBackoff 0.1e6 10e6)
 
-pollList :: (HasCallStack, MonadIO m, MonadCatch m) => Text -> m [a] -> m (NonEmpty a)
+pollList :: (HasCallStack, MonadIO m, MonadCatch m, TryException m) => Text -> m [a] -> m (NonEmpty a)
 pollList description action = pollDesc description $ nonEmpty <$> action
 
-pollFilteredList :: (HasCallStack, MonadIO m, MonadCatch m) => Text -> (a -> Bool) -> m [a] -> m (NonEmpty a)
+pollFilteredList :: (HasCallStack, MonadIO m, MonadCatch m, TryException m) => Text -> (a -> Bool) -> m [a] -> m (NonEmpty a)
 pollFilteredList description filterFunc action =
   pollDesc description $ nonEmpty . filter filterFunc <$> action
 
-pollFilteredMList :: (HasCallStack, MonadIO m, MonadCatch m) => Text -> (a -> m Bool) -> m [a] -> m (NonEmpty a)
+pollFilteredMList :: (HasCallStack, MonadIO m, MonadCatch m, TryException m) => Text -> (a -> m Bool) -> m [a] -> m (NonEmpty a)
 pollFilteredMList description filterFunc action =
   pollDesc description $ nonEmpty <$> (action >>= filterM filterFunc)
 
@@ -125,6 +127,9 @@ data ClientEnvs = ClientEnvs
   }
 
 type ClientsM = ReaderT ClientEnvs IO
+
+instance TryException ClientsM where
+  withTryCatch _ = try
 
 withBecknClients :: ClientEnvs -> ClientsM a -> IO a
 withBecknClients = flip runReaderT

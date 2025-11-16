@@ -6,18 +6,18 @@ module Storage.Queries.FRFSQuoteCategory where
 
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory
+import qualified Domain.Types.FRFSQuoteCategoryType
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
-import qualified Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSQuoteCategory as Beam
-import qualified Storage.Queries.FRFSTicketCategoryMetadataConfig
+import qualified Storage.Queries.Transformers.FRFSQuoteCategory
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m ())
 create = createWithKV
@@ -30,6 +30,13 @@ findAllByQuoteId quoteId = do findAllWithKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m (Maybe Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateFinalPriceByQuoteCategoryId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m ())
+updateFinalPriceByQuoteCategoryId finalPrice id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateQuantityByQuoteCategoryId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -46,7 +53,12 @@ updateByPrimaryKey (Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bppItemId bppItemId,
-      Se.Set Beam.maxTicketAllowed maxTicketAllowed,
+      Se.Set Beam.category (Kernel.Prelude.Just category),
+      Se.Set Beam.code (categoryMeta <&> (.code)),
+      Se.Set Beam.description (categoryMeta <&> (.description)),
+      Se.Set Beam.title (categoryMeta <&> (.title)),
+      Se.Set Beam.tnc (categoryMeta <&> (.tnc)),
+      Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.offeredPrice ((.amount) offeredPrice),
@@ -54,28 +66,28 @@ updateByPrimaryKey (Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory {..}) = do
       Se.Set Beam.price ((.amount) price),
       Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
       Se.Set Beam.selectedQuantity selectedQuantity,
-      Se.Set Beam.ticketCategoryMetadataConfigId (Kernel.Types.Id.getId $ (.id) ticketCategoryMetadataConfig),
-      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.ticketCategoryMetadataConfigId ticketCategoryMetadataConfigId,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.FRFSQuoteCategory Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory where
   fromTType' (Beam.FRFSQuoteCategoryT {..}) = do
-    ticketCategoryMetadataConfig' <- Storage.Queries.FRFSTicketCategoryMetadataConfig.findById (Kernel.Types.Id.Id ticketCategoryMetadataConfigId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("Ticket category metadata config not found for quote category: " <> show id))
     pure $
       Just
         Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory
           { bppItemId = bppItemId,
+            category = Kernel.Prelude.fromMaybe Domain.Types.FRFSQuoteCategoryType.ADULT category,
+            categoryMeta = Storage.Queries.Transformers.FRFSQuoteCategory.mkQuoteCategoryMetadata code title description tnc,
+            finalPrice = Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice,
             id = Kernel.Types.Id.Id id,
-            maxTicketAllowed = maxTicketAllowed,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             offeredPrice = Kernel.Types.Common.mkPrice currency offeredPrice,
             price = Kernel.Types.Common.mkPrice currency price,
             quoteId = Kernel.Types.Id.Id quoteId,
             selectedQuantity = selectedQuantity,
-            ticketCategoryMetadataConfig = ticketCategoryMetadataConfig',
+            ticketCategoryMetadataConfigId = ticketCategoryMetadataConfigId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -84,8 +96,13 @@ instance ToTType' Beam.FRFSQuoteCategory Domain.Types.FRFSQuoteCategory.FRFSQuot
   toTType' (Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory {..}) = do
     Beam.FRFSQuoteCategoryT
       { Beam.bppItemId = bppItemId,
+        Beam.category = Kernel.Prelude.Just category,
+        Beam.code = categoryMeta <&> (.code),
+        Beam.description = categoryMeta <&> (.description),
+        Beam.title = categoryMeta <&> (.title),
+        Beam.tnc = categoryMeta <&> (.tnc),
+        Beam.finalPrice = Kernel.Prelude.fmap (.amount) finalPrice,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.maxTicketAllowed = maxTicketAllowed,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.offeredPrice = (.amount) offeredPrice,
@@ -93,7 +110,7 @@ instance ToTType' Beam.FRFSQuoteCategory Domain.Types.FRFSQuoteCategory.FRFSQuot
         Beam.price = (.amount) price,
         Beam.quoteId = Kernel.Types.Id.getId quoteId,
         Beam.selectedQuantity = selectedQuantity,
-        Beam.ticketCategoryMetadataConfigId = Kernel.Types.Id.getId $ (.id) ticketCategoryMetadataConfig,
+        Beam.ticketCategoryMetadataConfigId = ticketCategoryMetadataConfigId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

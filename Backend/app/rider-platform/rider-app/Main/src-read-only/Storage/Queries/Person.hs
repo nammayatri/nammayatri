@@ -10,6 +10,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Whatsapp.Interface.Types
 import Kernel.Prelude
@@ -144,6 +145,9 @@ updateLiveActivityToken liveActivityToken id = do
 updatePayoutVpa :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutVpa payoutVpa id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.payoutVpa payoutVpa, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePersonPassword :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePersonPassword passwordHash id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.passwordHash passwordHash, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateReferralCodeAndReferredAt ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
@@ -187,7 +191,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
       Se.Set Beam.clientReactNativeVersion clientReactNativeVersion,
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
-      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.comments comments,
       Se.Set Beam.currentCity (Kernel.Prelude.Just currentCity),
       Se.Set Beam.customerNammaTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType customerNammaTags),
       Se.Set Beam.customerPaymentId customerPaymentId,

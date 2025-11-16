@@ -34,7 +34,6 @@ updateByPrimaryKey (Domain.Types.DriverProfileQuestions.DriverProfileQuestions {
   updateWithKV
     [ Se.Set Beam.aboutMe aboutMe,
       Se.Set Beam.aspirations aspirations,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.drivingSince drivingSince,
       Se.Set Beam.hometown hometown,
       Se.Set Beam.imageIds imageIds,

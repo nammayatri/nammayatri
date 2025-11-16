@@ -6,6 +6,8 @@ module Domain.Action.ProviderPlatform.Operator.Driver
     getDriverOperatorList,
     postDriverOperatorSendJoiningOtp,
     postDriverOperatorVerifyJoiningOtp,
+    getDriverOperatorDashboardAnalyticsAllTime,
+    getDriverOperatorDashboardAnalytics,
   )
 where
 
@@ -13,6 +15,7 @@ import qualified API.Client.ProviderPlatform.Operator as Client
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
+import Data.Time.Calendar
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
@@ -88,3 +91,13 @@ postDriverOperatorVerifyJoiningOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merc
 postDriverOperatorVerifyJoiningOtp merchantShortId opCity apiTokenInfo authId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverOperatorVerifyJoiningOtp) authId apiTokenInfo.personId.getId req
+
+getDriverOperatorDashboardAnalyticsAllTime :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.AllTimeOperatorAnalyticsRes)
+getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorDashboardAnalyticsAllTime) apiTokenInfo.personId.getId
+
+getDriverOperatorDashboardAnalytics :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Time.Calendar.Day -> Data.Time.Calendar.Day -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes)
+getDriverOperatorDashboardAnalytics merchantShortId opCity apiTokenInfo from to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorDashboardAnalytics) apiTokenInfo.personId.getId from to

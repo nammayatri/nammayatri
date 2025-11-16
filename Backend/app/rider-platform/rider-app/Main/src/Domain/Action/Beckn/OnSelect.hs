@@ -41,7 +41,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Confirm as SConfirm
+import SharedLogic.Type
 import qualified Storage.CachedQueries.BppDetails as CQBPP
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Quote as QQuote
@@ -77,6 +79,7 @@ data QuoteInfo = QuoteInfo
     isCustomerPrefferedSearchRoute :: Maybe Bool,
     isBlockedRoute :: Maybe Bool,
     quoteValidTill :: UTCTime,
+    billingCategory :: BillingCategory,
     tripCategory :: TripCategory
   }
 
@@ -121,7 +124,8 @@ onSelect OnSelectValidatedReq {..} = do
           -- Lock Release: Held for 10 seconds once acquired.
           isLockAcquired <- SConfirm.tryInitTriggerLock autoAssignQuote.requestId
           when isLockAcquired $ do
-            let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quote = autoAssignQuote, paymentMethodId = searchRequest.selectedPaymentMethodId}
+            merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
+            let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quote = autoAssignQuote, paymentMethodId = searchRequest.selectedPaymentMethodId, paymentInstrument = searchRequest.selectedPaymentInstrument, merchant}
             dConfirmRes <- SConfirm.confirm dConfirmReq
             becknInitReq <- ACL.buildInitReqV2 dConfirmRes
             handle (errHandler dConfirmRes.booking) $ do
@@ -201,6 +205,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             tripCategory = Just tripCategory,
             vehicleIconUrl = estimate.vehicleIconUrl,
             isSafetyPlus = quoteDetails.isSafetyPlus,
+            billingCategory = billingCategory,
             ..
           }
   pure quote

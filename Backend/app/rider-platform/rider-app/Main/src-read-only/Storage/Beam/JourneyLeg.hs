@@ -18,6 +18,7 @@ import Tools.Beam.UtilsTH
 data JourneyLegT f = JourneyLegT
   { agencyGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     agencyName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    busLocationData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     changedBusesInSequence :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
@@ -44,6 +45,7 @@ data JourneyLegT f = JourneyLegT
     journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     legPricingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     legId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    serviceTypes :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     mode :: B.C f Domain.Types.Common.MultimodalTravelMode,
@@ -51,7 +53,6 @@ data JourneyLegT f = JourneyLegT
     osmEntrance :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     osmExit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     sequenceNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    serviceTypes :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
     startLocationLat :: B.C f Kernel.Prelude.Double,
     startLocationLon :: B.C f Kernel.Prelude.Double,
     straightLineEntrance :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

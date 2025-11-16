@@ -47,6 +47,11 @@ RiderConfig:
       canBoardIn: "[BecknV2.FRFS.Enums.ServiceTierType]"
     ServiceTierSource:
       enum: "NANDI,QUOTES"
+    SpecialVehicleNotificationConfig:
+      derive: "Eq"
+      vehicleNo: Text
+      notificationTitle: Text
+      notificationMessage: Text
 
   tableName: rider_config
 
@@ -164,6 +169,11 @@ RiderConfig:
     enableRideEndOffers: Bool
     metricsBlacklistPatterns: "Maybe [Text]"
     dashboardMediaFileUrlPattern : Maybe Text
+    maxNearbyBuses: Maybe Int
+    nearbyBusSearchRadius: Maybe Double
+    enableOnlinePaymentRide: Maybe Bool
+    nearbyBusMaxTimeThreshold: Maybe Int
+    specialVehicleNotificationConfigs: "Maybe [SpecialVehicleNotificationConfig]"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -200,6 +210,7 @@ RiderConfig:
     noOfRideRequestsConfig: Maybe Int
     busTrackingConfig: Maybe Value
     busTierSortingConfig: Maybe Value
+    specialVehicleNotificationConfigs: Maybe Value
     serviceTierRelationshipCfg: Maybe Value
     pickupInstructionsThreshold: Maybe Int
     pickupInstructionsProximityMeters: Maybe Int
@@ -256,6 +267,7 @@ RiderConfig:
     serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Kernel.Utils.JSON.valueToMaybe)|E
     noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    specialVehicleNotificationConfigs: (specialVehicleNotificationConfigs >>= Kernel.Utils.JSON.valueToMaybe)|E
     pickupInstructionsThreshold: fromMaybe 4 pickupInstructionsThreshold|E
     pickupInstructionsProximityMeters: fromMaybe 10 pickupInstructionsProximityMeters|E
     initiateFirstMultimodalJourney: fromMaybe False initiateFirstMultimodalJourney|E
@@ -304,6 +316,7 @@ RiderConfig:
     serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Just . Data.Aeson.toJSON)|E
     noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Just . Data.Aeson.toJSON|E
+    specialVehicleNotificationConfigs: (specialVehicleNotificationConfigs >>= Just . Data.Aeson.toJSON)|E
     pickupInstructionsThreshold: Just pickupInstructionsThreshold|E
     pickupInstructionsProximityMeters: Just pickupInstructionsProximityMeters|E
     initiateFirstMultimodalJourney: Just initiateFirstMultimodalJourney|E
@@ -361,7 +374,7 @@ RiderConfig:
     trackVehicleKeyExpiry: "900"
     distanceToNearestStopThreshold: "200"
     validateSetOnboardingVehicleRequest: "false"
-
+    enableOnlinePaymentRide: "false"
   queries:
     findByMerchantOperatingCityId:
       kvFunction: findOneWithKV
@@ -399,6 +412,7 @@ RiderConfig:
     ticketingPermissionConfig: "json"
     busTrackingConfig: "json"
     busTierSortingConfig: "json"
+    specialVehicleNotificationConfigs: "json"
     serviceTierRelationshipCfg: "json"
     metricsBlacklistPatterns: text []
 

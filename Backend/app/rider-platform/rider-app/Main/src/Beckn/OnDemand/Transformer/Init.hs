@@ -12,6 +12,7 @@ import qualified Data.List
 import qualified Data.Text
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.DeliveryDetails as DTDD
+import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Trip as Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
@@ -20,15 +21,15 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Utils.Text
 import qualified SharedLogic.Confirm
 
-buildInitReq :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Bool -> DBC.BecknConfig -> Text -> m BecknV2.OnDemand.Types.InitReq
-buildInitReq uiConfirm bapUrl action domain isValueAddNP bapConfig initTtl = do
+buildInitReq :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Bool -> DBC.BecknConfig -> DRC.RiderConfig -> Text -> m BecknV2.OnDemand.Types.InitReq
+buildInitReq uiConfirm bapUrl action domain isValueAddNP bapConfig riderConfig initTtl = do
   initReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain uiConfirm.booking.id.getId (Just uiConfirm.searchRequestId.getId) uiConfirm.merchant.bapId bapUrl (Just uiConfirm.providerId) (Just uiConfirm.providerUrl) uiConfirm.city uiConfirm.merchant.country (Just initTtl)
-  let initReqMessage_ = buildInitReqMessage uiConfirm isValueAddNP bapConfig
+  let initReqMessage_ = buildInitReqMessage uiConfirm isValueAddNP bapConfig riderConfig
   pure $ BecknV2.OnDemand.Types.InitReq {initReqContext = initReqContext_, initReqMessage = initReqMessage_}
 
-buildInitReqMessage :: SharedLogic.Confirm.DConfirmRes -> Bool -> DBC.BecknConfig -> BecknV2.OnDemand.Types.ConfirmReqMessage
-buildInitReqMessage uiConfirm isValueAddNP bapConfig = do
-  let confirmReqMessageOrder_ = tfOrder uiConfirm isValueAddNP bapConfig
+buildInitReqMessage :: SharedLogic.Confirm.DConfirmRes -> Bool -> DBC.BecknConfig -> DRC.RiderConfig -> BecknV2.OnDemand.Types.ConfirmReqMessage
+buildInitReqMessage uiConfirm isValueAddNP bapConfig riderConfig = do
+  let confirmReqMessageOrder_ = tfOrder uiConfirm isValueAddNP bapConfig riderConfig
   BecknV2.OnDemand.Types.ConfirmReqMessage {confirmReqMessageOrder = confirmReqMessageOrder_}
 
 tfFulfillmentVehicle :: SharedLogic.Confirm.DConfirmRes -> BecknV2.OnDemand.Types.Vehicle
@@ -43,13 +44,13 @@ tfFulfillmentVehicle uiConfirm = do
   let vehicleCapacity_ = Nothing
   BecknV2.OnDemand.Types.Vehicle {vehicleCategory = vehicleCategory_, vehicleColor = vehicleColor_, vehicleMake = vehicleMake_, vehicleModel = vehicleModel_, vehicleRegistration = vehicleRegistration_, vehicleVariant = vehicleVariant_, vehicleCapacity = vehicleCapacity_}
 
-tfOrder :: SharedLogic.Confirm.DConfirmRes -> Bool -> DBC.BecknConfig -> BecknV2.OnDemand.Types.Order
-tfOrder uiConfirm isValueAddNP bapConfig = do
+tfOrder :: SharedLogic.Confirm.DConfirmRes -> Bool -> DBC.BecknConfig -> DRC.RiderConfig -> BecknV2.OnDemand.Types.Order
+tfOrder uiConfirm isValueAddNP bapConfig riderConfig = do
   let orderCancellation_ = Nothing
   let orderCancellationTerms_ = Nothing
   let orderId_ = Nothing
   let orderProvider_ = Just $ tfProvider uiConfirm
-  let orderPayments_ = Beckn.OnDemand.Utils.Init.mkPayment uiConfirm.paymentMethodInfo bapConfig uiConfirm.city & Just
+  let orderPayments_ = Beckn.OnDemand.Utils.Init.mkPayment uiConfirm.paymentMethodInfo bapConfig riderConfig uiConfirm.city & Just
   let orderStatus_ = Nothing
   let orderQuote_ = Nothing
   let orderBilling_ = tfOrderBilling uiConfirm.riderPhone uiConfirm.riderName & Just

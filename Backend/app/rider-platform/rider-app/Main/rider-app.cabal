@@ -45,6 +45,7 @@ library
       API.Beckn.OnStatus
       API.Beckn.OnTrack
       API.Beckn.OnUpdate
+      API.Conductor
       API.Dashboard
       API.Dashboard.Exotel
       API.FRFS
@@ -79,6 +80,7 @@ library
       API.UI.Issue
       API.UI.Maps
       API.UI.PartnerOrganizationFRFS
+      API.UI.Pass
       API.UI.Payment
       API.UI.PersonStats
       API.UI.Profile
@@ -181,6 +183,7 @@ library
       Domain.Action.Dashboard.RideBooking.Confirm
       Domain.Action.Dashboard.RideBooking.Frontend
       Domain.Action.Dashboard.RideBooking.Maps
+      Domain.Action.Dashboard.RideBooking.MultiModal
       Domain.Action.Dashboard.RideBooking.NotifyRideInfo
       Domain.Action.Dashboard.RideBooking.Profile
       Domain.Action.Dashboard.RideBooking.Quote
@@ -210,11 +213,13 @@ library
       Domain.Action.UI.CallEvent
       Domain.Action.UI.Cancel
       Domain.Action.UI.CancellationReason
+      Domain.Action.UI.Conductor.Stats
       Domain.Action.UI.Confirm
       Domain.Action.UI.CRIS
       Domain.Action.UI.CustomerReferral
       Domain.Action.UI.DeletedPerson
       Domain.Action.UI.Disability
+      Domain.Action.UI.Dispatcher
       Domain.Action.UI.DriverOffer
       Domain.Action.UI.EditLocation
       Domain.Action.UI.Estimate
@@ -243,6 +248,7 @@ library
       Domain.Action.UI.NearbyDrivers
       Domain.Action.UI.NyRegularSubscription
       Domain.Action.UI.PartnerOrganizationFRFS
+      Domain.Action.UI.Pass
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
       Domain.Action.UI.PersonDefaultEmergencyNumber
@@ -257,6 +263,7 @@ library
       Domain.Action.UI.RentalsIntercityCache
       Domain.Action.UI.Ride
       Domain.Action.UI.RidePayment
+      Domain.Action.UI.RiderLocation
       Domain.Action.UI.Route
       Domain.Action.UI.SavedReqLocation
       Domain.Action.UI.Search
@@ -291,6 +298,7 @@ library
       Domain.Types.Extra.PartnerOrgConfig
       Domain.Types.Extra.PersonFlowStatus
       Domain.Types.Extra.PlaceNameCache
+      Domain.Types.Extra.PurchasedPass
       Domain.Types.Extra.RecentLocation
       Domain.Types.Extra.RentalDetails
       Domain.Types.Extra.Ride
@@ -341,6 +349,7 @@ library
       ExternalBPP.ExternalAPI.Subway.CRIS.OtpGeneration
       ExternalBPP.ExternalAPI.Subway.CRIS.ReconTicketEnquiry
       ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare
+      ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3
       ExternalBPP.ExternalAPI.Subway.CRIS.SDKData
       ExternalBPP.ExternalAPI.Subway.CRIS.Types
       ExternalBPP.ExternalAPI.Subway.CRIS.Uts
@@ -374,6 +383,7 @@ library
       SharedLogic.Cancel
       SharedLogic.Confirm
       SharedLogic.CreateFareForMultiModal
+      SharedLogic.EstimateTags
       SharedLogic.External.BbpsService.Flow
       SharedLogic.External.LocationTrackingService.API.NearbyDrivers
       SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute
@@ -392,11 +402,13 @@ library
       SharedLogic.LocationMapping
       SharedLogic.Merchant
       SharedLogic.MerchantConfig
+      SharedLogic.MerchantPaymentMethod
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
       SharedLogic.NyRegularSubscriptionHasher
       SharedLogic.NySubscription
       SharedLogic.Payment
+      SharedLogic.PaymentVendorSplits
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PublicTransport
@@ -415,6 +427,7 @@ library
       SharedLogic.Scheduler.Jobs.MetroBusinessHour
       SharedLogic.Scheduler.Jobs.NyRegularInstance
       SharedLogic.Scheduler.Jobs.NyRegularMaster
+      SharedLogic.Scheduler.Jobs.PaymentOrderStatusCheck
       SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
       SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
       SharedLogic.Scheduler.Jobs.SafetyCSAlert
@@ -427,6 +440,7 @@ library
       SharedLogic.TicketRule.Apply
       SharedLogic.TicketRule.Core
       SharedLogic.TicketUtils
+      SharedLogic.Type
       Storage.Beam.BecknRequest
       Storage.Beam.Common
       Storage.Beam.EstimateBreakup
@@ -476,12 +490,14 @@ library
       Storage.CachedQueries.SavedReqLocationExtra
       Storage.CachedQueries.Sos
       Storage.CachedQueries.StationsExtraInformation
+      Storage.CachedQueries.Translations
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleConfig
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.Booking
       Storage.Clickhouse.BookingCancellationReason
+      Storage.Clickhouse.ConductorStats
       Storage.Clickhouse.EstimateBreakup
       Storage.Clickhouse.FareBreakup
       Storage.Clickhouse.Location
@@ -525,11 +541,16 @@ library
       Storage.Queries.NyRegularSubscriptionExtra
       Storage.Queries.PartnerOrganizationExtra
       Storage.Queries.PartnerOrgConfigExtra
+      Storage.Queries.PassCategoryExtra
+      Storage.Queries.PassExtra
+      Storage.Queries.PassTypeExtra
+      Storage.Queries.PassVerifyTransactionExtra
       Storage.Queries.PersonDefaultEmergencyNumberExtra
       Storage.Queries.PersonExtra
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfigExtra
       Storage.Queries.PopularLocationExtra
+      Storage.Queries.PurchasedPassExtra
       Storage.Queries.QueriesExtra.RideLite
       Storage.Queries.QuoteExtra
       Storage.Queries.RatingExtra
@@ -555,6 +576,7 @@ library
       Storage.Queries.Transformers.BookingCancellationReason
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.Estimate
+      Storage.Queries.Transformers.FRFSQuoteCategory
       Storage.Queries.Transformers.IntegratedBPPConfig
       Storage.Queries.Transformers.Journey
       Storage.Queries.Transformers.JourneyLeg
@@ -574,6 +596,7 @@ library
       Storage.Queries.Transformers.TicketMerchantDetails
       Storage.Queries.Transformers.TripTerms
       Storage.Queries.Transformers.WhiteListOrg
+      Storage.Queries.TranslationsExtra
       Storage.Queries.UiRiderConfigExtra
       Storage.Queries.VehicleRouteMappingExtra
       Storage.Queries.WhiteListOrgExtra
@@ -627,6 +650,7 @@ library
       API.Action.Dashboard.RideBooking.Confirm
       API.Action.Dashboard.RideBooking.Frontend
       API.Action.Dashboard.RideBooking.Maps
+      API.Action.Dashboard.RideBooking.MultiModal
       API.Action.Dashboard.RideBooking.NotifyRideInfo
       API.Action.Dashboard.RideBooking.Profile
       API.Action.Dashboard.RideBooking.Quote
@@ -639,6 +663,7 @@ library
       API.Action.UI.CRIS
       API.Action.UI.CustomerReferral
       API.Action.UI.DeletedPerson
+      API.Action.UI.Dispatcher
       API.Action.UI.EditLocation
       API.Action.UI.EstimateBP
       API.Action.UI.FavouriteDriver
@@ -654,10 +679,12 @@ library
       API.Action.UI.NearbyBuses
       API.Action.UI.NearbyDrivers
       API.Action.UI.NyRegularSubscription
+      API.Action.UI.Pass
       API.Action.UI.PickupInstructions
       API.Action.UI.Places
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
+      API.Action.UI.RiderLocation
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.TicketKapture
@@ -684,6 +711,7 @@ library
       API.Types.Dashboard.RideBooking.Endpoints.Confirm
       API.Types.Dashboard.RideBooking.Endpoints.Frontend
       API.Types.Dashboard.RideBooking.Endpoints.Maps
+      API.Types.Dashboard.RideBooking.Endpoints.MultiModal
       API.Types.Dashboard.RideBooking.Endpoints.NotifyRideInfo
       API.Types.Dashboard.RideBooking.Endpoints.Profile
       API.Types.Dashboard.RideBooking.Endpoints.Quote
@@ -692,6 +720,7 @@ library
       API.Types.Dashboard.RideBooking.Endpoints.Select
       API.Types.Dashboard.RideBooking.Frontend
       API.Types.Dashboard.RideBooking.Maps
+      API.Types.Dashboard.RideBooking.MultiModal
       API.Types.Dashboard.RideBooking.NotifyRideInfo
       API.Types.Dashboard.RideBooking.Profile
       API.Types.Dashboard.RideBooking.Quote
@@ -703,6 +732,7 @@ library
       API.Types.UI.CRIS
       API.Types.UI.CustomerReferral
       API.Types.UI.DeletedPerson
+      API.Types.UI.Dispatcher
       API.Types.UI.EditLocation
       API.Types.UI.EstimateBP
       API.Types.UI.FavouriteDriver
@@ -717,10 +747,12 @@ library
       API.Types.UI.NearbyBuses
       API.Types.UI.NearbyDrivers
       API.Types.UI.NyRegularSubscription
+      API.Types.UI.Pass
       API.Types.UI.PickupInstructions
       API.Types.UI.Places
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
+      API.Types.UI.RiderLocation
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.TicketKapture
@@ -747,7 +779,10 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.ClientPersonInfo
+      Domain.Types.CrisRecon
       Domain.Types.DeletedPerson
+      Domain.Types.Depot
+      Domain.Types.DepotManager
       Domain.Types.Disability
       Domain.Types.DisabilityTranslation
       Domain.Types.DraftTicketChange
@@ -809,6 +844,10 @@ library
       Domain.Types.PartnerOrganization
       Domain.Types.PartnerOrgConfig
       Domain.Types.PartnerOrgStation
+      Domain.Types.Pass
+      Domain.Types.PassCategory
+      Domain.Types.PassType
+      Domain.Types.PassVerifyTransaction
       Domain.Types.PaymentCustomer
       Domain.Types.PayoutConfig
       Domain.Types.Person
@@ -820,6 +859,8 @@ library
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.PlaceNameCache
       Domain.Types.PopularLocation
+      Domain.Types.PurchasedPass
+      Domain.Types.PurchasedPassPayment
       Domain.Types.Quote
       Domain.Types.QuoteBreakup
       Domain.Types.Rating
@@ -855,6 +896,7 @@ library
       Domain.Types.TicketPlace
       Domain.Types.TicketService
       Domain.Types.TicketSubPlace
+      Domain.Types.Translations
       Domain.Types.TripTerms
       Domain.Types.UiRiderConfig
       Domain.Types.ValueAddNP
@@ -883,7 +925,10 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.ClientPersonInfo
+      Storage.Beam.CrisRecon
       Storage.Beam.DeletedPerson
+      Storage.Beam.Depot
+      Storage.Beam.DepotManager
       Storage.Beam.Disability
       Storage.Beam.DisabilityTranslation
       Storage.Beam.DraftTicketChange
@@ -945,6 +990,10 @@ library
       Storage.Beam.PartnerOrganization
       Storage.Beam.PartnerOrgConfig
       Storage.Beam.PartnerOrgStation
+      Storage.Beam.Pass
+      Storage.Beam.PassCategory
+      Storage.Beam.PassType
+      Storage.Beam.PassVerifyTransaction
       Storage.Beam.PaymentCustomer
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
@@ -955,6 +1004,8 @@ library
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.PlaceNameCache
       Storage.Beam.PopularLocation
+      Storage.Beam.PurchasedPass
+      Storage.Beam.PurchasedPassPayment
       Storage.Beam.Quote
       Storage.Beam.QuoteBreakup
       Storage.Beam.Rating
@@ -990,6 +1041,7 @@ library
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
       Storage.Beam.TicketSubPlace
+      Storage.Beam.Translations
       Storage.Beam.TripTerms
       Storage.Beam.UiRiderConfig
       Storage.Beam.ValueAddNP
@@ -1021,7 +1073,10 @@ library
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.ClientPersonInfo
+      Storage.Queries.CrisRecon
       Storage.Queries.DeletedPerson
+      Storage.Queries.Depot
+      Storage.Queries.DepotManager
       Storage.Queries.Disability
       Storage.Queries.DisabilityTranslation
       Storage.Queries.DraftTicketChange
@@ -1109,11 +1164,16 @@ library
       Storage.Queries.OrphanInstances.NyRegularSubscription
       Storage.Queries.OrphanInstances.PartnerOrganization
       Storage.Queries.OrphanInstances.PartnerOrgConfig
+      Storage.Queries.OrphanInstances.Pass
+      Storage.Queries.OrphanInstances.PassCategory
+      Storage.Queries.OrphanInstances.PassType
+      Storage.Queries.OrphanInstances.PassVerifyTransaction
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
       Storage.Queries.OrphanInstances.PopularLocation
+      Storage.Queries.OrphanInstances.PurchasedPass
       Storage.Queries.OrphanInstances.Quote
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.RecentLocation
@@ -1132,6 +1192,7 @@ library
       Storage.Queries.OrphanInstances.TicketBookingService
       Storage.Queries.OrphanInstances.TicketBookingServiceCategory
       Storage.Queries.OrphanInstances.TicketService
+      Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.UiRiderConfig
       Storage.Queries.OrphanInstances.VehicleRouteMapping
       Storage.Queries.OrphanInstances.WhiteListOrg
@@ -1139,6 +1200,10 @@ library
       Storage.Queries.PartnerOrganization
       Storage.Queries.PartnerOrgConfig
       Storage.Queries.PartnerOrgStation
+      Storage.Queries.Pass
+      Storage.Queries.PassCategory
+      Storage.Queries.PassType
+      Storage.Queries.PassVerifyTransaction
       Storage.Queries.PaymentCustomer
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
@@ -1149,6 +1214,8 @@ library
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.PlaceNameCache
       Storage.Queries.PopularLocation
+      Storage.Queries.PurchasedPass
+      Storage.Queries.PurchasedPassPayment
       Storage.Queries.Quote
       Storage.Queries.QuoteBreakup
       Storage.Queries.Rating
@@ -1184,6 +1251,7 @@ library
       Storage.Queries.TicketPlace
       Storage.Queries.TicketService
       Storage.Queries.TicketSubPlace
+      Storage.Queries.Translations
       Storage.Queries.TripTerms
       Storage.Queries.UiRiderConfig
       Storage.Queries.ValueAddNP
@@ -1288,6 +1356,7 @@ library
     , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
+    , regex-compat
     , regex-posix
     , resource-pool
     , scheduler
@@ -1425,6 +1494,7 @@ executable rider-app-exe
     , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
+    , regex-compat
     , regex-posix
     , resource-pool
     , rider-app
@@ -1559,6 +1629,7 @@ test-suite rider-app-test
     , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
+    , regex-compat
     , regex-posix
     , resource-pool
     , rider-app

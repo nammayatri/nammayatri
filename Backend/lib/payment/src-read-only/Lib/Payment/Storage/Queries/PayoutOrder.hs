@@ -62,7 +62,6 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
       Se.Set Beam.price ((.amount) amount),
       Se.Set Beam.city city,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.customerEmailEncrypted (customerEmail & unEncrypted . encrypted),
       Se.Set Beam.customerEmailHash (customerEmail & hash),
       Se.Set Beam.customerId customerId,

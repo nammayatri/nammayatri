@@ -77,3 +77,9 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN docum
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_mandatory_for_enabling boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN document_fields_json json ;
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN applicable_to text  default 'FLEET_AND_INDIVIDUAL';

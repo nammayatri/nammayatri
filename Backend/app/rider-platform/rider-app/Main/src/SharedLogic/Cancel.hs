@@ -101,7 +101,7 @@ cancelSearchUtil (personId, merchantId) estimateId = do
     else do
       dCancelSearch <- DCancel.mkDomainCancelSearch personId estimateId
       result <-
-        try @_ @SomeException $
+        withTryCatch "cancelSearchBPP" $
           when dCancelSearch.sendToBpp . void . withShortRetry $ do
             CallBPP.cancelV2 merchantId dCancelSearch.providerUrl =<< CACL.buildCancelSearchReqV2 dCancelSearch
       case result of

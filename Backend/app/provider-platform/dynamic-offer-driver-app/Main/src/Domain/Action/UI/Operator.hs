@@ -13,12 +13,12 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAssociation
 import qualified Storage.Queries.Person as QPerson
@@ -47,14 +47,20 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   DOR.makeDriverReferredByOperator merchantOperatingCityId driverId operator.id
 
   QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
-  let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-  when allowCacheDriverFlowStatus $ do
-    driverInfo <- QDI.findById driverOperatorAssociation.driverId >>= fromMaybeM (DriverNotFound driverOperatorAssociation.driverId.getId)
-    DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus
+  Analytics.handleDriverAnalyticsAndFlowStatus
+    transporterConfig
+    driverOperatorAssociation.driverId
+    Nothing
+    ( \driverInfo -> do
+        when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.id.getId
+        Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.id.getId
+    )
+    ( \driverInfo -> do
+        DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus
+    )
   QDriverInfoInternal.updateOnboardingVehicleCategory mbOnboardingVehicleCategory driver.id
 
-  unless (transporterConfig.requiresOnboardingInspection == Just True) $
-    QDI.updateEnabledVerifiedState driverId True (Just True)
+  unless (transporterConfig.requiresOnboardingInspection == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "OPERATOR_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#operatorName#}" operator.firstName merchantPN.title

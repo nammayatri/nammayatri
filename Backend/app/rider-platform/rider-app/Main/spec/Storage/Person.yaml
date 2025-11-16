@@ -119,6 +119,7 @@ Person:
     profilePicture: Maybe Text
     verificationChannel: Maybe Text
     liveActivityToken : Maybe Text
+    comments: "Maybe [Text]"
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -381,6 +382,11 @@ Person:
     updateLastUsedVehicleCategories:
       kvFunction: updateWithKV
       params: [lastUsedVehicleCategories]
+      where: id
+
+    updatePersonPassword:
+      kvFunction: updateWithKV
+      params: [passwordHash]
       where: id
 
   extraOperations:

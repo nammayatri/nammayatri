@@ -25,7 +25,6 @@ data FRFSQuote = FRFSQuote
     childPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     childTicketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    discountsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     estimatedPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fareDetails :: Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSFareDetails,
@@ -38,11 +37,11 @@ data FRFSQuote = FRFSQuote
     oldCacheDump :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
-    price :: Kernel.Types.Common.Price,
+    price :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     providerDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     providerId :: Kernel.Prelude.Text,
     providerName :: Kernel.Prelude.Text,
-    quantity :: Kernel.Prelude.Int,
+    quantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
@@ -67,4 +66,4 @@ data FRFSFareDetails = FRFSFareDetails
 
 data FRFSQuoteType = SingleJourney | ReturnJourney | Pass | SpecialFareSingleJourney deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSQuoteType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSQuoteType)

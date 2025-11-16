@@ -44,7 +44,6 @@ updateByPrimaryKey (Domain.Types.LmsModuleTranslation.LmsModuleTranslation {..})
       Se.Set Beam.thumbnailImage thumbnailImage,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId)]]

@@ -33,7 +33,6 @@ updateByPrimaryKey (Domain.Types.AppInstalls.AppInstalls {..}) = do
   updateWithKV
     [ Se.Set Beam.appVersion (Kernel.Prelude.fmap Kernel.Utils.Version.versionToText appVersion),
       Se.Set Beam.bundleVersion (Kernel.Prelude.fmap Kernel.Utils.Version.versionToText bundleVersion),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.deviceToken deviceToken,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.platform platform,

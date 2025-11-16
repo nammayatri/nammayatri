@@ -64,7 +64,7 @@ whenSearchTryCancellable searchTryId actions = do
   gotLock <- lockSearchTry searchTryId
   if gotLock
     then do
-      exep <- try @_ @SomeException actions
+      exep <- withTryCatch "whenSearchTryCancellable" actions
       case exep of
         Left e -> do
           unlockSearchTry searchTryId

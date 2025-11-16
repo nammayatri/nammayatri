@@ -61,6 +61,10 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetAssignments,
     getDriverFleetOperatorInfo,
     postDriverFleetLocationList,
+    postDriverFleetGetDriverDetails,
+    postDriverFleetGetNearbyDriversV2,
+    getDriverFleetDashboardAnalyticsAllTime,
+    getDriverFleetDashboardAnalytics,
   )
 where
 
@@ -70,6 +74,7 @@ import qualified "dashboard-helper-api" Dashboard.Common as DCommon
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Registration
 import qualified Data.ByteString.Lazy as LBS
 import Data.Text hiding (elem, filter, find, length, map, null)
+import Data.Time (Day)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import "lib-dashboard" Domain.Action.Dashboard.Person as DPerson
 import Domain.Action.ProviderPlatform.CheckVerification (checkFleetOwnerVerification)
@@ -420,6 +425,18 @@ getDriverFleetStatus merchantShortId opCity apiTokenInfo mbFleetOwnerId = do
   (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetStatus) requestorId mbFleetOwnerId'
 
+getDriverFleetDashboardAnalyticsAllTime :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Flow Common.AllTimeFleetAnalyticsRes
+getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDashboardAnalyticsAllTime) fleetOwnerId
+
+getDriverFleetDashboardAnalytics :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Day -> Day -> Flow Common.FilteredFleetAnalyticsRes
+getDriverFleetDashboardAnalytics merchantShortId opCity apiTokenInfo from to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDashboardAnalytics) fleetOwnerId from to
+
 ---------------------------------------------------------------------------------------------------------------------------------
 ----------------------------------------------- READ LAYER (Multi Fleet Level) --------------------------------------------------
 ---------------------------------------------------------------------------------------------------------------------------------
@@ -516,6 +533,7 @@ getDriverFleetAssignments merchantShortId opCity apiTokenInfo limit offset from 
 getDriverFleetOperatorInfo :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow Common.FleetOwnerInfoRes)
 getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCode mbMobileNumber mbPersonId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+
   person <- case (mbPersonId, mbMobileNumber) of
     (Just pid, _) -> QP.findById (Id pid) >>= fromMaybeM (PersonNotFound pid)
     (_, Just mobileNumber) -> do
@@ -524,6 +542,7 @@ getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCo
     (Nothing, Nothing) ->
       throwError $ InvalidRequest "Either personId or mobile number must be provided."
   res <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) person.id.getId
+
   pure
     res {Common.approvedBy = person.approvedBy <&> getId}
 
@@ -532,3 +551,24 @@ postDriverFleetLocationList merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let memberPersonId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetLocationList) memberPersonId req
+
+postDriverFleetGetDriverDetails :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.DriverDetailsReq -> Environment.Flow Common.DriverDetailsResp)
+postDriverFleetGetDriverDetails merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let memberPersonId = apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetGetDriverDetails) memberPersonId req
+
+postDriverFleetGetNearbyDriversV2 :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.NearbyDriversReqV2 -> Environment.Flow Common.NearbyDriversRespTV2)
+postDriverFleetGetNearbyDriversV2 merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  fleetOwnerIds <- getFleetOwnerIds apiTokenInfo.personId.getId Nothing
+  drivers <-
+    concatMapM
+      ( \(fleetOwnerId', fleetOwnerName) -> do
+          Common.NearbyDriversRespV2 {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetGetNearbyDriversV2) fleetOwnerId' req
+          return $ map (addFleetOwnerDetails fleetOwnerId' fleetOwnerName) drivers
+      )
+      fleetOwnerIds
+  return $ Common.NearbyDriversRespTV2 {..}
+  where
+    addFleetOwnerDetails fleetOwnerId fleetOwnerName Common.NearbyDriverDetails {..} = Common.NearbyDriverDetailsT {..}

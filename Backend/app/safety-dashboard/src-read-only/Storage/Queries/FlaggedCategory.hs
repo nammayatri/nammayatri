@@ -34,4 +34,4 @@ findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Ty
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FlaggedCategory.FlaggedCategory -> m ())
 updateByPrimaryKey (Domain.Types.FlaggedCategory.FlaggedCategory {..}) = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.createdAt createdAt, Se.Set Beam.name name, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+  updateWithKV [Se.Set Beam.name name, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

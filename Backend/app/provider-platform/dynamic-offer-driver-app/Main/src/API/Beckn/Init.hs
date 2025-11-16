@@ -116,7 +116,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
       | otherwise = throwM exc
 
     callWithErrorHandling transactionId action = do
-      exep <- try @_ @SomeException action
+      exep <- withTryCatch "init:callWithErrorHandling" action
       case exep of
         Left e -> do
           Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)

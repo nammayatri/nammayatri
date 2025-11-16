@@ -22,6 +22,7 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
 import qualified Kernel.Types.Version
 import qualified Kernel.Utils.TH
+import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
 
 data RideE e = Ride
@@ -29,8 +30,10 @@ data RideE e = Ride
     allowedEditPickupLocationAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    billingCategory :: SharedLogic.Type.BillingCategory,
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     bppRideId :: Kernel.Types.Id.Id Domain.Types.Ride.BPPRide,
+    cancellationChargesOnCancel :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationFeeIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -116,8 +119,10 @@ instance EncryptedItem Ride where
           allowedEditPickupLocationAttempts = allowedEditPickupLocationAttempts entity,
           backendAppVersion = backendAppVersion entity,
           backendConfigVersion = backendConfigVersion entity,
+          billingCategory = billingCategory entity,
           bookingId = bookingId entity,
           bppRideId = bppRideId entity,
+          cancellationChargesOnCancel = cancellationChargesOnCancel entity,
           cancellationFeeIfCancelled = cancellationFeeIfCancelled entity,
           chargeableDistance = chargeableDistance entity,
           clientBundleVersion = clientBundleVersion entity,
@@ -195,8 +200,10 @@ instance EncryptedItem Ride where
             allowedEditPickupLocationAttempts = allowedEditPickupLocationAttempts entity,
             backendAppVersion = backendAppVersion entity,
             backendConfigVersion = backendConfigVersion entity,
+            billingCategory = billingCategory entity,
             bookingId = bookingId entity,
             bppRideId = bppRideId entity,
+            cancellationChargesOnCancel = cancellationChargesOnCancel entity,
             cancellationFeeIfCancelled = cancellationFeeIfCancelled entity,
             chargeableDistance = chargeableDistance entity,
             clientBundleVersion = clientBundleVersion entity,

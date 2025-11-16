@@ -15,16 +15,17 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils
+import qualified SharedLogic.Type
 import qualified Storage.Beam.Ride as Beam
 import Storage.Queries.Transformers.Ride
 import qualified Storage.Queries.Transformers.Ride
 
 instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
   fromTType' (Beam.RideT {..}) = do
-    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
-    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
-    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
-    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
+    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId
     merchantOperatingCityId' <- Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId merchantOperatingCityId
     stops' <- Storage.Queries.Transformers.Ride.getStops id hasStops
@@ -36,12 +37,14 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
         Domain.Types.Ride.Ride
           { backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
+            billingCategory = Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             bookingId = Kernel.Types.Id.Id bookingId,
+            cancellationChargesOnCancel = cancellationChargesOnCancel,
             cancellationFeeIfCancelled = cancellationFeeIfCancelled,
             chargeableDistance = chargeableDistance,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer),
+            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
             clientId = clientId,
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
@@ -51,6 +54,9 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             distanceCalculationFailed = distanceCalculationFailed,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverArrivalTime = driverArrivalTime,
+            driverCancellationPenaltyAmount = driverCancellationPenaltyAmount,
+            driverCancellationPenaltyFeeId = driverCancellationPenaltyFeeId,
+            driverCancellationPenaltyWaivedReason = driverCancellationPenaltyWaivedReason,
             driverDeviatedFromRoute = driverDeviatedFromRoute,
             driverDeviatedToTollRoute = driverDeviatedToTollRoute,
             driverGoHomeRequestId = Kernel.Types.Id.Id <$> driverGoHomeRequestId,
@@ -64,6 +70,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             estimatedTollNames = estimatedTollNames,
             fare = fmap (Kernel.Types.Common.mkAmountWithDefault fareAmount) fare,
             fareParametersId = Kernel.Types.Id.Id <$> fareParametersId,
+            fleetOwnerId = Kernel.Types.Id.Id <$> fleetOwnerId,
             fromLocation = fromLocation',
             hasStops = hasStops,
             id = Kernel.Types.Id.Id id,
@@ -121,15 +128,17 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
     Beam.RideT
       { Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
+        Beam.billingCategory = Kernel.Prelude.Just billingCategory,
         Beam.bookingId = Kernel.Types.Id.getId bookingId,
+        Beam.cancellationChargesOnCancel = cancellationChargesOnCancel,
         Beam.cancellationFeeIfCancelled = cancellationFeeIfCancelled,
         Beam.chargeableDistance = chargeableDistance,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = (clientDevice >>= (.deviceManufacturer)),
-        Beam.clientModelName = (clientDevice <&> (.deviceModel)),
-        Beam.clientOsType = (clientDevice <&> (.deviceType)),
-        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
+        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
+        Beam.clientModelName = clientDevice <&> (.deviceModel),
+        Beam.clientOsType = clientDevice <&> (.deviceType),
+        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
         Beam.clientId = clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
@@ -139,6 +148,9 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.distanceCalculationFailed = distanceCalculationFailed,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverArrivalTime = driverArrivalTime,
+        Beam.driverCancellationPenaltyAmount = driverCancellationPenaltyAmount,
+        Beam.driverCancellationPenaltyFeeId = driverCancellationPenaltyFeeId,
+        Beam.driverCancellationPenaltyWaivedReason = driverCancellationPenaltyWaivedReason,
         Beam.driverDeviatedFromRoute = driverDeviatedFromRoute,
         Beam.driverDeviatedToTollRoute = driverDeviatedToTollRoute,
         Beam.driverGoHomeRequestId = Kernel.Types.Id.getId <$> driverGoHomeRequestId,
@@ -155,6 +167,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.fare = Kernel.Prelude.fmap roundToIntegral fare,
         Beam.fareAmount = fare,
         Beam.fareParametersId = Kernel.Types.Id.getId <$> fareParametersId,
+        Beam.fleetOwnerId = Kernel.Types.Id.getId <$> fleetOwnerId,
         Beam.hasStops = hasStops,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.insuredAmount = insuredAmount,

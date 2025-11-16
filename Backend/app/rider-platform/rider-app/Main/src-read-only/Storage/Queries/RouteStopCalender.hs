@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findByTripIds ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable] -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.RouteStopCalender.RouteStopCalender]))
+  ([Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable] -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteStopCalender.RouteStopCalender])
 findByTripIds tripId integratedBppConfigId = do
   findAllWithKV
     [ Se.And
@@ -51,7 +51,6 @@ updateByPrimaryKey (Domain.Types.RouteStopCalender.RouteStopCalender {..}) = do
     [ Se.Set Beam.serviceability serviceability,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId), Se.Is Beam.tripId $ Se.Eq (Kernel.Types.Id.getId tripId)]]

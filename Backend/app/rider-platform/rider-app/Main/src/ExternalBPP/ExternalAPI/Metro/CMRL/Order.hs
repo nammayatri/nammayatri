@@ -6,6 +6,7 @@ module ExternalBPP.ExternalAPI.Metro.CMRL.Order where
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Data.UUID as UU
+import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET hiding (Log)
@@ -19,18 +20,21 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => CMRLConfig -> IntegratedBPPConfig -> FRFSTicketBooking -> Maybe Text -> m ProviderOrder
-createOrder config integratedBPPConfig booking mRiderNumber = do
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => CMRLConfig -> IntegratedBPPConfig -> FRFSTicketBooking -> [FRFSQuoteCategory] -> Maybe Text -> m ProviderOrder
+createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
   orderId <- case booking.bppOrderId of
     Just oid -> return oid
     Nothing -> getBppOrderId booking
   paymentTxnId <- booking.paymentTxnId & fromMaybeM (InternalError $ "Payment Transaction Id Missing")
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  let totalTicketQuantity = max 1 (booking.quantity + fromMaybe 0 booking.childTicketQuantity)
+  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
+      singleTicketPrice = (getUnitPriceFromPriceItem fareParameters.adultItem).amountInt.getMoney
+      totalTicketQuantity = fareParameters.totalQuantity
   ticketsData <-
     generateQRTickets config $
       GenerateQRReq
@@ -38,7 +42,7 @@ createOrder config integratedBPPConfig booking mRiderNumber = do
           destination = toStation.code,
           ticketType = "SJT", -- TODO: FIX THIS
           noOfTickets = 1, -- Always set to 1 as per requirement
-          ticketFare = getMoney (maybe booking.price.amountInt (.amountInt) booking.finalPrice) `div` totalTicketQuantity,
+          ticketFare = singleTicketPrice,
           customerMobileNo = fromMaybe "9999999999" mRiderNumber,
           uniqueTxnRefNo = orderId,
           bankRefNo = paymentTxnId,
@@ -112,7 +116,7 @@ generateQRTickets :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) =>
 generateQRTickets config qrReq = do
   let modifiedQrReq = qrReq {origin = getStationCode qrReq.origin, destination = getStationCode qrReq.destination}
       eulerClient = \accessToken -> ET.client generateQRAPI (Just $ "Bearer " <> accessToken) modifiedQrReq
-  result <- try @_ @SomeException $ callCMRLAPI config eulerClient "generateQRTickets" generateQRAPI
+  result <- withTryCatch "CMRL:generateQR" $ callCMRLAPI config eulerClient "generateQRTickets" generateQRAPI
   case result of
     Left err -> do
       let mCMRLError = fromException @CMRLError err

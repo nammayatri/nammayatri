@@ -14,3 +14,15 @@ data EntityName = MANUAL | DRIVER_DAILY_STATS | BACKLOG | DAILY_STATS_VIA_DASHBO
 $(mkBeamInstancesForEnumAndList ''EntityName)
 
 data Ride
+
+data PaymentFulfillmentStatus
+  = FulfillmentPending
+  | FulfillmentFailed
+  | FulfillmentSucceeded
+  | FulfillmentRefundPending
+  | FulfillmentRefundInitiated
+  | FulfillmentRefundFailed
+  | FulfillmentRefunded
+  deriving (Eq, Ord, Read, Show, FromJSON, ToJSON, Generic, ToSchema, ToParamSchema)
+
+$(mkBeamInstancesForEnum ''PaymentFulfillmentStatus)

@@ -6,6 +6,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
 import qualified Domain.Types.FRFSQuote as Quote
+import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.MerchantOperatingCity
 import EulerHS.Prelude hiding (concatMap, find, null, readMaybe, whenJust)
 import qualified EulerHS.Types as ET
@@ -36,10 +37,10 @@ type RouteFareAPI =
 mkRouteFareKey :: Text -> Text -> Text -> Text
 mkRouteFareKey startStopCode endStopCode searchReqId = "CRIS:" <> searchReqId <> "-" <> startStopCode <> "-" <> endStopCode
 
-mkRouteFareCacheKey :: Text -> Text -> Text -> Text
-mkRouteFareCacheKey startStopCode endStopCode changeOver = "CRIS:" <> startStopCode <> "-" <> endStopCode <> "-" <> changeOver
+mkRouteFareCacheKey :: Text -> Text -> Text -> Bool -> Text
+mkRouteFareCacheKey startStopCode endStopCode changeOver getAllFares = "CRIS:" <> startStopCode <> "-" <> endStopCode <> "-" <> changeOver <> "-" <> T.pack (show getAllFares)
 
-getCachedFaresAndRecache ::
+getRouteFare ::
   ( CoreMetrics m,
     MonadFlow m,
     CacheFlow m r,
@@ -49,15 +50,16 @@ getCachedFaresAndRecache ::
   CRISConfig ->
   Id MerchantOperatingCity ->
   CRISFareRequest ->
-  m [FRFSUtils.FRFSFare]
-getCachedFaresAndRecache config merchantOperatingCityId request = do
-  let redisKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
+  Bool ->
+  m ([FRFSUtils.FRFSFare], Maybe Text)
+getRouteFare config merchantOperatingCityId request getAllFares = do
+  let redisKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver getAllFares
   redisResp <- Hedis.safeGet redisKey
   case redisResp of
     Just fares -> do
       logDebug $ "getCachedFaresAndRecache: fares found in cache" <> show fares
       fork "fetchAndCacheFares for suburban" $ void fetchAndCacheFares
-      return fares
+      return (fares, Nothing)
     Nothing -> do
       fetchAndCacheFares
   where
@@ -115,8 +117,13 @@ getCachedFaresAndRecache config merchantOperatingCityId request = do
         routeFareDetails `forM` \routeFareDetail -> do
           let allFares = routeFareDetail.fareDtlsList
           let routeId = routeFareDetail.routeId
-          let onlySelectedViaFares = filter (\fare -> fare.via == request.changeOver) allFares
-          let fares = if null onlySelectedViaFares || request.changeOver == " " then allFares else onlySelectedViaFares
+          let validStations = T.splitOn "-" request.via
+          let fares' = if getAllFares then allFares else filter (\fare -> fare.via `Kernel.Prelude.elem` validStations) allFares
+              fares'' = filter (\fare -> fare.via == " ") allFares
+          let fares =
+                if request.changeOver == " "
+                  then if null fares'' || getAllFares then fares' else fares''
+                  else filter (\fare -> fare.via == request.changeOver) allFares
           fares `forM` \fare -> do
             let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
                 mbChildFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.childFare
@@ -127,20 +134,48 @@ getCachedFaresAndRecache config merchantOperatingCityId request = do
             serviceTier <- serviceTiers & listToMaybe & fromMaybeM (CRISError $ "Failed to find service tier: " <> show classCode)
             return $
               FRFSUtils.FRFSFare
-                { price =
-                    Price
-                      { amountInt = round fareAmount,
-                        amount = fareAmount,
-                        currency = INR
-                      },
-                  childPrice =
-                    Just $
-                      Price
-                        { amountInt = round childFareAmount,
-                          amount = childFareAmount,
-                          currency = INR
+                { categories =
+                    [ FRFSUtils.FRFSTicketCategory
+                        { category = ADULT,
+                          code = "ADULT",
+                          title = "Adult General Ticket",
+                          description = "Adult General Ticket",
+                          tnc = "Terms and conditions apply for adult general ticket",
+                          price =
+                            Price
+                              { amountInt = round fareAmount,
+                                amount = fareAmount,
+                                currency = INR
+                              },
+                          offeredPrice =
+                            Price
+                              { amountInt = round fareAmount,
+                                amount = fareAmount,
+                                currency = INR
+                              },
+                          eligibility = True
                         },
-                  categories = [],
+                      FRFSUtils.FRFSTicketCategory
+                        { category = CHILD,
+                          code = "CHILD",
+                          title = "Child General Ticket",
+                          description = "Child General Ticket",
+                          tnc = "Terms and conditions apply for child general ticket",
+                          price =
+                            Price
+                              { amountInt = round childFareAmount,
+                                amount = childFareAmount,
+                                currency = INR
+                              },
+                          offeredPrice =
+                            Price
+                              { amountInt = round childFareAmount,
+                                amount = childFareAmount,
+                                currency = INR
+                              },
+                          eligibility = True
+                        }
+                    ],
                   farePolicyId = Nothing,
                   fareDetails =
                     Just
@@ -162,24 +197,10 @@ getCachedFaresAndRecache config merchantOperatingCityId request = do
                         isAirConditioned = serviceTier.isAirConditioned
                       }
                 }
-      let fareCacheKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
+      let fareCacheKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver getAllFares
       let fares = concat frfsDetails
       Hedis.setExp fareCacheKey fares 3600
-      return $ fares
-
--- Main function
-getRouteFare ::
-  ( CoreMetrics m,
-    MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EncFlow m r
-  ) =>
-  CRISConfig ->
-  Id MerchantOperatingCity ->
-  CRISFareRequest ->
-  m [FRFSUtils.FRFSFare]
-getRouteFare = getCachedFaresAndRecache
+      return $ (fares, Nothing)
 
 routeFareAPI :: Proxy RouteFareAPI
 routeFareAPI = Proxy

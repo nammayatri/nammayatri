@@ -3,9 +3,11 @@
 
 module Domain.Types.SearchRequest where
 
+import qualified API.Types.UI.RiderLocation
 import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.Client
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -31,6 +33,7 @@ data SearchRequest = SearchRequest
     availablePaymentMethods :: [Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod],
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    busLocationData :: [API.Types.UI.RiderLocation.BusLocation],
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
@@ -73,6 +76,7 @@ data SearchRequest = SearchRequest
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchMode :: Kernel.Prelude.Maybe Domain.Types.SearchRequest.SearchMode,
+    selectedPaymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     selectedPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     startTime :: Kernel.Prelude.UTCTime,
     stops :: [Domain.Types.Location.Location],

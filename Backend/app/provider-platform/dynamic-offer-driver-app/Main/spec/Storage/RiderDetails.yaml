@@ -32,6 +32,10 @@ RiderDetails:
     completedRides : Int
     validCancellations : Int
     cancellationDueRides : Int
+    cancellationDuesPaid : HighPrecMoney
+    noOfTimesCanellationDuesPaid : Int
+    noOfTimesWaiveOffUsed : Int
+    waivedOffAmount : HighPrecMoney
     currency : Currency
     disputeChancesUsed : Int
     merchantId : Id Merchant
@@ -51,6 +55,10 @@ RiderDetails:
     completedRides: fromMaybe 0 completedRides|E
     validCancellations: fromMaybe 0 validCancellations|E
     cancellationDueRides: fromMaybe 0 cancellationDueRides|E
+    cancellationDuesPaid: fromMaybe 0 cancellationDuesPaid|E
+    noOfTimesCanellationDuesPaid: fromMaybe 0 noOfTimesCanellationDuesPaid|E
+    noOfTimesWaiveOffUsed: fromMaybe 0 noOfTimesWaiveOffUsed|E
+    waivedOffAmount: fromMaybe 0 waivedOffAmount|E
 
   toTType:
     currency: Kernel.Prelude.Just|I
@@ -59,6 +67,10 @@ RiderDetails:
     completedRides: Kernel.Prelude.Just|I
     validCancellations: Kernel.Prelude.Just|I
     cancellationDueRides: Kernel.Prelude.Just|I
+    cancellationDuesPaid: Kernel.Prelude.Just|I
+    noOfTimesCanellationDuesPaid: Kernel.Prelude.Just|I
+    noOfTimesWaiveOffUsed: Kernel.Prelude.Just|I
+    waivedOffAmount: Kernel.Prelude.Just|I
 
   beamType:
     currency: Maybe Currency
@@ -67,6 +79,10 @@ RiderDetails:
     completedRides : Maybe Int
     validCancellations : Maybe Int
     cancellationDueRides : Maybe Int
+    cancellationDuesPaid : Maybe HighPrecMoney
+    noOfTimesCanellationDuesPaid : Maybe Int
+    noOfTimesWaiveOffUsed : Maybe Int
+    waivedOffAmount : Maybe HighPrecMoney
   constraints:
     id: PrimaryKey
     mobileNumberHash: "!SecondaryKey" # forcing to be a secondary key

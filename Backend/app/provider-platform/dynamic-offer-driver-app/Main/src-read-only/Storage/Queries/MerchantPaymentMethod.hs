@@ -32,7 +32,6 @@ updateByPrimaryKey (Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod {..
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.collectedBy collectedBy,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.paymentInstrument paymentInstrument,

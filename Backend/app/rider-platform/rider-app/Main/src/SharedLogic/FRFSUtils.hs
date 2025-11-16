@@ -17,6 +17,7 @@ module SharedLogic.FRFSUtils where
 import qualified API.Types.UI.FRFSTicketService as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
+import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
 import Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
@@ -24,23 +25,23 @@ import Data.List (groupBy, nub, sortBy)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import qualified Domain.Action.Beckn.FRFS.Common as FRFSCommon
+import Domain.Action.Beckn.FRFS.Common
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import Domain.Types.BecknConfig
+import qualified Domain.Types.Extra.VendorSplitDetails as VendorSplitDetails
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategorySpec as FRFSCategorySpec
+import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteFareProduct
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicket as DT
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
-import qualified Domain.Types.FRFSTicketBookingBreakup as DFRFSTicketBookingBreakup
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
-import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketCategoryMetadataConfig as DFRFSTicketCategoryMetadataConfig
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -54,14 +55,14 @@ import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import qualified Domain.Types.RouteTripMapping as DRTM
 import qualified Domain.Types.Station as Station
-import Environment
+import qualified Domain.Types.VendorSplitDetails as VendorSplitDetails
 import EulerHS.Prelude (comparing, concatMapM, (+||), (||+))
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.External.Maps.Types ()
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -75,44 +76,32 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
-import Lib.Payment.Domain.Types.Refunds as Refunds
 import Lib.Payment.Storage.Beam.BeamFlow
-import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
-import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
-import qualified Lib.Yudhishthira.Types as LYT
-import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import SharedLogic.JobScheduler as JobScheduler
+import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.FRFSGtfsStageFare as QFRFSGtfsStageFare
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
-import Storage.Queries.AadhaarVerification as QAV
 import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
 import qualified Storage.Queries.FRFSGtfsStageFare as QQFRFSGtfsStageFare
+import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import Storage.Queries.FRFSStageFare as QFRFSStageFare
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
-import qualified Storage.Queries.FRFSTicketBookingBreakup as QFRFSTicketBookingBreakup
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
-import Storage.Queries.FRFSTicketCategoryMetadataConfig as QFRFSTicketCategoryMetadataConfig
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
-import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJL
-import qualified Storage.Queries.Person as QP
 import Storage.Queries.RouteTripMapping as QRouteTripMapping
 import Storage.Queries.StopFare as QRouteStopFare
-import Tools.DynamicLogic
+import qualified Storage.Queries.VendorSplitDetails as QVendorSplitDetails
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Payment as Payment
@@ -156,57 +145,6 @@ data FRFSTicketCategoryDynamic = FRFSTicketCategoryDynamic
     ticketCategories :: [DFRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig]
   }
   deriving (Generic, Show, FromJSON, ToJSON)
-
-getFRFSTicketCategoryWithEligibility ::
-  ( MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r
-  ) =>
-  Id DMOC.MerchantOperatingCity ->
-  Spec.VehicleCategory ->
-  Id DP.Person ->
-  [Id DFRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig] ->
-  m [(DFRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig, Bool)]
-getFRFSTicketCategoryWithEligibility merchantOperatingCityId _vehicleType personId applicableCategoryIds = do
-  -- Get the ticket category metadata
-  availableCategorys <-
-    pure . catMaybes
-      =<< mapM
-        ( \applicableCategoryId -> QFRFSTicketCategoryMetadataConfig.findById applicableCategoryId
-        )
-        applicableCategoryIds
-
-  -- Get aadhaar verification for eligibility
-  aadhaarVerification <- QAV.findByPersonId personId
-
-  -- Determine which categories are applicable
-  applicableCategorys <- do
-    let ticketCategoryData = FRFSTicketCategoryDynamic {aadhaarData = aadhaarVerification, ticketCategories = availableCategorys}
-    localTime <- getLocalCurrentTime 19800 -- Fix Me
-    (allLogics, _) <- getAppDynamicLogic (cast merchantOperatingCityId) LYT.FRFS_TICKET_CATEGORIES localTime Nothing Nothing
-    response <- try @_ @SomeException $ LYTU.runLogics allLogics ticketCategoryData
-    case response of
-      Left e -> do
-        logError $ "Error in running FRFS Category Logic - " <> show e <> " - " <> show ticketCategoryData <> " - " <> show allLogics
-        return []
-      Right resp ->
-        case (A.fromJSON resp.result :: Result FRFSTicketCategoryDynamic) of
-          A.Success result -> return result.ticketCategories
-          A.Error err -> do
-            logError $ "Error in parsing FRFSTicketCategoryDynamic - " <> show err <> " - " <> show resp <> " - " <> show ticketCategoryData <> " - " <> show allLogics
-            return []
-
-  -- Return category metadata with eligibility
-  return $ mergeCategorys availableCategorys applicableCategorys
-  where
-    mergeCategorys availableCategorys applicableCategorys =
-      map
-        ( \category ->
-            let isEligible = any (\appCategory -> appCategory.id == category.id) applicableCategorys
-             in (category, isEligible)
-        )
-        availableCategorys
 
 data RouteStopInfo = RouteStopInfo
   { route :: Route.Route,
@@ -361,11 +299,13 @@ getPossibleRoutesBetweenTwoParentStops startParentStopCode endParentStopCode int
             Nothing -> Nothing
 
 data FRFSTicketCategory = FRFSTicketCategory
-  { code :: Text,
+  { category :: FRFSQuoteCategoryType,
+    code :: Text,
     title :: Text,
     description :: Text,
     tnc :: Text,
     price :: Price,
+    offeredPrice :: Price,
     eligibility :: Bool
   }
   deriving stock (Generic, Show)
@@ -384,8 +324,6 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
 
 data FRFSFare = FRFSFare
   { farePolicyId :: Maybe (Id DFRFSFarePolicy.FRFSFarePolicy),
-    price :: Price,
-    childPrice :: Maybe Price,
     categories :: [FRFSTicketCategory],
     fareDetails :: Maybe Quote.FRFSFareDetails,
     vehicleServiceTier :: FRFSVehicleServiceTier
@@ -405,7 +343,7 @@ getFare riderId vehicleType serviceTier integratedBPPConfigId merchantId merchan
   mapM (buildFRFSFare riderId vehicleType merchantId merchantOperatingCityId routeCode startStopCode endStopCode) serviceableFareProducts
 
 buildFRFSFare :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Spec.VehicleCategory -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> FRFSRouteFareProduct -> m FRFSFare
-buildFRFSFare riderId vehicleType _merchantId merchantOperatingCityId routeCode startStopCode endStopCode fareProduct = do
+buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCode startStopCode endStopCode fareProduct = do
   vehicleServiceTier <- QFRFSVehicleServiceTier.findById fareProduct.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fareProduct.vehicleServiceTierId.getId)
   farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
   let cessCharge = fromMaybe (HighPrecMoney 0) farePolicy.cessCharge
@@ -415,7 +353,7 @@ buildFRFSFare riderId vehicleType _merchantId merchantOperatingCityId routeCode 
         routeStopFare <- QRouteStopFare.findByRouteStartAndStopCode farePolicy.id startStopCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Fare Not Found")
         return $
           Price
-            { amountInt = round routeStopFare.amount,
+            { amountInt = roundToIntegral routeStopFare.amount,
               amount = routeStopFare.amount,
               currency = routeStopFare.currency
             }
@@ -428,17 +366,25 @@ buildFRFSFare riderId vehicleType _merchantId merchantOperatingCityId routeCode 
         let amount = stageFare.amount + cessCharge
         return $
           Price
-            { amountInt = round amount,
+            { amountInt = roundToIntegral amount,
               amount = amount,
               currency = stageFare.currency
             }
-  categoriesWithEligibility <- getFRFSTicketCategoryWithEligibility merchantOperatingCityId vehicleType riderId farePolicy.applicableDiscountIds
   return $
     FRFSFare
       { farePolicyId = Just farePolicy.id,
-        price = price,
-        childPrice = Nothing,
-        categories = map (mkCategory price) categoriesWithEligibility,
+        categories =
+          [ FRFSTicketCategory
+              { category = ADULT,
+                code = "ADULT",
+                title = "Adult General Ticket",
+                description = "Adult General Ticket",
+                tnc = "Terms and conditions apply for adult general ticket",
+                price = price,
+                offeredPrice = price,
+                eligibility = True
+              }
+          ],
         fareDetails = Nothing,
         vehicleServiceTier =
           FRFSVehicleServiceTier
@@ -462,33 +408,8 @@ getCachedRouteStopFares riderId vehicleType integratedBPPConfig merchantId merch
       mapM (buildFRFSFare riderId vehicleType merchantId merchantOperatingCityId routeCode startStopCode endStopCode) serviceableFareProducts
     Nothing -> return []
 
-mkCategory :: Price -> (DFRFSTicketCategoryMetadataConfig.FRFSTicketCategoryMetadataConfig, Bool) -> FRFSTicketCategory
-mkCategory price (category, eligibility) =
-  let categoryPrice =
-        case category.domainCategoryValue of
-          FRFSCategorySpec.FixedAmount amount ->
-            Price
-              { amountInt = round amount,
-                amount = amount,
-                currency = price.currency
-              }
-          FRFSCategorySpec.Percentage percent ->
-            Price
-              { amountInt = round ((HighPrecMoney (toRational percent) * price.amount) / 100),
-                amount = (HighPrecMoney (toRational percent) * price.amount) / 100,
-                currency = price.currency
-              }
-   in FRFSTicketCategory
-        { code = category.code,
-          title = category.title,
-          description = category.description,
-          tnc = category.tnc,
-          price = categoryPrice,
-          eligibility = eligibility
-        }
-
 getFareThroughGTFS :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
-getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig _merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
+getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
   tripDetails <- OTPRest.getExampleTrip integratedBPPConfig routeCode
   case tripDetails of
     Just trip -> do
@@ -515,15 +436,22 @@ getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig _merchant
                 Nothing -> QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
               forM fares $ \fare -> do
                 vehicleServiceTier <- QFRFSVehicleServiceTier.findById fare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fare.vehicleServiceTierId.getId)
-                let price = Price {amountInt = round (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
-                categoriesWithEligibility <- getFRFSTicketCategoryWithEligibility merchantOperatingCityId vehicleType riderId fare.discountIds
-                logDebug $ "categoriesWithEligibility: " <> show categoriesWithEligibility <> " fare: " <> show fare <> " price: " <> show price <> " vehicleServiceTier: " <> show vehicleServiceTier <> " fare.discountIds: "
+                let price = Price {amountInt = roundToIntegral (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
                 return $
                   FRFSFare
                     { farePolicyId = Nothing,
-                      price = price,
-                      childPrice = Nothing,
-                      categories = map (mkCategory price) categoriesWithEligibility,
+                      categories =
+                        [ FRFSTicketCategory
+                            { category = ADULT,
+                              code = "ADULT",
+                              title = "Adult General Ticket",
+                              description = "Adult General Ticket",
+                              tnc = "Terms and conditions apply for adult general ticket",
+                              price = price,
+                              offeredPrice = price,
+                              eligibility = True
+                            }
+                        ],
                       fareDetails = Nothing,
                       vehicleServiceTier =
                         FRFSVehicleServiceTier
@@ -541,7 +469,7 @@ getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig _merchant
 
 getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
 getFares riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
-  faresResult <- try @_ @SomeException (getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
+  faresResult <- withTryCatch "getFareThroughGTFS:getFares" (getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
   fares <- case faresResult of
     Left err -> do
       logError $ "Error in getFareThroughGTFS (GraphQL/GTFS): " <> show err
@@ -550,7 +478,7 @@ getFares riderId vehicleType serviceTier integratedBPPConfig merchantId merchant
 
   if null fares
     then do
-      try @_ @SomeException (getFare riderId vehicleType serviceTier integratedBPPConfig.id merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
+      withTryCatch "getFare:getFares" (getFare riderId vehicleType serviceTier integratedBPPConfig.id merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
         >>= \case
           Left err -> do
             logError $ "Error in getFare: " <> show err
@@ -561,7 +489,7 @@ getFares riderId vehicleType serviceTier integratedBPPConfig merchantId merchant
                 if null fares' && (fareCachingAllowed == Just True)
                   then do
                     -- TODO: hamdle serviceTier passing stuff here
-                    try @_ @SomeException (getCachedRouteStopFares riderId vehicleType integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
+                    withTryCatch "getCachedRouteStopFares:getFares" (getCachedRouteStopFares riderId vehicleType integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
                       >>= \case
                         Left err -> do
                           logError $ "Error in getCachedRouteStopFares: " <> show err
@@ -578,7 +506,8 @@ data VehicleTracking = VehicleTracking
     upcomingStops :: [UpcomingStop],
     vehicleId :: Text,
     vehicleInfo :: Maybe VehicleInfo,
-    delay :: Maybe Seconds
+    delay :: Maybe Seconds,
+    routeShortName :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -617,7 +546,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
     Spec.BUS -> do
       case platformType of
         DIBC.APPLICATION -> do
-          vehicleTrackingInfo <- getVehicleInfo integratedBPPConfig
+          vehicleTrackingInfo <- getVehicleTrackingInfo integratedBPPConfig
           mapM
             ( \(vehicleId, vehicleInfo) -> do
                 upcomingStop <-
@@ -638,7 +567,8 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                       upcomingStops = [],
                       vehicleId = vehicleId,
                       vehicleInfo = Just vehicleInfo,
-                      delay = Nothing
+                      delay = Nothing,
+                      routeShortName = Nothing
                     }
             )
             vehicleTrackingInfo
@@ -677,6 +607,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                   nextStopTravelDistance = Nothing,
                   upcomingStops = upcomingStops, -- fix it later
                   vehicleId = bus.vehicleNumber,
+                  routeShortName = busData.route_number,
                   vehicleInfo =
                     Just $
                       VehicleInfo
@@ -730,6 +661,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                       nextStopTravelTime = Nothing,
                       nextStopTravelDistance = Nothing,
                       upcomingStops = [],
+                      routeShortName = Nothing,
                       vehicleId = show vehicleType,
                       vehicleInfo = Nothing,
                       delay = Nothing
@@ -758,7 +690,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
 
     takeUntil y = foldr (\x acc -> x : if x == y then [] else acc) []
 
-    getVehicleInfo integratedBPPConfig = do
+    getVehicleTrackingInfo integratedBPPConfig = do
       vehicleInfoByRouteCode :: [(Text, VehicleInfo)] <- do
         vehicleTrackingResp <- LF.vehicleTrackingOnRoute (LF.ByRoute routeCode)
         pure $ mkVehicleInfo vehicleTrackingResp
@@ -867,112 +799,6 @@ getAllJourneyFrfsBookings booking = do
       return (Just leg.journeyId, bookings)
     Nothing -> pure (Nothing, [booking])
 
-markAllRefundBookings ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    MonadFlow m,
-    EsqDBReplicaFlow m r,
-    ServiceFlow m r,
-    EncFlow m r,
-    SchedulerFlow r
-  ) =>
-  DFRFSTicketBooking.FRFSTicketBooking ->
-  Id DP.Person ->
-  m ()
-markAllRefundBookings booking personId = do
-  (mbJourneyId, allJourneyFrfsBookings) <- getAllJourneyFrfsBookings booking
-  allPaymentBookings <- mapM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) allJourneyFrfsBookings
-  let paymentBookings = catMaybes allPaymentBookings
-
-  let terminalBookings = filter (\frfsBooking -> frfsBooking.status `elem` [DFRFSTicketBooking.FAILED, DFRFSTicketBooking.CANCELLED]) allJourneyFrfsBookings
-      nonRefundInitiatedBookings' =
-        catMaybes $
-          map
-            ( \bkg ->
-                find
-                  ( \paymentBooking ->
-                      paymentBooking.frfsTicketBookingId == bkg.id
-                        && paymentBooking.status == DFRFSTicketBookingPayment.REFUND_PENDING
-                  )
-                  paymentBookings
-                  <&> \paymentBooking -> (bkg, paymentBooking.id)
-            )
-            terminalBookings
-  nonRefundInitiatedBookings <-
-    filterM
-      ( \(currBooking, _paymentBookingId) -> do
-          let mkRefundLockKey = "frfsRefundBooking:" <> currBooking.id.getId
-          processedCount <- Redis.incr mkRefundLockKey
-          void $ Redis.expire mkRefundLockKey 60
-          pure (processedCount == 1)
-      )
-      nonRefundInitiatedBookings'
-  let allFailed = not (null terminalBookings) && all (\frfsBooking -> frfsBooking.status == DFRFSTicketBooking.FAILED) allJourneyFrfsBookings
-  whenJust (listToMaybe nonRefundInitiatedBookings) $ \_ -> do
-    logInfo $ "payment status api markAllRefundBookings: " <> show nonRefundInitiatedBookings
-    logInfo $ "allFailed flag in markAllRefundBookings: " <> show allFailed
-    person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-    let (bookings, paymentBookingIds) = unzip nonRefundInitiatedBookings
-    payments <- mapM (QFRFSTicketBookingPayment.findById) paymentBookingIds
-    orderShortId <- case listToMaybe (catMaybes payments) of
-      Just payment -> do
-        order <- QPaymentOrder.findById payment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound payment.paymentOrderId.getId)
-        pure order.shortId.getShortId
-      Nothing -> throwError (InvalidRequest "orderShortId not found in markAllRefundBookings")
-    frfsConfig <-
-      CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
-        >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
-    (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings bookings person.merchantId person.merchantOperatingCityId Payment.FRFSMultiModalBooking frfsConfig.isFRFSTestingEnabled
-    isSplitEnabled <- Payment.getIsSplitEnabled person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-    splitDetails <- Payment.mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
-    let refundSplitDetails = mkRefundSplitDetails bookings
-    refundId <- generateGUID
-    when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
-    logInfo $ "refund info for refundId: " <> show refundId <> ", amount: " <> show amountUpdated <> ", orderShortId: " <> orderShortId <> ", splitSettlementDetails" <> show splitDetails
-    logInfo $ "internal split details: " <> show refundSplitDetails
-    let refundReq =
-          Payment.AutoRefundReq
-            { orderId = orderShortId,
-              requestId = refundId,
-              amount = amountUpdated,
-              splitSettlementDetails = splitDetails
-            }
-        createRefundCall refundReq' = Payment.refundOrder person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion refundReq'
-    result <- try @_ @SomeException $ DPayment.refundService (refundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = refundId}) (Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId) (Just refundSplitDetails) createRefundCall
-    case result of
-      Left err -> do
-        forM_ paymentBookingIds $ \paymentBookingId -> do
-          void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED paymentBookingId
-        logError $ "Refund service failed for journey " <> refundId <> ": " <> show err
-      Right _ -> do
-        logInfo $ "Refund service completed successfully for journey " <> refundId
-        forM_ paymentBookingIds $ \paymentBookingId -> do
-          void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_INITIATED paymentBookingId
-
-        riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-        let scheduleAfter = riderConfig.refundStatusUpdateInterval -- Schedule for 24 hours later
-            jobData =
-              JobScheduler.CheckRefundStatusJobData
-                { JobScheduler.refundId = refundId,
-                  JobScheduler.numberOfRetries = 0
-                }
-        createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just person.merchantOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
-        logInfo $ "Scheduled refund status check job for " <> refundId <> " in 24 hours (initial check)"
-
-        logInfo $ "payment status api markAllRefundBookings completed"
-    pure ()
-  where
-    mkRefundSplitDetails :: [DFRFSTicketBooking.FRFSTicketBooking] -> [Refunds.Split]
-    mkRefundSplitDetails bookings =
-      map
-        ( \bkg ->
-            Refunds.Split
-              { splitAmount = bkg.price.amount,
-                frfsBookingId = bkg.id.getId
-              }
-        )
-        bookings
-
 createPaymentOrder ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
@@ -1026,8 +852,9 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
       commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
       createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId Nothing createOrderReq createOrderCall
-  mapM (DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId Nothing createOrderReq) orderResp
+  mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId merchantOperatingCityId Nothing paymentType
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq createOrderCall
+  mapM (DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq) orderResp
   where
     getPaymentIds = do
       orderShortId <- generateShortId
@@ -1051,6 +878,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
       let ticketBookingPayment =
             DFRFSTicketBookingPayment.FRFSTicketBookingPayment
               { frfsTicketBookingId = booking.id,
+                frfsQuoteId = Just booking.quoteId,
                 id = ticketBookingPaymentId,
                 status = DFRFSTicketBookingPayment.PENDING,
                 merchantId = Just booking.merchantId,
@@ -1064,21 +892,23 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
 makecancelledTtlKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
 makecancelledTtlKey bookingId = "FRFS:OnConfirm:CancelledTTL:bookingId-" <> bookingId.getId
 
-totalOrderValue :: DTBP.FRFSTicketBookingPaymentStatus -> DFRFSTicketBooking.FRFSTicketBooking -> Flow Price
+totalOrderValue :: MonadFlow m => DTBP.FRFSTicketBookingPaymentStatus -> DFRFSTicketBooking.FRFSTicketBooking -> m Price
 totalOrderValue paymentBookingStatus booking =
   if paymentBookingStatus == DTBP.REFUND_PENDING || paymentBookingStatus == DTBP.REFUNDED
-    then booking.price `addPrice` refundAmountToPrice -- Here the `refundAmountToPrice` value is in Negative
-    else pure $ booking.price
+    then booking.totalPrice `addPrice` refundAmountToPrice -- Here the `refundAmountToPrice` value is in Negative
+    else pure $ booking.totalPrice
   where
     refundAmountToPrice = mkPrice (Just INR) (fromMaybe (HighPrecMoney $ toRational (0 :: Int)) booking.refundAmount)
 
-updateTotalOrderValueAndSettlementAmount :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Flow ()
-updateTotalOrderValueAndSettlementAmount booking bapConfig = do
+-- TODO :: This function called in Ticket Cancellation flow does not properly handle multiple quote category, whe enabling cancellation for multiple categories this needs to be rectified.
+updateTotalOrderValueAndSettlementAmount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> BecknConfig -> m ()
+updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig = do
   paymentBooking <- runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
-  let finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee
-      finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational booking.quantity)
+  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
+      finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee
+      finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational fareParameters.totalQuantity)
   tOrderPrice <- totalOrderValue paymentBooking.status booking
-  let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational booking.quantity)
+  let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational fareParameters.totalQuantity)
   settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
   void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById settlementAmount tOrderValue booking.id
 
@@ -1102,105 +932,461 @@ isWithinTimeBound startTime endTime now timeDiffFromUtc =
           else nowTOD >= startTime || nowTOD <= endTime
    in inWindow
 
-getQuantityTagFromCategory :: DFRFSTicketCategoryMetadataConfig.FRFSQuoteCategoryType -> FRFSCategorySpec.FRFSCategoryTag
+getQuantityTagFromCategory :: FRFSQuoteCategoryType -> FRFSCategorySpec.FRFSCategoryTag
 getQuantityTagFromCategory categoryType = case categoryType of
-  DFRFSTicketCategoryMetadataConfig.ADULT -> FRFSCategorySpec.ADULT_QUANTITY
-  DFRFSTicketCategoryMetadataConfig.CHILD -> FRFSCategorySpec.CHILD_QUANTITY
-  DFRFSTicketCategoryMetadataConfig.SENIOR_CITIZEN -> FRFSCategorySpec.SENIOR_CITIZEN_QUANTITY
-  DFRFSTicketCategoryMetadataConfig.STUDENT -> FRFSCategorySpec.STUDENT_QUANTITY
-  DFRFSTicketCategoryMetadataConfig.FEMALE -> FRFSCategorySpec.FEMALE_QUANTITY
-  DFRFSTicketCategoryMetadataConfig.MALE -> FRFSCategorySpec.MALE_QUANTITY
+  ADULT -> FRFSCategorySpec.ADULT_QUANTITY
+  CHILD -> FRFSCategorySpec.CHILD_QUANTITY
+  SENIOR_CITIZEN -> FRFSCategorySpec.SENIOR_CITIZEN_QUANTITY
+  STUDENT -> FRFSCategorySpec.STUDENT_QUANTITY
+  FEMALE -> FRFSCategorySpec.FEMALE_QUANTITY
+  MALE -> FRFSCategorySpec.MALE_QUANTITY
 
-getPriceTagFromCategory :: DFRFSTicketCategoryMetadataConfig.FRFSQuoteCategoryType -> FRFSCategorySpec.FRFSCategoryTag
+getPriceTagFromCategory :: FRFSQuoteCategoryType -> FRFSCategorySpec.FRFSCategoryTag
 getPriceTagFromCategory categoryType = case categoryType of
-  DFRFSTicketCategoryMetadataConfig.ADULT -> FRFSCategorySpec.ADULT_PRICE
-  DFRFSTicketCategoryMetadataConfig.CHILD -> FRFSCategorySpec.CHILD_PRICE
-  DFRFSTicketCategoryMetadataConfig.SENIOR_CITIZEN -> FRFSCategorySpec.SENIOR_CITIZEN_PRICE
-  DFRFSTicketCategoryMetadataConfig.STUDENT -> FRFSCategorySpec.STUDENT_PRICE
-  DFRFSTicketCategoryMetadataConfig.FEMALE -> FRFSCategorySpec.FEMALE_PRICE
-  DFRFSTicketCategoryMetadataConfig.MALE -> FRFSCategorySpec.MALE_PRICE
+  ADULT -> FRFSCategorySpec.ADULT_PRICE
+  CHILD -> FRFSCategorySpec.CHILD_PRICE
+  SENIOR_CITIZEN -> FRFSCategorySpec.SENIOR_CITIZEN_PRICE
+  STUDENT -> FRFSCategorySpec.STUDENT_PRICE
+  FEMALE -> FRFSCategorySpec.FEMALE_PRICE
+  MALE -> FRFSCategorySpec.MALE_PRICE
 
-getTotalPriceTagFromCategory :: DFRFSTicketCategoryMetadataConfig.FRFSQuoteCategoryType -> FRFSCategorySpec.FRFSCategoryTag
+getTotalPriceTagFromCategory :: FRFSQuoteCategoryType -> FRFSCategorySpec.FRFSCategoryTag
 getTotalPriceTagFromCategory categoryType = case categoryType of
-  DFRFSTicketCategoryMetadataConfig.ADULT -> FRFSCategorySpec.TOTAL_ADULT_PRICE
-  DFRFSTicketCategoryMetadataConfig.CHILD -> FRFSCategorySpec.TOTAL_CHILD_PRICE
-  DFRFSTicketCategoryMetadataConfig.SENIOR_CITIZEN -> FRFSCategorySpec.TOTAL_SENIOR_CITIZEN_PRICE
-  DFRFSTicketCategoryMetadataConfig.STUDENT -> FRFSCategorySpec.TOTAL_STUDENT_PRICE
-  DFRFSTicketCategoryMetadataConfig.FEMALE -> FRFSCategorySpec.TOTAL_FEMALE_PRICE
-  DFRFSTicketCategoryMetadataConfig.MALE -> FRFSCategorySpec.TOTAL_MALE_PRICE
+  ADULT -> FRFSCategorySpec.TOTAL_ADULT_PRICE
+  CHILD -> FRFSCategorySpec.TOTAL_CHILD_PRICE
+  SENIOR_CITIZEN -> FRFSCategorySpec.TOTAL_SENIOR_CITIZEN_PRICE
+  STUDENT -> FRFSCategorySpec.TOTAL_STUDENT_PRICE
+  FEMALE -> FRFSCategorySpec.TOTAL_FEMALE_PRICE
+  MALE -> FRFSCategorySpec.TOTAL_MALE_PRICE
 
-createBookingBreakupEntries ::
+updateQuoteCategoriesWithQuantitySelections ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  DFRFSTicketBooking.FRFSTicketBooking ->
-  [FRFSCommon.DCategorySelect] ->
-  Id DM.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  m ()
-createBookingBreakupEntries booking categories merchantId merchantOperatingCityId = do
-  now <- getCurrentTime
-
-  breakupEntries <- concat . catMaybes <$> mapM (createBreakupEntries now) categories
-
-  unless (null breakupEntries) $
-    QFRFSTicketBookingBreakup.createMany breakupEntries
-  where
-    createBreakupEntries now categorySelect = do
-      quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
-      let mbQuoteCategory = find (\qc -> qc.bppItemId == categorySelect.bppItemId) quoteCategories
-
-      case mbQuoteCategory of
-        Just quoteCategory -> do
-          quantityBreakupId <- generateGUID
-          let quantityTag = getQuantityTagFromCategory quoteCategory.ticketCategoryMetadataConfig.category
-          let quantityEntry =
-                DFRFSTicketBookingBreakup.FRFSTicketBookingBreakup
-                  { id = quantityBreakupId,
-                    merchantId = merchantId,
-                    merchantOperatingCityId = merchantOperatingCityId,
-                    quoteCategoryId = quoteCategory.id,
-                    tag = quantityTag,
-                    ticketBookingId = booking.id,
-                    value = show categorySelect.quantity,
-                    createdAt = now,
-                    updatedAt = now
-                  }
-
-          priceBreakupId <- generateGUID
-          let priceTag = getTotalPriceTagFromCategory quoteCategory.ticketCategoryMetadataConfig.category
-          let totalPrice = modifyPrice quoteCategory.offeredPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational categorySelect.quantity)
-              priceValue = show totalPrice.amount
-          let priceEntry =
-                DFRFSTicketBookingBreakup.FRFSTicketBookingBreakup
-                  { id = priceBreakupId,
-                    merchantId = merchantId,
-                    merchantOperatingCityId = merchantOperatingCityId,
-                    quoteCategoryId = quoteCategory.id,
-                    tag = priceTag,
-                    ticketBookingId = booking.id,
-                    value = priceValue,
-                    createdAt = now,
-                    updatedAt = now
-                  }
-
-          return $ Just [quantityEntry, priceEntry]
-        Nothing -> do
-          logError $ "Quote category not found for bppItemId: " <> categorySelect.bppItemId <> ", skipping breakup entries"
-          return Nothing
-
-updateQuoteCategoriesWithSelections ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  [APITypes.FRFSCategorySelectionReq] ->
+  [(Id DFRFSQuoteCategory.FRFSQuoteCategory, Int)] ->
   [DFRFSQuoteCategory.FRFSQuoteCategory] ->
   m [DFRFSQuoteCategory.FRFSQuoteCategory]
-updateQuoteCategoriesWithSelections categorySelections quoteCategories = do
+updateQuoteCategoriesWithQuantitySelections categories quoteCategories = do
   updatedQuoteCategories <- mapM updateCategory quoteCategories
   return updatedQuoteCategories
   where
     updateCategory category =
-      case find (\sel -> sel.quoteCategoryId == category.id) categorySelections of
-        Just selection -> do
-          QFRFSQuoteCategory.updateQuantityByQuoteCategoryId (Just selection.quantity) category.id
-          return category {DFRFSQuoteCategory.selectedQuantity = Just selection.quantity}
+      case find (\(quoteCategoryId, _) -> quoteCategoryId == category.id) categories of
+        Just (_, quantity) -> do
+          QFRFSQuoteCategory.updateQuantityByQuoteCategoryId (Just quantity) category.id
+          return (category {DFRFSQuoteCategory.selectedQuantity = Just quantity})
         Nothing -> do
           QFRFSQuoteCategory.updateQuantityByQuoteCategoryId Nothing category.id
-          return category {DFRFSQuoteCategory.selectedQuantity = Nothing}
+          return (category {DFRFSQuoteCategory.selectedQuantity = Nothing})
+
+updateQuoteCategoriesWithFinalPrice ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [(Id DFRFSQuoteCategory.FRFSQuoteCategory, Price)] ->
+  [DFRFSQuoteCategory.FRFSQuoteCategory] ->
+  m ([DFRFSQuoteCategory.FRFSQuoteCategory], Bool)
+updateQuoteCategoriesWithFinalPrice categories quoteCategories = do
+  updatedQuoteCategories <- mapM updateCategory quoteCategories
+  let finalQuoteCategories = map fst updatedQuoteCategories
+      isFareChanged = any (\(_, isFareChanged') -> isFareChanged') updatedQuoteCategories
+  return (finalQuoteCategories, isFareChanged)
+  where
+    updateCategory category =
+      case find (\(quoteCategoryId, _) -> quoteCategoryId == category.id) categories of
+        Just (_, finalPrice) -> do
+          QFRFSQuoteCategory.updateFinalPriceByQuoteCategoryId (Just finalPrice) category.id
+          return (category {DFRFSQuoteCategory.finalPrice = Just finalPrice}, finalPrice /= category.offeredPrice)
+        Nothing -> do
+          QFRFSQuoteCategory.updateFinalPriceByQuoteCategoryId Nothing category.id
+          return (category {DFRFSQuoteCategory.finalPrice = Nothing}, False)
+
+createBasketFromBookings ::
+  ( EsqDBReplicaFlow m r,
+    BeamFlow m r,
+    EncFlow m r,
+    ServiceFlow m r
+  ) =>
+  [FTBooking.FRFSTicketBooking] ->
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Payment.PaymentServiceType ->
+  Maybe Bool ->
+  m [Payment.Basket]
+createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentServiceType mbEnableOffer = do
+  logDebug $ "mbEnableOffer: " <> show mbEnableOffer
+  let dummyBasket =
+        [ Payment.Basket
+            { Payment.id = "no_basket",
+              Payment.unitPrice = 0,
+              Payment.quantity = 1
+            }
+        ]
+  if mbEnableOffer /= Just True
+    then do
+      return dummyBasket
+    else do
+      case allJourneyBookings of
+        [booking] -> do
+          -- offer valid only for single mode booking (not handled for multimodal right now)
+          quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
+          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+          mbOfferSKUProductId <- Payment.fetchOfferSKUConfig merchantId merchantOperatingCityId Nothing paymentServiceType
+          let fareParameters = calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) quote
+              adultQuantity = fareParameters.adultItem <&> (.quantity)
+              childQuantity = fareParameters.childItem <&> (.quantity)
+              adultUnitPrice = fareParameters.adultItem <&> (.unitPrice.amount)
+              childUnitPrice = fareParameters.childItem <&> (.unitPrice)
+          case (mbOfferSKUProductId, adultQuantity, childQuantity, adultUnitPrice, childUnitPrice) of
+            (Just offerSKUProductId, Just adultQuantity', childQuantity', Just adultUnitPrice', _) -> do
+              if adultQuantity' == 1 && fromMaybe 0 childQuantity' == 0
+                then
+                  return $
+                    [ Payment.Basket
+                        { Payment.id = offerSKUProductId,
+                          Payment.unitPrice = adultUnitPrice',
+                          Payment.quantity = adultQuantity'
+                        }
+                    ]
+                else return dummyBasket
+            _ -> return dummyBasket
+        _ -> return dummyBasket
+
+data CategoryPriceItem = CategoryPriceItem
+  { quantity :: Int,
+    unitPrice :: Price,
+    totalPrice :: Price,
+    categoryType :: FRFSQuoteCategoryType
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+data PriceItem = PriceItem
+  { quantity :: Int,
+    unitPrice :: Price,
+    totalPrice :: Price
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+data FRFSFareParameters = FRFSFareParameters
+  { adultItem :: Maybe PriceItem,
+    childItem :: Maybe PriceItem,
+    femaleItem :: Maybe PriceItem,
+    totalPrice :: Price,
+    totalQuantity :: Int,
+    currency :: Currency
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+getQuantityFromPriceItem :: Maybe PriceItem -> Int
+getQuantityFromPriceItem = maybe 0 (.quantity)
+
+getUnitPriceFromPriceItem :: Maybe PriceItem -> Price
+getUnitPriceFromPriceItem = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.unitPrice)
+
+getAmountFromPriceItem :: Maybe PriceItem -> Price
+getAmountFromPriceItem = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.totalPrice)
+
+nonZeroQuantity :: Maybe Int -> Maybe Int
+nonZeroQuantity = \case
+  Just quantity -> if quantity > 0 then Just quantity else Nothing
+  Nothing -> Nothing
+
+mkCategoryPriceItemFromQuoteCategories :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> [CategoryPriceItem]
+mkCategoryPriceItemFromQuoteCategories quoteCategories = mapMaybe mkPriceItem quoteCategories
+  where
+    mkPriceItem :: DFRFSQuoteCategory.FRFSQuoteCategory -> Maybe CategoryPriceItem
+    mkPriceItem category = do
+      quantity <- category.selectedQuantity <|> Just 0
+      let unitPrice = fromMaybe category.offeredPrice category.finalPrice
+      return $
+        CategoryPriceItem
+          { quantity = quantity,
+            unitPrice,
+            totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quantity),
+            categoryType = category.category
+          }
+
+mkCategoryPriceItemFromDCategorySelect :: [DCategorySelect] -> [CategoryPriceItem]
+mkCategoryPriceItemFromDCategorySelect quoteCategories = mapMaybe mkPriceItem quoteCategories
+  where
+    mkPriceItem :: DCategorySelect -> Maybe CategoryPriceItem
+    mkPriceItem category = do
+      let quantity = category.quantity
+      let unitPrice = category.price
+      return $
+        CategoryPriceItem
+          { quantity = quantity,
+            unitPrice,
+            totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quantity),
+            categoryType = category.category
+          }
+
+calculateFareParameters :: [CategoryPriceItem] -> FRFSFareParameters
+calculateFareParameters priceItems =
+  let adultItem = find (\category -> category.categoryType == ADULT) priceItems <&> mkPriceItem
+      childItem = find (\category -> category.categoryType == CHILD) priceItems <&> mkPriceItem
+      femaleItem = find (\category -> category.categoryType == FEMALE) priceItems <&> mkPriceItem
+      currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem <|> femaleItem)
+
+      adultTotalAmount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem femaleItem).amount
+      totalPrice =
+        Price
+          { amount = adultTotalAmount + (getAmountFromPriceItem childItem).amount,
+            amountInt = roundToIntegral (adultTotalAmount + (getAmountFromPriceItem childItem).amount),
+            currency
+          }
+
+      adultTotalQuantity = getQuantityFromPriceItem adultItem + getQuantityFromPriceItem femaleItem
+      totalQuantity =
+        adultTotalQuantity + getQuantityFromPriceItem childItem
+   in FRFSFareParameters
+        { adultItem = adultItem,
+          childItem = childItem,
+          femaleItem = femaleItem,
+          totalPrice = totalPrice,
+          totalQuantity = totalQuantity,
+          currency
+        }
+  where
+    mkPriceItem CategoryPriceItem {..} = PriceItem {..}
+
+-- This is temporary function to handle the fallback case when the quote categories are not found in the database.
+calculateFareParametersWithQuoteFallback :: [CategoryPriceItem] -> Quote.FRFSQuote -> FRFSFareParameters
+calculateFareParametersWithQuoteFallback categories quote =
+  let fareParameters = calculateFareParameters categories
+      adultItem =
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.adultItem else Nothing)
+          <|> ( ((,) <$> quote.quantity <*> quote.price) <&> \(quantity, unitPrice) ->
+                  PriceItem
+                    { quantity = quantity,
+                      unitPrice = unitPrice,
+                      totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quantity)
+                    }
+              )
+      childItem =
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.childItem else Nothing)
+          <|> ( ((,) <$> quote.childTicketQuantity <*> quote.price) <&> \(quantity, unitPrice) ->
+                  PriceItem
+                    { quantity = quantity,
+                      unitPrice = unitPrice,
+                      totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quantity)
+                    }
+              )
+      femaleItem = fareParameters.femaleItem
+      currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem <|> femaleItem)
+      totalPrice =
+        Price
+          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount,
+            amountInt = roundToIntegral ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
+            currency
+          }
+      totalQuantity =
+        getQuantityFromPriceItem adultItem + getQuantityFromPriceItem childItem + getQuantityFromPriceItem femaleItem
+   in FRFSFareParameters
+        { adultItem = adultItem,
+          childItem = childItem,
+          femaleItem = femaleItem,
+          totalPrice = totalPrice,
+          totalQuantity = totalQuantity,
+          currency = currency
+        }
+
+calculateFareParametersWithBookingFallback :: [CategoryPriceItem] -> FTBooking.FRFSTicketBooking -> FRFSFareParameters
+calculateFareParametersWithBookingFallback categories booking =
+  let fareParameters = calculateFareParameters categories
+      adultQuantity = fromMaybe 0 ((fareParameters.adultItem <&> (.quantity)) <|> booking.quantity)
+      childQuantity = fromMaybe 0 ((fareParameters.childItem <&> (.quantity)) <|> booking.childTicketQuantity)
+      mbRouteStations :: Maybe [APITypes.FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
+      mbRouteStation = listToMaybe =<< mbRouteStations
+      adultItem =
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.adultItem else Nothing)
+          <|> ( ((,,) <$> booking.quantity <*> (mbRouteStation <&> (.priceWithCurrency)) <*> (booking.finalPrice <|> Just booking.totalPrice)) <&> \(quantity, unitPrice', totalPrice') ->
+                  PriceItem
+                    { quantity = quantity,
+                      unitPrice =
+                        Price
+                          { amount = unitPrice'.amount,
+                            amountInt = roundToIntegral unitPrice'.amount,
+                            currency = unitPrice'.currency
+                          },
+                      totalPrice = modifyPrice totalPrice' $ \p -> HighPrecMoney $ ((p.getHighPrecMoney) / (toRational (adultQuantity + childQuantity))) * (toRational quantity)
+                    }
+              )
+      childItem =
+        (if maybe 0 (.quantity) fareParameters.adultItem + maybe 0 (.quantity) fareParameters.childItem > 0 then fareParameters.childItem else Nothing)
+          <|> ( ((,,) <$> booking.childTicketQuantity <*> (mbRouteStation <&> (.priceWithCurrency)) <*> (booking.finalPrice <|> Just booking.totalPrice)) <&> \(quantity, unitPrice', totalPrice') ->
+                  PriceItem
+                    { quantity = quantity,
+                      unitPrice =
+                        Price
+                          { amount = unitPrice'.amount,
+                            amountInt = roundToIntegral unitPrice'.amount,
+                            currency = unitPrice'.currency
+                          },
+                      totalPrice = modifyPrice totalPrice' $ \p -> HighPrecMoney $ ((p.getHighPrecMoney) / (toRational (adultQuantity + childQuantity))) * (toRational quantity)
+                    }
+              )
+      femaleItem = fareParameters.femaleItem
+      currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem <|> femaleItem)
+      totalPrice =
+        Price
+          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount,
+            amountInt = roundToIntegral ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
+            currency
+          }
+      totalQuantity =
+        getQuantityFromPriceItem adultItem + getQuantityFromPriceItem childItem + getQuantityFromPriceItem femaleItem
+   in FRFSFareParameters
+        { adultItem = adultItem,
+          childItem = childItem,
+          femaleItem = femaleItem,
+          totalPrice = totalPrice,
+          totalQuantity = totalQuantity,
+          currency
+        }
+
+-- TODO :: To be deprecated, and unified with SharedLogic.PaymentVendorSplits.createVendorSplit
+createVendorSplitFromBookings ::
+  ( EsqDBReplicaFlow m r,
+    BeamFlow m r,
+    EncFlow m r,
+    ServiceFlow m r
+  ) =>
+  [FTBooking.FRFSTicketBooking] ->
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Payment.PaymentServiceType ->
+  Bool ->
+  m ([Payment.VendorSplitDetails], HighPrecMoney)
+createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentType isFRFSTestingEnabled = do
+  let amount =
+        if isFRFSTestingEnabled
+          then 1.0 * (HighPrecMoney $ toRational $ length allJourneyBookings)
+          else
+            foldl
+              (\accAmt item -> (accAmt + item.totalPrice.amount))
+              0.0
+              allJourneyBookings
+  isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
+  case allJourneyBookings of
+    [] -> return ([], 0.0)
+    _ -> do
+      if isSplitEnabled
+        then do
+          splitDetailsZippedByBooking <- do
+            mapM
+              ( \item -> do
+                  integBppConfig <- SIBC.findIntegratedBPPConfigById item.integratedBppConfigId
+                  vendorSplitDetailsList <- QVendorSplitDetails.findAllByIntegratedBPPConfigId integBppConfig.id
+                  let amountPerBooking = if isFRFSTestingEnabled then 1.0 else item.totalPrice.amount
+                  return (item.id, (amountPerBooking, vendorSplitDetailsList))
+              )
+              allJourneyBookings
+          vendorSplitDetailsListToIncludeInSplit <- QVendorSplitDetails.findAllByMerchantOperatingCityIdAndIncludeInSplit (Just merchantOperatingCityId) (Just True)
+          vendorSplitDetails <- convertVendorDetails splitDetailsZippedByBooking vendorSplitDetailsListToIncludeInSplit isFRFSTestingEnabled
+          return (vendorSplitDetails, amount)
+        else return ([], amount)
+
+convertVendorDetails ::
+  ( EsqDBReplicaFlow m r,
+    BeamFlow m r,
+    EncFlow m r,
+    ServiceFlow m r
+  ) =>
+  [(Id FTBooking.FRFSTicketBooking, (HighPrecMoney, [VendorSplitDetails.VendorSplitDetails]))] ->
+  [VendorSplitDetails.VendorSplitDetails] ->
+  Bool ->
+  m [Payment.VendorSplitDetails]
+convertVendorDetails splitDetailsZippedByBooking vendorDetailsToIncludeByDefault isFRFSTestingEnabled = do
+  let validVendorSplitDetails = concat $ map (\ele -> createVendorSplitForBooking ele) splitDetailsZippedByBooking
+  finalSplits <- ensureAllRequiredVendorsExist validVendorSplitDetails
+  logInfo $ "validVendorSplitDetails" <> show validVendorSplitDetails
+  logInfo $ "finalSplits" <> show finalSplits
+  return finalSplits
+  where
+    createVendorSplitForBooking (bookingId, (amount, vd)) = map (\splitDetails -> toPaymentVendorDetails bookingId.getId amount splitDetails) vd
+    toPaymentVendorDetails bookingId amount vd =
+      let totalAmount = if isFRFSTestingEnabled then (1 :: HighPrecMoney) else amount
+          splitAmount =
+            if vd.splitType == VendorSplitDetails.FLEXIBLE
+              then calculateSplitAmount vd.splitShare totalAmount
+              else totalAmount
+       in Payment.VendorSplitDetails
+            { splitAmount = splitAmount,
+              splitType = vendorSplitDetailSplitTypeToPaymentSplitType vd.splitType,
+              vendorId = vd.vendorId,
+              ticketId = Just $ bookingId
+            }
+
+    calculateSplitAmount :: Maybe VendorSplitDetails.SplitShare -> HighPrecMoney -> HighPrecMoney
+    calculateSplitAmount mbSplitPercentage totalAmount =
+      case mbSplitPercentage of
+        Just (VendorSplitDetails.Percentage percentage) ->
+          totalAmount * (fromRational (toRational percentage) / 100.0)
+        Just (VendorSplitDetails.FixedValue fixedValue) ->
+          fromIntegral fixedValue
+        Nothing ->
+          totalAmount
+
+    ensureAllRequiredVendorsExist ::
+      ( EsqDBReplicaFlow m r,
+        BeamFlow m r,
+        EncFlow m r,
+        ServiceFlow m r
+      ) =>
+      [Payment.VendorSplitDetails] ->
+      m [Payment.VendorSplitDetails]
+    ensureAllRequiredVendorsExist existingVendorSplits = do
+      let existingVendorIds = map (.vendorId) existingVendorSplits
+          missingVendors = filter (\vd -> vd.vendorId `notElem` existingVendorIds) vendorDetailsToIncludeByDefault
+      missingVendorSplits <- mapM createDefaultVendorSplit missingVendors
+      return $ existingVendorSplits ++ missingVendorSplits
+
+    createDefaultVendorSplit ::
+      ( EsqDBReplicaFlow m r,
+        BeamFlow m r,
+        EncFlow m r,
+        ServiceFlow m r
+      ) =>
+      VendorSplitDetails.VendorSplitDetails ->
+      m Payment.VendorSplitDetails
+    createDefaultVendorSplit vd = do
+      ticketId <- generateGUID
+      return $
+        Payment.VendorSplitDetails
+          { splitAmount = 0,
+            splitType = vendorSplitDetailSplitTypeToPaymentSplitType vd.splitType,
+            vendorId = vd.vendorId,
+            ticketId = Just ticketId
+          }
+
+vendorSplitDetailSplitTypeToPaymentSplitType :: VendorSplitDetails.SplitType -> Payment.SplitType
+vendorSplitDetailSplitTypeToPaymentSplitType = \case
+  VendorSplitDetails.FIXED -> Payment.FIXED
+  VendorSplitDetails.FLEXIBLE -> Payment.FLEXIBLE
+
+-- TODO :: Added for Backward Comaptibility, to be removed post release
+createFRFSQuoteCategory :: (EsqDBReplicaFlow m r, BeamFlow m r, EncFlow m r, ServiceFlow m r) => Id Quote.FRFSQuote -> Maybe Int -> FRFSQuoteCategoryType -> m (Maybe APITypes.FRFSCategorySelectionReq)
+createFRFSQuoteCategory quoteId mbQuantity category = do
+  quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (FRFSQuoteNotFound quoteId.getId)
+  mapM
+    ( \(quantity, price) -> do
+        quoteCategoryId <- generateGUID
+        now <- getCurrentTime
+        let quoteCategory =
+              DFRFSQuoteCategory.FRFSQuoteCategory
+                { id = quoteCategoryId,
+                  category = category,
+                  quoteId = quote.id,
+                  bppItemId = quote.bppItemId,
+                  price = price,
+                  offeredPrice = price,
+                  finalPrice = Nothing,
+                  categoryMeta = Nothing,
+                  merchantId = quote.merchantId,
+                  merchantOperatingCityId = quote.merchantOperatingCityId,
+                  ticketCategoryMetadataConfigId = Nothing,
+                  selectedQuantity = Just quantity,
+                  createdAt = now,
+                  updatedAt = now
+                }
+        QFRFSQuoteCategory.create quoteCategory
+        return APITypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategoryId, quantity = quantity}
+    )
+    ((,) <$> mbQuantity <*> quote.price)

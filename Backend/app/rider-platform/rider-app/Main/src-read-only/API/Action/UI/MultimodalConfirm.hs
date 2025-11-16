@@ -46,7 +46,7 @@ type API =
            API.Types.UI.MultimodalConfirm.JourneyConfirmReq
       :> Post
            '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+           API.Types.UI.MultimodalConfirm.JourneyConfirmResp
       :<|> TokenAuth
       :> "multimodal"
       :> Capture
@@ -526,7 +526,7 @@ postMultimodalConfirm ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyConfirmResp
   )
 postMultimodalConfirm a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 

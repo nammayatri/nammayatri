@@ -53,7 +53,6 @@ updateByPrimaryKey (Domain.Types.FleetBadgeAssociation.FleetBadgeAssociation {..
       Se.Set Beam.associatedTill associatedTill,
       Se.Set Beam.badgeId (Kernel.Types.Id.getId badgeId),
       Se.Set Beam.badgeType badgeType,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.fleetOwnerId fleetOwnerId,
       Se.Set Beam.isActive isActive,

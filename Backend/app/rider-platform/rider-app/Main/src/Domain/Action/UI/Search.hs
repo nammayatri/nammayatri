@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Search where
 
+import API.Types.UI.RiderLocation (BusLocation)
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Beckn
 import Control.Applicative ((<|>))
@@ -158,6 +159,7 @@ extractSearchDetails now = \case
         originStopCode = Nothing,
         vehicleCategory = Nothing,
         currentLocation = Nothing,
+        busLocationData = [],
         ..
       }
   RentalSearch RentalSearchReq {..} ->
@@ -174,6 +176,7 @@ extractSearchDetails now = \case
         platformType = Nothing,
         vehicleCategory = Nothing,
         currentLocation = Nothing,
+        busLocationData = [],
         ..
       }
   InterCitySearch InterCitySearchReq {..} ->
@@ -187,6 +190,7 @@ extractSearchDetails now = \case
         originStopCode = Nothing,
         vehicleCategory = Nothing,
         currentLocation = Nothing,
+        busLocationData = [],
         ..
       }
   AmbulanceSearch OneWaySearchReq {..} ->
@@ -204,6 +208,7 @@ extractSearchDetails now = \case
         platformType = Nothing,
         vehicleCategory = Nothing,
         currentLocation = Nothing,
+        busLocationData = [],
         ..
       }
   DeliverySearch OneWaySearchReq {..} ->
@@ -221,6 +226,7 @@ extractSearchDetails now = \case
         platformType = Nothing,
         vehicleCategory = Nothing,
         currentLocation = Nothing,
+        busLocationData = [],
         ..
       }
   PTSearch PublicTransportSearchReq {..} ->
@@ -240,6 +246,7 @@ extractSearchDetails now = \case
         placeNameSource = Nothing,
         destinationStopCode = Just destinationStopCode,
         originStopCode = Just originStopCode,
+        busLocationData = fromMaybe [] busLocationData,
         ..
       }
 
@@ -349,6 +356,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       isReservedRideSearch
       justMultimodalSearch
       multimodalSearchRequestId
+      busLocationData
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -586,8 +594,9 @@ buildSearchRequest ::
   Bool ->
   Bool ->
   Maybe Text ->
+  [BusLocation] ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE
@@ -627,6 +636,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         autoAssignEnabled = Nothing,
         autoAssignEnabledV2 = Nothing,
         selectedPaymentMethodId = Nothing,
+        selectedPaymentInstrument = Nothing,
         isPetRide = Nothing,
         isAdvanceBookingEnabled = Nothing,
         availablePaymentMethods = [],

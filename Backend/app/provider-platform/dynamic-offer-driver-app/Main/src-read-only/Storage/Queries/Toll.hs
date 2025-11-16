@@ -35,8 +35,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Toll.Toll {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.isAutoRickshawAllowed isAutoRickshawAllowed,
+    [ Se.Set Beam.isAutoRickshawAllowed isAutoRickshawAllowed,
       Se.Set Beam.isTwoWheelerAllowed isTwoWheelerAllowed,
       Se.Set Beam.name name,
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),

@@ -8,6 +8,7 @@ imports:
   Document: Dashboard.Common
   VehicleCategory: Dashboard.Common
   DriverVehicleDetails: Dashboard.Common
+  CommonDriverOnboardingDocuments: Dashboard.Common
 
 module: DriverRegistration
 apiPrefix: driver
@@ -333,8 +334,11 @@ types:
   SSNRejectDetails:
     - reason: Text
     - ssn: Text
+  CommonDocumentRejectDetails:
+    - reason: Text
+    - documentId: Id CommonDriverOnboardingDocuments
   RejectDetails:
-    - enum: "SSNReject SSNRejectDetails, ImageDocuments ImageDocumentsRejectDetails"
+    - enum: "SSNReject SSNRejectDetails, ImageDocuments ImageDocumentsRejectDetails, CommonDocumentReject CommonDocumentRejectDetails"
   FitnessApproveDetails:
     - applicationNumber: Text
     - categoryOfVehicle: Maybe Text
@@ -413,13 +417,16 @@ types:
     - retryCount: Int
     - requestId: Maybe Text
     - createdAt: UTCTime
+  CommonDocumentApproveDetails:
+    - documentId: Id CommonDriverOnboardingDocuments
+    - updatedDocumentData: Maybe Text  # Updated JSON data if any corrections needed
   PanType:
       enum: "INDIVIDUAL,BUSINESS"
   ServiceType:
     enum: "HyperVerge,Idfy"
     derive: "HttpInstance"
   ApproveDetails:
-    - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails, Pan PanApproveDetails, NOC NOCApproveDetails, BusinessLicenseImg BusinessLicenseApproveDetails"
+    - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails, Pan PanApproveDetails, NOC NOCApproveDetails, BusinessLicenseImg BusinessLicenseApproveDetails, CommonDocument CommonDocumentApproveDetails"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

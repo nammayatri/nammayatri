@@ -86,15 +86,15 @@ calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong 
   let mbIsAutoRickshawAllowed = (\(_, _, mbIsAutoRickshawAllowed', _) -> mbIsAutoRickshawAllowed') <$> mbTollChargesAndNames
   let mbIsTwoWheelerAllowed = join ((\(_, _, _, isTwoWheelerAllowed) -> isTwoWheelerAllowed) <$> mbTollChargesAndNames)
   let allFarePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed fareProducts.farePolicies
-  estimates <- mapM (\fp -> buildEstimateHelper fp mbTollCharges mbTollNames now) allFarePolicies
+  estimates <- mapM (\fp -> buildEstimateHelper fp mbTollCharges mbTollNames now transporterConfig.currency) allFarePolicies
   let estimateAPIEntity = map buildEstimateApiEntity estimates
   return API.Types.UI.FareCalculator.FareResponse {estimatedFares = estimateAPIEntity}
   where
-    buildEstimateHelper fp mbTollCharges mbTollNames now = do
+    buildEstimateHelper fp mbTollCharges mbTollNames now currency = do
       vehicleServiceTierItem <-
         CQVST.findByServiceTierTypeAndCityIdInRideFlow fp.vehicleServiceTier merchanOperatingCityId configsInExperimentVersions
           >>= fromMaybeM (VehicleServiceTierNotFound $ show fp.vehicleServiceTier)
-      DBS.buildEstimate merchantId merchanOperatingCityId INR Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing 0 mbDuration False vehicleServiceTierItem fp
+      DBS.buildEstimate merchantId merchanOperatingCityId currency Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing 0 mbDuration False vehicleServiceTierItem fp
 
     selectFarePolicy distance' duration' mbIsAutoRickshawAllowed' mbIsTwoWheelerAllowed' =
       filter (\farePolicy -> isValid farePolicy mbVehicleServiceTier)

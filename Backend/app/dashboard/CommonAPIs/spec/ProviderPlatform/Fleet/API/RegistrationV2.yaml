@@ -86,6 +86,7 @@ types:
     - businessLicenseImage: Maybe Text
     - operatorReferralCode: Maybe Text
     - adminApprovalRequired: Maybe Bool
+    - setIsEnabled: Maybe Bool
   FleetOwnerRegisterTReqV2: # hide secrets
     - firstName: Text
     - lastName: Text

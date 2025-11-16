@@ -49,3 +49,20 @@ ALTER TABLE atlas_app.frfs_recon ADD COLUMN txn_id text ;
 ALTER TABLE atlas_app.frfs_recon ADD COLUMN ticket_status text ;
 ALTER TABLE atlas_app.frfs_recon ADD COLUMN provider_name text NOT NULL;
 ALTER TABLE atlas_app.frfs_recon ADD COLUMN provider_id text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_recon ALTER COLUMN transaction_ref_number SET DEFAULT 'NA';
+ALTER TABLE atlas_app.frfs_recon ALTER COLUMN transaction_ref_number DROP NOT NULL;
+ALTER TABLE atlas_app.frfs_recon ALTER COLUMN ticket_qty SET DEFAULT 0;
+ALTER TABLE atlas_app.frfs_recon ALTER COLUMN ticket_qty DROP NOT NULL;
+ALTER TABLE atlas_app.frfs_recon ALTER COLUMN ticket_number SET DEFAULT 'NA';
+ALTER TABLE atlas_app.frfs_recon ALTER COLUMN ticket_number DROP NOT NULL;
+ALTER TABLE atlas_app.frfs_recon ALTER COLUMN source_station_code SET DEFAULT 'NA';
+ALTER TABLE atlas_app.frfs_recon ALTER COLUMN source_station_code DROP NOT NULL;
+ALTER TABLE atlas_app.frfs_recon ALTER COLUMN destination_station_code SET DEFAULT 'NA';
+ALTER TABLE atlas_app.frfs_recon ALTER COLUMN destination_station_code DROP NOT NULL;
+ALTER TABLE atlas_app.frfs_recon ADD COLUMN recon_status text ;
+ALTER TABLE atlas_app.frfs_recon ADD COLUMN payment_gateway text ;
+ALTER TABLE atlas_app.frfs_recon ADD COLUMN entity_type text ;

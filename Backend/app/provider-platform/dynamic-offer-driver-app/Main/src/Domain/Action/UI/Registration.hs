@@ -334,7 +334,10 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             rideRequestVolume = Nothing,
             isSilentModeEnabled = Nothing,
             isTTSEnabled = Nothing,
-            isHighAccuracyLocationEnabled = Nothing
+            isHighAccuracyLocationEnabled = Nothing,
+            rideRequestVolumeEnabled = Nothing,
+            lastOfflineTime = Just now,
+            ruleBasedUpgradeTiers = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo
@@ -608,5 +611,5 @@ logout (personId, _, merchantOpCityId) = do
   when (uperson.role == SP.DRIVER) $ do
     driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
     let newFlowStatus = DDriverMode.getDriverFlowStatus (Just DriverInfo.OFFLINE) False
-    DDriverMode.updateDriverModeAndFlowStatus uperson.id transporterConfig False (Just DriverInfo.OFFLINE) newFlowStatus driverInfo
+    DDriverMode.updateDriverModeAndFlowStatus uperson.id transporterConfig False (Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing
   pure Success

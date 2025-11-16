@@ -25,108 +25,116 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("driver" :> (GetDriverPaymentDue :<|> PostDriverEnable :<|> PostDriverCollectCash :<|> PostDriverV2CollectCash :<|> PostDriverExemptCash :<|> PostDriverV2ExemptCash :<|> GetDriverInfo :<|> PostDriverUnlinkVehicle :<|> PostDriverEndRCAssociation :<|> PostDriverAddVehicle :<|> PostDriverSetRCStatus :<|> PostDriverExemptDriverFee))
+type API = ("driver" :> (GetDriverPaymentDue :<|> PostDriverEnable :<|> PostDriverCollectCash :<|> PostDriverV2CollectCash :<|> PostDriverExemptCash :<|> PostDriverV2ExemptCash :<|> GetDriverInfo :<|> GetDriverFeedbackList :<|> PostDriverUnlinkVehicle :<|> PostDriverEndRCAssociation :<|> PostDriverAddVehicle :<|> PostDriverSetRCStatus :<|> PostDriverExemptDriverFee))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getDriverPaymentDue merchantId city :<|> postDriverEnable merchantId city :<|> postDriverCollectCash merchantId city :<|> postDriverV2CollectCash merchantId city :<|> postDriverExemptCash merchantId city :<|> postDriverV2ExemptCash merchantId city :<|> getDriverInfo merchantId city :<|> postDriverUnlinkVehicle merchantId city :<|> postDriverEndRCAssociation merchantId city :<|> postDriverAddVehicle merchantId city :<|> postDriverSetRCStatus merchantId city :<|> postDriverExemptDriverFee merchantId city
+handler merchantId city = getDriverPaymentDue merchantId city :<|> postDriverEnable merchantId city :<|> postDriverCollectCash merchantId city :<|> postDriverV2CollectCash merchantId city :<|> postDriverExemptCash merchantId city :<|> postDriverV2ExemptCash merchantId city :<|> getDriverInfo merchantId city :<|> getDriverFeedbackList merchantId city :<|> postDriverUnlinkVehicle merchantId city :<|> postDriverEndRCAssociation merchantId city :<|> postDriverAddVehicle merchantId city :<|> postDriverSetRCStatus merchantId city :<|> postDriverExemptDriverFee merchantId city
 
 type GetDriverPaymentDue =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER) / ('API.Types.Dashboard.RideBooking.Driver.GET_DRIVER_PAYMENT_DUE))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER / 'API.Types.Dashboard.RideBooking.Driver.GET_DRIVER_PAYMENT_DUE)
       :> API.Types.Dashboard.RideBooking.Driver.GetDriverPaymentDue
   )
 
 type PostDriverEnable =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER) / ('API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_ENABLE))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER / 'API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_ENABLE)
       :> API.Types.Dashboard.RideBooking.Driver.PostDriverEnable
   )
 
 type PostDriverCollectCash =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER) / ('API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_COLLECT_CASH))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER / 'API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_COLLECT_CASH)
       :> API.Types.Dashboard.RideBooking.Driver.PostDriverCollectCash
   )
 
 type PostDriverV2CollectCash =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER) / ('API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_V2_COLLECT_CASH))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER / 'API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_V2_COLLECT_CASH)
       :> API.Types.Dashboard.RideBooking.Driver.PostDriverV2CollectCash
   )
 
 type PostDriverExemptCash =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER) / ('API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_EXEMPT_CASH))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER / 'API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_EXEMPT_CASH)
       :> API.Types.Dashboard.RideBooking.Driver.PostDriverExemptCash
   )
 
 type PostDriverV2ExemptCash =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER) / ('API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_V2_EXEMPT_CASH))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER / 'API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_V2_EXEMPT_CASH)
       :> API.Types.Dashboard.RideBooking.Driver.PostDriverV2ExemptCash
   )
 
 type GetDriverInfo =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER) / ('API.Types.Dashboard.RideBooking.Driver.GET_DRIVER_INFO))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER / 'API.Types.Dashboard.RideBooking.Driver.GET_DRIVER_INFO)
       :> API.Types.Dashboard.RideBooking.Driver.GetDriverInfo
+  )
+
+type GetDriverFeedbackList =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER / 'API.Types.Dashboard.RideBooking.Driver.GET_DRIVER_FEEDBACK_LIST)
+      :> API.Types.Dashboard.RideBooking.Driver.GetDriverFeedbackList
   )
 
 type PostDriverUnlinkVehicle =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER) / ('API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_UNLINK_VEHICLE))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER / 'API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_UNLINK_VEHICLE)
       :> API.Types.Dashboard.RideBooking.Driver.PostDriverUnlinkVehicle
   )
 
 type PostDriverEndRCAssociation =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER) / ('API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_END_RC_ASSOCIATION))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER / 'API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_END_RC_ASSOCIATION)
       :> API.Types.Dashboard.RideBooking.Driver.PostDriverEndRCAssociation
   )
 
 type PostDriverAddVehicle =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER) / ('API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_ADD_VEHICLE))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER / 'API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_ADD_VEHICLE)
       :> API.Types.Dashboard.RideBooking.Driver.PostDriverAddVehicle
   )
 
 type PostDriverSetRCStatus =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER) / ('API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_SET_RC_STATUS))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER / 'API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_SET_RC_STATUS)
       :> API.Types.Dashboard.RideBooking.Driver.PostDriverSetRCStatus
   )
 
 type PostDriverExemptDriverFee =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.DRIVER) / ('API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_EXEMPT_DRIVER_FEE))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.DRIVER / 'API.Types.Dashboard.RideBooking.Driver.POST_DRIVER_EXEMPT_DRIVER_FEE)
       :> API.Types.Dashboard.RideBooking.Driver.PostDriverExemptDriverFee
   )
 
-getDriverPaymentDue :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.Dashboard.RideBooking.Driver.DriverOutstandingBalanceResp])
+getDriverPaymentDue :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.Dashboard.RideBooking.Driver.DriverOutstandingBalanceResp])
 getDriverPaymentDue merchantShortId opCity apiTokenInfo countryCode phone = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Driver.getDriverPaymentDue merchantShortId opCity apiTokenInfo countryCode phone
 
 postDriverEnable :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -144,8 +152,11 @@ postDriverExemptCash merchantShortId opCity apiTokenInfo driverId = withFlowHand
 postDriverV2ExemptCash :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Dashboard.Common.Driver.ServiceNames -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverV2ExemptCash merchantShortId opCity apiTokenInfo driverId serviceName = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Driver.postDriverV2ExemptCash merchantShortId opCity apiTokenInfo driverId serviceName
 
-getDriverInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Driver.DriverInfoRes)
+getDriverInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Driver.DriverInfoRes)
 getDriverInfo merchantShortId opCity apiTokenInfo mobileNumber mobileCountryCode vehicleNumber dlNumber rcNumber email personId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Driver.getDriverInfo merchantShortId opCity apiTokenInfo mobileNumber mobileCountryCode vehicleNumber dlNumber rcNumber email personId
+
+getDriverFeedbackList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Driver.GetFeedbackListRes)
+getDriverFeedbackList merchantShortId opCity apiTokenInfo personId mobileNumber mobileCountryCode = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Driver.getDriverFeedbackList merchantShortId opCity apiTokenInfo personId mobileNumber mobileCountryCode
 
 postDriverUnlinkVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverUnlinkVehicle merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Driver.postDriverUnlinkVehicle merchantShortId opCity apiTokenInfo driverId

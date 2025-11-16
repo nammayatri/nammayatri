@@ -84,7 +84,7 @@ checkForIsInterCity ::
   FlowHandler BPPInternal.IsIntercityResp
 checkForIsInterCity (personId, merchantId) req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  eitherResp <- try @_ @SomeException (BPPInternal.getIsInterCity merchant req)
+  eitherResp <- withTryCatch "getIsInterCity:checkForIsInterCity" (BPPInternal.getIsInterCity merchant req)
   case eitherResp of
     Left err -> do
       logDebug $ "Intercity API failed: " <> show err

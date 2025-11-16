@@ -4,7 +4,6 @@
 
 module Lib.Payment.Storage.Queries.Refunds where
 
-import qualified Data.Aeson
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface
@@ -13,7 +12,6 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Kernel.Utils.JSON
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Lib.Payment.Domain.Types.Refunds
 import qualified Lib.Payment.Storage.Beam.BeamFlow
@@ -31,6 +29,11 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findByShortId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.Refunds.Refunds -> m (Maybe Lib.Payment.Domain.Types.Refunds.Refunds))
 findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]
+
+updateIsApiCallSuccess :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds -> m ())
+updateIsApiCallSuccess isApiCallSuccess id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.isApiCallSuccess isApiCallSuccess, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateRefundsEntryByResponse ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -58,11 +61,11 @@ instance FromTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
             id = Kernel.Types.Id.Id id,
             idAssignedByServiceProvider = idAssignedByServiceProvider,
             initiatedBy = initiatedBy,
+            isApiCallSuccess = isApiCallSuccess,
             merchantId = merchantId,
             orderId = Kernel.Types.Id.ShortId orderId,
             refundAmount = refundAmount,
             shortId = Kernel.Types.Id.ShortId shortId,
-            split = split >>= Kernel.Utils.JSON.valueToMaybe,
             status = status,
             updatedAt = updatedAt
           }
@@ -76,11 +79,11 @@ instance ToTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.idAssignedByServiceProvider = idAssignedByServiceProvider,
         Beam.initiatedBy = initiatedBy,
+        Beam.isApiCallSuccess = isApiCallSuccess,
         Beam.merchantId = merchantId,
         Beam.orderId = Kernel.Types.Id.getShortId orderId,
         Beam.refundAmount = refundAmount,
         Beam.shortId = Kernel.Types.Id.getShortId shortId,
-        Beam.split = split >>= Just . Data.Aeson.toJSON,
         Beam.status = status,
         Beam.updatedAt = updatedAt
       }

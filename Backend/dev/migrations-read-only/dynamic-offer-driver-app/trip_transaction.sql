@@ -62,3 +62,43 @@ ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN conductor_fleet_b
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN conductor_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN vip_name text ;
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN duty_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN start_address text ;
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN end_address text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN scheduled_trip_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN trip_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN pilot_source text ;
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN pilot_destination text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN pilot_source_lon double precision ;
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN pilot_source_lat double precision ;
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN pilot_destination_lon double precision ;
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN pilot_destination_lat double precision ;
+
+
+------- SQL updates -------
+

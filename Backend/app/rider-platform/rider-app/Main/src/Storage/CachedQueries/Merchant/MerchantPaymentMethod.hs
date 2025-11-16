@@ -17,6 +17,7 @@ module Storage.CachedQueries.Merchant.MerchantPaymentMethod
   ( create,
     findAllByMerchantOperatingCityId,
     findByIdAndMerchantOperatingCityId,
+    findById,
     clearCache,
   )
 where
@@ -52,6 +53,26 @@ cacheMerchantPaymentMethods merchantId cfg = do
 makeMerchantOperatingCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOperatingCityIdKey id = "driver-offer:CachedQueries:MerchantPaymentMethod:MerchantOperatingCityId-" <> id.getId
 
+makeIdKey :: Id MerchantPaymentMethod -> Text
+makeIdKey id = "rider-app:CachedQueries:MerchantPaymentMethod:Id-" <> id.getId
+
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
 clearCache merchantOperatingCityId = do
   Hedis.del (makeMerchantOperatingCityIdKey merchantOperatingCityId)
+
+findById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantPaymentMethod -> m (Maybe MerchantPaymentMethod)
+findById id = do
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
+    Just a -> return $ Just $ coerce @(MerchantPaymentMethodD 'Unsafe) @MerchantPaymentMethod a
+    Nothing -> do
+      result <- Queries.findById id
+      case result of
+        Just merchantPaymentMethod -> do
+          cacheMerchantPaymentMethodById id merchantPaymentMethod
+          return $ Just merchantPaymentMethod
+        Nothing -> return Nothing
+
+cacheMerchantPaymentMethodById :: (CacheFlow m r) => Id MerchantPaymentMethod -> MerchantPaymentMethod -> m ()
+cacheMerchantPaymentMethodById id cfg = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeIdKey id) (coerce @MerchantPaymentMethod @(MerchantPaymentMethodD 'Unsafe) cfg) expTime

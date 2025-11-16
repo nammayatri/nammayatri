@@ -52,8 +52,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Rating.Rating {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.feedbackDetails feedbackDetails,
+    [ Se.Set Beam.feedbackDetails feedbackDetails,
       Se.Set Beam.mediaId (Kernel.Types.Id.getId <$> mediaId),
       Se.Set Beam.ratingValue ratingValue,
       Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),

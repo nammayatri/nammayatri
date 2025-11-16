@@ -26,7 +26,7 @@ createMany = traverse_ create
 
 findAllByFarePoliyIdAndIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct]))
+  (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct])
 findAllByFarePoliyIdAndIntegratedBPPConfigId farePolicyId integratedBppConfigId = do
   findAllWithKV
     [ Se.And
@@ -37,12 +37,12 @@ findAllByFarePoliyIdAndIntegratedBPPConfigId farePolicyId integratedBppConfigId 
 
 findAllByIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct]))
+  (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct])
 findAllByIntegratedBPPConfigId integratedBppConfigId = do findAllWithKV [Se.And [Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)]]
 
 findByRouteCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct]))
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct])
 findByRouteCode routeCode integratedBppConfigId = do
   findAllWithKV
     [ Se.And
@@ -79,7 +79,6 @@ updateByPrimaryKey (Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct {..})
       Se.Set Beam.timeBounds timeBounds,
       Se.Set Beam.vehicleServiceTierId (Kernel.Types.Id.getId vehicleServiceTierId),
       Se.Set Beam.vehicleType vehicleType,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

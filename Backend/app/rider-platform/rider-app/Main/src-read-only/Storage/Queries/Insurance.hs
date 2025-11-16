@@ -32,7 +32,6 @@ updateByPrimaryKey (Domain.Types.Insurance.Insurance {..}) = do
   updateWithKV
     [ Se.Set Beam.category category,
       Se.Set Beam.certificateUrl certificateUrl,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.customerId (Kernel.Types.Id.getId customerId),
       Se.Set Beam.customerName customerName,
       Se.Set Beam.customerPhone customerPhone,

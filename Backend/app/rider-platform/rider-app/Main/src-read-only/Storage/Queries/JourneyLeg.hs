@@ -86,6 +86,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
   updateWithKV
     [ Se.Set Beam.agencyGtfsId (agency >>= (.gtfsId)),
       Se.Set Beam.agencyName (agency <&> (.name)),
+      Se.Set Beam.busLocationData (Just $ toJSON busLocationData),
       Se.Set Beam.changedBusesInSequence changedBusesInSequence,
       Se.Set Beam.distance ((.value) <$> distance),
       Se.Set Beam.distanceUnit ((.unit) <$> distance),
@@ -111,6 +112,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.journeyId (Just $ Kernel.Types.Id.getId journeyId),
       Se.Set Beam.legPricingId legPricingId,
       Se.Set Beam.legId legSearchId,
+      Se.Set Beam.serviceTypes liveVehicleAvailableServiceTypes,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.mode mode,
@@ -118,7 +120,6 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.osmEntrance (osmEntrance >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.osmExit (osmExit >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.sequenceNumber (Just sequenceNumber),
-      Se.Set Beam.serviceTypes serviceTypes,
       Se.Set Beam.startLocationLat (startLocation & (.latitude)),
       Se.Set Beam.startLocationLon (startLocation & (.longitude)),
       Se.Set Beam.straightLineEntrance (straightLineEntrance >>= Just . Data.Aeson.toJSON),
@@ -130,7 +131,6 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.toStopName (toStopDetails >>= (.name)),
       Se.Set Beam.toStopPlatformCode (toStopDetails >>= (.platformCode)),
       Se.Set Beam.userBookedBusServiceTierType userBookedBusServiceTierType,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

@@ -5,6 +5,7 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Data.Time as Time
 import qualified Data.UUID as UU
+import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import ExternalBPP.ExternalAPI.Direct.Utils
@@ -14,17 +15,18 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
+import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
 
-createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> m ProviderOrder
-createOrder config integratedBPPConfig qrTtl booking = do
+createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
+createOrder config integratedBPPConfig qrTtl booking quoteCategories = do
   orderId <- case booking.bppOrderId of
     Just oid -> return oid
     Nothing -> getBppOrderId booking
   let mbRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
   routeStations <- mbRouteStations & fromMaybeM (InternalError "Route Stations Not Found.")
-  tickets <- mapM (getTicketDetail config integratedBPPConfig qrTtl booking) routeStations
+  tickets <- mapM (getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories) routeStations
   return ProviderOrder {..}
 
 getBppOrderId :: (MonadFlow m) => FRFSTicketBooking -> m Text
@@ -33,8 +35,8 @@ getBppOrderId booking = do
   let orderId = show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords bookingUUID)) :: Integer) -- This should be max 20 characters UUID (Using Transaction UUID)
   return orderId
 
-getTicketDetail :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> FRFSRouteStationsAPI -> m ProviderTicket
-getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
+getTicketDetail :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> [FRFSQuoteCategory] -> FRFSRouteStationsAPI -> m ProviderTicket
+getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeStation = do
   busTypeId <- routeStation.vehicleServiceTier <&> (.providerCode) & fromMaybeM (InternalError "Bus Provider Code Not Found.")
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
   let startStation = head routeStation.stations
@@ -60,9 +62,10 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
           Redis.setExp otpKey otpCode endOfDayDiffInSeconds.getSeconds
           return otpCode
   let ticketDescription = "ROUTE: " <> route.shortName <> " | FROM: " <> fromStation.name <> " | TO: " <> toStation.name
-      amount = Money $ round routeStation.priceWithCurrency.amount
-      adultQuantity = booking.quantity
-      childQuantity = fromMaybe 0 booking.childTicketQuantity
+      fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
+      singleTicketPrice = (getUnitPriceFromPriceItem fareParameters.adultItem).amountInt
+      adultQuantity = maybe 0 (.quantity) fareParameters.adultItem
+      childQuantity = maybe 0 (.quantity) fareParameters.childItem
       qrValidityIST = addUTCTime (secondsToNominalDiffTime 19800) qrValidity
       qrRefreshAt = config.qrRefreshTtl <&> (\ttl -> addUTCTime (secondsToNominalDiffTime ttl) now)
   qrData <-
@@ -76,7 +79,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
           expiry = formatUtcTime qrValidityIST,
           expiryIST = qrValidityIST,
           ticketNumber,
-          ticketAmount = amount,
+          ticketAmount = singleTicketPrice, -- TODO :: This `routeStation.priceWithCurrency.amount` is a fallback, should be removed once we have quoteCategories
           refreshAt = qrRefreshAt,
           otpCode = Just otpCode
         }

@@ -1,6 +1,5 @@
 module ExternalBPP.Flow where
 
-import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.List.NonEmpty as NE
 import Domain.Action.Beckn.FRFS.Common
@@ -11,10 +10,10 @@ import Domain.Types.BecknConfig
 import Domain.Types.FRFSConfig
 import Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
+import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
-import qualified Domain.Types.FRFSTicketCategoryMetadataConfig as DFRFSTicketCategoryMetadataConfig
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -29,14 +28,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.Queries.FRFSQuote as QFRFSQuote
-import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
 getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> NonEmpty CallAPI.BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> m (Bool, [FRFSFare])
 getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId = do
-  try @_ @SomeException (CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId) >>= \case
+  withTryCatch "callExternalBPP:getFares" (CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId) >>= \case
     Left _ -> return (True, [])
     Right fares -> return fares
 
@@ -78,13 +75,13 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                     endStopCode = endStationCode,
                     travelTime = Nothing
                   }
-          mkQuote searchReq.vehicleType [routeInfo]
+          mkQuote serviceTier searchReq.vehicleType [routeInfo]
         Nothing -> do
           routesInfo <- bool getPossibleRoutesBetweenTwoStops getPossibleRoutesBetweenTwoParentStops (fromMaybe False searchReq.searchAsParentStops) startStationCode endStationCode integratedBPPConfig
           quotes <-
             mapM
               ( \routeInfo -> do
-                  mkQuote searchReq.vehicleType [routeInfo]
+                  mkQuote Nothing searchReq.vehicleType [routeInfo]
               )
               routesInfo
           return $ concat quotes
@@ -108,19 +105,20 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                       }
               )
               routesDetails
-          mkQuote searchReq.vehicleType routesInfo
+          mkQuote Nothing searchReq.vehicleType routesInfo
 
-    mkQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Spec.VehicleCategory -> [RouteStopInfo] -> m [DQuote]
-    mkQuote _vehicleType [] = return []
-    mkQuote vehicleType routesInfo = do
+    mkQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Maybe Spec.ServiceTierType -> Spec.VehicleCategory -> [RouteStopInfo] -> m [DQuote]
+    mkQuote _serviceTier _vehicleType [] = return []
+    mkQuote serviceTier vehicleType routesInfo = do
       let fareRouteDetails = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode}) routesInfo
       stations <- CallAPI.buildStations fareRouteDetails integratedBPPConfig
       let nonEmptyFareRouteDetails = NE.fromList fareRouteDetails
-      (_, fares) <- CallAPI.getFares searchReq.riderId merchant merchantOperatingCity integratedBPPConfig nonEmptyFareRouteDetails vehicleType Nothing searchReq.multimodalSearchRequestId
+      (_, fares) <- CallAPI.getFares searchReq.riderId merchant merchantOperatingCity integratedBPPConfig nonEmptyFareRouteDetails vehicleType serviceTier searchReq.multimodalSearchRequestId
       return $
         map
           ( \FRFSFare {..} ->
-              let routeStations =
+              let adultPrice = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.price) (find (\category -> category.category == ADULT) categories)
+                  routeStations =
                     map
                       ( \routeInfo ->
                           DRouteStation
@@ -132,7 +130,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                               routeStations = stations,
                               routeTravelTime = routeInfo.travelTime,
                               routeServiceTier = Just $ mkDVehicleServiceTier vehicleServiceTier,
-                              routePrice = price,
+                              routePrice = adultPrice,
                               routeSequenceNum = Nothing,
                               routeColor = Nothing,
                               routeFarePolicyId = farePolicyId
@@ -145,7 +143,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                       _type = DFRFSQuote.SingleJourney,
                       routeStations = routeStations,
                       fareDetails = fareDetails,
-                      categories = map (mkDCategory price) categories,
+                      categories = map mkDCategory categories,
                       ..
                     }
           )
@@ -153,34 +151,48 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
 
     mkDVehicleServiceTier FRFSVehicleServiceTier {..} = DVehicleServiceTier {..}
 
-    mkDCategory basePrice FRFSTicketCategory {..} = DCategory {bppItemId = CallAPI.getProviderName integratedBPPConfig, offeredPrice = price, price = basePrice, ..}
+    mkDCategory FRFSTicketCategory {..} =
+      DCategory
+        { bppItemId = CallAPI.getProviderName integratedBPPConfig,
+          offeredPrice = offeredPrice,
+          price = price,
+          categoryMeta =
+            Just $
+              DFRFSQuoteCategory.QuoteCategoryMetadata
+                { code = code,
+                  title = title,
+                  description = description,
+                  tnc = tnc
+                },
+          ..
+        }
 
-select :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSQuote.FRFSQuote -> Maybe Int -> Maybe Int -> Maybe [API.FRFSCategorySelectionReq] -> m DOnSelect
-select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq = do
-  void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
-  updatedQuoteCategories <- updateQuoteCategoriesWithSelections (fromMaybe [] categorySelectionReq) quoteCategories
-  let categories =
-        mapMaybe
-          ( \category -> do
-              selectedQuantity <- category.selectedQuantity
-              return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity}
-          )
-          updatedQuoteCategories
+select :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSQuote.FRFSQuote -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> m DOnSelect
+select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote quoteCategories = do
   return $
     DOnSelect
       { providerId = quote.providerId,
-        totalPrice = quote.price,
-        fareBreakUp = [],
-        bppItemId = quote.bppItemId,
         validTill = Just quote.validTill,
+        fareBreakUp = [],
         transactionId = quote.searchId.getId,
         messageId = quote.id.getId,
-        category = categories
+        categories =
+          mapMaybe
+            ( \category -> do
+                selectedQuantity <- category.selectedQuantity
+                return $
+                  DCategorySelect
+                    { bppItemId = category.bppItemId,
+                      quantity = selectedQuantity,
+                      category = category.category,
+                      price = category.offeredPrice
+                    }
+            )
+            quoteCategories
       }
 
-init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
-init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking = do
+init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> m DOnInit
+init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories = do
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.initTTLSec
   paymentDetails <- mkPaymentDetails bapConfig.collectedBy
   bankAccountNumber <- paymentDetails.bankAccNumber & fromMaybeM (InternalError "Bank Account Number Not Found")
@@ -189,11 +201,9 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
   return $
     DOnInit
       { providerId = bapConfig.uniqueKeyId,
-        totalPrice = booking.price,
-        totalQuantity = booking.quantity,
-        totalChildTicketQuantity = booking.childTicketQuantity,
+        totalPrice = booking.totalPrice,
+        categories = mapMaybe mkDCategorySelect quoteCategories,
         fareBreakUp = [],
-        bppItemId = CallAPI.getProviderName integratedBPPConfig,
         validTill = validTill,
         transactionId = booking.searchId.getId,
         messageId = booking.id.getId,
@@ -202,20 +212,29 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
         bppOrderId = bppOrderId
       }
   where
+    mkDCategorySelect quoteCategory = do
+      quantity <- quoteCategory.selectedQuantity
+      return $
+        DCategorySelect
+          { bppItemId = CallAPI.getProviderName integratedBPPConfig,
+            quantity = quantity,
+            category = quoteCategory.category,
+            price = quoteCategory.offeredPrice
+          }
     mkPaymentDetails = \case
       Spec.BAP -> do
         let paymentParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
         paymentParams & fromMaybeM (InternalError "BknPaymentParams Not Found")
       Spec.BPP -> CallAPI.getPaymentDetails merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
 
-confirm :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
-confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking = do
+confirm :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> m DOrder
+confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories = do
   let qrTtl =
         case booking.vehicleType of
           Spec.BUS -> frfsConfig.busStationTtl
           Spec.METRO -> Seconds frfsConfig.metroStationTtl
           _ -> Seconds frfsConfig.metroStationTtl
-  order <- CallAPI.createOrder integratedBPPConfig qrTtl (mRiderName, mRiderNumber) booking
+  order <- CallAPI.createOrder integratedBPPConfig qrTtl (mRiderName, mRiderNumber) booking quoteCategories
   let tickets =
         map
           ( \ticket ->
@@ -235,7 +254,7 @@ confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfi
   return $
     DOrder
       { providerId = bapConfig.uniqueKeyId,
-        totalPrice = booking.price.amount,
+        totalPrice = booking.totalPrice.amount,
         fareBreakUp = [],
         bppOrderId = order.orderId,
         bppItemId = CallAPI.getProviderName integratedBPPConfig,
@@ -268,7 +287,7 @@ status _merchantId _merchantOperatingCity integratedBPPConfig bapConfig booking 
   return $
     DOrder
       { providerId = bapConfig.uniqueKeyId,
-        totalPrice = booking.price.amount,
+        totalPrice = booking.totalPrice.amount,
         fareBreakUp = [],
         bppOrderId = bppOrderId,
         bppItemId = CallAPI.getProviderName integratedBPPConfig,
@@ -282,17 +301,3 @@ verifyTicket :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlo
 verifyTicket _merchantId _merchantOperatingCity integratedBPPConfig _bapConfig encryptedQrData = do
   TicketPayload {..} <- CallAPI.verifyTicket integratedBPPConfig encryptedQrData
   return DTicketPayload {..}
-
--- Helper function to build DCategorySelect from quote categories
-buildCategorySelect :: (MonadFlow m) => [DFRFSQuoteCategory.FRFSQuoteCategory] -> Maybe Int -> Maybe Int -> m [DCategorySelect]
-buildCategorySelect quoteCategories ticketQuantity childTicketQuantity = do
-  let generalCategories = filter (\category -> category.ticketCategoryMetadataConfig.category == DFRFSTicketCategoryMetadataConfig.ADULT) quoteCategories
-      childCategories = filter (\category -> category.ticketCategoryMetadataConfig.category == DFRFSTicketCategoryMetadataConfig.CHILD) quoteCategories
-
-  let generalQuantity = fromMaybe 0 ticketQuantity
-      childQuantity = fromMaybe 0 childTicketQuantity
-
-  let generalSelect = map (\category -> DCategorySelect {bppItemId = category.bppItemId, quantity = generalQuantity}) generalCategories
-      childSelect = map (\category -> DCategorySelect {bppItemId = category.bppItemId, quantity = childQuantity}) childCategories
-
-  return $ generalSelect ++ childSelect

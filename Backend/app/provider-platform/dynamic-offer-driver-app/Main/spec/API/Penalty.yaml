@@ -1,0 +1,22 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+
+
+module: Penalty
+
+apis:
+  - POST:
+      endpoint: /penalty/check
+      request:
+        type: "PenaltyCheckReq"
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "PenaltyCheckRes"
+
+types:
+  PenaltyCheckReq:
+    - rideId: Text
+    - point: LatLong
+  PenaltyCheckRes:
+    - isCancellationPenaltyApplicable: Maybe Bool
+    - cancellationPenaltyAmount: Maybe HighPrecMoney

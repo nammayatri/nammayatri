@@ -204,7 +204,7 @@ data DriverError
   | DriverAlreadyLinkedWithVehicle Text
   | FleetOwnerAccountBlocked
   | AccountBlocked
-  | DriverActivityUpdateInProgress
+  | DriverActivityUpdateInProgress Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -224,7 +224,7 @@ instance IsBaseError DriverError where
   toMessage (DriverAlreadyLinkedWithVehicle vehicleNo) = Just $ "Driver is already linked with vehicle " <> vehicleNo
   toMessage FleetOwnerAccountBlocked = Just "Fleet Owner account has been blocked."
   toMessage AccountBlocked = Just "Account has been blocked."
-  toMessage DriverActivityUpdateInProgress = Just "Driver activity update is already in progress. Please try again later."
+  toMessage (DriverActivityUpdateInProgress driverId) = Just $ "Driver activity update is already in progress for driverId: " <> driverId <> ". Please try again later."
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -242,7 +242,7 @@ instance IsHTTPError DriverError where
     DriverEmailAlreadyExists _ -> "DRIVER_EMAIL_ALREADY_EXISTS"
     FleetOwnerAccountBlocked -> "FLEET_OWNER_ACCOUNT_BLOCKED"
     AccountBlocked -> "ACCOUNT_BLOCKED"
-    DriverActivityUpdateInProgress -> "DRIVER_ACTIVITY_UPDATE_IN_PROGRESS"
+    DriverActivityUpdateInProgress _ -> "DRIVER_ACTIVITY_UPDATE_IN_PROGRESS"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
@@ -258,7 +258,7 @@ instance IsHTTPError DriverError where
     DriverEmailAlreadyExists _ -> E400
     FleetOwnerAccountBlocked -> E403
     AccountBlocked -> E403
-    DriverActivityUpdateInProgress -> E409
+    DriverActivityUpdateInProgress _ -> E409
 
 instance IsAPIError DriverError where
   toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload
@@ -1238,8 +1238,10 @@ data DriverOnboardingError
   | InvalidDocumentType Text
   | DriverOnboardingVehicleCategoryNotFound
   | HyperVergeWebhookPayloadRecordNotFound Text
+  | DocumentNotFound Text
   | DuplicateWebhookReceived
   | WebhookAuthFailed
+  | RCBlockedByAnotherAccount
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1293,8 +1295,10 @@ instance IsBaseError DriverOnboardingError where
     InvalidDocumentType docType -> Just $ "Document type send in the query is invalid or not supported!!!! query = " <> docType
     DriverOnboardingVehicleCategoryNotFound -> Just $ "Driver Onboarding Vehicle Catgeory Not Found"
     HyperVergeWebhookPayloadRecordNotFound reqId -> Just $ "Request id in Hyperverge webhook does not match any request id in HypervergeVerification table. RequestId : " <> reqId
+    DocumentNotFound docId -> Just $ "Document not found with id: " <> docId
     DuplicateWebhookReceived -> Just "Multiple webhooks received for same request id."
     WebhookAuthFailed -> Just "Auth header data mismatch ocurred!!!!!!"
+    RCBlockedByAnotherAccount -> Just "RC is Blocked By another Account"
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1347,8 +1351,10 @@ instance IsHTTPError DriverOnboardingError where
     InvalidDocumentType _ -> "INAVLID_DOCUMENT_TYPE"
     DriverOnboardingVehicleCategoryNotFound -> "DRIVER_ONBOARDING_VEHICLE_CATEGORY_NOT_FOUND"
     HyperVergeWebhookPayloadRecordNotFound _ -> "HYPERVERGE_WEBHOOK_PAYLOAD_RECORD_NOT_FOUND"
+    DocumentNotFound _ -> "DOCUMENT_NOT_FOUND"
     DuplicateWebhookReceived -> "DUPLICATE_WEBHOOK_RECEIVED"
     WebhookAuthFailed -> "WEBHOOK_AUTH_FAILED"
+    RCBlockedByAnotherAccount -> "RC_BLOCKED_BY_ANOTHER_ACCOUNT"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1399,8 +1405,10 @@ instance IsHTTPError DriverOnboardingError where
     InvalidDocumentType _ -> E400
     DriverOnboardingVehicleCategoryNotFound -> E500
     HyperVergeWebhookPayloadRecordNotFound _ -> E400
+    DocumentNotFound _ -> E404
     DuplicateWebhookReceived -> E400
     WebhookAuthFailed -> E401
+    RCBlockedByAnotherAccount -> E400
 
 instance IsAPIError DriverOnboardingError
 

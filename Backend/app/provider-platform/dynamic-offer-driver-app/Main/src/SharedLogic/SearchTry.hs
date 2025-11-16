@@ -45,6 +45,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.Pricing
+import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.TransporterConfig as CTC
@@ -123,7 +124,8 @@ initiateDriverSearchBatch ::
   m ()
 initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
   searchTry <- createNewSearchTry
-  try @_ @SomeException
+  withTryCatch
+    "initiateDriverSearchBatch"
     ( do
         driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
         goHomeCfg <- CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId)))
@@ -193,7 +195,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           let estimateOrQuoteServiceTierNames = tripQuoteDetails <&> (.vehicleServiceTierName)
           searchTry <- case mbLastSearchTry of
             Nothing -> do
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier
               _ <- QST.create searchTry
               return searchTry
             Just oldSearchTry -> do
@@ -204,7 +206,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               -- TODO : Fix this
               -- unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
               --   throwError SearchTryEstimatedFareChanged
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier
               when (oldSearchTry.status == DST.ACTIVE) $ do
                 QST.updateStatus DST.CANCELLED oldSearchTry.id
                 void $ QDQ.setInactiveBySTId oldSearchTry.id
@@ -233,13 +235,14 @@ buildSearchTry ::
   Int ->
   DST.SearchRepeatType ->
   DTC.TripCategory ->
+  SLT.BillingCategory ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Text ->
   [Text] ->
   DVST.ServiceTierType ->
   m DST.SearchTry
-buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory customerExtraFee petCharges messageId estimateOrQuoteServTierNames serviceTier = do
+buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory billingCategory customerExtraFee petCharges messageId estimateOrQuoteServTierNames serviceTier = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow serviceTier searchReq.merchantOperatingCityId searchReq.configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))

@@ -137,6 +137,15 @@ apis:
         type: FareBreakUpRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES FARE_BREAKUP
+  - POST: # WaiverRideCancellationPenaltyAPI
+      endpoint: /{rideId}/waiverRideCancellationPenalty
+      auth: ApiAuthV2
+      request:
+        type: WaiverRideCancellationPenaltyReq
+      params:
+        rideId: Id Ride
+      response:
+        type: APISuccess
 
 types:
   RideListRes:
@@ -168,6 +177,8 @@ types:
     - driverPhoneNo: Maybe Text
     - rideStatus: RideStatus
     - rideCreatedAt: UTCTime
+  WaiverRideCancellationPenaltyReq:
+    - reason: Text
 
   DeprecatedTripCategory: # TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`
     - enum: "OneWay, Rental, RideShare, InterCity, CrossCity, Ambulance"
@@ -203,6 +214,7 @@ types:
     - customerPickupLocation: LocationAPIEntity
     - customerDropLocation: Maybe LocationAPIEntity
     - actualDropLocation: Maybe LatLong
+    - isDestinationEdited: Maybe Bool
     - driverId: Id Driver
     - driverName: Text
     - driverPhoneNo: Maybe Text
@@ -256,6 +268,7 @@ types:
     - roundTrip: Maybe Bool
     - deliveryParcelImageId: Maybe Text
     - estimatedReservedDuration: Maybe Minutes
+    - isPetRide: Maybe Bool
   LocationAPIEntity:
     - lat: Double
     - lon: Double

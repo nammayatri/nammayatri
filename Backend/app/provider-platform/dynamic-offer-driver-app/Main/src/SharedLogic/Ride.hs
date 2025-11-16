@@ -49,6 +49,7 @@ import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.ScheduledNotifications as SN
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRNC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -56,6 +57,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideD
@@ -75,9 +77,21 @@ initializeRide ::
   Maybe Bool ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe (Id Person) ->
   Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
-initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide = do
+initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId = do
   let merchantId = merchant.id
+  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && isJust transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ do
+    whenJust mFleetOwnerId $ \fleetOwnerId -> do
+      Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
+        fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId >>= fromMaybeM (PersonNotFound fleetOwnerId.getId)
+        let rideFare = booking.estimatedFare
+            threshold = fromMaybe 0 transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
+            lien = fromMaybe 0 fleetOwnerInfo.lienAmount
+            balance = fromMaybe 0 fleetOwnerInfo.prepaidSubscriptionBalance
+        when (balance - lien < rideFare + threshold) $ throwError (InvalidRequest "Low fleet balance.")
+        QFOI.updateLienAmount (Just (lien + rideFare)) fleetOwnerId
   otpCode <-
     case mbOtpCode of
       Just otp -> pure otp
@@ -95,7 +109,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   let isDriverOnRide = bool (Just False) (previousRideInprogress >>= Just . isJust <$> (.driverTripEndLocation)) (isJust previousRideInprogress)
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId
   rideDetails <- buildRideDetails booking ride driver vehicle
 
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
@@ -130,6 +144,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   where
     notificationType = Notification.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
+
     message uBooking =
       cs $
         unwords
@@ -148,6 +163,31 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     notifyRideRelatedNotificationOnEvent ride now timeDiffEvent = do
       rideRelatedNotificationConfigList <- SCRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId timeDiffEvent booking.configInExperimentVersions
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driver.id)
+
+releaseLien ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadCatch m
+  ) =>
+  DBooking.Booking ->
+  DRide.Ride ->
+  m ()
+releaseLien booking ride = do
+  result <- try $
+    whenJust ride.fleetOwnerId $ \fleetOwnerId -> do
+      Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
+        fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId >>= fromMaybeM (PersonNotFound fleetOwnerId.getId)
+        let reservedFare = booking.estimatedFare
+            lien = fromMaybe 0 fleetOwnerInfo.lienAmount
+        QFOI.updateLienAmount (Just (lien - reservedFare)) fleetOwnerId
+  case result of
+    Left (e :: SomeException) ->
+      logTagError ("releaseLien failed for rideId " <> getId ride.id) (show e)
+    Right () -> pure ()
+
+makeSubscriptionRunningBalanceLockKey :: Text -> Text
+makeSubscriptionRunningBalanceLockKey personId = "SubscriptionRunningBalanceLockKey:" <> personId
 
 buildRideDetails ::
   DBooking.Booking ->
@@ -191,8 +231,9 @@ buildRide ::
   DVeh.Vehicle ->
   Bool ->
   Maybe Bool ->
+  Maybe (Id Person) ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
@@ -210,6 +251,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         merchantOperatingCityId = booking.merchantOperatingCityId,
         status = status,
         driverId = cast driver.id,
+        fleetOwnerId = mFleetOwnerId, -- fleet owner of driver, rideDetails stores fleet owner of vehicle
         otp = otp,
         endOtp = Nothing,
         trackingUrl = trackingUrl,
@@ -223,6 +265,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         tripEndTime = Nothing,
         tripStartPos = Nothing,
         tripEndPos = Nothing,
+        billingCategory = booking.billingCategory,
         rideEndedBy = Nothing,
         isDriverSpecialLocWarrior = fromMaybe False (dinfo <&> (.isSpecialLocWarrior)),
         previousRideTripEndPos = LatLong <$> (previousRideToLocation <&> (.lat)) <*> (previousRideToLocation <&> (.lon)),
@@ -280,7 +323,11 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         isPickupOrDestinationEdited = Just False,
         isInsured = booking.isInsured,
         insuredAmount = booking.insuredAmount,
-        reactBundleVersion = driver.reactBundleVersion
+        reactBundleVersion = driver.reactBundleVersion,
+        driverCancellationPenaltyFeeId = Nothing,
+        driverCancellationPenaltyAmount = Nothing,
+        cancellationChargesOnCancel = Nothing,
+        driverCancellationPenaltyWaivedReason = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
@@ -407,3 +454,6 @@ getArrivalTimeBufferOfVehicle bufferJson serviceTier =
     DST.BOAT -> buffer.boat
     DST.VIP_ESCORT -> buffer.vipEscort
     DST.VIP_OFFICER -> buffer.vipOfficer
+    DST.AC_PRIORITY -> buffer.sedan
+    DST.BIKE_PLUS -> buffer.bikeplus
+    DST.E_RICKSHAW -> buffer.erickshaw

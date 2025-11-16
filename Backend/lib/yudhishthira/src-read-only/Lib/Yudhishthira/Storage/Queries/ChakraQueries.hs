@@ -34,13 +34,7 @@ findByPrimaryKey chakra queryName = do findOneWithKV [Se.And [Se.Is Beam.chakra 
 updateByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries -> m ())
 updateByPrimaryKey (Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries {..}) = do
   _now <- getCurrentTime
-  updateWithKV
-    [Se.Set Beam.queryResults queryResults, Se.Set Beam.queryText queryText, Se.Set Beam.createdAt createdAt, Se.Set Beam.updatedAt _now]
-    [ Se.And
-        [ Se.Is Beam.chakra $ Se.Eq chakra,
-          Se.Is Beam.queryName $ Se.Eq queryName
-        ]
-    ]
+  updateWithKV [Se.Set Beam.queryResults queryResults, Se.Set Beam.queryText queryText, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.chakra $ Se.Eq chakra, Se.Is Beam.queryName $ Se.Eq queryName]]
 
 instance FromTType' Beam.ChakraQueries Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries where
   fromTType' (Beam.ChakraQueriesT {..}) = do

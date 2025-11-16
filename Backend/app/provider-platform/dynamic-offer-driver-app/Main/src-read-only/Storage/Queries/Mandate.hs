@@ -38,8 +38,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Mandate.Mandate {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.currency (Kernel.Prelude.Just currency),
+    [ Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.endDate endDate,
       Se.Set Beam.mandatePaymentFlow mandatePaymentFlow,
       Se.Set Beam.maxAmount maxAmount,

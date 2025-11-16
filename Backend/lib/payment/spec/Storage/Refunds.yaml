@@ -22,12 +22,7 @@ Refunds:
     initiatedBy : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
-    split: Maybe [Split]
-
-  types:
-    Split:
-      splitAmount: HighPrecMoney
-      frfsBookingId: Text
+    isApiCallSuccess: Maybe Bool
 
   constraints:
     orderId: SecondaryKey
@@ -38,15 +33,6 @@ Refunds:
     createdAt: timestamp with time zone
     updatedAt: timestamp with time zone
     split: "json"
-
-  beamType:
-    split: Maybe Value
-
-  fromTType:
-    split: split >>= Kernel.Utils.JSON.valueToMaybe|E
-
-  toTType:
-    split: split >>= Just . Data.Aeson.toJSON|E
 
   queries:
     findById:
@@ -61,6 +47,10 @@ Refunds:
     updateRefundsEntryByResponse:
       kvFunction: updateWithKV
       params: [initiatedBy, idAssignedByServiceProvider, errorMessage, errorCode, status]
+      where: id
+    updateIsApiCallSuccess:
+      kvFunction: updateWithKV
+      params: [isApiCallSuccess]
       where: id
   excludedDefaultQueries:
     - createMany

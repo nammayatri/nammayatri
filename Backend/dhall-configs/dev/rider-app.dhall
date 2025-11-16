@@ -246,6 +246,7 @@ let RiderJobType =
       | NyRegularMaster
       | NyRegularInstance
       | CrisRecon
+      | PaymentOrderStatusCheck
       >
 
 let jobInfoMapx =
@@ -283,6 +284,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.NyRegularInstance, mapValue = True }
       , { mapKey = RiderJobType.NyRegularMaster, mapValue = True }
       , { mapKey = RiderJobType.CrisRecon, mapValue = True }
+      , { mapKey = RiderJobType.PaymentOrderStatusCheck, mapValue = True }
       ]
 
 let cacConfig =
@@ -335,6 +337,8 @@ let dashboardClickhouseCfg = riderClickhouseCfg
 let tsServiceConfig = { url = "http://0.0.0.0:3001/" }
 
 let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+
+let disableViaPointTimetableCheck = False
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -429,4 +433,5 @@ in  { esqDBCfg
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , nearByDriverAPIRateLimitOptions
     , inMemConfig
+    , disableViaPointTimetableCheck
     }

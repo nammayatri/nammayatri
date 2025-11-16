@@ -44,6 +44,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Booking as QRB
@@ -160,7 +161,7 @@ validateRequest (RideAssigned RideAssignedInfo {..}) transactionId isValueAddNP 
       then QRB.findByBPPBookingId bppBookingId |<|>| QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
       else QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
   mbMerchant <- CQM.findById booking.merchantId
-  let onlinePayment = maybe False (.onlinePayment) mbMerchant
+  let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
   onlinePaymentParameters <-
     if onlinePayment
       then do

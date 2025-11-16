@@ -61,7 +61,7 @@ updateTicketAndChildTicketQuantityById :: (EsqDBFlow m r, MonadFlow m, CacheFlow
 updateTicketAndChildTicketQuantityById id quantity childTicketQuantity = do
   _now <- getCurrentTime
   updateOneWithKV
-    ([Se.Set Beam.updatedAt _now] <> [Se.Set Beam.quantity (fromJust quantity) | isJust quantity] <> [Se.Set Beam.childTicketQuantity childTicketQuantity | isJust childTicketQuantity])
+    ([Se.Set Beam.updatedAt _now] <> [Se.Set Beam.quantity quantity | isJust quantity] <> [Se.Set Beam.childTicketQuantity childTicketQuantity | isJust childTicketQuantity])
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findAllByProviderNameAndCreatedAtAfterAndStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> UTCTime -> DFRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [FRFSTicketBooking]

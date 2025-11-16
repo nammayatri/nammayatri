@@ -45,7 +45,6 @@ updateByPrimaryKey (Domain.Types.QuestionInformation.QuestionInformation {..}) =
     [ Se.Set Beam.options (convertOptionsToTable options),
       Se.Set Beam.question question,
       Se.Set Beam.questionType questionType,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.questionId $ Se.Eq (Kernel.Types.Id.getId questionId)]]

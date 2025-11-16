@@ -12,6 +12,7 @@ import Data.Time.Format
 import Data.Time.LocalTime
 import Data.UUID (UUID, fromText, toWords)
 import Domain.Types.FRFSQuote as DFRFSQuote
+import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Prelude hiding (find, readMaybe)
@@ -27,6 +28,7 @@ import Kernel.Types.App
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Servant.API
+import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.Person as QPerson
@@ -242,8 +244,8 @@ convertToBookingResponse ticketData encrypted =
       showTicketValidity = ticketData.showTicketValidity
     }
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => CRISConfig -> IntegratedBPPConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m ProviderOrder
-createOrder config integratedBPPConfig booking = do
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => CRISConfig -> IntegratedBPPConfig -> DFRFSTicketBooking.FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
+createOrder config integratedBPPConfig booking quoteCategories = do
   person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mbMobileNumber <- decrypt `mapM` person.mobileNumber
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (CRISError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
@@ -266,8 +268,12 @@ createOrder config integratedBPPConfig booking = do
     Nothing -> getBppOrderId booking
   classCode <- getFRFSVehicleServiceTier quote
   startTime <- fromMaybeM (CRISError "Start time not found") booking.startTime
-  let tpBookType = if booking.isSingleMode == Just True then 1 else 0
+  let tpBookType = if config.enableBookType == Just True && booking.isSingleMode == Just True then 1 else 0
 
+  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
+      adultQuantity = fareParameters.adultItem <&> (.quantity)
+      childQuantity = fareParameters.childItem <&> (.quantity)
+      chargeableAmount = maybe booking.totalPrice.amountInt.getMoney ((.getMoney) . (.amountInt)) booking.finalPrice
   let bookJourneyReq =
         CRISBookingRequest
           { mob = fromMaybe "9999999999" mbMobileNumber,
@@ -282,11 +288,11 @@ createOrder config integratedBPPConfig booking = do
             trainType = trainTypeCode,
             tktType = config.ticketType,
             journeyDate = T.pack $ formatTime defaultTimeLocale "%m-%d-%Y" (utcToIST startTime),
-            adult = booking.quantity,
-            child = fromMaybe 0 booking.childTicketQuantity,
+            adult = fromMaybe 0 adultQuantity,
+            child = fromMaybe 0 childQuantity,
             seniorMen = 0,
             seniorWomen = 0,
-            fare = round booking.price.amount.getHighPrecMoney,
+            fare = chargeableAmount,
             paymentCode = config.appCode,
             osBuildVersion = osBuildVersion,
             bookingMode = 2,
@@ -300,14 +306,14 @@ createOrder config integratedBPPConfig booking = do
             returnRouteId = 0,
             osType = osType,
             distance = distance.getMeters,
-            chargeableAmount = round booking.price.amount.getHighPrecMoney,
+            chargeableAmount,
             bonusCreditAmount = 0,
             bonusDebitAmount = 0,
             tktTypeId = 1,
             agentAccountId = show config.tpAccountId,
             bookAuthCode = bookAuthCode,
             agentAppTxnId = orderId,
-            bankDeductedAmount = round booking.price.amount.getHighPrecMoney,
+            bankDeductedAmount = chargeableAmount,
             tpBookType = tpBookType
           }
   logInfo $ "GetBookJourney: " <> show bookJourneyReq

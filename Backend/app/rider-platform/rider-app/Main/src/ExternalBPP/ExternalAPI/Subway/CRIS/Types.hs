@@ -23,7 +23,8 @@ data CRISFareRequest = CRISFareRequest
 
 -- Response types
 data CRISFareResponse = CRISFareResponse
-  { routeFareDetailsList :: [RouteFareDetails]
+  { routeFareDetailsList :: [RouteFareDetails],
+    sdkData :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 

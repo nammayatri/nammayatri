@@ -12,3 +12,9 @@ ALTER TABLE atlas_driver_offer_bpp.payment_order_split ADD COLUMN payment_order_
 ALTER TABLE atlas_driver_offer_bpp.payment_order_split ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.payment_order_split ADD COLUMN vendor_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.payment_order_split ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payment_order_split ADD COLUMN transaction_id text ;

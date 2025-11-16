@@ -283,6 +283,35 @@ instance IsHTTPError TicketBookingError where
 
 instance IsAPIError TicketBookingError
 
+data PassError
+  = PassNotFound Text
+  | PassCategoryNotFound Text
+  | PassTypeNotFound Text
+  | PurchasedPassNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PassError
+
+instance IsBaseError PassError where
+  toMessage (PassNotFound passId) = Just $ "Pass not found: " <> show passId
+  toMessage (PassCategoryNotFound categoryId) = Just $ "Pass category not found: " <> show categoryId
+  toMessage (PassTypeNotFound typeId) = Just $ "Pass type not found: " <> show typeId
+  toMessage (PurchasedPassNotFound purchasedPassId) = Just $ "Purchased pass not found: " <> show purchasedPassId
+
+instance IsHTTPError PassError where
+  toErrorCode = \case
+    PassNotFound _ -> "PASS_NOT_FOUND"
+    PassCategoryNotFound _ -> "PASS_CATEGORY_NOT_FOUND"
+    PassTypeNotFound _ -> "PASS_TYPE_NOT_FOUND"
+    PurchasedPassNotFound _ -> "PURCHASED_PASS_NOT_FOUND"
+  toHttpCode = \case
+    PassNotFound _ -> E500
+    PassCategoryNotFound _ -> E500
+    PassTypeNotFound _ -> E500
+    PurchasedPassNotFound _ -> E500
+
+instance IsAPIError PassError
+
 data RiderError
   = RiderConfigNotFound Text
   | RiderConfigDoesNotExist Text
@@ -969,6 +998,8 @@ data MultimodalError
   = InvalidStationChange Text Text
   | NoValidMetroRoute Text Text -- source, destination
   | MetroLegNotFound Text -- reason
+  | NoValidSubwayRoute Text Text -- source, destination
+  | SubwayLegNotFound Text -- reason
   | InvalidLegOrder Int -- legOrder
   | OSRMFailure Text -- reason
   | OTPServiceUnavailable Text -- reason
@@ -980,6 +1011,8 @@ data MultimodalError
   | PublicTransportDataUnavailable Text -- reason
   | StopNotFound Text
   | StopDoesNotHaveLocation Text
+  | CategoriesAndTotalPriceMismatch Text Text
+  | NoSelectedCategoryFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''MultimodalError
@@ -989,6 +1022,8 @@ instance IsBaseError MultimodalError where
     InvalidStationChange stopCode reason -> Just $ "Invalid station change for stop code " <> stopCode <> ": " <> reason
     NoValidMetroRoute source dest -> Just $ "No valid metro route found between " <> source <> " and " <> dest
     MetroLegNotFound reason -> Just $ "Metro leg not found: " <> reason
+    NoValidSubwayRoute source dest -> Just $ "No valid subway route found between " <> source <> " and " <> dest
+    SubwayLegNotFound reason -> Just $ "Subway leg not found: " <> reason
     InvalidLegOrder legOrder -> Just $ "Invalid leg order: " <> show legOrder
     OSRMFailure reason -> Just $ "OSRM service failure: " <> reason
     OTPServiceUnavailable reason -> Just $ "OTP service unavailable: " <> reason
@@ -1000,12 +1035,16 @@ instance IsBaseError MultimodalError where
     PublicTransportDataUnavailable reason -> Just $ "Public transport data unavailable: " <> reason
     StopNotFound reason -> Just $ "Stop not found: " <> reason
     StopDoesNotHaveLocation reason -> Just $ "Stop does not have location: " <> reason
+    CategoriesAndTotalPriceMismatch categoriesTotalPrice totalPrice -> Just $ "Categories and total price mismatch: " <> categoriesTotalPrice <> " and " <> totalPrice
+    NoSelectedCategoryFound quoteId -> Just $ "No selected category found in quote categories, quoteId : " <> quoteId
 
 instance IsHTTPError MultimodalError where
   toErrorCode = \case
     InvalidStationChange _ _ -> "INVALID_STATION_CHANGE"
     NoValidMetroRoute _ _ -> "NO_VALID_METRO_ROUTE"
     MetroLegNotFound _ -> "METRO_LEG_NOT_FOUND"
+    NoValidSubwayRoute _ _ -> "NO_VALID_SUBWAY_ROUTE"
+    SubwayLegNotFound _ -> "SUBWAY_LEG_NOT_FOUND"
     InvalidLegOrder _ -> "INVALID_LEG_ORDER"
     OSRMFailure _ -> "OSRM_FAILURE"
     OTPServiceUnavailable _ -> "OTP_SERVICE_UNAVAILABLE"
@@ -1017,10 +1056,15 @@ instance IsHTTPError MultimodalError where
     PublicTransportDataUnavailable _ -> "PUBLIC_TRANSPORT_DATA_UNAVAILABLE"
     StopNotFound _ -> "STOP_NOT_FOUND"
     StopDoesNotHaveLocation _ -> "STOP_DOES_NOT_HAVE_LOCATION"
+    CategoriesAndTotalPriceMismatch _ _ -> "CATEGORIES_AND_TOTAL_PRICE_MISMATCH"
+    NoSelectedCategoryFound _ -> "NO_SELECTED_CATEGORY_FOUND"
+
   toHttpCode = \case
     InvalidStationChange _ _ -> E400
     NoValidMetroRoute _ _ -> E400
     MetroLegNotFound _ -> E400
+    NoValidSubwayRoute _ _ -> E400
+    SubwayLegNotFound _ -> E400
     InvalidLegOrder _ -> E400
     OSRMFailure _ -> E500
     OTPServiceUnavailable _ -> E503
@@ -1032,5 +1076,55 @@ instance IsHTTPError MultimodalError where
     PublicTransportDataUnavailable _ -> E500
     StopNotFound _ -> E400
     StopDoesNotHaveLocation _ -> E400
+    CategoriesAndTotalPriceMismatch _ _ -> E500
+    NoSelectedCategoryFound _ -> E500
 
 instance IsAPIError MultimodalError
+
+data DepotManagerError
+  = DepotManagerNotFound Text
+  | DepotFleetInfoNotFound Text
+  | DepotManagerDoesNotHaveAccessToFleet Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DepotManagerError
+
+instance IsBaseError DepotManagerError where
+  toMessage = \case
+    DepotManagerNotFound depotManagerId -> Just $ "Depot manager with id: " <> depotManagerId <> " not found."
+    DepotManagerDoesNotHaveAccessToFleet depotManagerId fleetId -> Just $ "Depot manager with id: " <> depotManagerId <> " does not have access to fleet with id: " <> fleetId <> "."
+    DepotFleetInfoNotFound fleetId -> Just $ "Depot fleet info with id: " <> fleetId <> " not found."
+
+instance IsHTTPError DepotManagerError where
+  toErrorCode = \case
+    DepotManagerNotFound _ -> "DEPOT_MANAGER_NOT_FOUND"
+    DepotManagerDoesNotHaveAccessToFleet _ _ -> "DEPOT_MANAGER_DOES_NOT_HAVE_ACCESS_TO_FLEET"
+    DepotFleetInfoNotFound _ -> "DEPOT_FLEET_INFO_NOT_FOUND"
+  toHttpCode = \case
+    DepotManagerNotFound _ -> E400
+    DepotManagerDoesNotHaveAccessToFleet _ _ -> E401
+    DepotFleetInfoNotFound _ -> E400
+
+instance IsAPIError DepotManagerError
+
+data GetUserTokenError
+  = GetUserIdError Text
+  | UserNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''GetUserTokenError
+
+instance IsBaseError GetUserTokenError where
+  toMessage = \case
+    GetUserIdError appSecretKey -> Just $ "Get user id error for app secret key: " <> appSecretKey
+    UserNotFound mobileNumberHash -> Just $ "User with mobile number hash: " <> mobileNumberHash <> " not found."
+
+instance IsHTTPError GetUserTokenError where
+  toErrorCode = \case
+    GetUserIdError _ -> "GET_USER_ID_ERROR"
+    UserNotFound _ -> "USER_NOT_FOUND"
+  toHttpCode = \case
+    GetUserIdError _ -> E400
+    UserNotFound _ -> E400
+
+instance IsAPIError GetUserTokenError

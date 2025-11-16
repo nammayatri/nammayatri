@@ -959,7 +959,7 @@ pushConfigHistory domain version merchantOpCityId configsJson = do
   pushToKafka configHistory "config-history" ""
   where
     runLogicsOnConfig logics configWrapper = do
-      response <- try @_ @SomeException $ runLogics logics configWrapper
+      response <- withTryCatch "runLogics:runLogicsOnConfig" $ runLogics logics configWrapper
       case response of
         Left e -> do
           throwError (InternalError $ "Error in push config history for domain: " <> show domain <> " and version: " <> show version <> " and error: " <> show e)

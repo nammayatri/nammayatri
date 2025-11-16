@@ -60,7 +60,6 @@ updateByPrimaryKey (Domain.Types.AadhaarVerification.AadhaarVerification {..}) =
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.aadhaarNumberHash aadhaarNumberHash,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.isVerified isVerified,
       Se.Set Beam.personDob personDob,
       Se.Set Beam.personGender personGender,

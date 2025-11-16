@@ -31,12 +31,7 @@ findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Ty
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TripTerms.TripTerms -> m ())
 updateByPrimaryKey (Domain.Types.TripTerms.TripTerms {..}) = do
   _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.descriptions (intercalateDescriptions descriptions),
-      Se.Set Beam.updatedAt (Just _now)
-    ]
-    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+  updateWithKV [Se.Set Beam.descriptions (intercalateDescriptions descriptions), Se.Set Beam.updatedAt (Just _now)] [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 instance FromTType' Beam.TripTerms Domain.Types.TripTerms.TripTerms where
   fromTType' (Beam.TripTermsT {..}) = do

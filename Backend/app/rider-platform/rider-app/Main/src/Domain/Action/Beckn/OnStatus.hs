@@ -47,6 +47,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -335,7 +336,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       vehicleAge = Nothing
       driverPhoneNumber = Just driverPhoneNumber'
       driverAlternateNumber = driverAlternateNumber'
-      onlinePayment = maybe False (.onlinePayment) mbMerchant
+      onlinePayment = SPayment.isOnlinePayment mbMerchant booking
       cancellationFeeIfCancelled = Nothing
       isAlreadyFav = Just False
       favCount = Just 0
@@ -349,8 +350,10 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       pickupRouteCallCount = Just 0
       talkedWithDriver = Nothing
       isSafetyPlus = booking.preferSafetyPlus
+      billingCategory = booking.billingCategory
       isInsured = booking.isInsured
       insuredAmount = booking.insuredAmount
+      cancellationChargesOnCancel = Nothing
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::

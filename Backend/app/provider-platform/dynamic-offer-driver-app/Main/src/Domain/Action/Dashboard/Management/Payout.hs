@@ -312,7 +312,7 @@ postPayoutPayoutUpdateVPA _merchantShortId _opCity req = do
             vpa = req.vpa
           }
       verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId paymentServiceName (Just person.id.getId)
-  resp <- try @_ @SomeException $ Payout.verifyVPAService verifyVPAReq verifyVpaCall
+  resp <- withTryCatch "verifyVPAService:postPayoutPayoutUpdateVPA" $ Payout.verifyVPAService verifyVPAReq verifyVpaCall
   case resp of
     Left e -> throwError $ InvalidRequest $ "VPA Verification Failed: " <> show e
     Right response -> do

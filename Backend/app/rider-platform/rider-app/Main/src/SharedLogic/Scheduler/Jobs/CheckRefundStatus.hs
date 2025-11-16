@@ -14,11 +14,12 @@
 
 module SharedLogic.Scheduler.Jobs.CheckRefundStatus where
 
-import Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.Person as DP
-import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -30,23 +31,33 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.JobScheduler
+import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
-import Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Person as QP
 import Tools.Error
+import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 import qualified Tools.Payment as Payment
+import qualified UrlShortner.Common as UrlShortner
 
 checkRefundStatusJob ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    MonadFlow m,
+  ( CacheFlow m r,
     EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
-    ServiceFlow m r
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+    HasBAPMetrics m r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Job 'CheckRefundStatus ->
   m ExecutionResult
@@ -75,35 +86,44 @@ checkRefundStatusJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
         logInfo $ "Scheduled next refund status check for " <> refundId.getId <> " in " <> show nextSchedule <> " (retry " <> show (currentRetries + 1) <> "/" <> show maxRetries <> ")"
   return Complete
 
-processRefundStatus :: (EncFlow m r, CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r) => DRefunds.Refunds -> DP.Person -> DPaymentOrder.PaymentOrder -> m Bool
+processRefundStatus ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    SchedulerFlow r,
+    EsqDBReplicaFlow m r,
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+    HasBAPMetrics m r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
+  DRefunds.Refunds ->
+  DP.Person ->
+  DPaymentOrder.PaymentOrder ->
+  m Bool
 processRefundStatus refundEntry person paymentOrder = do
   let nonTerminalStatuses = [Payment.REFUND_PENDING, Payment.MANUAL_REVIEW]
+      paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
   if refundEntry.status `elem` nonTerminalStatuses
     then do
-      frfsTicketBookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
-      let orderStatusCall = Payment.orderStatus person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion
+      let orderStatusCall = Payment.orderStatus person.merchantId person.merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
           commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
-      paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
-      let matchingRefund = find (\refund -> refund.requestId == refundEntry.id.getId) paymentStatusResp.refunds
+      paymentStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
+      let matchingRefund = find (\refund -> refund.requestId == refundEntry.id.getId) paymentStatusResponse.refunds
       case matchingRefund of
         Just refund -> do
           let newStatus = refund.status
           when (newStatus /= refundEntry.status) $ do
-            DPayment.updateRefundStatus refund
+            void $ DPayment.upsertRefundStatus paymentOrder refund
             logInfo $ "Updated refund status for " <> refundEntry.id.getId <> " to " <> show newStatus
 
           when (newStatus `notElem` nonTerminalStatuses) $ do
-            logInfo $ "Refund " <> refundEntry.id.getId <> " completed with status: " <> show newStatus
-            mapM_
-              ( \frfsTicketBookingPayment -> do
-                  let refundStatus =
-                        case newStatus of
-                          Payment.REFUND_SUCCESS -> DFRFSTicketBookingPayment.REFUNDED
-                          Payment.REFUND_FAILURE -> DFRFSTicketBookingPayment.REFUND_FAILED
-                          _ -> DFRFSTicketBookingPayment.REFUND_PENDING
-                  QFRFSTicketBookingPayment.updateStatusById refundStatus frfsTicketBookingPayment.id
-              )
-              frfsTicketBookingPayments
+            void $ SPayment.orderStatusHandler paymentServiceType paymentOrder paymentStatusResponse
           return True
         Nothing -> return False
     else return False

@@ -74,7 +74,6 @@ updateByPrimaryKey (Domain.Types.BBPS.BBPS {..}) = do
       Se.Set Beam.refShortId (Kernel.Types.Id.getShortId refShortId),
       Se.Set Beam.status status,
       Se.Set Beam.transType transType,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.refId $ Se.Eq (Kernel.Types.Id.getId refId)]]

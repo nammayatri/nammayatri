@@ -29,6 +29,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -42,6 +43,7 @@ cancelBooking ::
     CacheFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EncFlow m r,
+    MonadCatch m,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -63,10 +65,12 @@ cancelBooking booking mbDriver transporter = do
   bookingCancellationReason <- case mbDriver of
     Nothing -> buildBookingCancellationReason Nothing mbRide transporterId'
     Just driver -> buildBookingCancellationReason (Just driver.id) mbRide transporterId'
+  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
 
   -- Lock Description: This is a Shared Lock held Between Booking Cancel for Customer & Driver, At a time only one of them can do the full Cancel to OnCancel/Reallocation flow.
   -- Lock Release: Held for 30 seconds and released at the end of the OnCancel.
   SharedCancel.tryCancellationLock booking.transactionId $ do
+    when (fromMaybe False transporter.prepaidSubscriptionAndWalletEnabled && isJust transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ whenJust mbRide $ \ride -> releaseLien booking ride
     whenJust mbDriver $ \driver ->
       updateOnRideStatusWithAdvancedRideCheck driver.id mbRide
     QRB.updateStatus booking.id DRB.CANCELLED

@@ -30,7 +30,7 @@ instance ToTType' Beam.DriverSSN Domain.Types.DriverSSN.DriverSSN where
       { Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.rejectReason = rejectReason,
-        Beam.ssnEncrypted = ((ssn & unEncrypted . encrypted)),
-        Beam.ssnHash = (ssn & hash),
+        Beam.ssnEncrypted = ssn & unEncrypted . encrypted,
+        Beam.ssnHash = ssn & hash,
         Beam.verificationStatus = verificationStatus
       }

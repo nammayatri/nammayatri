@@ -153,7 +153,8 @@ data ProfileRes = ProfileRes
     isPayoutEnabled :: Maybe Bool,
     publicTransportVersion :: Maybe Text,
     isMultimodalRider :: Bool,
-    customerTags :: DA.Value
+    customerTags :: DA.Value,
+    profilePicture :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -182,7 +183,9 @@ data UpdateProfileReq = UpdateProfileReq
     registrationLon :: Maybe Double,
     latestLat :: Maybe Double,
     latestLon :: Maybe Double,
-    marketingParams :: Maybe MarketingParams
+    marketingParams :: Maybe MarketingParams,
+    mbMobileNumber :: Maybe Text,
+    mbMobileCountryCode :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -267,13 +270,14 @@ getPersonDetails ::
   Maybe Int ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Bool ->
   Maybe Version ->
   Maybe Text ->
   Maybe Version ->
   Maybe Version ->
   Maybe Text ->
   m ProfileRes
-getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = do
+getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
@@ -328,11 +332,11 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
       )
       vehicleTypes
   let isMultimodalRider = getIsMultimodalRider riderConfig.enableMultiModalForAllUsers decPerson.customerNammaTags integratedBPPConfigs
-  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider
+  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage
   where
-    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider = do
+    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam = do
       gtfsVersion <-
-        try @_ @SomeException (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
+        withTryCatch "getGtfsVersion:getPersonDetails" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
           Left _ -> return (map (.feedKey) integratedBPPConfigs)
           Right gtfsVersions -> return gtfsVersions
       return $
@@ -363,6 +367,7 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
             cancellationRate = cancellationPerc,
             publicTransportVersion = if null gtfsVersion then Nothing else Just (T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) riderConfig.domainPublicTransportDataVersion)),
             customerTags = YUtils.convertTags $ fromMaybe [] customerNammaTags,
+            profilePicture = if includeProfileImageParam == Just True then profilePicture else Nothing,
             ..
           }
 
@@ -396,6 +401,14 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       Nothing -> pure ()
   -- TODO: Remove this part from here once UI stops using updatePerson api to apply referral code
   void $ mapM (\refCode -> Referral.applyReferralCode person False refCode Nothing) req.referralCode
+  encryptedMobileNumber <- case req.mbMobileNumber of
+    Just mobileNumber -> do
+      mobileNumberDbHash <- getDbHash mobileNumber
+      mobileNumberExists <- QPerson.findByMobileNumberAndMerchantId (fromMaybe "+91" req.mbMobileCountryCode) mobileNumberDbHash merchantId
+      when (isJust mobileNumberExists) $ throwError (InvalidRequest "Phone already registered")
+      encMobileNumber <- encrypt mobileNumber
+      return (Just encMobileNumber)
+    Nothing -> return Nothing
   void $
     QPerson.updatePersonalInfo
       personId
@@ -425,6 +438,8 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       req.latestLon
       person
       req.liveActivityToken
+      encryptedMobileNumber
+      req.mbMobileCountryCode
   updateDisability req.hasDisability req.disability personId
 
 updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess

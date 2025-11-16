@@ -60,6 +60,7 @@ Plan:
     vehicleCategory : VehicleCategory|NoRelation
     listingPriority : Maybe  Int
     validityInDays : Maybe Int
+    isFleetOwnerPlan : Maybe Bool
     allowStrikeOff: Bool
     productOwnershipAmount : HighPrecMoney
 
@@ -88,6 +89,11 @@ Plan:
       kvFunction: findAllWithKV
       where:
         and: [merchantOpCityId, serviceName]
+
+    findByMerchantOpCityAndServiceAndFleetOwnerPlan:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOpCityId, serviceName, isFleetOwnerPlan]
 
     findByMerchantOpCityIdAndTypeWithServiceName:
       kvFunction: findAllWithKV

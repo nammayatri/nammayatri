@@ -27,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.CallFRFSBPP
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as Qquote
@@ -54,18 +55,23 @@ validateRequest DOnSelect {..} = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, quote)
 
-onSelect :: (FRFSConfirmFlow m r) => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> m ()
-onSelect onSelectReq merchant quote isSingleMode = do
+onSelect :: (FRFSConfirmFlow m r) => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> Maybe Bool -> m ()
+onSelect onSelectReq merchant quote isSingleMode mbEnableOffer = do
+  logDebug $ "onSelect isSingleMode: " <> show isSingleMode <> " mbEnableOffer: " <> show mbEnableOffer
   Metrics.finishMetrics Metrics.SELECT_FRFS merchant.name onSelectReq.transactionId quote.merchantOperatingCityId.getId
   whenJust (onSelectReq.validTill) (\validity -> void $ Qquote.updateValidTillById quote.id validity)
-  Qquote.updatePriceAndEstimatedPriceById quote.id onSelectReq.totalPrice (Just quote.price)
-  QJourneyLeg.updateEstimatedFaresBySearchId (Just onSelectReq.totalPrice.amount) (Just onSelectReq.totalPrice.amount) (Just quote.searchId.getId)
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+  updatedQuoteCategories <- FRFSUtils.updateQuoteCategoriesWithQuantitySelections (mapMaybe (\category -> (find (\category' -> category'.category == category.category) quoteCategories) <&> (\category' -> (category'.id, category.quantity))) onSelectReq.categories) quoteCategories
+  let fareParameters = FRFSUtils.calculateFareParametersWithQuoteFallback (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories) quote
+      adultPrice = fareParameters.adultItem <&> (.unitPrice)
+  whenJust adultPrice $ \price -> do
+    Qquote.updatePriceAndEstimatedPriceById quote.id price (Just price)
+    QJourneyLeg.updateEstimatedFaresBySearchId (Just price.amount) (Just price.amount) (Just quote.searchId.getId)
   let categorySelectionReq =
         mapMaybe
           ( \category -> do
               selectedQuantity <- category.selectedQuantity
               return $ FRFSCategorySelectionReq {quantity = selectedQuantity, quoteCategoryId = category.id}
           )
-          quoteCategories
-  void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote.id (FRFSQuoteConfirmReq {offered = Just categorySelectionReq, ticketQuantity = Nothing, childTicketQuantity = Nothing}) Nothing isSingleMode
+          updatedQuoteCategories
+  void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote.id categorySelectionReq Nothing isSingleMode mbEnableOffer

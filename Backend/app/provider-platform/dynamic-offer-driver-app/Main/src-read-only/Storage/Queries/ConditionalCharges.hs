@@ -37,7 +37,6 @@ updateByPrimaryKey (Domain.Types.ConditionalCharges.ConditionalCharges {..}) = d
     [ Se.Set Beam.cgstPercentage (Kernel.Prelude.Just cgstPercentage),
       Se.Set Beam.charge charge,
       Se.Set Beam.sgstPercentage (Kernel.Prelude.Just sgstPercentage),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.chargeCategory $ Se.Eq chargeCategory, Se.Is Beam.farePolicyId $ Se.Eq farePolicyId]]

@@ -52,3 +52,11 @@ findRatingForRideIfPositive rideIds = do
           Se.Is Beam.ratingValue $ Se.In [4, 5]
         ]
     ]
+
+findAllRatingsForPersonWithLimitOffset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Types.Person.Person -> Maybe Int -> m [Domain.Types.Rating.Rating]
+findAllRatingsForPersonWithLimitOffset (Id driverId) limit = do
+  findAllWithOptionsKV
+    [Se.Is Beam.driverId $ Se.Eq driverId]
+    (Se.Desc Beam.createdAt)
+    limit
+    Nothing

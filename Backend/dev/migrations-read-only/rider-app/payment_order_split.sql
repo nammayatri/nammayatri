@@ -12,3 +12,9 @@ ALTER TABLE atlas_app.payment_order_split ADD COLUMN payment_order_id character 
 ALTER TABLE atlas_app.payment_order_split ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.payment_order_split ADD COLUMN vendor_id text NOT NULL;
 ALTER TABLE atlas_app.payment_order_split ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payment_order_split ADD COLUMN transaction_id text ;

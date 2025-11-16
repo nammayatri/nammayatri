@@ -40,7 +40,6 @@ updateByPrimaryKey (Domain.Types.DriverOffer.DriverOffer {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bppQuoteId bppQuoteId,
-      Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.distanceToPickup (Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup),
       Se.Set Beam.distanceToPickupValue (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> distanceToPickup),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),

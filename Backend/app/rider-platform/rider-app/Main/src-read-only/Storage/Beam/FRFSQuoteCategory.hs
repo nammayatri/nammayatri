@@ -5,6 +5,7 @@ module Storage.Beam.FRFSQuoteCategory where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.FRFSQuoteCategoryType
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -13,8 +14,13 @@ import Tools.Beam.UtilsTH
 
 data FRFSQuoteCategoryT f = FRFSQuoteCategoryT
   { bppItemId :: B.C f Kernel.Prelude.Text,
+    category :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType),
+    code :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    title :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    tnc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    finalPrice :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     id :: B.C f Kernel.Prelude.Text,
-    maxTicketAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     offeredPrice :: B.C f Kernel.Types.Common.HighPrecMoney,
@@ -22,7 +28,7 @@ data FRFSQuoteCategoryT f = FRFSQuoteCategoryT
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
     quoteId :: B.C f Kernel.Prelude.Text,
     selectedQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    ticketCategoryMetadataConfigId :: B.C f Kernel.Prelude.Text,
+    ticketCategoryMetadataConfigId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

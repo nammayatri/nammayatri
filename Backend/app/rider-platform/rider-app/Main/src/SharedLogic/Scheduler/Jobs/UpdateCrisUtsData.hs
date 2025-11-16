@@ -41,7 +41,7 @@ updateCrisUtsDataJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       integratedBppConfigId = jobData.integratedBPPConfigId
   integratedBppConfig <- QIntegratedBPPConfig.findById integratedBppConfigId >>= fromMaybeM (InvalidRequest $ "integratedBppConfig not found for id: " <> show integratedBppConfigId)
   case integratedBppConfig.providerConfig of
-    CRIS config -> do
+    CRIS config@CRISConfig {..} -> do
       utsData <- Uts.getUtsData config
       encryptedAgentDataKey <- encrypt utsData.tkt
       encryptedEncryptionKey <- encrypt utsData.url
@@ -49,22 +49,10 @@ updateCrisUtsDataJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       let updatedProviderConfig =
             CRIS $
               CRISConfig
-                { baseUrl = config.baseUrl,
-                  encryptionKey = encryptedEncryptionKey,
+                { encryptionKey = encryptedEncryptionKey,
                   decryptionKey = encryptedDecryptionKey,
-                  clientSecret = clientSecret config,
-                  appCode = appCode config,
-                  tpAccountId = tpAccountId config,
-                  sourceZone = sourceZone config,
-                  ticketType = ticketType config,
                   agentDataDecryptionKey = encryptedAgentDataKey,
-                  utsDataKey = utsDataKey config,
-                  consumerKey = consumerKey config,
-                  changeOverIndirectStations = changeOverIndirectStations config,
-                  changeOverDirectStations = changeOverDirectStations config,
-                  consumerSecret = consumerSecret config,
-                  routeSortingCriteria = routeSortingCriteria config,
-                  reconDuration = reconDuration config
+                  ..
                 }
       QIntegratedBPPConfig.updateByPrimaryKey integratedBppConfig {providerConfig = updatedProviderConfig}
       let scheduleAfter = secondsToNominalDiffTime (24 * 60 * 60)

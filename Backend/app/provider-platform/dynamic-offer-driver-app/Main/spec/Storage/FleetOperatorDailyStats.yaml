@@ -1,0 +1,96 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Currency: Kernel.Types.Common
+  DistanceUnit: Kernel.Types.Common
+  Centesimal: Kernel.Types.Common
+
+FleetOperatorDailyStats:
+  tableName: fleet_operator_daily_stats
+
+  fields:
+    fleetOperatorId : Text
+    merchantLocalDate : Day
+    totalRatingCount : Maybe Int
+    totalRatingScore : Maybe Int
+    driverFirstSubscription : Maybe Int
+    inspectionCompleted : Maybe Int
+    rejectedRequestCount : Maybe Int
+    pulledRequestCount : Maybe Int
+    acceptationRequestCount : Maybe Int
+    totalRequestCount : Maybe Int
+    customerCancellationCount : Maybe Int
+    driverCancellationCount : Maybe Int
+    totalDistance : Maybe Meters
+    totalCompletedRides : Maybe Int
+    totalEarning : Maybe HighPrecMoney
+    currency : Maybe Currency
+    distanceUnit : Maybe DistanceUnit
+
+  beamType:
+    totalDistance: Maybe Double
+    totalEarning: Maybe HighPrecMoney
+
+  fromTType:
+    totalDistance: Kernel.Prelude.fmap (Kernel.Types.Common.Meters . GHC.Float.double2Int) totalDistance|E
+
+  toTType:
+    totalDistance: getTotalDistance
+
+  constraints:
+    fleetOperatorId: PrimaryKey
+    merchantLocalDate: PrimaryKey
+
+  queries:
+    findByFleetOperatorIdAndDate:
+      kvFunction: findOneWithKV
+      where:
+        and: [fleetOperatorId, merchantLocalDate]
+
+    updateByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [totalRatingCount, totalRatingScore, driverFirstSubscription, inspectionCompleted, rejectedRequestCount, pulledRequestCount, acceptationRequestCount, totalRequestCount, customerCancellationCount, driverCancellationCount, totalDistance, totalCompletedRides, totalEarning]
+      where:
+        and: [fleetOperatorId, merchantLocalDate]
+
+    updateTotalRatingCountAndTotalRatingScoreByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [totalRatingCount, totalRatingScore]
+      where:
+        and: [fleetOperatorId, merchantLocalDate]
+
+    updateDriverFirstSubscriptionByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [driverFirstSubscription]
+      where:
+        and: [fleetOperatorId, merchantLocalDate]
+
+    updateInspectionCompletedByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [inspectionCompleted]
+      where:
+        and: [fleetOperatorId, merchantLocalDate]
+
+    updateCustomerCancellationCountByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [customerCancellationCount]
+      where:
+        and: [fleetOperatorId, merchantLocalDate]
+
+    updateDriverCancellationCountByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [driverCancellationCount]
+      where:
+        and: [fleetOperatorId, merchantLocalDate]
+
+    updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [totalDistance, totalEarning, totalCompletedRides]
+      where:
+        and: [fleetOperatorId, merchantLocalDate]
+
+    updateRequestCountsByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [rejectedRequestCount, pulledRequestCount, acceptationRequestCount, totalRequestCount]
+      where:
+        and: [fleetOperatorId, merchantLocalDate]

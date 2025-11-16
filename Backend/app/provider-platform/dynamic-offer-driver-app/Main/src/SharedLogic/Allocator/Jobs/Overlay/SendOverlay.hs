@@ -36,11 +36,17 @@ acUsageRestrictionKey = "AC_USAGE_RESTRICTED"
 acUsageRestrictionLiftedKey :: Text
 acUsageRestrictionLiftedKey = "AC_USAGE_RESTRICTION_LIFTED"
 
+acUsageWarningKey :: Text
+acUsageWarningKey = "AC_USAGE_WARNING"
+
 sendACUsageRestrictionLiftedOverlay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
 sendACUsageRestrictionLiftedOverlay = sendACOverlay acUsageRestrictionLiftedKey
 
 sendACUsageRestrictionOverlay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
 sendACUsageRestrictionOverlay = sendACOverlay acUsageRestrictionKey
+
+sendACUsageWarningOverlay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
+sendACUsageWarningOverlay = sendACOverlay acUsageWarningKey
 
 sendACOverlay :: (CacheFlow m r, EsqDBFlow m r) => Text -> DP.Person -> m ()
 sendACOverlay overlayKey person = do

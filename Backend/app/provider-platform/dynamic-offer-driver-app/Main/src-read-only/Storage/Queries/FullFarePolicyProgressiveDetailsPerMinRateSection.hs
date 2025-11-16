@@ -36,7 +36,6 @@ updateByPrimaryKey (Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSecti
   updateWithKV
     [ Se.Set Beam.currency currency,
       Se.Set Beam.perMinRate perMinRate,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.farePolicyId $ Se.Eq farePolicyId, Se.Is Beam.rideDurationInMin $ Se.Eq rideDurationInMin]]

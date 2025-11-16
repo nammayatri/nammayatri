@@ -101,7 +101,8 @@ data Pricing = Pricing
     specialLocationName :: Maybe Text,
     vehicleIconUrl :: Maybe BaseUrl,
     smartTipSuggestion :: Maybe HighPrecMoney,
-    smartTipReason :: Maybe Text
+    smartTipReason :: Maybe Text,
+    qar :: Maybe Double
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -243,6 +244,9 @@ castVariant Variant.BOAT = (show Enums.BOAT, "BOAT")
 castVariant Variant.AUTO_PLUS = (show Enums.AUTO_RICKSHAW, "AUTO_PLUS")
 castVariant Variant.VIP_ESCORT = (show Enums.CAB, "VIP_ESCORT")
 castVariant Variant.VIP_OFFICER = (show Enums.CAB, "VIP_OFFICER")
+castVariant Variant.AC_PRIORITY = (show Enums.CAB, "AC_PRIORITY")
+castVariant Variant.BIKE_PLUS = (show Enums.TWO_WHEELER, "BIKE_PLUS")
+castVariant Variant.E_RICKSHAW = (show Enums.AUTO_RICKSHAW, "E_RICKSHAW")
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
@@ -284,6 +288,10 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "BUS", Just "BUS_AC") -> Just Variant.BUS_AC
   (Just "CAB", Just "VIP_ESCORT") -> Just Variant.VIP_ESCORT
   (Just "CAB", Just "VIP_OFFICER") -> Just Variant.VIP_OFFICER
+  (Just "CAB", Just "AC_PRIORITY") -> Just Variant.AC_PRIORITY
+  (Just "TWO_WHEELER", Just "BIKE_PLUS") -> Just Variant.BIKE_PLUS
+  (Just "MOTORCYCLE", Just "BIKE_PLUS") -> Just Variant.BIKE_PLUS
+  (Just "AUTO_RICKSHAW", Just "E_RICKSHAW") -> Just Variant.E_RICKSHAW
   _ -> Nothing
 
 parseAddress :: MonadFlow m => Spec.Location -> m (Maybe DL.LocationAddress)
@@ -1188,7 +1196,7 @@ tfQuotation booking =
   Just
     Spec.Quotation
       { quotationBreakup = mkQuotationBreakup booking.fareParams,
-        quotationPrice = tfQuotationPrice $ HighPrecMoney $ toRational booking.estimatedFare,
+        quotationPrice = tfQuotationPrice (HighPrecMoney $ toRational booking.estimatedFare) booking.currency,
         quotationTtl = Nothing
       }
 
@@ -1197,16 +1205,16 @@ tfQuotationSU fareParams estimatedFare =
   Just
     Spec.Quotation
       { quotationBreakup = mkQuotationBreakup fareParams,
-        quotationPrice = tfQuotationPrice estimatedFare,
+        quotationPrice = tfQuotationPrice estimatedFare fareParams.currency,
         quotationTtl = Nothing
       }
 
-tfQuotationPrice :: HighPrecMoney -> Maybe Spec.Price
-tfQuotationPrice estimatedFare =
+tfQuotationPrice :: HighPrecMoney -> Currency -> Maybe Spec.Price
+tfQuotationPrice estimatedFare currency =
   Just
     Spec.Price
       { priceComputedValue = Nothing,
-        priceCurrency = Just "INR",
+        priceCurrency = Just $ show currency,
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
         priceOfferedValue = Just $ encodeToText estimatedFare,
@@ -1223,7 +1231,7 @@ mkQuotationBreakup fareParams =
       Just
         Spec.Price
           { priceComputedValue = Nothing,
-            priceCurrency = Just "INR",
+            priceCurrency = Just $ show fareParams.currency,
             priceMaximumValue = Nothing,
             priceMinimumValue = Nothing,
             priceOfferedValue = Just $ encodeToText money,
@@ -1254,6 +1262,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_STOP_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PER_STOP_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_CHARGES)
         DFParams.Slab ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -1268,6 +1277,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_CHARGES)
         DFParams.Rental ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -1281,6 +1291,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_CHARGES)
         _ -> True
 
 type MerchantShortId = Text
@@ -1294,8 +1305,8 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemId = Just $ maybe (Common.mkItemId shortId booking.vehicleServiceTier) getId (booking.estimateId),
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
-          itemPrice = tfItemPrice $ booking.estimatedFare,
-          itemTags = mkRateCardTag estimatedDistance Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
+          itemPrice = tfItemPrice booking.estimatedFare booking.currency,
+          itemTags = mkRateCardTag estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
         }
     ]
 
@@ -1309,8 +1320,8 @@ tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId upd
           itemId = Just $ Common.mkItemId shortId booking.vehicleServiceTier,
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
-          itemPrice = tfItemPrice updatedBooking.estimatedFare,
-          itemTags = mkRateCardTag estimatedDistance' Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
+          itemPrice = tfItemPrice updatedBooking.estimatedFare booking.currency,
+          itemTags = mkRateCardTag estimatedDistance' booking.fareParams.customerCancellationDues Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
         }
     ]
 
@@ -1319,12 +1330,12 @@ tfPaymentId mbPaymentId = do
   paymentId <- mbPaymentId
   Just [paymentId]
 
-tfItemPrice :: HighPrecMoney -> Maybe Spec.Price
-tfItemPrice estimatedFare =
+tfItemPrice :: HighPrecMoney -> Currency -> Maybe Spec.Price
+tfItemPrice estimatedFare currency =
   Just
     Spec.Price
       { priceComputedValue = Nothing,
-        priceCurrency = Just "INR",
+        priceCurrency = Just $ show currency,
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
         priceOfferedValue = Just $ Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice Nothing estimatedFare, -- TODO : Remove this and make non mandatory on BAP side
@@ -1354,6 +1365,7 @@ convertEstimateToPricing specialLocationName (DEst.Estimate {..}, serviceTier, m
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
       isAirConditioned = serviceTier.isAirConditioned,
+      qar = mbActualQARFromLocGeohashDistance <|> mbActualQARFromLocGeohash <|> mbActualQARCity,
       ..
     }
 
@@ -1376,6 +1388,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       smartTipSuggestion = Nothing,
       smartTipReason = Nothing,
       tipOptions = Nothing,
+      qar = Nothing,
       ..
     }
 
@@ -1400,6 +1413,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       smartTipSuggestion = Nothing,
       smartTipReason = Nothing,
       tipOptions = Nothing,
+      qar = Nothing,
       ..
     }
 
@@ -1426,6 +1440,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
             <> durationToNearestDriverTagSingleton
             <> smartTipSuggestionTagSingleton
             <> smartTipReasonTagSingleton
+            <> qarTagSingleton
       }
   where
     smartTipSuggestionTagSingleton
@@ -1457,6 +1472,21 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                       descriptorShortDesc = Nothing
                     },
               tagValue = pricing.smartTipReason
+            }
+    qarTagSingleton
+      | isNothing pricing.qar || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.QAR,
+                      descriptorName = Just "QAR",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> pricing.qar
             }
     specialLocationTagSingleton specialLocationTag
       | isNothing specialLocationTag = Nothing
@@ -1614,6 +1644,9 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 Variant.AUTO_PLUS -> avgSpeed.autorickshaw.getKilometers
                 Variant.VIP_ESCORT -> avgSpeed.vipEscort.getKilometers
                 Variant.VIP_OFFICER -> avgSpeed.vipOfficer.getKilometers
+                Variant.AC_PRIORITY -> avgSpeed.sedan.getKilometers
+                Variant.BIKE_PLUS -> avgSpeed.bikeplus.getKilometers
+                Variant.E_RICKSHAW -> avgSpeed.erickshaw.getKilometers
 
           getDuration pricing.distanceToNearestDriver variantSpeed
 
@@ -1629,9 +1662,9 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 estimatedTimeTakenInSeconds :: Int = ceiling $ (distanceInMeters / avgSpeedInMetersPerSec)
             Just $ show estimatedTimeTakenInSeconds
 
-mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe Bool -> Maybe Params.FareParameters -> Maybe [Spec.TagGroup]
-mkRateCardTag estimatedDistance tollCharges estimatedFare congestionChargeViaDp farePolicy fareParametersInRateCard fareParams = do
-  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance tollCharges estimatedFare congestionChargeViaDp) farePolicy
+mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe Bool -> Maybe Params.FareParameters -> Maybe [Spec.TagGroup]
+mkRateCardTag estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp farePolicy fareParametersInRateCard fareParams = do
+  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance mbCancellationCharge tollCharges estimatedFare congestionChargeViaDp) farePolicy
       fareParamsBreakups =
         case fareParametersInRateCard of
           Just True -> maybe [] (mkFareParamsBreakups (\price -> show price) mkRateCardFareParamsBreakupItem) fareParams

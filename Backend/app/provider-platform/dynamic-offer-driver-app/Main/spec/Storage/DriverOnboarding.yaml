@@ -9,6 +9,8 @@ imports:
   VehicleVariant: Domain.Types.VehicleVariant
   VehicleCategory: Domain.Types.VehicleCategory
   Value: Data.Aeson
+  encode: Data.Aeson
+  decode: Data.Aeson
   DocumentType: Domain.Types.DocumentVerificationConfig
   Image: Domain.Types.Image
   DriverOnboardingError: Tools.Error
@@ -427,6 +429,16 @@ DocumentVerificationConfig:
       enum: "Infix,Prefix,Suffix"
     DocumentCategory:
       enum: "Driver,Vehicle,Permission,Training"
+    DocumentApplicableType:
+      enum: "FLEET,INDIVIDUAL,FLEET_AND_INDIVIDUAL"
+    FieldType:
+      enum: "FieldText,FieldInt,FieldDouble"
+    FieldInfo:
+      name: Text
+      _type: FieldType
+      isMandatory: Bool
+      regexValidation: Maybe Text
+      derive': "Eq,Ord,Show,Read,Generic,ToJSON,FromJSON,ToSchema"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
@@ -452,12 +464,15 @@ DocumentVerificationConfig:
     order: Int
     filterForOldApks: Maybe Bool
     documentCategory: Maybe DocumentCategory
+    applicableTo: DocumentApplicableType
+    documentFields: Maybe [FieldInfo]
   default:
     order: "0"
     doStrictVerifcation: "true"
     isDefaultEnabledOnManualVerification: "true"
     isImageValidationRequired: "true"
     filterForOldApks: false
+    applicableTo: "'FLEET_AND_INDIVIDUAL'"
   constraints:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
@@ -465,13 +480,24 @@ DocumentVerificationConfig:
   sqlType:
     dependencyDocumentType: text[]
     supportedVehicleClassesJSON: json
+    documentFieldsJSON: json
   beamFields:
     supportedVehicleClasses:
       supportedVehicleClassesJSON: Value
+    applicableTo:
+      applicableTo: Maybe DocumentApplicableType
+    documentFields:
+      documentFieldsJSON: Maybe Value
   toTType:
     supportedVehicleClassesJSON: getConfigJSON
+    documentFieldsJSON: Data.Aeson.toJSON <$> documentFields|E
+    applicableTo: Kernel.Prelude.Just applicableTo|E
+
   fromTType:
     supportedVehicleClasses: (getConfigFromJSON documentType)|M
+    documentFields: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< documentFieldsJSON|E
+    applicableTo: fromMaybe Domain.Types.DocumentVerificationConfig.FLEET_AND_INDIVIDUAL applicableTo|E
+
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithOptionsKV

@@ -36,7 +36,7 @@ findByPrimaryKey event tagName = do findOneWithKV [Se.And [Se.Is Beam.event $ Se
 updateByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.NammaTagTrigger.NammaTagTrigger -> m ())
 updateByPrimaryKey (Lib.Yudhishthira.Types.NammaTagTrigger.NammaTagTrigger {..}) = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.createdAt createdAt, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.event $ Se.Eq event, Se.Is Beam.tagName $ Se.Eq tagName]]
+  updateWithKV [Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.event $ Se.Eq event, Se.Is Beam.tagName $ Se.Eq tagName]]
 
 instance FromTType' Beam.NammaTagTrigger Lib.Yudhishthira.Types.NammaTagTrigger.NammaTagTrigger where
   fromTType' (Beam.NammaTagTriggerT {..}) = do pure $ Just Lib.Yudhishthira.Types.NammaTagTrigger.NammaTagTrigger {event = event, tagName = tagName, createdAt = createdAt, updatedAt = updatedAt}

@@ -31,8 +31,7 @@ findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Ty
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RideDetails.RideDetails -> m ())
 updateByPrimaryKey (Domain.Types.RideDetails.RideDetails {..}) = do
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.defaultServiceTierName defaultServiceTierName,
+    [ Se.Set Beam.defaultServiceTierName defaultServiceTierName,
       Se.Set Beam.driverCountryCode driverCountryCode,
       Se.Set Beam.driverName driverName,
       Se.Set Beam.driverNumberEncrypted (driverNumber <&> unEncrypted . (.encrypted)),

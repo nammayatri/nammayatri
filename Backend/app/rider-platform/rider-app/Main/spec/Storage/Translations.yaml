@@ -1,0 +1,31 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+  Language: Kernel.External.Types
+
+
+Translations:
+  tableName: translations
+
+  fields:
+    id : Id Translations
+    messageKey : Text
+    language : Language
+    message : Text
+    merchantOperatingCityId : Id MerchantOperatingCity
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+    messageKey: "!SecondaryKey"
+    language: "!SecondaryKey"
+
+  excludedFields: [merchantId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

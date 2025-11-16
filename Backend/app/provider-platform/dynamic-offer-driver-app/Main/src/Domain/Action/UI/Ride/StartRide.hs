@@ -25,17 +25,17 @@ where
 
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
-import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.Internal.StopDetection as StopDetection
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.DriverFlowStatus as DDFS
+import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
+import qualified Domain.Types.TransporterConfig as DTConf
 import Environment (Flow)
 import EulerHS.Prelude
 import Kernel.External.Maps.HasCoordinates
@@ -84,7 +84,7 @@ data DashboardStartRideReq = DashboardStartRideReq
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> Id SRB.Booking -> LatLong -> Id DM.Merchant -> Maybe DRide.OdometerReading -> m (),
+    startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> Id SRB.Booking -> LatLong -> Id DM.Merchant -> Maybe DRide.OdometerReading -> DTConf.TransporterConfig -> DDI.DriverInformation -> m (),
     notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> Maybe LatLong -> m (),
     rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
     initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
@@ -171,7 +171,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
           when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing driverReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
           when (not (fromMaybe False ride.enableOtpLessRide) && driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
           logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          pure (driverReq.point, driverReq.odometer)
+          validatedPoint <- validateStartRideCoordinates driverReq.point booking
+          pure (validatedPoint, driverReq.odometer)
         DashboardReq dashboardReq -> do
           when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing dashboardReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
           logTagInfo "dashboard -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
@@ -199,10 +200,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
       void $ Redis.del (StopDetection.mkStopCountRedisKey rideId.getId)
       whenWithLocationUpdatesLock driverId $ do
-        logTagInfo "startRide" ("Updating driver_flow_status to ON_RIDE for DriverId " <> getId driverId)
-        DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig driverInfo.active driverInfo.mode DDFS.ON_RIDE driverInfo
         withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
-        withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
+        withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer transporterConfig driverInfo
 
       fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
@@ -210,6 +209,13 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   where
     isValidRideStatus status = status `elem` [DRide.NEW, DRide.UPCOMING]
     isInProgress status = (status == DRide.INPROGRESS)
+
+    validateStartRideCoordinates point booking =
+      if point.lat == 0.0 && point.lon == 0.0
+        then do
+          logWarning "Invalid GPS coordinates (0.0, 0.0) received for ride start, using booking location as fallback"
+          pure $ getCoordinates booking.fromLocation
+        else pure point
 
 makeStartRideIdKey :: Id DP.Person -> Text
 makeStartRideIdKey driverId = "StartRideKey:PersonId-" <> driverId.getId

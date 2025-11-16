@@ -5,6 +5,7 @@ import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.Common as Common
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
+import qualified Domain.Types.DriverFlowStatus as DFS
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
@@ -117,6 +118,21 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
         <> ([Se.Set BeamDI.enabledAt (Just now) | isEnabled && isNothing enabledAt])
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
+updateActivityWithDriverFlowStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Bool -> Maybe Common.DriverMode -> Maybe DFS.DriverFlowStatus -> Maybe Bool -> Id Person.Driver -> m ())
+updateActivityWithDriverFlowStatus active mode driverFlowStatus mbHasRideStarted driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [ Se.Set BeamDI.active active,
+        Se.Set BeamDI.updatedAt now
+      ]
+        <> [Se.Set BeamDI.mode mode | isJust mode]
+        <> [Se.Set BeamDI.driverFlowStatus driverFlowStatus | isJust driverFlowStatus]
+        <> [Se.Set BeamDI.hasRideStarted mbHasRideStarted | isJust mbHasRideStarted]
+    )
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
 
 updateDynamicBlockedStateWithActivity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> Bool -> Maybe Bool -> Maybe Common.DriverMode -> BlockReasonFlag -> m ()
 updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime dashboardUserName merchantId reasonCode merchantOperatingCityId blockedBy isBlocked mbActive mbMode blockReasonFlag = do
@@ -400,8 +416,8 @@ updatePrepaidSubscriptionBalanceAndExpiry driverId amount expiryDate = do
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
 
-updatePrepaidSubscriptionBalance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> HighPrecMoney -> m ()
-updatePrepaidSubscriptionBalance driverId amount = do
+updatePrepaidSubscriptionBalance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMoney -> Id Person.Driver -> m ()
+updatePrepaidSubscriptionBalance amount driverId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamDI.prepaidSubscriptionBalance (Just amount),
@@ -473,3 +489,12 @@ findAllByDriverIds driverIds = do
   case res of
     Right driverInfoList -> catMaybes <$> mapM fromTType' driverInfoList
     Left _ -> pure []
+
+updateLastOfflineTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> UTCTime -> m ()
+updateLastOfflineTime driverId offlineTime = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.lastOfflineTime (Just offlineTime),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]

@@ -62,7 +62,11 @@ createNearestDriverReq nearestRadius now =
       isValueAddNP = True,
       onlinePayment = False,
       prepaidSubscriptionThreshold = Nothing,
+      fleetPrepaidSubscriptionThreshold = Nothing,
+      prepaidSubscriptionAndWalletEnabled = False,
       rideFare = Nothing,
+      paymentInstrument = Nothing,
+      minWalletAmountForCashRides = Nothing,
       ..
     }
 
@@ -134,5 +138,5 @@ setDriversActive isActive mode = do
     drivers
     ( \driver -> do
         driverInfo <- QDI.findById (Id driver) >>= fromMaybeM DriverInfoNotFound
-        DDriverMode.updateDriverModeAndFlowStatus (Id driver) transporterConfig isActive mode newFlowStatus driverInfo
+        DDriverMode.updateDriverModeAndFlowStatus (Id driver) transporterConfig isActive mode newFlowStatus driverInfo Nothing
     )

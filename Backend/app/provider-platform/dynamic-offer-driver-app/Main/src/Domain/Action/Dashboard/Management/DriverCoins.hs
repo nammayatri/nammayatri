@@ -226,7 +226,8 @@ getDriverCoinsCoinHistory merchantShortId opCity reqDriverId mbLimit mbOffset = 
           createdAt = createdAt,
           expirationAt = expirationAt,
           coinsUsed = coinsUsed,
-          bulkUploadTitle = bulkUploadTitle
+          bulkUploadTitle = bulkUploadTitle,
+          rideId = entityId
         }
 
     toBurnHistoryItem :: PurchaseHistory -> Common.CoinBurnHistoryItem

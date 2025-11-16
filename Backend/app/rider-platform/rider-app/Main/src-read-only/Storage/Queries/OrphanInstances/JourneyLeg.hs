@@ -32,6 +32,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
       Just
         Domain.Types.JourneyLeg.JourneyLeg
           { agency = Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName,
+            busLocationData = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData),
             changedBusesInSequence = changedBusesInSequence,
             distance = Kernel.Types.Common.Distance <$> distance <*> distanceUnit,
             duration = duration,
@@ -53,6 +54,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             journeyId = journeyId',
             legPricingId = legPricingId,
             legSearchId = legId,
+            liveVehicleAvailableServiceTypes = serviceTypes,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             mode = mode,
@@ -61,7 +63,6 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             osmExit = osmExit >>= Kernel.Utils.JSON.valueToMaybe,
             routeDetails = routeDetails',
             sequenceNumber = sequenceNumber',
-            serviceTypes = serviceTypes,
             startLocation = Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon,
             straightLineEntrance = straightLineEntrance >>= Kernel.Utils.JSON.valueToMaybe,
             straightLineExit = straightLineExit >>= Kernel.Utils.JSON.valueToMaybe,
@@ -78,6 +79,7 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
     Beam.JourneyLegT
       { Beam.agencyGtfsId = agency >>= (.gtfsId),
         Beam.agencyName = agency <&> (.name),
+        Beam.busLocationData = Just $ toJSON busLocationData,
         Beam.changedBusesInSequence = changedBusesInSequence,
         Beam.distance = (.value) <$> distance,
         Beam.distanceUnit = (.unit) <$> distance,
@@ -104,6 +106,7 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.journeyId = Just $ Kernel.Types.Id.getId journeyId,
         Beam.legPricingId = legPricingId,
         Beam.legId = legSearchId,
+        Beam.serviceTypes = liveVehicleAvailableServiceTypes,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.mode = mode,
@@ -111,7 +114,6 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.osmEntrance = osmEntrance >>= Just . Data.Aeson.toJSON,
         Beam.osmExit = osmExit >>= Just . Data.Aeson.toJSON,
         Beam.sequenceNumber = Just sequenceNumber,
-        Beam.serviceTypes = serviceTypes,
         Beam.startLocationLat = startLocation & (.latitude),
         Beam.startLocationLon = startLocation & (.longitude),
         Beam.straightLineEntrance = straightLineEntrance >>= Just . Data.Aeson.toJSON,

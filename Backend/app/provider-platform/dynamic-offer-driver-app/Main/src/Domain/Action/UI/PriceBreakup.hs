@@ -40,13 +40,13 @@ getPriceBreakup (_, _, _) rideId = do
   quote <- B.runInReplica $ QQuote.findById (Id booking.quoteId)
   case quote of
     Just quote' -> do
-      let fareDetails_ = catMaybes $ maybe [] (mkFarePolicyBreakups Prelude.id mkBreakupItem booking.estimatedDistance Nothing booking.estimatedFare quote'.fareParams.congestionChargeViaDp) quote'.farePolicy
+      let fareDetails_ = catMaybes $ maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem booking.currency) booking.estimatedDistance booking.fareParams.customerCancellationDues Nothing booking.estimatedFare quote'.fareParams.congestionChargeViaDp) quote'.farePolicy
       pure fareDetails_
     _ -> pure []
   where
-    mkBreakupItem :: Text -> Text -> Maybe DOVT.RateCardItem
-    mkBreakupItem title valueInText = do
-      priceObject <- DOV.stringToPrice INR valueInText
+    mkBreakupItem :: Currency -> Text -> Text -> Maybe DOVT.RateCardItem
+    mkBreakupItem currency title valueInText = do
+      priceObject <- DOV.stringToPrice currency valueInText
       return $
         DOVT.RateCardItem
           { title,

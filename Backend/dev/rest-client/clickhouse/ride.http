@@ -34,7 +34,7 @@ POST {{clickhouse-driver-offer-bpp}}
 Authorization: Basic default:{{clickhouse-password}}
 content-type: text/html
 
-Select 1
+SELECT mul(5, 3)
 
 ###
 

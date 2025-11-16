@@ -15,6 +15,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Confidence
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
+import qualified SharedLogic.Type as SLT
 
 -- Extra code goes here --
 data EditLocation = EditLocation
@@ -26,6 +27,8 @@ data EditLocation = EditLocation
 data RideAPIEntity = RideAPIEntity
   { allowedEditLocationAttempts :: Kernel.Prelude.Int,
     allowedEditPickupLocationAttempts :: Kernel.Prelude.Int,
+    cancellationFeeIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationChargesOnCancel :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     bppRideId :: Kernel.Types.Id.Id Domain.Types.Ride.BPPRide,
     chargeableRideDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     chargeableRideDistanceWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
@@ -33,6 +36,7 @@ data RideAPIEntity = RideAPIEntity
     computedPriceWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     createdAt :: Kernel.Prelude.UTCTime,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    billingCategory :: SLT.BillingCategory,
     driverImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverName :: Kernel.Prelude.Text,
     stopsInfo :: [DSI.StopInformation],

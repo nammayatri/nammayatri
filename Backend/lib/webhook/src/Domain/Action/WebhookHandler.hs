@@ -4,7 +4,6 @@ import Domain.Action.Flow as WFlow
 import qualified Domain.Types.WebhookExtra as WT
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Webhook.Storage.Beam.BeamFlow as BFlow
@@ -97,7 +96,7 @@ sendWebhookWithRetry WebhookJobInfo {..} = do
         else do
           updateRetryCount (webooksData.retryCount + 1) webooksData.id
           let req = buildWebHookRequest webooksData
-          resp <- try @_ @SomeException $ WFlow.nyWebhook webhookConfig.baseUrl webhookConfig.password webhookConfig.username req
+          resp <- withTryCatch "nyWebhook:webhookHandler" $ WFlow.nyWebhook webhookConfig.baseUrl webhookConfig.password webhookConfig.username req
           status <- do
             case resp of
               Right _ -> do

@@ -41,8 +41,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.TicketSubPlace.TicketSubPlace {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.description description,
+    [ Se.Set Beam.description description,
       Se.Set Beam.enforcedTicketPlaceId (Kernel.Types.Id.getId <$> enforcedTicketPlaceId),
       Se.Set Beam.isActive isActive,
       Se.Set Beam.name name,

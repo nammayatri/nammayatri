@@ -44,7 +44,6 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.childPrice (Kernel.Prelude.fmap (.amount) childPrice),
       Se.Set Beam.childTicketQuantity childTicketQuantity,
       Se.Set Beam.discountedTickets discountedTickets,
-      Se.Set Beam.discountsJson discountsJson,
       Se.Set Beam.estimatedPrice (Kernel.Prelude.fmap (.amount) estimatedPrice),
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
       Se.Set Beam.appSession (fareDetails <&> (.appSession)),
@@ -61,8 +60,8 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.oldCacheDump oldCacheDump,
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
-      Se.Set Beam.price ((.amount) price),
+      Se.Set Beam.currency (Kernel.Prelude.fmap (.currency) price),
+      Se.Set Beam.price (Kernel.Prelude.fmap (.amount) price),
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,
       Se.Set Beam.providerName providerName,
@@ -74,7 +73,6 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.toStationId toStationCode,
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleType vehicleType,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

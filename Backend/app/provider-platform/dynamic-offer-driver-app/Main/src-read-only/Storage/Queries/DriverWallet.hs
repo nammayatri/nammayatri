@@ -36,7 +36,6 @@ updateByPrimaryKey (Domain.Types.DriverWallet.DriverWallet {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.collectionAmount collectionAmount,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.driverPayable driverPayable,
       Se.Set Beam.gstDeduction gstDeduction,

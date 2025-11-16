@@ -53,6 +53,14 @@ apis:
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS RIDE_INFO_CUSTOMER
   - GET:
+      endpoint: /cancellationChargesWaiveOff/{rideId}
+      name: CancellationChargesWaiveOff
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: CancellationChargesWaiveOffRes
+  - GET:
       endpoint: /{rideId}/info
       name: GetShareRideInfo
       auth: NoAuth
@@ -155,6 +163,7 @@ types:
     - customerDropLocation: Maybe Location
     - driverName: Text
     - driverPhoneNo: Maybe Text
+    - driverAlternatePhoneNo: Maybe Text
     - driverRegisteredAt: Maybe UTCTime
     - vehicleNo: Text
     - vehicleModel: Text
@@ -193,6 +202,11 @@ types:
     - mobileCountryCode: Maybe Text
     - isSafetyPlus: Bool
     - isAirConditioned: Bool
+  CancellationChargesWaiveOffRes:
+    - rideId: Id Ride
+    - waivedOffAmount: Maybe HighPrecMoney
+    - waivedOffAmountWithCurrency: Maybe PriceAPIEntity
+    - waivedOffSuccess: Bool
   ShareRideInfoRes:
     - id: Id Ride
     - bookingId: Id Booking

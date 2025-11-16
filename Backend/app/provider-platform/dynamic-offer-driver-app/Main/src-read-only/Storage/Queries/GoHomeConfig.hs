@@ -38,7 +38,6 @@ updateByPrimaryKey (Domain.Types.GoHomeConfig.GoHomeConfig {..}) = do
     [ Se.Set Beam.activeTime activeTime,
       Se.Set Beam.addStartWaypointAt (Kernel.Types.Common.getMeters addStartWaypointAt),
       Se.Set Beam.cancellationCnt cancellationCnt,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.destRadiusMeters destRadiusMeters,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.enableGoHome enableGoHome,

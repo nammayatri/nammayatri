@@ -26,6 +26,7 @@ import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
 import Domain.Types
 import Domain.Types.BecknConfig
+import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketStatus as Ticket
 import Kernel.Prelude
@@ -403,3 +404,16 @@ data BppData = BppData
 
 mkCheckInprogressKey :: Text -> Text
 mkCheckInprogressKey transactionId = "FRFS:OnStatus:Solicited-" <> transactionId
+
+mkDCategorySelect :: (MonadFlow m) => Spec.Item -> m Domain.DCategorySelect
+mkDCategorySelect orderItem = do
+  bppItemId' <- orderItem.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
+  quantity' <- orderItem.itemQuantity >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybeM (InvalidRequest "Item Quantity not found")
+  let category =
+        case orderItem.itemDescriptor >>= (.descriptorCode) of
+          Just "SJT" -> ADULT
+          Just "SFSJT" -> FEMALE
+          _ -> ADULT
+      originalPrice = orderItem.itemPrice >>= Utils.parsePrice
+      offeredPrice = orderItem.itemPrice >>= Utils.parseOfferPrice
+  return $ DCategorySelect {bppItemId = bppItemId', quantity = quantity', category = category, price = fromMaybe (Price (Money 0) (HighPrecMoney 0.0) INR) (offeredPrice <|> originalPrice)}

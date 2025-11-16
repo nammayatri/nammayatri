@@ -32,6 +32,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     actualRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: Kernel.Types.Common.HighPrecMeters,
     allowDefaultPlanAllocation :: Kernel.Prelude.Bool,
+    allowDriverToUseFleetRcs :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicateAadhaar :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicateGst :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicatePan :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -63,7 +64,10 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     canSwitchToRental :: Kernel.Prelude.Bool,
     cancellationDistDiff :: Kernel.Prelude.Int,
     cancellationFee :: Kernel.Types.Common.HighPrecMoney,
+    cancellationFeeCycle :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     cancellationFeeDisputeLimit :: Kernel.Prelude.Int,
+    cancellationFeeDisputeWindow :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    cancellationFeeVendor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationRateCalculationThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationRateSlabConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,
     cancellationRateThresholdDaily :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -236,6 +240,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     updateOrderStatusBatchSize :: Kernel.Prelude.Int,
     updatePayoutStatusBatchSize :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
+    upgradeTierDropRetentionTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     upwardsRecomputeBuffer :: Kernel.Types.Common.HighPrecMeters,
     upwardsRecomputeBufferPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     useOfferListCache :: Kernel.Prelude.Bool,
@@ -256,6 +261,7 @@ data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelu
 data AnalyticsConfig = AnalyticsConfig
   { allowCacheDriverFlowStatus :: Kernel.Prelude.Bool,
     earningsWindowSize :: Kernel.Prelude.Int,
+    enableFleetOperatorDashboardAnalytics :: Kernel.Prelude.Bool,
     maxOnlineDurationDays :: Kernel.Prelude.Int,
     onlineDurationCalculateFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     weekStartMode :: Kernel.Prelude.Int
@@ -266,6 +272,7 @@ data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
   { ambulance :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     autorickshaw :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     bike :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    bikeplus :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     black :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     blackxl :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     boat :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -273,6 +280,7 @@ data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
     busNonAc :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     deliveryLightGoodsVehicle :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     deliverybike :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    erickshaw :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     evautorickshaw :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     hatchback :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     heritagecab :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -291,12 +299,14 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
   { ambulance :: Kernel.Types.Common.Kilometers,
     autorickshaw :: Kernel.Types.Common.Kilometers,
     bike :: Kernel.Types.Common.Kilometers,
+    bikeplus :: Kernel.Types.Common.Kilometers,
     black :: Kernel.Types.Common.Kilometers,
     blackxl :: Kernel.Types.Common.Kilometers,
     boat :: Kernel.Types.Common.Kilometers,
     busAc :: Kernel.Types.Common.Kilometers,
     busNonAc :: Kernel.Types.Common.Kilometers,
     deliveryLightGoodsVehicle :: Kernel.Types.Common.Kilometers,
+    erickshaw :: Kernel.Types.Common.Kilometers,
     evautorickshaw :: Kernel.Types.Common.Kilometers,
     hatchback :: Kernel.Types.Common.Kilometers,
     heritagecab :: Kernel.Types.Common.Kilometers,
@@ -356,6 +366,7 @@ data DriverWalletConfig = DriverWalletConfig
     enableWalletTopup :: Kernel.Prelude.Bool,
     gstPercentage :: Kernel.Prelude.Double,
     maxWalletPayoutsPerDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    minWalletAmountForCashRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minimumWalletPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
     payoutCutOffDays :: Kernel.Prelude.Int
   }
@@ -364,7 +375,10 @@ data DriverWalletConfig = DriverWalletConfig
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-newtype SubscriptionConfig = SubscriptionConfig {prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney}
+data SubscriptionConfig = SubscriptionConfig
+  { fleetPrepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
+  }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 type TransporterConfig = TransporterConfigD 'Safe

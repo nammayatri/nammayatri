@@ -19,6 +19,7 @@ data SubscriptionTransactionT f = SubscriptionTransactionT
     createdAt :: B.C f Data.Time.UTCTime,
     driverId :: B.C f Kernel.Prelude.Text,
     entityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

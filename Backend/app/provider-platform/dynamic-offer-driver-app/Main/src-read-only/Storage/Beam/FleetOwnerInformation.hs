@@ -10,6 +10,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FleetOwnerInformationT f = FleetOwnerInformationT
@@ -31,11 +32,14 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     gstNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     gstNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     isEligibleForSubscription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    lienAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     merchantId :: B.C f Kernel.Prelude.Text,
     panImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     panNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     panNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     panNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    planExpiryDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    prepaidSubscriptionBalance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     referredByOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registeredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     ticketPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

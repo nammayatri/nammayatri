@@ -84,6 +84,15 @@ getVehicleServiceType baseUrl gtfsId vehicleNumber = do
         logError $ "Error getting vehicle service type: " <> show err
         pure Nothing
 
+getVehicleInfo :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> Text -> m (Maybe VehicleInfoResponse)
+getVehicleInfo baseUrl gtfsId vehicleNumber = do
+  withShortRetry $
+    callAPI baseUrl (NandiAPI.getNandiVehicleInfo gtfsId vehicleNumber) "getVehicleInfo" NandiAPI.nandiVehicleInfoAPI >>= \case
+      Right response -> pure (Just response)
+      Left err -> do
+        logError $ "Error getting vehicle info: " <> show err
+        pure Nothing
+
 postGtfsGraphQL :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> GtfsGraphQLRequest -> m Value
 postGtfsGraphQL baseUrl request = do
   withShortRetry $ callAPI baseUrl (NandiAPI.postNandiGtfsGraphQL request) "postGtfsGraphQL" NandiAPI.nandiGtfsGraphQLAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_POST_GTFS_GRAPHQL_API") baseUrl)
@@ -118,3 +127,19 @@ getExampleTrip baseUrl gtfsId routeId = do
       Left err -> do
         logError $ "Error getting example trip: " <> show err
         pure Nothing
+
+getDepotNames :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> m [Text]
+getDepotNames baseUrl = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiDepotNames) "getDepotNames" NandiAPI.nandiDepotNamesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOT_NAMES_API") baseUrl)
+
+getDepotIds :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> m [Int]
+getDepotIds baseUrl = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiDepotIds) "getDepotIds" NandiAPI.nandiDepotIdsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_DEPOT_IDS_API") baseUrl)
+
+getVehiclesFromByDepotName :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Maybe Text -> m [DepotVehicle]
+getVehiclesFromByDepotName baseUrl depotName = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiGetVehiclesFromByDepotName depotName) "getVehiclesFromByDepotName" NandiAPI.nandiGetVehiclesFromDepotNameAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_VEHICLES_FROM_BY_DEPOT_NAME_API") baseUrl)
+
+getVehiclesFromByDepotId :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Maybe Int -> m [DepotVehicle]
+getVehiclesFromByDepotId baseUrl depotId = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiGetVehiclesFromByDepotId depotId) "getVehiclesFromByDepotId" NandiAPI.nandiGetVehiclesFromDepotIdAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_VEHICLES_FROM_BY_DEPOT_ID_API") baseUrl)

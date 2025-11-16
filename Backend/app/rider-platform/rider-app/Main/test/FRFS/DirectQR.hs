@@ -82,7 +82,7 @@ tests flowRt' appEnv = do
 
   -- Try invalid QR code
   logInfo "Testing invalid QR code..."
-  result <- try @_ @SomeException $ decodeQR testConfig "invalid_qr_data"
+  result <- withTryCatch "decodeQR:testInvalidQR" $ decodeQR testConfig "invalid_qr_data"
   case result of
     Left err -> logInfo $ "Expected error for invalid QR: " <> show err
     Right _ -> logInfo "Unexpected success for invalid QR"

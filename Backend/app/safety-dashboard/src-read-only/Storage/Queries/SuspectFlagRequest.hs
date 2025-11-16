@@ -100,7 +100,6 @@ updateByPrimaryKey (Domain.Types.SuspectFlagRequest.SuspectFlagRequest {..}) = d
   updateWithKV
     [ Se.Set Beam.adminApproval adminApproval,
       Se.Set Beam.approvedBy approvedBy,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.dl dl,
       Se.Set Beam.firstName firstName,
       Se.Set Beam.flaggedBy flaggedBy,

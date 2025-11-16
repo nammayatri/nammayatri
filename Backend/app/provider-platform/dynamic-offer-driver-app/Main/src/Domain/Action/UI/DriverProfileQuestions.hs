@@ -6,8 +6,10 @@ import ChatCompletion.Interface.Types as CIT
 import qualified Data.Text as T
 import Data.Time.Clock (utctDay)
 import Data.Time.Format (defaultTimeLocale, formatTime)
+import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DriverProfileQuestions as DTDPQ
 import qualified Domain.Types.DriverStats as DTS
+import qualified Domain.Types.Image as DImage
 import Domain.Types.LlmPrompt as DTL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -16,6 +18,7 @@ import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
+import Kernel.Beam.Functions
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -26,7 +29,9 @@ import Storage.CachedQueries.LLMPrompt.LLMPrompt as SCL
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverProfileQuestions as DPQ
 import qualified Storage.Queries.DriverStats as QDS
+import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Person as QPerson
 import Tools.ChatCompletion as TC
 import Tools.Error
 
@@ -145,36 +150,46 @@ getDriverProfileQues ::
     Maybe Bool ->
     Flow API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
   )
-getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages =
-  mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
-    >>= DPQ.findByPersonId
-    >>= \case
-      Just res ->
-        getImages (maybe [] (Id <$>) res.imageIds)
-          >>= \images ->
-            pure $
-              API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
-                { aspirations = fromMaybe [] res.aspirations,
-                  hometown = res.hometown,
-                  pledges = res.pledges,
-                  drivingSince = res.drivingSince,
-                  vehicleTags = fromMaybe [] res.vehicleTags,
-                  otherImages = if isImages == Just True then images else [], -- fromMaybe [] res.images
-                  profileImage = Nothing,
-                  otherImageIds = fromMaybe [] res.imageIds
-                }
-      Nothing ->
-        pure $
-          API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
-            { aspirations = [],
-              hometown = Nothing,
-              pledges = [],
-              drivingSince = Nothing,
-              vehicleTags = [],
-              otherImages = [],
-              profileImage = Nothing,
-              otherImageIds = []
-            }
+getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
+  driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
+  driverProfile <- DPQ.findByPersonId driverId
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  profileImage <- case person.faceImageId of
+    Just mediaId -> do
+      mediaEntry <- runInReplica $ QMF.findById mediaId >>= fromMaybeM (FileDoNotExist driverId.getId)
+      case mediaEntry.s3FilePath of
+        Just s3Path -> Just <$> S3.get (T.unpack s3Path)
+        _ -> fetchLegacyProfileImage driverId
+    Nothing -> do
+      fetchLegacyProfileImage driverId
+
+  case driverProfile of
+    Just res ->
+      getImages (maybe [] (Id <$>) res.imageIds)
+        >>= \images ->
+          pure $
+            API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
+              { aspirations = fromMaybe [] res.aspirations,
+                hometown = res.hometown,
+                pledges = res.pledges,
+                drivingSince = res.drivingSince,
+                vehicleTags = fromMaybe [] res.vehicleTags,
+                otherImages = if isImages == Just True then images else [], -- fromMaybe [] res.images
+                profileImage = profileImage,
+                otherImageIds = fromMaybe [] res.imageIds
+              }
+    Nothing ->
+      pure $
+        API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
+          { aspirations = [],
+            hometown = Nothing,
+            pledges = [],
+            drivingSince = Nothing,
+            vehicleTags = [],
+            otherImages = [],
+            profileImage = Nothing,
+            otherImageIds = []
+          }
   where
     getImages imageIds = do
       mapM (QMF.findById) imageIds <&> catMaybes <&> ((.url) <$>)
@@ -183,3 +198,7 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages =
     extractFilePath url = case T.splitOn "filePath=" url of
       [_before, after] -> after
       _ -> T.empty
+
+    fetchLegacyProfileImage driverId =
+      ImageQuery.findByPersonIdImageTypeAndValidationStatus driverId DTO.ProfilePhoto DImage.APPROVED
+        >>= maybe (pure Nothing) (\image -> Just <$> S3.get (T.unpack image.s3Path))

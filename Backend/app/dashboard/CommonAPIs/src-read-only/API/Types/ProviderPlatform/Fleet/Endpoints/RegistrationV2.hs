@@ -36,7 +36,8 @@ data FleetOwnerRegisterReqV2 = FleetOwnerRegisterReqV2
     businessLicenseNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     businessLicenseImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     operatorReferralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    adminApprovalRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    adminApprovalRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    setIsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

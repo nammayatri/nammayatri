@@ -30,6 +30,7 @@ import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDS
@@ -40,6 +41,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import qualified Tools.Payout as TP
+import Utils.Common.Cac.KeyNameConstants
 
 getPayoutReferralEarnings ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -110,7 +112,8 @@ getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   unless payoutConfig.isPayoutEnabled $ throwError $ InvalidRequest "Payout Registration is Not Enabled"
   let (fee, cgst, sgst) = (payoutConfig.payoutRegistrationFee, payoutConfig.payoutRegistrationCgst, payoutConfig.payoutRegistrationSgst)
-  clearDuesRes <- DD.clearDriverFeeWithCreate (personId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION (fee, Just cgst, Just sgst) DFee.PAYOUT_REGISTRATION INR Nothing False
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (Kernel.Types.Id.cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  clearDuesRes <- DD.clearDriverFeeWithCreate (personId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION (fee, Just cgst, Just sgst) DFee.PAYOUT_REGISTRATION transporterConfig.currency Nothing False
   DrInfo.updatePayoutRegistrationOrderId (Just clearDuesRes.orderId.getId) personId
   pure clearDuesRes
 

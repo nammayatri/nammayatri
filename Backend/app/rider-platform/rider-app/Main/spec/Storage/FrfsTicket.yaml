@@ -39,6 +39,7 @@ imports:
   RouteStopTimeTable: Domain.Types.RouteStopTimeTable
   FRFSCategoryTag: Domain.Types.FRFSQuoteCategorySpec
   OfferedValue: Domain.Types.FRFSQuoteCategorySpec
+  FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
 
 FRFSSearch:
   tableName: frfs_search
@@ -105,19 +106,18 @@ FRFSQuote:
     _type: FRFSQuoteType
     fromStationCode: Text
     toStationCode: Text
-    quantity: Int
+    quantity: Maybe Int # TODO :: To be deprecated with FRFSQuoteCategory
     stationsJson: Text
     routeStationsJson: Maybe Text
-    discountsJson: Maybe Text
     vehicleType: VehicleCategory
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
     providerName: Text
     providerDescription: Maybe Text
-    price: Price
-    childPrice: Maybe Price
-    estimatedPrice: Maybe Price
+    price: Maybe Price # TODO :: To be deprecated with FRFSQuoteCategory
+    childPrice: Maybe Price # TODO :: To be deprecated with FRFSQuoteCategory
+    estimatedPrice: Maybe Price # TODO :: To be deprecated with FRFSQuoteCategory
     fareDetails: Maybe FRFSFareDetails
     validTill: UTCTime
     riderId: Id Person
@@ -130,7 +130,7 @@ FRFSQuote:
     discountedTickets: Maybe Int
     bppDelayedInterest: Maybe Int
     oldCacheDump: Maybe Text
-    childTicketQuantity: Maybe Int
+    childTicketQuantity: Maybe Int # TODO :: To be deprecated with FRFSQuoteCategory
     multimodalSearchRequestId: Maybe Text
   beamFields:
     fromStationCode:
@@ -139,7 +139,7 @@ FRFSQuote:
       toStationId: Text
     price:
       currency: Maybe Currency
-      price: HighPrecMoney
+      price: Maybe HighPrecMoney
     childPrice:
       childPrice: Maybe HighPrecMoney
     estimatedPrice:
@@ -167,15 +167,15 @@ FRFSQuote:
       appSession: Int
 
   fromTType:
-    price: Kernel.Types.Common.mkPrice currency price|E
+    price: Kernel.Types.Common.mkPrice currency <$> price|E
     childPrice: Kernel.Types.Common.mkPrice currency <$> childPrice|E
     estimatedPrice: Kernel.Types.Common.mkPrice currency <$> estimatedPrice|E
     applicableDiscountIds: (Kernel.Types.Id.Id <$> ) <$>|I
     fareDetails: Domain.Types.FRFSQuote.FRFSFareDetails <$> appSession <*> distance <*> providerRouteId <*> ticketTypeCode <*> trainTypeCode <*> via|E
 
   toTType:
-    price: (.amount)|I
-    currency: (Kernel.Prelude.Just . (.currency))|I
+    price: (Kernel.Prelude.fmap (.amount))|I
+    currency: (Kernel.Prelude.fmap (.currency))|I
     childPrice: Kernel.Prelude.fmap (.amount)|I
     estimatedPrice: Kernel.Prelude.fmap (.amount)|I
     applicableDiscountIds: (Kernel.Types.Id.getId <$> ) <$>|I
@@ -188,6 +188,12 @@ FRFSQuote:
 
   sqlType:
     applicableDiscountIds: "text[]"
+
+  default:
+    price: "0"
+    childPrice: "0"
+    estimatedPrice: "0"
+    quantity: "0"
 
   constraints:
     id: PrimaryKey
@@ -211,35 +217,60 @@ FRFSQuoteCategory:
     id: Id FRFSQuoteCategory
     quoteId: Id FRFSQuote
     bppItemId: Text
-    ticketCategoryMetadataConfig: FRFSTicketCategoryMetadataConfig
-    price: Price
-    offeredPrice: Price
+    category: FRFSQuoteCategoryType|NoRelation
+    categoryMeta: Maybe QuoteCategoryMetadata
+    ticketCategoryMetadataConfigId: Maybe Text # TODO :: To be deprecated with QuoteCategoryMetadata
+    price: Price # Single Item Quantity Price without any passes or offers determined in OnSearch.
+    offeredPrice: Price # Single Item Quantity Discounted Price determined in OnSearch that would be less than or equal to `price`.
+    finalPrice: Maybe Price # Single Item Quantity Final Price determined in OnInit that the customer would actually pay.
     selectedQuantity: Maybe Int
-    maxTicketAllowed: Maybe Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
   constraints:
     id: PrimaryKey
     quoteId: SecondaryKey
   beamFields:
-    ticketCategoryMetadataConfig:
-      ticketCategoryMetadataConfigId: Text
+    categoryMeta:
+      code: Maybe Text
+      title: Maybe Text
+      description: Maybe Text
+      tnc: Maybe Text
     price:
       currency: Maybe Currency
       price: HighPrecMoney
     offeredPrice:
       offeredPrice: HighPrecMoney
+    finalPrice:
+      finalPrice: Maybe HighPrecMoney
+  beamType:
+    category: Maybe FRFSQuoteCategoryType
+  default:
+    ticketCategoryMetadataConfigId:  "'Unknown'"
 
   fromTType:
-    ticketCategoryMetadataConfig: 'Storage.Queries.FRFSTicketCategoryMetadataConfig.findById (Kernel.Types.Id.Id ticketCategoryMetadataConfigId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("Ticket category metadata config not found for quote category: " <> show id)) |EM'
     price: Kernel.Types.Common.mkPrice currency price|E
     offeredPrice: Kernel.Types.Common.mkPrice currency offeredPrice|E
+    finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
+    categoryMeta: Storage.Queries.Transformers.FRFSQuoteCategory.mkQuoteCategoryMetadata code title description tnc|E
+    category: Kernel.Prelude.fromMaybe Domain.Types.FRFSQuoteCategoryType.ADULT category|E
 
   toTType:
-    ticketCategoryMetadataConfigId: (Kernel.Types.Id.getId $ (.id) ticketCategoryMetadataConfig)|E
     price: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
     offeredPrice: (.amount)|I
+    finalPrice: (Kernel.Prelude.fmap (.amount))|I
+    code: (categoryMeta <&> (.code))|E
+    title: (categoryMeta <&> (.title))|E
+    description: (categoryMeta <&> (.description))|E
+    tnc: (categoryMeta <&> (.tnc))|E
+    category: Kernel.Prelude.Just|I
+
+  types:
+    QuoteCategoryMetadata:
+      code: Text
+      title: Text
+      description: Text
+      tnc: Text
 
   queries:
     findById:
@@ -252,43 +283,10 @@ FRFSQuoteCategory:
       kvFunction: updateWithKV
       params: [selectedQuantity, updatedAt]
       where: id
-
-FRFSQuoteBreakup:
-  tableName: frfs_quote_breakup
-  fields:
-    id: Id FRFSQuoteBreakup
-    quoteId: Id FRFSQuote
-    quoteCategoryId: Id FRFSQuoteCategory
-    tag: FRFSCategoryTag
-    value: Text
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-  constraints:
-    id: PrimaryKey
-    quoteId: "!SecondaryKey"
-    quoteCategoryId: "!SecondaryKey"
-
-
-
-FRFSTicketBookingBreakup:
-  tableName: frfs_ticket_booking_breakup
-  fields:
-    id: Id FRFSTicketBookingBreakup
-    ticketBookingId: Id FRFSTicketBooking
-    quoteCategoryId: Id FRFSQuoteCategory
-    tag: FRFSCategoryTag
-    value: Text
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-  constraints:
-    id: PrimaryKey
-    quoteId: SecondaryKey
-    quoteCategoryId: SecondaryKey
-  queries:
-    findByTicketBookingIdAndQuoteCategoryId:
-      kvFunction: findOneWithKV
-      where:
-        and: [ticketBookingId, quoteCategoryId]
+    updateFinalPriceByQuoteCategoryId:
+      kvFunction: updateWithKV
+      params: [finalPrice, updatedAt]
+      where: id
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
@@ -302,22 +300,21 @@ FRFSTicketBooking:
     riderId: Id Person
     stationsJson: Text
     routeStationsJson: Maybe Text
-    discountsJson: Maybe Text
     bppItemId: Text
     _type: FRFSQuoteType
     fromStationCode: Text
     toStationCode: Text
-    quantity: Int
-    childTicketQuantity: Maybe Int
+    quantity: Maybe Int # TODO :: To be deprecated with FRFSQuoteCategory
+    childTicketQuantity: Maybe Int # TODO :: To be deprecated with FRFSQuoteCategory
     vehicleType: VehicleCategory
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
     providerName: Text
     providerDescription: Maybe Text
-    price: Price
-    estimatedPrice: Price
-    finalPrice: Maybe Price
+    totalPrice: Price # This is the total price multiplied for all the selected quantities of Quote Categories
+    estimatedPrice: Maybe Price # TODO :: To be deprecated with FRFSQuoteCategory
+    finalPrice: Maybe Price # TODO :: To be deprecated with FRFSQuoteCategory
     validTill: UTCTime
     paymentTxnId: Maybe Text
     bppBankAccountNumber: Maybe Text
@@ -351,17 +348,19 @@ FRFSTicketBooking:
 
   default:
     customerCancelled: "false"
+    quantity: "0"
+    estimatedPrice: "0"
 
   beamFields:
     fromStationCode:
       fromStationId: Text
     toStationCode:
       toStationId: Text
-    price:
+    totalPrice:
       currency: Maybe Currency
       price: HighPrecMoney
     estimatedPrice:
-      estimatedPrice: HighPrecMoney
+      estimatedPrice: Maybe HighPrecMoney
     finalPrice:
       finalPrice: Maybe HighPrecMoney
 
@@ -370,14 +369,14 @@ FRFSTicketBooking:
       enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
 
   fromTType:
-    price: Kernel.Types.Common.mkPrice currency price|E
-    estimatedPrice: Kernel.Types.Common.mkPrice currency estimatedPrice|E
+    totalPrice: Kernel.Types.Common.mkPrice currency price|E
+    estimatedPrice: Kernel.Types.Common.mkPrice currency <$> estimatedPrice|E
     finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
 
   toTType:
-    price: (.amount)|I
-    estimatedPrice: (.amount)|I
+    estimatedPrice: Kernel.Prelude.fmap (.amount)|I
     finalPrice: Kernel.Prelude.fmap (.amount)|I
+    price: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
 
   constraints:
@@ -427,9 +426,9 @@ FRFSTicketBooking:
       kvFunction: updateWithKV
       params: [finalPrice, updatedAt]
       where: id
-    updatePriceAndQuantityById:
+    updateTotalPriceAndQuantityById:
       kvFunction: updateWithKV
-      params: [price, quantity, childTicketQuantity, updatedAt]
+      params: [totalPrice, quantity, childTicketQuantity, isFareChanged, updatedAt]
       where: id
     updateBppBankDetailsById:
       kvFunction: updateWithKV
@@ -560,6 +559,7 @@ FRFSTicketBookingPayment:
   fields:
     id: Id FRFSTicketBookingPayment
     frfsTicketBookingId: Id FRFSTicketBooking
+    frfsQuoteId: Maybe (Id FRFSQuote)
     paymentOrderId: Id PaymentOrder
     status: FRFSTicketBookingPaymentStatus
 
@@ -606,11 +606,11 @@ FRFSRecon:
     date: Text # on_confirm date
     time: Text # on_confirm time
     mobileNumber: Maybe Text # customer number
-    sourceStationCode: Text # source station code
-    destinationStationCode: Text # destination station code
-    ticketQty: Int # ticket quantity
-    ticketNumber: Text
-    transactionRefNumber: Text # transactionId
+    sourceStationCode: Maybe Text # source station code
+    destinationStationCode: Maybe Text # destination station code
+    ticketQty: Maybe Int # ticket quantity
+    ticketNumber: Maybe Text
+    transactionRefNumber: Maybe Text # transactionId
     transactionUUID: Maybe Text # transaction uuid
     txnId: Maybe Text # transaction uuid
     fare: Price # per ticket price
@@ -627,6 +627,31 @@ FRFSRecon:
     ticketStatus: Maybe FRFSTicketStatus
     providerId: Text
     providerName: Text
+    entityType: Maybe EntityType
+    reconStatus: Maybe ReconStatus
+    paymentGateway: Maybe Text
+
+  default:
+    destinationStationCode: "'NA'" # Default For DSL
+    sourceStationCode: "'NA'" # Default For DSL
+    ticketQty: '0' # Default For DSL
+    ticketNumber: "'NA'" # Default For DSL
+    transactionRefNumber: "'NA'" # Default For DSL
+
+  types:
+    EntityType:
+      enum: "BUS_PASS,FRFS_TICKET_BOOKING"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+    ReconStatus:
+      enum: "PENDING,SETTLED,PARTIALLY_SETTLED,REFUNDED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <EntityType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <EntityType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ReconStatus>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <ReconStatus>
 
   queries:
     updateTOrderValueAndSettlementAmountById:
@@ -919,17 +944,13 @@ FRFSTicketCategoryMetadataConfig:
     title: Text
     description: Text
     tnc: Text
-    category: FRFSQuoteCategoryType
+    category: FRFSQuoteCategoryType|NoRelation
     merchantId: Id Merchant
     domainCategoryValue: OfferedValue
     merchantOperatingCityId: Id MerchantOperatingCity
     vehicleCategory: VehicleCategory
   constraints:
     id: PrimaryKey
-
-  types:
-    FRFSQuoteCategoryType:
-      enum: "ADULT, CHILD, SENIOR_CITIZEN, STUDENT, FEMALE, MALE"
 
   queries:
     findById:

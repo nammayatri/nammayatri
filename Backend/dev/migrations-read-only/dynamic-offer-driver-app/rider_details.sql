@@ -58,3 +58,11 @@ ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN total_bookings integ
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN completed_rides integer ;
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancelled_rides integer ;
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancellation_due_rides integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN waived_off_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN no_of_times_waive_off_used integer ;
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN no_of_times_canellation_dues_paid integer ;
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancellation_dues_paid double precision ;

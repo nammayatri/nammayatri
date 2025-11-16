@@ -40,7 +40,6 @@ updateByPrimaryKey (Domain.Types.BapMetadata.BapMetadata {..}) = do
     [ Se.Set Beam.domain domain,
       Se.Set Beam.logoUrl (Kernel.Prelude.fmap showBaseUrl logoUrl),
       Se.Set Beam.name name,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

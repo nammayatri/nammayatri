@@ -54,6 +54,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (getCurrentTime)
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
@@ -301,11 +302,41 @@ notifyOnRideAssigned booking ride = do
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+
+  -- Check if vehicle number matches any special vehicle notification config
+  let matchedSpecialVehicleConfig = case riderConfig.specialVehicleNotificationConfigs of
+        Just configs -> L.find (\config -> config.vehicleNo == ride.vehicleNumber) configs
+        Nothing -> Nothing
+
   let entity = Notification.Entity Notification.Product rideId.getId (RideAssignedParam driverName booking.startTime booking.id booking.isScheduled)
       dynamicParams = RideAssignedParam driverName booking.startTime booking.id booking.isScheduled
   allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
+
   forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
     tag <- getDisabilityTag person.hasDisability person'.id
+
+    -- If vehicle number matches, send custom notification first
+    whenJust matchedSpecialVehicleConfig $ \specialConfig -> do
+      notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_ASSIGNMENT person'.merchantOperatingCityId
+      notificationSound <- getNotificationSound tag notificationSoundFromConfig
+      let customNotificationData =
+            Notification.NotificationReq
+              { category = Notification.DRIVER_ASSIGNMENT,
+                subCategory = Nothing,
+                showNotification = Notification.SHOW,
+                messagePriority = Nothing,
+                entity = entity,
+                body = specialConfig.notificationMessage,
+                title = specialConfig.notificationTitle,
+                auth = Notification.Auth person'.id.getId person'.deviceToken person'.notificationToken,
+                sound = notificationSound,
+                ttl = Nothing,
+                dynamicParams = dynamicParams
+              }
+      notifyPerson person'.merchantId person'.merchantOperatingCityId person'.id customNotificationData Nothing
+
+    -- Always send the normal DRIVER_ASSIGNMENT notification
     dynamicNotifyPerson
       person'
       (createNotificationReq "DRIVER_ASSIGNMENT" (\r -> r {soundTag = tag}))
@@ -1536,6 +1567,37 @@ notifyAboutScheduledRide booking title body = do
             sound = notificationSound
           }
   notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
+
+notifyRefundNotification :: (ServiceFlow m r) => Notification.Category -> Id DOrder.PaymentOrder -> Id Person -> DOrder.PaymentServiceType -> m ()
+notifyRefundNotification notifCategory paymentOrderId personId paymentServiceType = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  notificationSoundFromConfig <- SQNSC.findByNotificationType notifCategory person.merchantOperatingCityId
+  mbMerchantPN <- CPN.findMatchingMerchantPN person.merchantOperatingCityId (mkRefundNotificationKey) Nothing Nothing person.language Nothing
+  whenJust mbMerchantPN \merchantPN -> do
+    when (merchantPN.shouldTrigger) $ do
+      let notificationSound = maybe (Just "default") NSC.defaultSound notificationSoundFromConfig
+          templateParams = [] :: [(Text, Text)]
+          title = buildTemplate templateParams merchantPN.title
+          body = buildTemplate templateParams merchantPN.body
+          notificationData =
+            Notification.NotificationReq
+              { category = notifCategory,
+                subCategory = Nothing,
+                showNotification = Notification.SHOW,
+                messagePriority = Nothing,
+                entity = Notification.Entity Notification.Product paymentOrderId.getId (),
+                body,
+                title,
+                dynamicParams = EmptyDynamicParam,
+                auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+                ttl = Nothing,
+                sound = notificationSound
+              }
+      notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
+  where
+    mkRefundNotificationKey :: Text
+    mkRefundNotificationKey =
+      T.pack (show paymentServiceType) <> "_" <> T.pack (show notifCategory)
 
 getAllOtherRelatedPartyPersons :: ServiceFlow m r => SRB.Booking -> m [Person]
 getAllOtherRelatedPartyPersons booking = do

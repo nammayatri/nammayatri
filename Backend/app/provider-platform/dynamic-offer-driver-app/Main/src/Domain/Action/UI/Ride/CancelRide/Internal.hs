@@ -19,20 +19,9 @@ module Domain.Action.UI.Ride.CancelRide.Internal
     getCancellationCharges,
     customerCancellationChargesCalculation,
     getDistanceToPickup,
+    buildPenaltyCheckContext,
   )
 where
-
--- import qualified Domain.Types.CancellationFarePolicy as DTC
-
--- import Kernel.External.Maps.Types
-
--- import qualified SharedLogic.FareCalculator as FareCalculator
--- import SharedLogic.FarePolicy as SFP
-
--- import qualified SharedLogic.External.LocationTrackingService.Flow as LF
--- import qualified SharedLogic.External.LocationTrackingService.Types as LT
-
--- import qualified Lib.Yudhishthira.Types as LYT
 
 import Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
@@ -47,10 +36,12 @@ import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RiderDetails
+import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Yudhishthira as TY
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
 import Kernel.Prelude hiding (any, elem, map)
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -67,17 +58,19 @@ import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.Cancel
+import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
-import SharedLogic.Ride (updateOnRideStatusWithAdvancedRideCheck)
+import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
+import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as CCT
-import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -107,6 +100,7 @@ cancelRideImpl ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
+    HasKafkaProducer r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "maxShards" r Int,
@@ -120,6 +114,7 @@ cancelRideImpl ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     TranslateFlow m r,
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
@@ -131,7 +126,9 @@ cancelRideImpl ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal]
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->
@@ -152,11 +149,11 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             merchant <-
               CQM.findById merchantId
                 >>= fromMaybeM (MerchantNotFound merchantId.getId)
-            transporterConfig <- CTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-            noShowCharges <- try @_ @SomeException $ do
+            transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+            noShowCharges <- withTryCatch "noShowCharges:cancelRideImpl" $ do
               if transporterConfig.canAddCancellationFee
                 then do
-                  rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason
+                  rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
                   if validCustomerCancellation `elem` rideTags
                     then getCancellationCharges booking ride
                     else return Nothing
@@ -170,7 +167,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
             vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
             unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")
-            cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy userNoShowCharges
+            cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy userNoShowCharges transporterConfig merchant
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
 
             fork "DriverRideCancelledCoin Event : " $ do
@@ -183,15 +180,17 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 DC.driverCoinsEvent ride.driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByDriver (fromMaybe (DTCR.CancellationReasonCode "OTHER") bookingCReason.reasonCode)) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
 
             fork "cancelRide - Notify driver" $ do
-              rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason
+              rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
               triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
               triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
-              when (bookingCReason.source == SBCR.ByDriver) $
+              when (bookingCReason.source == SBCR.ByDriver) $ do
                 DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {rideTags, merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
+                DCP.accumulateCancellationPenalty booking ride rideTags transporterConfig
               Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
             fork "cancelRide/ReAllocate - Notify BAP" $ do
               isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
               unless isReallocated $ BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source userNoShowCharges
+            computeEligibleUpgradeTiers ride transporterConfig
         )
         ( do
             logDebug $ "CancelRideTransaction:RID:-" <> rideId.getId <> " Unlocked"
@@ -227,9 +226,12 @@ cancelRideTransaction ::
   Id DMerc.Merchant ->
   DRide.RideEndedBy ->
   Maybe PriceAPIEntity ->
+  DTC.TransporterConfig ->
+  DMerc.Merchant ->
   m ()
-cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancellationFee = do
+cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancellationFee transporterConfig merchant = do
   let driverId = cast ride.driverId
+  when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && isJust transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ releaseLien booking ride
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
   updateOnRideStatusWithAdvancedRideCheck driverId (Just ride)
   when booking.isScheduled $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing driverId
@@ -250,13 +252,17 @@ cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancell
 updateNammaTagsForCancelledRide ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   SRB.Booking ->
   DRide.Ride ->
   SBCR.BookingCancellationReason ->
+  DTC.TransporterConfig ->
   m [LYT.TagNameValue]
-updateNammaTagsForCancelledRide booking ride bookingCReason = do
+updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = do
   now <- getCurrentTime
   mbCallStatus <- QCallStatus.findOneByEntityId (Just ride.id.getId)
   let callAtemptByDriver = isJust mbCallStatus
@@ -270,15 +276,17 @@ updateNammaTagsForCancelledRide booking ride bookingCReason = do
             cancellationReason = bookingCReason,
             ..
           }
-  nammaTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)
+  nammaTags <- withTryCatch "computeNammaTags:RideCancel" (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)
   logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags) <> "| tagdata: " <> show tagData
   let allTags = ride.rideTags <> eitherToMaybe nammaTags
   QRide.updateRideTags allTags ride.id
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let tags = fromMaybe [] allTags
   when (validDriverCancellation `elem` tags) $ do
+    when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsCancelCount transporterConfig ride.driverId
     QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
   when (validCustomerCancellation `elem` tags) $ do
+    when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateFleetOwnerAnalyticsCustomerCancelCount ride.driverId transporterConfig
     QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId
   return $ fromMaybe [] allTags
 
@@ -324,7 +332,7 @@ getDistanceToPickup booking mbRide = do
   case mbRide of
     Just ride -> do
       mbLocation <- do
-        driverLocations <- try @_ @SomeException $ LF.driversLocation [ride.driverId]
+        driverLocations <- withTryCatch "driversLocation:getDistanceToPickup" $ LF.driversLocation [ride.driverId]
         case driverLocations of
           Left err -> do
             logError ("Failed to fetch Driver Location with error : " <> show err)
@@ -398,7 +406,7 @@ customerCancellationChargesCalculation booking ride riderDetails = do
     then do
       localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
       (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES localTime Nothing Nothing
-      response <- try @_ @SomeException $ LYTU.runLogics allLogics logicInput
+      response <- withTryCatch "runLogics:UserCancellationDues" $ LYTU.runLogics allLogics logicInput
       case response of
         Left e -> do
           logError $ "Error in running UserCancellationDuesLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics
@@ -439,3 +447,49 @@ getCancellationCharges booking ride = do
               return $ Just $ PriceAPIEntity {amount = charges, currency = booking.currency}
             Nothing -> return Nothing
         else return Nothing
+
+buildPenaltyCheckContext ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    HasShortDurationRetryCfg r c,
+    EncFlow m r,
+    LT.HasLocationService m r,
+    HasKafkaProducer r
+  ) =>
+  SRB.Booking ->
+  DRide.Ride ->
+  LatLong ->
+  m TY.PenaltyCheckTagData
+buildPenaltyCheckContext booking ride point = do
+  now <- getCurrentTime
+  numberOfCallAttempts <- QCallStatus.countCallsByEntityId ride.id
+
+  driverDistanceFromPickupNow <- do
+    distRes <- withTryCatch "driverDistanceToPickup:buildPenaltyCheckContext" $ driverDistanceToPickup booking (getCoordinates point) (getCoordinates booking.fromLocation)
+    either
+      ( \err -> do
+          logError ("PenaltyCheckError: Failed to calculate Driver Distance to Pickup with error : " <> show err)
+          return Nothing
+      )
+      (\d -> return $ Just d)
+      distRes
+
+  let driverDistanceFromPickupAtAcceptance = booking.distanceToPickup
+
+  let currentTime = floor $ utcTimeToPOSIXSeconds now
+      rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
+      driverArrivedAtPickup = isJust ride.driverArrivalTime
+
+  return $
+    TY.PenaltyCheckTagData
+      { ride = ride,
+        booking = booking,
+        currentTime,
+        rideCreatedTime,
+        driverArrivedAtPickup,
+        driverDistanceFromPickupNow,
+        driverDistanceFromPickupAtAcceptance,
+        numberOfCallAttempts
+      }

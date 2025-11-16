@@ -45,6 +45,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Booking
 import SharedLogic.Cancel
 import qualified SharedLogic.RiderDetails as SRD
+import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -131,13 +132,13 @@ handler merchantId req validatedReq = do
   (booking, driverName, driverId) <-
     case validatedReq.quote of
       ValidatedEstimate driverQuote searchTry -> do
-        booking <- buildBooking searchRequest driverQuote driverQuote.id.getId driverQuote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide
+        booking <- buildBooking searchRequest driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails searchRequest.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
         QST.updateStatus DST.COMPLETED (searchTry.id)
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
-        booking <- buildBooking searchRequest quote quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing
+        booking <- buildBooking searchRequest quote SLT.PERSONAL quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing req.initReqDetails searchRequest.configInExperimentVersions Nothing -------------TO DO --------RITIKA
         QRB.createBooking booking
         when booking.isScheduled $ void $ addScheduledBookingInRedis booking
         return (booking, Nothing, Nothing)
@@ -166,6 +167,7 @@ handler merchantId req validatedReq = do
       ) =>
       DSR.SearchRequest ->
       q ->
+      SLT.BillingCategory ->
       Text ->
       TripCategory ->
       UTCTime ->
@@ -176,7 +178,7 @@ handler merchantId req validatedReq = do
       [LYT.ConfigVersionMap] ->
       Maybe Int ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote quoteId tripCategory now mbPaymentMethodId paymentUrl distanceToPickup initReqDetails configInExperimentVersions coinsRewardedOnGoldTierRide = do
+    buildBooking searchRequest driverQuote billingCategory quoteId tripCategory now mbPaymentMethodId paymentUrl distanceToPickup initReqDetails configInExperimentVersions coinsRewardedOnGoldTierRide = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
@@ -218,6 +220,7 @@ handler merchantId req validatedReq = do
             currency = driverQuote.currency,
             distanceUnit = searchRequest.distanceUnit,
             riderName = Nothing,
+            billingCategory = billingCategory,
             estimatedDuration = searchRequest.estimatedDuration,
             fareParams = driverQuote.fareParams,
             specialLocationTag = driverQuote.specialLocationTag,
@@ -333,7 +336,7 @@ validateRequest merchantId req = do
       return $ ValidatedInitReq {searchRequest, quote = ValidatedQuote quote}
   where
     callWithErrorHandling transactionId action = do
-      exep <- try @_ @SomeException action
+      exep <- withTryCatch "init:validateRequest:callWithErrorHandling" action
       case exep of
         Left e -> do
           Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)

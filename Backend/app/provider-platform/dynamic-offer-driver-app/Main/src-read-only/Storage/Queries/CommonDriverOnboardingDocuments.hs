@@ -27,12 +27,12 @@ createMany = traverse_ create
 
 findByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m ([Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments])
 findByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId <$> driverId)]
 
 findByDriverIdAndDocumentType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Domain.Types.DocumentVerificationConfig.DocumentType -> m ([Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments])
 findByDriverIdAndDocumentType driverId documentType = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId <$> driverId), Se.Is Beam.documentType $ Se.Eq documentType]]
 
 findById ::
@@ -76,7 +76,6 @@ updateByPrimaryKey (Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnb
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.rejectReason rejectReason,
       Se.Set Beam.verificationStatus verificationStatus,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

@@ -34,7 +34,6 @@ updateByPrimaryKey (Domain.Types.BBPSConfig.BBPSConfig {..}) = do
     [ Se.Set Beam.bbpsAgentId bbpsAgentId,
       Se.Set Beam.bbpsServerUrl bbpsServerUrl,
       Se.Set Beam.bbpsSignatureKey (bbpsSignatureKey & unEncrypted),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)]]

@@ -39,7 +39,6 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess
-import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -103,7 +102,7 @@ sendIssue (personId, merchantId) request = do
   phoneNumber <- mapM decrypt person.mobileNumber
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   ticketRequest <- mkTicket newIssue person phoneNumber merchant.kaptureDisposition riderConfig.kaptureQueue riderConfig.kaptureConfig.deleteAccountCategory
-  ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId ticketRequest)
+  ticketResponse <- withTryCatch "createTicket:sendIssue" (createTicket person.merchantId person.merchantOperatingCityId ticketRequest)
   case ticketResponse of
     Right ticketResponse' -> do
       Queries.updateTicketId newIssue.id ticketResponse'.ticketId

@@ -9,6 +9,7 @@ import qualified Data.Map as Map
 import Domain.Types.Common
 import Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverPoolConfig
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
@@ -57,15 +58,16 @@ getNextDriverPoolBatch ::
   DSR.SearchRequest ->
   DST.SearchTry ->
   [TripQuoteDetail] ->
+  Maybe DMPM.PaymentMethodInfo ->
   GoHomeConfig ->
   m DriverPoolWithActualDistResultWithFlags
-getNextDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails goHomeConfig = withLogTag "getNextDriverPoolBatch" do
+getNextDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails paymentMethodInfo goHomeConfig = withLogTag "getNextDriverPoolBatch" do
   logDebug $ "Doing Special Driver Pooling for seachReq:- " <> show searchReq
   batchNum <- SDP.getPoolBatchNum searchTry.id
   SDP.incrementBatchNum searchTry.id
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId searchReq.configInExperimentVersions
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
-  withTimeAPI "driverPooling" "prepareDriverPoolBatch" $ prepareDriverPoolBatch cityServiceTiers merchant driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig
+  withTimeAPI "driverPooling" "prepareDriverPoolBatch" $ prepareDriverPoolBatch cityServiceTiers merchant driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig paymentMethodInfo
 
 assignTagsToDrivers :: [Id Driver] -> DriverPoolTags -> Bool -> [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
 assignTagsToDrivers driverIds driverTag checkNeeded =
@@ -104,8 +106,9 @@ prepareDriverPoolBatch ::
   [TripQuoteDetail] ->
   PoolBatchNum ->
   GoHomeConfig ->
+  Maybe DMPM.PaymentMethodInfo ->
   m DriverPoolWithActualDistResultWithFlags
-prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchTry tripQuoteDetails startingbatchNum goHomeConfig = withLogTag ("startingbatchNum- (" <> show startingbatchNum <> ")" <> " for txnId:- " <> show searchReq.transactionId) $ do
+prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchTry tripQuoteDetails startingbatchNum goHomeConfig paymentMethodInfo = withLogTag ("startingbatchNum- (" <> show startingbatchNum <> ")" <> " for txnId:- " <> show searchReq.transactionId) $ do
   isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
   previousBatchesDrivers <- getPreviousBatchesDrivers Nothing
   previousBatchesDriversOnRide <- getPreviousBatchesDrivers (Just True)
@@ -154,7 +157,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
         case batchNum of
           -1 -> do
             gateTaggedDrivers <- assignDriverGateTags searchReq newFilteredDriversWithFavourites
-            goHomeTaggedDrivers <- assignDriverGoHomeTags gateTaggedDrivers searchReq searchTry tripQuoteDetails driverPoolCfg merchant goHomeConfig merchantOpCityId isValueAddNP transporterConfig
+            goHomeTaggedDrivers <- assignDriverGoHomeTags gateTaggedDrivers searchReq searchTry tripQuoteDetails driverPoolCfg merchant goHomeConfig merchantOpCityId isValueAddNP transporterConfig paymentMethodInfo
             logDebug $ "GoHomeDriverPool and GateTaggedPool-" <> show goHomeTaggedDrivers
             withTimeAPI "driverPooling" "calculateNormalBatchGoHome" $ calculateNormalBatch merchantOpCityId transporterConfig onlyNonBlockedDrivers radiusStep blockListedDrivers (bookAnyFilters transporterConfig goHomeTaggedDrivers previousBatchesDrivers) txnId
           _ -> do
@@ -209,7 +212,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     isInterCity = isInterCityTrip searchTry.tripCategory,
                     onlinePayment = merchant.onlinePayment,
                     rideFare = Just searchTry.baseFare, -- TODO: add walletBalance check
-                    enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
+                    paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
+                    prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
                     ..
                   }
           calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum
@@ -337,7 +341,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         isInterCity = isInterCityTrip searchTry.tripCategory,
                         onlinePayment = merchant.onlinePayment,
                         rideFare = Just searchTry.baseFare,
-                        enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
+                        prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
+                        paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                         ..
                       }
               calculateDriverCurrentlyOnRideWithActualDist driverPoolReq poolType (toInteger batchNum') currentSearchInfo
@@ -464,8 +469,9 @@ assignDriverGoHomeTags ::
   Id MerchantOperatingCity ->
   Bool ->
   DTC.TransporterConfig ->
+  Maybe DMPM.PaymentMethodInfo ->
   m [DriverPoolWithActualDistResult]
-assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg merchant goHomeConfig merchantOpCityId isValueAddNP transporterConfig = do
+assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg merchant goHomeConfig merchantOpCityId isValueAddNP transporterConfig paymentMethodInfo = do
   (goHomeDriversInQueue, goHomeDriversNotToDestination) <-
     case searchReq.toLocation of
       Just toLoc | isGoHomeAvailable searchTry.tripCategory -> do
@@ -486,7 +492,8 @@ assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg m
                   onlinePayment = merchant.onlinePayment,
                   configsInExperimentVersions = searchReq.configInExperimentVersions,
                   rideFare = Just searchTry.baseFare,
-                  enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
+                  paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
+                  prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
                   ..
                 }
         filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False True) pool) goHomeReq merchantOpCityId

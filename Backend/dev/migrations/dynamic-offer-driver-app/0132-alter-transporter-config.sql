@@ -10,7 +10,6 @@ SET
     enable_existing_vehicle_in_bulk_upload = true,
     require_route_mapping_in_vehicle = false,
     deactivate_rc_on_unlink = false,
-    allow_cache_driver_flow_status = true,
     disable_driver_when_unlinking_vehicle = false,
     allow_duplicate_pan = false,
     allow_duplicate_gst = false,

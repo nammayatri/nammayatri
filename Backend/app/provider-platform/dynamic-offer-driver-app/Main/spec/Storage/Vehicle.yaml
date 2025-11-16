@@ -6,7 +6,8 @@ imports:
   ServiceTierType: Domain.Types.Common
   VehicleCategory: Domain.Types.VehicleCategory
   VehicleVariant: Domain.Types.VehicleVariant
-
+  UpgradedTier: Domain.Types.UpgradedTier
+  Value: Data.Aeson
 Vehicle:
   tableName: vehicle
 
@@ -50,14 +51,22 @@ Vehicle:
     vehicleRating: Maybe Double
     selectedServiceTiers: "[ServiceTierType]"
     vehicleTags: Maybe [Text]
+    ruleBasedUpgradeTiers: Maybe [UpgradedTier]
 
+  beamType:
+    ruleBasedUpgradeTiers: Maybe Value
   fromTType:
     category: Domain.Types.VehicleVariant.getVehicleCategory category variant |E
+    ruleBasedUpgradeTiers: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< ruleBasedUpgradeTiers|E
+  toTType:
+    ruleBasedUpgradeTiers: Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers|E
   default:
     selectedServiceTiers: "'{}'"
 
   sqlType:
     selectedServiceTiers: text[]
+    ruleBasedUpgradeTiers: "json"
 
   constraints:
     driverId: PrimaryKey
@@ -108,4 +117,8 @@ Vehicle:
       where: driverId
     deleteByDriverid:
       kvFunction: deleteWithKV
+      where: driverId
+    updateRuleBasedUpgradeTiers:
+      kvFunction: updateOneWithKV
+      params: [ruleBasedUpgradeTiers]
       where: driverId

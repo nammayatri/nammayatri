@@ -77,7 +77,6 @@ updateByPrimaryKey (Domain.Types.LmsVideoTranslation.LmsVideoTranslation {..}) =
       Se.Set Beam.useMerchantOperatingCityDefaultLanguageVideoUrl useMerchantOperatingCityDefaultLanguageVideoUrl,
       Se.Set Beam.viewCount viewCount,
       Se.Set Beam.ytVideoId ytVideoId,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.language $ Se.Eq language, Se.Is Beam.videoId $ Se.Eq (Kernel.Types.Id.getId videoId)]]

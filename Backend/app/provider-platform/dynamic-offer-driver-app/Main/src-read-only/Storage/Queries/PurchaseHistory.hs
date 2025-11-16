@@ -30,7 +30,6 @@ updateByPrimaryKey (Domain.Types.PurchaseHistory.PurchaseHistory {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.cash cash,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.driverId driverId,
       Se.Set Beam.merchantId merchantId,

@@ -19,6 +19,7 @@ imports:
   Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   PaymentMethodId: Kernel.External.Payment.Interface.Types
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   EncryptedHashedField: Kernel.External.Encryption
   DeliveryInitiation: BecknV2.OnDemand.Enums
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
@@ -31,6 +32,7 @@ imports:
   Value: Data.Aeson
   RecentLocation: Domain.Types.RecentLocation
   VehicleCategory: BecknV2.OnDemand.Enums
+  BusLocation: API.Types.UI.RiderLocation
 
 SearchRequest:
   tableName: search_request
@@ -65,6 +67,7 @@ SearchRequest:
     autoAssignEnabled: Maybe Bool
     autoAssignEnabledV2: Maybe Bool
     selectedPaymentMethodId: Maybe PaymentMethodId
+    selectedPaymentInstrument: Maybe PaymentInstrument
     riderPreferredOption: RiderPreferredOption
     createdAt: UTCTime
     clientBundleVersion: Maybe Version
@@ -93,6 +96,8 @@ SearchRequest:
     searchMode: Maybe SearchMode
     isMultimodalSearch: Maybe Bool
     multimodalSearchRequestId: Maybe Text
+    busLocationData: "[BusLocation]"
+
 
   default:
     hasMultimodalSearch: "false"
@@ -118,6 +123,7 @@ SearchRequest:
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
     configInExperimentVersions: Maybe Value
+    busLocationData: Maybe Value
 
   sqlType:
     toLocationId : character varying(36)
@@ -128,6 +134,7 @@ SearchRequest:
     currency: character varying(255)
     fromLocationId: character varying(36)
     configInExperimentVersions: "json"
+    busLocationData: "json"
 
   beamFields:
     distance:
@@ -184,6 +191,7 @@ SearchRequest:
     driverIdentifierType: driverIdentifier <&> (._type)|E
     driverIdentifierValue: driverIdentifier <&> (.value)|E
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
+    busLocationData: Just $ toJSON busLocationData|E
 
   fromTType:
     merchantOperatingCityId: Storage.Queries.Transformers.SearchRequest.backfillMOCId merchantId merchantOperatingCityId|EM
@@ -202,6 +210,7 @@ SearchRequest:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
     driverIdentifier: Domain.Types.RefereeLink.mkDriverIdentifier
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
+    busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
 
   excludedFields: [updatedAt]
 

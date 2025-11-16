@@ -17,6 +17,7 @@ data RiderDetailsT f = RiderDetailsT
   { bapId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cancellationDueRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationDues :: B.C f Kernel.Types.Common.HighPrecMoney,
+    cancellationDuesPaid :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cancelledRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     completedRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
@@ -34,6 +35,8 @@ data RiderDetailsT f = RiderDetailsT
     mobileNumberEncrypted :: B.C f Kernel.Prelude.Text,
     mobileNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     nightSafetyChecks :: B.C f Kernel.Prelude.Bool,
+    noOfTimesCanellationDuesPaid :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    noOfTimesWaiveOffUsed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     otpCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payoutFlagReason :: B.C f (Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -41,7 +44,8 @@ data RiderDetailsT f = RiderDetailsT
     referredByDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     totalBookings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    validCancellations :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
+    validCancellations :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    waivedOffAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 

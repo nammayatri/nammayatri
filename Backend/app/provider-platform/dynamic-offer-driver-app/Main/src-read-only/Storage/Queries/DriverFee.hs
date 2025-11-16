@@ -92,14 +92,15 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DriverFee.DriverFee {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.amountPaidByCoin amountPaidByCoin,
+    [ Se.Set Beam.addedToFeeId (Kernel.Types.Id.getId <$> addedToFeeId),
+      Se.Set Beam.amountPaidByCoin amountPaidByCoin,
       Se.Set Beam.autopayPaymentStage autopayPaymentStage,
       Se.Set Beam.badDebtDeclarationDate badDebtDeclarationDate,
       Se.Set Beam.badDebtRecoveryDate badDebtRecoveryDate,
       Se.Set Beam.billNumber billNumber,
+      Se.Set Beam.cancellationPenaltyAmount cancellationPenaltyAmount,
       Se.Set Beam.collectedAt collectedAt,
       Se.Set Beam.collectedBy collectedBy,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.endTime endTime,

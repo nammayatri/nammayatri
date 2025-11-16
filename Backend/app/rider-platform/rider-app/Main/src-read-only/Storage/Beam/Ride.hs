@@ -18,6 +18,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Confidence
 import qualified Kernel.Types.Time
 import qualified Kernel.Types.Version
+import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
 
 data RideT f = RideT
@@ -25,8 +26,10 @@ data RideT f = RideT
     allowedEditPickupLocationAttempts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),
     bookingId :: B.C f Kernel.Prelude.Text,
     bppRideId :: B.C f Kernel.Prelude.Text,
+    cancellationChargesOnCancel :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cancellationFeeIfCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     chargeableDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     chargeableDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),

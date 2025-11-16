@@ -39,6 +39,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Person as QPerson
@@ -138,6 +139,7 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           tollChargesWithCurrency = Nothing,
           tollNames = Nothing,
           disabilityTag = Nothing,
+          billingCategory = SLT.PERSONAL,
           goHomeRequestId = Nothing,
           isTranslated = False,
           -- customerCancellationDues = 0,
@@ -163,6 +165,7 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           isSafetyPlus = False,
           safetyPlusCharges = Nothing,
           coinsRewardedOnGoldTierRide = Nothing,
+          cancellationCharges = Nothing,
           ..
         }
 

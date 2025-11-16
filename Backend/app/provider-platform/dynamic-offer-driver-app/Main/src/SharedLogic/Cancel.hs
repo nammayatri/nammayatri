@@ -50,9 +50,11 @@ import qualified SharedLogic.DriverPool.Types as SDT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import SharedLogic.MerchantPaymentMethod
 import SharedLogic.Ride (multipleRouteKey, searchRequestKey)
 import SharedLogic.SearchTry
 import qualified Storage.Cac.TransporterConfig as QTC
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -142,6 +144,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       DP.addDriverToSearchCancelledList searchReq.id ride.driverId
       let conditionalCharges = driverQuote.fareParams.conditionalCharges
       tripQuoteDetails <- createTripQuoteDetails searchReq searchTry driverQuote.estimateId conditionalCharges
+      merchantPaymentMethod <- maybe (return Nothing) QMPM.findById booking.paymentMethodId
+      let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -151,7 +155,9 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 customerExtraFee = searchTry.customerExtraFee,
                 messageId = booking.id.getId,
                 isRepeatSearch = True,
-                isAllocatorBatch = False
+                isAllocatorBatch = False,
+                billingCategory = searchTry.billingCategory,
+                paymentMethodInfo = paymentMethodInfo
               }
       handleDriverSearchBatch driverSearchBatchInput booking searchTry.estimateId False
 
@@ -166,6 +172,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       QQuote.create newQuote
       QRB.createBooking newBooking
       when newBooking.isScheduled $ void $ addScheduledBookingInRedis newBooking
+      merchantPaymentMethod <- maybe (return Nothing) QMPM.findById booking.paymentMethodId
+      let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -175,12 +183,14 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 customerExtraFee = searchTry.customerExtraFee,
                 messageId = booking.id.getId,
                 isRepeatSearch,
-                isAllocatorBatch = False
+                isAllocatorBatch = False,
+                billingCategory = searchTry.billingCategory,
+                paymentMethodInfo = paymentMethodInfo
               }
       handleDriverSearchBatch driverSearchBatchInput newBooking searchTry.estimateId True
 
     handleDriverSearchBatch driverSearchBatchInput newBooking estimateId isStatic = do
-      result <- try @_ @SomeException (initiateDriverSearchBatch driverSearchBatchInput)
+      result <- withTryCatch "initiateDriverSearchBatch:handleDriverSearchBatch" (initiateDriverSearchBatch driverSearchBatchInput)
       case result of
         Right _ ->
           if isValueAddNP

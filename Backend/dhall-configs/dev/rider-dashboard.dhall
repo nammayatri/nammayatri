@@ -110,6 +110,7 @@ in  { esqDBCfg
     , authTokenCacheExpiry = +600
     , registrationTokenExpiry = +365
     , registrationTokenInactivityTimeout = None Integer
+    , updateRestrictedBppRoles = [] : List Text
     , sendEmailRateLimitOptions
     , encTools
     , exotelToken = ""

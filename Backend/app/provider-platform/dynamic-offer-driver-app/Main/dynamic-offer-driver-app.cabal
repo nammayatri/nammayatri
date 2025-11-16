@@ -49,6 +49,7 @@ library
       API.Internal.BulkLocUpdate
       API.Internal.Cac
       API.Internal.CallCustomerFCM
+      API.Internal.CancellationDues
       API.Internal.CustomerCancellationDues
       API.Internal.DriverCoordinates
       API.Internal.DriverInactiveFCM
@@ -144,7 +145,9 @@ library
       Domain.Action.Dashboard.AppManagement.Driver
       Domain.Action.Dashboard.AppManagement.DriverSubscription
       Domain.Action.Dashboard.AppManagement.Overlay
+      Domain.Action.Dashboard.AppManagement.Penalty
       Domain.Action.Dashboard.AppManagement.Subscription
+      Domain.Action.Dashboard.AppManagement.SubscriptionTransaction
       Domain.Action.Dashboard.Common
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Exotel
@@ -189,6 +192,7 @@ library
       Domain.Action.Internal.BulkLocUpdate
       Domain.Action.Internal.Cac
       Domain.Action.Internal.CallCustomerFCM
+      Domain.Action.Internal.CancellationDues
       Domain.Action.Internal.CustomerCancellationDues
       Domain.Action.Internal.DriverCoordinates
       Domain.Action.Internal.DriverInactiveFCM
@@ -260,6 +264,7 @@ library
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
       Domain.Action.UI.Payout
+      Domain.Action.UI.Penalty
       Domain.Action.UI.Performance
       Domain.Action.UI.Person
       Domain.Action.UI.PickupInstructions
@@ -314,6 +319,7 @@ library
       Domain.Types.Extra.DriverPlan
       Domain.Types.Extra.Feedback
       Domain.Types.Extra.Location
+      Domain.Types.Extra.MerchantClientConfig
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
@@ -344,6 +350,7 @@ library
       Domain.Types.OnUpdate
       Domain.Types.Quote
       Domain.Types.RideRoute
+      Domain.Types.UpgradedTier
       Domain.Types.UtilsTH
       Domain.Types.Yudhishthira
       Environment
@@ -380,6 +387,7 @@ library
       SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
       SharedLogic.Allocator.Jobs.Webhook.Webhook
+      SharedLogic.Analytics
       SharedLogic.Beckn.Common
       SharedLogic.BehaviourManagement.CancellationRate
       SharedLogic.BehaviourManagement.IssueBreach
@@ -394,6 +402,7 @@ library
       SharedLogic.Cancel
       SharedLogic.CancellationCoins
       SharedLogic.DeleteDriver
+      SharedLogic.DriverCancellationPenalty
       SharedLogic.DriverFee
       SharedLogic.DriverFleetOperatorAssociation
       SharedLogic.DriverFlowStatus
@@ -417,6 +426,7 @@ library
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
       SharedLogic.Fleet
+      SharedLogic.FleetOperatorStats
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
       SharedLogic.KaalChakra.Actions
@@ -431,11 +441,13 @@ library
       SharedLogic.Pricing
       SharedLogic.Ride
       SharedLogic.RiderDetails
+      SharedLogic.RuleBasedTierUpgrade
       SharedLogic.ScheduledNotifications
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
       SharedLogic.TollsDetector
+      SharedLogic.Type
       SharedLogic.UserCancellationDues
       SharedLogic.VehicleServiceTier
       SharedLogic.WMB
@@ -552,10 +564,13 @@ library
       Storage.Clickhouse.Estimate
       Storage.Clickhouse.FleetDriverAssociation
       Storage.Clickhouse.FleetOperatorAssociation
+      Storage.Clickhouse.FleetOperatorDailyStats
+      Storage.Clickhouse.FleetOperatorStats
       Storage.Clickhouse.Location
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
       Storage.Clickhouse.SearchRequestForDriver
+      Storage.Clickhouse.Vehicle
       Storage.Queries.AadhaarCardExtra
       Storage.Queries.BackgroundVerificationExtra
       Storage.Queries.Booking.Internal
@@ -632,6 +647,7 @@ library
       Storage.Queries.LocationMappingExtra
       Storage.Queries.MandateExtra
       Storage.Queries.MediaFileDocumentExtra
+      Storage.Queries.MerchantClientConfigExtra
       Storage.Queries.MerchantExtra
       Storage.Queries.MerchantPaymentMethodExtra
       Storage.Queries.MerchantServiceConfigExtra
@@ -674,9 +690,12 @@ library
       Storage.Queries.Transformers.DriverQuote
       Storage.Queries.Transformers.DriverStats
       Storage.Queries.Transformers.Estimate
+      Storage.Queries.Transformers.FleetOperatorDailyStats
+      Storage.Queries.Transformers.FleetOperatorStats
       Storage.Queries.Transformers.FleetOwnerInformation
       Storage.Queries.Transformers.Invoice
       Storage.Queries.Transformers.Location
+      Storage.Queries.Transformers.MerchantClientConfig
       Storage.Queries.Transformers.MerchantMessage
       Storage.Queries.Transformers.MerchantPaymentMethod
       Storage.Queries.Transformers.MerchantServiceConfig
@@ -741,7 +760,9 @@ library
       API.Action.Dashboard.AppManagement.Driver
       API.Action.Dashboard.AppManagement.DriverSubscription
       API.Action.Dashboard.AppManagement.Overlay
+      API.Action.Dashboard.AppManagement.Penalty
       API.Action.Dashboard.AppManagement.Subscription
+      API.Action.Dashboard.AppManagement.SubscriptionTransaction
       API.Action.Dashboard.Fleet
       API.Action.Dashboard.Fleet.Driver
       API.Action.Dashboard.Fleet.LiveMap
@@ -795,6 +816,7 @@ library
       API.Action.UI.MeterRide
       API.Action.UI.OperationHub
       API.Action.UI.Operator
+      API.Action.UI.Penalty
       API.Action.UI.PickupInstructions
       API.Action.UI.PriceBreakup
       API.Action.UI.Reels
@@ -813,9 +835,13 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.Driver
       API.Types.Dashboard.AppManagement.Endpoints.DriverSubscription
       API.Types.Dashboard.AppManagement.Endpoints.Overlay
+      API.Types.Dashboard.AppManagement.Endpoints.Penalty
       API.Types.Dashboard.AppManagement.Endpoints.Subscription
+      API.Types.Dashboard.AppManagement.Endpoints.SubscriptionTransaction
       API.Types.Dashboard.AppManagement.Overlay
+      API.Types.Dashboard.AppManagement.Penalty
       API.Types.Dashboard.AppManagement.Subscription
+      API.Types.Dashboard.AppManagement.SubscriptionTransaction
       API.Types.Dashboard.RideBooking
       API.Types.Dashboard.RideBooking.Driver
       API.Types.Dashboard.RideBooking.DriverRegistration
@@ -844,6 +870,7 @@ library
       API.Types.UI.Merchant
       API.Types.UI.MeterRide
       API.Types.UI.OperationHub
+      API.Types.UI.Penalty
       API.Types.UI.PickupInstructions
       API.Types.UI.PriceBreakup
       API.Types.UI.Reels
@@ -916,6 +943,8 @@ library
       Domain.Types.FleetDriverAssociation
       Domain.Types.FleetMemberAssociation
       Domain.Types.FleetOperatorAssociation
+      Domain.Types.FleetOperatorDailyStats
+      Domain.Types.FleetOperatorStats
       Domain.Types.FleetOwnerDocumentVerificationConfig
       Domain.Types.FleetOwnerInformation
       Domain.Types.FleetRCAssociation
@@ -941,6 +970,7 @@ library
       Domain.Types.Mandate
       Domain.Types.MediaFileDocument
       Domain.Types.Merchant
+      Domain.Types.MerchantClientConfig
       Domain.Types.MerchantMessage
       Domain.Types.MerchantOperatingCity
       Domain.Types.MerchantPaymentMethod
@@ -1069,6 +1099,8 @@ library
       Storage.Beam.FleetDriverAssociation
       Storage.Beam.FleetMemberAssociation
       Storage.Beam.FleetOperatorAssociation
+      Storage.Beam.FleetOperatorDailyStats
+      Storage.Beam.FleetOperatorStats
       Storage.Beam.FleetOwnerDocumentVerificationConfig
       Storage.Beam.FleetOwnerInformation
       Storage.Beam.FleetRCAssociation
@@ -1094,6 +1126,7 @@ library
       Storage.Beam.Mandate
       Storage.Beam.MediaFileDocument
       Storage.Beam.Merchant
+      Storage.Beam.MerchantClientConfig
       Storage.Beam.MerchantMessage
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.MerchantPaymentMethod
@@ -1226,6 +1259,8 @@ library
       Storage.Queries.FleetDriverAssociation
       Storage.Queries.FleetMemberAssociation
       Storage.Queries.FleetOperatorAssociation
+      Storage.Queries.FleetOperatorDailyStats
+      Storage.Queries.FleetOperatorStats
       Storage.Queries.FleetOwnerDocumentVerificationConfig
       Storage.Queries.FleetOwnerInformation
       Storage.Queries.FleetRCAssociation
@@ -1251,6 +1286,7 @@ library
       Storage.Queries.Mandate
       Storage.Queries.MediaFileDocument
       Storage.Queries.Merchant
+      Storage.Queries.MerchantClientConfig
       Storage.Queries.MerchantMessage
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.MerchantPaymentMethod
@@ -1314,6 +1350,7 @@ library
       Storage.Queries.OrphanInstances.Mandate
       Storage.Queries.OrphanInstances.MediaFileDocument
       Storage.Queries.OrphanInstances.Merchant
+      Storage.Queries.OrphanInstances.MerchantClientConfig
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.Message

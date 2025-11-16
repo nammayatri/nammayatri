@@ -75,9 +75,7 @@ getReconTicketEnquiry ::
   m ReconTicketEnquiryDecryptedResponse
 getReconTicketEnquiry config frfsTicketBooking = do
   bppOrderId <- frfsTicketBooking.bppOrderId & fromMaybeM (InvalidRequest "BppOrderId is missing")
-  let fareAmount = case frfsTicketBooking.finalPrice of
-        Just finalPrice -> finalPrice.amount
-        Nothing -> frfsTicketBooking.price.amount
+  let fareAmount = maybe frfsTicketBooking.totalPrice.amount (.amount) frfsTicketBooking.finalPrice
   person <- QPerson.findById frfsTicketBooking.riderId >>= fromMaybeM (PersonNotFound frfsTicketBooking.riderId.getId)
   mobileNumber <- person.mobileNumber & fromMaybeM (InvalidRequest "mobile no. not found")
   decryptedMobileNumber <- decrypt mobileNumber

@@ -27,16 +27,18 @@ import Control.Lens ((%~))
 import qualified Data.List as L
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Select as DSelect
-import Domain.Types
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Location as Location
+import Domain.Types.RiderConfig
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.MerchantPaymentMethod as SLMPM
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Tools.Error
 
 buildSelectReqV2 ::
@@ -46,30 +48,31 @@ buildSelectReqV2 ::
 buildSelectReqV2 dSelectRes = do
   endLoc <- dSelectRes.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
   moc <- CQMOC.findByMerchantIdAndCity dSelectRes.merchant.id dSelectRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dSelectRes.merchant.id.getId <> "-city-" <> show dSelectRes.city)
+  riderConfig <- QRC.findByMerchantOperatingCityId moc.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
   bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId dSelectRes.merchant.id "MOBILITY" moc.id
   bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dSelectRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   -- stops <- dSelectRes.searchRequest.stops
   messageId <- generateGUID
-  let message = buildSelectReqMessage dSelectRes endLoc dSelectRes.isValueAddNP bapConfig
+  let message = buildSelectReqMessage dSelectRes endLoc dSelectRes.isValueAddNP bapConfig riderConfig
       transactionId = dSelectRes.searchRequest.id.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack dSelectRes.merchant.id.getId)
   ttl <- bapConfig.selectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- ContextV2.buildContextV2 Context.SELECT Context.MOBILITY messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.city dSelectRes.merchant.country (Just ttl)
   pure $ Spec.SelectReq {selectReqContext = context, selectReqMessage = message}
 
-buildSelectReqMessage :: DSelect.DSelectRes -> Location.Location -> Bool -> BecknConfig -> Spec.ConfirmReqMessage
-buildSelectReqMessage res endLoc isValueAddNP bapConfig =
+buildSelectReqMessage :: DSelect.DSelectRes -> Location.Location -> Bool -> BecknConfig -> RiderConfig -> Spec.ConfirmReqMessage
+buildSelectReqMessage res endLoc isValueAddNP bapConfig riderConfig =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder res endLoc isValueAddNP bapConfig
+    { confirmReqMessageOrder = tfOrder res endLoc isValueAddNP bapConfig riderConfig
     }
 
-tfOrder :: DSelect.DSelectRes -> Location.Location -> Bool -> BecknConfig -> Spec.Order
-tfOrder res endLoc isValueAddNP bapConfig =
+tfOrder :: DSelect.DSelectRes -> Location.Location -> Bool -> BecknConfig -> RiderConfig -> Spec.Order
+tfOrder res endLoc isValueAddNP bapConfig riderConfig =
   let orderBilling = Nothing
       orderCancellation = Nothing
       orderCancellationTerms = Nothing
       orderId = Nothing
-      orderPayments = tfPayments res bapConfig
+      orderPayments = tfPayments res bapConfig riderConfig
       orderProvider = Just $ tfProvider res
       orderQuote = Nothing
       orderStatus = Nothing
@@ -144,7 +147,7 @@ mkItemTags res =
   let itemTags = [mkAutoAssignEnabledTagGroup res] <> mkSelectResDetailsTagGroup res
       itemTags' = if isJust res.customerExtraFee then mkCustomerTipTagGroup res : itemTags else itemTags
       itemTags'' = if not (null res.remainingEstimateBppIds) then mkOtheEstimatesTagGroup res : itemTags' else itemTags'
-      itemTags''' = [mkAdvancedBookingEnabledTagGroup res, mkDeviceIdTagGroup res, mkDisabilityDisableTagGroup res, mkSafetyPlusTagGroup res, mkPetRideTagGroup res] <> itemTags''
+      itemTags''' = [mkAdvancedBookingEnabledTagGroup res, mkDeviceIdTagGroup res, mkDisabilityDisableTagGroup res, mkSafetyPlusTagGroup res, mkPetRideTagGroup res, mkBillingCategoryTagGroup res] <> itemTags''
    in itemTags'''
 
 mkCustomerTipTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
@@ -347,6 +350,33 @@ mkPetRideTagGroup res =
           ]
     }
 
+mkBillingCategoryTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
+mkBillingCategoryTagGroup res =
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.BILLING_CATEGORY_INFO,
+              descriptorName = Just "Billing Category Info",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList =
+        Just
+          [ Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.BILLING_CATEGORY,
+                        descriptorName = Just "Billing Category",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = Just $ show res.billingCategory
+              }
+          ]
+    }
+
 mkSelectResDetailsTagGroup :: DSelect.DSelectRes -> [Spec.TagGroup]
 mkSelectResDetailsTagGroup res =
   maybe
@@ -430,10 +460,10 @@ tfPrice res =
       priceOfferedValue = Nothing
    in Spec.Price {..}
 
-tfPayments :: DSelect.DSelectRes -> BecknConfig -> Maybe [Spec.Payment]
-tfPayments res bapConfig = do
+tfPayments :: DSelect.DSelectRes -> BecknConfig -> RiderConfig -> Maybe [Spec.Payment]
+tfPayments res bapConfig riderConfig = do
   let mPrice = Just res.estimate.estimatedFare
-  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
+  let mkParams = SLMPM.mkBknPaymentParams res.paymentMethodInfo bapConfig riderConfig
   Just $ L.singleton $ mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
 tfProvider :: DSelect.DSelectRes -> Spec.Provider

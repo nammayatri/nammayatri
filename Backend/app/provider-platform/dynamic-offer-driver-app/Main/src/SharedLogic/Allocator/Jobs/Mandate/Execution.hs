@@ -126,7 +126,7 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
       let splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
       vendorFees' <- if splitEnabled then B.runInReplica $ QVF.findAllByDriverFeeId driverFee.id else pure []
       let vendorFees = map roundVendorFee vendorFees'
-      splitSettlementDetails' <- try @_ @SomeException $ if splitEnabled then mkSplitSettlementDetails vendorFees (roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)) else pure Nothing
+      splitSettlementDetails' <- withTryCatch "mkSplitSettlementDetails:buildExecutionRequestAndInvoice" $ if splitEnabled then mkSplitSettlementDetails vendorFees (roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst + fromMaybe 0 driverFee.cancellationPenaltyAmount)) else pure Nothing
       case splitSettlementDetails' of
         Left err -> do
           logError ("Execution failed for driverFeeId : " <> invoice.driverFeeId.getId <> " error : " <> show err)
@@ -139,7 +139,7 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
           let executionRequest =
                 PaymentInterface.MandateExecutionReq
                   { orderId = invoice.invoiceShortId,
-                    amount = roundToHalf driverFee.currency $ driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst,
+                    amount = roundToHalf driverFee.currency $ driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst + fromMaybe 0 driverFee.cancellationPenaltyAmount,
                     customerId = driverFee.driverId.getId,
                     notificationId = notification.shortId,
                     mandateId = mandateId.getId,
@@ -189,7 +189,7 @@ asyncExecutionCall ExecutionData {..} merchantId merchantOperatingCityId = do
   paymentService <- TPayment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id merchantOperatingCityId subscriptionConfig.serviceName
   if (driverFeeForExecution <&> (.status)) == Just PAYMENT_PENDING && (driverFeeForExecution <&> (.feeType)) == Just DF.RECURRING_EXECUTION_INVOICE
     then do
-      exec <- try @_ @SomeException (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (Just $ cast merchantOperatingCityId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService (Just driver.id.getId)))
+      exec <- withTryCatch "createExecutionService:asyncExecutionCall" (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (Just $ cast merchantOperatingCityId) (TPayment.mandateExecution merchantId merchantOperatingCityId paymentService (Just driver.id.getId)))
       case exec of
         Left err -> do
           QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverFee.id] Nothing

@@ -44,16 +44,19 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestT
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.MerchantPaymentMethod
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverQuote as QDQ
 import Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
@@ -120,7 +123,8 @@ handler merchant req validatedQuote = do
     handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId (Just req.enableOtpLessRide)
+      mFleetOwnerId <- QFDA.findByDriverId driver.id True
+      (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId (Just req.enableOtpLessRide) (mFleetOwnerId <&> (.fleetOwnerId) <&> Id)
       void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
@@ -142,7 +146,8 @@ handler merchant req validatedQuote = do
             pure res.dynamicReferralCode
           Just dr -> pure dr.dynamicReferralCode
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      (ride, _, vehicle) <- initializeRide merchant driver uBooking dynamicReferralCode (Just req.enableFrequentLocationUpdates) Nothing (Just req.enableOtpLessRide)
+      mFleetOwnerId <- QFDA.findByDriverId driver.id True
+      (ride, _, vehicle) <- initializeRide merchant driver uBooking dynamicReferralCode (Just req.enableFrequentLocationUpdates) Nothing (Just req.enableOtpLessRide) (mFleetOwnerId <&> (.fleetOwnerId) <&> Id)
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
 
@@ -170,6 +175,8 @@ handler merchant req validatedQuote = do
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
           driverParkingCharge = join $ (.parkingCharge) <$> quote.farePolicy
       tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId [] False booking.fareParams.congestionCharge booking.fareParams.petCharges booking.fareParams.priorityCharges
+      merchantPaymentMethod <- maybe (return Nothing) QMPM.findById booking.paymentMethodId
+      let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -178,8 +185,10 @@ handler merchant req validatedQuote = do
                 tripQuoteDetails = [tripQuoteDetail],
                 customerExtraFee = Nothing,
                 messageId = booking.id.getId,
+                billingCategory = booking.billingCategory,
                 isRepeatSearch = False,
-                isAllocatorBatch = False
+                isAllocatorBatch = False,
+                paymentMethodInfo = paymentMethodInfo
               }
       initiateDriverSearchBatch driverSearchBatchInput
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)

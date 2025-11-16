@@ -76,7 +76,7 @@ handlePickupInstruction ride booking driverIdValue = do
                   S3.S3AwsConf a -> do
                     let bucketName = a.bucketName
                     -- Generate a signed URL with 1 hour expiration (3600 seconds)
-                    result <- try @_ @SomeException $ S3Flow.generateDownloadUrl' bucketName (T.unpack s3Path) 3600
+                    result <- withTryCatch "generateDownloadUrl:handlePickupInstruction" $ S3Flow.generateDownloadUrl' bucketName (T.unpack s3Path) 3600
                     case result of
                       Right signedUrl -> do
                         logInfo "PickupInstructionHandler: Successfully generated signed URL for audio"
@@ -104,7 +104,7 @@ handlePickupInstruction ride booking driverIdValue = do
       let customerName = customer.firstName
 
       result <-
-        try @_ @SomeException $
+        withTryCatch "sendPickupInstruction:handlePickupInstruction" $
           CallBPPInternal.sendPickupInstruction
             merchant.driverOfferApiKey
             merchant.driverOfferBaseUrl

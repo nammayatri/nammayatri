@@ -3,6 +3,7 @@ module SharedLogic.DriverOnboarding.Status
     StatusRes' (..),
     VehicleDocumentItem (..),
     DocumentStatusItem (..),
+    CommonDocumentItem (..),
     DLDetails (..),
     RCDetails (..),
     statusHandler',
@@ -12,6 +13,7 @@ module SharedLogic.DriverOnboarding.Status
     mapStatus,
     checkAllDriverVehicleDocsVerified,
     activateRCAutomatically,
+    mkCommonDocumentItem,
   )
 where
 
@@ -22,6 +24,7 @@ import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
+import qualified Domain.Types.CommonDriverOnboardingDocuments as DCDOD
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as DL
@@ -108,6 +111,17 @@ data DocumentStatusItem = DocumentStatusItem
     verificationStatus :: ResponseStatus,
     verificationMessage :: Maybe Text,
     verificationUrl :: Maybe BaseUrl
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data CommonDocumentItem = CommonDocumentItem
+  { documentType :: DDVC.DocumentType,
+    documentData :: Text,
+    verificationStatus :: ResponseStatus,
+    rejectReason :: Maybe Text,
+    documentImageId :: Maybe Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -271,7 +285,7 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC
 
         mbVehicle <- QVehicle.findById personId -- check everytime
         when (shouldActivateRc && isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC && inspectionNotRequired && role == DP.DRIVER) $
-          void $ try @_ @SomeException (activateRCAutomatically personId driverImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
+          void $ withTryCatch "activateRCAutomatically:statusHandler" (activateRCAutomatically personId driverImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
         if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
     convertDLToDLDetails dl = do
@@ -535,7 +549,7 @@ fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs 
   let mbVerificationReqRecord = getLatestVerificationRecord inprogressVehicleIdfy inprogressVehicleHV
   case mbVerificationReqRecord of
     Just verificationReqRecord -> do
-      registrationNoEither <- try @_ @SomeException (decrypt verificationReqRecord.documentNumber)
+      registrationNoEither <- withTryCatch "decryptDocumentNumber:fetchInprogressVehicleDocuments" (decrypt verificationReqRecord.documentNumber)
       case registrationNoEither of
         Left err -> do
           logError $ "Error while decrypting document number: " <> (verificationReqRecord.documentNumber & unEncrypted . encrypted) <> " with err: " <> show err
@@ -645,7 +659,7 @@ getProcessedDriverDocuments driverImagesInfo docType useHVSdkForDL = do
       mbDL <- DLQuery.findByDriverId driverId -- add failure reason in dl and rc
       if isNothing mbDL && (useHVSdkForDL == Just True)
         then do
-          void $ try @_ @SomeException $ callGetDLGetStatus driverId merchantOpCityId
+          void $ withTryCatch "callGetDLGetStatus:getProcessedDriverDocuments" $ callGetDLGetStatus driverId merchantOpCityId
           mbDL' <- DLQuery.findByDriverId driverId
           return (mapStatus <$> (mbDL' <&> (.verificationStatus)), mbDL' >>= (.rejectReason), Nothing)
         else return (mapStatus <$> (mbDL <&> (.verificationStatus)), mbDL >>= (.rejectReason), Nothing)
@@ -910,7 +924,7 @@ getDLAndStatus driverImagesInfo language useHVSdkForDL = do
       Nothing -> do
         if useHVSdkForDL == Just True
           then do
-            void $ try @_ @SomeException $ callGetDLGetStatus driverId merchantOpCityId
+            void $ withTryCatch "callGetDLGetStatus:getDLAndStatus" $ callGetDLGetStatus driverId merchantOpCityId
             DLQuery.findByDriverId driverId
           else return Nothing
   (status, message) <-
@@ -1009,7 +1023,7 @@ verificationStatusWithMessage onboardingTryLimit imagesNum mbVerificationReqReco
     Just req -> do
       mbRC <- case docType of
         DVC.VehicleRegistrationCertificate -> do
-          registrationNoEither <- try @_ @SomeException (decrypt req.documentNumber)
+          registrationNoEither <- withTryCatch "decryptDocumentNumber:verificationStatusWithMessage" (decrypt req.documentNumber)
           case registrationNoEither of
             Left err -> do
               logError $ "Error while decrypting document number: " <> (req.documentNumber & unEncrypted . encrypted) <> " with err: " <> show err
@@ -1083,3 +1097,23 @@ getLatestVerificationRecord mbIdfyVerificationReq mbHvVerificationReq = do
     (Nothing, Just _) -> SDO.makeHVVerificationReqRecord <$> mbHvVerificationReq
     (Just _, Nothing) -> SDO.makeIdfyVerificationReqRecord <$> mbIdfyVerificationReq
     (Nothing, Nothing) -> Nothing
+
+-- Convert CommonDriverOnboardingDocuments to CommonDocumentItem
+mkCommonDocumentItem :: DCDOD.CommonDriverOnboardingDocuments -> CommonDocumentItem
+mkCommonDocumentItem doc =
+  CommonDocumentItem
+    { documentType = doc.documentType,
+      documentData = doc.documentData,
+      verificationStatus = mapVerificationStatus doc.verificationStatus,
+      rejectReason = doc.rejectReason,
+      documentImageId = getId <$> doc.documentImageId,
+      createdAt = doc.createdAt,
+      updatedAt = doc.updatedAt
+    }
+  where
+    mapVerificationStatus :: Documents.VerificationStatus -> ResponseStatus
+    mapVerificationStatus Documents.PENDING = PENDING
+    mapVerificationStatus Documents.VALID = VALID
+    mapVerificationStatus Documents.INVALID = INVALID
+    mapVerificationStatus Documents.MANUAL_VERIFICATION_REQUIRED = MANUAL_VERIFICATION_REQUIRED
+    mapVerificationStatus _ = PENDING -- default case

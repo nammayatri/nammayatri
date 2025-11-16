@@ -22,12 +22,15 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import Kernel.Utils.TH
 import qualified Lib.Yudhishthira.Types
+import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
 
 data Ride = Ride
   { backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    billingCategory :: SharedLogic.Type.BillingCategory,
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+    cancellationChargesOnCancel :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationFeeIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -42,6 +45,9 @@ data Ride = Ride
     distanceCalculationFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    driverCancellationPenaltyAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    driverCancellationPenaltyFeeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverCancellationPenaltyWaivedReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverDeviatedFromRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverDeviatedToTollRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverGoHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
@@ -55,6 +61,7 @@ data Ride = Ride
     estimatedTollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     fare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fareParametersId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FareParameters.FareParameters),
+    fleetOwnerId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     fromLocation :: Domain.Types.Location.Location,
     hasStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
@@ -117,8 +124,8 @@ data RideEndedBy = Driver | Dashboard | CallBased | CronJob | Allocator deriving
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
-$(mkHttpInstancesForEnum (''RideStatus))
+$(mkHttpInstancesForEnum ''RideStatus)

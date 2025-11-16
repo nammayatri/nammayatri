@@ -62,7 +62,6 @@ updateByPrimaryKey (Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantShortId (Kernel.Types.Id.getShortId merchantShortId),
       Se.Set Beam.state state,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

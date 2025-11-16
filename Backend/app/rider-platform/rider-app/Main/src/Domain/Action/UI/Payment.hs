@@ -18,23 +18,23 @@ module Domain.Action.UI.Payment
     getStatus,
     getOrder,
     juspayWebhookHandler,
+    stripeWebhookHandler,
   )
 where
 
 import Control.Applicative ((<|>))
-import qualified Domain.Action.UI.BBPS as BBPS
-import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import Environment
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
+import qualified Kernel.External.Payment.Interface.Stripe as Stripe
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import Kernel.External.Payment.Stripe.Webhook (RawByteString (..))
 import qualified Kernel.External.Payment.Types as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
@@ -47,9 +47,9 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
-import Lib.Payment.Storage.Beam.BeamFlow ()
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant (BasicAuthData)
+import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -109,29 +109,29 @@ createOrder (personId, merchantId) rideId = do
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
       createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal (Just person.id.getId) person.clientSdkVersion -- api call
-  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId Nothing createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
+  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.Normal createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- order status -----------------------------------------------------
 
 getStatus ::
-  ( CacheFlow m r,
-    EsqDBReplicaFlow m r,
-    L.MonadFlow m,
-    EsqDBFlow m r,
-    EncFlow m r,
-    CoreMetrics m,
-    HasKafkaProducer r
-  ) =>
   (Id DP.Person, Id DM.Merchant) ->
   Id DOrder.PaymentOrder ->
-  m DPayment.PaymentStatusResp
+  Flow DPayment.PaymentStatusResp
 getStatus (personId, merchantId) orderId = do
-  ticketBooking <- QTB.findById (cast orderId)
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
-  mocId <- ticketBooking <&> (.merchantOperatingCityId) & fromMaybeM (InternalError "MerchantOperatingCityId not found in booking") ----- fix the api and pass mocId in params
+  paymentOrder <- QOrder.findById orderId |<|>| QOrder.findByShortId (ShortId orderId.getId) >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  mocId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
+  let paymentServiceType = fromMaybe Payment.Normal paymentOrder.paymentServiceType
+  ticketPlaceId <-
+    case paymentServiceType of
+      Payment.Normal -> do
+        ticketBooking <- QTB.findById (cast paymentOrder.id)
+        return $ ticketBooking <&> (.ticketPlaceId)
+      _ -> return Nothing
   let commonPersonId = cast @DP.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId mocId (ticketBooking <&> (.ticketPlaceId)) Payment.Normal (Just person.id.getId) person.clientSdkVersion -- api call
-  DPayment.orderStatusService commonPersonId orderId orderStatusCall
+      orderStatusCall = Payment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion
+  orderStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
+  SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusResponse
 
 getOrder ::
   ( CacheFlow m r,
@@ -157,6 +157,42 @@ mkOrderAPIEntity DOrder.PaymentOrder {..} = do
 
 -- webhook ----------------------------------------------------------
 
+fetchPaymentServiceConfig ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe Payment.PaymentServiceType ->
+  Maybe Text ->
+  Payment.PaymentService ->
+  Flow Payment.PaymentServiceConfig
+fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service = do
+  merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
+  let city = fromMaybe merchant.defaultCity mbCity
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
+  let merchantId = merchant.id
+  placeBasedConfig <- case mbPlaceId of
+    Just id -> CQPBSC.findByPlaceIdAndServiceName (Id id) (DMSC.PaymentService service)
+    Nothing -> return Nothing
+  merchantServiceConfig' <- do
+    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCity.id (getPaymentServiceByType mbServiceType)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show service))
+  case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
+    Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.MetroPaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.BusPaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.BbpsPaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> pure vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> pure vsc
+    _ -> throwError $ InternalError "Unknown Service Config"
+  where
+    getPaymentServiceByType = \case
+      Just Payment.Normal -> DMSC.PaymentService service
+      Just Payment.BBPS -> DMSC.BbpsPaymentService service
+      Just Payment.FRFSBooking -> DMSC.MetroPaymentService service
+      Just Payment.FRFSBusBooking -> DMSC.BusPaymentService service
+      Just Payment.FRFSMultiModalBooking -> DMSC.MultiModalPaymentService service
+      Just Payment.FRFSPassPurchase -> DMSC.PassPaymentService service
+      Nothing -> DMSC.PaymentService service
+
 juspayWebhookHandler ::
   ShortId DM.Merchant ->
   Maybe Context.City ->
@@ -166,49 +202,39 @@ juspayWebhookHandler ::
   Value ->
   Flow AckResponse
 juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData value = do
-  merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
-  let city = fromMaybe merchant.defaultCity mbCity
-  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
-  let merchantId = merchant.id
-  placeBasedConfig <- case mbPlaceId of
-    Just id -> CQPBSC.findByPlaceIdAndServiceName (Id id) (DMSC.PaymentService Payment.Juspay)
-    Nothing -> return Nothing
-  merchantServiceConfig' <- do
-    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCity.id (getPaymentServiceByType mbServiceType)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show Payment.Juspay))
-  paymentServiceConfig <- do
-    case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
-      Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
-      Just (DMSC.MetroPaymentServiceConfig vsc) -> pure vsc
-      Just (DMSC.BusPaymentServiceConfig vsc) -> pure vsc
-      Just (DMSC.BbpsPaymentServiceConfig vsc) -> pure vsc
-      Just (DMSC.MultiModalPaymentServiceConfig vsc) -> pure vsc
-      _ -> throwError $ InternalError "Unknown Service Config"
+  paymentServiceConfig <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId Payment.Juspay
   orderWebhookResponse <- Juspay.orderStatusWebhook paymentServiceConfig DPayment.juspayWebhookService authData value
   osr <- case orderWebhookResponse of
     Nothing -> throwError $ InternalError "Order Contents not found."
     Just osr' -> pure osr'
-  (orderShortId, status, refunds) <- getOrderData osr
+  (orderShortId, status) <- getOrderData osr
   logDebug $ "order short Id from Response bap webhook: " <> show orderShortId
-  Redis.whenWithLockRedis (mkOrderStatusCheckKey orderShortId status) 60 $ do
-    case mbServiceType of
-      Just Payment.FRFSBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId refunds
-      Just Payment.FRFSBusBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId refunds
-      Just Payment.FRFSMultiModalBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId refunds
-      Just Payment.BBPS -> void $ BBPS.webhookHandlerBBPS (ShortId orderShortId) merchantId
-      _ -> pure ()
+  whenJust mbServiceType $ \paymentServiceType -> do
+    Redis.whenWithLockRedis (mkOrderStatusCheckKey orderShortId status) 60 $ do
+      void $ callWebhookHandlerWithOrderStatus paymentServiceType (ShortId orderShortId) (\_ -> pure osr)
   pure Ack
   where
-    getPaymentServiceByType = \case
-      Just Payment.Normal -> DMSC.PaymentService Payment.Juspay
-      Just Payment.BBPS -> DMSC.BbpsPaymentService Payment.Juspay
-      Just Payment.FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
-      Just Payment.FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
-      Just Payment.FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
-      Nothing -> DMSC.PaymentService Payment.Juspay
     getOrderData osr = case osr of
-      Payment.OrderStatusResp {..} -> pure (orderShortId, transactionStatus, refunds)
+      Payment.OrderStatusResp {..} -> pure (orderShortId, transactionStatus)
       _ -> throwError $ InternalError "Order Id not found in response."
+    callWebhookHandlerWithOrderStatus paymentServiceType' orderShortId orderStatusCall = do
+      paymentOrder <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
+      let paymentServiceType = fromMaybe paymentServiceType' paymentOrder.paymentServiceType
+      paymentStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
+      SPayment.orderStatusHandler paymentServiceType paymentOrder paymentStatusResponse
 
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text
 mkOrderStatusCheckKey orderId status = "lockKey:orderId:" <> orderId <> ":status" <> show status
+
+stripeWebhookHandler ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe Payment.PaymentServiceType ->
+  Maybe Text ->
+  Maybe Text ->
+  RawByteString ->
+  Flow AckResponse
+stripeWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader rawBytes = do
+  paymentServiceConfig <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId Payment.Stripe
+  let checkDuplicatedEvent _eventId = pure False -- FIXME
+  Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent DPayment.stripeWebhookService mbSigHeader rawBytes

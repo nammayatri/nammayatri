@@ -8,6 +8,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
@@ -27,10 +28,13 @@ data FleetOwnerInformationE e = FleetOwnerInformation
     gstNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     gstNumberDec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isEligibleForSubscription :: Kernel.Prelude.Bool,
+    lienAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     panImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     panNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     panNumberDec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    planExpiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    prepaidSubscriptionBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     referredByOperatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registeredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     ticketPlaceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -68,10 +72,13 @@ instance EncryptedItem FleetOwnerInformation where
           gstNumber = gstNumber_,
           gstNumberDec = gstNumberDec entity,
           isEligibleForSubscription = isEligibleForSubscription entity,
+          lienAmount = lienAmount entity,
           merchantId = merchantId entity,
           panImageId = panImageId entity,
           panNumber = panNumber_,
           panNumberDec = panNumberDec entity,
+          planExpiryDate = planExpiryDate entity,
+          prepaidSubscriptionBalance = prepaidSubscriptionBalance entity,
           referredByOperatorId = referredByOperatorId entity,
           registeredAt = registeredAt entity,
           ticketPlaceId = ticketPlaceId entity,
@@ -101,10 +108,13 @@ instance EncryptedItem FleetOwnerInformation where
             gstNumber = gstNumber_,
             gstNumberDec = gstNumberDec entity,
             isEligibleForSubscription = isEligibleForSubscription entity,
+            lienAmount = lienAmount entity,
             merchantId = merchantId entity,
             panImageId = panImageId entity,
             panNumber = panNumber_,
             panNumberDec = panNumberDec entity,
+            planExpiryDate = planExpiryDate entity,
+            prepaidSubscriptionBalance = prepaidSubscriptionBalance entity,
             referredByOperatorId = referredByOperatorId entity,
             registeredAt = registeredAt entity,
             ticketPlaceId = ticketPlaceId entity,

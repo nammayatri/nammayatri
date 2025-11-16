@@ -36,8 +36,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.BlackListOrg.BlackListOrg {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.domain domain,
+    [ Se.Set Beam.domain domain,
       Se.Set Beam.subscriberId (Kernel.Types.Id.getShortId subscriberId),
       Se.Set Beam.updatedAt (Just _now)
     ]

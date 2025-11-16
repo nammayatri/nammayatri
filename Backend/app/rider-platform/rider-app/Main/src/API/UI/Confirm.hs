@@ -23,6 +23,7 @@ where
 import qualified Beckn.ACL.Init as ACL
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as Quote
@@ -33,7 +34,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
-import Servant
+import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
@@ -48,6 +49,7 @@ type API =
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
     :> QueryParam "paymentMethodId" Payment.PaymentMethodId
+    :> QueryParam "paymentInstrument" DMPM.PaymentInstrument
     :> QueryParam "isAdvancedBookingEnabled" Bool
     :> Post '[JSON] ConfirmRes
 
@@ -68,19 +70,21 @@ confirm ::
   (Id SP.Person, Id Merchant.Merchant) ->
   Id Quote.Quote ->
   Maybe Payment.PaymentMethodId ->
+  Maybe DMPM.PaymentInstrument ->
   Maybe Bool ->
   FlowHandler ConfirmRes
-confirm (personId, merchantId) quoteId mbPaymentMethodId = withFlowHandlerAPI . confirm' (personId, merchantId) quoteId mbPaymentMethodId
+confirm (personId, merchantId) quoteId mbPaymentMethodId mbPaymentInstrument = withFlowHandlerAPI . confirm' (personId, merchantId) quoteId mbPaymentMethodId mbPaymentInstrument
 
 confirm' ::
   (Id SP.Person, Id Merchant.Merchant) ->
   Id Quote.Quote ->
   Maybe Payment.PaymentMethodId ->
+  Maybe DMPM.PaymentInstrument ->
   Maybe Bool ->
   Flow ConfirmRes
-confirm' (personId, _) quoteId mbPaymentMethodId isAdvanceBookingEnabled =
+confirm' (personId, _) quoteId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled =
   withPersonIdLogTag personId $ do
-    dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId isAdvanceBookingEnabled
+    dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId mbPaymentInstrument isAdvanceBookingEnabled
     becknInitReq <- ACL.buildInitReqV2 dConfirmRes
     moc <- CQMOC.findByMerchantIdAndCity dConfirmRes.merchant.id dConfirmRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dConfirmRes.merchant.id.getId <> "-city-" <> show dConfirmRes.city)
     bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId dConfirmRes.merchant.id "MOBILITY" moc.id

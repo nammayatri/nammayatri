@@ -37,6 +37,7 @@ parseAnalyticsConfig merchantOperatingCityId mbVal = do
           { weekStartMode = 3,
             earningsWindowSize = 7,
             allowCacheDriverFlowStatus = False,
+            enableFleetOperatorDashboardAnalytics = False,
             maxOnlineDurationDays = 10,
             onlineDurationCalculateFrom = Nothing
           }
@@ -54,6 +55,7 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             enableWalletPayout = False,
             enableWalletTopup = False,
             maxWalletPayoutsPerDay = Nothing,
+            minWalletAmountForCashRides = Nothing,
             minimumWalletPayoutAmount = 0,
             payoutCutOffDays = 7
           }
@@ -63,5 +65,5 @@ $(mkFieldParserWithDefault ''SubscriptionConfig)
 
 parseSubscriptionConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m SubscriptionConfig
 parseSubscriptionConfig merchantOperatingCityId mbVal = do
-  let def = SubscriptionConfig {prepaidSubscriptionThreshold = Nothing}
+  let def = SubscriptionConfig {prepaidSubscriptionThreshold = Nothing, fleetPrepaidSubscriptionThreshold = Nothing}
   parseFieldWithDefaultM "transporterConfig" "subscriptionConfig" merchantOperatingCityId def parseSubscriptionConfigWithDefault mbVal

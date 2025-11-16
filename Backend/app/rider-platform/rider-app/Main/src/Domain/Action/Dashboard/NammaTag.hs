@@ -39,6 +39,7 @@ import qualified ConfigPilotFrontend.Flow as CPF
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Dashboard.Common as Common
 import qualified Data.Aeson as A
+import Data.Default.Class (def)
 import Data.Singletons
 import qualified Data.Text as Text
 import qualified Domain.Types.FRFSConfig as DFRFS
@@ -69,6 +70,7 @@ import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYTU
 import qualified Lib.Yudhishthira.Types.Common as C
 import qualified Lib.Yudhishthira.TypesTH as YTH
+import SharedLogic.EstimateTags
 import SharedLogic.JobScheduler (RiderJobType (..))
 import SharedLogic.Merchant
 import qualified SharedLogic.Scheduler.Jobs.Chakras as Chakras
@@ -157,33 +159,36 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       url <- TC.getTSServiceUrl
       YudhishthiraFlow.verifyAndUpdateUIDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config Value)) _riderConfig.dynamicLogicUpdatePassword req logicData url
     LYTU.RIDER_CONFIG LYTU.RiderConfig -> do
-      def <- fromMaybeM (InvalidRequest "RiderConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTR.RiderConfig))
-      let configWrap = LYTU.Config def Nothing 1
+      def' <- fromMaybeM (InvalidRequest "RiderConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTR.RiderConfig))
+      let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTR.RiderConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTR.RiderConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.ESTIMATE_TAGS -> do
+      logicData :: EstimateTagsData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy EstimateTagsResult) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.PayoutConfig -> do
-      def <- fromMaybeM (InvalidRequest "PayoutConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
-      let configWrap = LYTU.Config def Nothing 1
+      def' <- fromMaybeM (InvalidRequest "PayoutConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
+      let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTP.PayoutConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTP.PayoutConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.RideRelatedNotificationConfig -> do
-      def <- fromMaybeM (InvalidRequest "RideRelatedNotificationConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig))
-      let configWrap = LYTU.Config def Nothing 1
+      def' <- fromMaybeM (InvalidRequest "RideRelatedNotificationConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig))
+      let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTRN.RideRelatedNotificationConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTRN.RideRelatedNotificationConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.MerchantConfig -> do
-      def <- fromMaybeM (InvalidRequest "MerchantConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTM.MerchantConfig))
-      let configWrap = LYTU.Config def Nothing 1
+      def' <- fromMaybeM (InvalidRequest "MerchantConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTM.MerchantConfig))
+      let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTM.MerchantConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTM.MerchantConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.MerchantPushNotification -> do
-      def <- fromMaybeM (InvalidRequest "MerchantPushNotification not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification))
-      let configWrap = LYTU.Config def Nothing 1
+      def' <- fromMaybeM (InvalidRequest "MerchantPushNotification not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification))
+      let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTPN.MerchantPushNotification) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DTPN.MerchantPushNotification)) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
-      def <- fromMaybeM (InvalidRequest "FRFSConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DFRFS.FRFSConfig))
-      let configWrap = LYTU.Config def Nothing 1
+      def' <- fromMaybeM (InvalidRequest "FRFSConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DFRFS.FRFSConfig))
+      let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DFRFS.FRFSConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (LYTU.Config DFRFS.FRFSConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"

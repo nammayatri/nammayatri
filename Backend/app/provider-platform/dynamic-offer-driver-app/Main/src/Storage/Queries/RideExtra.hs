@@ -12,7 +12,7 @@ import Data.Int
 import Data.List (zip7)
 import Data.List.Extra (notNull)
 import Data.Maybe
-import Data.Time hiding (getCurrentTime)
+import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
@@ -236,14 +236,17 @@ getUpcomingOrActiveByDriverId (Id personId) =
 
 getActiveBookingAndRideByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [(Ride, Booking)]
 getActiveBookingAndRideByDriverId (Id personId) = do
-  mapMaybeM
-    ( \ride ->
-        maybeM
-          (return Nothing)
-          (\booking -> return $ Just (ride, booking))
-          (QBooking.findById ride.bookingId)
-    )
-    =<< mapMaybeM (\status' -> findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq status']]) [Ride.INPROGRESS, Ride.NEW]
+  now <- getCurrentTime
+  rideBooking <-
+    mapMaybeM
+      (\ride -> maybeM (pure Nothing) (\booking -> pure $ Just (ride, booking)) (QBooking.findById ride.bookingId))
+      =<< mapMaybeM (\status' -> findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq status']]) [Ride.INPROGRESS, Ride.NEW]
+  pure $ filter (not . stuckMeterRide now) rideBooking
+  where
+    stuckMeterRide now (ride, booking) =
+      let olderThanADay = diffUTCTime now ride.createdAt >= (secondsToNominalDiffTime $ Seconds 86400)
+          isMeterRide = booking.tripCategory == (DTC.OneWay DTC.MeterRide)
+       in olderThanADay && isMeterRide && ride.status == Ride.NEW
 
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
@@ -558,6 +561,7 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
               pure $ mkRideItemUsingMaps rides rideDetails bookings riderDetails
             _ -> pure []
         _ -> pure []
+
       dbConf <- getReplicaBeamConfig
       res <- L.runDB dbConf $
         L.findRows $
@@ -693,46 +697,48 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
       rideDetails <- findOneWithKV [Se.Is BeamRD.id $ Se.Eq $ getId ride.id] >>= fromMaybeM (RideNotFound $ "for ride id: " <> ride.id.getId)
       pure $ mkRideItemV2 <$> [(rideShortId, ride.id, ride.createdAt, rideDetails.driverName, rideDetails.driverNumber, ride.status)]
     Nothing -> do
-      zippedRides <- case mbTo of
-        Just toDate | roundToMidnightUTCToDate toDate >= now -> do
-          case (mbDriverPhoneDBHash, mbCustomerPhoneDBHash) of
-            (Just _driverPhoneDBHash, _) -> do
-              rides <-
-                findAllWithOptionsKV
-                  [ Se.And
-                      ( [Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
-                          <> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq $ (roundToMidnightUTC $ fromJust mbFrom) | isJust mbFrom]
-                          <> [Se.Is BeamR.createdAt $ Se.LessThanOrEq $ (roundToMidnightUTCToDate $ fromJust mbTo) | isJust mbTo]
-                          <> [Se.Is BeamR.driverId $ Se.Eq $ (fromJust mbDriverId) | isJust mbDriverId]
-                      )
-                  ]
-                  (Se.Desc BeamR.createdAt)
-                  (Just $ limitVal)
-                  (Just $ offsetVal)
-              pure $ mkRideItemUsingMapsV2 rides mbDriver
-            (_, Just customerPhoneDBHash) -> do
-              riderDetails <- findAllWithKV [Se.Is BeamRDR.mobileNumberHash $ Se.Eq customerPhoneDBHash, Se.Is BeamRDR.merchantId $ Se.Eq $ getId merchant.id]
-              bookings <-
-                findAllFromKvRedis
-                  [ Se.And
-                      ( [Se.Is BeamB.riderId $ Se.In (Just . getId . RiderDetails.id <$> riderDetails)]
-                          <> [Se.Is BeamB.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC $ fromJust mbFrom | isJust mbFrom]
-                          <> [Se.Is BeamB.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate $ fromJust mbTo | isJust mbTo]
-                      )
-                  ]
-                  Nothing
-              rides <-
-                findAllFromKvRedis
-                  [ Se.And
-                      ( [Se.Is BeamR.bookingId $ Se.In (getId . Booking.id <$> bookings)]
-                          <> [Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
-                      )
-                  ]
-                  Nothing
-              rideDetails <- findAllFromKvRedis [Se.Is BeamRD.id $ Se.In $ getId . Ride.id <$> rides] Nothing
-              pure $ mkRideItemUsingMaps rides rideDetails bookings riderDetails
-            _ -> pure []
-        _ -> pure []
+      zippedRides <-
+        case (mbDriverPhoneDBHash, mbCustomerPhoneDBHash) of
+          (Just _driverPhoneDBHash, _) -> do
+            rides <-
+              findAllWithOptionsKV
+                [ Se.And
+                    ( [Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
+                        <> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq $ (roundToMidnightUTC $ fromJust mbFrom) | isJust mbFrom]
+                        <> [Se.Is BeamR.createdAt $ Se.LessThanOrEq $ (roundToMidnightUTCToDate $ fromJust mbTo) | isJust mbTo]
+                        <> [Se.Is BeamR.driverId $ Se.Eq $ (fromJust mbDriverId) | isJust mbDriverId]
+                    )
+                ]
+                (Se.Desc BeamR.createdAt)
+                (Just $ limitVal)
+                (Just $ offsetVal)
+            pure $ mkRideItemUsingMapsV2 rides mbDriver
+          (_, Just customerPhoneDBHash) -> do
+            case mbTo of
+              Just toDate | roundToMidnightUTCToDate toDate >= now -> do
+                riderDetails <- findAllWithKV [Se.Is BeamRDR.mobileNumberHash $ Se.Eq customerPhoneDBHash, Se.Is BeamRDR.merchantId $ Se.Eq $ getId merchant.id]
+                bookings <-
+                  findAllFromKvRedis
+                    [ Se.And
+                        ( [Se.Is BeamB.riderId $ Se.In (Just . getId . RiderDetails.id <$> riderDetails)]
+                            <> [Se.Is BeamB.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC $ fromJust mbFrom | isJust mbFrom]
+                            <> [Se.Is BeamB.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate $ fromJust mbTo | isJust mbTo]
+                        )
+                    ]
+                    Nothing
+                rides <-
+                  findAllFromKvRedis
+                    [ Se.And
+                        ( [Se.Is BeamR.bookingId $ Se.In (getId . Booking.id <$> bookings)]
+                            <> [Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
+                        )
+                    ]
+                    Nothing
+                rideDetails <- findAllFromKvRedis [Se.Is BeamRD.id $ Se.In $ getId . Ride.id <$> rides] Nothing
+                pure $ mkRideItemUsingMaps rides rideDetails bookings riderDetails
+              _ -> pure []
+          _ -> pure []
+
       results <- case (mbDriverPhoneDBHash, mbCustomerPhoneDBHash) of
         (Just _driverPhoneDBHash, _) -> pure []
         (_, _) -> do
@@ -759,7 +765,6 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
                         rideDetails' <- B.join_' (BeamCommon.rideDetails BeamCommon.atlasDB) (\rideDetails'' -> ride'.id B.==?. BeamRD.id rideDetails'')
                         riderDetails' <- B.join_' (BeamCommon.rDetails BeamCommon.atlasDB) (\riderDetails'' -> B.just_ (BeamRDR.id riderDetails'') B.==?. BeamB.riderId booking')
                         pure (ride', rideDetails', booking', riderDetails')
-
           case res of
             Right x -> do
               let rides = fst' <$> x

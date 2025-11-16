@@ -65,6 +65,9 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.MultiModalPaymentService Payment.Juspay -> Domain.MultiModalPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
     Domain.MultiModalPaymentService Payment.AAJuspay -> Domain.MultiModalPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
     Domain.MultiModalPaymentService Payment.Stripe -> Domain.MultiModalPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
+    Domain.PassPaymentService Payment.Juspay -> Domain.PassPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
+    Domain.PassPaymentService Payment.AAJuspay -> Domain.PassPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
+    Domain.PassPaymentService Payment.Stripe -> Domain.PassPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
     Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.JourneyMonitoring -> Domain.TokenizationServiceConfig . Tokenize.JourneyMonitoringTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.HyperVerge -> Domain.TokenizationServiceConfig . Tokenize.HyperVergeTokenizationServiceConfig <$> valueToMaybe configJSON
@@ -131,6 +134,11 @@ getServiceNameConfigJson = \case
       Just Juspay.AA -> (Domain.MultiModalPaymentService Payment.AAJuspay, toJSON cfg)
       _ -> (Domain.MultiModalPaymentService Payment.Juspay, toJSON cfg)
     Payment.StripeConfig cfg -> (Domain.MultiModalPaymentService Payment.Juspay, toJSON cfg)
+  Domain.PassPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> case cfg.serviceMode of
+      Just Juspay.AA -> (Domain.PassPaymentService Payment.AAJuspay, toJSON cfg)
+      _ -> (Domain.PassPaymentService Payment.Juspay, toJSON cfg)
+    Payment.StripeConfig cfg -> (Domain.PassPaymentService Payment.Juspay, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
   Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of

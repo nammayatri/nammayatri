@@ -37,7 +37,6 @@ updateByPrimaryKey (Domain.Types.BppDetails.BppDetails {..}) = do
       Se.Set Beam.name name,
       Se.Set Beam.subscriberId subscriberId,
       Se.Set Beam.supportNumber supportNumber,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

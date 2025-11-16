@@ -15,11 +15,13 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data DriverFeeT f = DriverFeeT
-  { amountPaidByCoin :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+  { addedToFeeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    amountPaidByCoin :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     autopayPaymentStage :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverFee.AutopayPaymentStage),
     badDebtDeclarationDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     badDebtRecoveryDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     billNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    cancellationPenaltyAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     collectedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     collectedBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

@@ -301,7 +301,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
                     ..
                   }
           -- If ML call fails for any reason, fall back to no congestion multiplier to keep flow running
-          resOrErr <- try @_ @SomeException (ML.getCongestionCharge mlPricingInternal.apiKey mlPricingInternal.url req)
+          resOrErr <- withTryCatch "getCongestionCharge:getFullFarePolicy" (ML.getCongestionCharge mlPricingInternal.apiKey mlPricingInternal.url req)
           case resOrErr of
             Right congestionChargeRes -> return congestionChargeRes.congestionChargeMultiplier
             Left e -> do
@@ -350,14 +350,17 @@ calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration mercha
           }
   SFC.calculateFareParameters params
 
-mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]
-mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTotalFare congestionChargeViaDp farePolicy = do
+mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]
+mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTollCharges estimatedTotalFare congestionChargeViaDp farePolicy = do
   let distance = fromMaybe 0 mbDistance -- TODO: Fix Later
       driverExtraFeeBounds = FarePolicyD.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
       nightShiftBounds = farePolicy.nightShiftBounds
 
       tollChargesCaption = show Tags.TOLL_CHARGES
       tollChargesItem = mkBreakupItem tollChargesCaption . (mkValue . show) <$> mbTollCharges
+
+      cancellationChargeCaption = show Tags.CANCELLATION_CHARGES
+      cancellationChargeItem = mkBreakupItem cancellationChargeCaption . (mkValue . highPrecMoneyToText) <$> mbCancellationCharge
 
       congestionChargePercentageCaption = show Tags.CONGESTION_CHARGE_PERCENTAGE
       congestionChargePercentageItemMultiplier =
@@ -425,6 +428,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
   catMaybes
     [ tollChargesItem,
       serviceChargeItem,
+      cancellationChargeItem,
       parkingChargeItem,
       governmentChargeItem,
       driverMinExtraFeeItem,
@@ -886,7 +890,7 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocation) (Jus
       logInfo $ "No DynamicPricingLogics found for merchantOperatingCityId : " <> show merchantOperatingCityId <> " and serviceTier : " <> show serviceTier <> " and localTime : " <> show localTime
       return Nothing
     else do
-      response <- try @_ @SomeException $ LYTU.runLogics allLogics dynamicPricingData
+      response <- withTryCatch "runLogics:getCongestionChargeMultiplierFromModel" $ LYTU.runLogics allLogics dynamicPricingData
       logInfo $ "DynamicPricing Req Logics : " <> show allLogics <> " and data is : " <> show dynamicPricingData <> " and response is : " <> show response
       case response of
         Left e -> do

@@ -13,13 +13,15 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data DocumentVerificationConfig = DocumentVerificationConfig
-  { checkExpiry :: Kernel.Prelude.Bool,
+  { applicableTo :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
+    checkExpiry :: Kernel.Prelude.Bool,
     checkExtraction :: Kernel.Prelude.Bool,
     dependencyDocumentType :: [Domain.Types.DocumentVerificationConfig.DocumentType],
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     doStrictVerifcation :: Kernel.Prelude.Bool,
     documentCategory :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory,
+    documentFields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDefaultEnabledOnManualVerification :: Kernel.Prelude.Bool,
@@ -41,6 +43,8 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data DocumentApplicableType = FLEET | INDIVIDUAL | FLEET_AND_INDIVIDUAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data DocumentCategory = Driver | Vehicle | Permission | Training deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -87,6 +91,11 @@ data DocumentType
   | BusinessRegistrationExtract
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data FieldInfo = FieldInfo {_type :: Domain.Types.DocumentVerificationConfig.FieldType, isMandatory :: Kernel.Prelude.Bool, name :: Kernel.Prelude.Text, regexValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data FieldType = FieldText | FieldInt | FieldDouble deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data SupportedVehicleClasses
   = DLValidClasses [Kernel.Prelude.Text]
   | RCValidClasses [Domain.Types.DocumentVerificationConfig.VehicleClassVariantMap]
@@ -107,9 +116,13 @@ data VehicleClassVariantMap = VehicleClassVariantMap
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, (Ord), (Read))
 
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentApplicableType))
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentCategory))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentType))
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FieldType))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SupportedVehicleClasses))
 

@@ -758,6 +758,8 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         isDefaultEnabledOnManualVerification = fromMaybe True isDefaultEnabledOnManualVerification,
         isImageValidationRequired = fromMaybe True isImageValidationRequired,
         doStrictVerifcation = fromMaybe True doStrictVerifcation,
+        applicableTo = DVC.FLEET_AND_INDIVIDUAL,
+        documentFields = Nothing,
         updatedAt = now,
         createdAt = now,
         documentCategory = castDocumentCategory <$> documentCategory,
@@ -1118,7 +1120,8 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     pickupBufferInSecsForNightShiftCal :: Text,
     disableRecompute :: Text,
     stateEntryPermitCharges :: Text,
-    conditionalCharges :: Text
+    conditionalCharges :: Text,
+    driverCancellationPenaltyAmount :: Text
   }
   deriving (Show)
 
@@ -1210,6 +1213,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "disable_recompute"
       <*> r .: "state_entry_permit_charges"
       <*> r .: "additional_charges"
+      <*> r .: "driver_cancellation_penalty_amount"
 
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
@@ -1409,6 +1413,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       maxAllowedTripDistance :: Meters <- readCSVField idx row.maxAllowedTripDistance "Max Allowed Trip Distance"
       let allowedTripDistanceBounds = Just $ FarePolicy.AllowedTripDistanceBounds {distanceUnit, minAllowedTripDistance, maxAllowedTripDistance}
       let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
+      let driverCancellationPenaltyAmount :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.driverCancellationPenaltyAmount "Driver Cancellation Penalty Amount"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
       let petCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.petCharges "Pet Charges"
       let priorityCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.priorityCharges "Priority Charges"
@@ -1686,7 +1691,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
   unprocessedEntities <-
     foldlM
       ( \unprocessedEntities specialLocationAndGates -> do
-          try @_ @SomeException
+          withTryCatch
+            "processSpecialLocationAndGatesGroup"
             (processSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates)
             >>= \case
               Left err -> return $ unprocessedEntities <> ["Unable to add special location : " <> show err]
@@ -1997,7 +2003,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- go home config
   mbGoHomeConfig <-
-    try @_ @SomeException (CGHC.findByMerchantOpCityId newMerchantOperatingCityId Nothing) >>= \case
+    withTryCatch "GoHomeConfig:findByMerchantOpCityId:postMerchantConfigOperatingCityCreate" (CGHC.findByMerchantOpCityId newMerchantOperatingCityId Nothing) >>= \case
       Left _ -> do
         goHomeConfig <- CGHC.findByMerchantOpCityId baseOperatingCityId Nothing
         let newGoHomeConfig = buildGoHomeConfig newMerchantId newMerchantOperatingCityId now goHomeConfig
@@ -2615,8 +2621,10 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
         let keysToClear =
               [ CQPlan.makeAllPlanKey,
                 CQPlan.makePlanIdAndPaymentModeKey plan.id plan.paymentMode plan.serviceName,
-                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated),
-                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing,
+                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated) (Just True),
+                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated) Nothing,
+                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing (Just True),
+                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing Nothing,
                 CQPlan.makeMerchantIdAndTypeKey plan.merchantOpCityId plan.planType plan.serviceName plan.vehicleCategory False,
                 CQPlan.makeMerchantIdKey plan.merchantOpCityId plan.serviceName,
                 CQPlan.makeMerchantIdAndPaymentModeAndVariantKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleVariant (Just plan.isDeprecated),

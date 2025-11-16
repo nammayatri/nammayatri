@@ -10,6 +10,7 @@ module Domain.Action.RiderPlatform.Management.Ride
     postRideSyncMultiple,
     postRideCancelMultiple,
     getRideKaptureList,
+    cancellationChargesWaiveOff,
   )
 where
 
@@ -112,3 +113,8 @@ getRideKaptureList merchantShortId opCity apiTokenInfo rideShortId countryCode p
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $
     API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideKaptureList) rideShortId countryCode phoneNumber supportPhoneNumber
+
+cancellationChargesWaiveOff :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.Flow API.Types.RiderPlatform.Management.Ride.CancellationChargesWaiveOffRes)
+cancellationChargesWaiveOff merchantShortId opCity apiTokenInfo rideId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.cancellationChargesWaiveOff) rideId

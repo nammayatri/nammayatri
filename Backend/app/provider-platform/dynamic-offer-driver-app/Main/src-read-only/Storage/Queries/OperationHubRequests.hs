@@ -69,7 +69,6 @@ updateByPrimaryKey (Domain.Types.OperationHubRequests.OperationHubRequests {..})
       Se.Set Beam.remarks remarks,
       Se.Set Beam.requestStatus requestStatus,
       Se.Set Beam.requestType requestType,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

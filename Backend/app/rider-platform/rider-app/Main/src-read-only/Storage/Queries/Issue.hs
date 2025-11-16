@@ -30,7 +30,6 @@ updateByPrimaryKey (Domain.Types.Issue.Issue {..}) = do
   updateWithKV
     [ Se.Set Beam.bookingId (Kernel.Types.Id.getId <$> bookingId),
       Se.Set Beam.contactEmail contactEmail,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.customerId (Kernel.Types.Id.getId customerId),
       Se.Set Beam.description description,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

@@ -5,7 +5,7 @@ module Domain.Action.UI.BBPS
   ( postBbpsSession,
     postBbpsCreateOrder,
     getBbpsGetOrderStatus,
-    webhookHandlerBBPS,
+    bbpsOrderStatusHandler,
     postBbpsPaymentStatus,
     postBbpsCrossCheckPayment,
     getBbpsOrders,
@@ -33,6 +33,7 @@ import qualified Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Types as Payment
 import qualified Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -127,7 +128,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
       createOrderCall = Payment.createOrder person.merchantId person.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId Nothing createOrderReq createOrderCall
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId Nothing Nothing Payment.BBPS createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> do
       QBBPS.create bbpsInfo
@@ -145,7 +146,15 @@ getBbpsGetOrderStatus ::
 getBbpsGetOrderStatus (_, _) refIdTxt = do
   let refId = Kernel.Types.Id.Id refIdTxt
   bbpsInfo <- QBBPS.findByRefId refId >>= fromMaybeM (InvalidRequest "BBPS info not found")
-  bbpsStatusHandler bbpsInfo
+  person <- QP.findById (Kernel.Types.Id.cast bbpsInfo.customerId) >>= fromMaybeM (InvalidRequest "Person not found")
+  bbpsStatusHandler bbpsInfo (withPaymentStatusResponseHandler bbpsInfo person)
+  where
+    withPaymentStatusResponseHandler :: DBBPS.BBPS -> DP.Person -> (DPayment.PaymentStatusResp -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
+    withPaymentStatusResponseHandler bbpsInfo person action = do
+      let orderStatusCall = Payment.orderStatus bbpsInfo.merchantId bbpsInfo.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion
+      let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person bbpsInfo.customerId
+      orderStatusResponse <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.cast bbpsInfo.refId) orderStatusCall
+      action orderStatusResponse
 
 postBbpsCrossCheckPayment :: API.Types.UI.BBPS.BBPSServerReq -> Environment.Flow API.Types.UI.BBPS.BBPSServerResp
 postBbpsCrossCheckPayment _req = do
@@ -208,19 +217,29 @@ getBbpsOrders (mbPersonId, merchantId) mbLimit mbOffset mbActive mbStatus = do
 mkBBPSInfoApiRes :: DBBPS.BBPS -> API.BBPSInfoAPIRes
 mkBBPSInfoApiRes DBBPS.BBPS {..} = API.BBPSInfoAPIRes {billDetails = API.BBPSBillDetails {txnAmount = highPrecMoneyToText amount, ..}, ..}
 
-webhookHandlerBBPS :: Kernel.Types.Id.ShortId DPaymentOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
-webhookHandlerBBPS orderShortId _merchantId = do
+bbpsOrderStatusHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EsqDBReplicaFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> DPayment.PaymentStatusResp -> m DPayment.PaymentFulfillmentStatus
+bbpsOrderStatusHandler _merchantId paymentStatusResponse = do
+  orderShortId <- DPayment.getOrderShortId paymentStatusResponse
   logDebug $ "bbps order bap webhookc call" <> orderShortId.getShortId
   order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
   bbpsInfo <- QBBPS.findByRefId (Kernel.Types.Id.cast order.id) >>= fromMaybeM (InvalidRequest "BBPS info not found")
-  bbpsStatusHandler bbpsInfo
+  bbpsStatusResp <- bbpsStatusHandler bbpsInfo withPaymentStatusResponseHandler
+  case bbpsStatusResp.status of
+    DBBPS.SUCCESS -> return DPayment.FulfillmentSucceeded
+    DBBPS.CONFIRMATION_FAILED -> return DPayment.FulfillmentFailed
+    DBBPS.PENDING -> return DPayment.FulfillmentPending
+    DBBPS.REFUND_PENDING -> return DPayment.FulfillmentRefundPending
+    DBBPS.REFUND_INITIATED -> return DPayment.FulfillmentRefundInitiated
+    DBBPS.REFUND_FAILED -> return DPayment.FulfillmentRefundFailed
+    DBBPS.REFUNDED -> return DPayment.FulfillmentRefunded
+    _ -> return DPayment.FulfillmentPending
+  where
+    withPaymentStatusResponseHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EsqDBReplicaFlow m r) => (DPayment.PaymentStatusResp -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
+    withPaymentStatusResponseHandler action = action paymentStatusResponse
 
-bbpsStatusHandler :: DBBPS.BBPS -> Environment.Flow API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
-bbpsStatusHandler bbpsInfo = do
-  let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person bbpsInfo.customerId
-  person <- QP.findById (Kernel.Types.Id.cast bbpsInfo.customerId) >>= fromMaybeM (InvalidRequest "Person not found")
-  let orderStatusCall = Payment.orderStatus bbpsInfo.merchantId bbpsInfo.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion
-      oldResp =
+bbpsStatusHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EsqDBReplicaFlow m r) => DBBPS.BBPS -> ((DPayment.PaymentStatusResp -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
+bbpsStatusHandler bbpsInfo withPaymentStatusResponseHandler = do
+  let oldResp =
         API.BBPSPaymentStatusAPIRes
           { status = bbpsInfo.status,
             paymentInformation = bbpsInfo.paymentInformation,
@@ -230,24 +249,24 @@ bbpsStatusHandler bbpsInfo = do
           }
   if
       | bbpsInfo.status `elem` [DBBPS.NEW, DBBPS.PENDING] -> do
-        paymentStatusResp <- DPayment.orderStatusService commonPersonId (Kernel.Types.Id.cast bbpsInfo.refId) orderStatusCall
-        maybeM
-          (pure oldResp)
-          ( \(bbpsStatus, paymentInfo, payMode, txnUUID) -> do
-              when (bbpsInfo.status /= bbpsStatus) $ do
-                if bbpsStatus == DBBPS.CONFIRMATION_PENDING
-                  then withBBPSLock bbpsInfo.refId $ QBBPS.updatePaymentInformationAndStatusByRefId txnUUID payMode paymentInfo bbpsStatus bbpsInfo.refId
-                  else withBBPSLock bbpsInfo.refId $ QBBPS.updateStatusByRefId bbpsStatus bbpsInfo.refId
-              return $
-                API.BBPSPaymentStatusAPIRes
-                  { status = bbpsStatus,
-                    paymentTxnId = txnUUID,
-                    paymentInformation = paymentInfo,
-                    paymentMode = payMode,
-                    errorMessage = bbpsInfo.errorMessage
-                  }
-          )
-          (pure $ makePaymentInformation paymentStatusResp)
+        withPaymentStatusResponseHandler $ \paymentStatusResp -> do
+          maybeM
+            (pure oldResp)
+            ( \(bbpsStatus, paymentInfo, payMode, txnUUID) -> do
+                when (bbpsInfo.status /= bbpsStatus) $ do
+                  if bbpsStatus == DBBPS.CONFIRMATION_PENDING
+                    then withBBPSLock bbpsInfo.refId $ QBBPS.updatePaymentInformationAndStatusByRefId txnUUID payMode paymentInfo bbpsStatus bbpsInfo.refId
+                    else withBBPSLock bbpsInfo.refId $ QBBPS.updateStatusByRefId bbpsStatus bbpsInfo.refId
+                return $
+                  API.BBPSPaymentStatusAPIRes
+                    { status = bbpsStatus,
+                      paymentTxnId = txnUUID,
+                      paymentInformation = paymentInfo,
+                      paymentMode = payMode,
+                      errorMessage = bbpsInfo.errorMessage
+                    }
+            )
+            (pure $ makePaymentInformation paymentStatusResp)
       | bbpsInfo.status `elem` [DBBPS.CONFIRMATION_PENDING, DBBPS.FAILED, DBBPS.SUCCESS, DBBPS.REFUNDED, DBBPS.REFUND_FAILED] -> return oldResp
       | bbpsInfo.status `elem` [DBBPS.AWAITING_BBPS_CONFIRMATION] -> return oldResp -- Extra state might be needed later to handle some cases -- we can call bbps status api here..
       | bbpsInfo.status `elem` [DBBPS.REFUND_PENDING, DBBPS.CONFIRMATION_FAILED] -> do
@@ -260,7 +279,7 @@ bbpsStatusHandler bbpsInfo = do
               | isRefundSuccess -> void $ withBBPSLock bbpsInfo.refId $ QBBPS.updateStatusByRefId DBBPS.REFUNDED bbpsInfo.refId
               | isAnyRefundPending -> void $ do
                 when (bbpsInfo.status /= DBBPS.REFUND_PENDING) $ withBBPSLock bbpsInfo.refId $ QBBPS.updateStatusByRefId DBBPS.REFUND_PENDING bbpsInfo.refId
-                DPayment.orderStatusService commonPersonId (Kernel.Types.Id.cast bbpsInfo.refId) orderStatusCall
+                withPaymentStatusResponseHandler $ \_ -> return oldResp
               | allRefundFailed -> void $ withBBPSLock bbpsInfo.refId $ QBBPS.updateStatusByRefId DBBPS.REFUND_FAILED bbpsInfo.refId
               | otherwise -> pure ()
         return oldResp
@@ -311,21 +330,7 @@ txnStatusToBBPSStatus = \case
   Payment.CLIENT_AUTH_TOKEN_EXPIRED -> DBBPS.FAILED
   Payment.CANCELLED -> DBBPS.FAILED
 
--- initiateAutoRefund :: Kernel.Types.Id.Id Merchant.Merchant -> Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id DBBPS.BBPS -> Kernel.Types.Id.ShortId DBBPS.BBPS -> HighPrecMoney -> Environment.Flow ()
--- initiateAutoRefund personMerchantId merchantOperatingCityId orderRefId orderShortId amount = do
---   refundId <- generateGUID
---   let autoRefundReq =
---         Payment.AutoRefundReq
---           { orderId = orderShortId.getShortId,
---             amount = amount,
---             requestId = refundId
---           }
---       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant personMerchantId
---       createRefundCall = Payment.refundOrder personMerchantId merchantOperatingCityId Nothing Payment.BBPS
---   _ <- DPayment.refundService (autoRefundReq, Kernel.Types.Id.Id refundId) commonMerchantId createRefundCall
---   QBBPS.updateStatusByRefId DBBPS.REFUND_PENDING orderRefId
-
-withBBPSLock :: Kernel.Types.Id.Id DBBPS.BBPS -> Environment.Flow () -> Environment.Flow ()
+withBBPSLock :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EsqDBReplicaFlow m r) => Kernel.Types.Id.Id DBBPS.BBPS -> m () -> m ()
 withBBPSLock id func = Redis.whenWithLockRedis (bbpsLockKey id.getId) 60 func
 
 bbpsLockKey :: Text -> Text

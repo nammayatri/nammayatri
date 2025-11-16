@@ -40,8 +40,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.VehicleRouteMapping.VehicleRouteMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.routeId routeId,
+    [ Se.Set Beam.routeId routeId,
       Se.Set Beam.service service,
       Se.Set Beam.shift shift,
       Se.Set Beam.typeOfService typeOfService,

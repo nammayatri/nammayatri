@@ -297,3 +297,53 @@ ALTER TABLE atlas_app.ride ADD COLUMN insured_amount text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN is_pet_ride boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN cancellation_charges_on_cancel double precision ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN billing_category text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

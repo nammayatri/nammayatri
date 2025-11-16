@@ -143,7 +143,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         { driverId = driverFee_.driverId,
           mandateId = mandateId_,
           driverFeeId = driverFee_.id,
-          amount = roundToHalf driverFee_.currency $ driverFee_.govtCharges + driverFee_.platformFee.fee + driverFee_.platformFee.cgst + driverFee_.platformFee.sgst
+          amount = roundToHalf driverFee_.currency $ driverFee_.govtCharges + driverFee_.platformFee.fee + driverFee_.platformFee.cgst + driverFee_.platformFee.sgst + fromMaybe 0 driverFee_.cancellationPenaltyAmount
         }
 
 data DriverInfoForPDNotification = DriverInfoForPDNotification
@@ -212,7 +212,7 @@ sendAsyncNotification driverToNotify merchantId merchantOperatingCityId subscrip
   driver <- QP.findById driverToNotify.driverId >>= fromMaybeM (PersonDoesNotExist driverToNotify.driverId.getId)
   QNTF.create $ buildNotificationEntity notificationId req driverToNotify.driverFeeId driverToNotify.mandateId now
   paymentServiceName <- TPayment.decidePaymentServiceForRecurring subscriptionConfig.paymentServiceName driver.id driver.merchantOperatingCityId subscriptionConfig.serviceName
-  exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId merchantOperatingCityId paymentServiceName (Just driver.id.getId)))
+  exec <- withTryCatch "createNotificationService:sendAsyncNotification" $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId merchantOperatingCityId paymentServiceName (Just driver.id.getId)))
   case exec of
     Left err -> do
       QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverToNotify.driverFeeId] Nothing

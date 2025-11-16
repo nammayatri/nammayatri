@@ -22,7 +22,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSStageFare.FRFSStageFare] -> m ())
 createMany = traverse_ create
 
-findAllByFarePolicyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m ([Domain.Types.FRFSStageFare.FRFSStageFare]))
+findAllByFarePolicyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m [Domain.Types.FRFSStageFare.FRFSStageFare])
 findAllByFarePolicyId farePolicyId = do findAllWithKV [Se.Is Beam.farePolicyId $ Se.Eq (Kernel.Types.Id.getId farePolicyId)]
 
 findByPrimaryKey ::
@@ -38,7 +38,6 @@ updateByPrimaryKey (Domain.Types.FRFSStageFare.FRFSStageFare {..}) = do
       Se.Set Beam.currency currency,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.farePolicyId $ Se.Eq (Kernel.Types.Id.getId farePolicyId), Se.Is Beam.stage $ Se.Eq stage]]

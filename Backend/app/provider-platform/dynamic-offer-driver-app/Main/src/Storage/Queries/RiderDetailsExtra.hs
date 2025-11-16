@@ -98,6 +98,46 @@ updateTotalBookingsCount riderId = do
     ]
     [Se.Is BeamRD.id (Se.Eq riderId)]
 
+updateCancellationDuesPaid :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMoney -> Text -> m ()
+updateCancellationDuesPaid cancellationDuesPaid riderId = do
+  now <- getCurrentTime
+  riderDetails <- findOneWithKV [Se.Is BeamRD.id (Se.Eq riderId)] >>= fromMaybeM (RiderDetailsNotFound riderId)
+  updateOneWithKV
+    [ Se.Set BeamRD.cancellationDuesPaid (Just (riderDetails.cancellationDuesPaid + cancellationDuesPaid)),
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId)]
+
+updateNoOfTimesCanellationDuesPaid :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m ()
+updateNoOfTimesCanellationDuesPaid riderId = do
+  now <- getCurrentTime
+  riderDetails <- findOneWithKV [Se.Is BeamRD.id (Se.Eq riderId)] >>= fromMaybeM (RiderDetailsNotFound riderId)
+  updateOneWithKV
+    [ Se.Set BeamRD.noOfTimesCanellationDuesPaid (Just (riderDetails.noOfTimesCanellationDuesPaid + 1)),
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId)]
+
+updateNoOfTimesWaiveOffUsed :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m ()
+updateNoOfTimesWaiveOffUsed riderId = do
+  now <- getCurrentTime
+  riderDetails <- findOneWithKV [Se.Is BeamRD.id (Se.Eq riderId)] >>= fromMaybeM (RiderDetailsNotFound riderId)
+  updateOneWithKV
+    [ Se.Set BeamRD.noOfTimesWaiveOffUsed (Just (riderDetails.noOfTimesWaiveOffUsed + 1)),
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId)]
+
+updateWaivedOffAmount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMoney -> Text -> m ()
+updateWaivedOffAmount waivedOffAmount riderId = do
+  now <- getCurrentTime
+  riderDetails <- findOneWithKV [Se.Is BeamRD.id (Se.Eq riderId)] >>= fromMaybeM (RiderDetailsNotFound riderId)
+  updateOneWithKV
+    [ Se.Set BeamRD.waivedOffAmount (Just (riderDetails.waivedOffAmount + waivedOffAmount)),
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId)]
+
 updateCompletedRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m ()
 updateCompletedRidesCount riderId = do
   now <- getCurrentTime

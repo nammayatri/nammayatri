@@ -113,6 +113,9 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
         Just Enums.SOFT_CANCEL -> do
           mbRide <- QRide.findActiveByRBId booking.id
           cancellationCharges <- maybe (return Nothing) (\ride -> DCancel.getCancellationCharges booking ride) mbRide
+          void $ case (cancellationCharges, mbRide) of
+            (Just priceEntity, Just ride) -> QRide.updateCancellationFeeIfCancelledField (Just priceEntity.amount) ride.id
+            _ -> return ()
           let onCancelBuildReq =
                 OC.DBookingCancelledReqV2
                   { booking = booking,

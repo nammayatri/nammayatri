@@ -49,6 +49,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import qualified Kernel.Types.Common as Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, generateShortId, throwError)
@@ -160,7 +161,7 @@ safeCreateOrGetIssueChat ticketId mbRideId personId chats mediaFiles mbIssueRepo
           }
 
     tryCreateIssueChat issueChat = do
-      try @_ @SomeException (QICT.create issueChat)
+      withTryCatch "create:tryCreateIssueChat" (QICT.create issueChat)
 
 -- Helper function for ticketStatusCallBack to safely handle Kapture data
 safeCreateOrUpdateIssueChatWithKapture ::
@@ -196,7 +197,7 @@ safeCreateOrUpdateIssueChatWithKapture ticketId mbRideId personId kaptureData mb
                 updatedAt = now
               }
       -- Use exception handling to catch duplicate key violations
-      result <- try @_ @SomeException (QICT.create newIssueChat)
+      result <- withTryCatch "create:ticketStatusCallBack" (QICT.create newIssueChat)
       case result of
         Left _ -> do
           -- If creation failed (likely due to duplicate), update existing
@@ -209,7 +210,8 @@ safeCreateOrUpdateIssueChatWithKapture ticketId mbRideId personId kaptureData mb
 createIssueReportV2 ::
   ( BeamFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    TryException m
   ) =>
   ShortId Merchant ->
   Context.City ->
@@ -844,7 +846,7 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
       { messageId = updatedIssueMessage.id
       }
   where
-    mkIssueMessage :: (BeamFlow m r, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => Maybe DIM.IssueMessage -> MerchantOperatingCity -> ServiceHandle m -> m DIM.IssueMessage
+    mkIssueMessage :: (BeamFlow m r, Common.MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => Maybe DIM.IssueMessage -> MerchantOperatingCity -> ServiceHandle m -> m DIM.IssueMessage
     mkIssueMessage mbIssueMessage merchantOperatingCity iHandle = do
       (mbOptionId, mbCategoryId) <- getAndValidateOptionAndCategoryId mbIssueMessage
       mbParentCategory <- findIssueCategory mbOptionId mbCategoryId
@@ -937,7 +939,7 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
       Just message -> message.messageType
       Nothing -> maybe DIM.Terminal (bool DIM.Intermediate DIM.FAQ . ((== DIC.FAQ) . (.categoryType))) mbParentCategory
 
-    uploadMessageMediaFiles :: (BeamFlow m r, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => Id DIM.IssueMessage -> [Id DMF.MediaFile] -> MerchantOperatingCity -> DIM.IssueMessageType -> ServiceHandle m -> m [Id DMF.MediaFile]
+    uploadMessageMediaFiles :: (BeamFlow m r, Common.MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => Id DIM.IssueMessage -> [Id DMF.MediaFile] -> MerchantOperatingCity -> DIM.IssueMessageType -> ServiceHandle m -> m [Id DMF.MediaFile]
     uploadMessageMediaFiles issueMessageId existingMediaFiles merchantOpCity messageType iHandle = do
       case messageType of
         DIM.FAQ -> do

@@ -21,7 +21,7 @@ import Codec.Picture.Types
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Base64.Lazy as B64L
 import qualified Data.ByteString.Lazy as LBS
-import Data.Text (null, pack, unpack)
+import Data.Text (pack, unpack)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.Dashboard.Common as DCommon
@@ -215,7 +215,7 @@ backfillAadhaarImage person merchantOpCityId aadhaarVerification =
 uploadOriginalAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
 uploadOriginalAadhaarImage person image imageType = do
   orgImageFilePath <- S3.createFilePath "/driver-aadhaar-photo/" ("driver-" <> getId person.id) S3.Image (parseImageExtension imageType)
-  resultOrg <- try @_ @SomeException $ S3.put (unpack orgImageFilePath) image
+  resultOrg <- withTryCatch "S3:put:uploadOriginalAadhaarImage" $ S3.put (unpack orgImageFilePath) image
   pure (orgImageFilePath, resultOrg)
 
 uploadCompressedAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> ImageType -> m (Text, Either SomeException ())
@@ -224,7 +224,7 @@ uploadCompressedAadhaarImage person merchantOpCityId image imageType = do
   let mbconfig = transporterConfig.aadhaarImageResizeConfig
   compImageFilePath <- S3.createFilePath "/driver-aadhaar-photo-resized/" ("driver-" <> getId person.id) S3.Image (parseImageExtension imageType)
   compImage <- maybe (return image) (\cfg -> fromMaybe image <$> resizeImage cfg.height cfg.width image imageType) mbconfig
-  resultComp <- try @_ @SomeException $ S3.put (unpack compImageFilePath) compImage
+  resultComp <- withTryCatch "S3:put:uploadCompressedAadhaarImage" $ S3.put (unpack compImageFilePath) compImage
   case resultComp of
     Left err -> logDebug ("Failed to Upload Compressed Aadhaar Image to S3 : " <> show err)
     Right _ -> QDI.updateCompAadhaarImagePath (Just compImageFilePath) (cast person.id)
@@ -418,27 +418,14 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
             let extractedNameOnCard = extractedAadhaarOutputData.name_on_card
             logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
             logInfo ("req.aadhaarName: " <> show req.aadhaarName)
-            if verifyBy == DPan.FRONTEND_SDK
-              then case (req.aadhaarName, extractedNameOnCard) of
-                (Just providedName, Just extractedName) | not (null providedName) && not (null extractedName) -> do
-                  let nameCompareReq =
-                        Verification.NameCompareReq
-                          { extractedName,
-                            verifiedName = providedName,
-                            percentage = Just True,
-                            driverId = person.id.getId
-                          }
-                  isValid <- DVRC.isNameComparePercentageValid merchantId merchantOpCityId nameCompareReq
-                  unless isValid $ throwError (MismatchDataError "Provided name and extracted name on card do not match")
-                _ -> throwError (InvalidRequest "Aadhaar name is required")
-              else case req.aadhaarNumber of
-                Just aadhaarNumber ->
-                  unless (extractedAadhaarNumber == Just aadhaarNumber) $
-                    throwImageError (Id req.aadhaarFrontImageId) $
-                      ImageDocumentNumberMismatch
-                        (maybe "null" maskText extractedAadhaarNumber)
-                        (maskText aadhaarNumber)
-                Nothing -> throwError (InvalidRequest "Aadhaar number is required")
+            when (verifyBy /= DPan.FRONTEND_SDK) $ case req.aadhaarNumber of
+              Just aadhaarNumber ->
+                unless (extractedAadhaarNumber == Just aadhaarNumber) $
+                  throwImageError (Id req.aadhaarFrontImageId) $
+                    ImageDocumentNumberMismatch
+                      (maybe "null" maskText extractedAadhaarNumber)
+                      (maskText aadhaarNumber)
+              Nothing -> throwError (InvalidRequest "Aadhaar number is required")
             when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
               DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedAadhaarOutputData.name_on_card extractedAadhaarOutputData.date_of_birth Nothing ODC.AadhaarCard driverDocument
             aadhaarCard <- makeAadhaarCardEntity person.id extractedAadhaarOutputData req

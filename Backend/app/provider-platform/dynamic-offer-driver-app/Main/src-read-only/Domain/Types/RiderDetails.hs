@@ -18,6 +18,7 @@ data RiderDetailsE e = RiderDetails
   { bapId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationDueRides :: Kernel.Prelude.Int,
     cancellationDues :: Kernel.Types.Common.HighPrecMoney,
+    cancellationDuesPaid :: Kernel.Types.Common.HighPrecMoney,
     cancelledRides :: Kernel.Prelude.Int,
     completedRides :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -34,6 +35,8 @@ data RiderDetailsE e = RiderDetails
     mobileCountryCode :: Kernel.Prelude.Text,
     mobileNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     nightSafetyChecks :: Kernel.Prelude.Bool,
+    noOfTimesCanellationDuesPaid :: Kernel.Prelude.Int,
+    noOfTimesWaiveOffUsed :: Kernel.Prelude.Int,
     otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutFlagReason :: Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason,
     referralCode :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverReferral.DriverReferral),
@@ -41,7 +44,8 @@ data RiderDetailsE e = RiderDetails
     referredByDriver :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     totalBookings :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
-    validCancellations :: Kernel.Prelude.Int
+    validCancellations :: Kernel.Prelude.Int,
+    waivedOffAmount :: Kernel.Types.Common.HighPrecMoney
   }
   deriving (Generic)
 
@@ -58,6 +62,7 @@ instance EncryptedItem RiderDetails where
         { bapId = bapId entity,
           cancellationDueRides = cancellationDueRides entity,
           cancellationDues = cancellationDues entity,
+          cancellationDuesPaid = cancellationDuesPaid entity,
           cancelledRides = cancelledRides entity,
           completedRides = completedRides entity,
           createdAt = createdAt entity,
@@ -74,6 +79,8 @@ instance EncryptedItem RiderDetails where
           mobileCountryCode = mobileCountryCode entity,
           mobileNumber = mobileNumber_,
           nightSafetyChecks = nightSafetyChecks entity,
+          noOfTimesCanellationDuesPaid = noOfTimesCanellationDuesPaid entity,
+          noOfTimesWaiveOffUsed = noOfTimesWaiveOffUsed entity,
           otpCode = otpCode entity,
           payoutFlagReason = payoutFlagReason entity,
           referralCode = referralCode entity,
@@ -81,7 +88,8 @@ instance EncryptedItem RiderDetails where
           referredByDriver = referredByDriver entity,
           totalBookings = totalBookings entity,
           updatedAt = updatedAt entity,
-          validCancellations = validCancellations entity
+          validCancellations = validCancellations entity,
+          waivedOffAmount = waivedOffAmount entity
         }
   decryptItem entity = do
     mobileNumber_ <- fst <$> decryptItem (mobileNumber entity)
@@ -90,6 +98,7 @@ instance EncryptedItem RiderDetails where
           { bapId = bapId entity,
             cancellationDueRides = cancellationDueRides entity,
             cancellationDues = cancellationDues entity,
+            cancellationDuesPaid = cancellationDuesPaid entity,
             cancelledRides = cancelledRides entity,
             completedRides = completedRides entity,
             createdAt = createdAt entity,
@@ -106,6 +115,8 @@ instance EncryptedItem RiderDetails where
             mobileCountryCode = mobileCountryCode entity,
             mobileNumber = mobileNumber_,
             nightSafetyChecks = nightSafetyChecks entity,
+            noOfTimesCanellationDuesPaid = noOfTimesCanellationDuesPaid entity,
+            noOfTimesWaiveOffUsed = noOfTimesWaiveOffUsed entity,
             otpCode = otpCode entity,
             payoutFlagReason = payoutFlagReason entity,
             referralCode = referralCode entity,
@@ -113,7 +124,8 @@ instance EncryptedItem RiderDetails where
             referredByDriver = referredByDriver entity,
             totalBookings = totalBookings entity,
             updatedAt = updatedAt entity,
-            validCancellations = validCancellations entity
+            validCancellations = validCancellations entity,
+            waivedOffAmount = waivedOffAmount entity
           },
         ""
       )

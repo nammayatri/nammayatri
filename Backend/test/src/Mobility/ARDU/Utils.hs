@@ -148,7 +148,7 @@ resetDriver driver = runARDUFlow "" $ do
     SCTC.findByMerchantOpCityId Fixtures.nammaYatriPartnerMerchantOperatingCityId Nothing
       >>= fromMaybeM (TransporterConfigNotFound Fixtures.nammaYatriPartnerMerchantOperatingCityId.getId)
   driverInfo <- QDI.findById (cast driver.driverId) >>= fromMaybeM DriverInfoNotFound
-  DDriverMode.updateDriverModeAndFlowStatus (cast driver.driverId) transporterConfig False (Just TDrInfo.OFFLINE) newFlowStatus driverInfo
+  DDriverMode.updateDriverModeAndFlowStatus (cast driver.driverId) transporterConfig False (Just TDrInfo.OFFLINE) newFlowStatus driverInfo Nothing
   QTDrInfo.updateOnRide False (cast driver.driverId)
 
 -- flow primitives
@@ -179,8 +179,10 @@ select bapToken quoteId =
         autoAssignEnabledV2 = Nothing,
         isAdvancedBookingEnabled = Nothing,
         paymentMethodId = Nothing,
+        paymentInstrument = Nothing,
         deliveryDetails = Nothing,
         disabilityDisable = Nothing,
+        billingCategory = Nothing,
         preferSafetyPlus = Nothing
       }
 
@@ -219,7 +221,7 @@ getQuotesByEstimateId appToken estimateId =
 
 confirmWithCheck :: Text -> Id AppQuote.Quote -> ClientsM (Id AppRB.Booking, TRB.Booking, TRide.Ride)
 confirmWithCheck appToken quoteId = do
-  bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId Nothing Nothing
+  bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId Nothing Nothing Nothing
 
   void . pollDesc "booking exists" $ do
     initRB <- getBAPBooking bBookingId

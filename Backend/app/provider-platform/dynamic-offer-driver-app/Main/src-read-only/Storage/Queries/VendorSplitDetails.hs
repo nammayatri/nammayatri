@@ -53,7 +53,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.VendorSplitDetails.VendorSplitDetails {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [Se.Set Beam.splitType splitType, Se.Set Beam.splitValue splitValue, Se.Set Beam.createdAt createdAt, Se.Set Beam.updatedAt _now]
+    [Se.Set Beam.splitType splitType, Se.Set Beam.splitValue splitValue, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.area $ Se.Eq area,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),

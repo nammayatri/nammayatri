@@ -55,3 +55,29 @@ newtype UserCancellationDuesResult = UserCancellationDuesResult
 
 instance Default UserCancellationDuesResult where
   def = UserCancellationDuesResult {cancellationCharges = 0}
+
+data UserCancellationDuesWaiveOffData = UserCancellationDuesWaiveOffData
+  { cancellationDues :: HighPrecMoney,
+    cancelledRides :: Int,
+    totalBookings :: Int,
+    completedRides :: Int,
+    validCancellations :: Int,
+    cancellationDueRides :: Int,
+    cancellationDuesPaid :: HighPrecMoney,
+    noOfTimesWaiveOffUsed :: Int,
+    noOfTimesCanellationDuesPaid :: Int,
+    waivedOffAmount :: HighPrecMoney,
+    currentWaivingOffAmount :: HighPrecMoney
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance Default UserCancellationDuesWaiveOffData where
+  def = UserCancellationDuesWaiveOffData {cancellationDues = 0, cancelledRides = 0, totalBookings = 0, completedRides = 0, validCancellations = 0, cancellationDueRides = 0, cancellationDuesPaid = 0, noOfTimesWaiveOffUsed = 0, noOfTimesCanellationDuesPaid = 0, waivedOffAmount = 0, currentWaivingOffAmount = 0}
+
+newtype UserCancellationDuesWaiveOffResult = UserCancellationDuesWaiveOffResult
+  { canWaiveOff :: Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance Default UserCancellationDuesWaiveOffResult where
+  def = UserCancellationDuesWaiveOffResult {canWaiveOff = False}

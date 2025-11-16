@@ -21,10 +21,39 @@ import qualified Storage.Beam.Ride as Beam
 import Storage.Queries.RideExtra as ReExport
 import Storage.Queries.Transformers.Ride
 
+updateCancellationChargesOnCancel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateCancellationChargesOnCancel cancellationChargesOnCancel id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.cancellationChargesOnCancel cancellationChargesOnCancel, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateCancellationFeeIfCancelledField :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateCancellationFeeIfCancelledField cancellationFeeIfCancelled id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.cancellationFeeIfCancelled cancellationFeeIfCancelled, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateDriverCancellationPenalty ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateDriverCancellationPenalty driverCancellationPenaltyFeeId driverCancellationPenaltyAmount id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.driverCancellationPenaltyFeeId driverCancellationPenaltyFeeId,
+      Se.Set Beam.driverCancellationPenaltyAmount driverCancellationPenaltyAmount,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateDriverCancellationPenaltyWaivedReasonAndAmount ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateDriverCancellationPenaltyWaivedReasonAndAmount driverCancellationPenaltyWaivedReason driverCancellationPenaltyAmount id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.driverCancellationPenaltyWaivedReason driverCancellationPenaltyWaivedReason,
+      Se.Set Beam.driverCancellationPenaltyAmount driverCancellationPenaltyAmount,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateEstimatedEndTimeRange :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Ride.EstimatedEndTimeRange -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateEstimatedEndTimeRange estimatedEndTimeRange id = do

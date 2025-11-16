@@ -11,12 +11,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data BBPSConfigT f = BBPSConfigT
-  { bbpsAgentId :: B.C f Kernel.Prelude.Text,
-    bbpsServerUrl :: B.C f Kernel.Prelude.Text,
-    bbpsSignatureKey :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { bbpsAgentId :: (B.C f Kernel.Prelude.Text),
+    bbpsServerUrl :: (B.C f Kernel.Prelude.Text),
+    bbpsSignatureKey :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -26,6 +26,6 @@ instance B.Table BBPSConfigT where
 
 type BBPSConfig = BBPSConfigT Identity
 
-$(enableKVPG ''BBPSConfigT ['merchantId] [])
+$(enableKVPG (''BBPSConfigT) [('merchantId)] [])
 
-$(mkTableInstances ''BBPSConfigT "bbps_config")
+$(mkTableInstances (''BBPSConfigT) "bbps_config")

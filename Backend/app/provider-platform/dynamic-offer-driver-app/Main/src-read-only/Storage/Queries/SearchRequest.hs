@@ -5,7 +5,6 @@
 module Storage.Queries.SearchRequest (module Storage.Queries.SearchRequest, module ReExport) where
 
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.ParcelType
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.Trip
 import Kernel.Beam.Functions
@@ -57,7 +56,6 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.bapId bapId,
       Se.Set Beam.bapUri (Kernel.Prelude.showBaseUrl bapUri),
       Se.Set Beam.configInExperimentVersions (Just $ toJSON configInExperimentVersions),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currency (Just currency),
       Se.Set Beam.customerCancellationDues customerCancellationDues,
       Se.Set Beam.customerLanguage customerLanguage,
@@ -66,7 +64,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.disabilityTag disabilityTag,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverDefaultExtraFee (roundToIntegral <$> driverDefaultExtraFee),
-      Se.Set Beam.driverDefaultExtraFeeAmount (driverDefaultExtraFee),
+      Se.Set Beam.driverDefaultExtraFeeAmount driverDefaultExtraFee,
       Se.Set Beam.driverIdForSearch (Kernel.Types.Id.getId <$> driverIdForSearch),
       Se.Set Beam.dynamicPricingLogicVersion dynamicPricingLogicVersion,
       Se.Set Beam.estimatedDistance estimatedDistance,
@@ -97,7 +95,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.specialLocationTag specialLocationTag,
       Se.Set Beam.startTime (Just startTime),
       Se.Set Beam.toLocGeohash toLocGeohash,
-      Se.Set Beam.toLocationId (((Kernel.Types.Id.getId . (.id)) <$> toLocation)),
+      Se.Set Beam.toLocationId (Kernel.Types.Id.getId . (.id) <$> toLocation),
       Se.Set Beam.tollCharges tollCharges,
       Se.Set Beam.tollNames tollNames,
       Se.Set Beam.transactionId transactionId,

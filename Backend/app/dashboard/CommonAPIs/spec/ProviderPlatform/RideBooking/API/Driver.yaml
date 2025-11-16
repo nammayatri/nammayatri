@@ -13,6 +13,10 @@ imports:
   DriverFeeStatus:  Dashboard.Common.Driver
   TagNameValue: Lib.Yudhishthira.Types
   TagObject: Lib.Yudhishthira.Types
+  DriverMode: Domain.Types.Common
+  Feedback: Domain.Types.Feedback
+  Rating: Domain.Types.Rating
+  Ride: Domain.Types.Ride
 module: Driver
 
 apis:
@@ -156,6 +160,15 @@ apis:
               mbFleet: Bool
             response:
               type: DriverInfoRes
+  - GET:
+      endpoint: /feedback/list
+      auth: ApiAuthV2
+      query:
+        - personId: Id Driver
+        - mobileNumber: Text
+        - mobileCountryCode: Text
+      response:
+        type: GetFeedbackListRes
   - POST: # UnlinkVehicleAPI
       endpoint: /{driverId}/unlinkVehicle
       auth: ApiAuthV2
@@ -298,6 +311,15 @@ types:
     - softBlockStiers: Maybe [Text]
     - softBlockExpiryTime: Maybe UTCTime
     - softBlockReasonFlag: Maybe Text
+    - driverMode: Maybe DriverMode
+    - lastOfflineTime: Maybe UTCTime
+  GetFeedbackListRes:
+    - feedbacks: [DriverFeedbackAPIEntity]
+  DriverFeedbackAPIEntity:
+    - rideId: Id Ride
+    - createdAt: UTCTime
+    - feedbackText: Maybe Text
+    - feedbackDetails: Maybe Text
   DriverLicenseAPIEntity:
     - driverLicenseId: Id DriverLicense
     - documentImageId1: Id Image

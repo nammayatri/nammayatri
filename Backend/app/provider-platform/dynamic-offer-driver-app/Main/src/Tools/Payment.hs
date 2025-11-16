@@ -14,14 +14,12 @@
 
 module Tools.Payment where
 
--- import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
--- import qualified EulerHS.Language as L
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -31,7 +29,6 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
 import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
--- import System.Environment as SE
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.DriverPlan as QDPlan

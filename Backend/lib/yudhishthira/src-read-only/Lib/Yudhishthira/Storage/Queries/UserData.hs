@@ -41,7 +41,6 @@ updateByPrimaryKey (Lib.Yudhishthira.Types.UserData.UserData {..}) = do
       Se.Set Beam.eventId (Kernel.Types.Id.getId eventId),
       Se.Set Beam.userDataValue userDataValue,
       Se.Set Beam.userId (Kernel.Types.Id.getId userId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

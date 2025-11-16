@@ -27,6 +27,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.Types
 import Kernel.Prelude
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
@@ -37,7 +38,6 @@ import SharedLogic.Allocator
 import SharedLogic.CallBAP
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
-import SharedLogic.DriverPool as SDP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -83,7 +83,9 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal]
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
   m ExecutionResult
@@ -120,7 +122,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                   merchantId = booking.providerId
                   merchantOperatingCityId = booking.merchantOperatingCityId
               mbCurrentDriverLocation <- do
-                driverLocations <- try @_ @SomeException $ LTF.driversLocation [driverId]
+                driverLocations <- withTryCatch "driversLocation:callPayout" $ LTF.driversLocation [driverId]
                 case driverLocations of
                   Left _err -> do
                     return Nothing
@@ -143,9 +145,10 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                       cancelOrReallocate ride cReason True (RideCancel.ApplicationRequestorId id.getId)
                       return $ Terminate "Job is Terminated and Ride is Reallocated due to getDistance API failure"
                     else do
-                      let sumOfDistances = sumDistances responseArray
-                      let estimatedDistinKm = metersToKilometers sumOfDistances
-                      isDriverTooFar <- isDriverTooFarFromPickup transporterConfig vehicle estimatedDistinKm scheduledPickupTime
+                      -- let sumOfDistances = sumDistances responseArray
+                      -- isDriverTooFar <- isDriverTooFarFromPickup transporterConfig vehicle estimatedDistinKm scheduledPickupTime
+                      let sumOfDurations = sumDuration responseArray
+                      isDriverTooFar <- isDriverTooFarFromScheduledPickup transporterConfig sumOfDurations scheduledPickupTime
                       if isDriverTooFar
                         then do
                           let cReason = "Ride is Cancelled because driver can't reach pickup of its scheduled booking on time"
@@ -187,9 +190,9 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
               let cReason = "Ride is Reallocated because any one of the above values are Nothing."
               cancelOrReallocate ride cReason True (RideCancel.ApplicationRequestorId id.getId)
               return $ Terminate "Job is Terminated and Ride is Reallocated because any one of the above values are Nothing"
-            Just (dropLoc, merchantId, scheduledPickup, transporterConfig, vehicle, scheduledPickupTime) -> do
+            Just (dropLoc, merchantId, scheduledPickup, transporterConfig, _vehicle, scheduledPickupTime) -> do
               mbCurrentDriverLocation <- do
-                driverLocations <- try @_ @SomeException $ LTF.driversLocation [driverId]
+                driverLocations <- withTryCatch "driversLocation:sendScheduledRideAssignedOnUpdate" $ LTF.driversLocation [driverId]
                 case driverLocations of
                   Left _err -> do
                     return Nothing
@@ -219,9 +222,10 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                       cancelOrReallocate ride cReason True (RideCancel.MerchantRequestorId (merchantId, ride.merchantOperatingCityId))
                       return $ Terminate "Job is Terminated and Ride is Reallocated due to getDistance API failure"
                     else do
-                      let sumOfDistances = sumDistances responseArray
-                      let estimatedDistinKm = metersToKilometers sumOfDistances
-                      isDriverTooFar <- isDriverTooFarFromPickup transporterConfig vehicle estimatedDistinKm scheduledPickupTime
+                      -- let sumOfDistances = sumDistances responseArray
+                      -- isDriverTooFar <- isDriverTooFarFromPickup transporterConfig vehicle estimatedDistinKm scheduledPickupTime
+                      let sumOfDurations = sumDuration responseArray
+                      isDriverTooFar <- isDriverTooFarFromScheduledPickup transporterConfig sumOfDurations scheduledPickupTime
                       if isDriverTooFar
                         then do
                           let cReason = "Ride is Cancelled because driver can't reach pickup of its scheduled booking on time"
@@ -241,22 +245,28 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
     isAPIError (APIFailed : _) = True
     isAPIError (_ : xs) = isAPIError xs
 
-    sumDistances :: [Result a b] -> Meters
-    sumDistances = foldr accumulate 0
+    sumDuration :: [Result a b] -> Seconds
+    sumDuration = foldr accumulate 0
       where
-        accumulate (DistanceResp resp) acc = acc + resp.distance
+        accumulate (DistanceResp resp) acc = acc + resp.duration
         accumulate APIFailed acc = acc
 
-    isDriverTooFarFromPickup transporterConfig vehicle estimatedDistinKm scheduledPickupTime = do
+    -- isDriverTooFarFromPickup transporterConfig vehicle estimatedDistinKm scheduledPickupTime = do
+    --   now <- getCurrentTime
+    --   let defaultAvgSpeed = 20 :: Kilometers
+    --   let avgSpeedOfVehicleInKM = maybe defaultAvgSpeed (SDP.getVehicleAvgSpeed vehicle.variant) transporterConfig.avgSpeedOfVehicle
+    --   let estimatedDistKmDouble = fromIntegral (getKilometers estimatedDistinKm) :: Double
+    --       avgSpeedKmPerHrDouble = fromIntegral (getKilometers avgSpeedOfVehicleInKM) :: Double
+    --       totalTimeinHr = estimatedDistKmDouble / avgSpeedKmPerHrDouble
+    --       totalTimeInSeconds = realToFrac (totalTimeinHr * 3600) :: NominalDiffTime
+    --       expectedEndTime = addUTCTime totalTimeInSeconds now
+    --       scheduledPickupTimeWithGraceTime = addUTCTime (transporterConfig.graceTimeForScheduledRidePickup) scheduledPickupTime
+    --   return $ expectedEndTime > scheduledPickupTimeWithGraceTime
+
+    isDriverTooFarFromScheduledPickup transporterConfig estimatedDurationSeconds scheduledPickupTime = do
       now <- getCurrentTime
-      let defaultAvgSpeed = 20 :: Kilometers
-      let avgSpeedOfVehicleInKM = maybe defaultAvgSpeed (SDP.getVehicleAvgSpeed vehicle.variant) transporterConfig.avgSpeedOfVehicle
-      let estimatedDistKmDouble = fromIntegral (getKilometers estimatedDistinKm) :: Double
-          avgSpeedKmPerHrDouble = fromIntegral (getKilometers avgSpeedOfVehicleInKM) :: Double
-          totalTimeinHr = estimatedDistKmDouble / avgSpeedKmPerHrDouble
-          totalTimeInSeconds = realToFrac (totalTimeinHr * 3600) :: NominalDiffTime
-          expectedEndTime = addUTCTime totalTimeInSeconds now
-          scheduledPickupTimeWithGraceTime = addUTCTime (transporterConfig.graceTimeForScheduledRidePickup) scheduledPickupTime
+      let expectedEndTime = addUTCTime (secondsToNominalDiffTime estimatedDurationSeconds) now
+      let scheduledPickupTimeWithGraceTime = addUTCTime (transporterConfig.graceTimeForScheduledRidePickup) scheduledPickupTime
       return $ expectedEndTime > scheduledPickupTimeWithGraceTime
 
 cancelOrReallocate ::
@@ -290,7 +300,9 @@ cancelOrReallocate ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal]
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   DRide.Ride ->
   Text ->
@@ -323,9 +335,15 @@ errorCatchAndHandle reqs func = processRequests reqs
   where
     processRequests [] = return []
     processRequests (req : rest) = do
-      resp <- try @_ @SomeException $ func req
+      resp <- withTryCatch "DistanceResp:errorCatchAndHandle" $ func req
       case resp of
         Left _ -> return [APIFailed]
         Right result -> do
           restResults <- processRequests rest
           return (DistanceResp result : restResults)
+
+sumDistances :: [Result a b] -> Meters
+sumDistances = foldr accumulate 0
+  where
+    accumulate (DistanceResp resp) acc = acc + resp.distance
+    accumulate APIFailed acc = acc

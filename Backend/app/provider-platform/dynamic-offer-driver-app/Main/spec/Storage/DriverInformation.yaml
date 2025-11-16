@@ -19,6 +19,7 @@ imports:
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
   Meters: Kernel.Types.Common
+  UpgradedTier: Domain.Types.UpgradedTier
 DriverInformation:
   tableName: driver_information
   types:
@@ -71,6 +72,7 @@ DriverInformation:
     referredByOperatorId: Maybe Text
     totalReferred: Maybe Int
     lastEnabledOn: Maybe UTCTime
+    lastOfflineTime: Maybe UTCTime
     canDowngradeToSedan: Bool
     canDowngradeToHatchback: Bool
     isPetModeEnabled: Bool
@@ -134,6 +136,8 @@ DriverInformation:
     isSilentModeEnabled: Maybe Bool
     isTTSEnabled: Maybe Bool
     isHighAccuracyLocationEnabled: Maybe Bool
+    rideRequestVolumeEnabled: Maybe Bool
+    ruleBasedUpgradeTiers: Maybe [UpgradedTier]
 
   default:
     active: "false"
@@ -192,12 +196,14 @@ DriverInformation:
     preferredSecondarySpecialLocIds: "Maybe [Text]"
     issueBreachCooldownTimes: Maybe Value
     servicesEnabledForSubscription: Maybe [ServiceNames]
+    ruleBasedUpgradeTiers: Maybe Value
 
   sqlType:
     preferredSecondarySpecialLocIds: "text[]"
     issueBreachCooldownTimes: "json"
     softBlockStiers: "text[]"
     servicesEnabledForSubscription: "text[]"
+    ruleBasedUpgradeTiers: "json"
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
@@ -218,6 +224,8 @@ DriverInformation:
     panNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem panNumberEncrypted panNumberHash|E
     aadhaarNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem aadhaarNumberEncrypted aadhaarNumberHash|E
     dlNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem dlNumberEncrypted dlNumberHash|E
+    ruleBasedUpgradeTiers: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< ruleBasedUpgradeTiers|E
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
@@ -242,6 +250,7 @@ DriverInformation:
     aadhaarNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
     dlNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
     dlNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+    ruleBasedUpgradeTiers: Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers|E
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -290,6 +299,7 @@ DriverInformation:
           rideRequestVolume,
           isTTSEnabled,
           isHighAccuracyLocationEnabled,
+          rideRequestVolumeEnabled,
         ]
       where: driverId
     updateRentalInterCityAndIntraCitySwitch:
@@ -312,10 +322,6 @@ DriverInformation:
     updateOnRide:
       kvFunction: updateOneWithKV
       params: [onRide]
-      where: driverId
-    updateActivity:
-      kvFunction: updateOneWithKV
-      params: [active, mode, driverFlowStatus]
       where: driverId
     addReferralCode: #check
       kvFunction: updateOneWithKV
@@ -426,4 +432,8 @@ DriverInformation:
     updateWalletBalance:
       kvFunction: updateOneWithKV
       params: [walletBalance]
+      where: driverId
+    updateUpgradedTiers:
+      kvFunction: updateOneWithKV
+      params: [ruleBasedUpgradeTiers]
       where: driverId

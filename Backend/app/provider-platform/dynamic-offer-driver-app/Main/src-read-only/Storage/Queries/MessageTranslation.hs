@@ -37,8 +37,7 @@ findByPrimaryKey messageId = do findOneWithKV [Se.And [Se.Is Beam.messageId $ Se
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MessageTranslation.MessageTranslation -> m ())
 updateByPrimaryKey (Domain.Types.MessageTranslation.MessageTranslation {..}) = do
   updateWithKV
-    [ Se.Set Beam.createdAt (Data.Time.utcToLocalTime Data.Time.utc createdAt),
-      Se.Set Beam.description description,
+    [ Se.Set Beam.description description,
       Se.Set Beam.label label,
       Se.Set Beam.language language,
       Se.Set Beam.shortDescription shortDescription,

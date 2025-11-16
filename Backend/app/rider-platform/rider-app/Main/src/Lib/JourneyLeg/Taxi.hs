@@ -111,7 +111,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
       mbEstimate <- maybe (pure Nothing) QEstimate.findById req.estimateId
       case mbEstimate of
         Just estimate -> do
-          try @_ @SomeException (cancelSearchUtil (req.personId, req.merchantId) estimate.id)
+          withTryCatch "cancelSearch:TaxiConfirm" (cancelSearchUtil (req.personId, req.merchantId) estimate.id)
             >>= \case
               Left err -> do
                 logTagInfo "Failed to cancel" $ show err
@@ -125,10 +125,12 @@ instance JT.JourneyLeg TaxiLegRequest m where
                     autoAssignEnabled = True,
                     autoAssignEnabledV2 = Just True,
                     paymentMethodId = Nothing,
+                    paymentInstrument = Nothing,
                     otherSelectedEstimates = Nothing,
                     isAdvancedBookingEnabled = Nothing,
                     deliveryDetails = Nothing,
                     disabilityDisable = Nothing,
+                    billingCategory = Nothing,
                     preferSafetyPlus = Nothing
                   }
           void $ DSelect.select2' (req.personId, req.merchantId) estimate.id selectReq
@@ -157,7 +159,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
               void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
           )
           ( \estimateId -> do
-              try @_ @SomeException (cancelSearch' (booking.riderId, booking.merchantId) estimateId)
+              withTryCatch "cancelSearch:TaxiCancel" (cancelSearch' (booking.riderId, booking.merchantId) estimateId)
                 >>= \case
                   Left err -> do
                     logTagInfo "Failed to cancel booking search: " $ show err
@@ -169,7 +171,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
         searchReq <- QSearchRequest.findById legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
         case legData.journeyLeg.legPricingId of
           Just pricingId -> do
-            try @_ @SomeException (cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId))
+            withTryCatch "cancelSearch:TaxiCancel" (cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId))
               >>= \case
                 Left err -> do
                   logTagInfo "Failed to cancel estimate search: " $ show err
@@ -229,7 +231,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
             }
     fareData <- CallBPPInternal.getFare taxiGetFareData.merchant taxiGetFareData.merchantOpCity.city calculateFareReq
     let mbFare = listToMaybe $ sortBy (comparing CallBPPInternal.minFare <> comparing CallBPPInternal.maxFare) (CallBPPInternal.estimatedFares fareData)
-    return (True, mbFare <&> \taxi -> JT.GetFareResponse {estimatedMinFare = taxi.minFare, estimatedMaxFare = taxi.maxFare, serviceTypes = Nothing, possibleRoutes = Nothing})
+    return (True, mbFare <&> \taxi -> JT.GetFareResponse {estimatedMinFare = taxi.minFare, estimatedMaxFare = taxi.maxFare, liveVehicleAvailableServiceTypes = Nothing, possibleRoutes = Nothing})
   getFare _ = throwError (InternalError "Not Supported")
 
 -- moved these here to avoid cyclic dependencies

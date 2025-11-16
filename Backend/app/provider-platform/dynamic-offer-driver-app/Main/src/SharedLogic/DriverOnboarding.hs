@@ -59,6 +59,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
+import SharedLogic.Analytics as Analytics
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -155,9 +156,10 @@ triggerOnboardingAlertsAndMessages driver merchant merchantOperatingCity = do
 enableAndTriggerOnboardingAlertsAndMessages :: Id DMOC.MerchantOperatingCity -> Id Person -> Bool -> Flow ()
 enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  DIQuery.updateEnabledVerifiedState personId True (Just verified)
+  merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId True (Just verified)
   when (not driverInfo.enabled && isNothing driverInfo.enabledAt) $ do
-    merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
     merchant <- CQM.findById merchantOpCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     triggerOnboardingAlertsAndMessages person merchant merchantOpCity
@@ -199,7 +201,13 @@ incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers personId = do
               else driverInfo.acUsageRestrictionType
       DIQuery.updateAcUsageRestrictionAndScore newRestrictionType (Just airConditionScore) personId
       fork "Send AC Restriction Overlay" $ ACOverlay.sendACUsageRestrictionOverlay driver
-    else DIQuery.updateAirConditionScore (Just airConditionScore) personId
+    else do
+      DIQuery.updateAirConditionScore (Just airConditionScore) personId
+      whenJust mbMaxACUsageRestrictionThreshold $ \threshold -> do
+        let thresholdInt = round threshold :: Int
+            scoreInt = round airConditionScore :: Int
+        when (scoreInt == thresholdInt - 1 || scoreInt == thresholdInt) $
+          fork "Send AC Warning Overlay" $ ACOverlay.sendACUsageWarningOverlay driver
   where
     safeMaximum :: Ord a => [a] -> Maybe a
     safeMaximum [] = Nothing
@@ -339,7 +347,8 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       downgradeReason = Nothing,
       createdAt = now,
       updatedAt = now,
-      vehicleTags = vehicleTag
+      vehicleTags = vehicleTag,
+      ruleBasedUpgradeTiers = Nothing
     }
 
 makeVehicleAPIEntity :: Maybe DVST.ServiceTierType -> Vehicle -> VehicleAPIEntity

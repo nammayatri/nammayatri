@@ -76,6 +76,7 @@ import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
 import Domain.Types.DriverPoolConfig
+import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -558,13 +559,17 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
             homeRadius = goHomeCfg.goHomeWayPointRadius,
             merchantId,
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
-            prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
+            prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
+            fleetPrepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
             rideFare,
+            minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides prepaidSubscriptionAndWalletEnabled,
+            paymentInstrument,
             isRental,
             isInterCity,
             onlinePayment,
             now,
-            isValueAddNP
+            isValueAddNP,
+            prepaidSubscriptionAndWalletEnabled
           }
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection ->
@@ -752,12 +757,13 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     transporterConfig :: DTC.TransporterConfig,
     mRadiusStep :: Maybe PoolRadiusStep,
     rideFare :: Maybe HighPrecMoney,
+    paymentInstrument :: Maybe MP.PaymentInstrument,
     isRental :: Bool,
     isInterCity :: Bool,
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     now :: UTCTime,
-    enforceSufficientDriverBalance :: Bool
+    prepaidSubscriptionAndWalletEnabled :: Bool
   }
 
 calculateDriverPool ::
@@ -784,7 +790,10 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           { fromLocLatLong = coord,
             nearestRadius = radius,
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
-            prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
+            prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
+            fleetPrepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
+            minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides prepaidSubscriptionAndWalletEnabled,
+            paymentInstrument,
             rideFare,
             ..
           }
@@ -1019,6 +1028,9 @@ getVehicleAvgSpeed variant avgSpeedOfVehicle = case variant of
   DVeh.BOAT -> avgSpeedOfVehicle.boat
   DVeh.VIP_ESCORT -> avgSpeedOfVehicle.vipEscort
   DVeh.VIP_OFFICER -> avgSpeedOfVehicle.vipOfficer
+  DVeh.AC_PRIORITY -> avgSpeedOfVehicle.sedan
+  DVeh.BIKE_PLUS -> avgSpeedOfVehicle.bikeplus
+  DVeh.E_RICKSHAW -> avgSpeedOfVehicle.erickshaw
 
 calculateDriverPoolCurrentlyOnRide ::
   ( EncFlow m r,
@@ -1047,8 +1059,11 @@ calculateDriverPoolCurrentlyOnRide CalculateDriverPoolReq {..} mbBatchNum = do
               nearestRadius = radius,
               driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
               currentRideTripCategoryValidForForwardBatching = driverPoolCfg.currentRideTripCategoryValidForForwardBatching,
-              prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
+              prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
+              fleetPrepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
               rideFare,
+              minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides prepaidSubscriptionAndWalletEnabled,
+              paymentInstrument,
               ..
             }
   driversWithLessThanNParallelRequests <- case poolStage of
@@ -1116,13 +1131,13 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
       logDebug "driverPool is empty"
       return []
     (a : pprox) -> do
-      let driverPoolResultsWithDriverLocationAsDestinationLocation = NE.fromList $ map driverResultFromDestinationLocation (a : pprox)
+      let driverPoolResultsWithDriverLocationAsDestinationLocation = driverResultFromDestinationLocation <$> (a :| pprox)
           driverToDestinationDistanceThreshold = driverPoolCfg.driverToDestinationDistanceThreshold
       driverPoolWithActualDistFromDestinationLocation <- computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOperatingCityId Nothing pickup driverPoolResultsWithDriverLocationAsDestinationLocation
       driverPoolWithActualDistFromCurrentLocation <- do
         case driverPoolCfg.useOneToOneOsrmMapping of
           Just True -> calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping (a :| pprox)
-          _ -> traverse (\driver -> calculateActualDistanceCurrently driverToDestinationDistanceThreshold driver) (a :| pprox)
+          _ -> traverse (calculateActualDistanceCurrently driverToDestinationDistanceThreshold) (a :| pprox)
       let driverPoolWithActualDist = catMaybes $ zipWith (curry $ combine driverToDestinationDistanceThreshold) (NE.toList driverPoolWithActualDistFromDestinationLocation) (NE.toList driverPoolWithActualDistFromCurrentLocation)
           filtDriverPoolWithActualDist' = case (driverPoolCfg.actualDistanceThresholdOnRide, poolType) of
             (_, SpecialZoneQueuePool) -> driverPoolWithActualDist

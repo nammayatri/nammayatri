@@ -11,6 +11,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.UpgradedTier
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -68,6 +69,7 @@ data DriverInformationE e = DriverInformation
     issueBreachCooldownTimes :: Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachCooldownTime],
     lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    lastOfflineTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     latestScheduledBooking :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     latestScheduledPickup :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     maxPickupRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
@@ -94,6 +96,8 @@ data DriverInformationE e = DriverInformation
     referredByFleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByOperatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideRequestVolume :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    rideRequestVolumeEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    ruleBasedUpgradeTiers :: Kernel.Prelude.Maybe [Domain.Types.UpgradedTier.UpgradedTier],
     servicesEnabledForSubscription :: [Domain.Types.Extra.Plan.ServiceNames],
     softBlockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -170,6 +174,7 @@ instance EncryptedItem DriverInformation where
           issueBreachCooldownTimes = issueBreachCooldownTimes entity,
           lastACStatusCheckedAt = lastACStatusCheckedAt entity,
           lastEnabledOn = lastEnabledOn entity,
+          lastOfflineTime = lastOfflineTime entity,
           latestScheduledBooking = latestScheduledBooking entity,
           latestScheduledPickup = latestScheduledPickup entity,
           maxPickupRadius = maxPickupRadius entity,
@@ -196,6 +201,8 @@ instance EncryptedItem DriverInformation where
           referredByFleetOwnerId = referredByFleetOwnerId entity,
           referredByOperatorId = referredByOperatorId entity,
           rideRequestVolume = rideRequestVolume entity,
+          rideRequestVolumeEnabled = rideRequestVolumeEnabled entity,
+          ruleBasedUpgradeTiers = ruleBasedUpgradeTiers entity,
           servicesEnabledForSubscription = servicesEnabledForSubscription entity,
           softBlockExpiryTime = softBlockExpiryTime entity,
           softBlockReasonFlag = softBlockReasonFlag entity,
@@ -264,6 +271,7 @@ instance EncryptedItem DriverInformation where
             issueBreachCooldownTimes = issueBreachCooldownTimes entity,
             lastACStatusCheckedAt = lastACStatusCheckedAt entity,
             lastEnabledOn = lastEnabledOn entity,
+            lastOfflineTime = lastOfflineTime entity,
             latestScheduledBooking = latestScheduledBooking entity,
             latestScheduledPickup = latestScheduledPickup entity,
             maxPickupRadius = maxPickupRadius entity,
@@ -290,6 +298,8 @@ instance EncryptedItem DriverInformation where
             referredByFleetOwnerId = referredByFleetOwnerId entity,
             referredByOperatorId = referredByOperatorId entity,
             rideRequestVolume = rideRequestVolume entity,
+            rideRequestVolumeEnabled = rideRequestVolumeEnabled entity,
+            ruleBasedUpgradeTiers = ruleBasedUpgradeTiers entity,
             servicesEnabledForSubscription = servicesEnabledForSubscription entity,
             softBlockExpiryTime = softBlockExpiryTime entity,
             softBlockReasonFlag = softBlockReasonFlag entity,

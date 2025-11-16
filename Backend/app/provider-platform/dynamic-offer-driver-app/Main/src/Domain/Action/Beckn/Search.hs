@@ -421,7 +421,7 @@ handler ValidatedDSearchReq {..} sReq = do
 
     addNammaTags :: Y.TagData -> Flow ()
     addNammaTags tagData = do
-      newSearchTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.Search tagData)
+      newSearchTags <- withTryCatch "computeNammaTags:Search" (Yudhishthira.computeNammaTags Yudhishthira.Search tagData)
       let tags = tagData.searchRequest.searchTags <> eitherToMaybe newSearchTags
       QSR.updateSearchTags tags tagData.searchRequest.id
 
@@ -496,7 +496,8 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
             isRental = False,
             isInterCity = False,
             rideFare = Nothing,
-            enforceSufficientDriverBalance = False,
+            paymentInstrument = Nothing,
+            prepaidSubscriptionAndWalletEnabled = False,
             ..
           }
   (driverPoolNotOnRide, _) <- calculateDriverPool calculateDriverPoolReq

@@ -128,7 +128,7 @@ data JourneyLeg = JourneyLeg
     colorCode :: Maybe Text, -- TODO :: Deprecated, Moved to RouteDetail
     duration :: Maybe Seconds,
     distance :: Maybe Distance,
-    serviceTypes :: Maybe [FRFSEnums.ServiceTierType],
+    liveVehicleAvailableServiceTypes :: Maybe [FRFSEnums.ServiceTierType],
     estimatedMinFare :: Maybe HighPrecMoney,
     estimatedMaxFare :: Maybe HighPrecMoney,
     validTill :: Maybe UTCTime
@@ -318,7 +318,7 @@ getJourneys searchRequest hasMultimodalSearch = do
                     colorCode = listToMaybe $ catMaybes $ map (.routeColorCode) journeyLeg.routeDetails,
                     routeDetails = map mkRouteDetail journeyLeg.routeDetails,
                     duration = journeyLeg.duration,
-                    serviceTypes = journeyLeg.serviceTypes,
+                    liveVehicleAvailableServiceTypes = journeyLeg.liveVehicleAvailableServiceTypes,
                     distance = journeyLeg.distance,
                     estimatedMinFare = (legInfo >>= (.estimatedMinFare) <&> (.amount)) <|> journeyLeg.estimatedMinFare,
                     estimatedMaxFare = (legInfo >>= (.estimatedMaxFare) <&> (.amount)) <|> journeyLeg.estimatedMaxFare,

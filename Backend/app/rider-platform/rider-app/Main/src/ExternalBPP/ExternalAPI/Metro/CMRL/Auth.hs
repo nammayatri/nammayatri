@@ -81,7 +81,7 @@ callCMRLAPI ::
   m res
 callCMRLAPI config eulerClientFunc description proxy = do
   token <- getAuthToken config
-  eitherResp <- try @_ @SomeException $ callApiUnwrappingApiError (identity @CMRLError) Nothing Nothing Nothing config.networkHostUrl (eulerClientFunc token) description proxy
+  eitherResp <- withTryCatch "CMRL:auth" $ callApiUnwrappingApiError (identity @CMRLError) Nothing Nothing Nothing config.networkHostUrl (eulerClientFunc token) description proxy
   case eitherResp of
     Left exec -> do
       let mbError = fromException @CMRLError exec

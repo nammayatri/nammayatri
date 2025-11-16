@@ -39,13 +39,15 @@ postKaptureCustomerLogin (mbPersonId, _) ticketType = do
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   email <- fromMaybe "" <$> mapM decrypt person.email
   addAndUpdateKaptureCustomerResponse <-
-    try @_ @SomeException
+    withTryCatch
+      "addAndUpdateKaptureCustomer:kaptureLogin"
       (addAndUpdateKaptureCustomer person.merchantId person.merchantOperatingCityId (TIT.KaptureCustomerReq personId.getId (fromMaybe "" person.lastName <> fromMaybe "" person.firstName) mobileNumber email personId.getId))
 
   kaptureEncryptionResponse <-
     case addAndUpdateKaptureCustomerResponse of
       Right _resp ->
-        try @_ @SomeException
+        withTryCatch
+          "kaptureEncryption:kaptureLogin"
           (kaptureEncryption person.merchantId person.merchantOperatingCityId (TIT.KaptureEncryptionReq personId.getId ticketType))
       Left err -> throwError $ InternalError ("Add And Update Kapture Customer Ticket API failed - " <> show err)
 

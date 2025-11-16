@@ -23,6 +23,7 @@ import Data.Text as Text hiding (find)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.ParcelType as DParcel
@@ -40,6 +41,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestT
 import SharedLogic.DriverPool
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
+import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
@@ -63,12 +65,15 @@ data DSelectReq = DSelectReq
     toUpdateDeviceIdInfo :: Bool,
     disabilityDisable :: Maybe Bool,
     parcelDetails :: (Maybe Text, Maybe Int),
-    preferSafetyPlus :: Bool
+    preferSafetyPlus :: Bool,
+    billingCategory :: SLT.BillingCategory,
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }
 
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
 handler :: DM.Merchant -> DSelectReq -> DSR.SearchRequest -> [DEst.Estimate] -> Flow ()
 handler merchant sReq searchReq estimates = do
+  logDebug $ "DSelectReq: select request billingCategory: " <> show sReq.billingCategory <> "transactionId: " <> sReq.transactionId
   now <- getCurrentTime
   riderId <- case sReq.customerPhoneNum of
     Just number -> do
@@ -120,7 +125,9 @@ handler merchant sReq searchReq estimates = do
             customerExtraFee = sReq.customerExtraFee,
             messageId = sReq.messageId,
             isRepeatSearch = False,
-            isAllocatorBatch = False
+            billingCategory = sReq.billingCategory,
+            isAllocatorBatch = False,
+            paymentMethodInfo = sReq.paymentMethodInfo
           }
   initiateDriverSearchBatch driverSearchBatchInput
   Metrics.finishGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST searchReq.transactionId
@@ -144,6 +151,6 @@ validateRequest merchantId sReq = do
 
 addNammaTags :: Y.SelectTagData -> DSR.SearchRequest -> Flow ()
 addNammaTags tagData sReq = do
-  newSearchTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.Select tagData)
+  newSearchTags <- withTryCatch "computeNammaTags:Select" (Yudhishthira.computeNammaTags Yudhishthira.Select tagData)
   let tags = sReq.searchTags <> eitherToMaybe newSearchTags
   QSR.updateSearchTags tags sReq.id

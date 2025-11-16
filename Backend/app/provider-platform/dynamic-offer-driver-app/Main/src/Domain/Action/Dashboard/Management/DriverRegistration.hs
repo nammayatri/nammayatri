@@ -42,6 +42,7 @@ import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Types.BusinessLicense as DBL
+import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
@@ -68,12 +69,14 @@ import Kernel.Types.Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Analytics as Analytics
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BusinessLicense as QBL
+import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
 import qualified Storage.Queries.DriverGstin as QGstin
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDL
@@ -343,7 +346,8 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
           mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (mapDocumentType docType) DVC.CAR Nothing
           let isMandatory = maybe False (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling) mbVerificationConfig
           when isMandatory $ do
-            QDriverInfo.updateEnabledVerifiedState person.id False Nothing
+            transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+            Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig person.id False Nothing
           pure False
         _ -> pure False
 
@@ -772,6 +776,32 @@ approveAndUpdatePan req mId mOpCityId = do
               }
       QPan.create pan
 
+approveAndUpdateCommonDocument :: Common.CommonDocumentApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdateCommonDocument req _mId _mOpCityId = do
+  let documentId = Id req.documentId.getId
+  -- Get the existing document
+  mbDocument <- QCommonDriverOnboardingDocuments.findById documentId
+  document <- mbDocument & fromMaybeM (DocumentNotFound documentId.getId)
+
+  -- Update document with new data if provided, otherwise just update verification status
+  let updatedDocument = case req.updatedDocumentData of
+        Just newData -> document {DCommonDoc.documentData = newData, DCommonDoc.verificationStatus = VALID}
+        Nothing -> document {DCommonDoc.verificationStatus = VALID}
+
+  QCommonDriverOnboardingDocuments.updateByPrimaryKey updatedDocument
+
+rejectAndUpdateCommonDocument :: Common.CommonDocumentRejectDetails -> Id DMOC.MerchantOperatingCity -> Flow ()
+rejectAndUpdateCommonDocument req _mOpCityId = do
+  let documentId = Id req.documentId.getId
+  -- Get the existing document
+  mbDocument <- QCommonDriverOnboardingDocuments.findById documentId
+  document <- mbDocument & fromMaybeM (DocumentNotFound documentId.getId)
+
+  -- Update document with rejection status and reason
+  let updatedDocument = document {DCommonDoc.verificationStatus = INVALID, DCommonDoc.rejectReason = Just req.reason}
+
+  QCommonDriverOnboardingDocuments.updateByPrimaryKey updatedDocument
+
 castReqTypeToDomain :: Common.PanType -> DPan.PanType
 castReqTypeToDomain = \case
   Common.INDIVIDUAL -> DPan.INDIVIDUAL
@@ -797,6 +827,7 @@ handleApproveRequest approveReq merchantId merchantOperatingCityId = do
     Common.NOC req -> approveAndUpdateNOC req merchantId merchantOperatingCityId
     Common.BusinessLicenseImg req -> approveAndUpdateBusinessLicense req merchantId merchantOperatingCityId
     Common.Pan req -> approveAndUpdatePan req merchantId merchantOperatingCityId
+    Common.CommonDocument req -> approveAndUpdateCommonDocument req merchantId merchantOperatingCityId
 
 handleRejectRequest :: Common.RejectDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 handleRejectRequest rejectReq _ merchantOperatingCityId = do
@@ -842,6 +873,7 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
         _ -> throwError (InternalError "Unknown Config in reject update document")
       driver <- QDriver.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
       Notify.notifyDriver merchantOperatingCityId notificationType (notificationTitle (show image.imageType)) (message (show image.imageType)) driver driver.deviceToken
+    Common.CommonDocumentReject commonRejectReq -> rejectAndUpdateCommonDocument commonRejectReq merchantOperatingCityId
   where
     notificationType = FCM.DOCUMENT_INVALID
     notificationTitle obj = "Attention: Your " <> obj <> " is invalid."

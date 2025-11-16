@@ -1,5 +1,6 @@
 module Lib.JourneyLeg.Types.Subway where
 
+import API.Types.UI.FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSQuote
@@ -38,9 +39,9 @@ data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     crisSdkResponse :: Maybe ApiTypes.CrisSdkResponse,
-    quantity :: Maybe Int,
-    childTicketQuantity :: Maybe Int,
-    isSingleMode :: Maybe Bool
+    isSingleMode :: Maybe Bool,
+    mbEnableOffer :: Maybe Bool,
+    categorySelectionReq :: [FRFSCategorySelectionReq]
   }
 
 data SubwayLegRequestCancelData = SubwayLegRequestCancelData
@@ -56,7 +57,8 @@ data SubwayLegRequestGetStateData = SubwayLegRequestGetStateData
 
 data SubwayLegRequestGetInfoData = SubwayLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    journeyLegs :: [DJourneyLeg.JourneyLeg]
   }
 
 data SubwayLegRequest

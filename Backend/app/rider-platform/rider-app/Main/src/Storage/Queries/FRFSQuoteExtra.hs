@@ -17,7 +17,7 @@ backfillQuotesForCachedQuoteFlow :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) 
 backfillQuotesForCachedQuoteFlow riderId quantity discountedTickets eventDiscountAmount isEventOngoing searchId = do
   _now <- getCurrentTime
   updateWithKV
-    ( [Se.Set Beam.riderId (Kernel.Types.Id.getId riderId), Se.Set Beam.updatedAt _now, Se.Set Beam.quantity quantity]
+    ( [Se.Set Beam.riderId (Kernel.Types.Id.getId riderId), Se.Set Beam.updatedAt _now, Se.Set Beam.quantity (Just quantity)]
         <> ([Se.Set Beam.discountedTickets discountedTickets | (Just True) == isEventOngoing])
         <> ([Se.Set Beam.eventDiscountAmount eventDiscountAmount | (Just True) == isEventOngoing])
     )
@@ -32,11 +32,10 @@ updateCachedQuoteByPrimaryKey FRFSQuote {..} = do
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
       Se.Set Beam.discountedTickets discountedTickets,
-      Se.Set Beam.discountsJson discountsJson,
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
       Se.Set Beam.oldCacheDump oldCacheDump,
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
-      Se.Set Beam.price ((.amount) price),
+      Se.Set Beam.currency ((.currency) <$> price),
+      Se.Set Beam.price ((.amount) <$> price),
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,
       Se.Set Beam.providerName providerName,
@@ -52,7 +51,7 @@ updatePriceAndEstimatedPriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) 
 updatePriceAndEstimatedPriceById id price quotePriceBeforeUpdate = do
   _now <- getCurrentTime
   updateWithKV
-    ([Se.Set Beam.price ((.amount) price), Se.Set Beam.estimatedPrice (Kernel.Prelude.fmap (.amount) quotePriceBeforeUpdate), Se.Set Beam.updatedAt _now])
+    ([Se.Set Beam.price (Just ((.amount) price)), Se.Set Beam.estimatedPrice (Kernel.Prelude.fmap (.amount) quotePriceBeforeUpdate), Se.Set Beam.updatedAt _now])
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateValidTillById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> UTCTime -> m ())
@@ -66,5 +65,5 @@ updateTicketAndChildTicketQuantityById :: (EsqDBFlow m r, MonadFlow m, CacheFlow
 updateTicketAndChildTicketQuantityById id quantity childTicketQuantity = do
   _now <- getCurrentTime
   updateWithKV
-    ([Se.Set Beam.updatedAt _now] <> [Se.Set Beam.quantity (fromJust quantity) | isJust quantity] <> [Se.Set Beam.childTicketQuantity childTicketQuantity | isJust childTicketQuantity])
+    ([Se.Set Beam.updatedAt _now] <> [Se.Set Beam.quantity quantity | isJust quantity] <> [Se.Set Beam.childTicketQuantity childTicketQuantity | isJust childTicketQuantity])
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

@@ -21,6 +21,7 @@ import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
@@ -108,6 +109,24 @@ updateEffectiveAmount orderId effectAmount = do
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
 
+findAllByStatusAndCreatedAtAfter :: BeamFlow m r => [Payment.TransactionStatus] -> UTCTime -> m [DOrder.PaymentOrder]
+findAllByStatusAndCreatedAtAfter statuses createdAtAfter =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamPO.createdAt $ Se.GreaterThanOrEq createdAtAfter,
+          Se.Is BeamPO.status $ Se.In statuses
+        ]
+    ]
+    (Se.Desc BeamPO.createdAt)
+    Nothing
+    Nothing
+
+findAllValidOrders :: BeamFlow m r => [Payment.TransactionStatus] -> [Maybe DPayment.PaymentFulfillmentStatus] -> m [DOrder.PaymentOrder]
+findAllValidOrders statuses paymentFulfillmentStatuses = do
+  now <- getCurrentTime
+  findAllWithKV
+    [Se.Is BeamPO.validTill $ Se.GreaterThanOrEq (Just now), Se.Is BeamPO.validTill $ Se.Not $ Se.Eq Nothing, Se.Is BeamPO.status $ Se.In statuses, Se.Is BeamPO.paymentFulfillmentStatus $ Se.In paymentFulfillmentStatuses]
+
 instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
   fromTType' orderT@BeamPO.PaymentOrderT {..} = do
     paymentLinks <- parsePaymentLinks orderT
@@ -154,3 +173,12 @@ instance ToTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
         effectAmount = Nothing,
         ..
       }
+
+updatePaymentFulfillmentStatus :: BeamFlow m r => Id DOrder.PaymentOrder -> Maybe DPayment.PaymentFulfillmentStatus -> m ()
+updatePaymentFulfillmentStatus orderId paymentFulfillmentStatus = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.paymentFulfillmentStatus paymentFulfillmentStatus,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]

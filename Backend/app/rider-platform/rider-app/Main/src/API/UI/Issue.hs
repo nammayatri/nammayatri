@@ -49,6 +49,7 @@ import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CallIGMBPP as CallBPP
+import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
@@ -60,6 +61,7 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingExtra as QBE
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.Person as QP
@@ -119,9 +121,15 @@ customerIssueHandle =
 castFindFRFSTicketBookingById :: Id Common.FRFSTicketBooking -> Flow (Maybe Common.FRFSTicketBooking)
 castFindFRFSTicketBookingById ticketBookingId = do
   frfsTicketBooking <- runInReplica $ QFTB.findById (cast ticketBookingId)
-  return $ fmap castFRFSTicketBooking frfsTicketBooking
+  mapM
+    ( \booking -> do
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+        let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
+        return $ castFRFSTicketBooking fareParameters booking
+    )
+    frfsTicketBooking
   where
-    castFRFSTicketBooking booking =
+    castFRFSTicketBooking fareParameters booking =
       Common.FRFSTicketBooking
         { id = cast booking.id,
           merchantOperatingCityId = cast booking.merchantOperatingCityId,
@@ -130,8 +138,8 @@ castFindFRFSTicketBookingById ticketBookingId = do
           fromStationCode = booking.fromStationCode,
           toStationCode = booking.toStationCode,
           vehicleType = castVehicleType booking.vehicleType,
-          price = booking.price,
-          quantity = booking.quantity,
+          price = booking.totalPrice,
+          quantity = fareParameters.totalQuantity,
           status = castFRFSStatus booking.status,
           createdAt = booking.createdAt,
           updatedAt = booking.updatedAt,
@@ -492,7 +500,9 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
       pure $ Just issueId
 
     processTicketBookingIssue ticketBooking category option merchant person igmConfig reqBody = do
-      frfsTicketBookingDetails <- fromFRFSTicketBooking ticketBooking
+      quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId ticketBooking.quoteId
+      let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) ticketBooking
+      frfsTicketBookingDetails <- fromFRFSTicketBooking ticketBooking fareParameters
       merchantOperatingCity <- CQMOC.findById frfsTicketBookingDetails.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show frfsTicketBookingDetails.merchantOperatingCityId)
       (becknIssueReq, issueId, igmIssue) <- ACL.buildIssueReq frfsTicketBookingDetails category option reqBody.description merchant person igmConfig merchantOperatingCity Nothing Nothing Nothing
       QIGM.create igmIssue
@@ -550,8 +560,10 @@ igmIssueStatus (personId, merchantId) = withFlowHandlerAPI $ do
       if issue.domain == Spec.ON_DEMAND
         then QB.findById (Id issue.bookingId) >>= fromMaybeM (BookingNotFound issue.bookingId) >>= \b -> pure (fromBooking b, b.providerUrl)
         else
-          QFTB.findById (Id issue.bookingId) >>= fromMaybeM (TicketBookingNotFound issue.bookingId) >>= \tb ->
-            liftA2 (,) (fromFRFSTicketBooking tb) (parseBaseUrl tb.bppSubscriberUrl)
+          QFTB.findById (Id issue.bookingId) >>= fromMaybeM (TicketBookingNotFound issue.bookingId) >>= \tb -> do
+            quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId tb.quoteId
+            let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) tb
+            liftA2 (,) (fromFRFSTicketBooking tb fareParameters) (parseBaseUrl tb.bppSubscriberUrl)
 
     becknIssueStatusReq <- ACL.buildIssueStatusReq merchant merchantOperatingCity bookingDetails issue.id.getId issue.transactionId
     fork "sending beckn issue_status" . withShortRetry $ void $ CallBPP.issueStatus providerUrl becknIssueStatusReq
@@ -578,7 +590,9 @@ resolveIGMIssue (personId, merchantId) issueReportId response rating = do
           return $ fromBooking booking
         Spec.PUBLIC_TRANSPORT -> do
           frfsBooking <- QFTB.findById (Id igmIssue.bookingId) >>= fromMaybeM (FRFSTicketBookingNotFound igmIssue.bookingId)
-          fromFRFSTicketBooking frfsBooking
+          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId frfsBooking.quoteId
+          let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) frfsBooking
+          fromFRFSTicketBooking frfsBooking fareParameters
       option <- maybe (return Nothing) (`QIO.findById` CUSTOMER) issueReport.optionId
       category <- case issueReport.categoryId of
         Nothing -> throwError $ InvalidRequest "Issue Category not found"
@@ -605,8 +619,8 @@ fromBooking b = do
       bppOrderId = Nothing
     }
 
-fromFRFSTicketBooking :: (MonadFlow m) => FRFSTicketBooking -> m RideBooking
-fromFRFSTicketBooking b = do
+fromFRFSTicketBooking :: (MonadFlow m) => FRFSTicketBooking -> FRFSFareParameters -> m RideBooking
+fromFRFSTicketBooking b fareParameters = do
   providerUrl <- parseBaseUrl b.bppSubscriberUrl
   pure $
     RideBooking
@@ -620,6 +634,6 @@ fromFRFSTicketBooking b = do
         bppItemId = b.bppItemId,
         contactPhone = Nothing,
         domain = Spec.PUBLIC_TRANSPORT,
-        quantity = Just b.quantity,
+        quantity = Just fareParameters.totalQuantity,
         bppOrderId = b.bppOrderId
       }

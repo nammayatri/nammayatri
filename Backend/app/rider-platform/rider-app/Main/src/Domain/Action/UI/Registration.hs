@@ -20,6 +20,9 @@ module Domain.Action.UI.Registration
     AuthVerifyReq (..),
     AuthVerifyRes (..),
     OTPChannel (..),
+    PasswordAuthReq (..),
+    GetTokenReq (..),
+    TempCodeRes (..),
     auth,
     signatureAuth,
     createPerson,
@@ -30,6 +33,9 @@ module Domain.Action.UI.Registration
     createPersonWithPhoneNumber,
     buildPerson,
     getRegistrationTokenE,
+    passwordBasedAuth,
+    getToken,
+    generateTempAppCode,
   )
 where
 
@@ -69,7 +75,6 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess as AP
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as BC
 import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -166,6 +171,25 @@ validateSignatureAuthReq AuthReq {..} =
     [ whenJust mobileCountryCode $ \countryCode -> validateField "mobileCountryCode" countryCode P.mobileCountryCode
     ]
 
+data GetTokenReq = GetTokenReq
+  { appSecretCode :: Text,
+    userMobileNo :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data TempCodeRes = TempCodeRes
+  {tempCode :: Text}
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data PasswordAuthReq = PasswordAuthReq
+  { userEmail :: Maybe Text,
+    userMobileNumber :: Maybe Text,
+    userCountryCode :: Maybe Text,
+    userMerchantId :: Id Merchant,
+    userPassword :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 data AuthRes = AuthRes
   { authId :: Id RegistrationToken,
     attempts :: Int,
@@ -189,7 +213,8 @@ type ResendAuthRes = AuthRes
 data AuthVerifyReq = AuthVerifyReq
   { otp :: Text,
     deviceToken :: Text,
-    whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods
+    whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods,
+    userPasswordString :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -224,8 +249,9 @@ auth ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   m AuthRes
-auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor = do
+auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor mbSenderHash = do
   let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
   let mbClientIP =
         mbXForwardedFor
@@ -290,7 +316,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
-  regToken <- makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM
+  regToken <- makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM False
   if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
     then do
       deploymentVersion <- asks (.version)
@@ -298,7 +324,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       RegistrationToken.create regToken
       when (isNothing useFakeOtpM) $ do
         let otpCode = SR.authValueHash regToken
-        let otpHash = smsCfg.credConfig.otpHash
+        let otpHash = fromMaybe smsCfg.credConfig.otpHash mbSenderHash
         case otpChannel of
           SMS -> do
             countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for SMS OTP channel")
@@ -369,7 +395,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
-  regToken <- makeSession SR.SIGNATURE scfg entityId mkId useFakeOtpM
+  regToken <- makeSession SR.SIGNATURE scfg entityId mkId useFakeOtpM False
   if not person.blocked
     then do
       deploymentVersion <- asks (.version)
@@ -377,10 +403,103 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
       _ <- RegistrationToken.create regToken
       mbEncEmail <- encrypt `mapM` reqWithMobileNumebr.email
       _ <- RegistrationToken.setDirectAuth regToken.id SR.SIGNATURE
-      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName mbEncEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) mbRnVersion (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing person Nothing
+      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName mbEncEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) mbRnVersion (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing person Nothing Nothing Nothing
       personAPIEntity <- verifyFlow person regToken reqWithMobileNumebr.whatsappNotificationEnroll deviceToken
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
+
+mkUserIdFromTempAppSecretKey :: Text -> Text
+mkUserIdFromTempAppSecretKey appSecretKey = "rider-platform:getUserIdKey:" <> appSecretKey
+
+setUserIdToTempAppSecretKey :: (CacheFlow m r, Redis.HedisFlow m r) => Text -> Id SP.Person -> m ()
+setUserIdToTempAppSecretKey appSecretKey personId = Redis.setExp (mkUserIdFromTempAppSecretKey appSecretKey) (getId personId) 120 -- 2 minutes
+
+getUserIdFromTempAppSecretKey :: (CacheFlow m r, Redis.HedisFlow m r) => Text -> m (Maybe (Id SP.Person))
+getUserIdFromTempAppSecretKey appSecretKey = (fmap (\(a :: Text) -> Id a)) <$> Redis.safeGet (mkUserIdFromTempAppSecretKey appSecretKey)
+
+generateTempAppCode ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Redis.HedisFlow m r
+  ) =>
+  Id SP.Person ->
+  m TempCodeRes
+generateTempAppCode personId = do
+  tempCode <- show . (`mod` 10000) <$> Redis.incr mkTempAppSecretKey
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
+  case A.toJSON . (.hash) <$> person.mobileNumber of
+    Just (A.String mobileNumberHash) -> do
+      let appSecretKey = mobileNumberHash <> ":" <> tempCode
+      setUserIdToTempAppSecretKey appSecretKey person.id
+      return $ TempCodeRes tempCode
+    _ -> throwError $ InvalidRequest "Mobile number not found"
+  where
+    mkTempAppSecretKey :: Text
+    mkTempAppSecretKey = "rider-platform:temp-app-secret-key:"
+
+getToken ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions]
+  ) =>
+  GetTokenReq ->
+  m AuthRes
+getToken req = do
+  mobileNumberHashVal <- A.toJSON <$> getDbHash req.userMobileNo
+  case mobileNumberHashVal of
+    A.String mobileNumberHash -> do
+      getTokenAttempts <- Redis.incr $ getUserLimitKey mobileNumberHash
+      when (getTokenAttempts > 3) $ throwError $ InvalidRequest "Too many attempts"
+      Redis.expire (getUserLimitKey mobileNumberHash) 3600 -- 1 hour
+      let appSecretKey = mobileNumberHash <> ":" <> req.appSecretCode
+      mbPersonId <- getUserIdFromTempAppSecretKey appSecretKey
+      case mbPersonId of
+        Just personId -> do
+          person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
+          registrationToken <- (listToMaybe <$> RegistrationToken.findAllByPersonId personId) >>= fromMaybeM (InternalError $ "Registration token not found for person id: " <> getId personId)
+          return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked
+        Nothing -> do
+          throwError $ GetUserIdError appSecretKey
+    _ -> throwError $ InvalidRequest "Mobile number not found"
+  where
+    getUserLimitKey :: Text -> Text
+    getUserLimitKey userMobileNo = "getUserLimitKey:" <> userMobileNo
+
+passwordBasedAuth ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions]
+  ) =>
+  PasswordAuthReq ->
+  m AuthRes
+passwordBasedAuth req = do
+  (mbPerson, method) <-
+    case (req.userMobileNumber, req.userCountryCode, req.userEmail) of
+      (Just mobileNumber, Just countryCode, Nothing) -> do
+        checkSlidingWindowLimit (verifyHitsCountKey . Id $ mobileNumber <> "_PASSWORD_AUTH")
+        mobileNumberHash <- getDbHash mobileNumber
+        (,SR.MOBILE_NUMBER) <$> Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash req.userMerchantId
+      (Nothing, _, Just email) -> do
+        checkSlidingWindowLimit (verifyHitsCountKey . Id $ email <> "_PASSWORD_AUTH")
+        (,SR.EMAIL) <$> Person.findByEmailAndMerchantId req.userMerchantId email
+      _ -> throwError $ InvalidRequest "Invalid request"
+  person <- fromMaybeM (PersonNotFound $ getId req.userMerchantId) mbPerson
+  passwordHash <- getDbHash req.userPassword
+  unless (person.passwordHash == Just passwordHash) $ throwError $ InvalidRequest "Invalid password"
+  let scfg =
+        SmsSessionConfig
+          { attempts = 3,
+            authExpiry = 30,
+            tokenExpiry = 30
+          }
+  registrationToken <- makeSession method scfg person.id.getId req.userMerchantId.getId Nothing True
+  _ <- RegistrationToken.create registrationToken
+  _ <- RegistrationToken.deleteByPersonIdExceptNew person.id registrationToken.id
+  return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked
 
 buildPerson ::
   ( HasFlowEnv m r '["version" ::: DeploymentVersion],
@@ -500,7 +619,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         authBlocked = Nothing,
         lastUsedVehicleServiceTiers = [],
         lastUsedVehicleCategories = [],
-        imeiNumber = Nothing -- TODO: take it from the request
+        imeiNumber = Nothing, -- TODO: take it from the request
+        comments = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -511,8 +631,9 @@ makeSession ::
   Text ->
   Text ->
   Maybe Text ->
+  Bool ->
   m SR.RegistrationToken
-makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp = do
+makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp verified = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- L.generateGUID
   token <- L.generateGUID
@@ -525,7 +646,7 @@ makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp = do
         authMedium,
         authType = SR.OTP,
         authValueHash = otp,
-        verified = False,
+        verified = verified,
         authExpiry = authExpiry,
         tokenExpiry = tokenExpiry,
         entityId = entityId,
@@ -592,6 +713,9 @@ verify tokenId req = do
   void $ RegistrationToken.setVerified True tokenId
   void $ Person.updateDeviceToken deviceToken person.id
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
+  whenJust req.userPasswordString $ \userPasswordString -> do
+    passwordHash <- getDbHash userPasswordString
+    void $ Person.updatePersonPassword (Just passwordHash) person.id
   when (isNothing person.customerReferralCode) $ do
     newCustomerReferralCode <- generateCustomerReferralCode
     checkIfReferralCodeExists <- Person.findPersonByCustomerReferralCode (Just newCustomerReferralCode)
@@ -662,7 +786,7 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
   pure person
   where
     addNammaTags person tagData = do
-      newPersonTags <- try @_ @SomeException (Yudhishthira.computeNammaTagsWithExpiry Yudhishthira.Login tagData)
+      newPersonTags <- withTryCatch "computeNammaTagsWithExpiry:Login" (Yudhishthira.computeNammaTagsWithExpiry Yudhishthira.Login tagData)
       let tags = nub (fromMaybe [] person.customerNammaTags <> fromMaybe [] (eitherToMaybe newPersonTags))
       Person.updateCustomerTags (Just tags) tagData.id
 
@@ -707,15 +831,16 @@ resend ::
     HasKafkaProducer r
   ) =>
   Id SR.RegistrationToken ->
+  Maybe Text ->
   m ResendAuthRes
-resend tokenId = do
+resend tokenId mbSenderHash = do
   SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
   person <- checkPersonExists entityId
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
   smsCfg <- asks (.smsCfg)
   let merchantOperatingCityId = person.merchantOperatingCityId
   let otpCode = authValueHash
-  let otpHash = smsCfg.credConfig.otpHash
+  let otpHash = fromMaybe smsCfg.credConfig.otpHash mbSenderHash
   otpChannel <- getPersonOTPChannel person.id
   case otpChannel of
     SMS -> do

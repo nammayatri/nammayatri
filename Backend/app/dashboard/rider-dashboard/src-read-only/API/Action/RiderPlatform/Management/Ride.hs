@@ -25,10 +25,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("ride" :> (GetRideList :<|> GetRideInfo :<|> GetShareRideInfo :<|> GetShareRideInfoByShortId :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSyncMultiple :<|> PostRideCancelMultiple :<|> GetRideKaptureList))
+type API = ("ride" :> (GetRideList :<|> GetRideInfo :<|> CancellationChargesWaiveOff :<|> GetShareRideInfo :<|> GetShareRideInfoByShortId :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSyncMultiple :<|> PostRideCancelMultiple :<|> GetRideKaptureList))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getRideList merchantId city :<|> getRideInfo merchantId city :<|> getShareRideInfo merchantId city :<|> getShareRideInfoByShortId merchantId city :<|> getRideTripRoute merchantId city :<|> getRidePickupRoute merchantId city :<|> postRideSyncMultiple merchantId city :<|> postRideCancelMultiple merchantId city :<|> getRideKaptureList merchantId city
+handler merchantId city = getRideList merchantId city :<|> getRideInfo merchantId city :<|> cancellationChargesWaiveOff merchantId city :<|> getShareRideInfo merchantId city :<|> getShareRideInfoByShortId merchantId city :<|> getRideTripRoute merchantId city :<|> getRidePickupRoute merchantId city :<|> postRideSyncMultiple merchantId city :<|> postRideCancelMultiple merchantId city :<|> getRideKaptureList merchantId city
 
 type GetRideList =
   ( ApiAuth
@@ -44,6 +44,14 @@ type GetRideInfo =
       'DSL
       ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.RIDE / 'API.Types.RiderPlatform.Management.Ride.GET_RIDE_INFO)
       :> API.Types.RiderPlatform.Management.Ride.GetRideInfo
+  )
+
+type CancellationChargesWaiveOff =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.RIDE / 'API.Types.RiderPlatform.Management.Ride.CANCELLATION_CHARGES_WAIVE_OFF)
+      :> API.Types.RiderPlatform.Management.Ride.CancellationChargesWaiveOff
   )
 
 type GetShareRideInfo = API.Types.RiderPlatform.Management.Ride.GetShareRideInfo
@@ -83,6 +91,9 @@ getRideList merchantShortId opCity apiTokenInfo limit offset bookingStatus rideS
 
 getRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.RideInfoRes)
 getRideInfo merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Ride.getRideInfo merchantShortId opCity apiTokenInfo rideId
+
+cancellationChargesWaiveOff :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.CancellationChargesWaiveOffRes)
+cancellationChargesWaiveOff merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Ride.cancellationChargesWaiveOff merchantShortId opCity apiTokenInfo rideId
 
 getShareRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.ShareRideInfoRes)
 getShareRideInfo merchantShortId opCity rideId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Ride.getShareRideInfo merchantShortId opCity rideId

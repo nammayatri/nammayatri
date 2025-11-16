@@ -304,7 +304,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         DRB.MeterRideDetails details -> (details.toLocation, [])
       allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
       allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
-      onlinePayment = maybe False (.onlinePayment) mbMerchant
+      onlinePayment = SPayment.isOnlinePayment mbMerchant booking
   mfuPattern <- fromMaybeM (MerchantDoesNotExist ("BuildRide merchant:" <> booking.merchantId.getId)) (fmap DMerchant.mediaFileUrlPattern mbMerchant)
   let fileUrl =
         ( mfuPattern
@@ -360,12 +360,14 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         estimatedEndTimeRange = Nothing,
         tipAmount = Nothing,
         hasStops = booking.hasStops,
+        billingCategory = booking.billingCategory,
         wasRideSafe = Nothing,
         pickupRouteCallCount = Just 0,
         talkedWithDriver = Nothing,
         isSafetyPlus = isSafetyPlus,
         isInsured = booking.isInsured,
         insuredAmount = booking.insuredAmount,
+        cancellationChargesOnCancel = Nothing,
         ..
       }
 
@@ -443,7 +445,8 @@ rideAssignedReqHandler req = do
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
         let createPaymentIntentReq =
               Payment.CreatePaymentIntentReq
-                { amount = booking.estimatedFare.amount,
+                { orderShortId = ride.shortId.getShortId,
+                  amount = booking.estimatedFare.amount,
                   applicationFeeAmount,
                   currency = booking.estimatedFare.currency,
                   customer = customerPaymentId,
@@ -666,7 +669,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              traveledDistance = convertHighPrecMetersToDistance distanceUnit <$> traveledDistance,
              tollConfidence,
              rideEndTime,
-             paymentStatus = maybe DRide.Completed (\m -> if m.onlinePayment then DRide.NotInitiated else DRide.Completed) mbMerchant,
+             paymentStatus = if SPayment.isOnlinePayment mbMerchant booking then DRide.NotInitiated else DRide.Completed,
              endOdometerReading
             }
   breakups <- traverse (buildFareBreakup ride.id) fareBreakups
@@ -695,7 +698,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       addOffersNammaTags updRide person
 
   -- we should create job for collecting money from customer
-  let onlinePayment = maybe False (.onlinePayment) mbMerchant
+  let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
   when onlinePayment $ do
     let applicationFeeAmount = applicationFeeAmountForRide fareBreakups
     let scheduleAfter = riderConfig.executePaymentDelay
@@ -930,6 +933,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
       QBPL.makeAllInactiveByBookingId booking.id
       checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.CANCELLED
   whenJust mbRide $ \ride -> void $ do
+    void $ QRide.updateCancellationChargesOnCancel (maybe Nothing (Just . (.amount)) cancellationFee) ride.id
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (InternalError "RiderConfig not found")
   fork "Cancellation Settlement" $ do
@@ -1023,7 +1027,7 @@ validateRideAssignedReq ::
 validateRideAssignedReq RideAssignedReq {..} = do
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
   mbMerchant <- CQM.findById booking.merchantId
-  let onlinePayment = maybe False (.onlinePayment) mbMerchant
+  let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
   -- TODO: Should we put 'TRIP_ASSIGNED' status check in the 'isAssignable' function for normal booking Or Handle for crone Job in Different Way?
   unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
   onlinePaymentParameters <-
@@ -1228,13 +1232,16 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             payoutProgramThresholdChecks = (dailyPayoutCount < riderConfig.payoutReferralThresholdPerDay) && (monthlyPayoutCount < riderConfig.payoutReferralThresholdPerMonth) && deviceIdCheck
         when (isConsideredForPayout && payoutProgramThresholdChecks && fromMaybe False isValidRide && riderConfig.payoutReferralProgram && payoutConfig.isPayoutEnabled) $ do
           personStats <- getPersonStats person_.id
-          QPersonStats.updateReferredByEarning (personStats.referredByEarnings + payoutConfig.referredByRewardAmount) person_.id
-
-          referredByPerson <- QP.findById (Id referredByCustomerId) >>= fromMaybeM (PersonNotFound referredByCustomerId)
-          sendPNToPerson referredByPerson True
-          sendPNToPerson person_ False
-          handlePayout person_ payoutConfig.referredByRewardAmount payoutConfig False referredByPersonStats DLP.REFERRED_BY_AWARD dailyPayoutCount
-          handlePayout referredByPerson payoutConfig.referralRewardAmountPerRide payoutConfig True referredByPersonStats DLP.REFERRAL_AWARD_RIDE dailyPayoutCount
+          let shouldProcessRefereePayout = payoutConfig.referredByRewardAmount > 0.0
+              shouldProcessReferrerPayout = payoutConfig.referralRewardAmountPerRide > 0.0
+          when shouldProcessRefereePayout $ do
+            QPersonStats.updateReferredByEarning (personStats.referredByEarnings + payoutConfig.referredByRewardAmount) person_.id
+            sendPNToPerson person_ False
+            handlePayout person_ payoutConfig.referredByRewardAmount payoutConfig False referredByPersonStats DLP.REFERRED_BY_AWARD dailyPayoutCount
+          when shouldProcessReferrerPayout $ do
+            referredByPerson <- QP.findById (Id referredByCustomerId) >>= fromMaybeM (PersonNotFound referredByCustomerId)
+            sendPNToPerson referredByPerson True
+            handlePayout referredByPerson payoutConfig.referralRewardAmountPerRide payoutConfig True referredByPersonStats DLP.REFERRAL_AWARD_RIDE dailyPayoutCount
     Nothing -> logTagError "Payout Config Error" $ "PayoutConfig Not Found for cityId: " <> merchantOperatingCityId.getId <> " and category: " <> show vehicleCategory
   where
     handlePayout person amount payoutConfig isReferredByPerson referredByPersonStats entity dailyPayoutCount = do
@@ -1255,7 +1262,7 @@ customerReferralPayout ride isValidRide riderConfig person_ merchantId merchantO
             payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
             let createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOperatingCityId payoutServiceName (Just person.id.getId)
             merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-            mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+            mbPayoutOrderResp <- withTryCatch "createPayoutService:handlePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOperatingCityId) (cast person.id) (Just [ride.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
             case mbPayoutOrderResp of
               Left err -> logError $ "Error in calling create payout rideId: " <> show ride.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
               _ -> pure ()

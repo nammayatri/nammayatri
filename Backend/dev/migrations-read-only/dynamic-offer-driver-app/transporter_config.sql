@@ -493,41 +493,30 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_wallet_c
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN analytics_config json  default '{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}' :: json;
 
 
+------- SQL updates -------
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN subscription_config SET DEFAULT '{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}' :: json;
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN analytics_config SET DEFAULT '{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "enableFleetOperatorDashboardAnalytics": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}' :: json;
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN driver_wallet_config SET DEFAULT '{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minWalletAmountForCashRides": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7}' :: json;
 
 
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fee_dispute_window integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fee_cycle integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fee_vendor text ;
 
 
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
-
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN upgrade_tier_drop_retention_time integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN subscription_config SET DEFAULT '{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}' :: json;
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_driver_to_use_fleet_rcs boolean ;

@@ -20,6 +20,7 @@ module Domain.Action.ProviderPlatform.RideBooking.Driver
     postDriverExemptCash,
     postDriverV2ExemptCash,
     getDriverInfo,
+    getDriverFeedbackList,
     postDriverUnlinkVehicle,
     postDriverEndRCAssociation,
     postDriverAddVehicle,
@@ -159,3 +160,8 @@ postDriverExemptDriverFee merchantShortId opCity apiTokenInfo driverId serviceNa
   transaction <- buildTransaction apiTokenInfo (Just driverId) $ Just req
   T.withTransactionStoring transaction $
     Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverExemptDriverFee) driverId apiTokenInfo.personId.getId serviceName req
+
+getDriverFeedbackList :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe Text -> Flow Common.GetFeedbackListRes)
+getDriverFeedbackList merchantShortId opCity apiTokenInfo personId mobileNumber mobileCountryCode = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.getDriverFeedbackList) personId mobileNumber mobileCountryCode

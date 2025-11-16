@@ -56,6 +56,7 @@ data RiderConfig = RiderConfig
     enableIGMIssueFlow :: Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
     enableMultiModalForAllUsers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableOnlinePaymentRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableRideEndOffers :: Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Bool,
     excludedVehicleVariants :: Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType],
@@ -80,6 +81,7 @@ data RiderConfig = RiderConfig
     localPoliceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     makeMultiModalSearch :: Kernel.Prelude.Bool,
     maxAllowedPublicTransportLegs :: Kernel.Prelude.Int,
+    maxNearbyBuses :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maximumWalkDistance :: Kernel.Types.Common.Meters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     metricsBlacklistPatterns :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
@@ -89,6 +91,8 @@ data RiderConfig = RiderConfig
     minimumWalkDistance :: Kernel.Types.Common.Meters,
     multimodalTesting :: Kernel.Prelude.Bool,
     nearByDriverRingBucketCfg :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.RingBucketCfg],
+    nearbyBusMaxTimeThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nearbyBusSearchRadius :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     nearbyDriverSearchRadius :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     noOfRideRequestsConfig :: Kernel.Prelude.Int,
     nyRegularExecutionTimeOffsetMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -120,6 +124,7 @@ data RiderConfig = RiderConfig
     serviceTierRelationshipCfg :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.ServiceTierRelationshipCfg],
     settleCancellationFeeBeforeNextRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sourceOfServiceTier :: Domain.Types.RiderConfig.ServiceTierSource,
+    specialVehicleNotificationConfigs :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.SpecialVehicleNotificationConfig],
     specialZoneRadius :: Kernel.Prelude.Int,
     suburbanBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     subwayTransitTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
@@ -164,5 +169,8 @@ data ServiceTierRelationshipCfg = ServiceTierRelationshipCfg {canBoardIn :: [Bec
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data ServiceTierSource = NANDI | QUOTES deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notificationMessage :: Kernel.Prelude.Text, notificationTitle :: Kernel.Prelude.Text, vehicleNo :: Kernel.Prelude.Text}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)

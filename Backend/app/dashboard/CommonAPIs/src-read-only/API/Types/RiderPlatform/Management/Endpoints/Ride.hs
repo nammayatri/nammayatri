@@ -46,6 +46,15 @@ data BookingStatus
   deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
+data CancellationChargesWaiveOffRes = CancellationChargesWaiveOffRes
+  { rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride,
+    waivedOffAmount :: Kernel.Prelude.Maybe Kernel.Types.Price.HighPrecMoney,
+    waivedOffAmountWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Price.PriceAPIEntity,
+    waivedOffSuccess :: Kernel.Prelude.Bool
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data CancellationSource
   = ByUser
   | ByDriver
@@ -175,6 +184,7 @@ data RideInfoRes = RideInfoRes
     customerDropLocation :: Kernel.Prelude.Maybe Location,
     driverName :: Kernel.Prelude.Text,
     driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverAlternatePhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverRegisteredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     vehicleNo :: Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Text,
@@ -294,7 +304,7 @@ newtype TicketRideListRes = TicketRideListRes {rides :: [RideInfo]}
   deriving stock (Show, Generic)
   deriving anyclass (ToSchema)
 
-type API = ("ride" :> (GetRideList :<|> GetRideInfo :<|> GetShareRideInfo :<|> GetShareRideInfoByShortId :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSyncMultiple :<|> PostRideCancelMultiple :<|> GetRideKaptureList))
+type API = ("ride" :> (GetRideList :<|> GetRideInfo :<|> CancellationChargesWaiveOff :<|> GetShareRideInfo :<|> GetShareRideInfoByShortId :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSyncMultiple :<|> PostRideCancelMultiple :<|> GetRideKaptureList))
 
 type GetRideList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> QueryParam "bookingStatus" BookingStatus
@@ -317,6 +327,8 @@ type GetRideList =
   )
 
 type GetRideInfo = ("rideinfo" :> Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> Get '[JSON] RideInfoRes)
+
+type CancellationChargesWaiveOff = ("cancellationChargesWaiveOff" :> Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> Get '[JSON] CancellationChargesWaiveOffRes)
 
 type GetShareRideInfo = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "info" :> Get '[JSON] ShareRideInfoRes)
 
@@ -354,6 +366,7 @@ type GetRideKaptureList =
 data RideAPIs = RideAPIs
   { getRideList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient RideListRes,
     getRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideInfoRes,
+    cancellationChargesWaiveOff :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient CancellationChargesWaiveOffRes,
     getShareRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient ShareRideInfoRes,
     getShareRideInfoByShortId :: Kernel.Types.Id.ShortId Dashboard.Common.Ride -> EulerHS.Types.EulerClient ShareRideInfoRes,
     getRideTripRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp,
@@ -366,11 +379,12 @@ data RideAPIs = RideAPIs
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
 mkRideAPIs rideClient = (RideAPIs {..})
   where
-    getRideList :<|> getRideInfo :<|> getShareRideInfo :<|> getShareRideInfoByShortId :<|> getRideTripRoute :<|> getRidePickupRoute :<|> postRideSyncMultiple :<|> postRideCancelMultiple :<|> getRideKaptureList = rideClient
+    getRideList :<|> getRideInfo :<|> cancellationChargesWaiveOff :<|> getShareRideInfo :<|> getShareRideInfoByShortId :<|> getRideTripRoute :<|> getRidePickupRoute :<|> postRideSyncMultiple :<|> postRideCancelMultiple :<|> getRideKaptureList = rideClient
 
 data RideUserActionType
   = GET_RIDE_LIST
   | GET_RIDE_INFO
+  | CANCELLATION_CHARGES_WAIVE_OFF
   | GET_SHARE_RIDE_INFO
   | GET_SHARE_RIDE_INFO_BY_SHORT_ID
   | GET_RIDE_TRIP_ROUTE

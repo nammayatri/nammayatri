@@ -36,6 +36,7 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
   updateWithKV
     [ Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.backendConfigVersion (fmap Kernel.Utils.Version.versionToText backendConfigVersion),
+      Se.Set Beam.billingCategory (Kernel.Prelude.Just billingCategory),
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
       Se.Set Beam.clientManufacturer (clientDevice >>= (.deviceManufacturer)),

@@ -14,3 +14,41 @@ ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN ticket_category_metadata_co
 ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_quote_category ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN tnc text ;
+ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN title text ;
+ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN final_price text ;
+ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN description text ;
+ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN code text ;
+ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN category text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN final_price TYPE double precision;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN ticket_category_metadata_config_id SET DEFAULT 'Unknown';
+ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN ticket_category_metadata_config_id DROP NOT NULL;
+
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

@@ -13,6 +13,7 @@ import qualified Domain.Types.FRFSQuote as DQuote
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
+import SharedLogic.FRFSUtils
 
 buildSelectReq ::
   (MonadFlow m) =>
@@ -54,7 +55,7 @@ tfOrder quote mSettlementType categories =
       orderFulfillments = Nothing,
       orderId = Nothing,
       orderItems = tfItems quote categories,
-      orderPayments = tfPayments quote mSettlementType,
+      orderPayments = tfPayments quote categories mSettlementType,
       orderProvider = tfProvider quote,
       orderQuote = Nothing,
       orderStatus = Nothing,
@@ -66,14 +67,15 @@ tfItems :: DQuote.FRFSQuote -> [DCategorySelect] -> Maybe [Spec.Item]
 tfItems quote categories =
   case categories of
     [] ->
-      Just
+      -- TODO :: This is deprecated, should be removed post `quoteCategories` unification
+      quote.quantity <&> \quantity ->
         [ Spec.Item
             { itemCategoryIds = Nothing,
               itemDescriptor = Nothing,
               itemFulfillmentIds = Nothing,
               itemId = Just quote.bppItemId,
               itemPrice = Nothing,
-              itemQuantity = tfQuantity quote.quantity,
+              itemQuantity = tfQuantity quantity,
               itemTime = Nothing
             }
         ]
@@ -106,12 +108,12 @@ tfQuantity quantity =
               }
       }
 
-tfPayments :: DQuote.FRFSQuote -> Maybe Text -> Maybe [Spec.Payment]
-tfPayments quote mSettlementType = do
-  let mCurrency = Just quote.price.currency
+tfPayments :: DQuote.FRFSQuote -> [DCategorySelect] -> Maybe Text -> Maybe [Spec.Payment]
+tfPayments quote categories mSettlementType = do
+  let fareParameters = calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromDCategorySelect categories) quote
   Just $
     singleton $
-      Utils.mkPaymentForSelectReq Spec.NOT_PAID (Just $ encodeToText quote.price.amount) Nothing Nothing mSettlementType mCurrency (show <$> quote.bppDelayedInterest)
+      Utils.mkPaymentForSelectReq Spec.NOT_PAID (Just $ encodeToText fareParameters.totalPrice.amount) Nothing Nothing mSettlementType (Just fareParameters.currency) (show <$> quote.bppDelayedInterest)
 
 tfProvider :: DQuote.FRFSQuote -> Maybe Spec.Provider
 tfProvider quote =

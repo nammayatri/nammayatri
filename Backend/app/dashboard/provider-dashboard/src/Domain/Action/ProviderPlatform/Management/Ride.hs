@@ -23,6 +23,7 @@ module Domain.Action.ProviderPlatform.Management.Ride
     getRideKaptureList,
     getRideFareBreakUp,
     getRideListV2,
+    postRideWaiverRideCancellationPenalty,
   )
 where
 
@@ -32,6 +33,7 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -131,3 +133,8 @@ getRideListV2 :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Kern
 getRideListV2 merchantShortId opCity apiTokenInfo currency customerPhoneNo driverPhoneNo from limit offset rideShortId rideStatus to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideListV2) currency customerPhoneNo driverPhoneNo from limit offset rideShortId rideStatus to
+
+postRideWaiverRideCancellationPenalty :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.Ride -> Common.WaiverRideCancellationPenaltyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postRideWaiverRideCancellationPenalty merchantShortId opCity apiTokenInfo rideId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.postRideWaiverRideCancellationPenalty) rideId req

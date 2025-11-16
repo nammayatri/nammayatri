@@ -16,7 +16,7 @@ import Kernel.Randomizer
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, throwError)
+import Kernel.Utils.Common (fromMaybeM, throwError, withTryCatch)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.Queries.Person as QP
 
@@ -35,7 +35,7 @@ postCrisGetSDKData (mbPersonId, _) mbIntegratedBPPConfigId request = do
       integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId person.merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL
       case integratedBPPConfig.providerConfig of
         DIBC.CRIS config' -> do
-          resp <- try @_ @SomeException $ GetSDKData.getSDKData config' request
+          resp <- withTryCatch "getSDKData" $ GetSDKData.getSDKData config' request
           case resp of
             Left _ -> throwError $ InternalError "Error in get-sdk-data!"
             Right sdkData -> do
@@ -70,7 +70,7 @@ getCrisOtpGeneration (mbPersonId, _) mbIntegratedBPPConfigId = do
                 otpType = 3,
                 osType = show osType
               }
-      resp <- try @_ @SomeException $ OtpGeneration.generateOtp config' request
+      resp <- withTryCatch "generateOtp:getCrisOtpGeneration" $ OtpGeneration.generateOtp config' request
       case resp of
         Left _ -> throwError $ InternalError "Error in otp-generation!"
         Right sdkData -> do
@@ -109,7 +109,7 @@ postCrisChangeDevice (mbPersonId, _) mbIntegratedBPPConfigId req = do
                 agentAccountId = config'.tpAccountId,
                 otp = req.otp
               }
-      resp <- try @_ @SomeException $ ChangeDevice.changeDevice config' request
+      resp <- withTryCatch "generateOtp:postCrisChangeDevice" $ ChangeDevice.changeDevice config' request
       case resp of
         Left _ -> throwError $ InternalError "Error in change-device!"
         Right sdkData -> do

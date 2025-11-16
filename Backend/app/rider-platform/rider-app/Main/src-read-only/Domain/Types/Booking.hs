@@ -10,6 +10,7 @@ import qualified Domain.Types.Client
 import qualified Domain.Types.Common
 import Domain.Types.Extra.Booking as ReExport
 import qualified Domain.Types.Extra.Booking
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -26,11 +27,13 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import qualified Lib.Yudhishthira.Types
+import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
 
 data Booking = Booking
   { backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    billingCategory :: SharedLogic.Type.BillingCategory,
     bookingDetails :: Domain.Types.Booking.BookingDetails,
     bppBookingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Booking.BPPBooking),
     bppEstimateId :: Kernel.Prelude.Text,
@@ -68,6 +71,7 @@ data Booking = Booking
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     multimodalSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     paymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     paymentStatus :: Kernel.Prelude.Maybe Domain.Types.Extra.Booking.PaymentStatus,
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

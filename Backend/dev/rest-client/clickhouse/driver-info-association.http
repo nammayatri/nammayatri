@@ -4,16 +4,16 @@ Authorization: Basic default:
 content-type: text/html
 
 INSERT INTO atlas_driver_offer_bpp.driver_information
-(driver_id, driver_flow_status,version)
+(driver_id, driver_flow_status,enabled,enabled_at,version)
 VALUES
-# ('favorit-suv-000000000000000000000001','SILENT',now()),
-# ('favorit-suv-000000000000000000000002','ONLINE',now()),
+('favorit-suv-000000000000000000000001','SILENT',true,now(),now()),
+('favorit-suv-000000000000000000000002','ONLINE',true,now(),now());
 # ('favorit-suv-000000000000000000000003','ONLINE',now()),
-('favorit-suv-000000000000000000000004','SILENT',now()),
+# ('favorit-suv-000000000000000000000004','SILENT',now()),
 # ('favorit-sedan-000000000000000000000001','OFFLINE',now()),
 # ('favorit-sedan-000000000000000000000002','OFFLINE',now()),
 # ('favorit-sedan-000000000000000000000003','OFFLINE',now()),
-('favorit-sedan-000000000000000000000004',null,now());
+# ('favorit-sedan-000000000000000000000004',null,now());
 # ('driver-info-suv-4', 'favorit-suv-000000000000000000000004','OFFLINE'),
 # ('driver-info-sedan-1', 'favorit-sedan-0000000000000000000000', 'OFFLINE'),
 # ('driver-info-sedan-2', 'favorit-sedan-0000000000000000000001', 'OFFLINE'),
@@ -28,15 +28,15 @@ Authorization: Basic default:
 content-type: text/html
 
 INSERT INTO atlas_driver_offer_bpp.driver_operator_association
-(id, driver_id, operator_id, is_active, version)
+(id, driver_id, operator_id, is_active, associated_on, version)
 VALUES
-('assoc-suv-1', 'favorit-suv-000000000000000000000001', 'favorit-operator-0-0000-000000000000', 1, now()),
-('assoc-suv-2', 'favorit-suv-000000000000000000000002', 'favorit-operator-0-0000-000000000000', 1, now()),
+('assoc-suv-1', 'favorit-suv-000000000000000000000001', 'favorit-operator-0-0000-000000000000', 1, now(), now()),
+('assoc-suv-2', 'favorit-suv-000000000000000000000002', 'favorit-operator-0-0000-000000000000', 1, now(), now()),
 # ('assoc-suv-3', 'favorit-suv-000000000000000000000003', 'favorit-operator-0-0000-000000000000', 1, now());
 # ('assoc-suv-4', 'favorit-suv-000000000000000000000004', 'favorit-operator-0-0000-000000000000', 1),
 # ('assoc-sedan-1', 'favorit-sedan-0000000000000000000000', 'favorit-operator-0-0000-000000000000', 1),
-('assoc-sedan-1', 'favorit-sedan-000000000000000000000001', 'favorit-operator-0-0000-000000000000', 1, now()),
-('assoc-sedan-2', 'favorit-sedan-000000000000000000000002', 'favorit-operator-0-0000-000000000000', 1, now());
+# ('assoc-sedan-1', 'favorit-sedan-000000000000000000000001', 'favorit-operator-0-0000-000000000000', 1, now()),
+# ('assoc-sedan-2', 'favorit-sedan-000000000000000000000002', 'favorit-operator-0-0000-000000000000', 1, now());
 # ('assoc-sedan-4', 'favorit-sedan-0000000000000000000003', 'favorit-operator-0-0000-000000000000', 1),
 # ('assoc-sedan-5', 'favorit-sedan-0000000000000000000004', 'favorit-operator-0-0000-000000000000', 1);
 
@@ -75,8 +75,7 @@ POST http://localhost:8123
 Authorization: Basic default:
 content-type: text/html
 
-SELECT driver_id, driver_flow_status FROM atlas_driver_offer_bpp.driver_information
-WHERE driver_id IN ('favorit-suv-000000000000000000000000', 'favorit-sedan-0000000000000000000000')
+select * from atlas_driver_offer_bpp.driver_operator_association
 FORMAT JSON
 
 ###
@@ -85,9 +84,11 @@ POST http://localhost:8123
 Authorization: Basic default:
 content-type: text/html
 
-SELECT driver_id, operator_id, is_active FROM atlas_driver_offer_bpp.driver_operator_association FINAL
-WHERE operator_id = 'favorit-operator-0-0000-000000000000' and is_active = '1'
-FORMAT JSON
+# SELECT driver_id, operator_id, is_active FROM atlas_driver_offer_bpp.driver_operator_association FINAL
+# WHERE operator_id = 'favorit-operator-0-0000-000000000000' and is_active = '1'
+# FORMAT JSON
+
+select * from atlas_driver_offer_bpp.driver_operator_association;
 
 ###
 # @name deleteDriverInformation
@@ -116,8 +117,10 @@ POST http://localhost:8123
 Authorization: Basic default:
 content-type: text/html
 
-SELECT (*) from atlas_driver_offer_bpp.driver_operator_association
-FORMAT JSON
+# SELECT (*) from atlas_driver_offer_bpp.driver_operator_association
+# FORMAT JSON
+
+SELECT driver_id as res1 FROM atlas_driver_offer_bpp.driver_operator_association FINAL  WHERE ((operator_id='favorit-operator-0-0000-000000000000') AND (is_active=1))
 
 ###
 
@@ -138,9 +141,8 @@ POST http://localhost:8123
 Authorization: Basic default:
 content-type: text/html
 
-SELECT driver_flow_status, count(*) as countStatus FROM atlas_driver_offer_bpp.driver_information
-where driver_id IN (select driver_id from atlas_driver_offer_bpp.driver_operator_association where operator_id = 'favorit-operator-0-0000-000000000000')
-GROUP BY driver_flow_status
+SELECT count(*) as countStatus FROM atlas_driver_offer_bpp.driver_information
+where driver_id IN (select driver_id from atlas_driver_offer_bpp.driver_operator_association where operator_id = 'favorit-operator-0-0000-000000000000') and enabled = true and enabled_at >= now() - interval 1 day and enabled_at <= now()
 FORMAT JSON
 
 ###

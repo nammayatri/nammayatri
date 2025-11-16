@@ -112,7 +112,14 @@ getDriverProfile withImages person = do
   vehicle <- QVeh.findById person.id
   modules <- SQDMC.findByDriverIdAndStatus person.id MODULE_COMPLETED >>= mapM (\driverModule -> QLmsModule.findById driverModule.moduleId)
   images <- if withImages == Just True then maybe (pure []) (maybe (pure []) (getImages . map Id) . (.imageIds)) driverProfile else pure []
-  profileImage <- ImageQuery.findByPersonIdImageTypeAndValidationStatus (person.id) DTO.ProfilePhoto DImage.APPROVED >>= maybe (return Nothing) (\image -> S3.get (T.unpack (image.s3Path)) <&> Just)
+  profileImage <- case person.faceImageId of
+    Just mediaId -> do
+      mediaEntry <- B.runInReplica $ QMF.findById mediaId >>= fromMaybeM (FileDoNotExist person.id.getId)
+      case mediaEntry.s3FilePath of
+        Just s3Path -> Just <$> S3.get (T.unpack s3Path)
+        _ -> fetchLegacyProfileImage person.id
+    Nothing -> do
+      fetchLegacyProfileImage person.id
   topFeedbacks <- getTopFeedBackForDriver person.id
   pure $
     DriverProfileRes
@@ -134,6 +141,9 @@ getDriverProfile withImages person = do
         topReviews = topFeedbacks
       }
   where
+    fetchLegacyProfileImage personId =
+      ImageQuery.findByPersonIdImageTypeAndValidationStatus personId DTO.ProfilePhoto DImage.APPROVED >>= maybe (return Nothing) (\image -> S3.get (T.unpack (image.s3Path)) <&> Just)
+
     nonZero Nothing = 1
     nonZero (Just a)
       | a <= 0 = 1

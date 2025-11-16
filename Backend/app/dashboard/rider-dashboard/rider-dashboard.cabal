@@ -50,6 +50,7 @@ library
       Domain.Action.RiderPlatform.RideBooking.Confirm
       Domain.Action.RiderPlatform.RideBooking.Frontend
       Domain.Action.RiderPlatform.RideBooking.Maps
+      Domain.Action.RiderPlatform.RideBooking.MultiModal
       Domain.Action.RiderPlatform.RideBooking.NotifyRideInfo
       Domain.Action.RiderPlatform.RideBooking.Profile
       Domain.Action.RiderPlatform.RideBooking.Quote
@@ -82,6 +83,7 @@ library
       API.Action.RiderPlatform.RideBooking.Confirm
       API.Action.RiderPlatform.RideBooking.Frontend
       API.Action.RiderPlatform.RideBooking.Maps
+      API.Action.RiderPlatform.RideBooking.MultiModal
       API.Action.RiderPlatform.RideBooking.NotifyRideInfo
       API.Action.RiderPlatform.RideBooking.Profile
       API.Action.RiderPlatform.RideBooking.Quote

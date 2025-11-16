@@ -200,13 +200,17 @@ handler (UEditLocationReq EditLocationReq {..}) = do
               if ride.status == DRide.INPROGRESS
                 then do
                   currentLocationPointsBatch <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
+                  logTagError "DebugErrorLog: EditDestSoftUpdate" $ "driver location points count: " <> show (length currentLocationPointsBatch.loc) <> ", driverId=" <> ride.driverId.getId <> ", rideId=" <> rideId.getId
                   editDestinationWaypoints <- getEditDestinationWaypoints ride.driverId
+                  logTagError "DebugErrorLog: EditDestSoftUpdate" $ "edit destination waypoints count: " <> show (length editDestinationWaypoints)
                   (snapToRoadFailed, editDestinationPoints) <- getLatlongsViaSnapToRoad (editDestinationWaypoints <> currentLocationPointsBatch.loc) merchantOperatingCity.merchantId merchantOperatingCity.id
+                  logTagError "DebugErrorLog: EditDestSoftUpdate" $ "snapped edit destination points count: " <> show (length editDestinationPoints)
                   let (currentLocPoint :: Maps.LatLong) =
                         fromMaybe (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon) $
                           (if not $ null currentLocationPointsBatch.loc then Just (last currentLocationPointsBatch.loc) else Nothing)
                             <|> (if not $ null editDestinationWaypoints then Just (last editDestinationWaypoints) else Nothing)
                   alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
+                  logTagError "DebugErrorLog: EditDestSoftUpdate" $ "Already snapped points count: " <> show (length alreadySnappedPoints)
                   let currentPoint = if snapToRoadFailed || null editDestinationPoints then currentLocPoint else fst $ last editDestinationPoints
                       alreadySnappedPointsWithCurrentPoint = alreadySnappedPoints <> editDestinationPoints <> [(currentPoint, True)]
                   whenJust (nonEmpty alreadySnappedPointsWithCurrentPoint) $ \alreadySnappedPointsWithCurrentPoint' -> do
@@ -338,7 +342,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
           _ -> throwError (InvalidRequest "Invalid status for edit location request")
   where
     snapToRoad latlongs merchantId merchanOperatingCityId = do
-      res <- Maps.snapToRoadWithFallback Nothing merchantId merchanOperatingCityId (Just rideId.getId) Maps.SnapToRoadReq {points = latlongs, distanceUnit = Meter, calculateDistanceFrom = Nothing}
+      res <- Maps.snapToRoadWithFallback Nothing merchantId merchanOperatingCityId True (Just rideId.getId) Maps.SnapToRoadReq {points = latlongs, distanceUnit = Meter, calculateDistanceFrom = Nothing}
       case res of
         (_, Left e) -> do
           logTagError "snapToRoadWithFallback failed in edit destination" $ "Error: " <> show e
@@ -347,14 +351,18 @@ handler (UEditLocationReq EditLocationReq {..}) = do
 
     getLatlongsViaSnapToRoad latlongs merchantId merchanOperatingCityId = do
       let latlongs' = chunksOf 98 latlongs
+      logTagError "DebugErrorLog: EditDestSnapToRoad" $ "SnapToRoad request batch count: " <> show (length latlongs')
       (failed, snappedLatLongs) <-
         foldM
           ( \(failed, snappedLatLongs) latlons -> do
+              logTagError "DebugErrorLog: EditDestSnapToRoad" $ "Processing snap chunk with point count: " <> show (length latlons)
               (failed', snappedLatLongs') <- snapToRoad latlons merchantId merchanOperatingCityId
+              logTagError "DebugErrorLog: EditDestSnapToRoad" $ "SnapToRoad snapped chunk point count: " <> show (length snappedLatLongs')
               return (failed' || failed, snappedLatLongs <> snappedLatLongs')
           )
           (False, [])
           latlongs'
+      logTagError "DebugErrorLog: EditDestSnapToRoad" $ "Total snapped points count: " <> show (length snappedLatLongs)
       return (failed, map (,False) snappedLatLongs)
 
 mkActions2 :: Text -> Double -> Double -> FCM.FCMActions -> FCM.FCMActions

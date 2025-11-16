@@ -41,13 +41,15 @@ where
 import qualified API.Types.UI.FRFSTicketService as FRFSTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
-import Data.OpenApi hiding (email, info, name)
+import Data.OpenApi hiding (description, email, info, name, title)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.FRFSTicketService as DFRFSTicketService
 import qualified Domain.Action.UI.Registration as DReg
 import Domain.Types.Extra.FRFSCachedQuote as CachedQuote
 import Domain.Types.FRFSConfig
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import qualified Domain.Types.FRFSQuoteCategory as FRFSQuoteCategory
+import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFTB
@@ -62,12 +64,12 @@ import qualified Domain.Types.RegistrationToken as SR
 import Domain.Types.Station
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id, length, map, null, whenJust, whenM)
+import EulerHS.Prelude hiding (id)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.Maps as Maps
-import Kernel.Prelude hiding (sequenceA_)
+import qualified Kernel.Prelude as KP
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
@@ -91,13 +93,16 @@ import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSQuote as QQuote
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QFT
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFTBP
+import qualified Storage.Queries.FRFSTicketCategoryMetadataConfig as QFRFSTicketCategoryMetadataConfig
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
+import qualified Storage.Queries.Transformers.FRFSQuoteCategory as TFQC
 import Tools.Error
 import qualified Tools.SMS as Sms
 
@@ -253,7 +258,7 @@ getRegToken :: Id SP.Person -> Id PartnerOrganization -> DPOC.RegistrationConfig
 getRegToken personId pOrgId regPOCfg mId isApiKeyAuth = do
   let entityId = personId
   RegistrationToken.findAllByPersonId entityId
-    <&> listToMaybe . sortOn (.updatedAt) . filter (isJust . (.createdViaPartnerOrgId))
+    <&> KP.listToMaybe . sortOn (.updatedAt) . filter (isJust . (.createdViaPartnerOrgId))
     >>= validateToken pOrgId
     >>= maybe (makeSessionViaPartner regPOCfg.sessionConfig entityId.getId mId.getId regPOCfg.fakeOtp pOrgId isApiKeyAuth) return
 
@@ -433,7 +438,7 @@ shareTicketInfo ticketBookingId = do
   pure $
     ShareTicketInfoResp
       { returnType = ticketBooking._type,
-        bookingPrice = ticketBooking.price.amount,
+        bookingPrice = ticketBooking.totalPrice.amount,
         paymentStatus = Utils.mkTBPStatusAPI paymentBooking.status,
         partnerOrgTransactionId = ticketBooking.partnerOrgTransactionId,
         city = city.city,
@@ -477,18 +482,21 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
         [ FRFSRouteDetails
             { routeCode = routeCode,
               startStationCode = fromStation.code,
-              endStationCode = toStation.code
+              endStationCode = toStation.code,
+              serviceTier = Nothing -- TODO: pass this for optimization
             }
         ]
   searchReq <- mkSearchReq bapConfig frfsVehicleType partnerOrgTransactionId partnerOrg fromStation toStation route
   fork ("FRFS Search: " <> searchReq.id.getId) $ do
     QSearch.create searchReq
     CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq Nothing frfsRouteDetails integratedBPPConfig
-  quotes <- mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransactionId searchReq.id
-  whenJust quotes $ \quotes' -> QQuote.createMany quotes'
-  case quotes of
-    Just quotes' -> do
-      quoteRes <- mapM mkQuoteRes quotes'
+  mbQuotes <- mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransactionId searchReq.id
+  whenJust mbQuotes $ \quotes -> do
+    QQuote.createMany (fst <$> quotes)
+    QFRFSQuoteCategory.createMany (concatMap snd quotes)
+  case mbQuotes of
+    Just quotes -> do
+      quoteRes <- mapM mkQuoteRes quotes
       return $
         GetFareRespV2
           { searchId = searchReq.id,
@@ -503,7 +511,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
   where
     mkSearchReq bapConfig frfsVehicleType partnerOrgTransactionId' partnerOrg' fromStation' toStation' route = do
       now <- getCurrentTime
-      let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.searchTTLSec) now
+      let validTill = addUTCTime (maybe 30 KP.intToNominalDiffTime bapConfig.searchTTLSec) now
       uid <- generateGUID
       return
         DFRFSSearch.FRFSSearch
@@ -535,18 +543,18 @@ mkLatLong mbLat mbLon = case (mbLat, mbLon) of
   (Just lat, Just lon) -> Just $ Maps.LatLong {..}
   _ -> Nothing
 
-mkQuoteRes :: (MonadFlow m) => DFRFSQuote.FRFSQuote -> m FRFSTypes.FRFSQuoteAPIRes
-mkQuoteRes quote = do
+mkQuoteRes :: (MonadFlow m) => (DFRFSQuote.FRFSQuote, [FRFSQuoteCategory.FRFSQuoteCategory]) -> m FRFSTypes.FRFSQuoteAPIRes
+mkQuoteRes (quote, quoteCategories) = do
   (stations :: [FRFSTypes.FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InvalidStationJson $ show quote.stationsJson)
   let routeStations :: Maybe [FRFSTypes.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-  let discounts :: Maybe [FRFSTypes.FRFSDiscountRes] = decodeFromText =<< quote.discountsJson
+  let fareParameters = Utils.calculateFareParametersWithQuoteFallback (Utils.mkCategoryPriceItemFromQuoteCategories quoteCategories) quote
   return $
     FRFSTypes.FRFSQuoteAPIRes
       { quoteId = quote.id,
         _type = quote._type,
-        price = quote.price.amount,
-        priceWithCurrency = mkPriceAPIEntity quote.price,
-        quantity = quote.quantity,
+        price = (Utils.getUnitPriceFromPriceItem fareParameters.adultItem).amount,
+        priceWithCurrency = mkPriceAPIEntity (Utils.getUnitPriceFromPriceItem fareParameters.adultItem),
+        quantity = fareParameters.totalQuantity,
         validTill = quote.validTill,
         vehicleType = quote.vehicleType,
         discountedTickets = quote.discountedTickets,
@@ -573,7 +581,7 @@ upsertPersonAndQuoteConfirm partnerOrg req = do
         Just booking -> cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg
         Nothing -> createNewBookingAndTriggerInit partnerOrg req regPOCfg
 
-mkQuoteFromCache :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Station -> Station -> FRFSConfig -> PartnerOrganization -> Maybe (Id PartnerOrgTransaction) -> Id DFRFSSearch.FRFSSearch -> m (Maybe [DFRFSQuote.FRFSQuote])
+mkQuoteFromCache :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Station -> Station -> FRFSConfig -> PartnerOrganization -> Maybe (Id PartnerOrgTransaction) -> Id DFRFSSearch.FRFSSearch -> m (Maybe [(DFRFSQuote.FRFSQuote, [FRFSQuoteCategory.FRFSQuoteCategory])])
 mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransactionId searchId = do
   let isroundTripAllowed = frfsConfig.roundTripTicketLimit > 0
   now <- getCurrentTime
@@ -614,18 +622,17 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.fromStationCode = fromStation'.code,
                 DFRFSQuote.toStationCode = toStation'.code,
                 DFRFSQuote.id = quoteId,
-                DFRFSQuote.price = frfsCachedData.price,
+                DFRFSQuote.price = Just frfsCachedData.price,
                 DFRFSQuote.childPrice = Nothing,
                 DFRFSQuote.estimatedPrice = Just frfsCachedData.price,
                 DFRFSQuote.providerDescription = Nothing,
                 DFRFSQuote.providerId = fromMaybe "metro_provider_id" frfsConfig'.providerId,
                 DFRFSQuote.providerName = fromMaybe "metro_provider_name" frfsConfig'.providerName,
-                DFRFSQuote.quantity = 1,
+                DFRFSQuote.quantity = Just 1,
                 DFRFSQuote.riderId = Utils.partnerOrgRiderId,
                 DFRFSQuote.searchId = searchId',
                 DFRFSQuote.stationsJson = frfsCachedData.stationsJson,
                 DFRFSQuote.routeStationsJson = Nothing,
-                DFRFSQuote.discountsJson = Nothing,
                 DFRFSQuote.validTill = validTill',
                 DFRFSQuote.vehicleType = fromStation'.vehicleType,
                 DFRFSQuote.merchantId = fromStation'.merchantId,
@@ -643,14 +650,34 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.oldCacheDump = Nothing,
                 DFRFSQuote.multimodalSearchRequestId = Nothing
               }
-      return $ Just quote
+      quoteCategoryId <- generateGUID
+      ticketCategoryMetadataConfig' <- QFRFSTicketCategoryMetadataConfig.findByCategoryVehicleAndCity ADULT fromStation'.vehicleType fromStation.merchantOperatingCityId
+      let quoteCategories =
+            [ FRFSQuoteCategory.FRFSQuoteCategory
+                { id = quoteCategoryId,
+                  category = ADULT,
+                  quoteId = quoteId,
+                  bppItemId = Utils.partnerOrgBppItemId,
+                  price = frfsCachedData.price, -- Single Ticket Price
+                  offeredPrice = frfsCachedData.price, -- Single Ticket Offered Price (Should be less than or equal to price)
+                  finalPrice = Nothing,
+                  categoryMeta = TFQC.mkQuoteCategoryMetadata (ticketCategoryMetadataConfig' <&> (.code)) (ticketCategoryMetadataConfig' <&> (.title)) (ticketCategoryMetadataConfig' <&> (.description)) (ticketCategoryMetadataConfig' <&> (.tnc)),
+                  merchantId = fromStation'.merchantId,
+                  merchantOperatingCityId = fromStation.merchantOperatingCityId,
+                  ticketCategoryMetadataConfigId = ticketCategoryMetadataConfig' <&> (.id.getId),
+                  selectedQuantity = Just 1,
+                  createdAt = now,
+                  updatedAt = now
+                }
+            ]
+      return $ Just (quote, quoteCategories)
 
 cretateBookingResIfBookingAlreadyCreated :: PartnerOrganization -> DFTB.FRFSTicketBooking -> DPOC.RegistrationConfig -> Flow UpsertPersonAndQuoteConfirmRes
 cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
   merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show booking.merchantOperatingCityId)
   stations <- decodeFromText booking.stationsJson & fromMaybeM (InvalidStationJson (show booking.stationsJson))
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let routeStations = decodeFromText =<< booking.routeStationsJson
-      discounts = decodeFromText =<< booking.discountsJson
   let bookingRes =
         FRFSTypes.FRFSTicketBookingStatusAPIRes
           { FRFSTypes._type = booking._type,
@@ -658,13 +685,13 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
             city = merchantOperatingCity.city,
             createdAt = booking.createdAt,
             discountedTickets = booking.discountedTickets,
-            discounts,
             eventDiscountAmount = booking.eventDiscountAmount,
+            quoteCategories = map mkFRFSQuoteCategoryAPIEntity quoteCategories,
             googleWalletJWTUrl = booking.googleWalletJWTUrl,
             isFareChanged = booking.isFareChanged,
             payment = Nothing,
-            price = booking.price.amount,
-            priceWithCurrency = mkPriceAPIEntity booking.price,
+            price = Just booking.totalPrice.amount,
+            priceWithCurrency = Just $ mkPriceAPIEntity booking.totalPrice,
             quantity = booking.quantity,
             routeStations,
             stations,
@@ -682,10 +709,17 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
       { body = Just body,
         quoteConfirmStatus = INIT_TRIGGERED
       }
+  where
+    mkFRFSQuoteCategoryAPIEntity :: FRFSQuoteCategory.FRFSQuoteCategory -> FRFSTypes.FRFSQuoteCategoryAPIEntity
+    mkFRFSQuoteCategoryAPIEntity FRFSQuoteCategory.FRFSQuoteCategory {..} =
+      FRFSTypes.FRFSQuoteCategoryAPIEntity {categoryMetadata = mkCategoryMetadataAPIEntity <$> categoryMeta, price = mkPriceAPIEntity price, offeredPrice = mkPriceAPIEntity offeredPrice, finalPrice = mkPriceAPIEntity <$> finalPrice, ..}
+      where
+        mkCategoryMetadataAPIEntity FRFSQuoteCategory.QuoteCategoryMetadata {..} = FRFSTypes.FRFSTicketCategoryMetadataAPIEntity {..}
 
 createNewBookingAndTriggerInit :: PartnerOrganization -> UpsertPersonAndQuoteConfirmReq -> DPOC.RegistrationConfig -> Flow UpsertPersonAndQuoteConfirmRes
 createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
   quote <- QQuote.findById req.quoteId >>= fromMaybeM (FRFSQuoteNotFound req.quoteId.getId)
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId req.quoteId
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode quote.fromStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for fromStationCode:" +|| quote.fromStationCode ||+ "")
   toStation <- OTPRest.getStationByGtfsIdAndStopCode quote.toStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for toStationCode:" +|| quote.toStationCode ||+ "")
@@ -713,9 +747,20 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
       let isEventOngoing = fromMaybe False frfsConfig.isEventOngoing
       stats <- B.runInMasterDbAndRedis $ QPStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
       let ticketsBookedInEvent = fromMaybe 0 stats.ticketsBookedInEvent
-          (discountedTickets, eventDiscountAmount) = Utils.getDiscountInfo isEventOngoing frfsConfig.freeTicketInterval frfsConfig.maxFreeTicketCashback quote.price req.numberOfPassengers ticketsBookedInEvent
+          fareParameters = Utils.calculateFareParametersWithQuoteFallback (Utils.mkCategoryPriceItemFromQuoteCategories quoteCategories) quote
+          (discountedTickets, eventDiscountAmount) =
+            case fareParameters.adultItem <&> (.unitPrice) of
+              Just adultPrice -> Utils.getDiscountInfo isEventOngoing frfsConfig.freeTicketInterval frfsConfig.maxFreeTicketCashback adultPrice req.numberOfPassengers ticketsBookedInEvent
+              Nothing -> (Nothing, Nothing)
       QQuote.backfillQuotesForCachedQuoteFlow personId req.numberOfPassengers discountedTickets eventDiscountAmount frfsConfig.isEventOngoing req.searchId
-      bookingRes <- DFRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote.id (FRFSTypes.FRFSQuoteConfirmReq {offered = Nothing, ticketQuantity = Nothing, childTicketQuantity = Nothing}) Nothing Nothing
+      let selectedQuoteCategories =
+            mapMaybe
+              ( \quoteCategory -> do
+                  selectedQuantity <- quoteCategory.selectedQuantity
+                  return $ FRFSTypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity = selectedQuantity}
+              )
+              quoteCategories
+      bookingRes <- DFRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote.id selectedQuoteCategories Nothing Nothing Nothing
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return

@@ -52,7 +52,6 @@ updateByPrimaryKey (Lib.Yudhishthira.Types.AppDynamicLogicElement.AppDynamicLogi
       Se.Set Beam.logic ((Data.String.Conversions.cs . Data.Aeson.encode) logic),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.patchedElement (fmap (Data.String.Conversions.cs . Data.Aeson.encode) patchedElement),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.order $ Se.Eq order, Se.Is Beam.version $ Se.Eq version]]

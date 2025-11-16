@@ -7,6 +7,7 @@ import qualified Data.Text as T
 import Domain.Action.Beckn.FRFS.OnSearch
 import Domain.Types hiding (ONDC)
 import Domain.Types.BecknConfig
+import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
@@ -31,6 +32,7 @@ import qualified ExternalBPP.ExternalAPI.Metro.CMRL.StationList as CMRLStationLi
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus as CMRLStatus
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney as CRISBookJourney
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
+import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as CRISRouteFareV3
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
 import Kernel.External.Types (ServiceFlow)
@@ -130,13 +132,13 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
   where
     callCRISAPI config' changeOver viaPoints = do
       let (_, startStop, endStop) = getRouteCodeAndStartAndStop
-      routeFareReq <- JMU.getRouteFareRequest startStop endStop changeOver viaPoints riderId
-      resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq
+      routeFareReq <- JMU.getRouteFareRequest startStop endStop changeOver viaPoints riderId (config'.useRouteFareV4 /= Just True)
+      resp <- withTryCatch "CRIS:getRouteFare" $ if config'.useRouteFareV4 == Just True then CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq False else CRISRouteFareV3.getRouteFare config' merchanOperatingCity.id routeFareReq True False
       case resp of
         Left err -> do
           logError $ "Error while calling CRIS API: " <> show err
           return []
-        Right fares -> return fares
+        Right (fares, _) -> return fares
 
     fetchAndCacheFares config' redisKey changeOver viaPoints isFareMandatory = do
       fares <- callCRISAPI config' changeOver viaPoints
@@ -152,15 +154,15 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
       let endStopCode = lastFareRouteDetail.endStopCode
       (routeCode, startStopCode, endStopCode)
 
-createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
-createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking = do
+createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
+createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quoteCategories = do
   Metrics.startMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
   resp <-
     case integrationBPPConfig.providerConfig of
-      CMRL config' -> CMRLOrder.createOrder config' integrationBPPConfig booking mRiderNumber
-      EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking
-      DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking
-      CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking
+      CMRL config' -> CMRLOrder.createOrder config' integrationBPPConfig booking quoteCategories mRiderNumber
+      EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
+      DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
+      CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking quoteCategories
       _ -> throwError $ InternalError "Unimplemented!"
   Metrics.finishMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
   return resp

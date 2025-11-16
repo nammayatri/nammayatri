@@ -125,7 +125,8 @@ upsertPersonAndGetFare partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerA
           [ FRFSRouteDetails
               { routeCode = route <&> (.code),
                 startStationCode = fromStation.code,
-                endStationCode = toStation.code
+                endStationCode = toStation.code,
+                serviceTier = Nothing -- TODO: pass this for optimization
               }
           ]
     res <- DFRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig frfsVehicleType frfsSearchReq frfsRouteDetails req.partnerOrgTransactionId (Just partnerOrg.orgId) Nothing Nothing (\_ -> pure ()) -- the journey leg upsert function is not required here

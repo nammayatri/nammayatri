@@ -68,6 +68,7 @@ import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.JourneyExtra as SQJ
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
 
@@ -207,6 +208,27 @@ data BookingListResV2 = BookingListResV2
 
 data BookingAPIEntityV2 = Ride SRB.BookingAPIEntity | MultiModalRide APITypes.JourneyInfoResp
   deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+bookingListV2ByCustomerLookup :: Id Merchant.Merchant -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe [SRB.BookingStatus] -> Maybe [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow BookingListResV2
+bookingListV2ByCustomerLookup merchantId mbLimit mbOffset mbBookingOffset mbJourneyOffset mbFromDate' mbToDate' mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType mbMobileNo mbCountryCode mbEmail mbCustomerId = do
+  personId <- case mbCustomerId of
+    Just customerId -> pure (Id customerId)
+    Nothing -> case mbMobileNo of
+      Just mobileNo -> do
+        mobileNoHash <- getDbHash mobileNo
+        mbPerson <- QPerson.findByMobileNumberAndMerchantId (fromMaybe "+91" mbCountryCode) mobileNoHash merchantId
+        case mbPerson of
+          Just person -> pure person.id
+          Nothing -> tryEmail
+      Nothing -> tryEmail
+  bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbFromDate' mbToDate' (fromMaybe [] mbBookingStatusList) (fromMaybe [] mbJourneyStatusList) mbIsPaymentSuccess mbBookingRequestType
+  where
+    tryEmail =
+      case mbEmail of
+        Just email -> do
+          person <- QPerson.findByEmailAndMerchantId merchantId email >>= fromMaybeM (InternalError "Person with given email does not exist")
+          pure person.id
+        Nothing -> throwError $ InternalError "No Person Found"
 
 bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Flow BookingListResV2
 bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbFromDate' mbToDate' mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType = do
@@ -353,7 +375,7 @@ buildApiEntityForRideOrJourneyWithCounts personId finalLimit bookings journeys i
     buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJ.Journey -> m (Maybe APITypes.JourneyInfoResp)
     buildJourneyApiEntity journey = do
       legsInfo <-
-        try @_ @SomeException (JMU.measureLatency (getAllLegsInfo journey.riderId journey.id) (show journey.id <> " getAllLegsInfo journey myrides measureLatency: "))
+        withTryCatch "getAllLegsInfo:buildJourneyApiEntity" (JMU.measureLatency (getAllLegsInfo journey.riderId journey.id) (show journey.id <> " getAllLegsInfo journey myrides measureLatency: "))
           >>= \case
             Left err -> do
               logError $ "Error getting legs info for journeyId: " <> show journey.id <> ", skipping from booking list : " <> show err

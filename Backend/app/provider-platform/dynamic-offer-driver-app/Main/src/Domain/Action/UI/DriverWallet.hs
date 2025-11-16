@@ -116,7 +116,7 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService person.merchantOperatingCityId.getId "PREPAID_SUBSCRIPTION") -- Driver wallet is not required for postpaid
-  unless (fromMaybe False merchant.enforceSufficientDriverBalance && transporterConfig.driverWalletConfig.enableWalletPayout) $ throwError $ InvalidRequest "Payouts are disabled"
+  unless (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableWalletPayout) $ throwError $ InvalidRequest "Payouts are disabled"
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
     driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     let walletBalance = fromMaybe 0 driverInfo.walletBalance
@@ -204,14 +204,14 @@ postWalletTopup (mbPersonId, merchantId, mocId) req = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   transporterConfig <- findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
-  unless (fromMaybe False merchant.enforceSufficientDriverBalance && transporterConfig.driverWalletConfig.enableWalletTopup) $ throwError $ InvalidRequest "Wallet topups are disabled"
+  unless (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableWalletTopup) $ throwError $ InvalidRequest "Wallet topups are disabled"
   when (req.amount <= 0) $ throwError $ InvalidRequest "Top-up amount must be greater than zero"
   eitherResult <- Redis.whenWithLockRedisAndReturnValue (makeWalletTopupLockKey driverId.getId) 10 $ do
     existingTopUpFee <- QDFE.findLatestByFeeTypeAndStatusWithTotalEarnings DF.WALLET_TOPUP [DF.PAYMENT_PENDING] driverId req.amount
     case existingTopUpFee of
       Just fee -> pure fee
       Nothing -> do
-        driverFee <- mkDriverFee driverId req.amount
+        driverFee <- mkDriverFee driverId req.amount transporterConfig.currency
         QDF.create driverFee
         pure driverFee
   case eitherResult of
@@ -240,7 +240,7 @@ postWalletTopup (mbPersonId, merchantId, mocId) req = do
             orderResp = createOrderResp
           }
 
-    mkDriverFee driverId amount = do
+    mkDriverFee driverId amount currency = do
       now <- getCurrentTime
       feeId <- generateGUID
       pure $
@@ -251,8 +251,8 @@ postWalletTopup (mbPersonId, merchantId, mocId) req = do
             merchantOperatingCityId = mocId,
             feeType = DF.WALLET_TOPUP,
             status = DF.PAYMENT_PENDING,
-            currency = INR,
-            platformFee = DF.PlatformFee {fee = 0, cgst = 0, sgst = 0, currency = INR},
+            currency,
+            platformFee = DF.PlatformFee {fee = 0, cgst = 0, sgst = 0, currency},
             govtCharges = 0,
             specialZoneAmount = 0,
             totalEarnings = amount,
@@ -289,5 +289,7 @@ postWalletTopup (mbPersonId, merchantId, mocId) req = do
             splitOfDriverFeeId = Nothing,
             stageUpdatedAt = Nothing,
             validDays = Nothing,
-            vehicleNumber = Nothing
+            vehicleNumber = Nothing,
+            cancellationPenaltyAmount = Nothing,
+            addedToFeeId = Nothing
           }

@@ -85,6 +85,8 @@ updateByPrimaryKey (Domain.Types.TripTransaction.TripTransaction {..}) = do
       Se.Set Beam.fleetBadgeId (Kernel.Types.Id.getId <$> driverFleetBadgeId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.driverName driverName,
+      Se.Set Beam.dutyType dutyType,
+      Se.Set Beam.endAddress endAddress,
       Se.Set Beam.endLocationLat (Kernel.Prelude.fmap (.lat) endLocation),
       Se.Set Beam.endLocationLon (Kernel.Prelude.fmap (.lon) endLocation),
       Se.Set Beam.endRideApprovalRequestId (Kernel.Types.Id.getId <$> endRideApprovalRequestId),
@@ -93,8 +95,14 @@ updateByPrimaryKey (Domain.Types.TripTransaction.TripTransaction {..}) = do
       Se.Set Beam.isCurrentlyDeviated isCurrentlyDeviated,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.pilotDestinationLat (Kernel.Prelude.fmap (.lat) pilotDestination),
+      Se.Set Beam.pilotDestinationLon (Kernel.Prelude.fmap (.lon) pilotDestination),
+      Se.Set Beam.pilotSourceLat (Kernel.Prelude.fmap (.lat) pilotSource),
+      Se.Set Beam.pilotSourceLon (Kernel.Prelude.fmap (.lon) pilotSource),
       Se.Set Beam.roundRouteCode roundRouteCode,
       Se.Set Beam.routeCode routeCode,
+      Se.Set Beam.scheduledTripTime scheduledTripTime,
+      Se.Set Beam.startAddress startAddress,
       Se.Set Beam.startLocationLat (Kernel.Prelude.fmap (.lat) startLocation),
       Se.Set Beam.startLocationLon (Kernel.Prelude.fmap (.lon) startLocation),
       Se.Set Beam.startedNearStopCode startedNearStopCode,
@@ -104,8 +112,10 @@ updateByPrimaryKey (Domain.Types.TripTransaction.TripTransaction {..}) = do
       Se.Set Beam.tripStartSource tripStartSource,
       Se.Set Beam.tripStartTime tripStartTime,
       Se.Set Beam.tripTerminationSource tripTerminationSource,
+      Se.Set Beam.tripType tripType,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vehicleNumber vehicleNumber,
-      Se.Set Beam.vehicleServiceTierType vehicleServiceTierType
+      Se.Set Beam.vehicleServiceTierType vehicleServiceTierType,
+      Se.Set Beam.vipName vipName
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

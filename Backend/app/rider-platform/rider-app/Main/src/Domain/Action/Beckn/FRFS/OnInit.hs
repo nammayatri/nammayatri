@@ -15,9 +15,11 @@
 module Domain.Action.Beckn.FRFS.OnInit where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import Domain.Action.Beckn.FRFS.Common (DFareBreakUp)
+import Domain.Action.Beckn.FRFS.Common (DCategorySelect, DFareBreakUp)
+import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
+import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -31,14 +33,15 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import Lib.Payment.Storage.Beam.BeamFlow
-import SharedLogic.CreateFareForMultiModal (createBasketFromBookings, createVendorSplitFromBookings)
 import SharedLogic.FRFSUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
@@ -47,10 +50,8 @@ import qualified Tools.Payment as Payment
 data DOnInit = DOnInit
   { providerId :: Text,
     totalPrice :: Price,
-    totalQuantity :: Int,
-    totalChildTicketQuantity :: Maybe Int,
+    categories :: [DCategorySelect],
     fareBreakUp :: [DFareBreakUp],
-    bppItemId :: Text,
     validTill :: Maybe UTCTime,
     transactionId :: Text,
     messageId :: Text,
@@ -59,13 +60,14 @@ data DOnInit = DOnInit
     bppOrderId :: Maybe Text
   }
 
-validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r) => DOnInit -> m (Merchant.Merchant, FTBooking.FRFSTicketBooking)
+validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r) => DOnInit -> m (Merchant.Merchant, FTBooking.FRFSTicketBooking, [DFRFSQuoteCategory.FRFSQuoteCategory])
 validateRequest DOnInit {..} = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QFRFSTicketBooking.findById (Id messageId) >>= fromMaybeM (BookingDoesNotExist messageId)
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  return (merchant, booking)
+  return (merchant, booking, quoteCategories)
 
 onInit ::
   ( EsqDBReplicaFlow m r,
@@ -78,17 +80,38 @@ onInit ::
   DOnInit ->
   Merchant.Merchant ->
   FTBooking.FRFSTicketBooking ->
+  [DFRFSQuoteCategory.FRFSQuoteCategory] ->
+  Maybe Bool ->
   m ()
-onInit onInitReq merchant oldBooking = do
+onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   Metrics.finishMetrics Metrics.INIT_FRFS merchant.name onInitReq.transactionId oldBooking.merchantOperatingCityId.getId
   person <- QP.findById oldBooking.riderId >>= fromMaybeM (PersonNotFound oldBooking.riderId.getId)
   whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity oldBooking.id)
-  void $ QFRFSTicketBooking.updatePriceAndQuantityById onInitReq.totalPrice onInitReq.totalQuantity onInitReq.totalChildTicketQuantity oldBooking.id -- Full Ticket Price (Multiplied By Quantity)
+  let totalPrice = onInitReq.totalPrice
+  (updatedQuoteCategories, isFareChanged) <-
+    updateQuoteCategoriesWithFinalPrice
+      ( mapMaybe
+          ( \quoteCategory ->
+              find (\category -> category.category == quoteCategory.category) quoteCategories
+                <&> \quoteCategory' -> (quoteCategory'.id, quoteCategory.price)
+          )
+          onInitReq.categories
+      )
+      quoteCategories
+  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories) oldBooking
+      adultTicketQuantity = fareParameters.adultItem <&> (.quantity)
+      childTicketQuantity = fareParameters.childItem <&> (.quantity)
+
+  when (totalPrice /= fareParameters.totalPrice) $ do
+    throwError $ CategoriesAndTotalPriceMismatch (show fareParameters.totalPrice) (show totalPrice)
+
+  -- TODO :: Remove Quantity update Booking Table post release of FRFSQuoteCategory
+  void $ QFRFSTicketBooking.updateTotalPriceAndQuantityById totalPrice adultTicketQuantity childTicketQuantity (Just isFareChanged) oldBooking.id -- Full Ticket Price (Multiplied By Quantity)
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) oldBooking.id
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId oldBooking.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
   whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) oldBooking.id)
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  let booking = oldBooking {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
+  let booking = oldBooking {FTBooking.totalPrice = totalPrice, FTBooking.journeyOnInitDone = Just True}
   QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
   (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking
 
@@ -99,9 +122,9 @@ onInit onInitReq merchant oldBooking = do
       (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
       baskets <- case mbJourneyId of
         Just _ -> do
-          Just <$> createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType
+          Just <$> createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
         Nothing -> return Nothing
-      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets
+      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
   where
     getPaymentType vehicleType mbJourneyId = do
       case mbJourneyId of
@@ -128,24 +151,29 @@ createPayments ::
   Payment.PaymentServiceType ->
   [Payment.VendorSplitDetails] ->
   Maybe [Payment.Basket] ->
+  Maybe Bool ->
+  Maybe (Id DJ.Journey) ->
   m ()
-createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket = do
+createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer mbJourneyId = do
   ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
-  isPaymentOrderProcessed <-
+  mbPaymentOrder <-
     if and ticketBookingPaymentsExist
       then do
         paymentOrder <- createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket
-        return $ isJust paymentOrder
+        return paymentOrder
       else do
-        updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings
-        return $ isJust updatedPaymentOrder
-  if isPaymentOrderProcessed
-    then markBookingApproved `mapM_` bookings
-    else do
+        updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer
+        return updatedPaymentOrder
+  case mbPaymentOrder of
+    Just paymentOrder -> mapM_ (markBookingApproved paymentOrder) bookings
+    Nothing -> do
       markBookingFailed `mapM_` bookings
       throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
   where
-    markBookingApproved booking = do
+    markBookingApproved paymentOrder booking = do
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
-      void $ QFRFSTicketBooking.updateFinalPriceById (Just booking.price) booking.id
+      -- TODO :: Remove Final Price update Booking Table post release of FRFSQuoteCategory
+      void $ QFRFSTicketBooking.updateFinalPriceById (Just booking.totalPrice) booking.id
+      whenJust mbJourneyId $ \journeyId -> do
+        void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) Nothing journeyId
     markBookingFailed booking = void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id

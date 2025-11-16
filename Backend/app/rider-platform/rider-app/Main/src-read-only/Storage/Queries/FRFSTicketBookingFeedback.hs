@@ -31,7 +31,7 @@ findByBookingId bookingId = do findOneWithKV [Se.And [Se.Is Beam.bookingId $ Se.
 
 findByMerchantIdAndOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSTicketBookingFeedback.FRFSTicketBookingFeedback]))
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSTicketBookingFeedback.FRFSTicketBookingFeedback])
 findByMerchantIdAndOperatingCityId merchantId merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -62,7 +62,6 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBookingFeedback.FRFSTicketBookingFeed
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bookingId (Kernel.Types.Id.getId bookingId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.feedbackDetails feedbackDetails,
       Se.Set Beam.isFareAccepted isFareAccepted,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

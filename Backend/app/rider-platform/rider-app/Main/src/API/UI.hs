@@ -24,6 +24,7 @@ import qualified API.Action.UI.CRIS as CRIS
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CustomerReferral as CustomerReferral
 import qualified API.Action.UI.DeletedPerson as DeletedPerson
+import qualified API.Action.UI.Dispatcher as Dispatcher
 import qualified API.Action.UI.EditLocation as EditLocation
 import qualified API.Action.UI.EstimateBP as EstimateBP
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
@@ -41,6 +42,7 @@ import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.Places as Places
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
+import qualified API.Action.UI.RiderLocation as RiderLocation
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketKapture as TicketKapture
@@ -64,6 +66,7 @@ import qualified API.UI.HotSpot as HotSpot
 import qualified API.UI.Issue as Issue
 import qualified API.UI.Maps as MapsProxy
 import qualified API.UI.PartnerOrganizationFRFS as PartnerOrgFRFS
+import qualified API.UI.Pass as Pass
 import qualified API.UI.Payment as Payment
 import qualified API.UI.PersonStats as PersonStats
 import qualified API.UI.Profile as Profile
@@ -149,6 +152,9 @@ type API =
            :<|> PickupInstructions.API
            :<|> NYRegular.API
            :<|> AttractionRecommend.API
+           :<|> RiderLocation.API
+           :<|> Pass.API
+           :<|> Dispatcher.API
        )
 
 handler :: FlowServer API
@@ -216,3 +222,6 @@ handler =
     :<|> PickupInstructions.handler
     :<|> NYRegular.handler
     :<|> AttractionRecommend.handler
+    :<|> RiderLocation.handler
+    :<|> Pass.handler
+    :<|> Dispatcher.handler

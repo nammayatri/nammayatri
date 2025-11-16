@@ -42,6 +42,8 @@ imports:
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
   SourceType: Domain.Types.RouteStopTimeTable
   FRFSCategorySelectionReq: API.Types.UI.FRFSTicketService
+  FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
+  PaymentStatusResp: Lib.Payment.Domain.Action
 
 module: MultimodalConfirm
 
@@ -62,6 +64,7 @@ types:
     merchantOperatingCityName: Maybe Text
     paymentOrderShortId: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder)
     result: Maybe Text # for backward compatibility hardcoding to Success in response
+    isSingleMode: Maybe Bool
     derive: "Show"
 
   LegStatus:
@@ -145,11 +148,11 @@ types:
   JourneyBookingPaymentStatus:
     journeyId: Id Journey
     paymentOrder: Maybe PaymentOrder
-    paymentFareUpdate: Maybe [PaymentFareUpdate]
     gatewayReferenceId: Maybe Text
 
   PaymentFareUpdate:
     journeyLegOrder: Int
+    category: FRFSQuoteCategoryType
     oldFare: PriceAPIEntity
     newFare: PriceAPIEntity
 
@@ -176,6 +179,7 @@ types:
 
   JourneyConfirmReq:
     journeyConfirmReqElements: "[JourneyConfirmReqElement]"
+    enableOffer: Maybe Bool
 
   JourneyConfirmReqElement:
     journeyLegOrder: Int
@@ -184,6 +188,11 @@ types:
     childTicketQuantity: Maybe Int
     crisSdkResponse: Maybe CrisSdkResponse
     categorySelectionReq: Maybe [FRFSCategorySelectionReq]
+
+  JourneyConfirmResp:
+    result: Text
+    orderSdkPayload: Maybe CreateOrderResp
+    gatewayReferenceId: Maybe Text
 
   CrisSdkResponse:
     osType: Text
@@ -321,7 +330,7 @@ apis:
       query:
         forceBookLegOrder: Int
       response:
-        type: Kernel.Types.APISuccess.APISuccess
+        type: JourneyConfirmResp
   - GET:
       endpoint: /multimodal/{journeyId}/booking/info
       params:

@@ -25,6 +25,7 @@ imports:
   RouteDetails: Domain.Types.RouteDetails
   TrackingStatus: Lib.JourneyModule.State.Types
   AvailableRoutesByTier: Domain.Types.RouteDetails
+  BusLocation: API.Types.UI.RiderLocation
 
 
 # add journeyLegId (Maybe (Id JourneyLeg)) in SearchRequest
@@ -227,7 +228,7 @@ JourneyLeg:
     estimatedMaxFare: Maybe HighPrecMoney
     toArrivalTime: Maybe UTCTime
     toDepartureTime: Maybe UTCTime
-    serviceTypes: Maybe [ServiceTierType]
+    liveVehicleAvailableServiceTypes: Maybe [ServiceTierType]
     legSearchId: Maybe Text
     legPricingId: Maybe Text
     changedBusesInSequence: "Maybe [Text]"
@@ -248,13 +249,15 @@ JourneyLeg:
     finalBoardedScheduleNo: Maybe Text
     finalBoardedBusServiceTierType: Maybe ServiceTierType
     userBookedBusServiceTierType: Maybe ServiceTierType
+    busLocationData: "[BusLocation]"
 
   sqlType:
-    serviceTypes: text[]
+    liveVehicleAvailableServiceTypes: text[]
     straightLineEntrance: "json"
     straightLineExit: "json"
     osmEntrance: "json"
     osmExit: "json"
+    busLocationData: "json"
 
   beamType:
     straightLineEntrance: Maybe Value
@@ -264,6 +267,7 @@ JourneyLeg:
     journeyId: Maybe Text
     isDeleted: Maybe Bool
     sequenceNumber: Maybe Int
+    busLocationData: Maybe Value
 
   beamFields:
     distance:
@@ -291,6 +295,8 @@ JourneyLeg:
       endLocationLon: Double
     legSearchId:
       legId: Maybe Text
+    liveVehicleAvailableServiceTypes:
+      serviceTypes: Maybe [ServiceTierType]
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -344,6 +350,7 @@ JourneyLeg:
     isDeleted: Storage.Queries.Transformers.JourneyLeg.getIsDeleted mbJourneyLegMapping isDeleted|EM
     sequenceNumber: Storage.Queries.Transformers.JourneyLeg.getSequenceNumber mbJourneyLegMapping sequenceNumber|EM
     alternateRouteIds: Kernel.Prelude.fromMaybe []|I
+    busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
 
   toTType:
     distance: (.value) <$> |I
@@ -369,6 +376,7 @@ JourneyLeg:
     agencyName: (agency <&> (.name))|E
     journeyId: (Just $ Kernel.Types.Id.getId journeyId)|E
     sequenceNumber: (Just sequenceNumber)|E
+    busLocationData: Just $ toJSON busLocationData|E
 
   excludedDefaultQueries:
     - create

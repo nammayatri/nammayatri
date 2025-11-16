@@ -44,7 +44,6 @@ updateByPrimaryKey (Domain.Types.DriverHomeLocation.DriverHomeLocation {..}) = d
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.address address,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.lat lat,
       Se.Set Beam.lon lon,

@@ -33,6 +33,7 @@ import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import SharedLogic.Type
 
 data IOSSearchRequestForDriverAPIEntity = IOSSearchRequestForDriverAPIEntity
   { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed
@@ -73,6 +74,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverMaxExtraFee :: Maybe Money,
     congestionCharges :: Maybe Money,
     petCharges :: Maybe Money,
+    cancellationCharges :: Maybe Money,
     specialZoneExtraTip :: Maybe Money,
     driverMinExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     driverMaxExtraFeeWithCurrency :: Maybe PriceAPIEntity,
@@ -80,6 +82,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverDefaultStepFeeWithCurrencyV2 :: Maybe PriceAPIEntity,
     driverStepFeeWithCurrency :: Maybe PriceAPIEntity,
     specialZoneExtraTipWithCurrency :: Maybe PriceAPIEntity,
+    billingCategory :: BillingCategory,
     pickupZone :: Bool,
     rideRequestPopupDelayDuration :: Seconds,
     specialLocationTag :: Maybe Text,
@@ -133,6 +136,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           bapName = bapMetadata <&> (.name),
           bapLogo = bapMetadata >>= (.logoUrl),
           startTime = nearbyReq.startTime,
+          billingCategory = searchTry.billingCategory,
           searchRequestValidTill = nearbyReq.searchRequestValidTill,
           distanceToPickup = nearbyReq.actualDistanceToPickup,
           distanceToPickupWithUnit = convertMetersToDistance nearbyReq.distanceUnit nearbyReq.actualDistanceToPickup,
@@ -184,6 +188,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           isReferredRideReq = searchRequest.driverIdForSearch $> True,
           isFavourite = nearbyReq.isFavourite,
           roundTrip = searchRequest.roundTrip,
+          cancellationCharges = roundToIntegral <$> searchRequest.customerCancellationDues,
           middleStopCount = fromMaybe 0 nearbyReq.middleStopCount,
           parcelType = nearbyReq.parcelType,
           parcelQuantity = nearbyReq.parcelQuantity,

@@ -48,6 +48,7 @@ type API =
            :> QueryParam "toss" Int
            :> QueryParam "tenant" Text
            :> QueryParam "context" Text
+           :> QueryParam "includeProfileImage" Bool
            :> Header "x-bundle-version" Version
            :> Header "x-rn-version" Text
            :> Header "x-client-version" Version
@@ -93,11 +94,11 @@ handler =
     :<|> (updateDefaultEmergencyNumbers :<|> getDefaultEmergencyNumbers)
     :<|> marketingEvents
 
-getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler DProfile.ProfileRes
-getPersonDetails (personId, merchantId) toss tenant context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . getPersonDetails' (personId, merchantId) toss tenant context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion
+getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler DProfile.ProfileRes
+getPersonDetails (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . getPersonDetails' (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion
 
-getPersonDetails' :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> Flow DProfile.ProfileRes
-getPersonDetails' (personId, merchantId) toss tenant context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = DProfile.getPersonDetails (personId, merchantId) toss tenant context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion
+getPersonDetails' :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> Flow DProfile.ProfileRes
+getPersonDetails' (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = DProfile.getPersonDetails (personId, merchantId) toss tenant context includeProfileImage mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion
 
 updatePerson :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler APISuccess.APISuccess
 updatePerson (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . updatePerson' (personId, merchantId) req mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion

@@ -58,7 +58,6 @@ updateByPrimaryKey (Domain.Types.FRFSConfig.FRFSConfig {..}) = do
       Se.Set Beam.roundTripTicketLimit roundTripTicketLimit,
       Se.Set Beam.straightLineDistance (Kernel.Prelude.Just straightLineDistance),
       Se.Set Beam.validTillSeconds (Kernel.Prelude.Just validTillSeconds),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]

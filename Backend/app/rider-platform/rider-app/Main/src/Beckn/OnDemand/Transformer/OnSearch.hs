@@ -54,7 +54,7 @@ buildInterCityQuoteInfo item quoteId_ currency = do
         Price
           { amountInt = Money 0,
             amount = HighPrecMoney 0.0,
-            currency = INR
+            currency
           }
   let baseFare = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getBaseFare itemTags currency)
   let perHourCharge = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPerHourCharge itemTags currency)
@@ -103,6 +103,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       -- petCharges <-
       waitingCharges_ <- Beckn.OnDemand.Utils.OnSearch.buildWaitingChargeInfo item currency
       estimateBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildEstimateBreakupList item currency
+      let qar_ = Beckn.OnDemand.Utils.OnSearch.getQAR item
       let smartTipSuggestion = Beckn.OnDemand.Utils.OnSearch.getSmartTipSuggestion item
       let tipOptions = Beckn.OnDemand.Utils.OnSearch.getTipOptions item
       let smartTipReason = Beckn.OnDemand.Utils.OnSearch.getSmartTipReason item
@@ -139,6 +140,7 @@ tfQuotesInfo provider fulfillments validTill item = do
               vehicleIconUrl = vehicleIconUrl,
               tipOptions,
               smartTipSuggestion,
+              qar = qar_,
               smartTipReason
             }
     QuoteBased _ -> do

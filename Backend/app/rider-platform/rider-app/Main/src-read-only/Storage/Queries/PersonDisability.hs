@@ -48,8 +48,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.PersonDisability.PersonDisability {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.description description,
+    [ Se.Set Beam.description description,
       Se.Set Beam.disabilityId disabilityId,
       Se.Set Beam.tag tag,
       Se.Set Beam.updatedAt _now

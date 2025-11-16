@@ -24,7 +24,8 @@ import Kernel.Types.Error
     RideError (RideNotFound),
   )
 import qualified Kernel.Types.Id as ID
-import Kernel.Utils.Error.Throwing (fromMaybeM, throwError)
+import Kernel.Utils.Common (withTryCatch)
+import Kernel.Utils.Error.Throwing (fromEitherM, fromMaybeM, throwError)
 import Kernel.Utils.Logging (logError, logWarning)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -47,7 +48,6 @@ getLiveMapDrivers ::
 getLiveMapDrivers merchantShortId _opCity radius requestorId mbReqFleetOwnerId mbDriverIdForRadius mbPoint = do
   when (radius.getMeters <= 0) . throwError $ InvalidRequest "Radius must be positive"
   latLong <- getPoint mbDriverIdForRadius mbPoint
-  checkLatLong latLong
   requestedPerson <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
   (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbReqFleetOwnerId
   (mbFleetOwnerId, mbOperatorId) <- case entityRole of
@@ -67,18 +67,20 @@ getLiveMapDrivers merchantShortId _opCity radius requestorId mbReqFleetOwnerId m
   catMaybes <$> mapM (maybe (pure Nothing) buildMapDriverInfo) mbPositionAndDriverInfoLs
   where
     getPoint :: Kernel.Prelude.Maybe (ID.Id ATD.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Environment.Flow LatLong
-    getPoint (Just driverIdForRadius) _ = getDriverCurrentLocation $ ID.cast driverIdForRadius
-    getPoint _ (Just point) = pure point
+    getPoint (Just driverIdForRadius) _ = getDriverCurrentLocation (ID.cast driverIdForRadius) >>= fromEitherM InternalError . validateLatLong
+    getPoint _ (Just point) = point & fromEitherM InvalidRequest . validateLatLong
     getPoint _ _ = throwError $ InvalidRequest "Either driverIdForRadius or point coordinates must be provided"
 
-    checkLatLong :: LatLong -> Environment.Flow ()
-    checkLatLong (LatLong lat lon) = do
-      when (lat < -90.0 || lat > 90.0) . throwError $
-        InvalidRequest "Latitude must be between -90 and 90 degrees"
-      when (lon < -180.0 || lon > 180.0) . throwError $
-        InvalidRequest "Longitude must be between -180 and 180 degrees"
+    validateLatLong :: LatLong -> Either Text LatLong
+    validateLatLong point@(LatLong lat lon) = do
+      when (lat < -90.0 || lat > 90.0) $
+        Left "Latitude must be between -90 and 90 degrees"
+      when (lon < -180.0 || lon > 180.0) $
+        Left "Longitude must be between -180 and 180 degrees"
+      pure point
 
     autoTypeLs =
+      -- TODO: Fetch from Vehicle Service Tier for this city
       [ DV.SUV,
         DV.AUTO_RICKSHAW,
         DV.HATCHBACK,
@@ -88,13 +90,18 @@ getLiveMapDrivers merchantShortId _opCity radius requestorId mbReqFleetOwnerId m
         DV.PREMIUM_SEDAN,
         DV.BLACK,
         DV.BLACK_XL,
-        DV.SUV_PLUS
+        DV.SUV_PLUS,
+        DV.BIKE,
+        DV.EV_AUTO_RICKSHAW,
+        DV.HERITAGE_CAB,
+        DV.BIKE_PLUS,
+        DV.E_RICKSHAW
       ]
 
 getDriverCurrentLocation :: ID.Id DP.Person -> Environment.Flow LatLong
 getDriverCurrentLocation driverId = do
   mbCurrentDriverLocation <-
-    try @_ @SomeException (LF.driversLocation [driverId])
+    withTryCatch "driversLocation:getDriverCurrentLocation" (LF.driversLocation [driverId])
       >>= \case
         Left _ -> do
           logError $ "Drivers location api was falied for current driver: " <> driverId.getId

@@ -54,3 +54,29 @@ ALTER TABLE atlas_app.frfs_quote ALTER COLUMN from_station_id TYPE text;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN multimodal_search_request_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ALTER COLUMN quantity SET DEFAULT 0;
+ALTER TABLE atlas_app.frfs_quote ALTER COLUMN quantity DROP NOT NULL;
+ALTER TABLE atlas_app.frfs_quote ALTER COLUMN price SET DEFAULT 0;
+ALTER TABLE atlas_app.frfs_quote ALTER COLUMN price DROP NOT NULL;
+ALTER TABLE atlas_app.frfs_quote ALTER COLUMN estimated_price SET DEFAULT 0;
+ALTER TABLE atlas_app.frfs_quote ALTER COLUMN child_price SET DEFAULT 0;
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

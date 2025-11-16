@@ -17,7 +17,8 @@ instance FromTType' Beam.FRFSTicketBookingPayment Domain.Types.FRFSTicketBooking
     pure $
       Just
         Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment
-          { frfsTicketBookingId = Kernel.Types.Id.Id frfsTicketBookingId,
+          { frfsQuoteId = Kernel.Types.Id.Id <$> frfsQuoteId,
+            frfsTicketBookingId = Kernel.Types.Id.Id frfsTicketBookingId,
             id = Kernel.Types.Id.Id id,
             paymentOrderId = Kernel.Types.Id.Id paymentOrderId,
             status = status,
@@ -30,7 +31,8 @@ instance FromTType' Beam.FRFSTicketBookingPayment Domain.Types.FRFSTicketBooking
 instance ToTType' Beam.FRFSTicketBookingPayment Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment where
   toTType' (Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment {..}) = do
     Beam.FRFSTicketBookingPaymentT
-      { Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
+      { Beam.frfsQuoteId = Kernel.Types.Id.getId <$> frfsQuoteId,
+        Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.paymentOrderId = Kernel.Types.Id.getId paymentOrderId,
         Beam.status = status,

@@ -159,7 +159,10 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
       image <- Image.validateImage True (fleetOwnerId, person.merchantId, person.merchantOperatingCityId) req'
       businessLicenseNumber <- forM req.businessLicenseNumber encrypt
       QFOI.updateBusinessLicenseImageAndNumber (Just image.imageId.getId) businessLicenseNumber fleetOwnerId
-  enabled <- enableFleetIfPossible fleetOwnerId req.adminApprovalRequired (castFleetType <$> req.fleetType) person.merchantOperatingCityId
+  enabled <-
+    case req.setIsEnabled of -- Required for fleets where docs are not mandatory
+      Just True -> pure True
+      _ -> enableFleetIfPossible fleetOwnerId req.adminApprovalRequired (castFleetType <$> req.fleetType) person.merchantOperatingCityId
   return $ Common.FleetOwnerRegisterResV2 enabled
 
 enableFleetIfPossible :: Id DP.Person -> Maybe Bool -> Maybe FOI.FleetType -> Id DMOC.MerchantOperatingCity -> Flow Bool
@@ -279,7 +282,10 @@ createFleetOwnerInfo personId merchantId enabled = do
             updatedAt = now,
             registeredAt = Nothing,
             isEligibleForSubscription = True,
-            ticketPlaceId = Nothing
+            ticketPlaceId = Nothing,
+            lienAmount = Nothing,
+            prepaidSubscriptionBalance = Nothing,
+            planExpiryDate = Nothing
           }
   QFOI.create fleetOwnerInfo
 

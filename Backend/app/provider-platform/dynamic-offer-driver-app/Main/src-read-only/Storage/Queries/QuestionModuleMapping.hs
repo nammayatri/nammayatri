@@ -33,7 +33,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.QuestionModuleMapping.QuestionModuleMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [Se.Set Beam.quizCoinFunction quizCoinFunction, Se.Set Beam.createdAt createdAt, Se.Set Beam.updatedAt _now]
+    [Se.Set Beam.quizCoinFunction quizCoinFunction, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.moduleId $ Se.Eq (Kernel.Types.Id.getId moduleId),
           Se.Is Beam.questionId $ Se.Eq (Kernel.Types.Id.getId questionId)

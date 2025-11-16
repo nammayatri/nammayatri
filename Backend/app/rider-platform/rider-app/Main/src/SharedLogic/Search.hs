@@ -1,5 +1,6 @@
 module SharedLogic.Search where
 
+import qualified API.Types.UI.RiderLocation as RL
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Beckn
 import Data.Aeson
@@ -123,12 +124,12 @@ data PublicTransportSearchReq = PublicTransportSearchReq
     destinationStopCode :: Text,
     startTime :: Maybe UTCTime,
     routeCode :: Maybe Text,
-    routeCodeEditedManually :: Maybe Bool,
     vehicleNumber :: Maybe Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     vehicleCategory :: Maybe Enums.VehicleCategory,
     platformType :: Maybe DIBPC.PlatformType,
-    currentLocation :: Maybe LatLong
+    currentLocation :: Maybe LatLong,
+    busLocationData :: Maybe [RL.BusLocation]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -198,7 +199,8 @@ data SearchDetails = SearchDetails
     originStopCode :: Maybe Text,
     vehicleCategory :: Maybe Enums.VehicleCategory,
     platformType :: Maybe DIBPC.PlatformType,
-    currentLocation :: Maybe LatLong
+    currentLocation :: Maybe LatLong,
+    busLocationData :: [RL.BusLocation]
   }
   deriving (Generic, Show)
 

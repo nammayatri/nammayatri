@@ -1077,6 +1077,74 @@ apis:
               type: DriverLocationListReq
             response:
               type: DriverLocationListResp
+
+  - POST:
+      endpoint: /fleet/getDriverDetails
+      auth: ApiAuthV2
+      request:
+        type: DriverDetailsReq
+      response:
+        type: DriverDetailsResp
+      helperApi:
+        - POST:
+            endpoint: /fleet/getDriverDetails/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: DriverDetailsReq
+            response:
+              type: DriverDetailsResp
+
+  - POST:
+      endpoint: /fleet/getNearbyDriversV2
+      auth: ApiAuthV2
+      request:
+        type: NearbyDriversReqV2
+      response:
+        type: NearbyDriversRespTV2
+      helperApi:
+        - POST:
+            endpoint: /fleet/getNearbyDriversV2/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: NearbyDriversReqV2
+            response:
+              type: NearbyDriversRespV2
+  - GET:
+      endpoint: /fleet/dashboard/analytics/allTime
+      auth: ApiAuthV2
+      response:
+        type: AllTimeFleetAnalyticsRes
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/dashboard/analytics/allTime
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            response:
+              type: AllTimeFleetAnalyticsRes
+  - GET:
+      endpoint: /fleet/dashboard/analytics
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - from: Day
+        - to: Day
+      response:
+        type: FilteredFleetAnalyticsRes
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/dashboard/analytics
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              - from: Day
+              - to: Day
+            response:
+              type: FilteredFleetAnalyticsRes
 types:
   NearbyDriverReq:
     - point: LatLong
@@ -1094,6 +1162,7 @@ types:
     - rideStatus: RideStatus
     - routeLongName: Maybe Text
     - point: LatLong
+    - driverId: Id Driver
   DriverInfoT:
     - routeCode: Text
     - driverName: Text
@@ -1103,6 +1172,7 @@ types:
     - point: LatLong
     - fleetOwnerId: Text
     - fleetOwnerName: Text
+    - driverId: Id Driver
   RideStatus:
     enum: ON_PICKUP | ON_RIDE
   TrackDriverLocationsReq:
@@ -1118,16 +1188,29 @@ types:
   TripStatus:
     - enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED, UPCOMING"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+  TripType:
+    - enum: "PILOT,WIMB"
+    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
   RoundTripDetail:
     - frequency: Int
   TripDetails:
     - routeCode: Text
     - roundTrip: Maybe RoundTripDetail
+    - scheduledTripTime: Maybe UTCTime
+    - vipName: Maybe Text
+    - dutyType: Maybe Text
+    - startAddress: Maybe Address
+    - endAddress: Maybe Address
+    - tripType: Maybe TripType
+  Address:
+    - point: LatLong
+    - address: Maybe Text
   TripPlannerReq:
     - driverId: Id Driver
     - badgeName: Maybe Text # TODO :: To be deprecated, and replaced with driverBadgeName
     - driverBadgeName: Maybe Text
     - conductorBadgeName: Maybe Text
+    - pilotBadgeName: Maybe Text
     - vehicleNumber: Text
     - trips: [TripDetails]
     - derive: "'HideSecrets"
@@ -1534,6 +1617,87 @@ types:
     - lon: Maybe Double
     - timeStamp: UTCTime
     - accuracy: Maybe Double
+  DriverDetailsReq:
+    - driverIds: [Id Driver]
+  DriverDetailsResp:
+    - drivers: [DriverDetails]
+  DriverDetails:
+    - driverId: Id Driver
+    - firstName: Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
+    - mobileCountryCode: Maybe Text
+    - mobileNumber: Maybe Text
+    - email: Maybe Text
+    - vehicleNumber: Maybe Text
+    - vehicleVariant: Maybe VehicleVariant
+    - derive: "'HideSecrets"
+  NearbyDriversReqV2:
+    - point: LatLong
+    - radius: Int
+    - vehicleVariantList: [VehicleVariant]
+    - derive: "'HideSecrets"
+  NearbyDriversRespV2:
+    - drivers: [NearbyDriverDetails]
+  NearbyDriversRespTV2:
+    - drivers: [NearbyDriverDetailsT]
+  NearbyDriverDetails:
+    - driverId: Id Driver
+    - point: LatLong
+    - rideStatus: Maybe RideStatus
+    - rideId: Maybe Text
+    - rideInfo: Maybe RideInfo
+  NearbyDriverDetailsT:
+    - fleetOwnerId: Text
+    - driverId: Id Driver
+    - point: LatLong
+    - fleetOwnerName: Text
+    - rideStatus: Maybe RideStatus
+    - rideId: Maybe Text
+    - rideInfo: Maybe RideInfo
+  RideInfo:
+    - enum: "Bus BusRideInfo | Car CarRideInfo | Pilot PilotRideInfo"
+  BusRideInfo:
+    busNumber: Text
+    routeCode: Text
+    source: LatLong
+    destination: LatLong
+    routeLongName: Maybe Text
+    driverName: Maybe Text
+    groupId : Maybe Text
+    derive: "'HideSecrets"
+  PilotRideInfo:
+    pilotNumber: Text
+    startAddress: Maybe Text
+    endAddress: Maybe Text
+    source: LatLong
+    destination: LatLong
+    driverName: Maybe Text
+    dutyType: Maybe Text
+    vipName: Maybe Text
+    scheduledTripTime: Maybe UTCTime
+    groupId: Maybe Text
+  CarRideInfo:
+    pickupLocation: LatLong
+    minDistanceBetweenTwoPoints: Maybe Int
+    rideStops: Maybe [LatLong]
+    derive: "'HideSecrets"
+  AllTimeFleetAnalyticsRes:
+    - activeVehicle: Int
+    - completedRides: Int
+    - totalActiveDrivers: Int
+    - currentOnlineDrivers: Int
+    - averageDriverRatings: Double
+  FilteredFleetAnalyticsRes:
+    - totalEarnings: PriceAPIEntity
+    - completedRides: Int
+    - totalDistance: Meters
+    - totalRideRequest: Int
+    - acceptedRequest: Int
+    - pulledRequest: Int
+    - rejectedRequest: Int
+    - driverCancelled: Int
+    - customerCancelled: Int
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

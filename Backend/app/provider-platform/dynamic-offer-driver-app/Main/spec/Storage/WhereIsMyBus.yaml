@@ -45,7 +45,9 @@ TripTransaction:
     ActionSource:
       enum: "DriverDirect, DriverOnApproval, AutoDetect, Dashboard, ForceDashboard, CronJob, AutoRecovery"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
-
+    TripType:
+      enum: "PILOT,WIMB"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
   fields:
     id: Id TripTransaction
     fleetOwnerId: Id Person
@@ -74,6 +76,14 @@ TripTransaction:
     merchantOperatingCityId: Id MerchantOperatingCity
     tripStartSource: Maybe ActionSource
     tripTerminationSource: Maybe ActionSource
+    dutyType: Maybe Text
+    vipName: Maybe Text
+    startAddress: Maybe Text
+    pilotSource: Maybe LatLong
+    pilotDestination: Maybe LatLong
+    endAddress: Maybe Text
+    scheduledTripTime: Maybe UTCTime
+    tripType: Maybe TripType
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -82,6 +92,12 @@ TripTransaction:
     driverId: "!SecondaryKey"
 
   beamFields:
+    pilotSource:
+      pilotSourceLat: Maybe Double
+      pilotSourceLon: Maybe Double
+    pilotDestination:
+      pilotDestinationLat: Maybe Double
+      pilotDestinationLon: Maybe Double
     startLocation:
       startLocationLat: Maybe Double
       startLocationLon: Maybe Double
@@ -96,15 +112,23 @@ TripTransaction:
     startLocationLon: Kernel.Prelude.fmap (.lon)|I
     endLocationLat: Kernel.Prelude.fmap (.lat)|I
     endLocationLon: Kernel.Prelude.fmap (.lon)|I
+    pilotSourceLat: Kernel.Prelude.fmap (.lat)|I
+    pilotSourceLon: Kernel.Prelude.fmap (.lon)|I
+    pilotDestinationLat: Kernel.Prelude.fmap (.lat)|I
+    pilotDestinationLon: Kernel.Prelude.fmap (.lon)|I
   fromTType:
     startLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
     endLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
+    pilotSource: Storage.Queries.Transformers.Ride.mkLatLong|I
+    pilotDestination: Storage.Queries.Transformers.Ride.mkLatLong|I
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TripStatus>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TripStatus>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ActionSource>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ActionSource>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TripType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TripType>
 
   queries:
     findByTransactionId:

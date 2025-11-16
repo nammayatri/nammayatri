@@ -19,13 +19,15 @@ findByMerchantOpCityIdAndPaymentModeWithServiceName ::
   PaymentMode ->
   ServiceNames ->
   Maybe Bool ->
+  Maybe Bool ->
   m [Plan]
-findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOpCityId) paymentMode serviceName mbIsDeprecated = do
+findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOpCityId) paymentMode serviceName mbIsDeprecated mbIsFleetOwnerPlan = do
   findAllWithKV
     [ Se.And
         ( [ Se.Is BeamP.merchantOpCityId $ Se.Eq merchantOpCityId,
             Se.Is BeamP.paymentMode $ Se.Eq paymentMode,
-            Se.Is BeamP.serviceName $ Se.Eq serviceName
+            Se.Is BeamP.serviceName $ Se.Eq serviceName,
+            Se.Is BeamP.isFleetOwnerPlan $ Se.Eq mbIsFleetOwnerPlan
           ]
             <> ( case mbIsDeprecated of
                    Nothing -> []
@@ -39,12 +41,14 @@ findByMerchantOpCityIdAndServiceName ::
   Id DMOC.MerchantOperatingCity ->
   ServiceNames ->
   Maybe Bool ->
+  Maybe Bool ->
   m [Plan]
-findByMerchantOpCityIdAndServiceName (Id merchantOpCityId) serviceName mbIsDeprecated = do
+findByMerchantOpCityIdAndServiceName (Id merchantOpCityId) serviceName mbIsDeprecated mbIsFleetOwnerPlan = do
   findAllWithKV
     [ Se.And
         ( [ Se.Is BeamP.merchantOpCityId $ Se.Eq merchantOpCityId,
-            Se.Is BeamP.serviceName $ Se.Eq serviceName
+            Se.Is BeamP.serviceName $ Se.Eq serviceName,
+            Se.Is BeamP.isFleetOwnerPlan $ Se.Eq mbIsFleetOwnerPlan
           ]
             <> ( case mbIsDeprecated of
                    Nothing -> []

@@ -35,7 +35,6 @@ updateByPrimaryKey (Domain.Types.SearchReqLocation.SearchReqLocation {..}) = do
       Se.Set Beam.building building,
       Se.Set Beam.city city,
       Se.Set Beam.country country,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.door door,
       Se.Set Beam.extras extras,
       Se.Set Beam.full_address full_address,

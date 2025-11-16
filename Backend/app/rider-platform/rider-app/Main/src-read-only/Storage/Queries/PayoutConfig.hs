@@ -74,7 +74,6 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
       Se.Set Beam.thresholdPayoutAmountPerPerson (Just thresholdPayoutAmountPerPerson),
       Se.Set Beam.timeDiff (Kernel.Utils.Common.nominalDiffTimeToSeconds timeDiff),
       Se.Set Beam.vehicleCategory vehicleCategory,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

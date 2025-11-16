@@ -30,6 +30,7 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Types (Language (..))
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -230,7 +231,25 @@ accumulateCoins targetAmount = takeCoinsRequired (targetAmount, []) False
         else takeCoinsRequired (afterTaking, (coinHis.id.getId, coinsTaken + afterTaking, coinStatus) : result) True []
 
 useCoinsHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> ConvertCoinToCashReq -> Flow APISuccess
-useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
+useCoinsHandler (driverId, merchantId, merchantOpCityId) ConvertCoinToCashReq {..} = do
+  isLocked <- withLockDriverId
+  if isLocked
+    then do
+      finally
+        (handler (driverId, merchantId, merchantOpCityId) ConvertCoinToCashReq {..})
+        ( do
+            Redis.unlockRedis mkLockKey
+            logDebug $ "Coins Conversion for DriverId: " <> driverId.getId <> "Converted to Cash"
+        )
+    else throwError (InternalError $ "Coins Conversion Inprogress")
+  where
+    withLockDriverId = do
+      isLocked <- Redis.tryLockRedis mkLockKey 30
+      return isLocked
+    mkLockKey = "ConvertCoinToCash:DriverId:" <> driverId.getId
+
+handler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> ConvertCoinToCashReq -> Flow APISuccess
+handler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {..} = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   unless (transporterConfig.coinFeature) $

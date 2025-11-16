@@ -148,7 +148,6 @@ updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
       Se.Set Beam.totalEarnings (Kernel.Prelude.roundToIntegral totalEarnings),
       Se.Set Beam.totalEarningsAmount (Kernel.Prelude.Just totalEarnings),
       Se.Set Beam.totalRideTime (Kernel.Prelude.Just totalRideTime),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq id]]

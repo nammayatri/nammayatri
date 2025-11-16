@@ -47,6 +47,7 @@ module Tools.Payment
     fetchGatewayReferenceId,
     fetchOfferSKUConfig,
     extractSplitSettlementDetailsAmount,
+    getPaymentOrderValidity,
   )
 where
 
@@ -88,6 +89,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Version
+import Lib.Payment.Domain.Types.PaymentOrder
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
@@ -172,6 +174,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
     Just (DMSC.BusPaymentServiceConfig vsc) -> func vsc mRoutingId req
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> func vsc mRoutingId req
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> func vsc mRoutingId req
+    Just (DMSC.PassPaymentServiceConfig vsc) -> func vsc mRoutingId req
     _ -> throwError $ InternalError "Unknown Service Config"
   where
     getPaymentServiceByType = \case
@@ -180,6 +183,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
       FRFSBooking -> pure $ DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> pure $ DMSC.BusPaymentService Payment.Juspay
       FRFSMultiModalBooking -> pure $ DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> pure $ DMSC.PassPaymentService Payment.Juspay
 
 decidePaymentService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> m DMSC.ServiceName
 decidePaymentService paymentServiceName clientSdkVersion = do
@@ -243,11 +247,6 @@ runWithServiceConfig3 func getCfg merchantId merchantOperatingCityId req1 req2 r
     DMSC.PaymentServiceConfig msc -> func msc req1 req2 req3
     _ -> throwError $ InternalError "Unknown Service Config"
 
-data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking | BBPS | FRFSMultiModalBooking
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
-
-$(mkHttpInstancesForEnum ''PaymentServiceType)
-
 data SplitType = FIXED | FLEXIBLE deriving (Eq, Ord, Read, Show, Generic, ToSchema, ToParamSchema)
 
 instance ToJSON SplitType where
@@ -295,6 +294,9 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplit
           logError $ "Marketplace percentage is negative: " <> show marketplacePercentage <> " for vendorFees: " <> show vendorFees <> "totalVendorPercentage: " <> show totalVendorPercentage
           throwError (InternalError "Marketplace percentage is negative")
 
+        logInfo $ "Creating aggregated percentage-based split settlement details - vendorPercentageSplits: " <> show vendorPercentageSplits <> " marketplacePercentage: " <> show marketplacePercentage
+        logInfo $ "Aggregated percentage-based split settlement details created successfully with totalAmount: " <> show totalAmount <> " and " <> show (length vendorPercentageSplits) <> " vendor splits"
+
         return $
           Just $
             PercentageBased $
@@ -314,6 +316,10 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplit
         when (marketplaceAmount < 0) $ do
           logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> " totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
           throwError (InternalError "Marketplace amount is negative")
+
+        logInfo $ "Creating aggregated amount-based split settlement details - vendorSplits: " <> show vendorSplits <> " marketplaceAmount: " <> show marketplaceAmount
+        logInfo $ "Aggregated amount-based split settlement details created successfully with totalAmount: " <> show totalAmount <> " totalVendorAmount: " <> show totalVendorAmount <> " and " <> show (length vendorSplits) <> " vendor splits"
+
         return $
           Just $
             AmountBased $
@@ -383,6 +389,9 @@ mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPer
           logError $ "Marketplace percentage is negative: " <> show marketplacePercentage <> " for vendorFees: " <> show vendorFees <> "totalVendorPercentage: " <> show totalVendorPercentage
           throwError (InternalError "Marketplace percentage is negative")
 
+        logInfo $ "Creating percentage-based split settlement details - vendorPercentageSplits: " <> show vendorPercentageSplits <> " marketplacePercentage: " <> show marketplacePercentage
+        logInfo $ "Split settlement details created successfully with totalAmount: " <> show totalAmount <> " and " <> show (length vendorPercentageSplits) <> " vendor splits"
+
         return $
           Just $
             PercentageBased $
@@ -409,6 +418,10 @@ mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPer
         when (marketplaceAmount < 0) $ do
           logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> "totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
           throwError (InternalError "Marketplace amount is negative")
+
+        logInfo $ "Creating amount-based split settlement details - vendorSplits: " <> show vendorSplits <> " marketplaceAmount: " <> show marketplaceAmount
+        logInfo $ "Amount-based split settlement details created successfully with totalAmount: " <> show totalAmount <> " totalVendorAmount: " <> show totalVendorAmount <> " and " <> show (length vendorSplits) <> " vendor splits"
+
         return $
           Just $
             AmountBased $
@@ -422,13 +435,15 @@ mkUnaggregatedRefundSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecM
 mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
   False -> return Nothing
   True -> do
+    uuid <- L.generateGUID
     let vendorSplits =
           map
             ( \fee ->
                 let roundedFee = roundVendorFee fee
                  in RefundSplit
                       { refundAmount = splitAmount roundedFee,
-                        subMid = vendorId roundedFee
+                        subMid = vendorId roundedFee,
+                        uniqueSplitId = fromMaybe uuid fee.ticketId
                       }
             )
             vendorFees
@@ -437,6 +452,10 @@ mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled totalAmount vendorFees
     when (marketplaceAmount < 0) $ do
       logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> "totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
       throwError (InternalError "Marketplace amount is negative")
+
+    logInfo $ "Creating refund split settlement details - vendorSplits: " <> show vendorSplits <> " marketplaceAmount: " <> show marketplaceAmount
+    logInfo $ "Refund split settlement details created successfully with totalAmount: " <> show totalAmount <> " totalVendorAmount: " <> show totalVendorAmount <> " and " <> show (length vendorSplits) <> " vendor refund splits"
+
     return $
       Just $
         RefundSplitSettlementDetails
@@ -468,6 +487,7 @@ getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceTyp
     Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
     _ -> False
   where
     getPaymentServiceByType = \case
@@ -476,6 +496,7 @@ getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceTyp
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
 
 getIsPercentageSplit ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -497,6 +518,7 @@ getIsPercentageSplit merchantId merchantOperatingCityId mbPlaceId paymentService
     Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
     _ -> False
   where
     getPaymentServiceByType = \case
@@ -505,6 +527,7 @@ getIsPercentageSplit merchantId merchantOperatingCityId mbPlaceId paymentService
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
 
 getIsRefundSplitEnabled ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -526,6 +549,7 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
     _ -> False
   where
     getPaymentServiceByType = \case
@@ -534,6 +558,42 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
+
+getPaymentOrderValidity ::
+  (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe (Id TicketPlace) ->
+  PaymentServiceType ->
+  m (Maybe Seconds)
+getPaymentOrderValidity merchantId merchantOperatingCityId mbPlaceId paymentServiceType = do
+  placeBasedConfig <- case mbPlaceId of
+    Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
+    Nothing -> return Nothing
+  merchantServiceConfig <-
+    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
+  return $ case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
+    Just (DMSC.PaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    Just (DMSC.MetroPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    Just (DMSC.BusPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    Just (DMSC.BbpsPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    _ -> Nothing
+  where
+    extractPaymentOrderValidity = \case
+      JuspayConfig cfg -> cfg.paymentOrderValidity
+      _ -> Nothing
+
+    getPaymentServiceByType = \case
+      Normal -> DMSC.PaymentService Payment.Juspay
+      BBPS -> DMSC.BbpsPaymentService Payment.Juspay
+      FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
+      FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
+      FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
 
 extractSplitSettlementDetailsAmount :: Maybe SplitSettlementDetails -> Maybe SplitSettlementDetailsAmount
 extractSplitSettlementDetailsAmount Nothing = Nothing
@@ -560,6 +620,7 @@ fetchGatewayReferenceId merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
     _ -> Nothing
   where
     getPaymentServiceByType = \case
@@ -568,6 +629,7 @@ fetchGatewayReferenceId merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay
 
 fetchOfferSKUConfig ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
@@ -589,6 +651,7 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
     Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
     Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
     Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
     _ -> Nothing
   where
     getPaymentServiceByType = \case
@@ -597,3 +660,4 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+      FRFSPassPurchase -> DMSC.PassPaymentService Payment.Juspay

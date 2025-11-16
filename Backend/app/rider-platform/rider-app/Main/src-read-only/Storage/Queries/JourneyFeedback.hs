@@ -40,7 +40,6 @@ updateByPrimaryKey (Domain.Types.JourneyFeedback.JourneyFeedback {..}) = do
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId)]]

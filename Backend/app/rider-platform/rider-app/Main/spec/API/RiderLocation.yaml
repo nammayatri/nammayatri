@@ -1,0 +1,36 @@
+imports:
+  Text: Data.Text
+  LatLong: Kernel.External.Maps.Types
+  UTCTime: Kernel.Prelude
+  City: Kernel.Types.Beckn.Context
+
+module: RiderLocation
+
+types:
+  RiderLocationRequest:
+    riderLat: Double
+    riderLon: Double
+    city: City
+    locationAccuracy: Maybe Double
+
+  BusLocation:
+    id : Maybe Text
+    busNumber: Text
+    distanceToBus: Double
+    timestamp: Maybe UTCTime
+    customerLocation: LatLong
+    customerLocationTimestamp: UTCTime
+    locationAccuracy: Maybe Double
+    derive: "Show"
+
+  RiderLocationResponse:
+    buses: [BusLocation]
+
+apis:
+  - POST:
+      endpoint: /identifyNearByBus
+      auth: TokenAuth
+      request:
+        type: RiderLocationRequest
+      response:
+        type: RiderLocationResponse

@@ -31,6 +31,9 @@ findAllByBookingId limit offset bookingId = do findAllWithOptionsKV [Se.Is Beam.
 findByBAPBUReqId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
 findByBAPBUReqId bapBookingUpdateRequestId = do findOneWithKV [Se.And [Se.Is Beam.bapBookingUpdateRequestId $ Se.Eq bapBookingUpdateRequestId]]
 
+findByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
+findByBookingId bookingId = do findOneWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]]
+
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
@@ -79,7 +82,6 @@ updateByPrimaryKey (Domain.Types.BookingUpdateRequest.BookingUpdateRequest {..})
   updateWithKV
     [ Se.Set Beam.bapBookingUpdateRequestId bapBookingUpdateRequestId,
       Se.Set Beam.bookingId (Kernel.Types.Id.getId bookingId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currentPointLat currentPointLat,
       Se.Set Beam.currentPointLon currentPointLon,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),

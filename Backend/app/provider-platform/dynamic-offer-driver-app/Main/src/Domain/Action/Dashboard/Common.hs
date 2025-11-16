@@ -90,6 +90,8 @@ castVehicleVariantDashboard = \case
   Just DV.BOAT -> Just Common.BOAT
   Just DV.VIP_ESCORT -> Just Common.VIP_ESCORT
   Just DV.VIP_OFFICER -> Just Common.VIP_OFFICER
+  Just DV.BIKE_PLUS -> Just Common.BIKE_PLUS
+  Just DV.E_RICKSHAW -> Just Common.E_RICKSHAW
   _ -> Nothing
 
 runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Bool -> Maybe (Id DP.Person) -> Flow ()
@@ -156,6 +158,8 @@ castStatus status = case status of -- only PENDING and OVERDUE possible
   REFUND_MANUAL_REVIEW_REQUIRED -> Common.REFUND_MANUAL_REVIEW_REQUIRED
   ONE_TIME_SECURITY_ADJUSTED -> Common.ONE_TIME_SECURITY_ADJUSTED
   SETTLED -> Common.SETTLED
+  IN_DISPUTE_WINDOW -> Common.IN_DISPUTE_WINDOW
+  ADDED_TO_INVOICE -> Common.ADDED_TO_INVOICE
 
 checkFleetOwnerVerification :: Text -> Maybe Bool -> Flow ()
 checkFleetOwnerVerification personId mbEnabledCheck = do
@@ -199,3 +203,6 @@ castDashboardVehicleVariantToDomain = \case
   Common.EV_AUTO_RICKSHAW -> DV.EV_AUTO_RICKSHAW
   Common.VIP_ESCORT -> DV.VIP_ESCORT
   Common.VIP_OFFICER -> DV.VIP_OFFICER
+  Common.AC_PRIORITY -> DV.AC_PRIORITY
+  Common.BIKE_PLUS -> DV.BIKE_PLUS
+  Common.E_RICKSHAW -> DV.E_RICKSHAW

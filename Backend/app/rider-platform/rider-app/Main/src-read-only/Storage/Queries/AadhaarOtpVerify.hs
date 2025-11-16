@@ -32,8 +32,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.AadhaarOtpVerify.AadhaarOtpVerify {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.personId (Kernel.Types.Id.getId personId),
+    [ Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.requestId requestId,
       Se.Set Beam.requestMessage requestMessage,
       Se.Set Beam.statusCode statusCode,

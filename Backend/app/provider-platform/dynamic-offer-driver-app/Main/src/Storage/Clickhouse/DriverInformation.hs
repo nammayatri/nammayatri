@@ -9,7 +9,9 @@ import Kernel.Types.Id
 
 data DriverInformationT f = DriverInformationT
   { driverId :: C f (Id DP.Person),
-    driverFlowStatus :: C f (Maybe DDF.DriverFlowStatus)
+    driverFlowStatus :: C f (Maybe DDF.DriverFlowStatus),
+    enabled :: C f Bool,
+    enabledAt :: C f (Maybe UTCTime)
   }
   deriving (Generic)
 
@@ -19,7 +21,9 @@ driverInformationTTable :: DriverInformationT (FieldModification DriverInformati
 driverInformationTTable =
   DriverInformationT
     { driverId = "driver_id",
-      driverFlowStatus = "driver_flow_status"
+      driverFlowStatus = "driver_flow_status",
+      enabled = "enabled",
+      enabledAt = "enabled_at"
     }
 
 type DriverInformation = DriverInformationT Identity
@@ -41,3 +45,29 @@ getModeCountsByDriverIds driverIds =
       $ CH.filter_
         (\info -> info.driverId `CH.in_` driverIds)
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
+
+getEnabledDriverCountByDriverIds ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  UTCTime ->
+  UTCTime ->
+  m Int
+getEnabledDriverCountByDriverIds driverIds from to = do
+  res <-
+    CH.findAll $
+      CH.select_
+        ( \info -> CH.aggregate $ CH.count_ info.driverId
+        )
+        $ CH.filter_ (\info -> info.driverId `CH.in_` driverIds CH.&&. info.enabled CH.==. True CH.&&. info.enabledAt CH.>=. Just from CH.&&. info.enabledAt CH.<=. Just to) (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
+  pure $ fromMaybe 0 (listToMaybe res)
+
+getOnlineDriverCountByDriverIds ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  m Int
+getOnlineDriverCountByDriverIds driverIds = do
+  res <-
+    CH.findAll $
+      CH.select_ (\info -> CH.aggregate $ CH.count_ info.driverId) $
+        CH.filter_ (\info -> info.driverId `CH.in_` driverIds CH.&&. info.driverFlowStatus CH.==. Just DDF.ONLINE) (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
+  pure $ fromMaybe 0 (listToMaybe res)

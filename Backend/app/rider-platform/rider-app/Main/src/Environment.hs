@@ -169,7 +169,8 @@ data AppCfg = AppCfg
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     selfBaseUrl :: BaseUrl,
     tsServiceConfig :: CPT.TSServiceConfig,
-    inMemConfig :: CF.InMemConfig
+    inMemConfig :: CF.InMemConfig,
+    disableViaPointTimetableCheck :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -272,6 +273,7 @@ data AppEnv = AppEnv
     selfBaseUrl :: BaseUrl,
     tsServiceConfig :: CPT.TSServiceConfig,
     inMemEnv :: CF.InMemEnv,
+    disableViaPointTimetableCheck :: Bool,
     url :: Maybe Text
   }
   deriving (Generic)
@@ -327,7 +329,7 @@ buildAppEnv cfg@AppCfg {..} = do
   ltsHedisEnv <- connectHedis ltsRedis identity
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
-  return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, ..}
+  return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, disableViaPointTimetableCheck = disableViaPointTimetableCheck, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

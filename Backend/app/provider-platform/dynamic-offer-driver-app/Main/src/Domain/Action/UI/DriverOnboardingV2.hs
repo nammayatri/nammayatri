@@ -4,11 +4,13 @@ import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
 import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
+import qualified Data.List as DL
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time (defaultTimeLocale, formatTime)
 import qualified Data.Time as DT
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VRC
 import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
 import Domain.Types.Common
@@ -68,13 +70,16 @@ import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QDPC
+import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverSSN as QDriverSSN
+import qualified Storage.Queries.FleetDriverAssociationExtra as FDA
 import qualified Storage.Queries.HyperVergeSdkLogs as HVSdkLogsQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCE
 import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
@@ -101,6 +106,8 @@ mkDocumentVerificationConfigAPIEntity language Domain.Types.DocumentVerification
       { title = maybe title (.message) mbTitle,
         description = maybe description (Just . (.message)) mbDescription,
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
+        applicableTo = applicableTo,
+        documentFields = documentFields,
         ..
       }
 
@@ -218,7 +225,7 @@ getDriverRateCard ::
     Environment.Flow [API.Types.UI.DriverOnboardingV2.RateCardResp]
   )
 getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDuration mbTripCategoryQuery mbServiceTierType = do
-  distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOperatingCityId
+  (currency, distanceUnit) <- SMerchant.getCurrencyAndDistanceUnitByMerchantOpCity merchantOperatingCityId
   let mbDistance = reqDistance
       mbDuration = reqDuration
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
@@ -240,15 +247,15 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
   case mbServiceTierType' of
     Just serviceTierType -> do
       when (serviceTierType `notElem` driverVehicleServiceTierTypes) $ throwError $ InvalidRequest ("Service tier " <> show serviceTierType <> " not available for driver")
-      mbRateCard <- getRateCardForServiceTier mbDistance mbDuration mbPickup transporterConfig tripCategory distanceUnit serviceTierType
+      mbRateCard <- getRateCardForServiceTier mbDistance mbDuration mbPickup transporterConfig tripCategory distanceUnit currency serviceTierType
       return $ maybeToList mbRateCard
     Nothing -> do
-      rateCards <- mapM (getRateCardForServiceTier mbDistance mbDuration mbPickup transporterConfig tripCategory distanceUnit) driverVehicleServiceTierTypes
+      rateCards <- mapM (getRateCardForServiceTier mbDistance mbDuration mbPickup transporterConfig tripCategory distanceUnit currency) driverVehicleServiceTierTypes
       return $ catMaybes rateCards
   where
-    mkBreakupItem :: Text -> Text -> Maybe API.Types.UI.DriverOnboardingV2.RateCardItem
-    mkBreakupItem title valueInText = do
-      priceObject <- stringToPrice INR valueInText -- change INR to proper currency after Roman changes
+    mkBreakupItem :: Currency -> Text -> Text -> Maybe API.Types.UI.DriverOnboardingV2.RateCardItem
+    mkBreakupItem currency title valueInText = do
+      priceObject <- stringToPrice currency valueInText
       return $
         API.Types.UI.DriverOnboardingV2.RateCardItem
           { title,
@@ -256,13 +263,13 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
             priceWithCurrency = mkPriceAPIEntity priceObject
           }
 
-    getRateCardForServiceTier :: Maybe Meters -> Maybe Minutes -> Maybe LatLong -> Maybe TransporterConfig -> TripCategory -> DistanceUnit -> Domain.Types.Common.ServiceTierType -> Environment.Flow (Maybe API.Types.UI.DriverOnboardingV2.RateCardResp)
-    getRateCardForServiceTier mbDistance mbDuration mbPickupLatLon transporterConfig tripCategory distanceUnit serviceTierType = do
+    getRateCardForServiceTier :: Maybe Meters -> Maybe Minutes -> Maybe LatLong -> Maybe TransporterConfig -> TripCategory -> DistanceUnit -> Currency -> Domain.Types.Common.ServiceTierType -> Environment.Flow (Maybe API.Types.UI.DriverOnboardingV2.RateCardResp)
+    getRateCardForServiceTier mbDistance mbDuration mbPickupLatLon transporterConfig tripCategory distanceUnit currency serviceTierType = do
       now <- getCurrentTime
       eitherFullFarePolicy <-
-        try @_ @SomeException (getFarePolicy mbPickupLatLon Nothing Nothing Nothing Nothing Nothing merchantOperatingCityId False tripCategory serviceTierType Nothing Nothing Nothing Nothing [])
+        withTryCatch "getFarePolicyWithServiceTierType" (getFarePolicy mbPickupLatLon Nothing Nothing Nothing Nothing Nothing merchantOperatingCityId False tripCategory serviceTierType Nothing Nothing Nothing Nothing [])
           >>= \case
-            Left _ -> try @_ @SomeException $ getFarePolicy Nothing Nothing Nothing Nothing Nothing Nothing merchantOperatingCityId False (Delivery OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing Nothing Nothing []
+            Left _ -> withTryCatch "getOneWayOnDemandFarePolicy" $ getFarePolicy Nothing Nothing Nothing Nothing Nothing Nothing merchantOperatingCityId False (Delivery OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing Nothing Nothing []
             Right farePolicy -> return $ Right farePolicy
       case eitherFullFarePolicy of
         Left _ -> return Nothing
@@ -301,7 +308,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   estimatedDistance = mbDistance,
                   estimatedRideDuration = minutesToSeconds <$> mbDuration,
                   timeDiffFromUtc = transporterConfig <&> (.timeDiffFromUtc),
-                  currency = INR, -- fix it later
+                  currency,
                   distanceUnit,
                   tollCharges = Nothing,
                   merchantOperatingCityId = Just merchantOperatingCityId,
@@ -312,15 +319,15 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
               perKmRate =
                 PriceAPIEntity
                   { amount = HighPrecMoney perKmAmount,
-                    currency = INR
+                    currency
                   }
               totalFare =
                 PriceAPIEntity
                   { amount = totalFareAmount,
-                    currency = INR
+                    currency
                   }
               perMinuteRate = getPerMinuteRate fareParams
-          let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id mkBreakupItem Nothing Nothing totalFare.amount Nothing (fullFarePolicyToFarePolicy fullFarePolicy)
+          let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id (mkBreakupItem currency) Nothing Nothing Nothing totalFare.amount Nothing (fullFarePolicyToFarePolicy fullFarePolicy)
           return $
             Just $
               API.Types.UI.DriverOnboardingV2.RateCardResp
@@ -647,7 +654,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.imageType == DTO.PanCard) $
         throwError (ImageInvalidType (show DTO.PanCard) "")
-      Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
+      Redis.withLockRedisAndReturnValue (VRC.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
     checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> m ()
     checkIfGenuineReq API.Types.UI.DriverOnboardingV2.DriverPanReq {..} = do
@@ -762,7 +769,7 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.imageType == DTO.GSTCertificate) $
         throwError (ImageInvalidType (show DTO.GSTCertificate) "")
-      Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
+      Redis.withLockRedisAndReturnValue (VRC.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
     callIdfy :: Text -> Flow Documents.VerificationStatus
     callIdfy personId = do
@@ -929,7 +936,7 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) = do
     createAccount :: Domain.Types.Person.Person -> UTCTime -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
     createAccount person now = do
       merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-      when (merchantOpCity.country /= Context.USA) $ throwError $ InvalidRequest "Bank account creation is only supported for USA"
+      when (merchantOpCity.country `notElem` [Context.USA, Context.Netherlands]) $ throwError $ InvalidRequest "Bank account creation is only supported for USA and Netherlands"
 
       mbMobileNumber <- mapM decrypt person.mobileNumber
       mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "Mobile number is required for opening a bank account")
@@ -938,9 +945,13 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) = do
       driverDob <- driverLicense.driverDob & fromMaybeM (InvalidRequest "Driver DOB is required for opening a bank account")
       -- idNumber <- decrypt driverLicense.licenseNumber
 
-      driverSSN <- runInReplica $ QDriverSSN.findByDriverId person.id >>= fromMaybeM (DriverSSNNotFound person.id.getId)
-      ssnNumber <- decrypt driverSSN.ssn
-      let ssnLast4 = T.takeEnd 4 ssnNumber
+      ssnLast4 <-
+        if merchantOpCity.country == Context.USA
+          then do
+            driverSSN <- runInReplica $ QDriverSSN.findByDriverId person.id >>= fromMaybeM (DriverSSNNotFound person.id.getId)
+            ssnNumber <- decrypt driverSSN.ssn
+            return $ Just $ T.takeEnd 4 ssnNumber
+          else return Nothing
 
       let createAccountReq =
             Payment.IndividualConnectAccountReq
@@ -950,7 +961,7 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) = do
                 firstName = person.firstName,
                 lastName = person.lastName,
                 address = Nothing, -- will add later
-                ssnLast4 = Just ssnLast4,
+                ssnLast4 = ssnLast4,
                 idNumber = Nothing,
                 mobileNumber
               }
@@ -1066,3 +1077,36 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
             createdAt = now,
             updatedAt = now
           }
+
+getDriverFleetRcs :: (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Flow APITypes.FleetRCListRes
+getDriverFleetRcs (mbDriverId, _, merchantOpCityId) limit offset = do
+  driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  driverLinkedRcs <- DAQuery.findAllLinkedByDriverId driverId
+  let driverRcIds = map (.rcId) driverLinkedRcs
+  driverRcs <- RCQuery.findAllById driverRcIds
+  fleetRcs <-
+    if transporterConfig.allowDriverToUseFleetRcs == Just True
+      then do
+        mbFleetDriverAssociation <- FDA.findByDriverId driverId True
+        case mbFleetDriverAssociation of
+          Nothing -> pure []
+          Just fleetDriverAssociation -> do
+            let fleetOwnerId = fleetDriverAssociation.fleetOwnerId
+            RCQuery.findAllByFleetOwnerId effectiveLimit offset (Just fleetOwnerId)
+      else pure []
+  let allRcs = DL.nubBy (\a b -> a.id == b.id) (driverRcs <> fleetRcs)
+      activeRcId = fmap (.rcId) . DL.find (.isRcActive) $ driverLinkedRcs
+  rcs <- mapM (getCombinedRcData activeRcId) allRcs
+  return $ APITypes.FleetRCListRes rcs
+  where
+    getCombinedRcData activeRcId rc = do
+      rcNo <- decrypt rc.certificateNumber
+      let isActive = Just rc.id == activeRcId
+      return $
+        VRC.LinkedRC
+          { rcActive = isActive,
+            rcDetails = SDO.makeRCAPIEntity rc rcNo,
+            isFleetRC = isJust rc.fleetOwnerId
+          }
+    effectiveLimit = Just $ min 10 (fromMaybe 10 limit)

@@ -274,7 +274,7 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
 
   let phoneNumber = fromMaybe "+91" fleetOwner.mobileCountryCode <> decryptedMobileNumber
   smsCfg <- asks (.smsCfg)
-  res <- try @_ @SomeException $ do
+  res <- withTryCatch "sendSMS:postFleetManagementFleetLinkVerifyOtp" $ do
     (mbSender, message, templateId) <-
       buildFleetLinkSuccessMessage merchantOpCityId $
         BuildFleetLinkUnlinkSuccessMessageReq
@@ -310,8 +310,8 @@ postFleetManagementFleetMemberAssociationCreate merchantShortId _opCity req = do
             level = req.level,
             parentGroupCode = req.parentGroupCode,
             groupCode = req.groupCode,
+            createdAt = existingAssociation.createdAt,
             order = req.order,
-            createdAt = now,
             updatedAt = now
           }
     Nothing -> do

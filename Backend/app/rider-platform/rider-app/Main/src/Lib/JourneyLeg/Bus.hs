@@ -12,10 +12,10 @@ import Lib.JourneyLeg.Types.Bus
 import qualified Lib.JourneyModule.Types as JT
 
 instance JT.JourneyLeg BusLegRequest m where
-  search (BusLegRequestSearch BusLegRequestSearchData {..}) = CFRFS.search Spec.BUS personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId upsertJourneyLegAction
+  search (BusLegRequestSearch BusLegRequestSearchData {..}) = CFRFS.search Spec.BUS personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId serviceTier upsertJourneyLegAction
   search _ = throwError (InternalError "Not supported")
 
-  confirm (BusLegRequestConfirm BusLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId quantity childTicketQuantity bookLater bookingAllowed Nothing Spec.BUS categorySelectionReq isSingleMode
+  confirm (BusLegRequestConfirm BusLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId bookLater bookingAllowed Nothing Spec.BUS categorySelectionReq isSingleMode mbEnableOffer
   confirm _ = throwError (InternalError "Not supported")
 
   update (BusLegRequestUpdate _) = do
@@ -33,7 +33,7 @@ instance JT.JourneyLeg BusLegRequest m where
   getState (BusLegRequestGetState req) = CFRFS.getState DTrip.Bus req.searchId req.riderLastPoints req.movementDetected req.routeCodeForDetailedTracking req.journeyLeg
   getState _ = throwError (InternalError "Not supported")
 
-  getInfo (BusLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.journeyLeg
+  getInfo (BusLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.journeyLeg req.journeyLegs
   getInfo _ = throwError (InternalError "Not supported")
 
   getFare (BusLegRequestGetFare BusLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.BUS serviceType routeDetails fromArrivalTime agencyGtfsId Nothing

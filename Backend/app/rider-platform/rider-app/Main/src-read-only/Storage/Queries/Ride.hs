@@ -35,6 +35,11 @@ markPaymentStatus paymentStatus id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.paymentStatus (Kernel.Prelude.Just paymentStatus), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateCancellationChargesOnCancel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateCancellationChargesOnCancel cancellationChargesOnCancel id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.cancellationChargesOnCancel cancellationChargesOnCancel, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateCancellationFeeIfCancelledField :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateCancellationFeeIfCancelledField cancellationFeeIfCancelled id = do
   _now <- getCurrentTime

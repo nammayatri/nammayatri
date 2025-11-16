@@ -25,6 +25,8 @@ data ApplicationEvent
   | RideCancel
   | Login
   | RideEndOffers
+  | PenaltyCheck
+  | UpgradeTier
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''ApplicationEvent)

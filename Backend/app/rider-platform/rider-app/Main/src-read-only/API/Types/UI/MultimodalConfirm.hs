@@ -9,6 +9,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.FRFSQuote
+import qualified Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSTicketBookingStatus
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Journey
@@ -97,13 +98,12 @@ data IntegratedQRReq = IntegratedQRReq {integratedQR :: Lib.JourneyModule.Types.
 data JourneyBookingPaymentStatus = JourneyBookingPaymentStatus
   { gatewayReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
-    paymentFareUpdate :: Kernel.Prelude.Maybe [PaymentFareUpdate],
     paymentOrder :: Kernel.Prelude.Maybe PaymentOrder
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JourneyConfirmReq = JourneyConfirmReq {journeyConfirmReqElements :: [JourneyConfirmReqElement]}
+data JourneyConfirmReq = JourneyConfirmReq {enableOffer :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, journeyConfirmReqElements :: [JourneyConfirmReqElement]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -114,6 +114,14 @@ data JourneyConfirmReqElement = JourneyConfirmReqElement
     journeyLegOrder :: Kernel.Prelude.Int,
     skipBooking :: Kernel.Prelude.Bool,
     ticketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data JourneyConfirmResp = JourneyConfirmResp
+  { gatewayReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    orderSdkPayload :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.CreateOrderResp,
+    result :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -129,6 +137,7 @@ data JourneyInfoResp = JourneyInfoResp
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedMaxFare :: Kernel.Types.Common.PriceAPIEntity,
     estimatedMinFare :: Kernel.Types.Common.PriceAPIEntity,
+    isSingleMode :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     journeyStatus :: Domain.Types.Journey.JourneyStatus,
     legs :: [Lib.JourneyModule.Types.LegInfo],
@@ -214,7 +223,12 @@ data OnboardedVehicleDetailsReq = OnboardedVehicleDetailsReq {vehicleNumber :: K
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PaymentFareUpdate = PaymentFareUpdate {journeyLegOrder :: Kernel.Prelude.Int, newFare :: Kernel.Types.Common.PriceAPIEntity, oldFare :: Kernel.Types.Common.PriceAPIEntity}
+data PaymentFareUpdate = PaymentFareUpdate
+  { category :: Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType,
+    journeyLegOrder :: Kernel.Prelude.Int,
+    newFare :: Kernel.Types.Common.PriceAPIEntity,
+    oldFare :: Kernel.Types.Common.PriceAPIEntity
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -60,7 +60,6 @@ updateByPrimaryKey (Domain.Types.ReelsData.ReelsData {..}) = do
       Se.Set Beam.thumbnailImageUrl thumbnailImageUrl,
       Se.Set Beam.title title,
       Se.Set Beam.videoUrl videoUrl,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

@@ -55,7 +55,6 @@ updateByPrimaryKey (Domain.Types.LeaderBoardConfigs.LeaderBoardConfigs {..}) = d
       Se.Set Beam.numberOfSets numberOfSets,
       Se.Set Beam.useOperatingCityBasedLeaderBoard useOperatingCityBasedLeaderBoard,
       Se.Set Beam.zScoreBase zScoreBase,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

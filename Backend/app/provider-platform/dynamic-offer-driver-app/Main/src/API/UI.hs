@@ -33,6 +33,7 @@ import qualified API.Action.UI.Merchant as Merchant
 import qualified API.Action.UI.MeterRide as MeterRide
 import qualified API.Action.UI.OperationHub as OH
 import qualified API.Action.UI.Operator as Operator
+import qualified API.Action.UI.Penalty as Penalty
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Reels as Reels
@@ -135,6 +136,7 @@ type API =
            :<|> Insurance.API
            :<|> DriverWallet.API
            :<|> SubscriptionTransaction.API
+           :<|> Penalty.API
        )
 
 handler :: FlowServer API
@@ -194,3 +196,4 @@ handler =
     :<|> Insurance.handler
     :<|> DriverWallet.handler
     :<|> SubscriptionTransaction.handler
+    :<|> Penalty.handler

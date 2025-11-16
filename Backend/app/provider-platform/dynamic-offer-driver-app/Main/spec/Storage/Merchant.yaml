@@ -47,6 +47,7 @@ imports:
   ServiceName: Domain.Types.Extra.MerchantServiceConfig
   GatewayAndRegistryService: Domain.Types
   Role: Domain.Types.Person
+  Version: Kernel.Types.Version
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -93,7 +94,7 @@ Merchant:
     fleetOwnerEnabledCheck: Maybe Bool
     overwriteAssociation: Maybe Bool
     mediaFileDocumentLinkExpires: Seconds
-    enforceSufficientDriverBalance: Maybe Bool
+    prepaidSubscriptionAndWalletEnabled: Maybe Bool # This is a top level switch to enable prepaid subscription and wallet features for drivers and fleet owners
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -813,6 +814,8 @@ TransporterConfig:
       boat: Kilometers
       vipEscort: Kilometers
       vipOfficer: Kilometers
+      bikeplus: Kilometers
+      erickshaw: Kilometers
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     DashboardMediaSendingLimit:
       sms: Int
@@ -842,6 +845,8 @@ TransporterConfig:
       boat: Maybe Seconds
       vipEscort: Maybe Seconds
       vipOfficer: Maybe Seconds
+      bikeplus: Maybe Seconds
+      erickshaw: Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     DistanceRecomputeConfigs:
       estimatedDistanceUpper: Meters
@@ -854,6 +859,7 @@ TransporterConfig:
       weekStartMode: Int
       earningsWindowSize: Int
       allowCacheDriverFlowStatus: Bool
+      enableFleetOperatorDashboardAnalytics: Bool
       maxOnlineDurationDays: Int
       onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
@@ -865,11 +871,12 @@ TransporterConfig:
       enableWalletTopup: Bool
       maxWalletPayoutsPerDay: Maybe Int
       minimumWalletPayoutAmount: HighPrecMoney
+      minWalletAmountForCashRides: Maybe HighPrecMoney
       payoutCutOffDays: Int
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
-      recordType: NewType
+      fleetPrepaidSubscriptionThreshold: Maybe HighPrecMoney
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
@@ -1098,6 +1105,11 @@ TransporterConfig:
     subscriptionConfig: SubscriptionConfig
     analyticsConfig: AnalyticsConfig
     driverWalletConfig: DriverWalletConfig
+    cancellationFeeCycle: Maybe Seconds
+    cancellationFeeDisputeWindow: Maybe Seconds
+    cancellationFeeVendor: Maybe Text
+    upgradeTierDropRetentionTime: Maybe Seconds
+    allowDriverToUseFleetRcs: Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1525,9 +1537,9 @@ TransporterConfig:
     disableDriverWhenUnlinkingVehicle : "true"
     distanceWeightage: "20"
     driverCallingOption: "'AnonymousCall'"
-    driverWalletConfig:  '''{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7}'' :: json'
-    analyticsConfig: '''{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}'' :: json'
-    subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null}'' :: json'
+    driverWalletConfig:  '''{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minWalletAmountForCashRides": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7}'' :: json'
+    analyticsConfig: '''{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "enableFleetOperatorDashboardAnalytics": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}'' :: json'
+    subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}'' :: json'
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
@@ -1610,6 +1622,38 @@ MerchantServiceConfig:
     configJSON: getConfigJSON
   fromTType:
     serviceConfig: Storage.Queries.Transformers.MerchantServiceConfig.mkServiceConfig configJSON serviceName|EM
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
+
+MerchantClientConfig:
+  derives: Generic,Show
+  fields:
+    packageId: Text
+    clientOS: Maybe Kernel.Types.Version.DeviceType
+    clientServiceConfig: Domain.Types.Extra.MerchantClientConfig.ClientServiceConfig
+    updatedAt: UTCTime
+    createdAt: UTCTime
+  beamFields:
+    clientServiceConfig:
+      serviceName: Domain.Types.MerchantClientConfig.ClientService
+      configJSON: Value
+  constraints:
+    packageId: PrimaryKey
+    serviceName: PrimaryKey
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+  beamInstance:
+    - MakeTableInstances
+  sqlType:
+    serviceName: character varying(50)
+    configJSON: json
+  toTType:
+    serviceName: getServiceName
+    configJSON: getConfigJSON
+  fromTType:
+    clientServiceConfig: Storage.Queries.Transformers.MerchantClientConfig.mkServiceConfig configJSON serviceName|EM
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE

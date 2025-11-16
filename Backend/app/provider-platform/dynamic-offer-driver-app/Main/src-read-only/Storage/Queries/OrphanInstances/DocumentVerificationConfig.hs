@@ -3,10 +3,12 @@
 
 module Storage.Queries.OrphanInstances.DocumentVerificationConfig where
 
+import qualified Data.Aeson
 import qualified Domain.Types.DocumentVerificationConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -15,17 +17,19 @@ import Storage.Queries.Transformers.DocumentVerificationConfig
 
 instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig where
   fromTType' (Beam.DocumentVerificationConfigT {..}) = do
-    supportedVehicleClasses' <- (getConfigFromJSON documentType) supportedVehicleClassesJSON
+    supportedVehicleClasses' <- getConfigFromJSON documentType supportedVehicleClassesJSON
     pure $
       Just
         Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig
-          { checkExpiry = checkExpiry,
+          { applicableTo = fromMaybe Domain.Types.DocumentVerificationConfig.FLEET_AND_INDIVIDUAL applicableTo,
+            checkExpiry = checkExpiry,
             checkExtraction = checkExtraction,
             dependencyDocumentType = dependencyDocumentType,
             description = description,
             disableWarning = disableWarning,
             doStrictVerifcation = doStrictVerifcation,
             documentCategory = documentCategory,
+            documentFields = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< documentFieldsJSON,
             documentType = documentType,
             filterForOldApks = filterForOldApks,
             isDefaultEnabledOnManualVerification = isDefaultEnabledOnManualVerification,
@@ -50,13 +54,15 @@ instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerific
 instance ToTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig where
   toTType' (Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..}) = do
     Beam.DocumentVerificationConfigT
-      { Beam.checkExpiry = checkExpiry,
+      { Beam.applicableTo = Kernel.Prelude.Just applicableTo,
+        Beam.checkExpiry = checkExpiry,
         Beam.checkExtraction = checkExtraction,
         Beam.dependencyDocumentType = dependencyDocumentType,
         Beam.description = description,
         Beam.disableWarning = disableWarning,
         Beam.doStrictVerifcation = doStrictVerifcation,
         Beam.documentCategory = documentCategory,
+        Beam.documentFieldsJSON = Data.Aeson.toJSON <$> documentFields,
         Beam.documentType = documentType,
         Beam.filterForOldApks = filterForOldApks,
         Beam.isDefaultEnabledOnManualVerification = isDefaultEnabledOnManualVerification,

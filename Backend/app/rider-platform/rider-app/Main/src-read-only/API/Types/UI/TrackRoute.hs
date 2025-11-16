@@ -2,6 +2,7 @@
 
 module API.Types.UI.TrackRoute where
 
+import qualified BecknV2.FRFS.Enums
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.RouteStopMapping
 import EulerHS.Prelude hiding (id)
@@ -23,6 +24,8 @@ data VehicleInfo = VehicleInfo
     nextStopTravelDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     nextStopTravelTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     routeCode :: Kernel.Prelude.Text,
+    routeShortName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     upcomingStops :: [SharedLogic.FRFSUtils.UpcomingStop],
     vehicleId :: Kernel.Prelude.Text,
     vehicleInfo :: VehicleInfoForRoute

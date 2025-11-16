@@ -1,5 +1,6 @@
 module Lib.JourneyLeg.Types.Metro where
 
+import API.Types.UI.FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSQuote
@@ -37,9 +38,9 @@ data MetroLegRequestConfirmData = MetroLegRequestConfirmData
     personId :: Id DPerson.Person,
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    quantity :: Maybe Int,
-    childTicketQuantity :: Maybe Int,
-    isSingleMode :: Maybe Bool
+    isSingleMode :: Maybe Bool,
+    mbEnableOffer :: Maybe Bool,
+    categorySelectionReq :: [FRFSCategorySelectionReq]
   }
 
 data MetroLegRequestCancelData = MetroLegRequestCancelData
@@ -55,7 +56,8 @@ data MetroLegRequestGetStateData = MetroLegRequestGetStateData
 
 data MetroLegRequestGetInfoData = MetroLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    journeyLegs :: [DJourneyLeg.JourneyLeg]
   }
 
 data MetroLegRequest

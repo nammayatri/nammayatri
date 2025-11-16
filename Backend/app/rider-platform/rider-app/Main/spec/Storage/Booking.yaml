@@ -30,12 +30,14 @@ imports:
   ServiceTierType: Domain.Types.ServiceTierType
   HighPrecMoney: Kernel.Types.Common
   PaymentMethodId: Kernel.External.Payment.Interface.Types
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
   TripParty: Domain.Types.Trip
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
   ParcelType: Domain.Types.ParcelType
   JourneyLeg: Domain.Types.JourneyLeg
   RecentLocation: Domain.Types.RecentLocation
+  BillingCategory: SharedLogic.Type
 
 BookingLocation:
   tableName: booking_location
@@ -184,6 +186,7 @@ Booking:
     bppBookingId: Maybe (Id BPPBooking)
     quoteId: Maybe (Id Quote)
     paymentMethodId: Maybe PaymentMethodId
+    paymentInstrument: Maybe PaymentInstrument
     paymentUrl: Maybe Text
     status: BookingStatus|NoRelation
     providerId: Text
@@ -198,6 +201,7 @@ Booking:
     riderId: Id Person
     isPetRide: Bool
     fromLocation: Location
+    billingCategory: BillingCategory
     initialPickupLocation: Location|NoRelation
     estimatedFare: Price
     estimatedDistance: Maybe Distance
@@ -292,6 +296,7 @@ Booking:
     merchantOperatingCityId: Maybe Text
     clientBundleVersion: Maybe Text
     clientSdkVersion: Maybe Text
+    billingCategory: Maybe BillingCategory
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     clientModelName: Maybe Text
@@ -397,6 +402,7 @@ Booking:
     preferSafetyPlus : Kernel.Prelude.Just|I
     isInsured: Kernel.Prelude.Just isInsured|E
     isPetRide: Kernel.Prelude.Just|I
+    billingCategory: Kernel.Prelude.Just billingCategory|E
 
   intermediateTransformers:
     toTType:
@@ -429,6 +435,7 @@ Booking:
     isInsured: fromMaybe False isInsured|E
     preferSafetyPlus : fromMaybe False preferSafetyPlus | E
     isPetRide: fromMaybe False isPetRide | E
+    billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
 
   extraOperations:
     - EXTRA_QUERY_FILE

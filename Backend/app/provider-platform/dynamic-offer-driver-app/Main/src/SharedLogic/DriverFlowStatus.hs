@@ -49,7 +49,7 @@ handleCacheMissForDriverFlowStatus entityRole entityId allKeys = do
       if lockAcquired
         then do
           logTagInfo "DriverStatus" $ "Acquired inProgress lock for entityId: " <> entityId <> ". Running ClickHouse query."
-          res <- try @_ @SomeException $ do
+          res <- withTryCatch "handleCacheMissForDriverFlowStatus" $ do
             driverIds <- case entityRole of
               DP.FLEET_OWNER -> CFDA.getDriverIdsByFleetOwnerId entityId
               DP.OPERATOR -> getFleetDriverIdsAndDriverIdsByOperatorId entityId
@@ -84,9 +84,33 @@ getFleetDriverIdsAndDriverIdsByOperatorId ::
   m [Id DP.Person]
 getFleetDriverIdsAndDriverIdsByOperatorId operatorId = do
   fleetOwnerIds <- CFOA.getFleetOwnerIdsByOperatorId operatorId
-  fleetDriverIds <- CFDA.getDriverIdsByFleetOwnerIds fleetOwnerIds
+  fleetDriverIds <-
+    if null fleetOwnerIds
+      then pure []
+      else CFDA.getDriverIdsByFleetOwnerIds fleetOwnerIds
   driverIds <- CDOA.getDriverIdsByOperatorId operatorId
   pure (driverIds <> fleetDriverIds)
+
+getTotalFleetDriverAndDriverCountByOperatorIdInDateRange ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  m Int
+getTotalFleetDriverAndDriverCountByOperatorIdInDateRange operatorId from to = do
+  fleetOwnerIds <- CFOA.getFleetOwnerIdsByOperatorId operatorId
+  fleetDriverCount <-
+    if null fleetOwnerIds
+      then pure 0
+      else CFDA.getTotalDriverCountByFleetOwnerIdsInDateRange fleetOwnerIds from to
+  driverCount <- CDOA.getTotalDriverCountByOperatorIdInDateRange operatorId from to
+  pure (fleetDriverCount + driverCount)
 
 toDriverStatusRes :: [(Maybe DDF.DriverFlowStatus, Int)] -> Common.DriverStatusRes
 toDriverStatusRes xs =

@@ -25,6 +25,7 @@ data BusLegRequestSearchData = BusLegRequestSearchData
     journeyLeg :: DJourneyLeg.JourneyLeg,
     multimodalSearchRequestId :: Maybe Text,
     recentLocationId :: Maybe (Id DRecentLocation.RecentLocation),
+    serviceTier :: Maybe Spec.ServiceTierType,
     upsertJourneyLegAction :: forall m r c. JL.SearchRequestFlow m r c => Text -> m ()
   }
 
@@ -36,9 +37,8 @@ data BusLegRequestConfirmData = BusLegRequestConfirmData
     personId :: Id DPerson.Person,
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    quantity :: Maybe Int,
-    childTicketQuantity :: Maybe Int,
-    categorySelectionReq :: Maybe [FRFSCategorySelectionReq],
+    categorySelectionReq :: [FRFSCategorySelectionReq],
+    mbEnableOffer :: Maybe Bool,
     isSingleMode :: Maybe Bool
   }
 
@@ -51,7 +51,8 @@ data BusLegRequestCancelData = BusLegRequestCancelData
 
 data BusLegRequestGetInfoData = BusLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    journeyLegs :: [DJourneyLeg.JourneyLeg]
   }
 
 data BusLegRequestGetStateData = BusLegRequestGetStateData

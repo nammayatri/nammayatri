@@ -44,7 +44,7 @@ installationStatus Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
     subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
     let batchSize = subscriptionConfigs.genericBatchSizeForJobs
         rescheduleInterval = subscriptionConfigs.genericJobRescheduleTime
-    resp <- try @_ @SomeException $ TD.cautioInstallationStatus merchantId merchantOpCityId (DMSC.DashCamService Dashcam.Cautio) (mkCautioReq offset batchSize)
+    resp <- withTryCatch "cautioInstallationStatus:installationStatus" $ TD.cautioInstallationStatus merchantId merchantOpCityId (DMSC.DashCamService Dashcam.Cautio) (mkCautioReq offset batchSize)
     dataEntity <- do
       case resp of
         Left err -> do

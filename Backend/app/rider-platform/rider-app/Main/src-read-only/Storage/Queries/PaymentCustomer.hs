@@ -37,13 +37,7 @@ findByPrimaryKey customerId = do findOneWithKV [Se.And [Se.Is Beam.customerId $ 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PaymentCustomer.PaymentCustomer -> m ())
 updateByPrimaryKey (Domain.Types.PaymentCustomer.PaymentCustomer {..}) = do
   _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.clientAuthToken clientAuthToken,
-      Se.Set Beam.clientAuthTokenExpiry clientAuthTokenExpiry,
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.And [Se.Is Beam.customerId $ Se.Eq customerId]]
+  updateWithKV [Se.Set Beam.clientAuthToken clientAuthToken, Se.Set Beam.clientAuthTokenExpiry clientAuthTokenExpiry, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.customerId $ Se.Eq customerId]]
 
 instance FromTType' Beam.PaymentCustomer Domain.Types.PaymentCustomer.PaymentCustomer where
   fromTType' (Beam.PaymentCustomerT {..}) = do

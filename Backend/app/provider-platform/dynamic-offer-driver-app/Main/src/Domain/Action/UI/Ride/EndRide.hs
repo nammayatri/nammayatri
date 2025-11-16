@@ -86,6 +86,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
+import SharedLogic.RuleBasedTierUpgrade
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.TransporterConfig as QTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -393,7 +394,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       case req of
         CronJobReq _ -> do
           logTagInfo "cron job -> endRide : " "Do not call snapToRoad, return estimates as final values."
-          res <- try @_ @SomeException $ recalculateFareForDistance handle booking rideOld estimatedDistance thresholdConfig False tripEndPoint
+          res <- withTryCatch "recalculateFareForDistance:endRideHandler" $ recalculateFareForDistance handle booking rideOld estimatedDistance thresholdConfig False tripEndPoint
           (chargeableDistance, finalFare, mbUpdatedFareParams) <-
             case res of
               Left err -> do
@@ -483,7 +484,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                driverGoHomeRequestId = ghInfo.driverGoHomeRequestId,
                hasStops = Just (not $ null ride.stops)
               }
-    newRideTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
+    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (Yudhishthira.computeNammaTags Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     fork "updating time and latlong in advance ride if any" $ do
       whenJust advanceRide $ \advanceRide' -> do
@@ -504,7 +505,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
         DC.incrementValidRideCount driverId expirationPeriod 1
         DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
-
+    computeEligibleUpgradeTiers ride thresholdConfig
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
@@ -552,7 +553,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         }
 
     withFallback defaultVal action = do
-      res <- try @_ @SomeException action
+      res <- withTryCatch "withFallback:endRideHandler" action
       case res of
         Left someException ->
           case fromException someException of

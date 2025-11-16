@@ -3,6 +3,7 @@
 
 module Domain.Types.JourneyLeg where
 
+import qualified API.Types.UI.RiderLocation
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.Common
@@ -19,6 +20,7 @@ import qualified Tools.Beam.UtilsTH
 
 data JourneyLeg = JourneyLeg
   { agency :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalAgency,
+    busLocationData :: [API.Types.UI.RiderLocation.BusLocation],
     changedBusesInSequence :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -40,6 +42,7 @@ data JourneyLeg = JourneyLeg
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     legPricingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     legSearchId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    liveVehicleAvailableServiceTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     mode :: Domain.Types.Common.MultimodalTravelMode,
@@ -48,7 +51,6 @@ data JourneyLeg = JourneyLeg
     osmExit :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,
     routeDetails :: [Domain.Types.RouteDetails.RouteDetails],
     sequenceNumber :: Kernel.Prelude.Int,
-    serviceTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     startLocation :: Kernel.External.Maps.Google.MapsClient.Types.LatLngV2,
     straightLineEntrance :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,
     straightLineExit :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,

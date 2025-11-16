@@ -23,6 +23,7 @@ imports:
   VehicleVariant: Domain.Types.VehicleVariant
   ServiceTierType: Domain.Types.Common
   TagNameValue: Lib.Yudhishthira.Types
+  BillingCategory: SharedLogic.Type
 
 Ride:
   tableName: ride
@@ -50,6 +51,7 @@ Ride:
     merchantOperatingCityId: Id MerchantOperatingCity
     status: RideStatus|NoRelation
     driverId: Id Person
+    fleetOwnerId: Maybe (Id Person)
     otp: Text
     endOtp: Maybe Text
     trackingUrl: BaseUrl
@@ -66,6 +68,7 @@ Ride:
     tripEndPos: Maybe LatLong
     previousRideTripEndPos: Maybe LatLong
     previousRideTripEndTime: Maybe UTCTime
+    cancellationChargesOnCancel : Maybe HighPrecMoney
     isDriverSpecialLocWarrior: Bool
     isAdvanceBooking : Bool
     isPetRide: Bool
@@ -79,6 +82,7 @@ Ride:
     endOdometerReading: Maybe OdometerReading
     createdAt: UTCTime
     updatedAt: UTCTime
+    billingCategory: BillingCategory
     driverDeviatedToTollRoute: Maybe Bool
     driverDeviatedFromRoute: Maybe Bool
     numberOfSnapToRoadCalls: Maybe Int
@@ -121,6 +125,9 @@ Ride:
     isPickupOrDestinationEdited: Maybe Bool
     isInsured: Bool
     insuredAmount: Maybe Text
+    driverCancellationPenaltyFeeId: Maybe Text
+    driverCancellationPenaltyAmount: Maybe HighPrecMoney
+    driverCancellationPenaltyWaivedReason: Maybe Text
 
   sqlType:
     id: character(36)
@@ -210,6 +217,7 @@ Ride:
     estimatedEndTimeRange: Storage.Queries.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
     rideTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
     isInsured: Kernel.Prelude.fromMaybe False isInsured|E
+    billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -245,6 +253,7 @@ Ride:
     estimatedEndTimeRangeEnd: Kernel.Prelude.fmap (.end)|I
     rideTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
     isInsured: Kernel.Prelude.Just|I
+    billingCategory: Kernel.Prelude.Just billingCategory|E
 
   beamType:
     trackingUrl: Text
@@ -263,6 +272,7 @@ Ride:
     clientManufacturer: Maybe Text
     rideTags: "Maybe [Text]"
     isInsured: Maybe Bool
+    billingCategory: Maybe BillingCategory
 
   constraints:
     id: PrimaryKey
@@ -294,6 +304,18 @@ Ride:
     updateIsPickupOrDestinationEdited:
       kvFunction: updateOneWithKV
       params: [isPickupOrDestinationEdited]
+      where: id
+    updateDriverCancellationPenalty:
+      kvFunction: updateOneWithKV
+      params: [driverCancellationPenaltyFeeId, driverCancellationPenaltyAmount]
+      where: id
+    updateDriverCancellationPenaltyWaivedReasonAndAmount:
+      kvFunction: updateOneWithKV
+      params: [driverCancellationPenaltyWaivedReason, driverCancellationPenaltyAmount]
+      where: id
+    updateCancellationChargesOnCancel:
+      kvFunction: updateOneWithKV
+      params: [cancellationChargesOnCancel]
       where: id
 
   excludedDefaultQueries:

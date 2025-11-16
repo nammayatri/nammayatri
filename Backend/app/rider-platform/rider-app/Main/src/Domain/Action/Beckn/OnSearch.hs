@@ -39,6 +39,7 @@ import qualified API.UI.Confirm as DConfirm
 import qualified API.UI.Select as DSelect
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
+import Data.Aeson as A
 import qualified Data.Aeson
 import Data.List (sortBy)
 import Data.Maybe ()
@@ -54,6 +55,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.NyRegularInstanceLog as DNyRegularInstanceLog
 import qualified Domain.Types.NyRegularSubscription as NyRegularSubscription
+import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.QuoteBreakup as DQuoteBreakup
 import qualified Domain.Types.RentalDetails as DRentalDetails
@@ -74,8 +76,13 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CallBPPInternal as Est
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
+import qualified SharedLogic.EstimateTags as SEST
+import qualified SharedLogic.Search as SLS
+import qualified SharedLogic.Type as SLT
 import Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
@@ -87,8 +94,10 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
+import qualified Tools.DynamicLogic as DynamicLogic
 import Tools.Error
 import Tools.Event
 import qualified Tools.Metrics as Metrics
@@ -149,6 +158,7 @@ data EstimateInfo = EstimateInfo
     vehicleCategory :: Enums.VehicleCategory,
     vehicleIconUrl :: Maybe BaseUrl,
     tipOptions :: Maybe [Int],
+    qar :: Maybe Double,
     -- petCharges :: Maybe Price,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text
@@ -286,8 +296,20 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       pure ()
     else do
       deploymentVersion <- asks (.version)
+      person <- QP.findById searchRequest.riderId >>= fromMaybeM (PersonDoesNotExist searchRequest.riderId.getId)
+      localTime <- getLocalCurrentTime 19800
+      estimates' <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion (fromMaybe [] ((Just . (.boostSearchPreSelectionServiceTierConfig)) =<< riderConfig))) (filterEstimtesByPrefference estimatesInfo blackListedVehicles mbNySubscription) -- add to SR
+      autoPrice <- getAutoPrice estimates'
+      nonACPrice <- getNonACPrice estimates'
+      cabQar <- getCabQar estimates'
+      autoQar <- getAutoQar estimates'
+      let userType = case personVehicleCategory person of
+            Just Enums.AUTO_RICKSHAW -> Just SEST.AUTO
+            Just Enums.CAB -> Just SEST.CAB
+            _ -> Nothing
 
-      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion (fromMaybe [] ((Just . (.boostSearchPreSelectionServiceTierConfig)) =<< riderConfig))) (filterEstimtesByPrefference estimatesInfo blackListedVehicles mbNySubscription) -- add to SR
+      -- let estimateTagsData = map (getEstimateTagsData autoQar cabQar autoPrice nonACPrice userType) estimates
+      estimates <- traverse (getTaggedEstimate autoQar cabQar autoPrice nonACPrice userType localTime searchRequest.merchantOperatingCityId) estimates'
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles mbNySubscription)
       updateRiderPreferredOption quotes
       let mbRequiredEstimate = listToMaybe $ sortBy (comparing ((DEstimate.minFare . DEstimate.totalFareRange) <&> (.amount)) <> comparing ((DEstimate.maxFare . DEstimate.totalFareRange) <&> (.amount))) estimates
@@ -301,7 +323,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
       when (searchRequest.isMeterRideSearch == Just True) $ do
         quoteForMeterRide <- listToMaybe quotes & fromMaybeM (InvalidRequest "Quote for meter ride doesn't exist")
-        void $ DConfirm.confirm' (searchRequest.riderId, merchant.id) quoteForMeterRide.id Nothing Nothing
+        void $ DConfirm.confirm' (searchRequest.riderId, merchant.id) quoteForMeterRide.id Nothing Nothing Nothing
 
       whenJust mbRequiredEstimate $ \requiredEstimate -> do
         shouldAutoSelect <- SLCF.createFares requestId.getId requiredEstimate.id.getId
@@ -333,10 +355,12 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
                 autoAssignEnabled = True,
                 autoAssignEnabledV2 = Just True,
                 paymentMethodId = Nothing,
+                paymentInstrument = Nothing,
                 otherSelectedEstimates = Nothing,
                 isAdvancedBookingEnabled = Nothing,
                 deliveryDetails = Nothing,
                 disabilityDisable = Nothing,
+                billingCategory = Nothing,
                 preferSafetyPlus = Nothing
               }
       void $ DSelect.select2' (personId, merchant.id) estimateId selectReq
@@ -499,6 +523,8 @@ buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSel
         isMultimodalSearch = searchRequest.isMultimodalSearch,
         boostSearchPreSelectionServiceTierConfig = (Just . (.orderArray)) =<< boostSearchPreSelectionServiceTier,
         vehicleCategory = Just vehicleCategory,
+        qar = qar,
+        estimateTags = Nothing,
         ..
       }
 
@@ -553,6 +579,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
         distanceUnit = searchRequest.distanceUnit,
         tripCategory = Just tripCategory,
         isSafetyPlus = False,
+        billingCategory = SLT.PERSONAL,
         ..
       }
 
@@ -666,3 +693,64 @@ buildQuoteBreakUp quotesItems quoteId merchantId merchantOperatingCityId =
             updatedAt = now,
             ..
           }
+
+-- getEstimateTags :: SEST.EstimateTagsData ->  Flow (Maybe [Text])
+getTaggedEstimate ::
+  Maybe Double ->
+  Maybe Double ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe SEST.UserType ->
+  UTCTime ->
+  Id DMerchantOperatingCity.MerchantOperatingCity ->
+  DEstimate.Estimate ->
+  Flow DEstimate.Estimate
+getTaggedEstimate autoQar cabQar autoPrice nonACPrice userType localTime mocId estimate = do
+  let logicInput =
+        SEST.EstimateTagsData
+          { autoQAR = autoQar,
+            cabQAR = cabQar,
+            autoPrice = autoPrice,
+            cabPrice = nonACPrice,
+            userType = userType,
+            vehicleCategory = estimate.vehicleCategory,
+            vehicleServiceTierType = estimate.vehicleServiceTierType
+          }
+  (allLogics, _mbVersion) <- DynamicLogic.getAppDynamicLogic (cast mocId) LYT.ESTIMATE_TAGS localTime Nothing Nothing
+  response <- withTryCatch "runLogics:EstimateTags" $ LYTU.runLogics allLogics logicInput
+  res <- case response of
+    Left e -> do
+      logError $ "Error in running EstimateTagsLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics
+      return (Just [])
+    Right resp -> do
+      case (A.fromJSON resp.result :: Result SEST.EstimateTagsResult) of
+        A.Success result -> do
+          logTagInfo ("estimateTags-" <> getId estimate.id) ("result.tags: " <> show result.tags)
+          return (Just result.tags)
+        A.Error e -> do
+          logError $ "Error in parsing EstimateTagsResult - " <> show e <> " - " <> show resp.result <> " - " <> show logicInput <> " - " <> show allLogics
+          return Nothing
+  return $ estimate{estimateTags = res}
+
+getAutoPrice :: [DEstimate.Estimate] -> Flow (Maybe HighPrecMoney)
+getAutoPrice estimates = do
+  let autoPrice = listToMaybe $ filter (\estimate -> estimate.vehicleServiceTierType == DVST.AUTO_RICKSHAW) estimates
+  pure $ autoPrice <&> (.totalFareRange.maxFare.amount)
+
+getNonACPrice :: [DEstimate.Estimate] -> Flow (Maybe HighPrecMoney)
+getNonACPrice estimates = do
+  let nonACPrice = listToMaybe $ filter (\estimate -> estimate.vehicleServiceTierType == DVST.TAXI) estimates
+  pure $ nonACPrice <&> (.totalFareRange.maxFare.amount)
+
+getAutoQar :: [DEstimate.Estimate] -> Flow (Maybe Double)
+getAutoQar estimates = do
+  let autoQar = listToMaybe $ filter (\estimate -> estimate.vehicleServiceTierType == DVST.AUTO_RICKSHAW) estimates
+  pure $ autoQar >>= (.qar)
+
+getCabQar :: [DEstimate.Estimate] -> Flow (Maybe Double)
+getCabQar estimates = do
+  let cabQar = listToMaybe $ filter (\estimate -> estimate.vehicleServiceTierType == DVST.TAXI) estimates
+  pure $ cabQar >>= (.qar)
+
+personVehicleCategory :: Person.Person -> Maybe Enums.VehicleCategory
+personVehicleCategory person = SLS.mostFrequent person.lastUsedVehicleCategories
