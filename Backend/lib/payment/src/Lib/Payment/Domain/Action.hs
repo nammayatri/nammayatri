@@ -1072,7 +1072,7 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
         DOrder.PaymentOrder
           { id = Id orderId,
             shortId = ShortId req.orderId, ---- to check --------
-            paymentServiceOrderId = "Unkown",
+            paymentServiceOrderId = "Unknown",
             requestId = Nothing,
             service = Nothing,
             clientId = Nothing,

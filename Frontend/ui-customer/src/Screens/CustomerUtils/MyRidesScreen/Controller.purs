@@ -352,7 +352,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , showDestination : if (decodeAddress $ Booking destination) == "" then "gone" else "visible" 
   , rideScheduledTime : fromMaybe "" ride.rideScheduledTime
   , totalTime : show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min"
-  , vehicleModel : if (rideDetails.vehicleModel `DA.elem` ["", "Unkown"]) then fromMaybe (HU.getVariantRideType rideDetails.vehicleVariant) ride.serviceTierName else rideDetails.vehicleModel
+  , vehicleModel : if (rideDetails.vehicleModel `DA.elem` ["", "Unknown"]) then fromMaybe (HU.getVariantRideType rideDetails.vehicleVariant) ride.serviceTierName else rideDetails.vehicleModel
   , rideStartTimeUTC : fromMaybe "" ride.rideStartTime
   , isAirConditioned : ride.isAirConditioned
   , providerName : ride.agencyName

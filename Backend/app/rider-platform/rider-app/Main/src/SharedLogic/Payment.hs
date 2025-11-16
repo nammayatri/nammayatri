@@ -130,7 +130,7 @@ paymentErrorHandler booking exec = do
     cancelBooking err = do
       let req =
             DCancel.CancelReq
-              { reasonCode = SCR.CancellationReasonCode (maybe "UNKOWN_ERROR" toErrorCode err),
+              { reasonCode = SCR.CancellationReasonCode (maybe "UNKNOWN_ERROR" toErrorCode err),
                 reasonStage = SCR.OnAssign,
                 additionalInfo = err >>= toMessage,
                 reallocate = Nothing,
