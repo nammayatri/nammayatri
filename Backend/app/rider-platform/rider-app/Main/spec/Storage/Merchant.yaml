@@ -58,6 +58,7 @@ Merchant:
     geoHashPrecisionValue: Int
     minimumDriverRatesCount: Int
     signingPublicKey: Base64
+    signingPrivateKey: Maybe Base64
     cipherText: Maybe Base64
     signatureExpiry: Int
     createdAt: UTCTime
@@ -155,6 +156,7 @@ Merchant:
     numOfAllowedEditPickupLocationAttemptsThreshold: int
     numOfAllowedEditLocationAttemptsThreshold: int
     signingPublicKey: text
+    signingPrivateKey: text
     signatureExpiry: int
     state: text
     fallbackShortId: text

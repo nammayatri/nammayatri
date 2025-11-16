@@ -21,6 +21,7 @@ module API.UI.Registration
     DRegistration.PasswordAuthReq (..),
     DRegistration.GetTokenReq (..),
     DRegistration.TempCodeRes (..),
+    DRegistration.CustomerSignatureRes (..),
     API,
     handler,
   )
@@ -41,6 +42,7 @@ import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth (TokenAuth)
 import Tools.SignatureAuth (SignatureAuth, SignatureAuthResult (..))
+import Tools.SignatureResponseBody (SignedResponse)
 
 ---- Registration Flow ------
 type API =
@@ -80,6 +82,9 @@ type API =
            :<|> "generate-temp-app-code"
              :> TokenAuth
              :> Post '[JSON] DRegistration.TempCodeRes
+           :<|> "makeSignature"
+             :> TokenAuth
+             :> Post '[JSON] (SignedResponse DRegistration.CustomerSignatureRes)
            :<|> "logout"
              :> TokenAuth
              :> Post '[JSON] APISuccess
@@ -94,6 +99,7 @@ handler =
     :<|> verify
     :<|> resend
     :<|> generateTempAppCode
+    :<|> makeSignature
     :<|> logout
 
 auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
@@ -118,6 +124,9 @@ resend tokenId mbSenderHash = withFlowHandlerAPI $ DRegistration.resend tokenId 
 
 generateTempAppCode :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DRegistration.TempCodeRes
 generateTempAppCode (perosnId, _) = withFlowHandlerAPI $ DRegistration.generateTempAppCode perosnId
+
+makeSignature :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler (SignedResponse DRegistration.CustomerSignatureRes)
+makeSignature (personId, merchantId) = withFlowHandlerAPI $ DRegistration.makeSignature personId merchantId
 
 logout :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
 logout (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRegistration.logout personId

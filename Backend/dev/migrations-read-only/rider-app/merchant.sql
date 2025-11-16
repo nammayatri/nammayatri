@@ -89,3 +89,8 @@ ALTER TABLE atlas_app.merchant ADD COLUMN enable_for_multiple_search_issue boole
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant ADD COLUMN stuck_ride_auto_cancellation_buffer integer;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant ADD COLUMN signing_private_key text ;

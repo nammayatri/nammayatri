@@ -23,6 +23,7 @@ module Domain.Action.UI.Registration
     PasswordAuthReq (..),
     GetTokenReq (..),
     TempCodeRes (..),
+    CustomerSignatureRes (..),
     auth,
     signatureAuth,
     createPerson,
@@ -36,6 +37,7 @@ module Domain.Action.UI.Registration
     passwordBasedAuth,
     getToken,
     generateTempAppCode,
+    makeSignature,
   )
 where
 
@@ -106,6 +108,7 @@ import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
+import Tools.SignatureResponseBody (SignatureResponseConfig (..), SignedResponse, wrapWithSignature)
 import Tools.Whatsapp
 import qualified Tools.Whatsapp as Whatsapp
 
@@ -179,6 +182,13 @@ data GetTokenReq = GetTokenReq
 
 data TempCodeRes = TempCodeRes
   {tempCode :: Text}
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data CustomerSignatureRes = CustomerSignatureRes
+  { customerId :: Id SP.Person,
+    customerPhoneNumber :: Maybe Text,
+    customerName :: Maybe Text
+  }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data PasswordAuthReq = PasswordAuthReq
@@ -436,6 +446,39 @@ generateTempAppCode personId = do
   where
     mkTempAppSecretKey :: Text
     mkTempAppSecretKey = "rider-platform:temp-app-secret-key:"
+
+makeSignature ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  Id SP.Person ->
+  Id DMerchant.Merchant ->
+  m (SignedResponse CustomerSignatureRes)
+makeSignature personId merchantId = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
+  merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+
+  phoneNumber <- mapM decrypt person.mobileNumber
+  let fullName = case (person.firstName, person.lastName) of
+        (Just fn, Just ln) -> Just $ fn <> " " <> ln
+        (Just fn, Nothing) -> Just fn
+        _ -> Nothing
+  let customerData =
+        CustomerSignatureRes
+          { customerId = person.id,
+            customerPhoneNumber = phoneNumber,
+            customerName = fullName
+          }
+
+  signingPrivateKey <- merchant.signingPrivateKey & fromMaybeM (InvalidRequest "Signing private key not found")
+  let signatureConfig =
+        SignatureResponseConfig
+          { merchantShortId = merchant.shortId,
+            signingPrivateKey = signingPrivateKey
+          }
+
+  wrapWithSignature signatureConfig customerData
 
 getToken ::
   ( CacheFlow m r,

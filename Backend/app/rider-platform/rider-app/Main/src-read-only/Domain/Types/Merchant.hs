@@ -55,6 +55,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     scheduleRideBufferTime :: Kernel.Prelude.NominalDiffTime,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     signatureExpiry :: Kernel.Prelude.Int,
+    signingPrivateKey :: Kernel.Prelude.Maybe Kernel.Types.Base64.Base64,
     signingPublicKey :: Kernel.Types.Base64.Base64,
     stuckRideAutoCancellationBuffer :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     subscriberId :: Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber,

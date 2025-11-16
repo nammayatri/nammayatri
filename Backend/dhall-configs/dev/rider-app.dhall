@@ -434,6 +434,7 @@ in  { esqDBCfg
     , nearByDriverAPIRateLimitOptions
     , inMemConfig
     , disableViaPointTimetableCheck
+    , parkingApiKey = sec.parkingApiKey
     , frfsMetricsApiKey = "test-frfs-metrics-api-key-12345"
     , frfsMetricsRateLimitHits = +100
     , frfsMetricsRateLimitWindowSec = +60
