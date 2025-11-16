@@ -107,7 +107,6 @@ import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
-import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
@@ -254,10 +253,8 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
                     Just paymentOrder -> do
                       let paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
                           merchantOperatingCityId = fromMaybe booking.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
-                          commonPersonId = cast @Domain.Types.Person.Person @DPayment.Person personId
                           orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
-                      orderStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
-                      void $ SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusResponse
+                      void $ SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
                       createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType
                       return (createOrderResp, Just paymentBooking.status)
                     Nothing -> return (Nothing, Nothing)

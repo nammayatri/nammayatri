@@ -24,7 +24,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
-import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
@@ -112,8 +111,7 @@ processRefundStatus refundEntry person paymentOrder = do
   if refundEntry.status `elem` nonTerminalStatuses
     then do
       let orderStatusCall = Payment.orderStatus person.merchantId person.merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
-          commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
-      paymentStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
+      paymentStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
       let matchingRefund = find (\refund -> refund.requestId == refundEntry.id.getId) paymentStatusResponse.refunds
       case matchingRefund of
         Just refund -> do
@@ -123,7 +121,7 @@ processRefundStatus refundEntry person paymentOrder = do
             logInfo $ "Updated refund status for " <> refundEntry.id.getId <> " to " <> show newStatus
 
           when (newStatus `notElem` nonTerminalStatuses) $ do
-            void $ SPayment.orderStatusHandler paymentServiceType paymentOrder paymentStatusResponse
+            void $ SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
           return True
         Nothing -> return False
     else return False

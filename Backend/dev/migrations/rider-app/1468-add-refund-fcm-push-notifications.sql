@@ -42,5 +42,3 @@ FROM
             ('REFUND_SUCCESS', 'BBPS_REFUND_SUCCESS', 'Refund Processed ', 'Your refund has been processed successfully. Please check your bank account for details.'),
             ('REFUND_FAILED', 'BBPS_REFUND_FAILED', 'Refund Failed ', 'Your refund wasn''t processed. Tap to retry.')
     ) AS data (fcm_notification_type, key, title, body);
-
-ALTER TABLE atlas_app.payment_order ADD COLUMN payment_fulfillment_status TEXT;

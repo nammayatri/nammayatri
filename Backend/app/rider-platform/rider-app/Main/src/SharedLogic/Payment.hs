@@ -12,6 +12,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParkingTransaction as DPT
@@ -36,6 +37,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
@@ -43,6 +45,7 @@ import SharedLogic.JobScheduler
 import qualified SharedLogic.JobScheduler as JobScheduler
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.ParkingTransaction as QPT
 import qualified Storage.Queries.Person as QPerson
@@ -178,9 +181,53 @@ orderStatusHandler ::
   ) =>
   DOrder.PaymentServiceType ->
   DOrder.PaymentOrder ->
+  (Payment.OrderStatusReq -> m Payment.OrderStatusResp) ->
+  m DPayment.PaymentStatusResp
+orderStatusHandler paymentService paymentOrder orderStatusCall =
+  do
+    Redis.withCrossAppRedis $
+      Redis.whenWithLockRedisAndReturnValue
+        makePaymentOrderStatusHandlerLockKey
+        60
+        ( do
+            orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
+            orderStatusHandlerWithRefunds paymentService paymentOrder orderStatusResponse
+        )
+    >>= \case
+      Right updatedPaymentStatusResponse -> return updatedPaymentStatusResponse
+      Left _ -> do
+        logError $ "Order status handler lock not acquired for payment order, falling back to status updated by the last thread that released the acquired lock for eventual consitency: " <> show paymentOrder.id.getId
+        orderStatusResponse <- DPayment.orderStatusServiceImmutable paymentOrder.personId paymentOrder.id orderStatusCall
+        mbPaymentOrder <- QPaymentOrder.findById paymentOrder.id
+        let updatedPaymentOrder = fromMaybe paymentOrder mbPaymentOrder
+        case orderStatusResponse of
+          DPayment.PaymentStatus {..} -> return $ DPayment.PaymentStatus {DPayment.paymentFulfillmentStatus = updatedPaymentOrder.paymentFulfillmentStatus, DPayment.domainEntityId = updatedPaymentOrder.domainEntityId, ..}
+          _ -> return orderStatusResponse
+  where
+    makePaymentOrderStatusHandlerLockKey :: Text
+    makePaymentOrderStatusHandlerLockKey = "orderStatusHandler:paymentOrder:" <> paymentOrder.id.getId
+
+orderStatusHandlerWithRefunds ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    SchedulerFlow r,
+    EsqDBReplicaFlow m r,
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+    HasBAPMetrics m r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
+  DOrder.PaymentServiceType ->
+  DOrder.PaymentOrder ->
   DPayment.PaymentStatusResp ->
   m DPayment.PaymentStatusResp
-orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
+orderStatusHandlerWithRefunds paymentService paymentOrder paymentStatusResponse = do
   refundStatusHandler paymentOrder paymentStatusResponse.refunds paymentService
   eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId <-
     withTryCatch "orderStatusHandler:orderStatusHandler" $
@@ -204,42 +251,40 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
     case paymentStatusResponse.status of
       Payment.CHARGED -> do
         case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
-          Right paymentFulfillmentStatus ->
-            case paymentFulfillmentStatus of
-              (DPayment.FulfillmentFailed, _, _) -> initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
-              (DPayment.FulfillmentPending, _, _) -> do
+          Right paymentFullfillmentStatusWithEntityIdAndTransactionId ->
+            case paymentFullfillmentStatusWithEntityIdAndTransactionId of
+              (DPayment.FulfillmentFailed, domainEntityId, _) -> do
+                paymentStatusRespWithRefund <- initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
+                return $ mkPaymentStatusResp paymentStatusRespWithRefund (Just DPayment.FulfillmentFailed) domainEntityId
+              -- If Payment Charged after the Order Validity, then initiate the Refund for the Customer
+              (DPayment.FulfillmentPending, domainEntityId, _) -> do
                 now <- getCurrentTime
                 case paymentOrder.validTill of
                   Just orderValidTill -> do
                     if now > orderValidTill
-                      then initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
-                      else return paymentStatusResponse
-                  _ -> return paymentStatusResponse
-              _ -> return paymentStatusResponse
+                      then do
+                        paymentStatusRespWithRefund <- initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
+                        return $ mkPaymentStatusResp paymentStatusRespWithRefund (Just DPayment.FulfillmentPending) domainEntityId
+                      else return $ mkPaymentStatusResp paymentStatusResponse (Just DPayment.FulfillmentPending) domainEntityId
+                  _ -> return $ mkPaymentStatusResp paymentStatusResponse (Just DPayment.FulfillmentPending) domainEntityId
+              (paymentFulfillmentStatus, domainEntityId, _) -> return $ mkPaymentStatusResp paymentStatusResponse (Just paymentFulfillmentStatus) domainEntityId
           Left err -> do
             logError $ "Error in payment fullfillment status handler: " <> show err
-            case paymentOrder.paymentFulfillmentStatus of
-              Just DPayment.FulfillmentPending -> initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
-              _ -> return paymentStatusResponse
-      _ -> return paymentStatusResponse
-  let paymentStatusResponseWithFulfillmentStatus =
-        case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
-          Right (paymentFulfillmentStatus', domainEntityId', _) ->
-            case finalPaymentStatusResponse of
-              DPayment.PaymentStatus {..} -> DPayment.PaymentStatus {DPayment.paymentFulfillmentStatus = Just paymentFulfillmentStatus', DPayment.domainEntityId = domainEntityId', ..}
-              _ -> finalPaymentStatusResponse
-          Left _ -> finalPaymentStatusResponse
+            return $ mkPaymentStatusResp paymentStatusResponse paymentOrder.paymentFulfillmentStatus paymentOrder.domainEntityId
+      _ -> return $ mkPaymentStatusResp paymentStatusResponse paymentOrder.paymentFulfillmentStatus paymentOrder.domainEntityId
+  -- Create the Recon Entry and Trigger the Refund Notifications
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
-    Right (newPaymentFulfillmentStatus, _, Just domainTransactionId) -> do
+    Right (newPaymentFulfillmentStatus, _, mbDomainTransactionId) -> do
       whenJust paymentOrder.paymentFulfillmentStatus $ \oldPaymentFulfillmentStatus -> do
         when (newPaymentFulfillmentStatus /= oldPaymentFulfillmentStatus) $ do
           -- Recon Entry
-          void $
-            withTryCatch "createReconEntry" $ do
-              when (newPaymentFulfillmentStatus == DPayment.FulfillmentSucceeded) $ do
-                case paymentService of
-                  DOrder.FRFSPassPurchase -> Pass.createPassReconEntry paymentStatusResponse domainTransactionId
-                  _ -> pure ()
+          whenJust mbDomainTransactionId $ \domainTransactionId -> do
+            void $
+              withTryCatch "createReconEntry" $ do
+                when (newPaymentFulfillmentStatus == DPayment.FulfillmentSucceeded) $ do
+                  case paymentService of
+                    DOrder.FRFSPassPurchase -> Pass.createPassReconEntry paymentStatusResponse domainTransactionId
+                    _ -> pure ()
           -- Refund Notify
           fork "Process Refunds Notifications" $ do
             let personId = cast @DPayment.Person @Person.Person paymentOrder.personId
@@ -249,8 +294,18 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
               DPayment.FulfillmentRefunded -> TNotifications.notifyRefundNotification Notification.REFUND_SUCCESS paymentOrder.id personId paymentService
               _ -> pure ()
     _ -> pure ()
-  QPaymentOrder.updatePaymentFulfillmentStatus paymentOrder.id paymentStatusResponseWithFulfillmentStatus.paymentFulfillmentStatus
-  return paymentStatusResponseWithFulfillmentStatus
+  -- Update the Payment Order with the new payment fulfillment status, domain entity id and domain transaction id
+  case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
+    Right (_, _, domainTransactionId) -> do
+      QPaymentOrder.updatePaymentFulfillmentStatus paymentOrder.id finalPaymentStatusResponse.paymentFulfillmentStatus finalPaymentStatusResponse.domainEntityId domainTransactionId
+    _ -> pure ()
+  return finalPaymentStatusResponse
+  where
+    mkPaymentStatusResp :: DPayment.PaymentStatusResp -> Maybe DPayment.PaymentFulfillmentStatus -> Maybe Text -> DPayment.PaymentStatusResp
+    mkPaymentStatusResp paymentStatusResponse' paymentFulfillmentStatus' domainEntityId' = do
+      case paymentStatusResponse' of
+        DPayment.PaymentStatus {..} -> DPayment.PaymentStatus {DPayment.paymentFulfillmentStatus = paymentFulfillmentStatus', DPayment.domainEntityId = domainEntityId', ..}
+        _ -> paymentStatusResponse'
 
 refundStatusHandler ::
   ( EncFlow m r,
@@ -264,20 +319,19 @@ refundStatusHandler ::
   [Payment.RefundsData] ->
   DOrder.PaymentServiceType ->
   m ()
-refundStatusHandler paymentOrder refunds paymentServiceType = do
+refundStatusHandler paymentOrder _ paymentServiceType = do
+  refundsEntry <- QRefunds.findAllByOrderId paymentOrder.shortId
   mapM_
-    ( \refund -> do
-        mbRefundEntry <- DPayment.upsertRefundStatus paymentOrder refund
-        whenJust mbRefundEntry $ \refundEntry -> do
-          case paymentServiceType of
-            DOrder.FRFSBooking -> bookingsRefundStatusHandler refundEntry
-            DOrder.FRFSBusBooking -> bookingsRefundStatusHandler refundEntry
-            DOrder.FRFSMultiModalBooking -> bookingsRefundStatusHandler refundEntry
-            DOrder.FRFSPassPurchase -> passesRefundStatusHandler refundEntry
-            DOrder.ParkingBooking -> parkingBookingRefundStatusHandler refundEntry
-            _ -> pure ()
+    ( \refundEntry -> do
+        case paymentServiceType of
+          DOrder.FRFSBooking -> bookingsRefundStatusHandler refundEntry
+          DOrder.FRFSBusBooking -> bookingsRefundStatusHandler refundEntry
+          DOrder.FRFSMultiModalBooking -> bookingsRefundStatusHandler refundEntry
+          DOrder.FRFSPassPurchase -> passesRefundStatusHandler refundEntry
+          DOrder.ParkingBooking -> parkingBookingRefundStatusHandler refundEntry
+          _ -> pure ()
     )
-    refunds
+    refundsEntry
   where
     bookingsRefundStatusHandler ::
       ( EsqDBFlow m r,
@@ -292,20 +346,22 @@ refundStatusHandler paymentOrder refunds paymentServiceType = do
     bookingsRefundStatusHandler refund = do
       let refundStatus = refund.status
           isRefundApiCallSuccess = refund.isApiCallSuccess
-      bookingPayment <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
-      let bookingPaymentIds = bookingPayment <&> (.id)
+      bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
       mapM_
-        ( \bookingPaymentId ->
+        ( \bookingPayment -> do
+            let bookingPaymentId = bookingPayment.id
+                bookingId = bookingPayment.frfsTicketBookingId
             case refundStatus of
               Payment.REFUND_SUCCESS -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUNDED bookingPaymentId
               Payment.REFUND_FAILURE -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED bookingPaymentId
-              _ ->
+              _ -> do
                 case isRefundApiCallSuccess of
                   Nothing -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING bookingPaymentId
                   Just True -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_INITIATED bookingPaymentId
                   Just False -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED bookingPaymentId
+                QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
         )
-        bookingPaymentIds
+        bookingPayments
 
     passesRefundStatusHandler ::
       ( EsqDBFlow m r,

@@ -174,11 +174,13 @@ instance ToTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
         ..
       }
 
-updatePaymentFulfillmentStatus :: BeamFlow m r => Id DOrder.PaymentOrder -> Maybe DPayment.PaymentFulfillmentStatus -> m ()
-updatePaymentFulfillmentStatus orderId paymentFulfillmentStatus = do
+updatePaymentFulfillmentStatus :: BeamFlow m r => Id DOrder.PaymentOrder -> Maybe DPayment.PaymentFulfillmentStatus -> Maybe Text -> Maybe Text -> m ()
+updatePaymentFulfillmentStatus orderId paymentFulfillmentStatus domainEntityId domainTransactionId = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamPO.paymentFulfillmentStatus paymentFulfillmentStatus,
+      Se.Set BeamPO.domainEntityId domainEntityId,
+      Se.Set BeamPO.domainTransactionId domainTransactionId,
       Se.Set BeamPO.updatedAt now
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
