@@ -214,7 +214,7 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
           Left err -> do
             logError $ "Error in payment fullfillment status handler: " <> show err
             case paymentOrder.paymentFulfillmentStatus of
-              Just DPayment.FulfillmentPending -> initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
+              Just DPayment.FulfillmentPending -> return paymentStatusResponse -- initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
               _ -> return paymentStatusResponse
       _ -> return paymentStatusResponse
   let paymentStatusResponseWithFulfillmentStatus =
