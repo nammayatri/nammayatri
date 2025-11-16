@@ -44,6 +44,7 @@ import Mobility.AppBackend.Fixtures
 import Servant hiding (Context)
 import Servant.Client
 import qualified "rider-app" SharedLogic.Cancel as AppSelect
+import qualified "rider-app" Tools.SignatureResponseBody as SignedResponse
 
 selectQuote2 :: RegToken -> Id AbeEstimate.Estimate -> AppSelect.DSelectReq -> ClientM AppSelect.MultimodalSelectRes
 selectList :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.SelectListRes
@@ -104,6 +105,7 @@ appGetToken :: Reg.GetTokenReq -> ClientM Reg.AuthRes
 appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
 appReInitiateLogin :: Id AppSRT.RegistrationToken -> Maybe Text -> ClientM Reg.ResendAuthRes
 appGenerateTempAppCode :: RegToken -> ClientM Reg.TempCodeRes
+appMakeSignature :: RegToken -> ClientM (SignedResponse.SignedResponse Reg.CustomerSignatureRes)
 logout :: RegToken -> ClientM APISuccess
 appAuth
   :<|> appSignatureAuth
@@ -112,6 +114,7 @@ appAuth
   :<|> appVerify
   :<|> appReInitiateLogin
   :<|> appGenerateTempAppCode
+  :<|> appMakeSignature
   :<|> logout =
     client (Proxy :: Proxy Reg.API)
 
