@@ -85,6 +85,8 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
       Nothing
       ( \driverInfo -> do
           Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetOwnerId) res.person.id
+          -- This function called here also because when flow status will not enable but analytics will enable then we should only compute online status only. And if both the feature is enabled then we should called only one time which I called in flow status section.
+          when (not transporterConfig.analyticsConfig.allowCacheDriverFlowStatus) $ DDriverMode.incrementFleetOperatorStatusKeyForDriver SP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus True
           mOperator <- QFOA.findByFleetOwnerId fleetOwnerId True
           when (isNothing mOperator) $ logTagError "AnalyticsAddDriver" "Operator not found for fleet owner"
           whenJust mOperator $ \operator -> do
@@ -92,6 +94,6 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
             Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
       )
       ( \driverInfo -> do
-          DDriverMode.incrementFleetOperatorStatusKeyForDriver SP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
+          DDriverMode.incrementFleetOperatorStatusKeyForDriver SP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus False
       )
   pure Success

@@ -133,11 +133,13 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
             dr.driverId
             Nothing
             ( \driverInfo -> do
+                -- This function called here also because when flow status will not enable but analytics will enable then we should only compute online status only. And if both the feature is enabled then we should called only one time which I called in flow status section.
+                when (not transporterConfig.analyticsConfig.allowCacheDriverFlowStatus) $ DDriverMode.incrementFleetOperatorStatusKeyForDriver Person.OPERATOR dr.driverId.getId driverInfo.driverFlowStatus True
                 when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig dr.driverId.getId
                 Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig dr.driverId.getId
             )
             ( \driverInfo -> do
-                DDriverMode.incrementFleetOperatorStatusKeyForDriver Person.OPERATOR dr.driverId.getId driverInfo.driverFlowStatus
+                DDriverMode.incrementFleetOperatorStatusKeyForDriver Person.OPERATOR dr.driverId.getId driverInfo.driverFlowStatus False
             )
           incrementOnboardedCount DriverReferral dr.driverId transporterConfig
           return Success
