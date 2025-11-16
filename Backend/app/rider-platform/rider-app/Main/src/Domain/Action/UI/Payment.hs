@@ -128,10 +128,8 @@ getStatus (personId, merchantId) orderId = do
         ticketBooking <- QTB.findById (cast paymentOrder.id)
         return $ ticketBooking <&> (.ticketPlaceId)
       _ -> return Nothing
-  let commonPersonId = cast @DP.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion
-  orderStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
-  SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusResponse
+  let orderStatusCall = Payment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion
+  SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
 
 getOrder ::
   ( CacheFlow m r,
@@ -222,8 +220,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
     callWebhookHandlerWithOrderStatus paymentServiceType' orderShortId orderStatusCall = do
       paymentOrder <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
       let paymentServiceType = fromMaybe paymentServiceType' paymentOrder.paymentServiceType
-      paymentStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
-      SPayment.orderStatusHandler paymentServiceType paymentOrder paymentStatusResponse
+      SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
 
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text
 mkOrderStatusCheckKey orderId status = "lockKey:orderId:" <> orderId <> ":status" <> show status

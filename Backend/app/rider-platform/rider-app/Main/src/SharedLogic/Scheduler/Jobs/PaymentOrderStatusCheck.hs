@@ -16,7 +16,6 @@ module SharedLogic.Scheduler.Jobs.PaymentOrderStatusCheck where
 
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Person as DP
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -25,7 +24,6 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
@@ -133,7 +131,4 @@ processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
   person <- QPerson.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
   let paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
       orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
-      commonPersonId = cast @DP.Person @DPayment.Person person.id
-
-  paymentStatusResponse <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
-  void $ SPayment.orderStatusHandler paymentServiceType paymentOrder paymentStatusResponse
+  void $ SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall

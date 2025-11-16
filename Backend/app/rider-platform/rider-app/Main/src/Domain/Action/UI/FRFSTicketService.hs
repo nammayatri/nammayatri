@@ -1058,7 +1058,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                       txnId <- getSuccessTransactionId transactions
                       let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
                       -- setNxExpire
-                      isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
+                      isLockAcquired <- Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
                       when isLockAcquired $ do
                         void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.SUCCESS paymentBooking.id
                         void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id

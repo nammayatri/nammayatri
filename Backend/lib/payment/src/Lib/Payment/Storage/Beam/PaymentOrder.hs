@@ -66,7 +66,9 @@ data PaymentOrderT f = PaymentOrderT
     updatedAt :: B.C f UTCTime,
     merchantOperatingCityId :: B.C f (Maybe Text),
     effectAmount :: B.C f (Maybe HighPrecMoney),
-    paymentFulfillmentStatus :: B.C f (Maybe PaymentFulfillmentStatus)
+    paymentFulfillmentStatus :: B.C f (Maybe PaymentFulfillmentStatus),
+    domainEntityId :: B.C f (Maybe Text),
+    domainTransactionId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
