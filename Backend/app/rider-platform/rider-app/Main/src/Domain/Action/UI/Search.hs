@@ -160,6 +160,7 @@ extractSearchDetails now = \case
         vehicleCategory = Nothing,
         currentLocation = Nothing,
         busLocationData = [],
+        numberOfLuggages = numberOfLuggages,
         ..
       }
   RentalSearch RentalSearchReq {..} ->
@@ -177,6 +178,7 @@ extractSearchDetails now = \case
         vehicleCategory = Nothing,
         currentLocation = Nothing,
         busLocationData = [],
+        numberOfLuggages = numberOfLuggages,
         ..
       }
   InterCitySearch InterCitySearchReq {..} ->
@@ -191,6 +193,7 @@ extractSearchDetails now = \case
         vehicleCategory = Nothing,
         currentLocation = Nothing,
         busLocationData = [],
+        numberOfLuggages = numberOfLuggages,
         ..
       }
   AmbulanceSearch OneWaySearchReq {..} ->
@@ -209,6 +212,7 @@ extractSearchDetails now = \case
         vehicleCategory = Nothing,
         currentLocation = Nothing,
         busLocationData = [],
+        numberOfLuggages = numberOfLuggages,
         ..
       }
   DeliverySearch OneWaySearchReq {..} ->
@@ -227,6 +231,7 @@ extractSearchDetails now = \case
         vehicleCategory = Nothing,
         currentLocation = Nothing,
         busLocationData = [],
+        numberOfLuggages = numberOfLuggages,
         ..
       }
   PTSearch PublicTransportSearchReq {..} ->
@@ -247,6 +252,7 @@ extractSearchDetails now = \case
         destinationStopCode = Just destinationStopCode,
         originStopCode = Just originStopCode,
         busLocationData = fromMaybe [] busLocationData,
+        numberOfLuggages = Nothing,
         ..
       }
 
@@ -390,7 +396,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber,
+        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber numberOfLuggages,
         ..
       }
   where
@@ -418,7 +424,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
-    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch phoneNumber = do
+    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch phoneNumber numberOfLuggages = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
       let reserveTag = case searchRequest.searchMode of
@@ -432,6 +438,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                      (Beckn.DURATION_INFO_IN_S, show . (.getSeconds) <$> duration),
                      (Beckn.RETURN_TIME, show <$> returnTime),
                      (Beckn.ROUND_TRIP, Just $ show roundTrip),
+                     (Beckn.NUMBER_OF_LUGGAGE, show <$> numberOfLuggages),
                      (Beckn.WAYPOINTS, LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints),
                      (Beckn.MULTIPLE_ROUTES, LT.toStrict . TE.decodeUtf8 . encode <$> mbMultipleRoutes),
                      (Beckn.IS_METER_RIDE_SEARCH, show <$> isMeterRideSearch),

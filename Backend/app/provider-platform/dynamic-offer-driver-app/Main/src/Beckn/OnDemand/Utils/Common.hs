@@ -1263,6 +1263,9 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_STOP_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PER_STOP_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.LUGGAGE_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RETURN_FEE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.BOOTH_CHARGE)
         DFParams.Slab ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -1278,6 +1281,9 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.LUGGAGE_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RETURN_FEE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.BOOTH_CHARGE)
         DFParams.Rental ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -1292,6 +1298,9 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.LUGGAGE_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RETURN_FEE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.BOOTH_CHARGE)
         _ -> True
 
 type MerchantShortId = Text

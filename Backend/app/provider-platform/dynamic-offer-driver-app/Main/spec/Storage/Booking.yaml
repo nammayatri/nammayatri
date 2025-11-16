@@ -97,6 +97,7 @@ Booking:
     isInsured: Bool
     insuredAmount: Maybe Text
     exotelDeclinedCallStatusReceivingTime: Maybe UTCTime
+    numberOfLuggages: Maybe Int
 
   excludedFields:
     - merchantId

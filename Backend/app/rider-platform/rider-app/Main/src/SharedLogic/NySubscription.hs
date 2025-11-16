@@ -79,7 +79,8 @@ triggerSubscriptionSearch subscription = do
             platformType = Nothing,
             isReserveRide = Just True,
             subscriptionId = Just subscription.id,
-            verifyBeforeCancellingOldBooking = Just True
+            verifyBeforeCancellingOldBooking = Just True,
+            numberOfLuggages = Nothing
           }
   merchantId <- subscription.merchantId & fromMaybeM (InternalError $ "no merchant id for subscription id :" <> subscription.id.getId)
   searchResp <-

@@ -114,7 +114,7 @@ getNearestDrivers NearestDriversReq {..} = do
       then QDBA.getDrivers (driverLocs <&> (.driverId))
       else return []
 
-  logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
+  logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos_) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
   let res = linkArrayList driverLocs driverInfos vehicle drivers driverBankAccounts
   logDebug $ "GetNearestDrivers Result:- " <> show (length res)
   logDebug $ "MetroWarriorDebugging Result:- getNearestDrivers --------person tags res----" <> show res

@@ -290,7 +290,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     distanceUnit = booking.distanceUnit,
                     estimatedCongestionCharge = booking.estimatedCongestionCharge,
                     merchantOperatingCityId = Just booking.merchantOperatingCityId,
-                    mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges
+                    mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
+                    numberOfLuggages = booking.numberOfLuggages
                   }
             QFP.create fareParameters
             let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now

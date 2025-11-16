@@ -99,6 +99,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 isReserveRide = Just False,
                 subscriptionId = Nothing,
                 verifyBeforeCancellingOldBooking = Just True,
+                numberOfLuggages = Nothing,
                 ..
               }
   search _ = throwError (InternalError "Not Supported")

@@ -63,6 +63,7 @@ data Booking = Booking
     isScheduled :: Kernel.Prelude.Bool,
     maxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    numberOfLuggages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelType :: Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType,
     paymentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

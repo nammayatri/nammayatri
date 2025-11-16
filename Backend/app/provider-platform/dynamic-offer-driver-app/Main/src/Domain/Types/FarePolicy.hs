@@ -13,7 +13,7 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 
-module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
+module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy, ReturnFee (..), BoothCharge (..)) where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as DPM
 import Data.Aeson.Types
@@ -37,12 +37,29 @@ import Kernel.Types.Id as KTI
 import Kernel.Utils.GenericPretty
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
 
+data ReturnFee
+  = ReturnFeeFixed HighPrecMoney
+  | ReturnFeePercentage Double
+  deriving (Generic, Show, Eq, FromJSON, Read, Ord, ToJSON, ToSchema)
+
+$(mkBeamInstancesForJSON ''ReturnFee)
+
+data BoothCharge
+  = BoothChargeFixed HighPrecMoney
+  | BoothChargePercentage Double
+  deriving (Generic, Show, Eq, FromJSON, Read, Ord, ToJSON, ToSchema)
+
+$(mkBeamInstancesForJSON ''BoothCharge)
+
 data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
     perStopCharge :: Maybe HighPrecMoney,
+    perLuggageCharge :: Maybe HighPrecMoney,
+    returnFee :: Maybe ReturnFee,
+    boothCharges :: Maybe BoothCharge,
     currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
@@ -147,6 +164,9 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     serviceCharge :: Maybe HighPrecMoney,
     perStopCharge :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
+    perLuggageCharge :: Maybe HighPrecMoney,
+    returnFee :: Maybe ReturnFee,
+    boothCharges :: Maybe BoothCharge,
     currency :: Currency,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,

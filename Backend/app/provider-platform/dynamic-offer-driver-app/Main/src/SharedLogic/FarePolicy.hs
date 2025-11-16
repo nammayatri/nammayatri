@@ -346,7 +346,8 @@ calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration mercha
             currency,
             distanceUnit,
             merchantOperatingCityId = Just merchantOperatingCityId,
-            mbAdditonalChargeCategories = Nothing
+            mbAdditonalChargeCategories = Nothing,
+            numberOfLuggages = Nothing
           }
   SFC.calculateFareParameters params
 
@@ -384,6 +385,25 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
 
       serviceChargeCaption = show Tags.SERVICE_CHARGE
       serviceChargeItem = mkBreakupItem serviceChargeCaption . (mkValue . highPrecMoneyToText) <$> farePolicy.serviceCharge
+
+      luggageChargeCaption = show Tags.LUGGAGE_CHARGE
+      luggageChargeItem = mkBreakupItem luggageChargeCaption . (mkValue . show) <$> farePolicy.perLuggageCharge
+
+      (boothChargeFixedItem, boothChargePercentageItem) =
+        case farePolicy.boothCharges of
+          Just (FarePolicyD.BoothChargeFixed hpm) ->
+            (Just $ mkBreakupItem (show Tags.BOOTH_CHARGE) (mkValue $ highPrecMoneyToText hpm), Nothing)
+          Just (FarePolicyD.BoothChargePercentage d) ->
+            (Nothing, Just $ mkBreakupItem (show Tags.BOOTH_CHARGE_PERCENTAGE) (mkValue $ show d))
+          Nothing -> (Nothing, Nothing)
+
+      (returnFeeFixedItem, returnFeePercentageItem) =
+        case farePolicy.returnFee of
+          Just (FarePolicyD.ReturnFeeFixed hpm) ->
+            (Just $ mkBreakupItem (show Tags.RETURN_FEE) (mkValue $ highPrecMoneyToText hpm), Nothing)
+          Just (FarePolicyD.ReturnFeePercentage d) ->
+            (Nothing, Just $ mkBreakupItem (show Tags.RETURN_FEE_PERCENTAGE) (mkValue $ show d))
+          Nothing -> (Nothing, Nothing)
 
       governmentChargeCaption = show Tags.GOVERNMENT_CHARGE
       governmentChargeItem = mkBreakupItem governmentChargeCaption . (mkValue . show) <$> farePolicy.govtCharges
@@ -443,7 +463,12 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       insuranceChargeItem,
       cardChargePercentageItem,
       fixedCardChargeItem,
-      perStopChargeItem
+      perStopChargeItem,
+      luggageChargeItem,
+      boothChargeFixedItem,
+      boothChargePercentageItem,
+      returnFeeFixedItem,
+      returnFeePercentageItem
     ]
     <> additionalDetailsBreakups
     <> driverExtraFeeBoundsMinFeeItems

@@ -150,7 +150,8 @@ data DSearchReq = DSearchReq
     isMultimodalSearch :: Maybe Bool,
     isReserveRide :: Maybe Bool,
     mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
-    reserveRideEstimate :: Maybe DBppEstimate.BppEstimate
+    reserveRideEstimate :: Maybe DBppEstimate.BppEstimate,
+    numberOfLuggages :: Maybe Int
   }
 
 -- data EstimateExtraInfo = EstimateExtraInfo
@@ -180,6 +181,7 @@ data ValidatedDSearchReq = ValidatedDSearchReq
     isValueAddNP :: Bool,
     driverIdForSearch :: Maybe (Id DP.Person),
     isMeterRideSearch :: Maybe Bool,
+    numberOfLuggages :: Maybe Int,
     isReserveRide :: Maybe Bool,
     reserveRideEstimate :: Maybe DBppEstimate.BppEstimate
   }
@@ -593,6 +595,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         parcelType = Nothing,
         parcelQuantity = Nothing,
         preferSafetyPlus = False,
+        numberOfLuggages = numberOfLuggages,
         ..
       }
 
@@ -650,7 +653,8 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           noOfStops = length searchRequest.stops,
           distanceUnit = searchRequest.distanceUnit,
           merchantOperatingCityId = Just merchantOpCityId,
-          mbAdditonalChargeCategories = Nothing
+          mbAdditonalChargeCategories = Nothing,
+          numberOfLuggages = searchRequest.numberOfLuggages
         }
   quoteId <- Id <$> generateGUID
   void $ cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
@@ -734,7 +738,8 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               currency,
               distanceUnit,
               merchantOperatingCityId = Just merchantOperatingCityId,
-              mbAdditonalChargeCategories = Nothing
+              mbAdditonalChargeCategories = Nothing,
+              numberOfLuggages = mbSearchReq >>= (.numberOfLuggages)
             }
     fareParamsMax <- calculateFareParameters params
     fareParamsMin <-
@@ -810,9 +815,10 @@ validateRequest merchant sReq = do
   (isInterCity, isCrossCity, destinationTravelCityName) <- checkForIntercityOrCrossCity transporterConfig sReq.dropLocation sourceCity merchant
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
-  let isMeterRideSearch = sReq.isMeterRideSearch
-  let isReserveRide = sReq.isReserveRide
-  let reserveRideEstimate = sReq.reserveRideEstimate
+      isMeterRideSearch = sReq.isMeterRideSearch
+      isReserveRide = sReq.isReserveRide
+      reserveRideEstimate = sReq.reserveRideEstimate
+      numberOfLuggages = sReq.numberOfLuggages
   driverIdForSearch <- mapM getDriverIdFromIdentifier $ bool Nothing sReq.driverIdentifier isValueAddNP
   return ValidatedDSearchReq {..}
 

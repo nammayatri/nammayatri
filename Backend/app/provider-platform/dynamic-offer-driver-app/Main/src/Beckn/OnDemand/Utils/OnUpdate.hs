@@ -111,7 +111,10 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.PARKING_CHARGE),
                      Just (show Enums.RIDE_STOP_CHARGES),
                      Just (show Enums.PER_STOP_CHARGES),
-                     Just (show Enums.NIGHT_SHIFT_CHARGE)
+                     Just (show Enums.NIGHT_SHIFT_CHARGE),
+                     Just (show Enums.LUGGAGE_CHARGE),
+                     Just (show Enums.RETURN_FEE),
+                     Just (show Enums.BOOTH_CHARGE)
                    ]
         DFParams.Slab ->
           title
@@ -130,7 +133,10 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.TOLL_CHARGES),
                      Just (show Enums.PET_CHARGES),
-                     Just (show Enums.PARKING_CHARGE)
+                     Just (show Enums.PARKING_CHARGE),
+                     Just (show Enums.LUGGAGE_CHARGE),
+                     Just (show Enums.RETURN_FEE),
+                     Just (show Enums.BOOTH_CHARGE)
                    ]
         DFParams.Rental ->
           title
@@ -147,7 +153,10 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.PET_CHARGES),
-                     Just (show Enums.PARKING_CHARGE)
+                     Just (show Enums.PARKING_CHARGE),
+                     Just (show Enums.LUGGAGE_CHARGE),
+                     Just (show Enums.RETURN_FEE),
+                     Just (show Enums.BOOTH_CHARGE)
                    ]
         DFParams.InterCity ->
           title
@@ -165,7 +174,10 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.EXTRA_DISTANCE_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.PET_CHARGES),
-                     Just (show Enums.PARKING_CHARGE)
+                     Just (show Enums.PARKING_CHARGE),
+                     Just (show Enums.LUGGAGE_CHARGE),
+                     Just (show Enums.RETURN_FEE),
+                     Just (show Enums.BOOTH_CHARGE)
                    ]
         _ -> True
 

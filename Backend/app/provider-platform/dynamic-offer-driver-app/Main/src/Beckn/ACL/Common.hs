@@ -117,7 +117,10 @@ filterRequiredBreakups fParamsType breakup = do
                  "PARKING_CHARGE",
                  "NIGHT_SHIFT_CHARGE",
                  "RIDE_STOP_CHARGES",
-                 "PER_STOP_CHARGES"
+                 "PER_STOP_CHARGES",
+                 "LUGGAGE_CHARGE",
+                 "RETURN_FEE",
+                 "BOOTH_CHARGE"
                ]
     DFParams.Slab ->
       title
@@ -133,7 +136,10 @@ filterRequiredBreakups fParamsType breakup = do
                  "NIGHT_SHIFT_CHARGE",
                  "EXTRA_TIME_FARE",
                  "CANCELLATION_CHARGES",
-                 "PARKING_CHARGE"
+                 "PARKING_CHARGE",
+                 "LUGGAGE_CHARGE",
+                 "RETURN_FEE",
+                 "BOOTH_CHARGE"
                ]
     DFParams.Rental ->
       title
@@ -149,7 +155,10 @@ filterRequiredBreakups fParamsType breakup = do
                  "WAITING_OR_PICKUP_CHARGES",
                  "EXTRA_TIME_FARE",
                  "CANCELLATION_CHARGES",
-                 "PARKING_CHARGE"
+                 "PARKING_CHARGE",
+                 "LUGGAGE_CHARGE",
+                 "RETURN_FEE",
+                 "BOOTH_CHARGE"
                ]
     DFParams.InterCity ->
       title
@@ -166,7 +175,10 @@ filterRequiredBreakups fParamsType breakup = do
                  "EXTRA_TIME_FARE",
                  "EXTRA_DISTANCE_FARE",
                  "CANCELLATION_CHARGES",
-                 "PARKING_CHARGE"
+                 "PARKING_CHARGE",
+                 "LUGGAGE_CHARGE",
+                 "RETURN_FEE",
+                 "BOOTH_CHARGE"
                ]
     _ -> True
 

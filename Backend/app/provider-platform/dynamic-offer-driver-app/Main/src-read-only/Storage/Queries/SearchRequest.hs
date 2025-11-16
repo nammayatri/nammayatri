@@ -81,6 +81,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.isScheduled (Just isScheduled),
       Se.Set Beam.merchantOperatingCityId (Just $ Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.messageId messageId,
+      Se.Set Beam.numberOfLuggages numberOfLuggages,
       Se.Set Beam.parcelQuantity parcelQuantity,
       Se.Set Beam.parcelType parcelType,
       Se.Set Beam.pickupZoneGateId pickupZoneGateId,
