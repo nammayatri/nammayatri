@@ -43,6 +43,7 @@ getConfigJSON = \case
     Sms.TwillioSmsConfig cfg -> toJSON cfg
     Sms.DigoEngageSmsConfig cfg -> toJSON cfg
     Sms.VonageSmsConfig cfg -> toJSON cfg
+    Sms.KarixSmsConfig cfg -> toJSON cfg
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig cfg -> toJSON cfg
     Whatsapp.TataCommunicationsConfig cfg -> toJSON cfg
@@ -107,6 +108,7 @@ getServiceName = \case
     Sms.TwillioSmsConfig _ -> Domain.SmsService Sms.TwillioSms
     Sms.DigoEngageSmsConfig _ -> Domain.SmsService Sms.DigoEngage
     Sms.VonageSmsConfig _ -> Domain.SmsService Sms.VonageSms
+    Sms.KarixSmsConfig _ -> Domain.SmsService Sms.KarixSms
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig _ -> Domain.WhatsappService Whatsapp.GupShup
     Whatsapp.TataCommunicationsConfig _ -> Domain.WhatsappService Whatsapp.TataCommunications
@@ -176,6 +178,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.SmsService Sms.TwillioSms -> Domain.SmsServiceConfig . Sms.TwillioSmsConfig <$> eitherValue configJSON
   Domain.SmsService Sms.DigoEngage -> Domain.SmsServiceConfig . Sms.DigoEngageSmsConfig <$> eitherValue configJSON
   Domain.SmsService Sms.VonageSms -> Domain.SmsServiceConfig . Sms.VonageSmsConfig <$> eitherValue configJSON
+  Domain.SmsService Sms.KarixSms -> Domain.SmsServiceConfig . Sms.KarixSmsConfig <$> eitherValue configJSON
   Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> eitherValue configJSON
   Domain.WhatsappService Whatsapp.TataCommunications -> Domain.WhatsappServiceConfig . Whatsapp.TataCommunicationsConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> eitherValue configJSON
