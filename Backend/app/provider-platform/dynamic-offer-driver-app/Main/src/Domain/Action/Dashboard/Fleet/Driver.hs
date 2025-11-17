@@ -2221,9 +2221,17 @@ getDriverFleetTripTransactions merchantShortId opCity driverId mbFrom mbTo mbVeh
           tripEndTime = tripTransaction.tripEndTime,
           tripStatus = castTripStatus tripTransaction.status,
           fleetOwnerId = tripTransaction.fleetOwnerId.getId,
-          fleetOwnerName = fromMaybe "" (Map.lookup (tripTransaction.fleetOwnerId.getId) fleetNameMap)
+          fleetOwnerName = fromMaybe "" (Map.lookup (tripTransaction.fleetOwnerId.getId) fleetNameMap),
+          tripType = castTripType <$> tripTransaction.tripType,
+          scheduledTripTime = tripTransaction.scheduledTripTime,
+          dutyType = tripTransaction.dutyType,
+          vipName = tripTransaction.vipName,
+          startAddress = tripTransaction.pilotSource >>= (\point -> Just (Common.Address {point = point, address = tripTransaction.startAddress})),
+          endAddress = tripTransaction.pilotDestination >>= (\point -> Just (Common.Address {point = point, address = tripTransaction.endAddress}))
         }
-
+    castTripType = \case
+      DTT.PILOT -> Common.PILOT
+      DTT.WIMB -> Common.WIMB
     castTripStatus = \case
       TRIP_ASSIGNED -> Common.TRIP_ASSIGNED
       IN_PROGRESS -> Common.IN_PROGRESS

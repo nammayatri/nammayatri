@@ -1242,6 +1242,12 @@ types:
     - tripStatus: TripStatus
     - fleetOwnerId: Text
     - fleetOwnerName: Text
+    - tripType: Maybe TripType
+    - scheduledTripTime: Maybe UTCTime
+    - dutyType: Maybe Text
+    - vipName: Maybe Text
+    - startAddress: Maybe Address
+    - endAddress: Maybe Address
   TripTransactionResp:
     - trips: [TripTransactionDetail]
     - totalTrips: Int

@@ -772,7 +772,13 @@ data TripTransactionDetailT = TripTransactionDetailT
     tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripStatus :: TripStatus,
     fleetOwnerId :: Kernel.Prelude.Text,
-    fleetOwnerName :: Kernel.Prelude.Text
+    fleetOwnerName :: Kernel.Prelude.Text,
+    tripType :: Kernel.Prelude.Maybe TripType,
+    scheduledTripTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    dutyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vipName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    startAddress :: Kernel.Prelude.Maybe Address,
+    endAddress :: Kernel.Prelude.Maybe Address
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
