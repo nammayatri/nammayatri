@@ -2,6 +2,7 @@
 
 module Domain.Action.UI.MultimodalConfirm
   ( postMultimodalInitiate,
+    postMultimodalInitiateSimpl,
     postMultimodalConfirm,
     getMultimodalBookingInfo,
     postMultimodalOrderSwitchTaxi,
@@ -152,6 +153,16 @@ $(deriveJSONOmitNothing ''API.Types.UI.MultimodalConfirm.TransportStation)
 $(deriveJSONOmitNothing ''API.Types.UI.MultimodalConfirm.TransportRouteStopMapping)
 $(deriveJSONOmitNothing ''API.Types.UI.MultimodalConfirm.PublicTransportData)
 
+runAction :: Id Domain.Types.Journey.Journey -> Environment.Flow ApiTypes.JourneyInfoResp -> Environment.Flow ApiTypes.JourneyInfoResp
+runAction journeyId action = do
+  if journeyId.getId == ""
+    then action
+    else do
+      Redis.withWaitAndLockRedis lockKey 10 100 $
+        action
+  where
+    lockKey = "infoLock-" <> journeyId.getId
+
 postMultimodalInitiate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -160,21 +171,24 @@ postMultimodalInitiate ::
     Environment.Flow ApiTypes.JourneyInfoResp
   )
 postMultimodalInitiate (_personId, _merchantId) journeyId = do
-  runAction $ do
+  runAction journeyId $ do
     journeyLegs <- QJourneyLeg.getJourneyLegs journeyId
-    JMU.measureLatency (addAllLegs journeyId (Just journeyLegs) journeyLegs) "addAllLegs"
     journey <- JM.getJourney journeyId
+    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs) "addAllLegs"
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
-    legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journeyId) "JM.getAllLegsInfo"
+    legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
     JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
-  where
-    runAction action = do
-      if journeyId.getId == ""
-        then action
-        else do
-          Redis.withWaitAndLockRedis lockKey 10 100 $
-            action
-    lockKey = "infoLock-" <> journeyId.getId
+
+postMultimodalInitiateSimpl ::
+  [DJourneyLeg.JourneyLeg] ->
+  Domain.Types.Journey.Journey ->
+  Environment.Flow ApiTypes.JourneyInfoResp
+postMultimodalInitiateSimpl journeyLegs journey = do
+  runAction journey.id $ do
+    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs) "addAllLegs"
+    JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
+    legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
+    JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
 
 postMultimodalConfirm ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
