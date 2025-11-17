@@ -754,7 +754,9 @@ applyDraftChanges draftChange = do
                 rules = existingService >>= (.rules),
                 isClosed = fromMaybe False (existingService <&> (.isClosed)),
                 serviceDetails = serviceDef.serviceDetails,
-                maxSelection = serviceDef.maxSelection
+                maxSelection = serviceDef.maxSelection,
+                note = existingService >>= (.note),
+                priority = existingService >>= (.priority)
               }
       case existingService of
         Just _ -> QTicketService.updateByPrimaryKey updatedService

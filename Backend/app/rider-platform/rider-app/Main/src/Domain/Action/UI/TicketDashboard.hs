@@ -193,7 +193,9 @@ getTicketPlaceDashboardDetails placeId _requestorId _requestorRole = do
           rules = svc.rules,
           serviceDetails = svc.serviceDetails,
           subPlaceId = svc.subPlaceId,
-          maxSelection = svc.maxSelection
+          maxSelection = svc.maxSelection,
+          note = svc.note,
+          priority = svc.priority
         }
 
     toBusinessHourDetails :: DBusinessHour.BusinessHour -> BusinessHourDetails
@@ -343,7 +345,9 @@ updateTicketService existingService serviceDetails = do
       DTicketService.businessHours = serviceDetails.businessHours,
       DTicketService.rules = serviceDetails.rules,
       DTicketService.serviceDetails = serviceDetails.serviceDetails,
-      DTicketService.maxSelection = serviceDetails.maxSelection
+      DTicketService.maxSelection = serviceDetails.maxSelection,
+      DTicketService.note = serviceDetails.note,
+      DTicketService.priority = serviceDetails.priority
     }
 
 createTicketService :: (Id Merchant.Merchant, Id MOCity.MerchantOperatingCity) -> TicketServiceDetails -> Id DTicketPlace.TicketPlace -> Flow DTicketService.TicketService
@@ -367,6 +371,8 @@ createTicketService (merchantId, merchantOpCityId) serviceDetails placeId = do
         DTicketService.merchantOperatingCityId = pure merchantOpCityId,
         DTicketService.createdAt = now,
         DTicketService.updatedAt = now,
+        DTicketService.note = Nothing,
+        DTicketService.priority = Nothing,
         DTicketService.rules = Nothing,
         DTicketService.isClosed = False,
         DTicketService.serviceDetails = serviceDetails.serviceDetails,
