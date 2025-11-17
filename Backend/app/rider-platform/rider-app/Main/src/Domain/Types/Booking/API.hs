@@ -75,6 +75,7 @@ data BookingAPIEntity = BookingAPIEntity
     status :: BookingStatus,
     agencyName :: Text,
     agencyNumber :: Maybe Text,
+    riderMobileNumber :: Maybe Text,
     estimatedFare :: Money,
     isBookingUpdated :: Bool,
     discount :: Maybe Money,
@@ -275,6 +276,8 @@ makeBookingAPIEntity ::
 makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason = do
   bookingDetails <- mkBookingAPIDetails booking requesterId
   rides <- mapM buildRideAPIEntity allRides
+  person <- QP.findById requesterId >>= fromMaybeM (PersonNotFound requesterId.getId)
+  riderMobile <- mapM decrypt person.mobileNumber
   let providerNum = fromMaybe "+91" bppDetails.supportNumber
   mbJourneyLeg <- QJL.findByLegSearchId (Just booking.transactionId)
   return $
@@ -283,6 +286,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         status = booking.status,
         agencyName = bppDetails.name,
         agencyNumber = Just providerNum,
+        riderMobileNumber = riderMobile,
         estimatedFare = booking.estimatedFare.amountInt,
         discount = booking.discount <&> (.amountInt),
         estimatedTotalFare = booking.estimatedTotalFare.amountInt,
