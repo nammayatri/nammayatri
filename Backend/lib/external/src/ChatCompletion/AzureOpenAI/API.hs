@@ -13,7 +13,7 @@ type AzureOpenAIAPI =
   ChatCompletionAPI
 
 type ChatCompletionAPI =
-  "openai" :> "deployments" :> "gpt-4" :> "chat" :> "completions"
+  "openai" :> "deployments" :> "genius-south-india" :> "chat" :> "completions"
     :> MandatoryQueryParam "api-version" Text
     :> MandatoryQueryParam "api-key" Text
     :> ReqBody '[JSON] CAT.ChatCompletionReq

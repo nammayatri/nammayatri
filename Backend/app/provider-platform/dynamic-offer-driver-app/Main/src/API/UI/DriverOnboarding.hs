@@ -16,6 +16,7 @@ module API.UI.DriverOnboarding where
 
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as DriverOnboarding
+import qualified Domain.Action.UI.DriverOnboarding.DocumentRegistration as DocumentRegistration
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.GstVerification as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
@@ -74,6 +75,10 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] Image.ImageValidateRequest
              :> Post '[JSON] Image.ImageValidateResponse
+           :<|> "validateDocumentImage"
+             :> TokenAuth
+             :> ReqBody '[JSON] DocumentRegistration.ValidateDocumentImageRequest
+             :> Post '[JSON] DocumentRegistration.ValidateDocumentImageResponse
            :<|> "validateImageFile"
              :> TokenAuth
              :> MultipartForm Tmp Image.ImageValidateFileRequest
@@ -126,6 +131,7 @@ handler =
       :<|> verifyAadhaar
       :<|> statusHandler
       :<|> validateImage
+      :<|> validateDocumentImage
       :<|> validateImageFile
       :<|> generateAadhaarOtp
       :<|> verifyAadhaarOtp
@@ -164,6 +170,9 @@ verifyAadhaar (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI 
 
 validateImage :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
 validateImage (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId, merchantOpCityId)
+
+validateDocumentImage :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DocumentRegistration.ValidateDocumentImageRequest -> FlowHandler DocumentRegistration.ValidateDocumentImageResponse
+validateDocumentImage (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DocumentRegistration.validateDocument False (personId, merchantId, merchantOpCityId) req
 
 validateImageFile :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Image.ImageValidateFileRequest -> FlowHandler Image.ImageValidateResponse
 validateImageFile (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Image.validateImageFile False (personId, merchantId, merchantOpCityId)

@@ -13,16 +13,37 @@
 -}
 {-# LANGUAGE ApplicativeDo #-}
 
-module Domain.Action.UI.DriverOnboarding.Image where
+module Domain.Action.UI.DriverOnboarding.Image
+  ( ImageValidateRequest (..),
+    ImageValidateResponse (..),
+    ImageValidateFileRequest (..),
+    validateImage,
+    validateImageFile,
+    extractDLInfoFromText,
+    extractRCInfoFromText,
+    getImage,
+    imageS3Lock,
+    throwValidationError,
+    convertHVStatusToValidationStatus,
+    convertValidationStatusToVerificationStatus,
+  )
+where
 
 import qualified API.Types.UI.DriverOnboardingV2 as Domain
 import AWS.S3 as S3
+import ChatCompletion.Interface.Types as CIT
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types ((.:))
+import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
-import qualified Data.Text as T hiding (length)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time.Format.ISO8601
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate (imageS3Lock)
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.Extra.MerchantServiceConfig as DOSC
 import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
+import Domain.Types.LlmPrompt as DTL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -42,15 +63,18 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.Multipart
 import SharedLogic.DriverOnboarding
+import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
+import qualified Storage.CachedQueries.LLMPrompt.LLMPrompt as SCL
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.FleetRCAssociationExtra as FRCA
 import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
+import Tools.ChatCompletion as TC
 import Tools.Error
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
@@ -301,3 +325,146 @@ getImage merchantId imageId = do
   case imageMetadata of
     Just img | img.merchantId == merchantId -> S3.get $ T.unpack img.s3Path
     _ -> pure T.empty
+
+-- Extract DOB and DL number from documentInfoText using LLM
+extractDLInfoFromText ::
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  Flow (Maybe Text, Maybe Text) -- Returns (driverLicenseNumber, driverDateOfBirth in DD/MM/YYYY format)
+extractDLInfoFromText merchantId merchantOpCityId documentInfoText = do
+  logDebug $ "Image.extractDLInfoFromText: Starting DL extraction for merchantId=" <> show merchantId <> ", merchantOpCityId=" <> show merchantOpCityId <> ", documentInfoText length=" <> show (T.length documentInfoText)
+  orgLLMChatCompletionConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  let llmService = (.llmChatCompletion) orgLLMChatCompletionConfig
+  logDebug $ "Image.extractDLInfoFromText: Found LLM service config, llmService=" <> show llmService
+  -- Use AzureOpenAI prompt key
+  let promptKey = DTL.AzureOpenAI_DLExtraction_1
+  prompt <-
+    SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOpCityId (DOSC.LLMChatCompletionService llmService) DTL.DLExtraction promptKey
+      >>= fromMaybeM (LlmPromptNotFound merchantOpCityId.getId (show (DOSC.LLMChatCompletionService llmService)) (show DTL.DLExtraction) (show promptKey))
+  logDebug $ "Image.extractDLInfoFromText: Found prompt template, promptKey=" <> show promptKey
+  let filledPrompt = T.replace "{#documentInfoText#}" documentInfoText prompt.promptTemplate
+      chatReq = CIT.GeneralChatCompletionReq {genMessages = [CIT.GeneralChatCompletionMessage {genRole = "user", genContent = filledPrompt}]}
+  logDebug $ "Image.extractDLInfoFromText: Calling LLM chat completion"
+  gccresp <- TC.getChatCompletion merchantId merchantOpCityId chatReq
+  let responseText = gccresp.genMessage.genContent
+  logDebug $ "Image.extractDLInfoFromText: Received LLM response, length=" <> show (T.length responseText) <> ", response=" <> responseText
+  -- Parse JSON response from LLM
+  -- Expected format: {"driverLicenseNumber": "DL123456", "driverDateOfBirth": "DD/MM/YYYY"}
+  parseExtractedDLInfo responseText
+  where
+    stripMarkdownCodeBlocks :: Text -> Text
+    stripMarkdownCodeBlocks text =
+      let trimmed = T.strip text
+          -- Remove markdown code block markers at start: ```json or ```
+          withoutStart =
+            if T.isPrefixOf "```json" trimmed
+              then T.drop 7 trimmed
+              else
+                if T.isPrefixOf "```" trimmed
+                  then T.drop 3 trimmed
+                  else trimmed
+          -- Remove markdown code block markers at end: ```
+          withoutEnd =
+            if T.isSuffixOf "```" withoutStart
+              then T.dropEnd 3 withoutStart
+              else withoutStart
+          -- Strip again after removing markers
+          cleaned = T.strip withoutEnd
+       in cleaned
+
+    parseExtractedDLInfo :: Text -> Flow (Maybe Text, Maybe Text)
+    parseExtractedDLInfo responseText = do
+      logDebug $ "Image.extractDLInfoFromText.parseExtractedDLInfo: Parsing JSON response"
+      let cleanedResponse = stripMarkdownCodeBlocks responseText
+      logDebug $ "Image.extractDLInfoFromText.parseExtractedDLInfo: Cleaned response (after stripping markdown)=" <> cleanedResponse
+      let eitherParsed = Aeson.eitherDecodeStrict (TE.encodeUtf8 cleanedResponse) :: Either String Aeson.Value
+      case eitherParsed of
+        Left err -> do
+          logError $ "Image.extractDLInfoFromText.parseExtractedDLInfo: Failed to parse JSON, error=" <> T.pack err <> ", cleanedResponse=" <> cleanedResponse <> ", originalResponse=" <> responseText
+          throwError $ InvalidRequest $ "Failed to parse LLM response as JSON: " <> T.pack err <> ". Response: " <> cleanedResponse
+        Right json -> do
+          logDebug $ "Image.extractDLInfoFromText.parseExtractedDLInfo: JSON parsed successfully, extracting fields"
+          let parseObj =
+                Aeson.parseMaybe
+                  ( Aeson.withObject "DLExtraction" $ \obj -> do
+                      dlNumber <- obj .: "driverLicenseNumber"
+                      dobStr <- obj .: "driverDateOfBirth"
+                      return (dlNumber, dobStr)
+                  )
+          case parseObj json of
+            Nothing -> do
+              logError $ "Image.extractDLInfoFromText.parseExtractedDLInfo: Failed to parse required fields, cleanedResponse=" <> cleanedResponse <> ", originalResponse=" <> responseText
+              throwError $ InvalidRequest $ "Failed to parse required fields from LLM response: " <> cleanedResponse
+            Just (dlNumber, dobStr) -> do
+              logDebug $ "Image.extractDLInfoFromText.parseExtractedDLInfo: Extracted dlNumber=" <> dlNumber <> ", dobStr=" <> dobStr
+              -- Return date string as-is (LLM already provides DD/MM/YYYY format)
+              return (Just dlNumber, Just dobStr)
+
+-- Extract RC number from documentInfoText using LLM
+extractRCInfoFromText ::
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  Flow (Maybe Text) -- Returns vehicleRegistrationCertNumber
+extractRCInfoFromText merchantId merchantOpCityId documentInfoText = do
+  logDebug $ "Image.extractRCInfoFromText: Starting RC extraction for merchantId=" <> show merchantId <> ", merchantOpCityId=" <> show merchantOpCityId <> ", documentInfoText length=" <> show (T.length documentInfoText)
+  orgLLMChatCompletionConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  let llmService = (.llmChatCompletion) orgLLMChatCompletionConfig
+  logDebug $ "Image.extractRCInfoFromText: Found LLM service config, llmService=" <> show llmService
+  -- Use AzureOpenAI prompt key
+  let promptKey = DTL.AzureOpenAI_RCExtraction_1
+  prompt <-
+    SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOpCityId (DOSC.LLMChatCompletionService llmService) DTL.RCExtraction promptKey
+      >>= fromMaybeM (LlmPromptNotFound merchantOpCityId.getId (show (DOSC.LLMChatCompletionService llmService)) (show DTL.RCExtraction) (show promptKey))
+  logDebug $ "Image.extractRCInfoFromText: Found prompt template, promptKey=" <> show promptKey
+  let filledPrompt = T.replace "{#documentInfoText#}" documentInfoText prompt.promptTemplate
+      chatReq = CIT.GeneralChatCompletionReq {genMessages = [CIT.GeneralChatCompletionMessage {genRole = "user", genContent = filledPrompt}]}
+  logDebug $ "Image.extractRCInfoFromText: Calling LLM chat completion"
+  gccresp <- TC.getChatCompletion merchantId merchantOpCityId chatReq
+  let responseText = gccresp.genMessage.genContent
+  logDebug $ "Image.extractRCInfoFromText: Received LLM response, length=" <> show (T.length responseText) <> ", response=" <> responseText
+  -- Parse JSON response from LLM
+  -- Expected format: {"vehicleRegistrationCertNumber": "RC123456"}
+  parseExtractedRCInfo responseText
+  where
+    stripMarkdownCodeBlocks :: Text -> Text
+    stripMarkdownCodeBlocks text =
+      let trimmed = T.strip text
+          -- Remove markdown code block markers at start: ```json or ```
+          withoutStart =
+            if T.isPrefixOf "```json" trimmed
+              then T.drop 7 trimmed
+              else
+                if T.isPrefixOf "```" trimmed
+                  then T.drop 3 trimmed
+                  else trimmed
+          -- Remove markdown code block markers at end: ```
+          withoutEnd =
+            if T.isSuffixOf "```" withoutStart
+              then T.dropEnd 3 withoutStart
+              else withoutStart
+          -- Strip again after removing markers
+          cleaned = T.strip withoutEnd
+       in cleaned
+
+    parseExtractedRCInfo :: Text -> Flow (Maybe Text)
+    parseExtractedRCInfo responseText = do
+      logDebug $ "Image.extractRCInfoFromText.parseExtractedRCInfo: Parsing JSON response"
+      let cleanedResponse = stripMarkdownCodeBlocks responseText
+      logDebug $ "Image.extractRCInfoFromText.parseExtractedRCInfo: Cleaned response (after stripping markdown)=" <> cleanedResponse
+      let eitherParsed = Aeson.eitherDecodeStrict (TE.encodeUtf8 cleanedResponse) :: Either String Aeson.Value
+      case eitherParsed of
+        Left err -> do
+          logError $ "Image.extractRCInfoFromText.parseExtractedRCInfo: Failed to parse JSON, error=" <> T.pack err <> ", cleanedResponse=" <> cleanedResponse <> ", originalResponse=" <> responseText
+          throwError $ InvalidRequest $ "Failed to parse LLM response as JSON: " <> T.pack err <> ". Response: " <> cleanedResponse
+        Right json -> do
+          logDebug $ "Image.extractRCInfoFromText.parseExtractedRCInfo: JSON parsed successfully, extracting vehicleRegistrationCertNumber"
+          let parseObj = Aeson.parseMaybe (Aeson.withObject "RCExtraction" $ \obj -> obj .: "vehicleRegistrationCertNumber")
+          case parseObj json of
+            Nothing -> do
+              logError $ "Image.extractRCInfoFromText.parseExtractedRCInfo: Failed to parse vehicleRegistrationCertNumber, cleanedResponse=" <> cleanedResponse <> ", originalResponse=" <> responseText
+              throwError $ InvalidRequest $ "Failed to parse vehicleRegistrationCertNumber from LLM response: " <> cleanedResponse
+            Just rcNumber -> do
+              logDebug $ "Image.extractRCInfoFromText.parseExtractedRCInfo: Successfully extracted rcNumber=" <> rcNumber
+              return (Just rcNumber)
