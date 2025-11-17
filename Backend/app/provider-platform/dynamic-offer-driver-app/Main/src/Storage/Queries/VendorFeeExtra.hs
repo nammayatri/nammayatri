@@ -99,7 +99,9 @@ createChildVendorFee parentFee childFee totalFee = do
                   driverFeeId = childFee.id,
                   vendorId = vfee.vendorId,
                   createdAt = now,
-                  updatedAt = now
+                  updatedAt = now,
+                  splitMethod = vfee.splitMethod,
+                  isVendorFeeProcessedAt = vfee.isVendorFeeProcessedAt
                 }
           )
           vendorFees
