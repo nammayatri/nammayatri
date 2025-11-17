@@ -195,26 +195,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   Hedis.del $ searchRequestKey booking.transactionId
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
   clearTollStartGateBatchCache ride.driverId
-  when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled) $ do
-    case ride.fare of
-      Just fare -> fork "update prepaid balance" $ updateBalance fare
-      Nothing -> logWarning $ "Fare is not present for ride: " <> show ride.id.getId
-  when (thresholdConfig.subscription) $ do
-    -- Turn this off for only prepaid subscriptions
-    let serviceName = YATRI_SUBSCRIPTION
-    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
-  when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
-    fork "createDriverWalletTransaction" $ createDriverWalletTransaction ride booking thresholdConfig
-
-  triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
-  triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
-
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
-
-  let validRide = isValidRide ride
-  sendReferralFCM validRide ride booking mbRiderDetails thresholdConfig
-  when (validRide && (ride.traveledDistance > 1000 || (fromMaybe False ride.distanceCalculationFailed && fromMaybe 0 ride.chargeableDistance > 1000))) $ updateLeaderboardZScore booking ride
-  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams, ..}
   let currency = booking.currency
   let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues
   logInfo $ "customerCancellationDues: newFareParams.customerCancellationDues: " <> show customerCancellationDues <> " ride.id: " <> show ride.id.getId <> " thresholdConfig.canAddCancellationFee: " <> show thresholdConfig.canAddCancellationFee
@@ -243,6 +224,24 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
         QRD.updateCancellationDues 0 riderDetails.id >> QCC.create cancellationCharges
       -- QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 (riderDetails.id) >> QCC.create cancellationCharges
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
+  when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled) $ do
+    case ride.fare of
+      Just fare -> fork "update prepaid balance" $ updateBalance fare
+      Nothing -> logWarning $ "Fare is not present for ride: " <> show ride.id.getId
+  when (thresholdConfig.subscription) $ do
+    -- Turn this off for only prepaid subscriptions
+    let serviceName = YATRI_SUBSCRIPTION
+    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
+  when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
+    fork "createDriverWalletTransaction" $ createDriverWalletTransaction ride booking thresholdConfig
+
+  triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
+  triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
+
+  let validRide = isValidRide ride
+  sendReferralFCM validRide ride booking mbRiderDetails thresholdConfig
+  when (validRide && (ride.traveledDistance > 1000 || (fromMaybe False ride.distanceCalculationFailed && fromMaybe 0 ride.chargeableDistance > 1000))) $ updateLeaderboardZScore booking ride
+  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams, ..}
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.END_TIME booking.configInExperimentVersions
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driverId)
