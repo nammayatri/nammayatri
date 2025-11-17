@@ -19,7 +19,6 @@ module Lib.Payment.Domain.Action
     createOrderService,
     orderStatusService,
     juspayWebhookService,
-    stripeWebhookService,
     createNotificationService,
     createExecutionService,
     buildSDKPayload,
@@ -49,7 +48,6 @@ import qualified Data.Time as Time
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
-import qualified Kernel.External.Payment.Interface.Events.Types as PEInterface
 import qualified Kernel.External.Payment.Interface.Types as PInterface
 import Kernel.External.Payment.Juspay.Types (RefundStatus (REFUND_PENDING))
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
@@ -97,7 +95,7 @@ data PaymentStatusResp
         paymentMethodType :: Maybe Text,
         authIdCode :: Maybe Text,
         txnUUID :: Maybe Text,
-        effectAmount :: Maybe HighPrecMoney,
+        effectiveAmount :: Maybe HighPrecMoney,
         offers :: Maybe [Payment.Offer],
         paymentServiceType :: Maybe DOrder.PaymentServiceType,
         paymentFulfillmentStatus :: Maybe PaymentFulfillmentStatus,
@@ -274,7 +272,7 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = mbMerchantOpCityId,
-            paymentFulfillmentStatus = Just FulfillmentPending
+            paymentFulfillmentStatus = Nothing
           }
 
     buildTransaction ::
@@ -290,7 +288,7 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
       pure
         DTransaction.PaymentTransaction
           { id = uuid,
-            txnUUID = Just resp.paymentIntentId,
+            txnUUID = Nothing,
             txnId = Just resp.paymentIntentId,
             paymentMethodType = Nothing, -- fix it later
             paymentMethod = Nothing, -- fix it later
@@ -561,20 +559,20 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity 
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = mbMerchantOpCityId,
-            paymentFulfillmentStatus = Just FulfillmentPending
+            paymentFulfillmentStatus = Nothing,
+            effectiveAmount = Nothing
           }
   buildPaymentSplit req.orderId mkPaymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
   pure mkPaymentOrder
 
-mkPaymentOrderSplit :: (EncFlow m r, BeamFlow m r) => Text -> HighPrecMoney -> PInterface.MBY -> HighPrecMoney -> Maybe Text -> Text -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> m DPaymentOrderSplit.PaymentOrderSplit
-mkPaymentOrderSplit vendorId amount mdrBorneBy merchantCommission transactionId paymentOrderId merchantId merchantOperatingCityId = do
+mkPaymentOrderSplit :: (EncFlow m r, BeamFlow m r) => Text -> HighPrecMoney -> PInterface.MBY -> HighPrecMoney -> Text -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> m DPaymentOrderSplit.PaymentOrderSplit
+mkPaymentOrderSplit vendorId amount mdrBorneBy merchantCommission paymentOrderId merchantId merchantOperatingCityId = do
   id <- generateGUID
   now <- getCurrentTime
   return $
     DPaymentOrderSplit.PaymentOrderSplit
       { id = id,
         vendorId = vendorId,
-        transactionId = transactionId,
         merchantId = merchantId.getId,
         amount = mkPrice Nothing amount,
         mdrBorneBy = mdrBorneBy,
@@ -582,7 +580,8 @@ mkPaymentOrderSplit vendorId amount mdrBorneBy merchantCommission transactionId 
         merchantOperatingCityId = merchantOperatingCityId <&> (.getId),
         paymentOrderId = Id paymentOrderId,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        effectiveAmount = mkPrice Nothing amount
       }
 
 buildPaymentSplit :: (EncFlow m r, BeamFlow m r) => Text -> DOrder.PaymentOrder -> Maybe PInterface.SplitSettlementDetails -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> m ()
@@ -608,8 +607,8 @@ buildPaymentSplit paymentOrderId paymentOrder mbSplitSettlementDetails merchantI
     Nothing -> pure ()
   where
     createSplits marketplaceAmount mdrBorneBy vendorSplits = do
-      marketPlaceSplit <- mkPaymentOrderSplit "marketPlace" marketplaceAmount mdrBorneBy 0 Nothing paymentOrderId merchantId merchantOperatingCityId
-      vendorSplitEntries <- mapM (\vendor -> mkPaymentOrderSplit vendor.subMid vendor.amount mdrBorneBy vendor.merchantCommission (Just vendor.uniqueSplitId) paymentOrderId merchantId merchantOperatingCityId) vendorSplits
+      marketPlaceSplit <- mkPaymentOrderSplit "marketPlace" marketplaceAmount mdrBorneBy 0 paymentOrderId merchantId merchantOperatingCityId
+      vendorSplitEntries <- mapM (\vendor -> mkPaymentOrderSplit vendor.subMid vendor.amount mdrBorneBy vendor.merchantCommission paymentOrderId merchantId merchantOperatingCityId) vendorSplits
       let splits = marketPlaceSplit : vendorSplitEntries
       QPaymentOrderSplit.createMany splits
 
@@ -695,7 +694,6 @@ orderStatusService personId orderId orderStatusCall = do
                 isRetargeted = Nothing,
                 splitSettlementResponse = Nothing,
                 retargetLink = Nothing,
-                applicationFeeAmount = Nothing,
                 ..
               }
       maybe
@@ -727,6 +725,8 @@ orderStatusService personId orderId orderStatusCall = do
                 applicationFeeAmount = Nothing,
                 ..
               }
+      let splitSettlementResponse = fromMaybe Nothing splitSettlementResponse
+      logDebug $ "splitSettlementResponse: " <> show splitSettlementResponse
       maybe
         (updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
@@ -735,6 +735,7 @@ orderStatusService personId orderId orderStatusCall = do
         transactionUUID
       mapM_ updateRefundStatus refunds
       void $ QOrder.updateEffectiveAmount orderId effectiveAmount
+      splitSettlementResponse
       res <- withTryCatch "buildOrderOffer:processPaymentStatus" $ buildOrderOffer orderId offers order.merchantId order.merchantOperatingCityId
       case res of
         Left e -> logError $ "buildOrderOffer failed for orderId=" <> orderId.getId <> " err=" <> show e
@@ -753,11 +754,11 @@ orderStatusService personId orderId orderStatusCall = do
             payerVpa = (payerVpa <|> ((.payerVpa) =<< upi)),
             authIdCode = ((.authIdCode) =<< paymentGatewayResponse),
             txnUUID = transactionUUID,
-            effectAmount = effectiveAmount,
+            effectiveAmount = effectiveAmount,
             offers = offers,
             paymentServiceType = order.paymentServiceType,
             validTill = order.validTill,
-            paymentFulfillmentStatus = order.paymentFulfillmentStatus,
+            paymentFulfillmentStatus = Nothing, -- To be filled by Domain
             domainEntityId = Nothing, -- To be filled by Domain
             ..
           }
@@ -774,7 +775,6 @@ data OrderTxn = OrderTxn
     respCode :: Maybe Text,
     gatewayReferenceId :: Maybe Text,
     amount :: HighPrecMoney,
-    applicationFeeAmount :: Maybe HighPrecMoney,
     bankErrorMessage :: Maybe Text,
     bankErrorCode :: Maybe Text,
     currency :: Currency,
@@ -818,13 +818,12 @@ updateOrderTransaction order resp respDump = do
       let updTransaction =
             transaction{statusId = resp.transactionStatusId,
                         status = resp.transactionStatus,
-                        paymentMethodType = resp.paymentMethod, -- why paymentMethod and paymentMethodType confused?
+                        paymentMethodType = resp.paymentMethod,
                         paymentMethod = resp.paymentMethodType,
                         respMessage = resp.respMessage,
                         respCode = resp.respCode,
                         gatewayReferenceId = resp.gatewayReferenceId,
                         amount = resp.amount,
-                        applicationFeeAmount = fromMaybe transaction.applicationFeeAmount resp.applicationFeeAmount,
                         currency = resp.currency,
                         mandateStatus = resp.mandateStatus,
                         mandateStartDate = resp.mandateStartDate,
@@ -864,7 +863,7 @@ buildPaymentTransaction order OrderTxn {..} respDump = do
         ..
       }
 
--- juspay webhook ----------------------------------------------------------
+-- webhook ----------------------------------------------------------
 
 juspayWebhookService ::
   BeamFlow m r =>
@@ -889,7 +888,6 @@ juspayWebhookService resp respDump = do
                 isRetargeted = Nothing,
                 retargetLink = Nothing,
                 splitSettlementResponse = Nothing,
-                applicationFeeAmount = Nothing,
                 ..
               }
       maybe
@@ -911,7 +909,6 @@ juspayWebhookService resp respDump = do
                 isRetried = isRetriedOrder,
                 isRetargeted = isRetargetedOrder,
                 retargetLink = retargetPaymentLink,
-                applicationFeeAmount = Nothing,
                 ..
               }
       maybe
@@ -923,103 +920,6 @@ juspayWebhookService resp respDump = do
       mapM_ updateRefundStatus refunds
     _ -> return ()
   return Ack
-
--- stripe webhook ----------------------------------------------------------
-
-stripeWebhookService ::
-  BeamFlow m r =>
-  PEInterface.ServiceEventResp ->
-  Text ->
-  m AckResponse
-stripeWebhookService resp respDump = do
-  logWarning $ "Webhook response dump: " <> respDump
-  logWarning $ "Webhook response: " <> show resp
-  let mbOrderTxn = case resp.eventData of
-        PEInterface.PaymentIntentSucceededEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
-        PEInterface.PaymentIntentPaymentFailedEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
-        PEInterface.PaymentIntentProcessingEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
-        PEInterface.PaymentIntentCanceledEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
-        PEInterface.PaymentIntentCreatedEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
-        PEInterface.PaymentIntentRequiresActionEvent paymentIntent -> Just $ mkPaymentIntentOrderTxn paymentIntent
-        PEInterface.ChargeSucceededEvent charge -> Just $ mkChargeOrderTxn charge
-        PEInterface.ChargeFailedEvent charge -> Just $ mkChargeOrderTxn charge
-        PEInterface.ChargeRefundedEvent charge -> Just $ mkChargeOrderTxn charge
-        PEInterface.ChargeDisputeCreatedEvent charge -> Just $ mkChargeOrderTxn charge
-        PEInterface.ChargeDisputeClosedEvent charge -> Just $ mkChargeOrderTxn charge
-        PEInterface.ChargeRefundUpdatedEvent charge -> Just $ mkChargeOrderTxn charge
-        _ -> Nothing
-
-  whenJust mbOrderTxn $ \(mbOrderShortId, orderTxn) -> do
-    case mbOrderShortId of
-      Just orderShortId -> do
-        order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
-        maybe
-          (updateOrderTransaction order orderTxn Nothing)
-          ( \transactionUUID' ->
-              Redis.whenWithLockRedis (txnStripeProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
-          )
-          orderTxn.transactionUUID
-      Nothing -> throwError (InvalidRequest $ "orderShortId not found for eventId: " <> resp.id.getId)
-  pure Ack
-
-txnStripeProccessingKey :: Text -> Text
-txnStripeProccessingKey txnId = "Txn:Stripe:Processing:TxnId-" <> txnId
-
-mkDefaultStripeOrderTxn :: Payment.TransactionStatus -> HighPrecMoney -> Currency -> OrderTxn
-mkDefaultStripeOrderTxn transactionStatus amount currency =
-  OrderTxn
-    { transactionUUID = Nothing,
-      transactionStatusId = 0, -- not used in stripe
-      txnId = Nothing,
-      paymentMethodType = Nothing,
-      paymentMethod = Nothing,
-      respMessage = Nothing,
-      respCode = Nothing,
-      gatewayReferenceId = Nothing,
-      applicationFeeAmount = Nothing,
-      bankErrorMessage = Nothing,
-      bankErrorCode = Nothing,
-      dateCreated = Nothing,
-      mandateStatus = Nothing,
-      mandateStartDate = Nothing,
-      mandateEndDate = Nothing,
-      mandateId = Nothing,
-      mandateFrequency = Nothing,
-      mandateMaxAmount = Nothing,
-      isRetried = Nothing,
-      isRetargeted = Nothing,
-      retargetLink = Nothing,
-      splitSettlementResponse = Nothing,
-      ..
-    }
-
-mkPaymentIntentOrderTxn :: PEInterface.PaymentIntent -> (Maybe Text, OrderTxn)
-mkPaymentIntentOrderTxn PEInterface.PaymentIntent {..} = do
-  let transactionStatus = Payment.castToTransactionStatus status
-      defaultOrderTxn = mkDefaultStripeOrderTxn transactionStatus amount currency
-      orderTxn =
-        defaultOrderTxn{txnId = Just paymentIntentId,
-                        transactionUUID = Just paymentIntentId,
-                        paymentMethod = paymentMethod,
-                        dateCreated = Just createdAt,
-                        applicationFeeAmount = applicationFeeAmount
-                       }
-  (orderShortId, orderTxn)
-
-mkChargeOrderTxn :: PEInterface.Charge -> (Maybe Text, OrderTxn)
-mkChargeOrderTxn PEInterface.Charge {..} = do
-  let transactionStatus = PInterface.castChargeToTransactionStatus status
-      defaultOrderTxn = mkDefaultStripeOrderTxn transactionStatus amount currency
-      orderTxn =
-        defaultOrderTxn{txnId = paymentIntentId,
-                        transactionUUID = paymentIntentId,
-                        paymentMethod = paymentMethod,
-                        dateCreated = Just createdAt,
-                        applicationFeeAmount = applicationFeeAmount,
-                        bankErrorMessage = failureMessage,
-                        bankErrorCode = failureCode
-                       }
-  (orderShortId, orderTxn)
 
 --- notification api ----------
 
@@ -1095,7 +995,8 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = mbMerchantOpCityId,
-            paymentFulfillmentStatus = Just FulfillmentPending
+            paymentFulfillmentStatus = Nothing,
+            effectiveAmount = Nothing
           }
 
 --- refunds api ----
@@ -1113,13 +1014,13 @@ createRefundService orderShortId refundsCall = do
   if null exisitingOrderRefunds
     then do
       paymentSplits <- QPaymentOrderSplit.findByPaymentOrder order.id
-      splitSettlementDetails <- mkSplitSettlementDetails paymentSplits
+      splitSettlementDetails <- mkSplitSettlementDetails paymentSplits order.amount order.effectiveAmount
       refundId <- generateGUID
       let refundReq =
             PInterface.AutoRefundReq
               { orderId = order.shortId.getShortId,
                 requestId = refundId,
-                amount = order.amount,
+                amount = order.effectiveAmount,
                 splitSettlementDetails
               }
       now <- getCurrentTime
@@ -1136,19 +1037,24 @@ createRefundService orderShortId refundsCall = do
           return Nothing
     else return Nothing
   where
-    mkSplitSettlementDetails :: MonadFlow m => [DPaymentOrderSplit.PaymentOrderSplit] -> m (Maybe PInterface.RefundSplitSettlementDetails)
-    mkSplitSettlementDetails paymentSplits = do
+    mkSplitSettlementDetails :: MonadFlow m => [DPaymentOrderSplit.PaymentOrderSplit] -> HighPrecMoney -> HighPrecMoney -> m (Maybe PInterface.RefundSplitSettlementDetails)
+    mkSplitSettlementDetails paymentSplits totalAmount effectiveAmount = do
       if null paymentSplits
         then return Nothing
         else do
           marketPlaceSplit <- find (\split -> split.vendorId == "marketPlace") paymentSplits & fromMaybeM (InternalError "marketPlace Split Detail not Found")
+          shouldSettleMarketplaceAmount <-
+            if effectiveAmount < totalAmount
+              && length paymentSplits == 1
+              then return True
+              else return False
           let vendorSplits =
                 map
                   ( \split ->
                       PInterface.RefundSplit
                         { refundAmount = split.amount.amount,
                           subMid = split.vendorId,
-                          uniqueSplitId = fromMaybe split.id.getId split.transactionId
+                          uniqueSplitId = split.id.getId
                         }
                   )
                   paymentSplits

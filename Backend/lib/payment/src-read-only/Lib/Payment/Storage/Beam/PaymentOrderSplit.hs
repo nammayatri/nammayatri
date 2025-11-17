@@ -24,7 +24,8 @@ data PaymentOrderSplitT f = PaymentOrderSplitT
     paymentOrderId :: B.C f Kernel.Prelude.Text,
     transactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    vendorId :: B.C f Kernel.Prelude.Text
+    vendorId :: B.C f Kernel.Prelude.Text,
+    effectiveAmount :: B.C f Kernel.Types.Common.HighPrecMoney
   }
   deriving (Generic, B.Beamable)
 

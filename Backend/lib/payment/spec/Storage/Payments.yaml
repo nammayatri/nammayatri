@@ -31,6 +31,7 @@ PaymentOrderSplit:
   constraints:
     id: PrimaryKey
     paymentOrderId: SecondaryKey
+    transactionId: SecondaryKey
 
   beamFields:
     amount:

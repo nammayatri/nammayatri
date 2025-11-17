@@ -101,10 +101,10 @@ updateAmount orderId amount = do
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
 
 updateEffectiveAmount :: BeamFlow m r => Id DOrder.PaymentOrder -> Maybe HighPrecMoney -> m ()
-updateEffectiveAmount orderId effectAmount = do
+updateEffectiveAmount orderId effectiveAmount = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamPO.effectAmount effectAmount,
+    [ Se.Set BeamPO.effectiveAmount effectiveAmount,
       Se.Set BeamPO.updatedAt now
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
@@ -170,7 +170,7 @@ instance ToTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
         clientAuthTokenHash = clientAuthToken <&> (.hash),
         serviceProvider = Just serviceProvider,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
-        effectAmount = Nothing,
+        effectiveAmount = Nothing,
         ..
       }
 
