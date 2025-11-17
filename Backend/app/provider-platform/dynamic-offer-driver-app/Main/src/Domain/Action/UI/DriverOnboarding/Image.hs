@@ -118,12 +118,12 @@ createPath driverId merchantId documentType = do
         <> ".png"
     )
 
-validateImage ::
+validateImageHandler ::
   Bool ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ImageValidateRequest ->
   Flow ImageValidateResponse
-validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateRequest {..} = do
+validateImageHandler isDashboard (personId, _, merchantOpCityId) req@ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantId = person.merchantId
   when (isJust validationStatus && imageType == DVC.ProfilePhoto) $ checkIfGenuineReq merchantId req
@@ -151,7 +151,8 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
         Nothing -> throwError $ RCMandatory (show imageType)
       else return Nothing
 
-  images <- filter ((\txnId -> isNothing txnId || (txnId /= workflowTransactionId)) . (.workflowTransactionId)) <$> Query.findRecentByPersonIdAndImageType personId imageType
+  allImages <- Query.findRecentByPersonIdAndImageType personId imageType
+  let images = filter ((\txnId -> isNothing txnId || (txnId /= workflowTransactionId)) . (.workflowTransactionId)) allImages
   unless isDashboard $ do
     let onboardingTryLimit = transporterConfig.onboardingTryLimit
     when (length images > onboardingTryLimit * bool 1 2 (imageType == DVC.AadhaarCard || imageType == DVC.DriverLicense)) $ do
@@ -163,11 +164,23 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
   -- WorkflowTransactionId is used only in case of hyperverge request
   when (imageType /= DVC.DriverLicense && isJust workflowTransactionId && any ((== Just Documents.VALID) . (.verificationStatus)) images) $ throwError $ DocumentAlreadyValidated (show imageType)
   when (imageType /= DVC.DriverLicense && isJust workflowTransactionId && any ((== Just Documents.MANUAL_VERIFICATION_REQUIRED) . (.verificationStatus)) images) $ throwError $ DocumentUnderManualReview (show imageType)
+  -- The below condition could probably be merged with the 1st condition above by replacing images with allImages.
+  when
+    ( imageType == DVC.ProfilePhoto
+        && any
+          ( \img ->
+              img.verificationStatus == Just Documents.VALID
+                && img.workflowTransactionId == workflowTransactionId
+          )
+          allImages
+    )
+    $ throwError $ DocumentAlreadyValidated (show imageType)
 
   imagePath <- createPath personId.getId merchantId.getId imageType
   fork "S3 Put Image" do
     Redis.withLockRedis (imageS3Lock imagePath) 5 $
       S3.put (T.unpack imagePath) image
+
   imageEntity <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId sdkFailureReason
   Query.create imageEntity
 
@@ -211,6 +224,28 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
       case respUserDetails of
         VI.HVSelfieFlow (VI.SelfieFlow _) -> return ()
         _ -> void $ throwValidationError Nothing Nothing Nothing
+
+validateImage ::
+  Bool ->
+  (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  ImageValidateRequest ->
+  Flow ImageValidateResponse
+validateImage isDashboard (personId, merchantId, merchantOpCityId) req@ImageValidateRequest {..} = do
+  isLocked <- withLockPersonId
+  if isLocked
+    then do
+      finally
+        (validateImageHandler isDashboard (personId, merchantId, merchantOpCityId) req)
+        ( do
+            Redis.unlockRedis mkLockKey
+            logDebug $ "Create Image Lock for PersonId: " <> personId.getId <> " Unlocked"
+        )
+    else throwError (InternalError $ "Image Upload In Progress")
+  where
+    withLockPersonId = do
+      isLocked <- Redis.tryLockRedis mkLockKey 45
+      return isLocked
+    mkLockKey = "CreateImageTransaction:PersonId:-" <> personId.getId <> "-ImageType:" <> show imageType
 
 convertHVStatusToValidationStatus :: Text -> Domain.ValidationStatus
 convertHVStatusToValidationStatus status =
