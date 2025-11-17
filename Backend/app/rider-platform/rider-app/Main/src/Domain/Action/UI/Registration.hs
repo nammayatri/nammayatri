@@ -50,6 +50,7 @@ import Data.OpenApi hiding (email, info, tags)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Domain.Action.UI.Person as SP
+import qualified Domain.Types.Depot as DDepot
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -98,6 +99,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.MerchantConfig as CQM
 import qualified Storage.CachedQueries.Person as CQP
+import qualified Storage.Queries.DepotManager as QDepotManager
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.PersonDisability as PDisability
@@ -206,7 +208,8 @@ data AuthRes = AuthRes
     authType :: SR.LoginType,
     token :: Maybe Text,
     person :: Maybe PersonAPIEntity,
-    isPersonBlocked :: Bool
+    isPersonBlocked :: Bool,
+    depotCode :: Maybe (Id DDepot.Depot)
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -362,7 +365,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
             emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
             L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
-  return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
+  return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing
   where
     castChannelToMedium :: OTPChannel -> SR.Medium
     castChannelToMedium SMS = SR.SMS
@@ -415,8 +418,8 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
       _ <- RegistrationToken.setDirectAuth regToken.id SR.SIGNATURE
       _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName mbEncEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) mbRnVersion (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing person Nothing Nothing Nothing
       personAPIEntity <- verifyFlow person regToken reqWithMobileNumebr.whatsappNotificationEnroll deviceToken
-      return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked
-    else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
+      return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked Nothing
+    else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing
 
 mkUserIdFromTempAppSecretKey :: Text -> Text
 mkUserIdFromTempAppSecretKey appSecretKey = "rider-platform:getUserIdKey:" <> appSecretKey
@@ -502,7 +505,7 @@ getToken req = do
         Just personId -> do
           person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
           registrationToken <- (listToMaybe <$> RegistrationToken.findAllByPersonId personId) >>= fromMaybeM (InternalError $ "Registration token not found for person id: " <> getId personId)
-          return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked
+          return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked Nothing
         Nothing -> do
           throwError $ GetUserIdError appSecretKey
     _ -> throwError $ InvalidRequest "Mobile number not found"
@@ -533,6 +536,8 @@ passwordBasedAuth req = do
   person <- fromMaybeM (PersonNotFound $ getId req.userMerchantId) mbPerson
   passwordHash <- getDbHash req.userPassword
   unless (person.passwordHash == Just passwordHash) $ throwError $ InvalidRequest "Invalid password"
+  mbDepotManager <- QDepotManager.findByPersonId person.id
+  let mbDepotCode = mbDepotManager <&> (.depotCode)
   let scfg =
         SmsSessionConfig
           { attempts = 3,
@@ -542,7 +547,7 @@ passwordBasedAuth req = do
   registrationToken <- makeSession method scfg person.id.getId req.userMerchantId.getId Nothing True
   _ <- RegistrationToken.create registrationToken
   _ <- RegistrationToken.deleteByPersonIdExceptNew person.id registrationToken.id
-  return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked
+  return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked mbDepotCode
 
 buildPerson ::
   ( HasFlowEnv m r '["version" ::: DeploymentVersion],
@@ -913,7 +918,7 @@ resend tokenId mbSenderHash = do
       L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
 
   void $ RegistrationToken.updateAttempts (attempts - 1) id
-  return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing person.blocked
+  return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing person.blocked Nothing
 
 cleanCachedTokens :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
