@@ -474,3 +474,12 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN nearby_bus_max_time_threshold inte
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN special_vehicle_notification_configs json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN offer_list_cache_version text ;
+
+
+------- SQL updates -------
+
