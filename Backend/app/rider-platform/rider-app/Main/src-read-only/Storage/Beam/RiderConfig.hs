@@ -98,6 +98,7 @@ data RiderConfigT f = RiderConfigT
     nyRegularMasterJobNextRunOffsetSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     nyRegularMinGapSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     nyRegularSubscriptionBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    offerListCacheVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payoutBatchDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     payoutBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     payoutReferralProgram :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

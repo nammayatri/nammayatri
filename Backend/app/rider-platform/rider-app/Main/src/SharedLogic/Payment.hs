@@ -19,6 +19,7 @@ import qualified Domain.Types.ParkingTransaction as DPT
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as Ride
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -277,6 +278,7 @@ orderStatusHandlerWithRefunds paymentService paymentOrder paymentStatusResponse 
     Right (newPaymentFulfillmentStatus, _, mbDomainTransactionId) -> do
       whenJust paymentOrder.paymentFulfillmentStatus $ \oldPaymentFulfillmentStatus -> do
         when (newPaymentFulfillmentStatus /= oldPaymentFulfillmentStatus) $ do
+          let personId = cast @DPayment.Person @Person.Person paymentOrder.personId
           -- Recon Entry
           whenJust mbDomainTransactionId $ \domainTransactionId -> do
             void $
@@ -287,12 +289,21 @@ orderStatusHandlerWithRefunds paymentService paymentOrder paymentStatusResponse 
                     _ -> pure ()
           -- Refund Notify
           fork "Process Refunds Notifications" $ do
-            let personId = cast @DPayment.Person @Person.Person paymentOrder.personId
             case newPaymentFulfillmentStatus of
               DPayment.FulfillmentRefundInitiated -> TNotifications.notifyRefundNotification Notification.REFUND_PENDING paymentOrder.id personId paymentService
               DPayment.FulfillmentRefundFailed -> TNotifications.notifyRefundNotification Notification.REFUND_FAILED paymentOrder.id personId paymentService
               DPayment.FulfillmentRefunded -> TNotifications.notifyRefundNotification Notification.REFUND_SUCCESS paymentOrder.id personId paymentService
               _ -> pure ()
+          -- Invalidate the Offer List Cache
+          case newPaymentFulfillmentStatus of
+            DPayment.FulfillmentSucceeded ->
+              -- If Fulfillment Succeeded post Payment with Offers, then invalidate the Offer List Cache
+              unless (null (fromMaybe [] paymentStatusResponse.offers)) $ do
+                fork "Invalidate Offer List Cache" $ do
+                  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+                  let merchantOperatingCityId = maybe person.merchantOperatingCityId (cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity) paymentOrder.merchantOperatingCityId
+                  invalidateOfferListCache person merchantOperatingCityId (mkPrice (Just paymentOrder.currency) paymentOrder.amount)
+            _ -> pure ()
     _ -> pure ()
   -- Update the Payment Order with the new payment fulfillment status, domain entity id and domain transaction id
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
@@ -427,8 +438,8 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
   paymentServiceType <- paymentOrder.paymentServiceType & fromMaybeM (InvalidRequest "Payment service type not found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   processRefund person paymentOrder paymentServiceType
-  let merchanOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
-      orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchanOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
+  let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
+      orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
   paymentStatusResp <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
   refundStatusHandler paymentOrder paymentStatusResp.refunds paymentServiceType
   return paymentStatusResp
@@ -447,9 +458,9 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
       DOrder.PaymentServiceType ->
       m ()
     processRefund person paymentOrder paymentServiceType = do
-      let merchanOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
-      riderConfig <- QRC.findByMerchantOperatingCityId merchanOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchanOperatingCityId.getId)
-      let refundsOrderCall = TPayment.refundOrder (cast paymentOrder.merchantId) merchanOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
+      let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
+      riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+      let refundsOrderCall = TPayment.refundOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
       mbRefundResp <- DPayment.createRefundService paymentOrder.shortId refundsOrderCall
       whenJust mbRefundResp $ \refundResp -> do
         let refundRequestId = (listToMaybe refundResp.refunds) <&> (.requestId) -- TODO :: When will refunds be more than one ? even if more than 1 there requestId would be same right ?
@@ -460,7 +471,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
                   { JobScheduler.refundId = refundId,
                     JobScheduler.numberOfRetries = 0
                   }
-          createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just merchanOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
+          createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just merchantOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
           logInfo $ "Scheduled refund status check job for " <> refundId <> " in 24 hours (initial check)"
 
 validatePaymentInstrument :: (MonadThrow m, Log m) => Merchant.Merchant -> Maybe DMPM.PaymentInstrument -> Maybe Payment.PaymentMethodId -> m ()
@@ -480,3 +491,53 @@ validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do
 
 isOnlinePayment :: Maybe Merchant.Merchant -> Booking.Booking -> Bool
 isOnlinePayment mbMerchant booking = maybe False (.onlinePayment) mbMerchant && booking.paymentInstrument /= Just DMPM.Cash
+
+-------------------------------------------------------------------------------------------------------
+----------------------------------- Fetch Offers List With Caching ------------------------------------
+-------------------------------------------------------------------------------------------------------
+
+invalidateOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> Price -> m ()
+invalidateOfferListCache person merchantOperatingCityId price = do
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  req <- mkOfferListReq person price
+  let version = fromMaybe "N/A" riderConfig.offerListCacheVersion
+      key = makeOfferListCacheKey person version req
+  Redis.del key
+
+offerListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m Payment.OfferListResp
+offerListCache merchantId personId merchantOperatingCityId paymentServiceType price = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  req <- mkOfferListReq person price
+  let version = fromMaybe "N/A" riderConfig.offerListCacheVersion
+      key = makeOfferListCacheKey person version req
+  Redis.get key >>= \case
+    Just a -> return a
+    Nothing ->
+      ( \resp -> do
+          Redis.setExp key resp (7 * 86400) -- Cache for 7 days
+          return resp
+      )
+        =<< TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion req
+
+mkOfferListReq :: (MonadFlow m, EncFlow m r) => Person.Person -> Price -> m Payment.OfferListReq
+mkOfferListReq person price = do
+  now <- getCurrentTime
+  email <- mapM decrypt person.email
+  let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = price.amount, currency = price.currency}
+      customerReq = Payment.OfferCustomer {customerId = person.id.getId, email = email, mobile = Nothing}
+  return
+    Payment.OfferListReq
+      { order = offerOrder,
+        customer = Just customerReq,
+        -- These are used as filters for Driver, not required as of now, can be made generic in future.
+        planId = "dummy-not-required",
+        registrationDate = addUTCTime 19800 now,
+        dutyDate = addUTCTime 19800 now,
+        paymentMode = "dummy-not-required",
+        numOfRides = 0,
+        offerListingMetric = Nothing
+      }
+
+makeOfferListCacheKey :: Person.Person -> Text -> Payment.OfferListReq -> Text
+makeOfferListCacheKey person version _req = "OfferList:CId" <> person.id.getId <> ":V-" <> version

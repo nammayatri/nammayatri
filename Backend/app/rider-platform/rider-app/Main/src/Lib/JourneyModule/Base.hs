@@ -41,6 +41,7 @@ import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
+import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude as KP
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
@@ -71,9 +72,11 @@ import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JL
 import Lib.JourneyModule.Utils
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfo as GD
 import SharedLogic.FRFSUtils
+import SharedLogic.Payment as SPayment
 import SharedLogic.Search
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
@@ -1343,7 +1346,7 @@ getJourneyChangeLogCounter journeyId = do
   mbJourneyChangeLogCounter <- Redis.safeGet (mkJourneyChangeLogKey journeyId.getId)
   return $ fromMaybe 0 mbJourneyChangeLogCounter
 
-generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r) => DJourney.Journey -> [JL.LegInfo] -> m APITypes.JourneyInfoResp
+generateJourneyInfoResponse :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r) => DJourney.Journey -> [JL.LegInfo] -> m APITypes.JourneyInfoResp
 generateJourneyInfoResponse journey legs = do
   let estimatedMinFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMinFare <&> (.amount)) legs
   let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
@@ -1352,6 +1355,11 @@ generateJourneyInfoResponse journey legs = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId
   let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
   let unifiedQRV2 = getUnifiedQRV2 unifiedQR
+  offers <-
+    withTryCatch "generateJourneyInfoResponse:offerListCache" (SPayment.offerListCache journey.merchantId journey.riderId journey.merchantOperatingCityId DOrder.FRFSMultiModalBooking (mkPrice mbCurrency estimatedMinFareAmount))
+      >>= \case
+        Left _ -> return Nothing
+        Right offersResp -> return $ Just offersResp
   pure $
     APITypes.JourneyInfoResp
       { estimatedDuration = journey.estimatedDuration,
@@ -1369,7 +1377,8 @@ generateJourneyInfoResponse journey legs = do
         paymentOrderShortId = journey.paymentOrderShortId,
         unifiedQRV2,
         result = Just "Success",
-        isSingleMode = journey.isSingleMode
+        isSingleMode = journey.isSingleMode,
+        offers
       }
   where
     getUnifiedQRV2 :: Maybe JL.UnifiedTicketQR -> Maybe JL.UnifiedTicketQRV2

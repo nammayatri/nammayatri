@@ -99,6 +99,7 @@ data RiderConfig = RiderConfig
     nyRegularMasterJobNextRunOffsetSeconds :: Kernel.Prelude.NominalDiffTime,
     nyRegularMinGapSeconds :: Kernel.Types.Common.Seconds,
     nyRegularSubscriptionBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    offerListCacheVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutReferralProgram :: Kernel.Prelude.Bool,
