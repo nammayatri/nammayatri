@@ -52,6 +52,7 @@ import qualified Domain.Types.EstimateStatus as Estimate
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as Journey
+import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.MultimodalPreferences as DMP
@@ -448,15 +449,15 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
         if initiateJourney && isFirstJourneyReq
           then do
             case mbJourneyWithIndex of
-              Just (idx, firstJourney) -> do
+              Just (idx, firstJourney, firstJourneyLegs) -> do
                 resp <-
                   if forkInitiateFirstJourney
                     then do
                       fork "Initiate first the route" $ do
-                        void $ DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
+                        void $ DMC.postMultimodalInitiateSimpl firstJourneyLegs firstJourney
                       return Nothing
                     else do
-                      res <- JMU.measureLatency (DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id) "DMC.postMultimodalInitiate"
+                      res <- JMU.measureLatency (DMC.postMultimodalInitiateSimpl firstJourneyLegs firstJourney) "DMC.postMultimodalInitiateSimpl"
                       return $ Just res
                 fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences routeLiveInfo allJourneysLoaded searchRequest.busLocationData
                 return resp
@@ -465,7 +466,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 return Nothing
           else do
             case mbJourneyWithIndex of
-              Just (idx, _) -> do
+              Just (idx, _, _) -> do
                 fork "Process all routes " $ processRestOfRoutes [x | (j, x) <- indexedRoutesToProcess, j /= idx] userPreferences routeLiveInfo allJourneysLoaded searchRequest.busLocationData
               Nothing -> do
                 fork "Process all routes " $ processRestOfRoutes (map snd indexedRoutesToProcess) userPreferences routeLiveInfo allJourneysLoaded searchRequest.busLocationData
@@ -488,15 +489,15 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                     then Just NoUserPreferredFirstJourney
                     else Nothing
           }
-    go :: Bool -> [(Int, MultiModalTypes.MultiModalRoute)] -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> [RL.BusLocation] -> Flow (Maybe (Int, Journey.Journey))
+    go :: Bool -> [(Int, MultiModalTypes.MultiModalRoute)] -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> [RL.BusLocation] -> Flow (Maybe (Int, Journey.Journey, [DJourneyLeg.JourneyLeg]))
     go _ [] _ _ _ = return Nothing
     go isSingleMode ((idx, r) : routes) userPreferences routeLiveInfo busLocationData = do
       mbResult <- processRoute isSingleMode r userPreferences routeLiveInfo busLocationData
       case mbResult of
         Nothing -> go isSingleMode routes userPreferences routeLiveInfo busLocationData
-        Just journey -> return $ Just (idx, journey)
+        Just (journey, journeyLegs) -> return $ Just (idx, journey, journeyLegs)
 
-    processRoute :: Bool -> MultiModalTypes.MultiModalRoute -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> [RL.BusLocation] -> Flow (Maybe Journey.Journey)
+    processRoute :: Bool -> MultiModalTypes.MultiModalRoute -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> [RL.BusLocation] -> Flow (Maybe (Journey.Journey, [DJourneyLeg.JourneyLeg]))
     processRoute isSingleMode r userPreferences routeLiveInfo busLocationData = do
       updatedRoute <- updateRouteWithLegDurations r
       let initReq =

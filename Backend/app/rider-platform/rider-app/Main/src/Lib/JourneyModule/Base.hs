@@ -132,7 +132,7 @@ init ::
   JL.GetFareFlow m r =>
   JL.JourneyInitData ->
   APITypes.MultimodalUserPreferences ->
-  m (Maybe DJourney.Journey)
+  m (Maybe (DJourney.Journey, [DJourneyLeg.JourneyLeg]))
 init journeyReq userPreferences = do
   journeyId <- Common.generateGUID
   riderConfig <- QRC.findByMerchantOperatingCityId journeyReq.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journeyReq.merchantOperatingCityId.getId)
@@ -158,7 +158,7 @@ init journeyReq userPreferences = do
                           serviceTierType = Just liveInfo.serviceType
                         }
                   else Nothing
-          journeyLeg <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) fromLocation toLocation journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.parentSearchId journeyReq.maximumWalkDistance mbTotalLegFare Nothing onboardedSingleModeVehicle Nothing journeyReq.busLocationData
+          journeyLeg <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) fromLocation toLocation journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.parentSearchId journeyReq.maximumWalkDistance mbTotalLegFare Nothing onboardedSingleModeVehicle ((.serviceType) <$> journeyReq.routeLiveInfo) journeyReq.busLocationData
           return (legFare, journeyLeg)
       )
       legsWithContext
@@ -174,7 +174,7 @@ init journeyReq userPreferences = do
       journey <- JL.mkJourney journeyReq.isSingleMode searchReq.riderId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance (searchReq.recentLocationId) journeyReq.relevanceScore hasUserPreferredTransitTypesFlag hasUserPreferredTransitModesFlag fromLocation toLocation
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
-      return $ Just journey
+      return $ Just (journey, journeyLeg)
   where
     straightLineDistance leg = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
     hasUserPreferredTransitTypes legs userPrefs = do
@@ -531,13 +531,12 @@ addAllLegs ::
     JL.GetStateFlow m r c,
     m ~ Kernel.Types.Flow.FlowR AppEnv
   ) =>
-  Id DJourney.Journey ->
+  DJourney.Journey ->
   Maybe [DJourneyLeg.JourneyLeg] ->
   [DJourneyLeg.JourneyLeg] ->
   m ()
-addAllLegs journeyId mbOldJourneyLegs newJourneyLegs = do
-  journey <- getJourney journeyId
-  oldLegs <- maybe (QJourneyLeg.getJourneyLegs journeyId) pure mbOldJourneyLegs
+addAllLegs journey mbOldJourneyLegs newJourneyLegs = do
+  oldLegs <- maybe (QJourneyLeg.getJourneyLegs journey.id) pure mbOldJourneyLegs
   let filteredOldLegs = filter (\leg1 -> all (\leg2 -> leg1.sequenceNumber /= leg2.sequenceNumber) newJourneyLegs) oldLegs
   let allLegs = sortBy (comparing (.sequenceNumber)) (filteredOldLegs ++ newJourneyLegs)
   toLocation <- journey.toLocation & fromMaybeM (InvalidRequest "To location nothing for Journey / Parent Search Request")
@@ -1014,7 +1013,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
         forM_ legsToCancel $ \currLeg -> deleteLeg currLeg (SCR.CancellationReasonCode "") False Nothing
         QJourneyLeg.create journeyLeg
         updateJourneyChangeLogCounter journeyId
-        addAllLegs journeyId Nothing [journeyLeg]
+        addAllLegs journey Nothing [journeyLeg]
     -- check this code
     JL.StartLocation startlocation -> do
       currentLeg <- find (\leg -> leg.sequenceNumber == startlocation.legOrder) allLegs & fromMaybeM (InvalidRequest $ "Cannot find leg with order: " <> show startlocation.legOrder)
@@ -1269,7 +1268,8 @@ switchLeg journeyId _ req = do
   Redis.whenWithLockRedis lockKey 5 $ do
     deleteLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
     newJourneyLeg <- updateJourneyLeg journeyLeg req.newMode startLocation newDistance newDuration
-    addAllLegs journeyId Nothing [newJourneyLeg]
+    journey <- getJourney journeyId
+    addAllLegs journey Nothing [newJourneyLeg]
   where
     updateJourneyLeg ::
       ( CacheFlow m r,
