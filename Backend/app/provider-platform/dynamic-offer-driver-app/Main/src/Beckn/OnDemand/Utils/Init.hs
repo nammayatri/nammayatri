@@ -73,7 +73,7 @@ mkPaymentMethodInfo Spec.Payment {..}
     -- only this payment method supported for Stripe
     return $ Just $ DMPM.PaymentMethodInfo {paymentInstrument = DMPM.Card DMPM.DefaultCardType, collectedBy = DMPM.BAP, paymentType = DMPM.ON_FULFILLMENT}
   where
-    isStripePayment = (paymentTlMethod >>= decodeFromText) == Just Spec.StripeSdk
+    isStripePayment = (paymentTlMethod >>= (\method -> decodeFromText $ "\"" <> method <> "\"")) == Just Spec.StripeSdk
 mkPaymentMethodInfo Spec.Payment {..} = do
   _params <- paymentParams & fromMaybeM (InvalidRequest "Payment Params not found")
   collectedBy <- paymentCollectedBy & fromMaybeM (InvalidRequest "Payment Params not found") >>= castPaymentCollector
