@@ -1,6 +1,7 @@
 module Domain.Action.UI.FareCalculator where
 
 import qualified API.Types.UI.FareCalculator
+import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Geohash as Geohash
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T

@@ -968,6 +968,28 @@ apis:
             response:
               type: APISuccess
 
+  - GET:
+      endpoint: /dashboard/fleet/trip/{tripTransactionId}/{fleetOwnerId}/waypoints
+      auth: ApiAuthV2
+      params:
+        tripTransactionId: Id TripTransaction
+        fleetOwnerId: Text
+      query:
+        memberPersonId: Text
+      response:
+        type: TripTransactionWaypointsRes
+      helperApi:
+        - GET:
+            endpoint: /dashboard/fleet/trip/{tripTransactionId}/{fleetOwnerId}/waypoints
+            auth: ApiAuthV2
+            params:
+              tripTransactionId: Id TripTransaction
+              fleetOwnerId: Text
+            query:
+              memberPersonId: Text
+            response:
+              type: TripTransactionWaypointsRes
+
   - GET: # Retrieve the route details
       endpoint: /fleet/wmb/route/{routeCode}/details
       auth: ApiAuthV2
@@ -1256,6 +1278,15 @@ types:
     - trips: [TripTransactionDetailT]
     - totalTrips: Int
     - summary: Summary
+  ActualRoute:
+    - lat: Double
+    - lon: Double
+    - timestamp: UTCTime
+    - accuracy: Maybe Double
+  TripTransactionWaypointsRes:
+    - recordType: NewType
+    - waypoints: [ActualRoute]
+    - derive: "'HideSecrets"
   AddVehicleReq:
     - registrationNo: Text
     - vehicleClass: Text

@@ -65,6 +65,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetGetNearbyDriversV2,
     getDriverFleetDashboardAnalyticsAllTime,
     getDriverFleetDashboardAnalytics,
+    getDriverDashboardFleetTripWaypoints,
   )
 where
 
@@ -572,3 +573,10 @@ postDriverFleetGetNearbyDriversV2 merchantShortId opCity apiTokenInfo req = do
   return $ Common.NearbyDriversRespTV2 {..}
   where
     addFleetOwnerDetails fleetOwnerId fleetOwnerName Common.NearbyDriverDetails {..} = Common.NearbyDriverDetailsT {..}
+
+getDriverDashboardFleetTripWaypoints :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.TripTransaction -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow Common.TripTransactionWaypointsRes)
+getDriverDashboardFleetTripWaypoints merchantShortId opCity apiTokenInfo tripTransactionId fleetOwnerId _ = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  fleetOwnerId' <- getFleetOwnerId apiTokenInfo.personId.getId (Just fleetOwnerId)
+  let memberPersonId = apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverDashboardFleetTripWaypoints) tripTransactionId fleetOwnerId' (Just memberPersonId)
