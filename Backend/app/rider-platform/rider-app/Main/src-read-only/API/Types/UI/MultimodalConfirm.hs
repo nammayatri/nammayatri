@@ -25,6 +25,7 @@ import qualified Domain.Types.Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Juspay.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -142,6 +143,7 @@ data JourneyInfoResp = JourneyInfoResp
     journeyStatus :: Domain.Types.Journey.JourneyStatus,
     legs :: [Lib.JourneyModule.Types.LegInfo],
     merchantOperatingCityName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    offers :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.OfferListResp,
     paymentOrderShortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),
     result :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
