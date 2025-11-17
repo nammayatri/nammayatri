@@ -32,13 +32,10 @@ import qualified Domain.Types.DigilockerVerification as DDV
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Environment
 import qualified Kernel.External.SharedLogic.DigiLocker.Error as DigiLockerError
-import qualified Kernel.External.Verification as KernelVerification
 import qualified Kernel.External.Verification.Digilocker.Types as DigiTypes
-import qualified Kernel.External.Verification.Digilocker.Types as DigilockerTypes
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import qualified Kernel.External.Verification.Interface.Types as VerificationTypes
 import Kernel.Prelude
@@ -47,9 +44,9 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverLicenseExtra as QDLE
 import qualified Storage.Queries.Person as PersonQuery
@@ -99,7 +96,7 @@ pullDrivingLicenseDocument (mbDriverId, merchantId, merchantOpCityId) req = do
   accessToken <- session.accessToken & fromMaybeM (InvalidRequest "DigiLocker session not authorized. Access token missing.")
 
   -- Step 8: Get DigiLocker config
-  digiLockerConfig <- getDigiLockerConfig person.merchantOperatingCityId
+  digiLockerConfig <- DigilockerLockerShared.getDigiLockerConfig person.merchantOperatingCityId
 
   let orgId = digiLockerConfig.dlOrgId
   -- Step 9: Construct pull request with orgid from config
@@ -387,20 +384,6 @@ createCovDetails covs = map createCovDetail covs
 
 docTypeToText :: DVC.DocumentType -> Text
 docTypeToText = T.pack . show
-
--- | Get DigiLocker configuration from merchant service config
-getDigiLockerConfig :: Id DMOC.MerchantOperatingCity -> Flow DigilockerTypes.DigiLockerCfg
-getDigiLockerConfig merchantOpCityId = do
-  -- Fetch DigiLocker service config
-  let serviceName = DMSC.VerificationService KernelVerification.DigiLocker
-  merchantServiceConfig <-
-    CQMSC.findByServiceAndCity serviceName merchantOpCityId
-      >>= fromMaybeM (InternalError "DigiLocker service config not found. Please configure DigiLocker in merchant_service_config table.")
-
-  case merchantServiceConfig.serviceConfig of
-    DMSC.VerificationServiceConfig (KernelVerification.DigiLockerConfig config) ->
-      return config
-    _ -> throwError $ InternalError "Invalid DigiLocker service config type"
 
 -- | Extract error code and description from DigiLocker error
 -- Maps DigiLockerError to (errorCode, errorDescription) tuple for storage in DB

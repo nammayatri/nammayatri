@@ -35,7 +35,6 @@ import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
@@ -64,6 +63,7 @@ import Kernel.Utils.Common
 import qualified Network.HTTP.Types.URI as URI
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Merchant as SMerchant
@@ -72,7 +72,6 @@ import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
@@ -1130,30 +1129,6 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
 -- DigiLocker Configuration Type will be auto-generated from API YAML spec
 -- Import: API.Types.UI.DriverOnboardingV2.DigiLockerCfg (after running generator)
 
--- DigiLocker config is fetched from MerchantServiceConfig (credentials, URLs)
--- TransporterConfig.digilockerEnabled determines if feature is enabled
-
-getDigiLockerConfig :: Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Flow DigilockerTypes.DigiLockerCfg
-getDigiLockerConfig merchantOpCityId = do
-  -- Check if DigiLocker is enabled for this merchant+city
-  transporterConfig <-
-    CQTC.findByMerchantOpCityId merchantOpCityId Nothing
-      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-
-  unless (transporterConfig.digilockerEnabled == Just True) $
-    throwError $ InvalidRequest "DigiLocker not enabled for this merchant"
-
-  -- Fetch DigiLocker service config
-  let serviceName = DMSC.VerificationService Verification.DigiLocker
-  merchantServiceConfig <-
-    CQMSC.findByServiceAndCity serviceName merchantOpCityId
-      >>= fromMaybeM (InternalError "DigiLocker service config not found. Please configure DigiLocker in merchant_service_config table.")
-
-  case merchantServiceConfig.serviceConfig of
-    DMSC.VerificationServiceConfig (Verification.DigiLockerConfig config) ->
-      return config
-    _ -> throwError $ InternalError "Invalid DigiLocker service config type"
-
 ----------- GET DIGILOCKER AUTHORIZATION URL -----------
 
 postDriverDigilockerInitiate ::
@@ -1167,8 +1142,13 @@ postDriverDigilockerInitiate (mbDriverId, merchantId, merchantOpCityId) req = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   logInfo $ "DigiLocker initiate - Starting authorization flow for DriverId: " <> driverId.getId <> ", VehicleCategory: " <> show req.vehicleCategory
 
+  -- Validate vehicle category - only auto, car, and bike are allowed
+  let allowedVehicleCategories = [DVC.AUTO_CATEGORY, DVC.CAR, DVC.MOTORCYCLE]
+  unless (req.vehicleCategory `elem` allowedVehicleCategories) $
+    throwError $ InvalidRequest $ "Vehicle category must be one of: auto, car, or bike. Received: " <> show req.vehicleCategory
+
   -- Step 1: Verify DigiLocker is enabled for this merchant+city
-  verifyDigiLockerEnabled merchantOpCityId
+  DigilockerLockerShared.verifyDigiLockerEnabled merchantOpCityId
 
   -- Step 2: Check for existing active session
   latestSession <- QDV.findLatestByDriverId (Just 1) (Just 0) driverId
@@ -1184,19 +1164,6 @@ postDriverDigilockerInitiate (mbDriverId, merchantId, merchantOpCityId) req = do
       handleExistingSession driverId merchantId merchantOpCityId session req.vehicleCategory
 
 ----------- Helper Functions for DigiLocker Initiate -----------
-
--- Verify DigiLocker is enabled for merchant+city
-verifyDigiLockerEnabled :: Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Flow ()
-verifyDigiLockerEnabled merchantOpCityId = do
-  transporterConfig <-
-    CQTC.findByMerchantOpCityId merchantOpCityId Nothing
-      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-
-  -- Check if digilockerEnabled is true in TransporterConfig
-  unless (fromMaybe False transporterConfig.digilockerEnabled) $
-    throwError $ InvalidRequest "DigiLocker is not enabled for this merchant+city"
-
-  logInfo $ "DigiLocker initiate - Verified DigiLocker is enabled for merchantOpCityId: " <> merchantOpCityId.getId
 
 -- Handle existing session logic
 handleExistingSession ::
@@ -1259,18 +1226,19 @@ checkDocumentStatuses driverId merchantId merchantOpCityId session now vehicleCa
   let docStatusMap = session.docStatus
 
   -- Check for PENDING documents
-  when (hasDocWithStatus docStatusMap "PENDING") $ do
+  when (hasDocWithStatus docStatusMap (DigilockerLockerShared.docStatusToText DigilockerLockerShared.DOC_PENDING)) $ do
     logInfo $ "DigiLocker initiate - Found PENDING documents, returning 409"
     throwError DigiLockerDocumentsBeingVerified
 
   -- Check for FAILED or CONSENT_DENIED documents
-  if hasDocWithStatus docStatusMap "FAILED" || hasDocWithStatus docStatusMap "CONSENT_DENIED"
+  if hasDocWithStatus docStatusMap (DigilockerLockerShared.docStatusToText DigilockerLockerShared.DOC_FAILED)
+    || hasDocWithStatus docStatusMap (DigilockerLockerShared.docStatusToText DigilockerLockerShared.DOC_CONSENT_DENIED)
     then do
       logInfo $ "DigiLocker initiate - Found FAILED or CONSENT_DENIED documents, creating new session"
       createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
     else -- Check for PULL_REQUIRED documents
 
-      if hasDocWithStatus docStatusMap "PULL_REQUIRED"
+      if hasDocWithStatus docStatusMap (DigilockerLockerShared.docStatusToText DigilockerLockerShared.DOC_PULL_REQUIRED)
         then handlePullRequiredDocs driverId merchantId merchantOpCityId session docStatusMap now vehicleCategory
         else -- If no problematic status, check actual document tables
           checkActualDocumentTables driverId merchantId merchantOpCityId vehicleCategory
@@ -1348,7 +1316,7 @@ createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory 
   logInfo $ "DigiLocker initiate - Creating new session for DriverId: " <> driverId.getId <> ", VehicleCategory: " <> show vehicleCategory
 
   -- Fetch DigiLocker credentials from MerchantServiceConfig
-  digiLockerConfig <- getDigiLockerConfig merchantOpCityId
+  digiLockerConfig <- DigilockerLockerShared.getDigiLockerConfig merchantOpCityId
   logInfo $ "DigiLocker initiate - Config retrieved for merchantOpCityId: " <> merchantOpCityId.getId
 
   -- Generate PKCE parameters

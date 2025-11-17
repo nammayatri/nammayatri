@@ -403,6 +403,7 @@ library
       SharedLogic.DriverFleetOperatorAssociation
       SharedLogic.DriverFlowStatus
       SharedLogic.DriverOnboarding
+      SharedLogic.DriverOnboarding.Digilocker
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverPool
       SharedLogic.DriverPool.Config

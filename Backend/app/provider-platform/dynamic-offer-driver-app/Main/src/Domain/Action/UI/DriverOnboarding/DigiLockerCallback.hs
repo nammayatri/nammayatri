@@ -35,6 +35,8 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (Error)
 import Servant hiding (throwError)
+import SharedLogic.DriverOnboarding.Digilocker (DocStatus (..), docStatusToText)
+import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.Queries.AadhaarCard as QAC
@@ -132,7 +134,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
     throwError $ InvalidRequest "DigiLocker verification is not enabled for this merchant operating city"
 
   -- Step 6: Get DigiLocker config and call tokenize API
-  digiLockerConfig <- DriverOnboardingV2.getDigiLockerConfig person.merchantOperatingCityId
+  digiLockerConfig <- SDDigilocker.getDigiLockerConfig person.merchantOperatingCityId
   logInfo $
     "DigiLocker callback - Loaded DigiLocker config for merchantOpCityId: "
       <> person.merchantOperatingCityId.getId
@@ -289,25 +291,6 @@ data DocumentAvailability
   | PullRequired -- Document needs to be pulled with user input
   | ConsentDenied -- User did not give consent
   deriving (Show, Eq)
-
--- | Document status enum for docStatus JSON
--- These are the possible states a document can be in during DigiLocker verification
-data DocStatus
-  = DOC_PENDING -- Document is ready to fetch and verify
-  | DOC_SUCCESS -- Successfully fetched and verified
-  | DOC_FAILED -- Fetch or verification failed
-  | DOC_CONSENT_DENIED -- User denied consent for this document
-  | DOC_PULL_REQUIRED -- User needs to provide details (e.g., DL number)
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
--- | Convert DocStatus to Text for JSON
-docStatusToText :: DocStatus -> Text
-docStatusToText status = case status of
-  DOC_PENDING -> "PENDING"
-  DOC_SUCCESS -> "SUCCESS"
-  DOC_FAILED -> "FAILED"
-  DOC_CONSENT_DENIED -> "CONSENT_DENIED"
-  DOC_PULL_REQUIRED -> "PULL_REQUIRED"
 
 -- | Type to represent extracted document data from DigiLocker
 data ExtractedDocumentData
