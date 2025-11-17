@@ -75,7 +75,9 @@ data TicketServiceDetails = TicketServiceDetails
     expiry :: DTicketService.ExpiryType,
     businessHours :: [Id DBusinessHour.BusinessHour],
     rules :: Maybe [Rule],
-    maxSelection :: Maybe Int
+    maxSelection :: Maybe Int,
+    note :: Maybe Text,
+    priority :: Maybe Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
