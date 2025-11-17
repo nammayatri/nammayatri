@@ -79,6 +79,7 @@ library
       API.UI.HotSpot
       API.UI.Issue
       API.UI.Maps
+      API.UI.ParkingBooking
       API.UI.PartnerOrganizationFRFS
       API.UI.Pass
       API.UI.Payment

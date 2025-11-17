@@ -65,6 +65,7 @@ import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
 import qualified API.UI.HotSpot as HotSpot
 import qualified API.UI.Issue as Issue
 import qualified API.UI.Maps as MapsProxy
+import qualified API.UI.ParkingBooking as ParkingBooking
 import qualified API.UI.PartnerOrganizationFRFS as PartnerOrgFRFS
 import qualified API.UI.Pass as Pass
 import qualified API.UI.Payment as Payment
@@ -154,6 +155,7 @@ type API =
            :<|> AttractionRecommend.API
            :<|> RiderLocation.API
            :<|> Pass.API
+           :<|> ParkingBooking.API
            :<|> Dispatcher.API
        )
 
@@ -224,4 +226,5 @@ handler =
     :<|> AttractionRecommend.handler
     :<|> RiderLocation.handler
     :<|> Pass.handler
+    :<|> ParkingBooking.handler
     :<|> Dispatcher.handler
