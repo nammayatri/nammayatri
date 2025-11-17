@@ -1,0 +1,51 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+  Money: Kernel.Types.Common
+  PayoutOrderStatus: Kernel.External.Payout.Juspay.Types.Payout
+  Person: Domain.Types.Person
+
+FleetRcAssociationDailyStats:
+  tableName: fleet_rc_association_daily_stats
+
+  fields:
+    fleetOwnerId : Text
+    rcId : Text
+    merchantLocalDate : Day
+    totalCompletedRides : Int
+    totalEarnings : Maybe HighPrecMoney
+    rideDistance : Maybe Meters
+    rideDuration : Maybe Seconds
+    currency : Maybe Currency
+    distanceUnit : Maybe DistanceUnit
+
+  beamType:
+    totalEarnings: Maybe HighPrecMoney
+    rideDistance: Maybe Double
+
+  fromTType:
+    rideDistance: Kernel.Prelude.fmap (Kernel.Types.Common.Meters . GHC.Float.double2Int) rideDistance|E
+
+  toTType:
+    rideDistance: getTotalDistance
+
+  constraints:
+    fleetOwnerId: PrimaryKey
+    rcId: PrimaryKey
+    merchantLocalDate: PrimaryKey
+
+  queries:
+    findByFleetOwnerIdAndRcIdAndMerchantLocalDate:
+      kvFunction: findOneWithKV
+      where:
+        and: [fleetOwnerId, rcId, merchantLocalDate]
+
+    updateByFleetOwnerIdAndRcIdAndMerchantLocalDate:
+      kvFunction: updateOneWithKV
+      params: [totalCompletedRides, totalEarnings, rideDistance, rideDuration]
+      where:
+        and: [fleetOwnerId, rcId, merchantLocalDate]
+
+
