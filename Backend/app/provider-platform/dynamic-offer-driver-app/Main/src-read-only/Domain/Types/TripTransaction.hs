@@ -14,6 +14,7 @@ import qualified Domain.Types.Person
 import qualified Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
@@ -48,6 +49,7 @@ data TripTransaction = TripTransaction
     status :: Domain.Types.TripTransaction.TripStatus,
     tripCode :: Kernel.Prelude.Maybe Data.Text.Text,
     tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    tripEstimatedRouteDetails :: Kernel.Prelude.Maybe Domain.Types.TripTransaction.EstimatedRouteDetails,
     tripStartSource :: Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource,
     tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripTerminationSource :: Kernel.Prelude.Maybe Domain.Types.TripTransaction.ActionSource,
@@ -68,6 +70,9 @@ data ActionSource
   | CronJob
   | AutoRecovery
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data EstimatedRouteDetails = EstimatedRouteDetails {distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters, duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds, polyline :: Kernel.Prelude.Maybe Data.Text.Text}
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data TripStatus = TRIP_ASSIGNED | CANCELLED | IN_PROGRESS | PAUSED | COMPLETED | UPCOMING deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

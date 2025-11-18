@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.TripTransaction where
 
+import qualified Data.Aeson
 import qualified Domain.Types.TripTransaction
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -48,6 +49,7 @@ instance FromTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransa
             status = status,
             tripCode = tripCode,
             tripEndTime = tripEndTime,
+            tripEstimatedRouteDetails = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< tripEstimatedRouteDetails,
             tripStartSource = tripStartSource,
             tripStartTime = tripStartTime,
             tripTerminationSource = tripTerminationSource,
@@ -94,6 +96,7 @@ instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransact
         Beam.status = status,
         Beam.tripCode = tripCode,
         Beam.tripEndTime = tripEndTime,
+        Beam.tripEstimatedRouteDetails = Kernel.Prelude.toJSON <$> tripEstimatedRouteDetails,
         Beam.tripStartSource = tripStartSource,
         Beam.tripStartTime = tripStartTime,
         Beam.tripTerminationSource = tripTerminationSource,

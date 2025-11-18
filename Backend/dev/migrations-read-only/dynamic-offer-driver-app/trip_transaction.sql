@@ -102,3 +102,13 @@ ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN pilot_destination
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN trip_estimated_route_details json ;
+
+
+------- SQL updates -------
+
