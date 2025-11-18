@@ -59,110 +59,9 @@ import qualified Tools.Payment as TPayment
 import TransactionLogs.Types
 import qualified UrlShortner.Common as UrlShortner
 
-makePaymentIntent ::
-  ( MonadFlow m,
-    EncFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
-  ) =>
-  Id Merchant.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  Id Person.Person ->
-  Ride.Ride ->
-  Payment.CreatePaymentIntentReq ->
-  m Payment.CreatePaymentIntentResp
-makePaymentIntent merchantId merchantOpCityId personId ride createPaymentIntentReq = do
-  let commonMerchantId = cast @Merchant.Merchant @DPayment.Merchant merchantId
-      commonPersonId = cast @Person.Person @DPayment.Person personId
-      commonRideId = cast @Ride.Ride @DPayment.Ride ride.id
-      createPaymentIntentCall = TPayment.createPaymentIntent merchantId merchantOpCityId
-      updatePaymentIntentAmountCall = TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId
-      cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId
-  DPayment.createPaymentIntentService commonMerchantId (Just $ cast merchantOpCityId) commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall cancelPaymentIntentCall
-
-cancelPaymentIntent ::
-  ( MonadFlow m,
-    EncFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
-  ) =>
-  Id Merchant.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  Id Ride.Ride ->
-  m ()
-cancelPaymentIntent merchantId merchantOpCityId rideId = do
-  let cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId
-  DPayment.cancelPaymentIntentService (cast @Ride.Ride @DPayment.Ride rideId) cancelPaymentIntentCall
-
-chargePaymentIntent ::
-  ( MonadFlow m,
-    EncFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
-  ) =>
-  Id Merchant.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  Payment.PaymentIntentId ->
-  m Bool
-chargePaymentIntent merchantId merchantOpCityId paymentIntentId = do
-  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
-      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
-  DPayment.chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall
-
-paymentErrorHandler ::
-  ( EncFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
-  ) =>
-  Booking.Booking ->
-  SomeException ->
-  m ()
-paymentErrorHandler booking exec = do
-  let err = fromException @Payment.StripeError exec
-  cancelBooking err
-  where
-    cancelBooking err = do
-      let req =
-            DCancel.CancelReq
-              { reasonCode = SCR.CancellationReasonCode (maybe "UNKOWN_ERROR" toErrorCode err),
-                reasonStage = SCR.OnAssign,
-                additionalInfo = err >>= toMessage,
-                reallocate = Nothing,
-                blockOnCancellationRate = Nothing
-              }
-      dCancelRes <- DCancel.cancel booking Nothing req SBCR.ByApplication
-      void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
-
-makeCxCancellationPayment ::
-  ( MonadFlow m,
-    EncFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
-  ) =>
-  Id Merchant.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  Payment.PaymentIntentId ->
-  HighPrecMoney ->
-  m Bool
-makeCxCancellationPayment merchantId merchantOpCityId paymentIntentId cancellationAmount = do
-  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
-      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
-  DPayment.updateForCXCancelPaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount
+-------------------------------------------------------------------------------------------------------
+----------------------------------- Payment Order Status Handler --------------------------------------
+-------------------------------------------------------------------------------------------------------
 
 orderStatusHandler ::
   ( CacheFlow m r,
@@ -474,24 +373,6 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
           createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just merchantOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
           logInfo $ "Scheduled refund status check job for " <> refundId <> " in 24 hours (initial check)"
 
-validatePaymentInstrument :: (MonadThrow m, Log m) => Merchant.Merchant -> Maybe DMPM.PaymentInstrument -> Maybe Payment.PaymentMethodId -> m ()
-validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do
-  if merchant.onlinePayment
-    then do
-      let paymentInstrument = fromMaybe (DMPM.Card DMPM.DefaultCardType) mbPaymentInstrument
-      case paymentInstrument of
-        DMPM.Card _ -> when (isNothing mbPaymentMethodId) $ throwError PaymentMethodRequired
-        DMPM.Cash -> pure ()
-        _ -> throwError (InvalidRequest "Only Card and Cash payment instruments supported")
-    else do
-      let paymentInstrument = fromMaybe DMPM.Cash mbPaymentInstrument
-      case paymentInstrument of
-        DMPM.Cash -> pure ()
-        _ -> throwError (InvalidRequest "Only Cash payment instrument supported")
-
-isOnlinePayment :: Maybe Merchant.Merchant -> Booking.Booking -> Bool
-isOnlinePayment mbMerchant booking = maybe False (.onlinePayment) mbMerchant && booking.paymentInstrument /= Just DMPM.Cash
-
 -------------------------------------------------------------------------------------------------------
 ----------------------------------- Fetch Offers List With Caching ------------------------------------
 -------------------------------------------------------------------------------------------------------
@@ -541,3 +422,130 @@ mkOfferListReq person price = do
 
 makeOfferListCacheKey :: Person.Person -> Text -> Payment.OfferListReq -> Text
 makeOfferListCacheKey person version _req = "OfferList:CId" <> person.id.getId <> ":V-" <> version
+
+-------------------------------------------------------------------------------------------------------
+------------------------------------- Payment Utility Functions ---------------------------------------
+-------------------------------------------------------------------------------------------------------
+
+makePaymentIntent ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
+  ) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id Person.Person ->
+  Ride.Ride ->
+  Payment.CreatePaymentIntentReq ->
+  m Payment.CreatePaymentIntentResp
+makePaymentIntent merchantId merchantOpCityId personId ride createPaymentIntentReq = do
+  let commonMerchantId = cast @Merchant.Merchant @DPayment.Merchant merchantId
+      commonPersonId = cast @Person.Person @DPayment.Person personId
+      commonRideId = cast @Ride.Ride @DPayment.Ride ride.id
+      createPaymentIntentCall = TPayment.createPaymentIntent merchantId merchantOpCityId
+      updatePaymentIntentAmountCall = TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId
+      cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId
+  DPayment.createPaymentIntentService commonMerchantId (Just $ cast merchantOpCityId) commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall cancelPaymentIntentCall
+
+cancelPaymentIntent ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
+  ) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id Ride.Ride ->
+  m ()
+cancelPaymentIntent merchantId merchantOpCityId rideId = do
+  let cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId
+  DPayment.cancelPaymentIntentService (cast @Ride.Ride @DPayment.Ride rideId) cancelPaymentIntentCall
+
+chargePaymentIntent ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
+  ) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Payment.PaymentIntentId ->
+  m Bool
+chargePaymentIntent merchantId merchantOpCityId paymentIntentId = do
+  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
+      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
+  DPayment.chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall
+
+paymentErrorHandler ::
+  ( EncFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
+  ) =>
+  Booking.Booking ->
+  SomeException ->
+  m ()
+paymentErrorHandler booking exec = do
+  let err = fromException @Payment.StripeError exec
+  cancelBooking err
+  where
+    cancelBooking err = do
+      let req =
+            DCancel.CancelReq
+              { reasonCode = SCR.CancellationReasonCode (maybe "UNKOWN_ERROR" toErrorCode err),
+                reasonStage = SCR.OnAssign,
+                additionalInfo = err >>= toMessage,
+                reallocate = Nothing,
+                blockOnCancellationRate = Nothing
+              }
+      dCancelRes <- DCancel.cancel booking Nothing req SBCR.ByApplication
+      void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
+
+makeCxCancellationPayment ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r
+  ) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Payment.PaymentIntentId ->
+  HighPrecMoney ->
+  m Bool
+makeCxCancellationPayment merchantId merchantOpCityId paymentIntentId cancellationAmount = do
+  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
+      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
+  DPayment.updateForCXCancelPaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount
+
+validatePaymentInstrument :: (MonadThrow m, Log m) => Merchant.Merchant -> Maybe DMPM.PaymentInstrument -> Maybe Payment.PaymentMethodId -> m ()
+validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do
+  if merchant.onlinePayment
+    then do
+      let paymentInstrument = fromMaybe (DMPM.Card DMPM.DefaultCardType) mbPaymentInstrument
+      case paymentInstrument of
+        DMPM.Card _ -> when (isNothing mbPaymentMethodId) $ throwError PaymentMethodRequired
+        DMPM.Cash -> pure ()
+        _ -> throwError (InvalidRequest "Only Card and Cash payment instruments supported")
+    else do
+      let paymentInstrument = fromMaybe DMPM.Cash mbPaymentInstrument
+      case paymentInstrument of
+        DMPM.Cash -> pure ()
+        _ -> throwError (InvalidRequest "Only Cash payment instrument supported")
+
+isOnlinePayment :: Maybe Merchant.Merchant -> Booking.Booking -> Bool
+isOnlinePayment mbMerchant booking = maybe False (.onlinePayment) mbMerchant && booking.paymentInstrument /= Just DMPM.Cash
