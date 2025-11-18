@@ -407,8 +407,8 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
       )
         =<< TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion req
 
-mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> m (Maybe CumulativeOfferResp)
-mkCumulativeOfferResp merchantOperatingCityId offerListResp = do
+mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r, ToJSON a) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> a -> m (Maybe CumulativeOfferResp)
+mkCumulativeOfferResp merchantOperatingCityId offerListResp extraParams = do
   now <- getCurrentTime
   (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.CUMULATIVE_OFFER_POLICY) now Nothing Nothing
   if null logics
@@ -417,7 +417,7 @@ mkCumulativeOfferResp merchantOperatingCityId offerListResp = do
       pure Nothing
     else do
       logInfo $ "Running cumulative offer logic with " <> show (length logics) <> " rules"
-      result <- LYTU.runLogics logics offerListResp
+      result <- LYTU.runLogics logics (CumulativeOfferReq offerListResp extraParams)
       case A.fromJSON result.result :: A.Result CumulativeOfferResp of
         A.Success logicResult -> do
           logInfo $ "Cumulative offer logic result: " <> show logicResult
