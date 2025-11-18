@@ -19,7 +19,9 @@ module Domain.Action.UI.DriverOnboarding.DocumentRegistration
   )
 where
 
+import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
 import qualified Domain.Types.Merchant as DM
@@ -29,18 +31,23 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.DriverOnboarding (convertUTCTimetoDate, removeSpaceAndDash)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Tools.Error
+import qualified Tools.Verification as Verification
 
 data ValidateDocumentImageRequest = ValidateDocumentImageRequest
   { image :: Text,
-    imageType :: DVC.DocumentType,
-    documentInfoText :: Maybe Text
+    imageType :: DVC.DocumentType
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
 data ValidateDocumentImageResponse = ValidateDocumentImageResponse
   { imageId :: Id Domain.Image,
     documentNumber :: Maybe Text,
-    dateOfBirth :: Maybe Text
+    dateOfBirth :: Maybe Text,
+    nameOnCard :: Maybe Text,
+    isVerified :: Bool
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -50,29 +57,33 @@ validateDocument ::
   ValidateDocumentImageRequest ->
   Flow ValidateDocumentImageResponse
 validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDocumentImageRequest {..} = do
-  logDebug $ "DocumentRegistration.validateDocument: Starting validation for personId=" <> show personId <> ", imageType=" <> show imageType <> ", hasDocumentInfoText=" <> show (isJust documentInfoText)
+  logDebug $ "DocumentRegistration.validateDocument: Starting validation for personId=" <> show personId <> ", imageType=" <> show imageType
   imageResponse <- Image.validateImage isDashboard (personId, merchantId, merchantOpCityId) Image.ImageValidateRequest {image = image, imageType = imageType, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
-  let imageId = imageResponse.imageId
+  let imageId :: Id Domain.Image = imageResponse.imageId
+  imageData <- Image.getImage merchantId imageId
   logDebug $ "DocumentRegistration.validateDocument: Image validated successfully, imageId=" <> show imageId
-  (documentNumber, dateOfBirth) <- case documentInfoText of
-    Just docText -> do
-      logDebug $ "DocumentRegistration.validateDocument: Extracting info from documentInfoText, imageType=" <> show imageType
-      case imageType of
-        DVC.DriverLicense -> do
-          logDebug $ "DocumentRegistration.validateDocument: Extracting DL info"
-          (documentNumber, dateOfBirth) <- Image.extractDLInfoFromText merchantId merchantOpCityId docText
-          logDebug $ "DocumentRegistration.validateDocument: DL extraction completed, documentNumber=" <> show documentNumber <> ", dateOfBirth=" <> show dateOfBirth
-          return (documentNumber, dateOfBirth)
-        DVC.VehicleRegistrationCertificate -> do
-          logDebug $ "DocumentRegistration.validateDocument: Extracting RC info"
-          documentNumber <- Image.extractRCInfoFromText merchantId merchantOpCityId docText
-          logDebug $ "DocumentRegistration.validateDocument: RC extraction completed, documentNumber=" <> show documentNumber
-          return (documentNumber, Nothing)
-        _ -> do
-          logDebug $ "DocumentRegistration.validateDocument: Unsupported document type for auto-registration: " <> show imageType
-          return (Nothing, Nothing) -- Only DL and RC are supported for auto-registration
-    Nothing -> do
-      logDebug $ "DocumentRegistration.validateDocument: No documentInfoText provided, skipping extraction"
-      return (Nothing, Nothing)
+  operatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  (documentNumber, dateOfBirth, nameOnCard) <- case imageType of
+    DVC.DriverLicense -> do
+      resp <- Verification.extractDLImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
+      logDebug $ "DocumentRegistration.validateDocument: Extracted DL Image successfully, resp=" <> show resp
+      case resp.extractedDL of
+        Just extractedDL -> do
+          let documentNumber = removeSpaceAndDash <$> extractedDL.dlNumber
+          let dateOfBirth = fmap convertUTCTimetoDate (VC.parseDateTime =<< extractedDL.dateOfBirth)
+          let nameOnCard = extractedDL.nameOnCard
+          DL.cacheExtractedDl personId documentNumber (show operatingCity.city)
+          return (documentNumber, dateOfBirth, nameOnCard)
+        Nothing -> do
+          return (Nothing, Nothing, Nothing)
+    DVC.VehicleRegistrationCertificate -> do
+      resp <- Verification.extractRCImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
+      case resp.extractedRC of
+        Just extractedRC -> do
+          let documentNumber = removeSpaceAndDash <$> extractedRC.rcNumber
+          return (documentNumber, Nothing, Nothing)
+        Nothing -> do
+          return (Nothing, Nothing, Nothing)
+    _ -> return (Nothing, Nothing, Nothing)
   logDebug $ "DocumentRegistration.validateDocument: Validation completed, returning response with documentNumber=" <> show documentNumber <> ", dateOfBirth=" <> show dateOfBirth
-  pure $ ValidateDocumentImageResponse imageId documentNumber dateOfBirth
+  pure $ ValidateDocumentImageResponse imageId documentNumber dateOfBirth nameOnCard True

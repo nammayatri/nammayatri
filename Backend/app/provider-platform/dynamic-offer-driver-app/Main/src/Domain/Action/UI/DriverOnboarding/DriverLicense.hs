@@ -18,6 +18,7 @@ module Domain.Action.UI.DriverOnboarding.DriverLicense
     DriverDLRes,
     verifyDL,
     onVerifyDL,
+    cacheExtractedDl,
     convertUTCTimetoDate,
   )
 where
@@ -80,9 +81,11 @@ data DriverDLReq = DriverDLReq
     imageId1 :: Id Image.Image,
     imageId2 :: Maybe (Id Image.Image),
     dateOfIssue :: Maybe UTCTime,
+    nameOnCard :: Maybe Text,
     nameOnCardFromSdk :: Maybe Text, -- used when frontend sdk is used for extraction
     requestId :: Maybe Text, -- used when frontend sdk is used for extraction
-    sdkTransactionId :: Maybe Text -- used when frontend sdk is used for extraction
+    sdkTransactionId :: Maybe Text, -- used when frontend sdk is used for extraction
+    isDLImageValidated :: Maybe Bool
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -119,30 +122,36 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
-  (nameOnCard, dateOfBirth) <-
+  (nameOnTheCard, dateOfBirth) <-
     if isJust nameOnCardFromSdk
       then return (nameOnCardFromSdk, Nothing)
       else
         if isNothing dateOfIssue && documentVerificationConfig.checkExtraction && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
-          then do
-            image1 <- getImage imageId1
-            image2 <- getImage `mapM` imageId2
-            resp <-
-              Verification.extractDLImage person.merchantId merchantOpCityId $
-                Verification.ExtractImageReq {image1, image2, driverId = person.id.getId}
-            case resp.extractedDL of
-              Just extractedDL -> do
-                let extractDLNumber = removeSpaceAndDash <$> extractedDL.dlNumber
-                let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
-                let nameOnCard = extractedDL.nameOnCard
-                -- disable this check for debugging with mock-idfy
-                cacheExtractedDl person.id extractDLNumber operatingCity
-                unless (extractDLNumber == dlNumber) $
-                  throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
-                let extractedDob = VC.parseDateTime =<< extractedDL.dateOfBirth
-                void $ VC.compareDateOfBirth extractedDob (Just driverDateOfBirth)
-                return (nameOnCard, extractedDL.dateOfBirth)
-              Nothing -> throwImageError imageId1 ImageExtractionFailed
+          then
+            if isJust req.isDLImageValidated
+              then do
+                let nameOnTheCard = req.nameOnCard
+                let dateOfBirth = Just $ convertUTCTimetoDate req.driverDateOfBirth
+                return (nameOnTheCard, dateOfBirth)
+              else do
+                image1 <- getImage imageId1
+                image2 <- getImage `mapM` imageId2
+                resp <-
+                  Verification.extractDLImage person.merchantId merchantOpCityId $
+                    Verification.ExtractImageReq {image1, image2, driverId = person.id.getId}
+                case resp.extractedDL of
+                  Just extractedDL -> do
+                    let extractDLNumber = removeSpaceAndDash <$> extractedDL.dlNumber
+                    let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
+                    let _nameOnCard = extractedDL.nameOnCard
+                    -- disable this check for debugging with mock-idfy
+                    cacheExtractedDl person.id extractDLNumber operatingCity
+                    unless (extractDLNumber == dlNumber) $
+                      throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
+                    let extractedDob = VC.parseDateTime =<< extractedDL.dateOfBirth
+                    void $ VC.compareDateOfBirth extractedDob (Just driverDateOfBirth)
+                    return (_nameOnCard, extractedDL.dateOfBirth)
+                  Nothing -> throwImageError imageId1 ImageExtractionFailed
           else return (Nothing, Nothing)
   decryptedPanNumber <- mapM decrypt driverInfo.panNumber
   decryptedAadhaarNumber <- mapM decrypt driverInfo.aadhaarNumber
@@ -163,7 +172,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             return ()
   let runBody = do
         when (VC.isNameCompareRequired transporterConfig verifyBy) $
-          VC.validateDocument merchantId merchantOpCityId person.id nameOnCard dateOfBirth Nothing DTO.DriverLicense VC.DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
+          VC.validateDocument merchantId merchantOpCityId person.id nameOnTheCard dateOfBirth Nothing DTO.DriverLicense VC.DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
         mdriverLicense <- Query.findByDLNumber driverLicenseNumber
         case mdriverLicense of
           Just driverLicense -> do
@@ -173,14 +182,14 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             if documentVerificationConfig.doStrictVerifcation
               then do
                 when (driverLicense.verificationStatus == Documents.INVALID) $ throwError DLInvalid
-                verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory req.requestId sdkTransactionId
-              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue req.vehicleCategory
+                verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
+              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
           Nothing -> do
             mDriverDL <- Query.findByDriverId personId
             when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
             if documentVerificationConfig.doStrictVerifcation
-              then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory req.requestId sdkTransactionId
-              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue req.vehicleCategory
+              then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
+              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
   if VC.isNameCompareRequired transporterConfig verifyBy
     then Redis.withWaitOnLockRedisWithExpiry (VC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
@@ -216,11 +225,11 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
     makeVerifyDLHitsCountKey dlNumber = "VerifyDL:dlNumberHits:" <> dlNumber <> ":hitsCount"
 
 verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Maybe VehicleCategory -> Maybe Text -> Maybe Text -> Flow ()
-verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard mbVehicleCategory mbReqId mbTxnId = do
+verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard mbVehicleCategory mbReqId mbTxnId = do
   now <- getCurrentTime
   encryptedDL <- encrypt dlNumber
   case mbReqId of
-    Just reqId -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnCard reqId now Domain.Success encryptedDL mbTxnId
+    Just reqId -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard reqId now Domain.Success encryptedDL mbTxnId
     Nothing -> do
       let imageExtractionValidation =
             if isNothing dateOfIssue && documentVerificationConfig.checkExtraction
@@ -231,12 +240,12 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
           Verification.VerifyDLAsyncReq {dlNumber, dateOfBirth = driverDateOfBirth, driverId = person.id.getId, returnState = Just True}
 
       case verifyRes.requestor of
-        VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnCard verifyRes.requestId now imageExtractionValidation encryptedDL
-        VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnCard verifyRes.requestId now imageExtractionValidation encryptedDL verifyRes.transactionId
+        VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard verifyRes.requestId now imageExtractionValidation encryptedDL
+        VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard verifyRes.requestId now imageExtractionValidation encryptedDL verifyRes.transactionId
         _ -> throwError $ InternalError ("Service provider not configured to return DL verification async responses. Provider Name : " <> (show verifyRes.requestor))
 
 mkIdfyVerificationEntity :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe VehicleCategory -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Flow Domain.IdfyVerification
-mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnCard requestId now imageExtractionValidation encryptedDL = do
+mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard requestId now imageExtractionValidation encryptedDL = do
   id <- generateGUID
   return $
     Domain.IdfyVerification
@@ -254,7 +263,7 @@ mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOf
         idfyResponse = Nothing,
         multipleRC = Nothing,
         retryCount = Just 0,
-        nameOnCard,
+        nameOnCard = nameOnTheCard,
         vehicleCategory = mbVehicleCategory,
         merchantId = Just person.merchantId,
         merchantOperatingCityId = Just person.merchantOperatingCityId,
@@ -266,7 +275,7 @@ mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOf
       }
 
 mkHyperVergeVerificationEntity :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe VehicleCategory -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe Text -> Flow Domain.HyperVergeVerification
-mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnCard requestId now imageExtractionValidation encryptedDL transactionId = do
+mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard requestId now imageExtractionValidation encryptedDL transactionId = do
   id <- generateGUID
   return $
     Domain.HyperVergeVerification
@@ -288,7 +297,7 @@ mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driver
         oxygen = Nothing,
         ventilator = Nothing,
         retryCount = Just 0,
-        nameOnCard,
+        nameOnCard = nameOnTheCard,
         merchantId = Just person.merchantId,
         merchantOperatingCityId = Just person.merchantOperatingCityId,
         createdAt = now,
@@ -325,12 +334,12 @@ onVerifyDL verificationReq output serviceName = do
           pure Ack
 
 onVerifyDLHandler :: Person.Person -> Maybe Text -> Maybe Text -> Maybe [Idfy.CovDetail] -> Maybe Text -> Maybe Text -> DocumentVerificationConfig -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe Text -> Maybe UTCTime -> Maybe VehicleCategory -> Flow ()
-onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificationConfig imageId1 imageId2 nameOnCard dateOfIssue vehicleCategory = do
+onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificationConfig imageId1 imageId2 nameOnTheCard dateOfIssue vehicleCategory = do
   now <- getCurrentTime
   id <- generateGUID
   mEncryptedDL <- encrypt `mapM` dlNumber
   let mLicenseExpiry = convertTextToUTC dlExpiry
-  let mDriverLicense = createDL person.merchantId documentVerificationConfig person.id covDetails name dob id imageId1 imageId2 nameOnCard dateOfIssue vehicleCategory now <$> mEncryptedDL <*> mLicenseExpiry
+  let mDriverLicense = createDL person.merchantId documentVerificationConfig person.id covDetails name dob id imageId1 imageId2 nameOnTheCard dateOfIssue vehicleCategory now <$> mEncryptedDL <*> mLicenseExpiry
 
   case mDriverLicense of
     Just driverLicense -> do
@@ -369,14 +378,14 @@ createDL ::
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   Domain.DriverLicense
-createDL merchantId configs driverId covDetails name dob id imageId1 imageId2 nameOnCard dateOfIssue vehicleCategory now edl expiry = do
+createDL merchantId configs driverId covDetails name dob id imageId1 imageId2 nameOnTheCard dateOfIssue vehicleCategory now edl expiry = do
   let classOfVehicles = maybe [] (map (.cov)) covDetails
   let verificationStatus =
         if configs.doStrictVerifcation
           then validateDLStatus configs expiry classOfVehicles now
           else Documents.MANUAL_VERIFICATION_REQUIRED
   let verifiedName = (\n -> if '*' `T.elem` n then Nothing else Just n) =<< name
-  let driverName = verifiedName <|> nameOnCard
+  let driverName = verifiedName <|> nameOnTheCard
   Domain.DriverLicense
     { id,
       driverId,
@@ -434,8 +443,10 @@ dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq pe
             vehicleCategory = verificationReq.vehicleCategory,
             dateOfIssue = Just issueDate,
             nameOnCardFromSdk = Nothing,
+            nameOnCard = verificationReq.nameOnCard,
             requestId = Nothing,
-            sdkTransactionId = Nothing
+            sdkTransactionId = Nothing,
+            isDLImageValidated = Nothing
           }
   void $ verifyDL DPan.FRONTEND_SDK Nothing (person.id, person.merchantId, person.merchantOperatingCityId) dlreq
   return Ack

@@ -423,6 +423,8 @@ postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.Registe
         nameOnCardFromSdk = Nothing,
         requestId = Nothing,
         sdkTransactionId = Nothing,
+        nameOnCard = Nothing,
+        isDLImageValidated = Nothing,
         ..
       }
 
@@ -438,6 +440,7 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ Common.Registe
         { imageId = cast imageId,
           vehicleCategory = Nothing,
           vehicleDetails = Nothing,
+          isRCImageValidated = Nothing,
           ..
         }
     )

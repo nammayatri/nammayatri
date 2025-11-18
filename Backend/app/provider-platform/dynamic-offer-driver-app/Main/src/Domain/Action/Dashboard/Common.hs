@@ -108,7 +108,8 @@ runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet bul
             ventilator = req.ventilator,
             multipleRC = Nothing,
             vehicleDetails = Nothing,
-            vehicleCategory = req.vehicleCategory
+            vehicleCategory = req.vehicleCategory,
+            isRCImageValidated = Nothing
           }
   void $ DomainRC.verifyRC (not isFleet) (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq bulkUpload mbFleetOwnerId
 
