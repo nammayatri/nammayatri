@@ -153,3 +153,15 @@ create table atlas_driver_offer_bpp.person (
     `version` DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(version)
 ORDER BY (id);
+
+create table atlas_driver_offer_bpp.fleet_rc_daily_stats (
+    `fleet_owner_id` String,
+    `rc_id` String,
+    `merchant_local_date` Date DEFAULT today(),
+    `total_completed_rides` Int64,
+    `total_earnings` Int64,
+    `ride_distance` Int64,
+    `ride_duration` Int64,
+    `version` DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(version)
+ORDER BY (merchant_local_date, fleet_owner_id, rc_id);

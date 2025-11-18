@@ -39,6 +39,7 @@ updateByPrimaryKey (Domain.Types.RideDetails.RideDetails {..}) = do
       Se.Set Beam.fleetOwnerId fleetOwnerId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.rcId rcId,
       Se.Set Beam.vehicleAge vehicleAge,
       Se.Set Beam.vehicleClass vehicleClass,
       Se.Set Beam.vehicleColor vehicleColor,

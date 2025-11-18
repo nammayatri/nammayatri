@@ -1,0 +1,40 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Money: Kernel.Types.Common
+  PayoutOrderStatus: Kernel.External.Payout.Juspay.Types.Payout
+  Person: Domain.Types.Person
+
+FleetRcDailyStats:
+  tableName: fleet_rc_daily_stats
+
+  fields:
+    fleetOwnerId : Text
+    rcId : Text
+    merchantLocalDate : Day
+    totalCompletedRides : Int
+    totalEarnings :  HighPrecMoney
+    rideDistance :  Meters
+    rideDuration :  Seconds
+    currency : Maybe Currency
+
+  default:
+    totalCompletedRides: "0"
+    totalEarnings: "0"
+    rideDistance: "0"
+    rideDuration: "0"
+
+  sqlType:
+    totalEarnings: bigint
+    rideDistance: bigint
+    rideDuration: bigint
+
+  constraints:
+    fleetOwnerId: PrimaryKey
+    rcId: PrimaryKey
+    merchantLocalDate: PrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+

@@ -106,6 +106,7 @@ import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
+import qualified SharedLogic.FleetVehicleStats as FVS
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.ScheduledNotifications as SN
 import SharedLogic.TollsDetector
@@ -189,7 +190,11 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   QRide.updateAll ride.id ride
   let safetyPlusCharges = maybe Nothing (\a -> find (\ac -> ac.chargeCategory == DAC.SAFETY_PLUS_CHARGES) a) $ (mbFareParams <&> (.conditionalCharges)) <|> (Just newFareParams.conditionalCharges)
   void $ QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
-  when thresholdConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig driverId ride
+  when thresholdConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+    fork "updateFleetVehicleDailyStats and updateOperatorAnalyticsTotalRideCount" $ do
+      Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig driverId ride
+      whenJust ride.fleetOwnerId $ \fleetOwnerId -> do
+        FVS.updateFleetVehicleDailyStats fleetOwnerId.getId thresholdConfig ride
   when (isJust safetyPlusCharges) $ QDriverStats.incSafetyPlusRiderCountAndEarnings (cast ride.driverId) (fromMaybe 0.0 $ safetyPlusCharges <&> (.charge))
   Hedis.del $ multipleRouteKey booking.transactionId
   Hedis.del $ searchRequestKey booking.transactionId

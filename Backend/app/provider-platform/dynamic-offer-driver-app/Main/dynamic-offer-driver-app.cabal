@@ -431,6 +431,7 @@ library
       SharedLogic.FareProduct
       SharedLogic.Fleet
       SharedLogic.FleetOperatorStats
+      SharedLogic.FleetVehicleStats
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
       SharedLogic.KaalChakra.Actions
@@ -568,12 +569,14 @@ library
       Storage.Clickhouse.FleetOperatorAssociation
       Storage.Clickhouse.FleetOperatorDailyStats
       Storage.Clickhouse.FleetOperatorStats
+      Storage.Clickhouse.FleetRcDailyStats
       Storage.Clickhouse.Location
       Storage.Clickhouse.Person
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
       Storage.Clickhouse.SearchRequestForDriver
       Storage.Clickhouse.Vehicle
+      Storage.Clickhouse.VehicleRegistrationCertificate
       Storage.Queries.AadhaarCardExtra
       Storage.Queries.BackgroundVerificationExtra
       Storage.Queries.Booking.Internal
@@ -639,6 +642,7 @@ library
       Storage.Queries.FleetOperatorDailyStatsExtra
       Storage.Queries.FleetOwnerInformationExtra
       Storage.Queries.FleetRCAssociationExtra
+      Storage.Queries.FleetRcDailyStatsExtra
       Storage.Queries.Geometry
       Storage.Queries.HyperVergeVerificationExtra
       Storage.Queries.IdfyVerificationExtra
@@ -956,6 +960,7 @@ library
       Domain.Types.FleetOwnerDocumentVerificationConfig
       Domain.Types.FleetOwnerInformation
       Domain.Types.FleetRCAssociation
+      Domain.Types.FleetRcDailyStats
       Domain.Types.FleetRouteAssociation
       Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection
       Domain.Types.GoHomeConfig
@@ -1113,6 +1118,7 @@ library
       Storage.Beam.FleetOwnerDocumentVerificationConfig
       Storage.Beam.FleetOwnerInformation
       Storage.Beam.FleetRCAssociation
+      Storage.Beam.FleetRcDailyStats
       Storage.Beam.FleetRouteAssociation
       Storage.Beam.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Beam.GoHomeConfig
@@ -1274,6 +1280,7 @@ library
       Storage.Queries.FleetOwnerDocumentVerificationConfig
       Storage.Queries.FleetOwnerInformation
       Storage.Queries.FleetRCAssociation
+      Storage.Queries.FleetRcDailyStats
       Storage.Queries.FleetRouteAssociation
       Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Queries.GoHomeConfig
@@ -1353,6 +1360,7 @@ library
       Storage.Queries.OrphanInstances.FleetOperatorAssociation
       Storage.Queries.OrphanInstances.FleetOwnerInformation
       Storage.Queries.OrphanInstances.FleetRCAssociation
+      Storage.Queries.OrphanInstances.FleetRcDailyStats
       Storage.Queries.OrphanInstances.Image
       Storage.Queries.OrphanInstances.Invoice
       Storage.Queries.OrphanInstances.KioskLocation
