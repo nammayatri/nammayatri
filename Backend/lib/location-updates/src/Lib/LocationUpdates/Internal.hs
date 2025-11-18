@@ -212,7 +212,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
       isAtLeastBatchPlusOne <- atLeastBatchPlusOne
       when (snapToRoadCallCondition && isAtLeastBatchPlusOne) $ do
         currSnapToRoadState <- processSnapToRoadCall
-        Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 21600 -- 6 hours
+        Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 86400 -- 24 hours
   where
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
     continueCondition = if ending then pointsRemaining else atLeastBatchPlusOne
@@ -251,7 +251,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
           <&> fromMaybe (SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just passedThroughDrop) (Just False) Nothing)
       let isPassedThroughDrop = bool prevSnapToRoadState.passThroughDropThreshold (Just True) passedThroughDrop
       let currSnapToRoadState = prevSnapToRoadState {passThroughDropThreshold = isPassedThroughDrop}
-      Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 21600 -- 6 hours
+      Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 86400 -- 24 hours
 
 recalcDistanceBatchStep ::
   (CacheFlow m r, Monad m, Log m, MonadFlow m) =>
@@ -501,4 +501,4 @@ updatePassedThroughDrop driverId = do
   prevSnapToRoadState :: SnapToRoadState <-
     Redis.safeGet (onRideSnapToRoadStateKey driverId)
       <&> fromMaybe (SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just False) (Just False) Nothing)
-  Redis.setExp (onRideSnapToRoadStateKey driverId) prevSnapToRoadState {passThroughDropThreshold = Just False} 21600
+  Redis.setExp (onRideSnapToRoadStateKey driverId) prevSnapToRoadState {passThroughDropThreshold = Just False} 86400 -- 24 hours
