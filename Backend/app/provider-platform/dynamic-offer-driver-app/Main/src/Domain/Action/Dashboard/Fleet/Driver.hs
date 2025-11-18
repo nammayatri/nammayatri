@@ -473,7 +473,8 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
             ventilator = req.ventilator,
             multipleRC = req.multipleRC,
             vehicleCategory = req.vehicleCategory,
-            vehicleDetails = Nothing
+            vehicleDetails = Nothing,
+            isRCImageValidated = Nothing
           }
   void $ DomainRC.verifyRC False (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq False (Just personId)
   logTagInfo "dashboard -> Register RC For Fleet : " (show driver.id)
