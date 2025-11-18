@@ -179,7 +179,7 @@ cancel req merchant booking mbActiveSearchTry = do
                       charges' <- case ride.cancellationFeeIfCancelled of
                         Just cancelCharges -> return (Just cancelCharges)
                         Nothing -> do
-                          cancellationdues <- customerCancellationChargesCalculation booking ride riderDetails
+                          cancellationdues <- customerCancellationChargesCalculation booking ride riderDetails bookingCR.reasonCode
                           case cancellationdues of
                             Just charges -> do
                               logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show charges)

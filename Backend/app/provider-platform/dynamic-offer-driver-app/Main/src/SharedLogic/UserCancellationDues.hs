@@ -2,6 +2,7 @@ module SharedLogic.UserCancellationDues where
 
 import Data.Default.Class
 import qualified Domain.Types as DTC
+import qualified Domain.Types.CancellationReason as DCancellationReason
 import qualified Domain.Types.ServiceTierType as DServiceTierType
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -23,7 +24,8 @@ data UserCancellationDuesData = UserCancellationDuesData
     validCancellations :: Int,
     cancellationDueRides :: Int,
     serviceTier :: DServiceTierType.ServiceTierType,
-    tripCategory :: DTC.TripCategory
+    tripCategory :: DTC.TripCategory,
+    cancellationReasonSelected :: Maybe DCancellationReason.CancellationReasonCode -- TODO test
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -45,7 +47,8 @@ instance Default UserCancellationDuesData where
         validCancellations = 0,
         cancellationDueRides = 0,
         serviceTier = DServiceTierType.TAXI,
-        tripCategory = DTC.OneWay DTC.OneWayOnDemandDynamicOffer
+        tripCategory = DTC.OneWay DTC.OneWayOnDemandDynamicOffer,
+        cancellationReasonSelected = Nothing
       }
 
 newtype UserCancellationDuesResult = UserCancellationDuesResult

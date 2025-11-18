@@ -155,7 +155,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 then do
                   rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
                   if validCustomerCancellation `elem` rideTags
-                    then getCancellationCharges booking ride
+                    then getCancellationCharges booking ride bookingCReason.reasonCode
                     else return Nothing
                 else return Nothing
             userNoShowCharges <- case noShowCharges of
@@ -357,8 +357,9 @@ customerCancellationChargesCalculation ::
   SRB.Booking ->
   DRide.Ride ->
   RiderDetails.RiderDetails ->
+  Maybe DTCR.CancellationReasonCode ->
   m (Maybe HighPrecMoney)
-customerCancellationChargesCalculation booking ride riderDetails = do
+customerCancellationChargesCalculation booking ride riderDetails reasonCode = do
   transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   (cancellationDisToPickup, _mbLocation) <- getDistanceToPickup booking (Just ride)
   now <- getCurrentTime
@@ -400,7 +401,8 @@ customerCancellationChargesCalculation booking ride riderDetails = do
             validCancellations = riderDetails.validCancellations,
             cancellationDueRides = riderDetails.cancellationDueRides,
             serviceTier = booking.vehicleServiceTier,
-            tripCategory = booking.tripCategory
+            tripCategory = booking.tripCategory,
+            cancellationReasonSelected = reasonCode
           }
   if transporterConfig.canAddCancellationFee
     then do
@@ -432,8 +434,9 @@ getCancellationCharges ::
   ) =>
   SRB.Booking ->
   DRide.Ride ->
+  Maybe DTCR.CancellationReasonCode ->
   m (Maybe PriceAPIEntity)
-getCancellationCharges booking ride = do
+getCancellationCharges booking ride reasonCode = do
   transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   case booking.riderId of
     Nothing -> return Nothing
@@ -441,7 +444,7 @@ getCancellationCharges booking ride = do
       riderDetails <- QRiderDetails.findById rid >>= fromMaybeM (RiderDetailsNotFound rid.getId)
       if transporterConfig.canAddCancellationFee
         then do
-          charges' <- customerCancellationChargesCalculation booking ride riderDetails
+          charges' <- customerCancellationChargesCalculation booking ride riderDetails reasonCode
           case charges' of
             Just charges -> do
               return $ Just $ PriceAPIEntity {amount = charges, currency = booking.currency}
