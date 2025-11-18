@@ -66,6 +66,7 @@ buildAuthReq merchantShortId req =
       middleName = Nothing,
       lastName = Nothing,
       email = Nothing,
+      businessEmail = Nothing,
       language = Nothing,
       gender = Nothing,
       otpChannel = req.otpChannel,

@@ -24,6 +24,10 @@ module Domain.Action.UI.Registration
     GetTokenReq (..),
     TempCodeRes (..),
     CustomerSignatureRes (..),
+    SendBusinessEmailVerificationReq (..),
+    SendBusinessEmailVerificationRes (..),
+    VerifyBusinessEmailReq (..),
+    VerifyBusinessEmailRes (..),
     auth,
     signatureAuth,
     createPerson,
@@ -38,6 +42,8 @@ module Domain.Action.UI.Registration
     getToken,
     generateTempAppCode,
     makeSignature,
+    sendBusinessEmailVerification,
+    verifyBusinessEmail,
   )
 where
 
@@ -102,6 +108,7 @@ import qualified Storage.Queries.DepotManager as QDepotManager
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.PersonDisability as PDisability
+import qualified Storage.Queries.PersonExtra as PersonExtra
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Storage.Queries.SafetySettings as QSafety
@@ -123,6 +130,7 @@ data AuthReq = AuthReq
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     email :: Maybe Text,
+    businessEmail :: Maybe Text,
     language :: Maybe Maps.Language,
     gender :: Maybe SP.Gender,
     otpChannel :: Maybe SOTP.OTPChannel,
@@ -147,6 +155,7 @@ instance A.FromJSON AuthReq where
         <*> obj .:? "middleName"
         <*> obj .:? "lastName"
         <*> obj .:? "email"
+        <*> obj .:? "businessEmail"
         <*> obj .:? "language"
         <*> obj .:? "gender"
         <*> obj .:? "otpChannel"
@@ -565,6 +574,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
       else return False
   encMobNum <- mapM encrypt req.mobileNumber
   encEmail <- mapM encrypt req.email
+  encBusinessEmail <- mapM encrypt req.businessEmail
   deploymentVersion <- asks (.version)
   return $
     SP.Person
@@ -647,7 +657,9 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         lastUsedVehicleServiceTiers = [],
         lastUsedVehicleCategories = [],
         imeiNumber = Nothing, -- TODO: take it from the request
-        comments = Nothing
+        comments = Nothing,
+        businessProfileVerified = Nothing,
+        businessEmail = encBusinessEmail
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -965,6 +977,7 @@ createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
                 middleName = Nothing,
                 lastName = Nothing,
                 email = Nothing,
+                businessEmail = Nothing,
                 language = Nothing,
                 gender = Nothing,
                 otpChannel = Nothing,
@@ -976,3 +989,140 @@ createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
       createdPerson <-
         createPerson authReq SP.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing
       pure $ createdPerson.id
+
+---------- Business Email Verification --------
+data SendBusinessEmailVerificationReq = SendBusinessEmailVerificationReq
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data SendBusinessEmailVerificationRes = SendBusinessEmailVerificationRes
+  { message :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data VerifyBusinessEmailReq = VerifyBusinessEmailReq
+  { token :: Maybe Text, -- Magic link token from email
+    otp :: Maybe Text -- OTP entered by user in app
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+validateVerifyBusinessEmailReq :: Validate VerifyBusinessEmailReq
+validateVerifyBusinessEmailReq VerifyBusinessEmailReq {..} =
+  sequenceA_
+    [ -- If OTP is provided, validate it's 4 digits
+      whenJust otp $ \otpValue -> validateField "otp" otpValue $ ExactLength 4 `And` star P.digit
+    ]
+
+data VerifyBusinessEmailRes = VerifyBusinessEmailRes
+  { message :: Text,
+    verified :: Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+sendBusinessEmailVerification ::
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    CacheFlow m r,
+    EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
+    EncFlow m r
+  ) =>
+  Id SP.Person ->
+  Id DMerchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m APISuccess
+sendBusinessEmailVerification personId merchantId merchantOperatingCityId = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  businessEmail <- person.businessEmail & fromMaybeM (PersonFieldNotPresent "businessEmail")
+  decryptedBusinessEmail <- decrypt businessEmail
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  emailBusinessVerificationConfig <- riderConfig.emailBusinessVerificationConfig & fromMaybeM (RiderConfigNotFound $ "emailBusinessVerificationConfig not found for merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+
+  -- Generate BOTH OTP and magic link token
+  otp <- generateOTPCode
+  verificationToken <- L.generateGUID
+  rtid <- L.generateGUID
+  now <- getCurrentTime
+
+  -- Create a RegistrationToken for business email verification
+  -- Store OTP in authValueHash and magic link token in token field
+  let regToken =
+        SR.RegistrationToken
+          { id = Id rtid,
+            token = verificationToken, -- Magic link token
+            attempts = 3,
+            authMedium = SR.EMAIL,
+            authType = SR.OTP,
+            authValueHash = otp, -- Store OTP here for verification
+            verified = False,
+            authExpiry = 30, -- 30 minutes expiry for email verification
+            tokenExpiry = 30, -- 30 minutes token expiry
+            entityId = getId personId,
+            merchantId = getId merchantId,
+            entityType = SR.USER,
+            createdAt = now,
+            updatedAt = now,
+            info = Just "businessEmailVerification", -- Mark this as business email verification
+            createdViaPartnerOrgId = Nothing
+          }
+
+  -- Store the token
+  void $ RegistrationToken.create regToken
+
+  -- Send email with BOTH OTP and magic link
+  withLogTag ("personId_" <> getId personId) $ do
+    L.runIO $ Email.sendBusinessVerificationEmail emailBusinessVerificationConfig [decryptedBusinessEmail] otp verificationToken
+
+  return AP.Success
+
+verifyBusinessEmail ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
+    EncFlow m r
+  ) =>
+  Maybe (Id SP.Person) -> -- Optional personId (required for OTP verification)
+  VerifyBusinessEmailReq ->
+  m VerifyBusinessEmailRes
+verifyBusinessEmail mbPersonId req = do
+  runRequestValidation validateVerifyBusinessEmailReq req
+
+  -- Determine verification method and get registration token
+  regToken <- case (req.token, req.otp, mbPersonId) of
+    -- Magic Link verification
+    (Just tokenValue, Nothing, _) -> do
+      rt <- RegistrationToken.findByToken tokenValue >>= fromMaybeM (InvalidRequest "Invalid verification token")
+      -- Check if it's for business email verification
+      unless (rt.info == Just "businessEmailVerification") $ throwError (InvalidRequest "Invalid token type")
+      -- Check if already verified
+      when rt.verified $ throwError (AuthBlocked "Email already verified")
+      return rt
+
+    -- OTP verification
+    (Nothing, Just otpValue, Just personId) -> do
+      -- Find latest business email verification token for this person
+      regTokens <- RegistrationToken.findAllByPersonId personId
+      rt <-
+        find (\rt -> rt.info == Just "businessEmailVerification" && not rt.verified) regTokens
+          & fromMaybeM (InvalidRequest "No pending business email verification found")
+      -- Verify OTP
+      unless (rt.authValueHash == otpValue) $ throwError InvalidAuthData
+      return rt
+
+    -- OTP without personId
+    (Nothing, Just _, Nothing) ->
+      throwError (InvalidRequest "Person ID is required for OTP verification")
+    -- Invalid combination
+    _ ->
+      throwError (InvalidRequest "Either token or otp must be provided")
+
+  -- Check expiry
+  whenM (isExpired (realToFrac (regToken.authExpiry * 60)) regToken.updatedAt) $
+    throwError TokenExpired
+
+  -- Get person
+  person <- Person.findById (Id regToken.entityId) >>= fromMaybeM (PersonNotFound regToken.entityId)
+
+  -- Mark as verified
+  void $ RegistrationToken.setVerified True regToken.id
+  void $ PersonExtra.updateBusinessProfileVerified person.id True
+
+  return $ VerifyBusinessEmailRes {message = "Business email verified successfully", verified = True}

@@ -30,6 +30,22 @@ data EmailOTPConfig = EmailOTPConfig
   }
   deriving (Read, Generic, Show, FromJSON, ToJSON, ToSchema, Ord, Eq)
 
+data EmailMagicLinkConfig = EmailMagicLinkConfig
+  { fromEmail :: Text,
+    subject :: Text,
+    bodyTemplate :: Text,
+    verificationUrlTemplate :: Text -- Should contain <token> placeholder
+  }
+  deriving (Read, Generic, Show, FromJSON, ToJSON, ToSchema, Ord, Eq)
+
+data EmailBusinessVerificationConfig = EmailBusinessVerificationConfig
+  { fromEmail :: Text,
+    subject :: Text,
+    bodyTemplate :: Text, -- Should contain both <otp> and <link> placeholders
+    verificationUrlTemplate :: Text -- Should contain <token> placeholder
+  }
+  deriving (Read, Generic, Show, FromJSON, ToJSON, ToSchema, Ord, Eq)
+
 fromFieldEmailConfig ::
   DPSF.Field ->
   Maybe ByteString ->
@@ -49,3 +65,43 @@ instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be EmailOTPConfig whe
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be EmailOTPConfig
 
 instance FromBackendRow Postgres EmailOTPConfig
+
+fromFieldEmailMagicLinkConfig ::
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion EmailMagicLinkConfig
+fromFieldEmailMagicLinkConfig f mbValue = do
+  value <- fromField f mbValue
+  case A.fromJSON value of
+    A.Success a -> pure a
+    _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
+
+instance FromField EmailMagicLinkConfig where
+  fromField = fromFieldEmailMagicLinkConfig
+
+instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be EmailMagicLinkConfig where
+  sqlValueSyntax = sqlValueSyntax . A.toJSON
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be EmailMagicLinkConfig
+
+instance FromBackendRow Postgres EmailMagicLinkConfig
+
+fromFieldEmailBusinessVerificationConfig ::
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion EmailBusinessVerificationConfig
+fromFieldEmailBusinessVerificationConfig f mbValue = do
+  value <- fromField f mbValue
+  case A.fromJSON value of
+    A.Success a -> pure a
+    _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
+
+instance FromField EmailBusinessVerificationConfig where
+  fromField = fromFieldEmailBusinessVerificationConfig
+
+instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be EmailBusinessVerificationConfig where
+  sqlValueSyntax = sqlValueSyntax . A.toJSON
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be EmailBusinessVerificationConfig
+
+instance FromBackendRow Postgres EmailBusinessVerificationConfig

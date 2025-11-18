@@ -63,6 +63,11 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN email_otp_config json;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.rider_config ADD COLUMN email_magic_link_config json;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.rider_config ADD COLUMN kapture_config json NOT NULL default '{"kaptureQueue":"", "disposition":""}';
 
 
@@ -483,3 +488,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN offer_list_cache_version text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.rider_config ADD COLUMN email_business_verification_config json ;

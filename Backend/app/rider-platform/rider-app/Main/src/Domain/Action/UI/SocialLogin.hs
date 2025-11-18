@@ -90,6 +90,7 @@ postSocialLogin req = do
           lastName = Nothing,
           email = Just email,
           language = Nothing,
+          businessEmail = Nothing,
           gender = Nothing,
           otpChannel = Nothing,
           registrationLat = req.registrationLat,

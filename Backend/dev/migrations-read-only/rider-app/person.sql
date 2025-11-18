@@ -243,3 +243,50 @@ ALTER TABLE atlas_app.person ADD COLUMN last_used_vehicle_categories text[] ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN comments text[] ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN business_profile_verified boolean ;
+ALTER TABLE atlas_app.person ADD COLUMN business_email_hash text ;
+ALTER TABLE atlas_app.person ADD COLUMN business_email_encrypted text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

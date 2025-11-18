@@ -34,6 +34,8 @@ data PersonE e = Person
     blockedByRuleId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantConfig.MerchantConfig),
     blockedCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     blockedUntil :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    businessEmail :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
+    businessProfileVerified :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
@@ -115,6 +117,7 @@ type DecryptedPerson = PersonE 'AsUnencrypted
 instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
   encryptItem (entity, salt) = do
+    businessEmail_ <- encryptItem $ (,salt) <$> businessEmail entity
     email_ <- encryptItem $ (,salt) <$> email entity
     imeiNumber_ <- encryptItem $ (,salt) <$> imeiNumber entity
     mobileNumber_ <- encryptItem $ (,salt) <$> mobileNumber entity
@@ -129,6 +132,8 @@ instance EncryptedItem Person where
           blockedByRuleId = blockedByRuleId entity,
           blockedCount = blockedCount entity,
           blockedUntil = blockedUntil entity,
+          businessEmail = businessEmail_,
+          businessProfileVerified = businessProfileVerified entity,
           clientBundleVersion = clientBundleVersion entity,
           clientConfigVersion = clientConfigVersion entity,
           clientDevice = clientDevice entity,
@@ -202,6 +207,7 @@ instance EncryptedItem Person where
           whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus entity
         }
   decryptItem entity = do
+    businessEmail_ <- fmap fst <$> decryptItem (businessEmail entity)
     email_ <- fmap fst <$> decryptItem (email entity)
     imeiNumber_ <- fmap fst <$> decryptItem (imeiNumber entity)
     mobileNumber_ <- fmap fst <$> decryptItem (mobileNumber entity)
@@ -216,6 +222,8 @@ instance EncryptedItem Person where
             blockedByRuleId = blockedByRuleId entity,
             blockedCount = blockedCount entity,
             blockedUntil = blockedUntil entity,
+            businessEmail = businessEmail_,
+            businessProfileVerified = businessProfileVerified entity,
             clientBundleVersion = clientBundleVersion entity,
             clientConfigVersion = clientConfigVersion entity,
             clientDevice = clientDevice entity,

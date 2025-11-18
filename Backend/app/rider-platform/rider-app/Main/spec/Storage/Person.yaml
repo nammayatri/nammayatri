@@ -48,6 +48,8 @@ Person:
     gender : Gender
     identifierType : IdentifierType
     email : Maybe (EncryptedHashedField e Text)
+    businessEmail : Maybe (EncryptedHashedField e Text)
+    businessProfileVerified : Maybe Bool
     mobileNumber : Maybe (EncryptedHashedField e Text)
     imeiNumber : Maybe (EncryptedHashedField e Text)
     mobileCountryCode : Maybe Text
@@ -146,6 +148,9 @@ Person:
     email:
       emailEncrypted: Maybe Text
       emailHash: Maybe DbHash
+    businessEmail:
+      businessEmailEncrypted: Maybe Text
+      businessEmailHash: Maybe DbHash
     rating: {}
   intermediateTransformers:
       fromTType:
@@ -171,6 +176,7 @@ Person:
     merchantOperatingCityId: Kernel.Prelude.fst updateMerchantOpIdAndCity|E
     currentCity: Kernel.Prelude.snd updateMerchantOpIdAndCity|E
     email: EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash|E
+    businessEmail: EncryptedHashed <$> (Encrypted <$> businessEmailEncrypted) <*> businessEmailHash|E
     mobileNumber: EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash|E
     imeiNumber: EncryptedHashed <$> (Encrypted <$> imeiNumberEncrypted) <*> imeiNumberHash|E
     blockedAt: Data.Time.localTimeToUTC Data.Time.utc <$> blockedAt|E
@@ -191,6 +197,8 @@ Person:
     currentCity: Kernel.Prelude.Just|I
     emailEncrypted: (email <&> unEncrypted . (.encrypted))|E
     emailHash: (email <&> (.hash))|E
+    businessEmailEncrypted: (businessEmail <&> unEncrypted . (.encrypted))|E
+    businessEmailHash: (businessEmail <&> (.hash))|E
     mobileNumberEncrypted: (mobileNumber <&> unEncrypted . (.encrypted))|E
     mobileNumberHash: (mobileNumber <&> (.hash))|E
     imeiNumberEncrypted: (imeiNumber <&> unEncrypted . (.encrypted))|E
