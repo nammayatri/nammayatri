@@ -1355,11 +1355,11 @@ generateJourneyInfoResponse journey legs = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId
   let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
   let unifiedQRV2 = getUnifiedQRV2 unifiedQR
-  offers <-
+  offer <-
     withTryCatch "generateJourneyInfoResponse:offerListCache" (SPayment.offerListCache journey.merchantId journey.riderId journey.merchantOperatingCityId DOrder.FRFSMultiModalBooking (mkPrice mbCurrency estimatedMinFareAmount))
       >>= \case
         Left _ -> return Nothing
-        Right offersResp -> return $ Just offersResp
+        Right offersResp -> SPayment.mkCumulativeOfferResp journey.merchantOperatingCityId offersResp
   pure $
     APITypes.JourneyInfoResp
       { estimatedDuration = journey.estimatedDuration,
@@ -1378,7 +1378,7 @@ generateJourneyInfoResponse journey legs = do
         unifiedQRV2,
         result = Just "Success",
         isSingleMode = journey.isSingleMode,
-        offers
+        offer
       }
   where
     getUnifiedQRV2 :: Maybe JL.UnifiedTicketQR -> Maybe JL.UnifiedTicketQRV2

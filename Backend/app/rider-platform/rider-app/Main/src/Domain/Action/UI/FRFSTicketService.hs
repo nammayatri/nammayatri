@@ -695,12 +695,12 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
           childTicketQuantity = fareParameters.childItem <&> (.quantity)
           totalPrice = fareParameters.totalPrice
           adultPrice = fareParameters.adultItem <&> (.unitPrice)
-      whenJust adultPrice $ \price -> do
-        QFRFSQuote.updatePriceAndEstimatedPriceById quote.id price (Just price)
-        QJourneyLeg.updateEstimatedFaresBySearchId (Just price.amount) (Just price.amount) (Just quote.searchId.getId) -- Update the estimated fares for the journey legs
       updatedQuote <-
         if isMultiInitAllowed
           then do
+            whenJust adultPrice $ \price -> do
+              QFRFSQuote.updatePriceAndEstimatedPriceById quote.id price (Just price)
+              QJourneyLeg.updateEstimatedFaresBySearchId (Just price.amount) (Just price.amount) (Just quote.searchId.getId) -- Update the estimated fares for the journey legs
             void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity
             return $ quote {DFRFSQuote.quantity = ticketQuantity, DFRFSQuote.childTicketQuantity = childTicketQuantity}
           else return quote
