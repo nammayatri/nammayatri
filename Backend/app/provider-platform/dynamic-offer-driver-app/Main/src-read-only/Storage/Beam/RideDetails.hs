@@ -24,6 +24,7 @@ data RideDetailsT f = RideDetailsT
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    rcId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleAge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Months),
     vehicleClass :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

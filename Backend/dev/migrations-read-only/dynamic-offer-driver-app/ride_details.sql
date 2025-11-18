@@ -30,3 +30,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride_details ADD COLUMN merchant_id character
 ------- SQL updates -------
 
 CREATE INDEX ride_details_idx_vehicle_number ON atlas_driver_offer_bpp.ride_details USING btree (vehicle_number);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride_details ADD COLUMN rc_id character varying(36) ;

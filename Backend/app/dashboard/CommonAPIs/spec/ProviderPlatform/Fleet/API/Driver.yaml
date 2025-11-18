@@ -1281,6 +1281,36 @@ apis:
         - mbDutyType: Text
       response:
         type: TripTransactionRespT
+  - GET:
+      endpoint: /fleet/vehicle/list/stats
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - from: Day
+        - to: Day
+      query:
+        - vehicleNo: Text
+        - limit: Int
+        - offset: Int
+        - useDb: Bool
+      response:
+        type: FleetVehicleStatsRes
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/vehicle/list/stats
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              - from: Day
+              - to: Day
+            query:
+              - vehicleNo: Text
+              - limit: Int
+              - offset: Int
+              - useDb: Bool
+            response:
+              type: FleetVehicleStatsRes
+
 types:
   EstimatedRouteDetails:
     - polyline: Maybe Text
@@ -1921,6 +1951,20 @@ types:
     derive: "HttpInstance"
   FleetAnalyticsRes:
     - enum: "Filtered FilteredFleetAnalyticsRes | Earnings EarningFleetAnalyticsRes"
+  FleetVehicleStatsRes:
+    - fleetOwnerId: Text
+    - listItem: [FleetVehicleStatsItem]
+    - summary: Summary
+  FleetVehicleStatsItem:
+    - vehicleNo: Maybe Text
+    - vehicleModel: Maybe Text
+    - rcId: Maybe Text
+    - totalEarnings: HighPrecMoney
+    - currency: Maybe Currency
+    - completedRides: Int
+    - rideDistance: Meters
+    - rideDuration: Seconds
+    - earningPerKm: HighPrecMoney
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

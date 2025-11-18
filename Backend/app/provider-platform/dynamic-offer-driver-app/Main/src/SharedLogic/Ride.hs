@@ -213,6 +213,7 @@ buildRideDetails booking ride driver vehicle = do
         vehicleClass = Nothing,
         vehicleAge = getVehicleAge vehicle.mYManufacturing now,
         fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId),
+        rcId = (.id.getId) <$> vehicleRegCert,
         defaultServiceTierName = defaultServiceTierName,
         createdAt = Just now,
         merchantId = ride.merchantId,

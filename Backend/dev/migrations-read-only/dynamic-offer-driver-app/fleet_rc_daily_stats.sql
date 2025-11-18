@@ -1,0 +1,33 @@
+CREATE TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ();
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN currency character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN distance_unit character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN fleet_owner_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN merchant_local_date date NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN rc_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN ride_distance integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN ride_duration integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN total_completed_rides integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN total_earnings double precision NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN merchant_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD PRIMARY KEY ( fleet_owner_id, merchant_local_date, rc_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ALTER COLUMN total_earnings SET DEFAULT 0;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ALTER COLUMN total_earnings TYPE bigint;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ALTER COLUMN total_completed_rides SET DEFAULT 0;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ALTER COLUMN ride_duration SET DEFAULT 0;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ALTER COLUMN ride_distance SET DEFAULT 0;
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ALTER COLUMN ride_distance TYPE bigint;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ALTER COLUMN ride_duration TYPE bigint;
+

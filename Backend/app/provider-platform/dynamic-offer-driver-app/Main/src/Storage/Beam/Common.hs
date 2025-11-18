@@ -35,6 +35,7 @@ import Storage.Beam.FleetDriverAssociation
 import Storage.Beam.FleetOperatorAssociation
 import Storage.Beam.FleetOperatorDailyStats
 import Storage.Beam.FleetOwnerInformation
+import Storage.Beam.FleetRcDailyStats
 import Storage.Beam.Geometry
 import Storage.Beam.IdfyVerification
 import Storage.Beam.Image
@@ -100,7 +101,8 @@ atlasDB =
         fleetBadgeAssociation = fleetBadgeAssociationTable,
         fleetOwnerInformation = fleetOwnerInformationTable,
         fleetBookingAssignments = fleetBookingAssignmentsTable,
-        fleetBookingInformation = fleetBookingInformationTable
+        fleetBookingInformation = fleetBookingInformationTable,
+        fleetRcDailyStats = fleetRcDailyStatsTable
       }
 
 data AtlasDB f = AtlasDB
@@ -143,6 +145,7 @@ data AtlasDB f = AtlasDB
     fleetBadgeAssociation :: f (B.TableEntity FleetBadgeAssociationT),
     fleetOwnerInformation :: f (B.TableEntity FleetOwnerInformationT),
     fleetBookingAssignments :: f (B.TableEntity FleetBookingAssignmentsT),
-    fleetBookingInformation :: f (B.TableEntity FleetBookingInformationT)
+    fleetBookingInformation :: f (B.TableEntity FleetBookingInformationT),
+    fleetRcDailyStats :: f (B.TableEntity FleetRcDailyStatsT)
   }
   deriving (Generic, B.Database be)
