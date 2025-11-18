@@ -49,6 +49,8 @@ data RiderConfig = RiderConfig
     domainRouteCalculationEnabledModes :: Kernel.Prelude.Maybe [Kernel.External.MultiModal.Interface.Types.GeneralVehicleType],
     driverReferredSearchReqExpiry :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     dynamicLogicUpdatePassword :: Kernel.Prelude.Text,
+    emailBusinessVerificationConfig :: Kernel.Prelude.Maybe Email.Types.EmailBusinessVerificationConfig,
+    emailMagicLinkConfig :: Kernel.Prelude.Maybe Email.Types.EmailMagicLinkConfig,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
     enableAutoJourneyRefund :: Kernel.Prelude.Bool,
     enableBusFiltering :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

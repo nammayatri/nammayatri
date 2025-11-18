@@ -375,3 +375,12 @@ updatePersonComments personId comments = do
         Se.Set BeamP.updatedAt now
       ]
       [Se.Is BeamP.id (Se.Eq (getId personId))]
+
+updateBusinessProfileVerified :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Bool -> m ()
+updateBusinessProfileVerified personId isVerified = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.businessProfileVerified (Just isVerified),
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq (getId personId))]

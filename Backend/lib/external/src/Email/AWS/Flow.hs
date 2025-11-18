@@ -30,3 +30,27 @@ sendEmail config to otpCode = do
       message = newMessage (newContent subject) (Body' Nothing (Just $ newContent textBody))
       sendReq = newSendEmail from destination message
   void $ AWS.runResourceT $ AWS.send env sendReq
+
+sendMagicLinkEmail :: Email.EmailMagicLinkConfig -> [Text] -> Text -> IO ()
+sendMagicLinkEmail config to token = do
+  env <- AWS.newEnv AWS.discover
+  let from = config.fromEmail
+      subject = config.subject
+      verificationUrl = T.replace "<token>" token config.verificationUrlTemplate
+      textBody = T.replace "<link>" verificationUrl config.bodyTemplate
+      destination = Destination' Nothing Nothing (Just to)
+      message = newMessage (newContent subject) (Body' Nothing (Just $ newContent textBody))
+      sendReq = newSendEmail from destination message
+  void $ AWS.runResourceT $ AWS.send env sendReq
+
+sendBusinessVerificationEmail :: Email.EmailBusinessVerificationConfig -> [Text] -> Text -> Text -> IO ()
+sendBusinessVerificationEmail config to otpCode token = do
+  env <- AWS.newEnv AWS.discover
+  let from = config.fromEmail
+      subject = config.subject
+      verificationUrl = T.replace "<token>" token config.verificationUrlTemplate
+      textBody = T.replace "<otp>" otpCode $ T.replace "<link>" verificationUrl config.bodyTemplate
+      destination = Destination' Nothing Nothing (Just to)
+      message = newMessage (newContent subject) (Body' Nothing (Just $ newContent textBody))
+      sendReq = newSendEmail from destination message
+  void $ AWS.runResourceT $ AWS.send env sendReq

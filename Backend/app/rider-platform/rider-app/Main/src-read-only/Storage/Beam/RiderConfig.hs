@@ -48,6 +48,8 @@ data RiderConfigT f = RiderConfigT
     domainRouteCalculationEnabledModes :: B.C f (Kernel.Prelude.Maybe [Kernel.External.MultiModal.Interface.Types.GeneralVehicleType]),
     driverReferredSearchReqExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     dynamicLogicUpdatePassword :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    emailBusinessVerificationConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailBusinessVerificationConfig),
+    emailMagicLinkConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailMagicLinkConfig),
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
     enableAutoJourneyRefund :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableBusFiltering :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

@@ -304,6 +304,7 @@ createPersonViaPartner req merchant mbRegCoordinates partnerOrgId = do
           middleName = Nothing,
           lastName = Nothing,
           email = Nothing,
+          businessEmail = Nothing,
           language = Nothing,
           gender = Nothing,
           otpChannel = Nothing,

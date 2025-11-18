@@ -22,6 +22,10 @@ module API.UI.Registration
     DRegistration.GetTokenReq (..),
     DRegistration.TempCodeRes (..),
     DRegistration.CustomerSignatureRes (..),
+    DRegistration.SendBusinessEmailVerificationReq (..),
+    DRegistration.SendBusinessEmailVerificationRes (..),
+    DRegistration.VerifyBusinessEmailReq (..),
+    DRegistration.VerifyBusinessEmailRes (..),
     API,
     handler,
   )
@@ -40,7 +44,9 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Person as Person
 import Tools.Auth (TokenAuth)
+import Tools.Error
 import Tools.SignatureAuth (SignatureAuth, SignatureAuthResult (..))
 import Tools.SignatureResponseBody (SignedResponse)
 
@@ -88,6 +94,18 @@ type API =
            :<|> "logout"
              :> TokenAuth
              :> Post '[JSON] APISuccess
+           :<|> "business-email"
+             :> ( "send-verification"
+                    :> TokenAuth
+                    :> Post '[JSON] APISuccess
+                    :<|> "verify"
+                      :> ( ReqBody '[JSON] DRegistration.VerifyBusinessEmailReq
+                             :> Post '[JSON] DRegistration.VerifyBusinessEmailRes
+                             :<|> TokenAuth
+                               :> ReqBody '[JSON] DRegistration.VerifyBusinessEmailReq
+                               :> Post '[JSON] DRegistration.VerifyBusinessEmailRes
+                         )
+                )
        )
 
 handler :: FlowServer API
@@ -101,6 +119,7 @@ handler =
     :<|> generateTempAppCode
     :<|> makeSignature
     :<|> logout
+    :<|> (sendBusinessEmailVerification :<|> (verifyBusinessEmailWithoutAuth :<|> verifyBusinessEmailWithAuth))
 
 auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
 auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor mbSenderHash =
@@ -130,3 +149,17 @@ makeSignature (personId, merchantId) = withFlowHandlerAPI $ DRegistration.makeSi
 
 logout :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
 logout (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRegistration.logout personId
+
+sendBusinessEmailVerification :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
+sendBusinessEmailVerification (personId, merchantId) = withFlowHandlerAPI $ do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  DRegistration.sendBusinessEmailVerification personId merchantId merchantOperatingCityId
+
+-- Verify business email without auth (for magic link from email)
+verifyBusinessEmailWithoutAuth :: DRegistration.VerifyBusinessEmailReq -> FlowHandler DRegistration.VerifyBusinessEmailRes
+verifyBusinessEmailWithoutAuth req = withFlowHandlerAPI $ DRegistration.verifyBusinessEmail Nothing req
+
+-- Verify business email with auth (for OTP entered in app)
+verifyBusinessEmailWithAuth :: (Id SP.Person, Id Merchant.Merchant) -> DRegistration.VerifyBusinessEmailReq -> FlowHandler DRegistration.VerifyBusinessEmailRes
+verifyBusinessEmailWithAuth (personId, _) req = withFlowHandlerAPI $ DRegistration.verifyBusinessEmail (Just personId) req

@@ -107,6 +107,9 @@ appReInitiateLogin :: Id AppSRT.RegistrationToken -> Maybe Text -> ClientM Reg.R
 appGenerateTempAppCode :: RegToken -> ClientM Reg.TempCodeRes
 appMakeSignature :: RegToken -> ClientM (SignedResponse.SignedResponse Reg.CustomerSignatureRes)
 logout :: RegToken -> ClientM APISuccess
+sendBusinessEmailVerification :: RegToken -> ClientM APISuccess
+verifyBusinessEmailWithoutAuth :: Reg.VerifyBusinessEmailReq -> ClientM Reg.VerifyBusinessEmailRes
+verifyBusinessEmailWithAuth :: RegToken -> Reg.VerifyBusinessEmailReq -> ClientM Reg.VerifyBusinessEmailRes
 appAuth
   :<|> appSignatureAuth
   :<|> appPasswordAuth
@@ -115,7 +118,8 @@ appAuth
   :<|> appReInitiateLogin
   :<|> appGenerateTempAppCode
   :<|> appMakeSignature
-  :<|> logout =
+  :<|> logout
+  :<|> (sendBusinessEmailVerification :<|> (verifyBusinessEmailWithoutAuth :<|> verifyBusinessEmailWithAuth)) =
     client (Proxy :: Proxy Reg.API)
 
 mkAuthReq :: Reg.AuthReq
@@ -138,6 +142,7 @@ mkAuthReq =
       registrationLat = Nothing,
       registrationLon = Nothing,
       enableOtpLessRide = Nothing,
+      businessEmail = Nothing,
       allowBlockedUserLogin = Nothing
     }
 

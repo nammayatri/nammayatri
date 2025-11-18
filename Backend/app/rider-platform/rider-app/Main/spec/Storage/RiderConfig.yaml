@@ -2,6 +2,8 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   EmailOTPConfig: Email.Types
+  EmailMagicLinkConfig: Email.Types
+  EmailBusinessVerificationConfig: Email.Types
   KaptureConfig: IssueManagement.Common
   ExotelMapping: Domain.Types.Extra.RiderConfig
   VehicleServiceTierOrderConfig: Domain.Types.Extra.RiderConfig
@@ -84,6 +86,8 @@ RiderConfig:
     kaptureQueue: Text # deprecated
     kaptureConfig: IssueManagement.Common.KaptureConfig
     emailOtpConfig: Maybe Email.Types.EmailOTPConfig
+    emailMagicLinkConfig: Maybe Email.Types.EmailMagicLinkConfig
+    emailBusinessVerificationConfig: Maybe Email.Types.EmailBusinessVerificationConfig
     ivrTriggerDelay: NominalDiffTime
     executePaymentDelay: NominalDiffTime
     cancellationPaymentDelay: NominalDiffTime
@@ -391,6 +395,8 @@ RiderConfig:
 
   sqlType:
     emailOtpConfig: "json"
+    emailMagicLinkConfig: "json"
+    emailBusinessVerificationConfig: "json"
     kaptureConfig: "json"
     exotelAppIdMapping: "json"
     cxAgentDetails: text []
