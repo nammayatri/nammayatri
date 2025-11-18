@@ -65,6 +65,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetGetNearbyDriversV2,
     getDriverFleetDashboardAnalyticsAllTime,
     getDriverFleetDashboardAnalytics,
+    getDriverDashboardFleetTripWaypoints,
   )
 where
 
@@ -2221,9 +2222,17 @@ getDriverFleetTripTransactions merchantShortId opCity driverId mbFrom mbTo mbVeh
           tripEndTime = tripTransaction.tripEndTime,
           tripStatus = castTripStatus tripTransaction.status,
           fleetOwnerId = tripTransaction.fleetOwnerId.getId,
-          fleetOwnerName = fromMaybe "" (Map.lookup (tripTransaction.fleetOwnerId.getId) fleetNameMap)
+          fleetOwnerName = fromMaybe "" (Map.lookup (tripTransaction.fleetOwnerId.getId) fleetNameMap),
+          tripType = castTripType <$> tripTransaction.tripType,
+          scheduledTripTime = tripTransaction.scheduledTripTime,
+          dutyType = tripTransaction.dutyType,
+          vipName = tripTransaction.vipName,
+          startAddress = tripTransaction.pilotSource >>= (\point -> Just (Common.Address {point = point, address = tripTransaction.startAddress})),
+          endAddress = tripTransaction.pilotDestination >>= (\point -> Just (Common.Address {point = point, address = tripTransaction.endAddress}))
         }
-
+    castTripType = \case
+      DTT.PILOT -> Common.PILOT
+      DTT.WIMB -> Common.WIMB
     castTripStatus = \case
       TRIP_ASSIGNED -> Common.TRIP_ASSIGNED
       IN_PROGRESS -> Common.IN_PROGRESS
@@ -3020,14 +3029,17 @@ postDriverFleetGetNearbyDriversV2 merchantShortId _ fleetOwnerId req = do
         _ -> Nothing
 
     handleVipDriver driverLocation =
-      Just $
-        Common.NearbyDriverDetails
-          { driverId = cast driverLocation.driverId,
-            rideInfo = Nothing,
-            rideStatus = Nothing,
-            rideId = Nothing,
-            point = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
-          }
+      case (driverLocation.rideDetails >>= (.rideInfo), driverLocation.rideDetails <&> (.rideStatus)) of
+        (Just (LTST.Pilot LTST.PilotRideInfo {..}), Just rideStatus) ->
+          Just $
+            Common.NearbyDriverDetails
+              { driverId = cast driverLocation.driverId,
+                rideInfo = Just $ Common.Pilot Common.PilotRideInfo {..},
+                rideStatus = Just $ mkRideStatus rideStatus,
+                rideId = driverLocation.rideDetails <&> (.rideId),
+                point = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
+              }
+        _ -> Nothing
 
     mkRideStatus = \case
       TR.INPROGRESS -> Common.ON_RIDE
@@ -3086,3 +3098,30 @@ getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId fromDay toD
       driverCancelled = fromMaybe 0 agg.driverCancellationCountSum
       customerCancelled = fromMaybe 0 agg.customerCancellationCountSum
   pure $ Common.FilteredFleetAnalyticsRes {..}
+
+getDriverDashboardFleetTripWaypoints ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.TripTransaction ->
+  Text ->
+  Maybe Text ->
+  Flow Common.TripTransactionWaypointsRes
+getDriverDashboardFleetTripWaypoints _ _ tripTransactionId fleetOwnerId memberPersonId = do
+  rateLimitOptions <- asks (.driverFleetLocationListAPIRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (driverFleetTripWaypointsHitsCountKey fleetOwnerId memberPersonId) rateLimitOptions
+  tripTransaction <- QTT.findByTransactionId (cast tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
+  unless (tripTransaction.status == COMPLETED) $ throwError (InvalidRequest "Trip transaction is not completed")
+  startTime <- maybe (throwError (InvalidRequest "Trip transaction start time not found")) pure tripTransaction.tripStartTime
+  endTime <- maybe (throwError (InvalidRequest "Trip transaction end time not found")) pure tripTransaction.tripEndTime
+  driverEdaKafkaList <- CHDriverEda.findAllTuple startTime endTime tripTransaction.driverId (Just $ cast tripTransaction.id)
+  actualRoute <- mapM getActualRouteFromTuple driverEdaKafkaList
+  pure $ Common.TripTransactionWaypointsRes {waypoints = actualRoute}
+  where
+    getActualRouteFromTuple :: (Maybe Double, Maybe Double, UTCTime, Maybe Double, Maybe CHDriverEda.Status) -> Flow Common.ActualRoute
+    getActualRouteFromTuple (mbLat, mbLon, timestamp, mbAccuracy, _) =
+      case (mbLat, mbLon) of
+        (Just lat', Just lon') -> pure Common.ActualRoute {lat = lat', lon = lon', timestamp = timestamp, accuracy = mbAccuracy}
+        _ -> throwError $ InvalidRequest "Couldn't find driver's location."
+
+driverFleetTripWaypointsHitsCountKey :: Text -> Maybe Text -> Text
+driverFleetTripWaypointsHitsCountKey fleetOwnerId memberPersonId = "driverFleetTripWaypointsHitsCount:" <> fleetOwnerId <> ":" <> fromMaybe "" memberPersonId
