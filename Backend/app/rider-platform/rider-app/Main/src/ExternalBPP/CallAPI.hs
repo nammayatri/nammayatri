@@ -107,13 +107,9 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
                     then callOndcSearch networkHostUrl
                     else processOnSearch onSearchReq
           _ -> callOndcSearch networkHostUrl
-    DIRECT _ -> do
+    _ -> do
       onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails
       processOnSearch onSearchReq
-    _ -> do
-      fork "FRFS External SearchReq" $ do
-        onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails
-        processOnSearch onSearchReq
   where
     processOnSearch :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => DOnSearch.DOnSearch -> m ()
     processOnSearch onSearchReq = do
