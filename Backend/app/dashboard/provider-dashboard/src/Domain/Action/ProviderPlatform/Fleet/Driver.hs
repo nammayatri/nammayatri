@@ -66,6 +66,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetDashboardAnalyticsAllTime,
     getDriverFleetDashboardAnalytics,
     getDriverDashboardFleetTripWaypoints,
+    postDriverDashboardFleetEstimateRoute,
   )
 where
 
@@ -87,6 +88,7 @@ import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import EulerHS.Prelude hiding (elem, find, length, map, null, whenJust)
+import qualified Kernel.External.Maps
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -574,9 +576,15 @@ postDriverFleetGetNearbyDriversV2 merchantShortId opCity apiTokenInfo req = do
   where
     addFleetOwnerDetails fleetOwnerId fleetOwnerName Common.NearbyDriverDetails {..} = Common.NearbyDriverDetailsT {..}
 
-getDriverDashboardFleetTripWaypoints :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.TripTransaction -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow Common.TripTransactionWaypointsRes)
-getDriverDashboardFleetTripWaypoints merchantShortId opCity apiTokenInfo tripTransactionId fleetOwnerId _ = do
+getDriverDashboardFleetTripWaypoints :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.TripTransaction -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow Common.TripTransactionWaypointsRes)
+getDriverDashboardFleetTripWaypoints merchantShortId opCity apiTokenInfo tripTransactionId fleetOwnerId mbliteMode _ = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId' <- getFleetOwnerId apiTokenInfo.personId.getId (Just fleetOwnerId)
   let memberPersonId = apiTokenInfo.personId.getId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverDashboardFleetTripWaypoints) tripTransactionId fleetOwnerId' (Just memberPersonId)
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverDashboardFleetTripWaypoints) tripTransactionId fleetOwnerId' mbliteMode (Just memberPersonId)
+
+postDriverDashboardFleetEstimateRoute :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Common.EstimateRouteReq -> Environment.Flow Kernel.External.Maps.GetRoutesResp)
+postDriverDashboardFleetEstimateRoute merchantShortId opCity apiTokenInfo _ req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  fleetOwnerId' <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverDashboardFleetEstimateRoute) fleetOwnerId' req

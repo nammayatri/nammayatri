@@ -199,6 +199,7 @@ assignTripTransaction fleetConfig merchantId merchantOperatingCityId driverId ro
             tripType = Nothing,
             pilotSource = Nothing,
             pilotDestination = Nothing,
+            tripEstimatedRouteDetails = Nothing,
             ..
           }
 

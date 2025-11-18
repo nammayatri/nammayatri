@@ -19,6 +19,7 @@ imports:
   ActionSource: Dashboard.Common
   FleetBadgeType: Domain.Types.FleetBadgeType
   Role: Dashboard.Common
+  GetRoutesResp: Kernel.External.Maps
 module: Driver
 
 apis:
@@ -976,6 +977,7 @@ apis:
         fleetOwnerId: Text
       query:
         memberPersonId: Text
+        liteMode: Bool
       response:
         type: TripTransactionWaypointsRes
       helperApi:
@@ -987,6 +989,7 @@ apis:
               fleetOwnerId: Text
             query:
               memberPersonId: Text
+              liteMode: Bool
             response:
               type: TripTransactionWaypointsRes
 
@@ -1167,7 +1170,33 @@ apis:
               - to: Day
             response:
               type: FilteredFleetAnalyticsRes
+  - POST:
+      endpoint: /dashboard/fleet/estimateRoute
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+      request:
+        type: EstimateRouteReq
+      response:
+        type: GetRoutesResp
+      helperApi:
+        - POST:
+            endpoint: /dashboard/fleet/estimateRoute/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: EstimateRouteReq
+            response:
+              type: GetRoutesResp
 types:
+  EstimatedRouteDetails:
+    - polyline: Maybe Text
+    - duration: Maybe Seconds
+    - distance: Maybe Meters
+  EstimateRouteReq:
+    - start: LatLong
+    - end: LatLong
   NearbyDriverReq:
     - point: LatLong
     - radius: Int
@@ -1224,6 +1253,7 @@ types:
     - startAddress: Maybe Address
     - endAddress: Maybe Address
     - tripType: Maybe TripType
+    - estimatedRouteDetails: Maybe EstimatedRouteDetails
   Address:
     - point: LatLong
     - address: Maybe Text
@@ -1270,6 +1300,7 @@ types:
     - vipName: Maybe Text
     - startAddress: Maybe Address
     - endAddress: Maybe Address
+    - estimatedRouteDetails: Maybe EstimatedRouteDetails
   TripTransactionResp:
     - trips: [TripTransactionDetail]
     - totalTrips: Int
@@ -1284,8 +1315,8 @@ types:
     - timestamp: UTCTime
     - accuracy: Maybe Double
   TripTransactionWaypointsRes:
-    - recordType: NewType
     - waypoints: [ActualRoute]
+    - estimatedRouteDetails: Maybe EstimatedRouteDetails
     - derive: "'HideSecrets"
   AddVehicleReq:
     - registrationNo: Text

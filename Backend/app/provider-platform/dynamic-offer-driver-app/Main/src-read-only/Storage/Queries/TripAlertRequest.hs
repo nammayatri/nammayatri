@@ -36,7 +36,6 @@ updateByPrimaryKey (Domain.Types.TripAlertRequest.TripAlertRequest {..}) = do
       Se.Set Beam.alertRequestType alertRequestType,
       Se.Set Beam.alertStatus alertStatus,
       Se.Set Beam.conductorFleetBadgeId (Kernel.Types.Id.getId <$> conductorFleetBadgeId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.fleetBadgeId (Kernel.Types.Id.getId <$> driverFleetBadgeId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.fleetOwnerId (Kernel.Types.Id.getId fleetOwnerId),

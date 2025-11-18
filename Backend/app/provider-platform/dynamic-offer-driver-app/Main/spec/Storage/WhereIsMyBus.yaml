@@ -10,6 +10,7 @@ imports:
   AlertRequest: Domain.Types.AlertRequest
   FleetBadge: Domain.Types.FleetBadge
   DriverCoinsFunctionType: Lib.DriverCoins.Types
+  Value: Data.Aeson
 
 VehicleRouteMapping:
   tableName: vehicle_route_mapping
@@ -48,6 +49,11 @@ TripTransaction:
     TripType:
       enum: "PILOT,WIMB"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    EstimatedRouteDetails:
+      polyline: Maybe Text
+      duration: Maybe Seconds
+      distance: Maybe Meters
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
   fields:
     id: Id TripTransaction
     fleetOwnerId: Id Person
@@ -83,6 +89,7 @@ TripTransaction:
     pilotDestination: Maybe LatLong
     endAddress: Maybe Text
     scheduledTripTime: Maybe UTCTime
+    tripEstimatedRouteDetails: Maybe EstimatedRouteDetails
     tripType: Maybe TripType
     createdAt: UTCTime
     updatedAt: UTCTime
@@ -107,6 +114,8 @@ TripTransaction:
     driverFleetBadgeId:
       fleetBadgeId: Maybe (Id FleetBadge)
 
+  beamType:
+    tripEstimatedRouteDetails: Maybe Value
   toTType:
     startLocationLat: Kernel.Prelude.fmap (.lat)|I
     startLocationLon: Kernel.Prelude.fmap (.lon)|I
@@ -116,11 +125,17 @@ TripTransaction:
     pilotSourceLon: Kernel.Prelude.fmap (.lon)|I
     pilotDestinationLat: Kernel.Prelude.fmap (.lat)|I
     pilotDestinationLon: Kernel.Prelude.fmap (.lon)|I
+    tripEstimatedRouteDetails: Kernel.Prelude.toJSON <$> tripEstimatedRouteDetails | E
   fromTType:
     startLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
     endLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
     pilotSource: Storage.Queries.Transformers.Ride.mkLatLong|I
     pilotDestination: Storage.Queries.Transformers.Ride.mkLatLong|I
+    tripEstimatedRouteDetails: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< tripEstimatedRouteDetails | E
+
+  sqlType:
+    tripEstimatedRouteDetails: "json"
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TripStatus>

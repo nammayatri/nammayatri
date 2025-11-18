@@ -66,6 +66,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetDashboardAnalyticsAllTime,
     getDriverFleetDashboardAnalytics,
     getDriverDashboardFleetTripWaypoints,
+    postDriverDashboardFleetEstimateRoute,
   )
 where
 
@@ -77,6 +78,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Dr
 import Data.Csv
 import Data.List (groupBy, sortOn)
 import Data.List.NonEmpty (fromList, toList)
+import qualified Data.List.NonEmpty as NE
 import Data.List.Split (chunksOf)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -2193,6 +2195,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
             pilotSource = trip.startAddress <&> (.point),
             pilotDestination = trip.endAddress <&> (.point),
             tripType = castTripType <$> trip.tripType,
+            tripEstimatedRouteDetails = trip.estimatedRouteDetails >>= (\estimatedRoute -> Just (DTT.EstimatedRouteDetails {distance = estimatedRoute.distance, duration = estimatedRoute.duration, polyline = estimatedRoute.polyline})),
             ..
           }
 
@@ -2228,7 +2231,8 @@ getDriverFleetTripTransactions merchantShortId opCity driverId mbFrom mbTo mbVeh
           dutyType = tripTransaction.dutyType,
           vipName = tripTransaction.vipName,
           startAddress = tripTransaction.pilotSource >>= (\point -> Just (Common.Address {point = point, address = tripTransaction.startAddress})),
-          endAddress = tripTransaction.pilotDestination >>= (\point -> Just (Common.Address {point = point, address = tripTransaction.endAddress}))
+          endAddress = tripTransaction.pilotDestination >>= (\point -> Just (Common.Address {point = point, address = tripTransaction.endAddress})),
+          estimatedRouteDetails = tripTransaction.tripEstimatedRouteDetails >>= (\estimatedRoute -> Just (Common.EstimatedRouteDetails {distance = estimatedRoute.distance, duration = estimatedRoute.duration, polyline = estimatedRoute.polyline}))
         }
     castTripType = \case
       DTT.PILOT -> Common.PILOT
@@ -2373,7 +2377,8 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
           dutyType = Nothing,
           startAddress = Nothing,
           endAddress = Nothing,
-          tripType = Nothing
+          tripType = Nothing,
+          estimatedRouteDetails = Nothing
         }
 
 ---------------------------------------------------------------------
@@ -3104,18 +3109,25 @@ getDriverDashboardFleetTripWaypoints ::
   Context.City ->
   Id Common.TripTransaction ->
   Text ->
+  Maybe Bool ->
   Maybe Text ->
   Flow Common.TripTransactionWaypointsRes
-getDriverDashboardFleetTripWaypoints _ _ tripTransactionId fleetOwnerId memberPersonId = do
-  rateLimitOptions <- asks (.driverFleetLocationListAPIRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (driverFleetTripWaypointsHitsCountKey fleetOwnerId memberPersonId) rateLimitOptions
-  tripTransaction <- QTT.findByTransactionId (cast tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
-  unless (tripTransaction.status == COMPLETED) $ throwError (InvalidRequest "Trip transaction is not completed")
-  startTime <- maybe (throwError (InvalidRequest "Trip transaction start time not found")) pure tripTransaction.tripStartTime
-  endTime <- maybe (throwError (InvalidRequest "Trip transaction end time not found")) pure tripTransaction.tripEndTime
-  driverEdaKafkaList <- CHDriverEda.findAllTuple startTime endTime tripTransaction.driverId (Just $ cast tripTransaction.id)
-  actualRoute <- mapM getActualRouteFromTuple driverEdaKafkaList
-  pure $ Common.TripTransactionWaypointsRes {waypoints = actualRoute}
+getDriverDashboardFleetTripWaypoints _ _ tripTransactionId fleetOwnerId mbliteMode memberPersonId = do
+  let liteMode = fromMaybe True mbliteMode
+  case liteMode of
+    True -> do
+      tripTransaction <- QTT.findByTransactionId (cast tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
+      pure $ Common.TripTransactionWaypointsRes {waypoints = [], estimatedRouteDetails = tripTransaction.tripEstimatedRouteDetails >>= (\estimatedRoute -> Just (Common.EstimatedRouteDetails {distance = estimatedRoute.distance, duration = estimatedRoute.duration, polyline = estimatedRoute.polyline}))}
+    False -> do
+      rateLimitOptions <- asks (.driverFleetLocationListAPIRateLimitOptions)
+      checkSlidingWindowLimitWithOptions (driverFleetTripWaypointsHitsCountKey fleetOwnerId memberPersonId) rateLimitOptions
+      tripTransaction <- QTT.findByTransactionId (cast tripTransactionId) >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
+      unless (tripTransaction.status == COMPLETED) $ throwError (InvalidRequest "Trip transaction is not completed")
+      startTime <- maybe (throwError (InvalidRequest "Trip transaction start time not found")) pure tripTransaction.tripStartTime
+      endTime <- maybe (throwError (InvalidRequest "Trip transaction end time not found")) pure tripTransaction.tripEndTime
+      driverEdaKafkaList <- CHDriverEda.findAllTuple startTime endTime tripTransaction.driverId (Just $ cast tripTransaction.id)
+      actualRoute <- mapM getActualRouteFromTuple driverEdaKafkaList
+      pure $ Common.TripTransactionWaypointsRes {waypoints = actualRoute, estimatedRouteDetails = tripTransaction.tripEstimatedRouteDetails >>= (\estimatedRoute -> Just (Common.EstimatedRouteDetails {distance = estimatedRoute.distance, duration = estimatedRoute.duration, polyline = estimatedRoute.polyline}))}
   where
     getActualRouteFromTuple :: (Maybe Double, Maybe Double, UTCTime, Maybe Double, Maybe CHDriverEda.Status) -> Flow Common.ActualRoute
     getActualRouteFromTuple (mbLat, mbLon, timestamp, mbAccuracy, _) =
@@ -3125,3 +3137,15 @@ getDriverDashboardFleetTripWaypoints _ _ tripTransactionId fleetOwnerId memberPe
 
 driverFleetTripWaypointsHitsCountKey :: Text -> Maybe Text -> Text
 driverFleetTripWaypointsHitsCountKey fleetOwnerId memberPersonId = "driverFleetTripWaypointsHitsCount:" <> fleetOwnerId <> ":" <> fromMaybe "" memberPersonId
+
+postDriverDashboardFleetEstimateRoute ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.EstimateRouteReq ->
+  Environment.Flow Maps.GetRoutesResp
+postDriverDashboardFleetEstimateRoute merchantShortId opCity _fleetOwnerId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let getRoutesReq = Maps.GetRoutesReq {waypoints = NE.fromList [req.start, req.end], mode = Just Maps.CAR, calcPoints = True}
+  Maps.getRoutes merchant.id merchantOpCityId Nothing getRoutesReq
