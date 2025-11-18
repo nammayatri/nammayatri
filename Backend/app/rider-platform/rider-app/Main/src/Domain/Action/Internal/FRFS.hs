@@ -18,10 +18,10 @@ module Domain.Action.Internal.FRFS
   )
 where
 
+import Data.List (nubBy, sortBy)
 import Domain.Action.UI.Payment
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Environment
-import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -43,11 +43,13 @@ frfsStatusUpdate req = do
   let reqBookingIds = req.bookingIds
   mapM_
     ( \bookingId -> do
-        booking <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking payment id")
-        let merchantId = booking.merchantId
-            personId = booking.riderId
-        bookingPayment <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
-        getStatus (personId, merchantId) bookingPayment.paymentOrderId
+        withTryCatch "frfsStatusUpdate" $ do
+          booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking payment id")
+          let merchantId = booking.merchantId
+              personId = booking.riderId
+          bookingPayments <- QFRFSTicketBookingPayment.findAllTBPByBookingId bookingId
+          let uniqueBookingPayments = nubBy ((==) `on` (.paymentOrderId)) $ sortBy (compare `on` (.paymentOrderId)) bookingPayments
+          mapM_ (\paymentBooking -> getStatus (personId, merchantId) paymentBooking.paymentOrderId) uniqueBookingPayments
     )
     reqBookingIds
 
