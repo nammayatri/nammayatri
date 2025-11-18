@@ -440,11 +440,11 @@ getDriverFleetDashboardAnalytics merchantShortId opCity apiTokenInfo mbResponseT
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDashboardAnalytics) fleetOwnerId mbResponseType from to
 
-getDriverFleetDriverListStats :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Day -> Maybe Day -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe Common.FleetDriverStatsResponseType -> Flow Common.FleetDriverStatsListRes
-getDriverFleetDriverListStats merchantShortId opCity apiTokenInfo from to search limit offset responseType = do
+getDriverFleetDriverListStats :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Day -> Maybe Day -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Common.FleetDriverListStatsSortOn -> Maybe Common.FleetDriverStatsResponseType -> Flow Common.FleetDriverStatsListRes
+getDriverFleetDriverListStats merchantShortId opCity apiTokenInfo from to search limit offset sortDesc sortOn responseType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverListStats) fleetOwnerId from to search limit offset responseType
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverListStats) fleetOwnerId from to search limit offset sortDesc sortOn responseType
 
 ---------------------------------------------------------------------------------------------------------------------------------
 ----------------------------------------------- READ LAYER (Multi Fleet Level) --------------------------------------------------

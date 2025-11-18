@@ -76,6 +76,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Dr
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Endpoints.Driver as Common
 import Control.Applicative (optional)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
+import Data.Char (isDigit)
 import Data.Csv
 import Data.List (groupBy, sortOn)
 import Data.List.NonEmpty (fromList, toList)
@@ -155,7 +156,9 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.FleetBadgeAssociation as CFBA
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
+import qualified Storage.Clickhouse.FleetDriverAssociation as CFDA
 import qualified Storage.Clickhouse.FleetOperatorDailyStats as CFODS
+import qualified Storage.Clickhouse.Person as CHPerson
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -176,7 +179,6 @@ import qualified Storage.Queries.FleetBookingInformation as QFBI
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
-import qualified Storage.Queries.FleetDriverAssociationExtra as FDVE
 import qualified Storage.Queries.FleetMemberAssociation as FMA
 import qualified Storage.Queries.FleetOperatorAssociation as FOV
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssociation
@@ -1445,9 +1447,11 @@ getDriverFleetDriverListStats ::
   Maybe Text ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Bool ->
+  Maybe Common.FleetDriverListStatsSortOn ->
   Maybe Common.FleetDriverStatsResponseType ->
   Flow Common.FleetDriverStatsListRes
-getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mbSearch mbLimit mbOffset mbResponseType = do
+getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mbSearch mbLimit mbOffset sortDesc sortOnField mbResponseType = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -1455,37 +1459,64 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
   now <- getCurrentTime
   let fromDay = fromMaybe (utctDay now) mbFrom
       toDay = fromMaybe (utctDay now) mbTo
-      limit = min 10 . fromMaybe 10 $ mbLimit
-      offset = fromMaybe 0 mbOffset
+      limit = max 0 $ min 10 . fromMaybe 10 $ mbLimit
+      offset = max 0 $ fromMaybe 0 mbOffset
       responseType = fromMaybe Common.METRICS_LIST mbResponseType
 
-  -- Get all drivers with names filtered
-  allDrivers <- FDVE.findAllDriverByFleetOwnerIds [fleetOwnerId] (Just limit) (Just offset) Nothing Nothing mbSearch
+  -- Fetch driver ids from ClickHouse association
+  driverIdObjs <- CFDA.getDriverIdsByFleetOwnerId fleetOwnerId
+  let driverIdTexts = map (.getId) driverIdObjs
+      mbSearchTerm = do
+        raw <- mbSearch
+        let trimmed = T.strip raw
+        guard (not $ T.null trimmed)
+        pure trimmed
 
-  -- Extract driverIds and create name map
-  let driverIds = map (\(_, person) -> person.id.getId) allDrivers
-      driverNameMap = Map.fromList $ map (\(_, person) -> (person.id.getId, person.firstName <> maybe "" (" " <>) person.lastName)) allDrivers
+  (filteredDriverIds, preloadedMap) <-
+    case mbSearchTerm of
+      Nothing -> pure (driverIdTexts, Map.empty)
+      Just searchTerm -> do
+        mbMobileHash <- hashIfMobile searchTerm
+        persons <- CHPerson.findPersonsByIds driverIdObjs (Just searchTerm) mbMobileHash
+        let driverIdsFiltered = map (.personId) persons
+            personMap = Map.fromList $ map (\person -> (person.personId, buildDriverFullName person)) persons
+        pure (driverIdsFiltered, personMap)
 
-  -- Query stats based on response type
-  driverStats <- case responseType of
-    Common.EARNINGS_LIST -> do
-      earningsStats <- QFODSExtra.sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
-      let statsList = map buildEarningsResponse earningsStats
-      forM statsList $ \(driverId, statRes) -> do
-        let driverName = fromMaybe "Unknown" $ Map.lookup driverId driverNameMap
-        pure $ Common.EarningsList $ statRes {Common.driver_name = driverName}
-    Common.METRICS_LIST -> do
-      metricsStats <- QFODSExtra.sumDriverMetricsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
-      let statsList = map (buildMetricsResponse transporterConfig fromDay toDay) metricsStats
-      forM statsList $ \(driverId, statRes) -> do
-        let driverName = fromMaybe "Unknown" $ Map.lookup driverId driverNameMap
-        pure $ Common.MetricsList $ statRes {Common.driver_name = driverName}
+  driverStats <-
+    case responseType of
+      Common.EARNINGS_LIST -> do
+        earningsStats <- CFODS.sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId filteredDriverIds fromDay toDay limit offset sortDesc sortOnField
+        nameMap <- ensureNameMap preloadedMap (map (.driverId) earningsStats)
+        let statsList = map buildEarningsResponse earningsStats
+        forM statsList $ \(driverId, statRes) -> do
+          let driverName = fromMaybe "Unknown" $ Map.lookup driverId nameMap
+          pure $ Common.EarningsList $ statRes {Common.driver_name = driverName}
+      Common.METRICS_LIST -> do
+        metricsStats <- CFODS.sumDriverMetricsByFleetOwnerIdAndDriverIds fleetOwnerId filteredDriverIds fromDay toDay limit offset sortDesc sortOnField
+        nameMap <- ensureNameMap preloadedMap (map (.driverId) metricsStats)
+        let statsList = map (buildMetricsResponse transporterConfig fromDay toDay) metricsStats
+        forM statsList $ \(driverId, statRes) -> do
+          let driverName = fromMaybe "Unknown" $ Map.lookup driverId nameMap
+          pure $ Common.MetricsList $ statRes {Common.driver_name = driverName}
 
   let count = length driverStats
-      summary = Common.Summary {totalCount = length allDrivers, count}
+      summary = Common.Summary {totalCount = length filteredDriverIds, count}
 
   pure $ Common.FleetDriverStatsListRes {driverStats, summary}
   where
+    hashIfMobile :: Text -> Flow (Maybe DbHash)
+    hashIfMobile txt =
+      if T.all isDigit txt
+        then Just <$> getDbHash txt
+        else pure Nothing
+
+    ensureNameMap :: Map.Map Text Text -> [Text] -> Flow (Map.Map Text Text)
+    ensureNameMap existingMap driverIds
+      | not (Map.null existingMap) || null driverIds = pure existingMap
+      | otherwise = do
+        persons <- CHPerson.findPersonsByIds (map Id driverIds) Nothing Nothing
+        pure $ Map.fromList $ map (\person -> (person.personId, buildDriverFullName person)) persons
+
     buildEarningsResponse :: QFODSExtra.DriverEarningsAggregated -> (Text, Common.FleetDriverEarningsStatsRes)
     buildEarningsResponse agg =
       let onlineEarningGross = fromMaybe (HighPrecMoney 0.0) agg.onlineTotalEarningSum
@@ -1558,6 +1589,12 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
                 earning_per_km = PriceAPIEntity earningPerKm config.currency
               }
           )
+
+    buildDriverFullName :: CHPerson.PersonBasic -> Text
+    buildDriverFullName person =
+      let nameParts = mapMaybe (fmap T.strip) [Just person.firstNameValue, person.lastNameValue]
+          nameText = T.unwords $ filter (not . T.null) nameParts
+       in if T.null nameText then "Unknown" else nameText
 
 ---------------------------------------------------------------------
 

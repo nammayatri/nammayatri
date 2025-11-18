@@ -562,6 +562,8 @@ apis:
         - search: Text
         - limit: Int
         - offset: Int
+        - sortDesc: Bool
+        - SortOn: FleetDriverListStatsSortOn
         - responseType: FleetDriverStatsResponseType
       response:
         type: FleetDriverStatsListRes
@@ -577,6 +579,8 @@ apis:
               - search: Text
               - limit: Int
               - offset: Int
+              - sortDesc: Bool
+              - SortOn: FleetDriverListStatsSortOn
               - responseType: FleetDriverStatsResponseType
             response:
               type: FleetDriverStatsListRes
@@ -1511,6 +1515,9 @@ types:
     - paymentMethod: Maybe Text
   SortOn:
     - enum: "COMPLETED_RIDES, CANCELLED_RIDES"
+    - derive: "HttpInstance"
+  FleetDriverListStatsSortOn:
+    - enum: "TOTAL_RATING_COUNT, TOTAL_RATING_SCORE, DRIVER_FIRST_SUBSCRIPTION, INSPECTION_COMPLETED, REJECTED_REQUEST_COUNT, PULLED_REQUEST_COUNT, ACCEPTATION_REQUEST_COUNT, TOTAL_REQUEST_COUNT, CUSTOMER_CANCELLATION_COUNT, DRIVER_CANCELLATION_COUNT, TOTAL_DISTANCE, TOTAL_COMPLETED_RIDES, ONLINE_TOTAL_EARNING, CASH_TOTAL_EARNING, CASH_PLATFORM_FEES, ONLINE_PLATFORM_FEES, ONLINE_DURATION, RIDE_DURATION"
     - derive: "HttpInstance"
   FleetEarningRes:
     - totalRides: Int

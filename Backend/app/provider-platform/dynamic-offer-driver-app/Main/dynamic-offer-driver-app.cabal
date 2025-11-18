@@ -568,6 +568,7 @@ library
       Storage.Clickhouse.FleetOperatorDailyStats
       Storage.Clickhouse.FleetOperatorStats
       Storage.Clickhouse.Location
+      Storage.Clickhouse.Person
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
       Storage.Clickhouse.SearchRequestForDriver
