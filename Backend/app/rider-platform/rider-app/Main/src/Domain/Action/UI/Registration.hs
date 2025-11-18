@@ -365,7 +365,12 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
             emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
             L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
-  return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing
+  mbDepotCode <- case identifierType of
+    SP.MOBILENUMBER -> do
+      mbDepotManager <- QDepotManager.findByPersonId person.id
+      return $ mbDepotManager <&> (.depotCode)
+    _ -> return Nothing
+  return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked mbDepotCode
   where
     castChannelToMedium :: OTPChannel -> SR.Medium
     castChannelToMedium SMS = SR.SMS
