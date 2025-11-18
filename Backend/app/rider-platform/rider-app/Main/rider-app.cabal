@@ -410,6 +410,7 @@ library
       SharedLogic.NyRegularSubscriptionHasher
       SharedLogic.NySubscription
       SharedLogic.Payment
+      SharedLogic.PaymentType
       SharedLogic.PaymentVendorSplits
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber

@@ -1,6 +1,7 @@
 module SharedLogic.Payment where
 
 import qualified Beckn.ACL.Cancel as ACL
+import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.Cancel as DCancel
@@ -40,10 +41,14 @@ import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.JobScheduler
 import qualified SharedLogic.JobScheduler as JobScheduler
+import SharedLogic.PaymentType
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -52,6 +57,7 @@ import qualified Storage.Queries.ParkingTransaction as QPT
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
+import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 import Tools.Metrics.BAPMetrics
 import qualified Tools.Notifications as TNotifications
@@ -400,6 +406,25 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
           return resp
       )
         =<< TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion req
+
+mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> m (Maybe CumulativeOfferResp)
+mkCumulativeOfferResp merchantOperatingCityId offerListResp = do
+  now <- getCurrentTime
+  (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.CUMULATIVE_OFFER_POLICY) now Nothing Nothing
+  if null logics
+    then do
+      logInfo "No cumulative offer logic found."
+      pure Nothing
+    else do
+      logInfo $ "Running cumulative offer logic with " <> show (length logics) <> " rules"
+      result <- LYTU.runLogics logics offerListResp
+      case A.fromJSON result.result :: A.Result CumulativeOfferResp of
+        A.Success logicResult -> do
+          logInfo $ "Cumulative offer logic result: " <> show logicResult
+          pure $ Just logicResult
+        A.Error err -> do
+          logError $ "Failed to parse cumulative offer logic result: " <> show err
+          pure Nothing
 
 mkOfferListReq :: (MonadFlow m, EncFlow m r) => Person.Person -> Price -> m Payment.OfferListReq
 mkOfferListReq person price = do
