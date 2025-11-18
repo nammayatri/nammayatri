@@ -336,22 +336,35 @@ fetchDriverDocuments ::
 fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories role language useHVSdkForDL onlyMandatoryDocs = do
   let merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
       driverId = driverImagesInfo.driverId
+      transporterConfig = driverImagesInfo.transporterConfig
+      isDigiLockerEnabled = fromMaybe False transporterConfig.digilockerEnabled
 
-  digilockerDocStatusMap <- getDigilockerDocStatusMap driverId
+  -- Only fetch DigiLocker doc status if DigiLocker is enabled for this city
+  digilockerDocStatusMap <- if isDigiLockerEnabled then getDigilockerDocStatusMap driverId else pure HM.empty
 
   driverDocumentTypes <- getDriverDocTypes merchantOpCityId allDocumentVerificationConfigs possibleVehicleCategories role onlyMandatoryDocs
   driverDocumentTypes `forM` \docType -> do
     (mbStatus, mbProcessedReason, mbProcessedUrl) <- getProcessedDriverDocuments driverImagesInfo docType useHVSdkForDL
-    let responseCode = getResponseCode docType digilockerDocStatusMap
+    let responseCode = if isDigiLockerEnabled then getResponseCode docType digilockerDocStatusMap else Nothing
     case mbStatus of
       Just status -> do
         message <- documentStatusMessage status Nothing docType mbProcessedUrl language
-        let finalMessage = responseCode <|> mbProcessedReason <|> Just message
+        -- For DigiLocker-enabled cities: mbProcessedReason -> responseCode -> message
+        -- For non-DigiLocker cities: mbProcessedReason -> message
+        let finalMessage =
+              if isDigiLockerEnabled
+                then mbProcessedReason <|> responseCode <|> Just message
+                else mbProcessedReason <|> Just message
         return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbProcessedUrl}
       Nothing -> do
         (status, mbReason, mbUrl) <- getInProgressDriverDocuments driverImagesInfo docType
         message <- documentStatusMessage status mbReason docType mbUrl language
-        let finalMessage = responseCode <|> mbReason <|> Just message
+        -- For DigiLocker-enabled cities: mbReason -> responseCode -> message
+        -- For non-DigiLocker cities: mbReason -> message
+        let finalMessage =
+              if isDigiLockerEnabled
+                then mbReason <|> responseCode <|> Just message
+                else mbReason <|> Just message
         return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl}
 
 fetchVehicleDocuments ::
