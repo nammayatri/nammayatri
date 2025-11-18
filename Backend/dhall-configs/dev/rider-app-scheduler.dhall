@@ -35,6 +35,7 @@ let schedulerConfig =
       , schedulerType = common.schedulerType.RedisBased
       , schedulerSetName = "Scheduled_Jobs_Rider"
       , streamName = "Available_Jobs_Rider"
+      , streamCount = +15
       , maxThreads = +10
       , block = +10000
       , readCount = +1

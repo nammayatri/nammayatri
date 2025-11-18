@@ -82,6 +82,7 @@ in  { hedisCfg
     , producerTimestampKey = "producerTimestampKey"
     , batchSize = +1
     , streamName = "Available_Jobs_Rider"
+    , streamCount = +15
     , cacheConfig
     , schedulerSetName = "Scheduled_Jobs_Rider"
     , entryId = "*"

@@ -82,6 +82,7 @@ in  { hedisCfg
     , producerTimestampKey = "producerTimestampKey"
     , batchSize = +1
     , streamName = "Available_Chakras"
+    , streamCount = +15
     , cacheConfig
     , schedulerSetName = "Scheduled_Chakras"
     , entryId = "*"

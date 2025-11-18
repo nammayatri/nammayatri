@@ -166,15 +166,23 @@ runReviver' producerType = do
 
 insertIntoStream :: [B.ByteString] -> Flow ()
 insertIntoStream jobs = do
-  streamName <- asks (.streamName)
+  streamName' <- asks (.streamName)
+  streamCount <- asks (.streamCount)
+  let streamNumbers = [Nothing] ++ [Just streamIndex | streamIndex <- [1 .. streamCount]]
+  let streamNames = map (streamNameForNumber streamName') streamNumbers
+      jobStreamPairs = zip jobs (cycle streamNames)
   entryId <- asks (.entryId)
-  forM_ jobs $ \job -> fork "putting into stream" $ do
+  forM_ jobStreamPairs $ \(job, streamName) -> fork "putting into stream" $ do
     eqId <- generateGUID
     let eqIdByteString = TE.encodeUtf8 eqId
     let job_ = job
     let fieldValue = [(eqIdByteString, job_)]
     _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xAdd streamName entryId fieldValue
     return ()
+  where
+    streamNameForNumber streamName' streamNumber = case streamNumber of
+      Just numb -> streamName' <> "{" <> show numb <> "}"
+      Nothing -> streamName'
 
 splitIntoBatches :: Int -> [a] -> [[a]]
 splitIntoBatches _ [] = []
