@@ -65,6 +65,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetGetNearbyDriversV2,
     getDriverFleetDashboardAnalyticsAllTime,
     getDriverFleetDashboardAnalytics,
+    getDriverFleetVehicleListStats,
   )
 where
 
@@ -117,7 +118,7 @@ import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
 import qualified Domain.Types.VehicleCategory as DVC
-import Domain.Types.VehicleRegistrationCertificate
+import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleRouteMapping as DVRM
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
@@ -178,6 +179,7 @@ import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssoc
 import qualified Storage.Queries.FleetOperatorStats as QFleetOperatorStats
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
+import Storage.Queries.FleetRcDailyStatsExtra as QFRDSExtra
 import qualified Storage.Queries.FleetRouteAssociation as QFRA
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QP
@@ -257,10 +259,10 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
       pure Success
     _ -> throwError (InvalidRequest "Invalid Data")
 
-checkRCAssociationForDriver :: Id DP.Person -> Maybe VehicleRegistrationCertificate -> Bool -> Flow Bool
+checkRCAssociationForDriver :: Id DP.Person -> Maybe DVRC.VehicleRegistrationCertificate -> Bool -> Flow Bool
 checkRCAssociationForDriver driverId mbVehicleRC checkFleet = maybe checkAssociationWithDriver checkAssociationWithDriverAndVehicle mbVehicleRC
   where
-    checkAssociationWithDriverAndVehicle :: VehicleRegistrationCertificate -> Flow Bool
+    checkAssociationWithDriverAndVehicle :: DVRC.VehicleRegistrationCertificate -> Flow Bool
     checkAssociationWithDriverAndVehicle vehicleRC = do
       when (isJust vehicleRC.fleetOwnerId && checkFleet) $ throwError VehicleBelongsToFleet
       now <- getCurrentTime
@@ -355,7 +357,7 @@ validateFleetDriverAssociation fleetOwnerId driverPerson = do
   when (isNothing isAssociated) $
     throwError (DriverNotActiveInFleet driverPerson.id.getId fleetOwnerId)
 
-checkRCAssociationForFleet :: Text -> VehicleRegistrationCertificate -> Flow ()
+checkRCAssociationForFleet :: Text -> DVRC.VehicleRegistrationCertificate -> Flow ()
 checkRCAssociationForFleet fleetOwnerId vehicleRC = do
   when (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId /= Just fleetOwnerId) $ throwError VehicleBelongsToAnotherFleet
   activeAssociationsOfRC <- DRCAE.findAllActiveAssociationByRCId vehicleRC.id
@@ -513,7 +515,7 @@ getDriverFleetGetAllVehicle merchantShortId _ mbLimit mbOffset mbRegNumberString
       vehicles <- traverse (convertToVehicleAPIEntityT fleetNameMap) vehicleList
       return $ Common.ListVehicleResT (catMaybes vehicles)
 
-convertToVehicleAPIEntityTFromAssociation :: Map.Map Text Text -> (DriverRCAssociation, VehicleRegistrationCertificate) -> Flow (Maybe Common.VehicleAPIEntityT)
+convertToVehicleAPIEntityTFromAssociation :: Map.Map Text Text -> (DriverRCAssociation, DVRC.VehicleRegistrationCertificate) -> Flow (Maybe Common.VehicleAPIEntityT)
 convertToVehicleAPIEntityTFromAssociation fleetNameMap (association, rc) = do
   certificateNumber' <- decrypt rc.certificateNumber
   pure $
@@ -529,8 +531,8 @@ convertToVehicleAPIEntityTFromAssociation fleetNameMap (association, rc) = do
             fleetOwnerName = fromMaybe "" (Map.lookup foId fleetNameMap)
           }
 
-convertToVehicleAPIEntityT :: Map.Map Text Text -> VehicleRegistrationCertificate -> Flow (Maybe Common.VehicleAPIEntityT)
-convertToVehicleAPIEntityT fleetNameMap VehicleRegistrationCertificate {..} = do
+convertToVehicleAPIEntityT :: Map.Map Text Text -> DVRC.VehicleRegistrationCertificate -> Flow (Maybe Common.VehicleAPIEntityT)
+convertToVehicleAPIEntityT fleetNameMap DVRC.VehicleRegistrationCertificate {..} = do
   certificateNumber' <- decrypt certificateNumber
   mActiveAssociation <- QRCAssociation.findActiveAssociationByRC id True
   let isActive = isJust mActiveAssociation
@@ -670,7 +672,7 @@ postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo mbRequest
   FRAE.endAssociationForRC (Id fleetOwnerId_ :: Id DP.Person) vehicleRC.id
   pure Success
   where
-    updatedVehicleRegistrationCertificate VehicleRegistrationCertificate {..} = VehicleRegistrationCertificate {fleetOwnerId = Nothing, ..}
+    updatedVehicleRegistrationCertificate DVRC.VehicleRegistrationCertificate {..} = DVRC.VehicleRegistrationCertificate {fleetOwnerId = Nothing, ..}
 
 ---------------------------------------------------------------------
 postDriverFleetAddVehicles ::
@@ -1022,7 +1024,7 @@ calculateTimeDifference diffTime = Common.TotalDuration {..}
     minutes :: Int
     minutes = floor (remainingSeconds / 60)
 
-getListOfVehicles :: Maybe Text -> Text -> Maybe Int -> Maybe Int -> Maybe Common.FleetVehicleStatus -> Id DM.Merchant -> Maybe Text -> Maybe Text -> Flow [VehicleRegistrationCertificate]
+getListOfVehicles :: Maybe Text -> Text -> Maybe Int -> Maybe Int -> Maybe Common.FleetVehicleStatus -> Id DM.Merchant -> Maybe Text -> Maybe Text -> Flow [DVRC.VehicleRegistrationCertificate]
 getListOfVehicles mbVehicleNo fleetOwnerId mbLimit mbOffset mbStatus merchantId mbSearchString statusAwareVehicleNo = do
   let limit = fromIntegral $ min 10 $ fromMaybe 5 mbLimit
       offset = fromIntegral $ fromMaybe 0 mbOffset
@@ -1169,7 +1171,7 @@ getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLi
   let summary = Common.Summary {totalCount = 10000, count = length filteredItems}
   pure $ Common.DrivertoVehicleAssociationRes {fleetOwnerId = fleetOwnerId, listItem = filteredItems, summary = summary}
   where
-    createDriverVehicleAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [FleetDriverAssociation] -> [VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
+    createDriverVehicleAssociationListItem :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [FleetDriverAssociation] -> [DVRC.VehicleRegistrationCertificate] -> m [Common.DriveVehicleAssociationListItem]
     createDriverVehicleAssociationListItem fdaList vrcaList = do
       now <- getCurrentTime
       let defaultFrom = UTCTime (utctDay now) 0
@@ -1342,7 +1344,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOff
                   ..
                 }
         pure ls
-    getVehicleDetails :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => VehicleRegistrationCertificate -> m (Maybe Text, Maybe Common.VehicleVariant)
+    getVehicleDetails :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DVRC.VehicleRegistrationCertificate -> m (Maybe Text, Maybe Common.VehicleVariant)
     getVehicleDetails vrc = do
       decryptedVehicleRC <- decrypt vrc.certificateNumber
       let vehicleType = DCommon.castVehicleVariantDashboard vrc.vehicleVariant
@@ -1369,7 +1371,7 @@ getDriverFleetVehicleAssociation merchantShortId _opCity mbLimit mbOffset mbVehi
         summary = summary
       }
   where
-    createFleetVehicleAssociationListItem :: [(VehicleRegistrationCertificate, Text, Text)] -> Flow [Common.DriveVehicleAssociationListItemT]
+    createFleetVehicleAssociationListItem :: [(DVRC.VehicleRegistrationCertificate, Text, Text)] -> Flow [Common.DriveVehicleAssociationListItemT]
     createFleetVehicleAssociationListItem vrcListWithFleetInfo = do
       now <- getCurrentTime
       forM vrcListWithFleetInfo $ \(vrc, fleetOwnerId, fleetOwnerName) -> do
@@ -2069,7 +2071,7 @@ postDriverFleetTripPlanner merchantShortId opCity fleetOwnerId req = do
         createTripTransactions merchant.id merchantOpCity.id fleetOwnerId req.driverId vehicleRC (mbDriverBadge <|> mbPilotBadge) mbConductorBadge req.trips
         pure Success
 
-createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> VehicleRegistrationCertificate -> Maybe DFB.FleetBadge -> Maybe DFB.FleetBadge -> [Common.TripDetails] -> Flow ()
+createTripTransactions :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Id Common.Driver -> DVRC.VehicleRegistrationCertificate -> Maybe DFB.FleetBadge -> Maybe DFB.FleetBadge -> [Common.TripDetails] -> Flow ()
 createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicleRC mbDriverBadge mbConductorBadge trips = do
   initialActiveTrip <- WMB.findNextActiveTripTransaction fleetOwnerId (cast driverId)
   let (isActive, mbScheduledTripTime) = case initialActiveTrip of
@@ -2757,7 +2759,7 @@ getDriverDashboardInternalHelperGetFleetOwnerIds _ _ mbFleetOwnerId memberPerson
 
 -------------------------------------- multiple fleet queries ------------------------------------------------------
 
-getListOfVehiclesMultiFleet :: Maybe Text -> [Text] -> Maybe Int -> Maybe Int -> Maybe Common.FleetVehicleStatus -> Id DM.Merchant -> Maybe Text -> Maybe Text -> Flow [VehicleRegistrationCertificate]
+getListOfVehiclesMultiFleet :: Maybe Text -> [Text] -> Maybe Int -> Maybe Int -> Maybe Common.FleetVehicleStatus -> Id DM.Merchant -> Maybe Text -> Maybe Text -> Flow [DVRC.VehicleRegistrationCertificate]
 getListOfVehiclesMultiFleet mbVehicleNo fleetOwnerIds mbLimit mbOffset mbStatus merchantId mbSearchString statusAwareVehicleNo = do
   let limit = fromIntegral $ min 10 $ fromMaybe 5 mbLimit
       offset = fromIntegral $ fromMaybe 0 mbOffset
@@ -3086,3 +3088,44 @@ getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId fromDay toD
       driverCancelled = fromMaybe 0 agg.driverCancellationCountSum
       customerCancelled = fromMaybe 0 agg.customerCancellationCountSum
   pure $ Common.FilteredFleetAnalyticsRes {..}
+
+getDriverFleetVehicleListStats :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Int -> Maybe Int -> Day -> Day -> Flow Common.FleetVehicleStatsRes
+getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbVehicleNo mbLimit mbOffset fromDay toDay = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
+  agg <- QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbVehicleNo mbLimit mbOffset fromDay toDay -- add limit offset
+  let rcIds = map (\vehicleStat -> Id vehicleStat.rcId) agg
+  vehicleRegistrationCertificates <- VRCQuery.findAllById rcIds
+  let vehicleMap = Map.fromList $ map (\rc -> (rc.id.getId, rc)) vehicleRegistrationCertificates
+  let agg' = convertToFleetVehicleStatsItem transporterConfig agg vehicleMap
+
+  pure $ Common.FleetVehicleStatsRes {fleetOwnerId = fleetOwnerId, listItem = agg', summary = Common.Summary {totalCount = 0, count = 0}}
+
+convertToFleetVehicleStatsItem :: DTC.TransporterConfig -> [VehicleAggregatedStats] -> Map.Map Text DVRC.VehicleRegistrationCertificate -> [Common.FleetVehicleStatsItem]
+convertToFleetVehicleStatsItem transporterConfig agg vehicleMap =
+  map mkItem agg
+  where
+    calculateEarningsPerKm :: Meters -> HighPrecMoney -> HighPrecMoney
+    calculateEarningsPerKm distance earnings =
+      let distanceInKm = distance `div` 1000
+       in if distanceInKm.getMeters == 0
+            then HighPrecMoney 0.0
+            else toHighPrecMoney $ roundToIntegral earnings `div` distanceInKm.getMeters
+    mkItem :: VehicleAggregatedStats -> Common.FleetVehicleStatsItem
+    mkItem stats =
+      let rcIdKey = stats.rcId
+          mRc = Map.lookup rcIdKey vehicleMap
+          earningsPerKm = calculateEarningsPerKm stats.totalDistance stats.totalEarnings
+       in Common.FleetVehicleStatsItem
+            { Common.vehicleNo = mRc >>= (DVRC.unencryptedCertificateNumber),
+              Common.vehicleModel = mRc >>= (DVRC.vehicleModel),
+              rcId = Just rcIdKey,
+              totalEarnings = stats.totalEarnings,
+              currency = Just transporterConfig.currency,
+              completedRides = stats.totalCompletedRides,
+              rideDistance = stats.totalDistance,
+              rideDuration = stats.totalDuration,
+              earningPerKm = earningsPerKm
+            }

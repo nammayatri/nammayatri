@@ -65,6 +65,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetGetNearbyDriversV2,
     getDriverFleetDashboardAnalyticsAllTime,
     getDriverFleetDashboardAnalytics,
+    getDriverFleetVehicleListStats,
   )
 where
 
@@ -572,3 +573,9 @@ postDriverFleetGetNearbyDriversV2 merchantShortId opCity apiTokenInfo req = do
   return $ Common.NearbyDriversRespTV2 {..}
   where
     addFleetOwnerDetails fleetOwnerId fleetOwnerName Common.NearbyDriverDetails {..} = Common.NearbyDriverDetailsT {..}
+
+getDriverFleetVehicleListStats :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Data.Time.Day -> Data.Time.Day -> Environment.Flow Common.FleetVehicleStatsRes)
+getDriverFleetVehicleListStats merchantShortId opCity apiTokenInfo vehicleNo limit offset from to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let fleetOwnerId = apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetVehicleListStats) fleetOwnerId vehicleNo limit offset from to
