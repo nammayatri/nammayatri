@@ -29,10 +29,10 @@ onSelect _ req = withFlowHandlerAPI $ do
   withTransactionIdLogTag' transaction_id $ do
     onSelectReq <- ACL.buildOnSelectReq req
     Redis.whenWithLockRedis (onSelectLockKey onSelectReq.messageId) 60 $ do
-      (merchant, quote) <- DOnSelect.validateRequest onSelectReq
+      (merchant, quote, integratedBppConfig) <- DOnSelect.validateRequest onSelectReq
       fork "FRFS on_select processing" $ do
         Redis.whenWithLockRedis (onSelectProcessingLockKey onSelectReq.messageId) 60 $
-          DOnSelect.onSelect onSelectReq merchant quote Nothing Nothing
+          DOnSelect.onSelect onSelectReq merchant quote Nothing Nothing Nothing integratedBppConfig
       fork "FRFS onSelect received pushing ondc logs" do
         void $ pushLogs "on_select" (toJSON req) merchant.id.getId "PUBLIC_TRANSPORT"
   pure Utils.ack

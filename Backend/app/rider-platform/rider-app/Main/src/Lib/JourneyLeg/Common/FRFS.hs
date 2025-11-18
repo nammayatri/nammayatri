@@ -423,19 +423,20 @@ confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse v
   when (not bookLater && bookingAllowed) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
     quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
-    if vehicleType == Spec.BUS
-      then do
+    integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
+    case integratedBppConfig.providerConfig of
+      DIBC.ONDC _ -> do
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
         merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
         bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
-        FRFSTicketService.select processOnSelect merchant merchantOperatingCity bapConfig quote categorySelectionReq isSingleMode mbEnableOffer
-      else do
-        void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer
+        FRFSTicketService.select (processOnSelect integratedBppConfig) merchant merchantOperatingCity bapConfig quote categorySelectionReq isSingleMode mbEnableOffer
+      _ -> do
+        void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer integratedBppConfig
   where
-    processOnSelect :: (FRFSConfirmFlow m r) => DOnSelect -> Maybe Bool -> Maybe Bool -> m ()
-    processOnSelect onSelectReq mbSingleMode enableOffer = do
-      (merchant', quote') <- DOnSelect.validateRequest onSelectReq
-      DOnSelect.onSelect onSelectReq merchant' quote' mbSingleMode enableOffer
+    processOnSelect :: (FRFSConfirmFlow m r) => DIBC.IntegratedBPPConfig -> DOnSelect -> Maybe Bool -> Maybe Bool -> m ()
+    processOnSelect integratedBppConfig onSelectReq mbSingleMode enableOffer = do
+      (merchant', quote', _) <- DOnSelect.validateRequest onSelectReq
+      DOnSelect.onSelect onSelectReq merchant' quote' mbSingleMode enableOffer crisSdkResponse integratedBppConfig
 
 cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> m ()
 cancel searchId cancellationType = do

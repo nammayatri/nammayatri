@@ -760,7 +760,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
                   return $ FRFSTypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity = selectedQuantity}
               )
               quoteCategories
-      bookingRes <- DFRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote.id selectedQuoteCategories Nothing Nothing Nothing
+      bookingRes <- DFRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing integratedBPPConfig
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return

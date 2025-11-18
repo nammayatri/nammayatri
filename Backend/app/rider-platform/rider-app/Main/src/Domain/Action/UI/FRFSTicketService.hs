@@ -624,16 +624,16 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
                   req.childTicketQuantity <&> \childTicketQuantity -> FRFSTicketService.FRFSCategorySelectionReq {quoteCategoryId = quoteCategoryId, quantity = childTicketQuantity}
               Nothing -> createFRFSQuoteCategory quoteId req.childTicketQuantity CHILD
         ]
-  postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCategories Nothing Nothing Nothing
-
-postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe MultimodalConfirm.CrisSdkResponse -> Maybe Bool -> Maybe Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer = do
-  when (null selectedQuoteCategories) $ throwError $ NoSelectedCategoryFound quoteId.getId
-  merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
-  mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
+  postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategories Nothing Nothing Nothing integratedBppConfig
+
+postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe MultimodalConfirm.CrisSdkResponse -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer integratedBppConfig = do
+  when (null selectedQuoteCategories) $ throwError $ NoSelectedCategoryFound quote.id.getId
+  merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+  mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
   let isMultiInitAllowed =
         case mbBooking of
           Just booking ->
@@ -648,7 +648,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCatego
       then FRFSUtils.updateQuoteCategoriesWithQuantitySelections (selectedQuoteCategories <&> (\category -> (category.quoteCategoryId, category.quantity))) quoteCategories
       else return quoteCategories
   let fareParameters = FRFSUtils.calculateFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)
-  (rider, dConfirmRes) <- confirm isMultiInitAllowed quote fareParameters mbBooking
+  (rider, dConfirmRes) <- confirm isMultiInitAllowed fareParameters mbBooking
   merchantOperatingCity <- getMerchantOperatingCityFromBooking dConfirmRes
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
   let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< dConfirmRes.routeStationsJson
@@ -670,8 +670,8 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCatego
     --   | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = cancelFRFSTicketBooking booking
     --   | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = cancelFRFSTicketBooking booking
     --   | otherwise = throwM exc
-    confirm :: CallExternalBPP.FRFSConfirmFlow m r => Bool -> DFRFSQuote.FRFSQuote -> FRFSUtils.FRFSFareParameters -> Maybe DFRFSTicketBooking.FRFSTicketBooking -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
-    confirm isMultiInitAllowed quote fareParameters mbBooking = do
+    confirm :: CallExternalBPP.FRFSConfirmFlow m r => Bool -> FRFSUtils.FRFSFareParameters -> Maybe DFRFSTicketBooking.FRFSTicketBooking -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
+    confirm isMultiInitAllowed fareParameters mbBooking = do
       personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
       rider <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       now <- getCurrentTime
@@ -681,6 +681,10 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCatego
       let ticketQuantity = fareParameters.adultItem <&> (.quantity)
           childTicketQuantity = fareParameters.childItem <&> (.quantity)
           totalPrice = fareParameters.totalPrice
+          adultPrice = fareParameters.adultItem <&> (.unitPrice)
+      whenJust adultPrice $ \price -> do
+        QFRFSQuote.updatePriceAndEstimatedPriceById quote.id price (Just price)
+        QJourneyLeg.updateEstimatedFaresBySearchId (Just price.amount) (Just price.amount) (Just quote.searchId.getId) -- Update the estimated fares for the journey legs
       updatedQuote <-
         if isMultiInitAllowed
           then do
@@ -699,14 +703,14 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCatego
                   -- TODO :: Update the status of the old payment booking to REATTEMPTED, Uncomment post release.
                   -- void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REATTEMPTED booking.id
                   void $ QFRFSTicketBooking.updateTotalPriceAndQuantityById totalPrice ticketQuantity childTicketQuantity Nothing booking.id
-                  return $ booking {DFRFSTicketBooking.quoteId = quoteId, DFRFSTicketBooking.bppItemId = quote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.totalPrice = totalPrice, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
+                  return $ booking {DFRFSTicketBooking.quoteId = quote.id, DFRFSTicketBooking.bppItemId = quote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.totalPrice = totalPrice, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
                 else return booking
             pure (rider, updatedBooking)
         )
         (pure mbBooking)
 
     buildAndCreateBooking :: CallExternalBPP.FRFSConfirmFlow m r => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> FRFSUtils.FRFSFareParameters -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
-    buildAndCreateBooking rider quote@DFRFSQuote.FRFSQuote {..} fareParameters = do
+    buildAndCreateBooking rider quote'@DFRFSQuote.FRFSQuote {..} fareParameters = do
       uuid <- generateGUID
       now <- getCurrentTime
       mbSearch <- QFRFSSearch.findById searchId
@@ -719,7 +723,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId selectedQuoteCatego
                 status = DFRFSTicketBooking.NEW,
                 createdAt = now,
                 updatedAt = now,
-                merchantId = quote.merchantId,
+                merchantId = quote'.merchantId,
                 totalPrice = fareParameters.totalPrice,
                 estimatedPrice = Just fareParameters.totalPrice,
                 finalPrice = Nothing, -- TODO :: Analytics Kind of Pricing, not sent to UI
