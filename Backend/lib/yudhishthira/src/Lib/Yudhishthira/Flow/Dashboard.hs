@@ -278,6 +278,19 @@ postRunKaalChakraJob _h req =
     Lib.Yudhishthira.Types.ALL_USERS -> throwError (InvalidRequest "ALL_USERS option available only from kaal-chakra scheduler")
     _ -> kaalChakraEvent req
 
+mbCreateLogicData :: (FromJSON a, ToJSON a, BeamFlow m r) => Maybe a -> Maybe A.Value -> m (Maybe a)
+mbCreateLogicData defaultVal Nothing = return defaultVal
+mbCreateLogicData (Just defaultVal) (Just inputValue) = do
+  let defaultValue = A.toJSON defaultVal
+      finalValue = deepMerge defaultValue inputValue
+  case A.fromJSON finalValue of
+    A.Success a -> return (Just a)
+    A.Error err -> throwError $ InvalidRequest ("Not able to merge input data into default value. Getting error: " <> show err)
+mbCreateLogicData Nothing (Just inputValue) =
+  case A.fromJSON inputValue of
+    A.Success a -> return (Just a)
+    A.Error err -> throwError $ InvalidRequest ("Not able to parse req input data into logic input data type. Getting error: " <> show err)
+
 createLogicData :: (FromJSON a, ToJSON a, BeamFlow m r) => a -> Maybe A.Value -> m a
 createLogicData defaultVal Nothing = return defaultVal
 createLogicData defaultVal (Just inputValue) = do
