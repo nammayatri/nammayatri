@@ -1568,8 +1568,8 @@ notifyAboutScheduledRide booking title body = do
           }
   notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
 
-notifyRefundNotification :: (ServiceFlow m r) => Notification.Category -> Id DOrder.PaymentOrder -> Id Person -> DOrder.PaymentServiceType -> m ()
-notifyRefundNotification notifCategory paymentOrderId personId paymentServiceType = do
+notifyPaymentFulfillment :: (ServiceFlow m r) => Notification.Category -> Id DOrder.PaymentOrder -> Id Person -> DOrder.PaymentServiceType -> m ()
+notifyPaymentFulfillment notifCategory paymentOrderId personId paymentServiceType = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   notificationSoundFromConfig <- SQNSC.findByNotificationType notifCategory person.merchantOperatingCityId
   mbMerchantPN <- CPN.findMatchingMerchantPN person.merchantOperatingCityId (mkRefundNotificationKey) Nothing Nothing person.language Nothing

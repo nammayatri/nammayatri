@@ -98,7 +98,9 @@ orderStatusHandler paymentService paymentOrder orderStatusCall =
         60
         ( do
             orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
-            orderStatusHandlerWithRefunds paymentService paymentOrder orderStatusResponse
+            mbUpdatedPaymentOrder <- QPaymentOrder.findById paymentOrder.id
+            let updatedPaymentOrder = fromMaybe paymentOrder mbUpdatedPaymentOrder
+            orderStatusHandlerWithRefunds paymentService paymentOrder updatedPaymentOrder orderStatusResponse
         )
     >>= \case
       Right updatedPaymentStatusResponse -> return updatedPaymentStatusResponse
@@ -132,9 +134,10 @@ orderStatusHandlerWithRefunds ::
   ) =>
   DOrder.PaymentServiceType ->
   DOrder.PaymentOrder ->
+  DOrder.PaymentOrder ->
   DPayment.PaymentStatusResp ->
   m DPayment.PaymentStatusResp
-orderStatusHandlerWithRefunds paymentService paymentOrder paymentStatusResponse = do
+orderStatusHandlerWithRefunds paymentService paymentOrder updatedPaymentOrder paymentStatusResponse = do
   refundStatusHandler paymentOrder paymentService
   eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId <-
     withTryCatch "orderStatusHandler:orderStatusHandler" $
@@ -196,9 +199,13 @@ orderStatusHandlerWithRefunds paymentService paymentOrder paymentStatusResponse 
           -- Refund Notify
           fork "Process Refunds Notifications" $ do
             case newPaymentFulfillmentStatus of
-              DPayment.FulfillmentRefundInitiated -> TNotifications.notifyRefundNotification Notification.REFUND_PENDING paymentOrder.id personId paymentService
-              DPayment.FulfillmentRefundFailed -> TNotifications.notifyRefundNotification Notification.REFUND_FAILED paymentOrder.id personId paymentService
-              DPayment.FulfillmentRefunded -> TNotifications.notifyRefundNotification Notification.REFUND_SUCCESS paymentOrder.id personId paymentService
+              DPayment.FulfillmentRefundInitiated -> TNotifications.notifyPaymentFulfillment Notification.REFUND_PENDING paymentOrder.id personId paymentService
+              DPayment.FulfillmentRefundFailed -> TNotifications.notifyPaymentFulfillment Notification.REFUND_FAILED paymentOrder.id personId paymentService
+              DPayment.FulfillmentRefunded -> TNotifications.notifyPaymentFulfillment Notification.REFUND_SUCCESS paymentOrder.id personId paymentService
+              DPayment.FulfillmentPending -> do
+                when (paymentOrder.status /= updatedPaymentOrder.status && updatedPaymentOrder.status == Payment.CHARGED) $ do
+                  TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_PENDING paymentOrder.id personId paymentService
+              DPayment.FulfillmentSucceeded -> TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS paymentOrder.id personId paymentService
               _ -> pure ()
         -- Invalidate the Offer List Cache
         case newPaymentFulfillmentStatus of
