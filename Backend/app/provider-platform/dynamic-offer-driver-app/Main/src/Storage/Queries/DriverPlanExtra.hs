@@ -35,7 +35,7 @@ findAllDriversToSendManualPaymentLinkWithLimit serviceName merchantId opCityId e
         [ Se.Is BeamDF.merchantId $ Se.Eq (Just merchantId.getId),
           Se.Is BeamDF.merchantOpCityId $ Se.Eq (Just opCityId.getId),
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.lastPaymentLinkSentAtIstDate $ Se.Not $ Se.Eq (Just endTime)
+          Se.Or [Se.Is BeamDF.lastPaymentLinkSentAtIstDate $ Se.LessThan (Just endTime), Se.Is BeamDF.lastPaymentLinkSentAtIstDate $ Se.Eq Nothing]
         ]
     ]
     (Just limit)
