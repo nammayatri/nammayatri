@@ -235,17 +235,21 @@ refundStatusHandler ::
   [Payment.RefundsData] ->
   DOrder.PaymentServiceType ->
   m ()
-refundStatusHandler paymentOrder _ paymentServiceType = do
+refundStatusHandler paymentOrder refunds paymentServiceType = do
   refundsEntry <- QRefunds.findAllByOrderId paymentOrder.shortId
   mapM_
     ( \refundEntry -> do
-        case paymentServiceType of
-          DOrder.FRFSBooking -> bookingsRefundStatusHandler refundEntry
-          DOrder.FRFSBusBooking -> bookingsRefundStatusHandler refundEntry
-          DOrder.FRFSMultiModalBooking -> bookingsRefundStatusHandler refundEntry
-          DOrder.FRFSPassPurchase -> passesRefundStatusHandler refundEntry
-          DOrder.ParkingBooking -> parkingBookingRefundStatusHandler refundEntry
-          _ -> pure ()
+        let mbRefund = find (\refund -> refund.requestId == refundEntry.id.getId) refunds
+        case mbRefund of
+          Just refund -> do
+            case paymentServiceType of
+              DOrder.FRFSBooking -> bookingsRefundStatusHandler refund.status refundEntry
+              DOrder.FRFSBusBooking -> bookingsRefundStatusHandler refund.status refundEntry
+              DOrder.FRFSMultiModalBooking -> bookingsRefundStatusHandler refund.status refundEntry
+              DOrder.FRFSPassPurchase -> passesRefundStatusHandler refund.status refundEntry
+              DOrder.ParkingBooking -> parkingBookingRefundStatusHandler refund.status refundEntry
+              _ -> pure ()
+          Nothing -> pure ()
     )
     refundsEntry
   where
@@ -257,16 +261,17 @@ refundStatusHandler paymentOrder _ paymentServiceType = do
         ServiceFlow m r,
         EncFlow m r
       ) =>
+      Payment.RefundStatus ->
       DRefunds.Refunds ->
       m ()
-    bookingsRefundStatusHandler refund = do
-      let refundStatus = refund.status
-          isRefundApiCallSuccess = refund.isApiCallSuccess
+    bookingsRefundStatusHandler refundStatus refund = do
+      let isRefundApiCallSuccess = refund.isApiCallSuccess
       bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
       mapM_
         ( \bookingPayment -> do
             let bookingPaymentId = bookingPayment.id
                 bookingId = bookingPayment.frfsTicketBookingId
+            QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
             case refundStatus of
               Payment.REFUND_SUCCESS -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUNDED bookingPaymentId
               Payment.REFUND_FAILURE -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED bookingPaymentId
@@ -275,7 +280,6 @@ refundStatusHandler paymentOrder _ paymentServiceType = do
                   Nothing -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING bookingPaymentId
                   Just True -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_INITIATED bookingPaymentId
                   Just False -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED bookingPaymentId
-                QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
         )
         bookingPayments
 
@@ -287,21 +291,35 @@ refundStatusHandler paymentOrder _ paymentServiceType = do
         ServiceFlow m r,
         EncFlow m r
       ) =>
+      Payment.RefundStatus ->
       DRefunds.Refunds ->
       m ()
-    passesRefundStatusHandler refund = do
-      mbPurchasedPassPayment <- QPurchasedPassPayment.findOneByPaymentOrderId paymentOrder.id
-      purchasedPass <- maybe (pure Nothing) (QPurchasedPass.findById . (.purchasedPassId)) mbPurchasedPassPayment >>= fromMaybeM (PurchasedPassNotFound paymentOrder.id.getId)
-      case refund.status of
+    passesRefundStatusHandler refundStatus refund = do
+      purchasedPassPayment <- QPurchasedPassPayment.findOneByPaymentOrderId paymentOrder.id >>= fromMaybeM (PurchasedPassPaymentNotFound paymentOrder.id.getId)
+      purchasedPass <- QPurchasedPass.findById purchasedPassPayment.purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassPayment.purchasedPassId.getId)
+      case refundStatus of
         Payment.REFUND_SUCCESS -> do
-          QPurchasedPass.updateStatusById DPurchasedPass.Refunded purchasedPass.id purchasedPass.startDate purchasedPass.endDate
+          QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.Refunded paymentOrder.id
+          when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
+            QPurchasedPass.updateStatusById DPurchasedPass.Refunded purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate
         Payment.REFUND_FAILURE -> do
-          QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id purchasedPass.startDate purchasedPass.endDate
+          QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundFailed paymentOrder.id
+          when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
+            QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate
         _ ->
           case refund.isApiCallSuccess of
-            Nothing -> QPurchasedPass.updateStatusById DPurchasedPass.RefundPending purchasedPass.id purchasedPass.startDate purchasedPass.endDate
-            Just True -> QPurchasedPass.updateStatusById DPurchasedPass.RefundInitiated purchasedPass.id purchasedPass.startDate purchasedPass.endDate
-            Just False -> QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id purchasedPass.startDate purchasedPass.endDate
+            Nothing -> do
+              QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundPending paymentOrder.id
+              when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
+                QPurchasedPass.updateStatusById DPurchasedPass.RefundPending purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate
+            Just True -> do
+              QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundInitiated paymentOrder.id
+              when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
+                QPurchasedPass.updateStatusById DPurchasedPass.RefundInitiated purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate
+            Just False -> do
+              QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundFailed paymentOrder.id
+              when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
+                QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate
 
     parkingBookingRefundStatusHandler ::
       ( EsqDBFlow m r,
@@ -311,11 +329,12 @@ refundStatusHandler paymentOrder _ paymentServiceType = do
         ServiceFlow m r,
         EncFlow m r
       ) =>
+      Payment.RefundStatus ->
       DRefunds.Refunds ->
       m ()
-    parkingBookingRefundStatusHandler refund = do
+    parkingBookingRefundStatusHandler refundStatus refund = do
       parkingTransaction <- QPT.findByPaymentOrderId paymentOrder.id >>= fromMaybeM (InvalidRequest "Parking transaction not found")
-      case refund.status of
+      case refundStatus of
         Payment.REFUND_SUCCESS -> do
           QPT.updateStatusById DPT.Refunded parkingTransaction.id
         Payment.REFUND_FAILURE -> do
