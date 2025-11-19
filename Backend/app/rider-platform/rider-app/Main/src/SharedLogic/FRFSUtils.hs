@@ -1133,7 +1133,7 @@ calculateFareParameters priceItems =
           }
 
       adultTotalQuantity = getQuantityFromPriceItem adultItem + getQuantityFromPriceItem femaleItem
-      adultItem' = adultItem' <|> femaleItem <&> (\item -> PriceItem {quantity = adultTotalQuantity, totalPrice = Price {amount = adultTotalAmount, amountInt = roundToIntegral adultTotalAmount, currency}, unitPrice = item.unitPrice})
+      adultItem' = adultItem <|> femaleItem <&> (\item -> PriceItem {quantity = adultTotalQuantity, totalPrice = Price {amount = adultTotalAmount, amountInt = roundToIntegral adultTotalAmount, currency}, unitPrice = item.unitPrice})
       totalQuantity =
         adultTotalQuantity + getQuantityFromPriceItem childItem
    in FRFSFareParameters
@@ -1173,12 +1173,12 @@ calculateFareParametersWithQuoteFallback categories quote =
       currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem <|> femaleItem)
       totalPrice =
         Price
-          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount,
-            amountInt = roundToIntegral ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
+          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount,
+            amountInt = roundToIntegral ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount),
             currency
           }
       totalQuantity =
-        getQuantityFromPriceItem adultItem + getQuantityFromPriceItem childItem + getQuantityFromPriceItem femaleItem
+        getQuantityFromPriceItem adultItem + getQuantityFromPriceItem childItem
    in FRFSFareParameters
         { adultItem = adultItem,
           childItem = childItem,
@@ -1227,12 +1227,12 @@ calculateFareParametersWithBookingFallback categories booking =
       currency = maybe INR (.unitPrice.currency) (adultItem <|> childItem <|> femaleItem)
       totalPrice =
         Price
-          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount,
-            amountInt = roundToIntegral ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount + (getAmountFromPriceItem femaleItem).amount),
+          { amount = (getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount,
+            amountInt = roundToIntegral ((getAmountFromPriceItem adultItem).amount + (getAmountFromPriceItem childItem).amount),
             currency
           }
       totalQuantity =
-        getQuantityFromPriceItem adultItem + getQuantityFromPriceItem childItem + getQuantityFromPriceItem femaleItem
+        getQuantityFromPriceItem adultItem + getQuantityFromPriceItem childItem
    in FRFSFareParameters
         { adultItem = adultItem,
           childItem = childItem,
