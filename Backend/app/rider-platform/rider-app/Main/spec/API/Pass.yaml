@@ -59,6 +59,11 @@ types:
     currentLat: Maybe Double
     currentLon: Maybe Double
     stopId: Maybe Text
+    ticketNumber: Maybe Text
+    isEntry: Maybe Bool
+    amount: Maybe HighPrecMoney
+    stationCode: Maybe Text
+    gateId: Maybe Text
 
   PassSelectionAPIEntity:
     purchasedPassId: Id PurchasedPass
@@ -116,6 +121,7 @@ apis:
         passId: Id Pass
       query:
         startDate: Day
+        amount: HighPrecMoney
       mandatoryQuery:
         deviceId: Text
       response:

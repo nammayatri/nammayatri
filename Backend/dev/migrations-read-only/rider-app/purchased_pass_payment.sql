@@ -15,3 +15,9 @@ ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN merchant_operating_city_
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.purchased_pass_payment ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN balance double precision ;

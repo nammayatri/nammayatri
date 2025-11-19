@@ -11,6 +11,7 @@ import qualified Domain.Types.PurchasedPassPayment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -94,6 +95,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.amount amount,
+      Se.Set Beam.balance (Just balance),
       Se.Set Beam.endDate endDate,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -114,6 +116,7 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
       Just
         Domain.Types.PurchasedPassPayment.PurchasedPassPayment
           { amount = amount,
+            balance = Kernel.Prelude.fromMaybe amount balance,
             endDate = endDate,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -133,6 +136,7 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
   toTType' (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..}) = do
     Beam.PurchasedPassPaymentT
       { Beam.amount = amount,
+        Beam.balance = Just balance,
         Beam.endDate = endDate,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,

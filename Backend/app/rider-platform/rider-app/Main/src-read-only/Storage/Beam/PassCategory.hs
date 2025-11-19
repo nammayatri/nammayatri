@@ -11,7 +11,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PassCategoryT f = PassCategoryT
-  { description :: B.C f Kernel.Prelude.Text,
+  { code :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    description :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

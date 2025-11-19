@@ -8,13 +8,19 @@ import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data PassVerifyTransactionT f = PassVerifyTransactionT
-  { destinationStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { closingAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    destinationStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    entryGateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    exitGateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fleetId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    openingAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     purchasePassId :: B.C f Kernel.Prelude.Text,
+    purchasePassPaymentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     sourceStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     validTill :: B.C f Kernel.Prelude.UTCTime,
     verifiedAt :: B.C f Kernel.Prelude.UTCTime,

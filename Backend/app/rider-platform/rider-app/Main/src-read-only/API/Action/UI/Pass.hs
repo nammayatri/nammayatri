@@ -21,6 +21,7 @@ import EulerHS.Prelude
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -39,6 +40,9 @@ type API =
            "passId"
            (Kernel.Types.Id.Id Domain.Types.Pass.Pass)
       :> "select"
+      :> QueryParam
+           "amount"
+           Kernel.Types.Common.HighPrecMoney
       :> QueryParam
            "startDate"
            Data.Time.Day
@@ -125,11 +129,12 @@ postMultimodalPassSelect ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Pass.Pass ->
+    Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney ->
     Kernel.Prelude.Maybe Data.Time.Day ->
     Data.Text.Text ->
     Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity
   )
-postMultimodalPassSelect a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalPassSelect a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getMultimodalPassList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
