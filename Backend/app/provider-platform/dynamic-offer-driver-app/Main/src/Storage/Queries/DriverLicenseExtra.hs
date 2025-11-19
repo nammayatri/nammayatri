@@ -23,6 +23,7 @@ upsert a@DriverLicense {..} = do
           Se.Set BeamDL.driverName driverName,
           Se.Set BeamDL.licenseExpiry licenseExpiry,
           Se.Set BeamDL.classOfVehicles classOfVehicles,
+          Se.Set BeamDL.driverId (Kernel.Types.Id.getId driverId),
           Se.Set BeamDL.verificationStatus verificationStatus,
           Se.Set BeamDL.failedRules failedRules,
           Se.Set BeamDL.updatedAt updatedAt
