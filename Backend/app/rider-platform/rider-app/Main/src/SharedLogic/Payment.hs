@@ -401,7 +401,7 @@ invalidateOfferListCache person merchantOperatingCityId price = do
   req <- mkOfferListReq person price
   let version = fromMaybe "N/A" riderConfig.offerListCacheVersion
       key = makeOfferListCacheKey person version req
-  Redis.del key
+  Redis.withCrossAppRedis $ Redis.del key
 
 offerListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m Payment.OfferListResp
 offerListCache merchantId personId merchantOperatingCityId paymentServiceType price = do
@@ -410,14 +410,15 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
   req <- mkOfferListReq person price
   let version = fromMaybe "N/A" riderConfig.offerListCacheVersion
       key = makeOfferListCacheKey person version req
-  Redis.get key >>= \case
-    Just a -> return a
-    Nothing ->
-      ( \resp -> do
-          Redis.setExp key resp (7 * 86400) -- Cache for 7 days
-          return resp
-      )
-        =<< TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion req
+  Redis.withCrossAppRedis $ do
+    Redis.get key >>= \case
+      Just a -> return a
+      Nothing ->
+        ( \resp -> do
+            Redis.setExp key resp (31 * 86400) -- Cache for 31 days
+            return resp
+        )
+          =<< TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion req
 
 mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> [JL.LegInfo] -> m (Maybe CumulativeOfferResp)
 mkCumulativeOfferResp merchantOperatingCityId offerListResp legInfos = do
