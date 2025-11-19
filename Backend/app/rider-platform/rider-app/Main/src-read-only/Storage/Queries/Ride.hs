@@ -65,6 +65,11 @@ updateFeedbackSkipped feedbackSkipped id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.feedbackSkipped (Kernel.Prelude.Just feedbackSkipped), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePickupEtaLogicVersion :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updatePickupEtaLogicVersion pickupEtaLogicVersion id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.pickupEtaLogicVersion pickupEtaLogicVersion, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePickupRouteCallCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updatePickupRouteCallCount pickupRouteCallCount id = do
   _now <- getCurrentTime

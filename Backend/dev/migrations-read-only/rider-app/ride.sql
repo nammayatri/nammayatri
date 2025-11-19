@@ -347,3 +347,9 @@ ALTER TABLE atlas_app.ride ADD COLUMN billing_category text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN pickup_eta_logic_version integer ;
