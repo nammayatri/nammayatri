@@ -10,6 +10,7 @@ imports:
   AlertRequest: Domain.Types.AlertRequest
   FleetBadge: Domain.Types.FleetBadge
   DriverCoinsFunctionType: Lib.DriverCoins.Types
+  Value: Data.Aeson
 
 VehicleRouteMapping:
   tableName: vehicle_route_mapping
@@ -45,7 +46,14 @@ TripTransaction:
     ActionSource:
       enum: "DriverDirect, DriverOnApproval, AutoDetect, Dashboard, ForceDashboard, CronJob, AutoRecovery"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
-
+    TripType:
+      enum: "PILOT,WIMB"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    EstimatedRouteDetails:
+      polyline: Maybe Text
+      duration: Maybe Seconds
+      distance: Maybe Meters
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
   fields:
     id: Id TripTransaction
     fleetOwnerId: Id Person
@@ -74,6 +82,15 @@ TripTransaction:
     merchantOperatingCityId: Id MerchantOperatingCity
     tripStartSource: Maybe ActionSource
     tripTerminationSource: Maybe ActionSource
+    dutyType: Maybe Text
+    vipName: Maybe Text
+    startAddress: Maybe Text
+    pilotSource: Maybe LatLong
+    pilotDestination: Maybe LatLong
+    endAddress: Maybe Text
+    scheduledTripTime: Maybe UTCTime
+    tripEstimatedRouteDetails: Maybe EstimatedRouteDetails
+    tripType: Maybe TripType
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -82,6 +99,12 @@ TripTransaction:
     driverId: "!SecondaryKey"
 
   beamFields:
+    pilotSource:
+      pilotSourceLat: Maybe Double
+      pilotSourceLon: Maybe Double
+    pilotDestination:
+      pilotDestinationLat: Maybe Double
+      pilotDestinationLon: Maybe Double
     startLocation:
       startLocationLat: Maybe Double
       startLocationLon: Maybe Double
@@ -91,20 +114,36 @@ TripTransaction:
     driverFleetBadgeId:
       fleetBadgeId: Maybe (Id FleetBadge)
 
+  beamType:
+    tripEstimatedRouteDetails: Maybe Value
   toTType:
     startLocationLat: Kernel.Prelude.fmap (.lat)|I
     startLocationLon: Kernel.Prelude.fmap (.lon)|I
     endLocationLat: Kernel.Prelude.fmap (.lat)|I
     endLocationLon: Kernel.Prelude.fmap (.lon)|I
+    pilotSourceLat: Kernel.Prelude.fmap (.lat)|I
+    pilotSourceLon: Kernel.Prelude.fmap (.lon)|I
+    pilotDestinationLat: Kernel.Prelude.fmap (.lat)|I
+    pilotDestinationLon: Kernel.Prelude.fmap (.lon)|I
+    tripEstimatedRouteDetails: Kernel.Prelude.toJSON <$> tripEstimatedRouteDetails | E
   fromTType:
     startLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
     endLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
+    pilotSource: Storage.Queries.Transformers.Ride.mkLatLong|I
+    pilotDestination: Storage.Queries.Transformers.Ride.mkLatLong|I
+    tripEstimatedRouteDetails: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< tripEstimatedRouteDetails | E
+
+  sqlType:
+    tripEstimatedRouteDetails: "json"
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TripStatus>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TripStatus>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <ActionSource>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ActionSource>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <TripType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <TripType>
 
   queries:
     findByTransactionId:

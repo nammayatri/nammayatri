@@ -213,28 +213,63 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
         source = sourceStopInfo,
         destination = destinationStopInfo,
         status = tripTransaction.status,
-        routeInfo = buildRouteInfo route
+        routeInfo = buildRouteInfo route,
+        dutyType = tripTransaction.dutyType,
+        vipName = tripTransaction.vipName,
+        scheduledTripTime = tripTransaction.scheduledTripTime,
+        tripType = tripTransaction.tripType
       }
 
 getTripTransactionDetails ::
   Domain.Types.TripTransaction.TripTransaction ->
   Flow TripTransactionDetails
 getTripTransactionDetails tripTransaction = do
-  route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
-  (sourceStopInfo, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route tripTransaction.routeCode
-  return $
-    TripTransactionDetails
-      { tripTransactionId = tripTransaction.id,
-        endRideApprovalRequestId = tripTransaction.endRideApprovalRequestId,
-        driverName = tripTransaction.driverName,
-        conductorName = tripTransaction.conductorName,
-        vehicleNumber = tripTransaction.vehicleNumber,
-        vehicleType = tripTransaction.vehicleServiceTierType,
-        source = sourceStopInfo,
-        destination = destinationStopInfo,
-        status = tripTransaction.status,
-        routeInfo = buildRouteInfo route
-      }
+  case tripTransaction.tripType of
+    Just PILOT -> do
+      let source = fromMaybe (LatLong 0.0 0.0) tripTransaction.pilotSource
+          destination = fromMaybe (LatLong 0.0 0.0) tripTransaction.pilotDestination
+          startAddress = fromMaybe "" tripTransaction.startAddress
+          endAddress = fromMaybe "" tripTransaction.endAddress
+      return $
+        TripTransactionDetails
+          { tripTransactionId = tripTransaction.id,
+            endRideApprovalRequestId = tripTransaction.endRideApprovalRequestId,
+            driverName = tripTransaction.driverName,
+            conductorName = tripTransaction.conductorName,
+            vehicleNumber = tripTransaction.vehicleNumber,
+            vehicleType = tripTransaction.vehicleServiceTierType,
+            source = StopInfo startAddress "NONE" source,
+            destination = StopInfo endAddress "NONE" destination,
+            status = tripTransaction.status,
+            routeInfo = dummyRouteInfo,
+            dutyType = tripTransaction.dutyType,
+            vipName = tripTransaction.vipName,
+            scheduledTripTime = tripTransaction.scheduledTripTime,
+            tripType = tripTransaction.tripType
+          }
+    _ -> do
+      route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
+      (sourceStopInfo, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route tripTransaction.routeCode
+      return $
+        TripTransactionDetails
+          { tripTransactionId = tripTransaction.id,
+            endRideApprovalRequestId = tripTransaction.endRideApprovalRequestId,
+            driverName = tripTransaction.driverName,
+            conductorName = tripTransaction.conductorName,
+            vehicleNumber = tripTransaction.vehicleNumber,
+            vehicleType = tripTransaction.vehicleServiceTierType,
+            source = sourceStopInfo,
+            destination = destinationStopInfo,
+            status = tripTransaction.status,
+            routeInfo = buildRouteInfo route,
+            dutyType = tripTransaction.dutyType,
+            vipName = tripTransaction.vipName,
+            scheduledTripTime = tripTransaction.scheduledTripTime,
+            tripType = tripTransaction.tripType
+          }
+
+dummyRouteInfo :: API.Types.UI.WMB.RouteInfo
+dummyRouteInfo = API.Types.UI.WMB.RouteInfo {code = "", shortName = "", longName = "", startPoint = LatLong 0.0 0.0, endPoint = LatLong 0.0 0.0}
 
 getWmbTripActive ::
   ( ( Maybe (Id Person),
@@ -272,10 +307,19 @@ postWmbTripStart (mbDriverId, _, _) tripTransactionId req = do
         Just tripTransaction -> do
           unless (tripTransactionId == tripTransaction.id && tripTransaction.status == TRIP_ASSIGNED) $ throwError AlreadyOnActiveTrip
           return tripTransaction
-  closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM (StopNotFound)
-  route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
-  (sourceStopInfo, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route tripTransaction.routeCode
-  void $ WMB.startTripTransaction tripTransaction route closestStop sourceStopInfo (LatLong req.location.lat req.location.lon) destinationStopInfo.point True DriverDirect
+
+  -- Handle based on trip type
+  case tripTransaction.tripType of
+    Just PILOT -> do
+      let source = fromMaybe (LatLong req.location.lat req.location.lon) tripTransaction.pilotSource
+      let destination = fromMaybe (LatLong req.location.lat req.location.lon) tripTransaction.pilotDestination
+      let sourceStopInfo = StopInfo "" "" source
+      void $ WMB.startTripTransaction tripTransaction Nothing Nothing sourceStopInfo (LatLong req.location.lat req.location.lon) destination True DriverDirect
+    _ -> do
+      closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM (StopNotFound)
+      route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
+      (sourceStopInfo, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route tripTransaction.routeCode
+      void $ WMB.startTripTransaction tripTransaction (Just route) (Just closestStop) sourceStopInfo (LatLong req.location.lat req.location.lon) destinationStopInfo.point True DriverDirect
   pure Success
 
 postWmbTripEnd ::
@@ -291,13 +335,24 @@ postWmbTripEnd (person, _, _) tripTransactionId req = do
   driverId <- fromMaybeM (DriverNotFoundWithId) person
   fleetDriverAssociation <- FDV.findByDriverId driverId True >>= fromMaybeM (NoActiveFleetAssociated driverId.getId)
   tripTransaction <- QTT.findByTransactionId tripTransactionId >>= fromMaybeM (TripTransactionNotFound tripTransactionId.getId)
-  route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
   fleetConfig <- QFC.findByPrimaryKey (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetDriverAssociation.fleetOwnerId)
-  let distanceLeft = KU.distanceBetweenInMeters req.location route.endPoint
-      rideEndEligibility = fleetConfig.allowEndingMidRoute || distanceLeft <= fleetConfig.endRideDistanceThreshold
+
+  -- Calculate distance and eligibility based on trip type
+  (distanceLeft, rideEndEligibility) <- case tripTransaction.tripType of
+    Just PILOT -> do
+      let dest = fromMaybe (LatLong req.location.lat req.location.lon) tripTransaction.pilotDestination
+          distance = KU.distanceBetweenInMeters req.location dest
+      pure (distance, True) -- Always allow ending for PILOT
+    _ -> do
+      route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
+      let distanceLeft = KU.distanceBetweenInMeters req.location route.endPoint
+      pure (distanceLeft, fleetConfig.allowEndingMidRoute || distanceLeft <= fleetConfig.endRideDistanceThreshold)
+
   unless rideEndEligibility $
     throwError $ RideNotEligibleForEnding
-  if fleetConfig.rideEndApproval && not (distanceLeft <= fleetConfig.endRideDistanceThreshold)
+
+  -- Skip ride end approval for PILOT trips
+  if tripTransaction.tripType /= Just PILOT && fleetConfig.rideEndApproval && not (distanceLeft <= fleetConfig.endRideDistanceThreshold)
     then do
       whenJust tripTransaction.endRideApprovalRequestId $ \endRideAlertRequestId -> do
         alertRequest <- QAR.findByPrimaryKey endRideAlertRequestId

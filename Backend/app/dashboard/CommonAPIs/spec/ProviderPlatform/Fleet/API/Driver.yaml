@@ -19,6 +19,7 @@ imports:
   ActionSource: Dashboard.Common
   FleetBadgeType: Domain.Types.FleetBadgeType
   Role: Dashboard.Common
+  GetRoutesResp: Kernel.External.Maps
 module: Driver
 
 apis:
@@ -968,6 +969,30 @@ apis:
             response:
               type: APISuccess
 
+  - GET:
+      endpoint: /dashboard/fleet/trip/{tripTransactionId}/{fleetOwnerId}/waypoints
+      auth: ApiAuthV2
+      params:
+        tripTransactionId: Id TripTransaction
+        fleetOwnerId: Text
+      query:
+        memberPersonId: Text
+        liteMode: Bool
+      response:
+        type: TripTransactionWaypointsRes
+      helperApi:
+        - GET:
+            endpoint: /dashboard/fleet/trip/{tripTransactionId}/{fleetOwnerId}/waypoints
+            auth: ApiAuthV2
+            params:
+              tripTransactionId: Id TripTransaction
+              fleetOwnerId: Text
+            query:
+              memberPersonId: Text
+              liteMode: Bool
+            response:
+              type: TripTransactionWaypointsRes
+
   - GET: # Retrieve the route details
       endpoint: /fleet/wmb/route/{routeCode}/details
       auth: ApiAuthV2
@@ -1145,7 +1170,33 @@ apis:
               - to: Day
             response:
               type: FilteredFleetAnalyticsRes
+  - POST:
+      endpoint: /dashboard/fleet/estimateRoute
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+      request:
+        type: EstimateRouteReq
+      response:
+        type: GetRoutesResp
+      helperApi:
+        - POST:
+            endpoint: /dashboard/fleet/estimateRoute/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: EstimateRouteReq
+            response:
+              type: GetRoutesResp
 types:
+  EstimatedRouteDetails:
+    - polyline: Maybe Text
+    - duration: Maybe Seconds
+    - distance: Maybe Meters
+  EstimateRouteReq:
+    - start: LatLong
+    - end: LatLong
   NearbyDriverReq:
     - point: LatLong
     - radius: Int
@@ -1188,16 +1239,30 @@ types:
   TripStatus:
     - enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED, UPCOMING"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+  TripType:
+    - enum: "PILOT,WIMB"
+    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
   RoundTripDetail:
     - frequency: Int
   TripDetails:
     - routeCode: Text
     - roundTrip: Maybe RoundTripDetail
+    - scheduledTripTime: Maybe UTCTime
+    - vipName: Maybe Text
+    - dutyType: Maybe Text
+    - startAddress: Maybe Address
+    - endAddress: Maybe Address
+    - tripType: Maybe TripType
+    - estimatedRouteDetails: Maybe EstimatedRouteDetails
+  Address:
+    - point: LatLong
+    - address: Maybe Text
   TripPlannerReq:
     - driverId: Id Driver
     - badgeName: Maybe Text # TODO :: To be deprecated, and replaced with driverBadgeName
     - driverBadgeName: Maybe Text
     - conductorBadgeName: Maybe Text
+    - pilotBadgeName: Maybe Text
     - vehicleNumber: Text
     - trips: [TripDetails]
     - derive: "'HideSecrets"
@@ -1229,6 +1294,13 @@ types:
     - tripStatus: TripStatus
     - fleetOwnerId: Text
     - fleetOwnerName: Text
+    - tripType: Maybe TripType
+    - scheduledTripTime: Maybe UTCTime
+    - dutyType: Maybe Text
+    - vipName: Maybe Text
+    - startAddress: Maybe Address
+    - endAddress: Maybe Address
+    - estimatedRouteDetails: Maybe EstimatedRouteDetails
   TripTransactionResp:
     - trips: [TripTransactionDetail]
     - totalTrips: Int
@@ -1237,6 +1309,15 @@ types:
     - trips: [TripTransactionDetailT]
     - totalTrips: Int
     - summary: Summary
+  ActualRoute:
+    - lat: Double
+    - lon: Double
+    - timestamp: UTCTime
+    - accuracy: Maybe Double
+  TripTransactionWaypointsRes:
+    - waypoints: [ActualRoute]
+    - estimatedRouteDetails: Maybe EstimatedRouteDetails
+    - derive: "'HideSecrets"
   AddVehicleReq:
     - registrationNo: Text
     - vehicleClass: Text
@@ -1643,7 +1724,7 @@ types:
     - rideId: Maybe Text
     - rideInfo: Maybe RideInfo
   RideInfo:
-    - enum: "Bus BusRideInfo | Car CarRideInfo"
+    - enum: "Bus BusRideInfo | Car CarRideInfo | Pilot PilotRideInfo"
   BusRideInfo:
     busNumber: Text
     routeCode: Text
@@ -1653,6 +1734,17 @@ types:
     driverName: Maybe Text
     groupId : Maybe Text
     derive: "'HideSecrets"
+  PilotRideInfo:
+    pilotNumber: Text
+    startAddress: Maybe Text
+    endAddress: Maybe Text
+    source: LatLong
+    destination: LatLong
+    driverName: Maybe Text
+    dutyType: Maybe Text
+    vipName: Maybe Text
+    scheduledTripTime: Maybe UTCTime
+    groupId: Maybe Text
   CarRideInfo:
     pickupLocation: LatLong
     minDistanceBetweenTwoPoints: Maybe Int
