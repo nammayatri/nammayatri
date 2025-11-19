@@ -8,6 +8,7 @@ module Domain.Action.UI.Dispatcher
     getDispatcherGetVehiclesByDepotName,
     getDispatcherGetVehiclesByDepotId,
     getDispatcherGetDepotNameById,
+    getDispatcherHistory,
     getFleetOverrideInfo,
     delFleetOverrideInfo,
   )
@@ -15,6 +16,7 @@ where
 
 import qualified API.Types.UI.Dispatcher
 import qualified BecknV2.OnDemand.Enums as BecknSpec
+import qualified Domain.Types.DispatcherHistory
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -31,6 +33,7 @@ import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.Queries.DepotManager as QD
+import qualified Storage.Queries.DispatcherHistory as QDH
 import Storage.Queries.Person as QP
 import Tools.Auth ()
 import Tools.Error
@@ -74,6 +77,29 @@ postDispatcherUpdateFleetSchedule (mbPersonId, _merchantId) req = do
     when (depotManager.depotCode.getId /= sourceFleetInfo.depotName) $ throwError $ DepotManagerDoesNotHaveAccessToFleet depotManager.personId.getId req.sourceFleetId
     when (depotManager.depotCode.getId /= updatedFleetInfo.depotName) $ throwError $ DepotManagerDoesNotHaveAccessToFleet depotManager.personId.getId req.updatedFleetId
   -- =========== validation done ===========
+  -- Record history
+  now <- getCurrentTime
+  historyId <- generateGUID
+  let (reasonTag, reasonContent) = case req.reason of
+        API.Types.UI.Dispatcher.BreakDown -> ("BreakDown", Nothing)
+        API.Types.UI.Dispatcher.OtherReason txt -> ("OtherReason", Just txt)
+  let dispatcherHistory =
+        Domain.Types.DispatcherHistory.DispatcherHistory
+          { id = historyId,
+            dispatcherId = personId,
+            currentVehicle = req.sourceFleetId,
+            replacedVehicle = req.updatedFleetId,
+            driverCode = updatedFleetInfo.driverCode,
+            conductorCode = updatedFleetInfo.conductorCode,
+            merchantId = person.merchantId,
+            merchantOperatingCityId = person.merchantOperatingCityId,
+            depotId = updatedFleetInfo.depotName,
+            reasonTag = reasonTag,
+            reasonContent = reasonContent,
+            createdAt = now,
+            updatedAt = now
+          }
+  QDH.create dispatcherHistory
   -- adding fleet override info in redis for waybill.
   Redis.setExp (fleetOverrideKey req.sourceFleetId) (req.updatedFleetId, updatedFleetInfo.waybillNo) 2400
   pure $ Kernel.Types.APISuccess.Success
@@ -156,3 +182,35 @@ getDispatcherGetDepotNameById (mbPersonId, _merchantId) depotId = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing person.merchantOperatingCityId BecknSpec.BUS DIBC.MULTIMODAL
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getDepotNameById baseUrl depotId
+
+getDispatcherHistory ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Environment.Flow [API.Types.UI.Dispatcher.DispatcherHistoryRes]
+  )
+getDispatcherHistory (mbPersonId, _merchantId) mbLimit mbOffset = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  _ <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let limit = fromMaybe 15 mbLimit
+      offset = fromMaybe 0 mbOffset
+  historyRecords <- B.runInReplica $ QDH.findByDispatcherId (Just limit) (Just offset) personId
+  pure $ map convertToHistoryRes historyRecords
+  where
+    convertToHistoryRes :: Domain.Types.DispatcherHistory.DispatcherHistory -> API.Types.UI.Dispatcher.DispatcherHistoryRes
+    convertToHistoryRes Domain.Types.DispatcherHistory.DispatcherHistory {..} =
+      API.Types.UI.Dispatcher.DispatcherHistoryRes
+        { API.Types.UI.Dispatcher.id = Kernel.Types.Id.getId id,
+          API.Types.UI.Dispatcher.dispatcherId = Kernel.Types.Id.getId dispatcherId,
+          API.Types.UI.Dispatcher.currentVehicle = currentVehicle,
+          API.Types.UI.Dispatcher.replacedVehicle = replacedVehicle,
+          API.Types.UI.Dispatcher.historyDriverCode = driverCode,
+          API.Types.UI.Dispatcher.historyConductorCode = conductorCode,
+          API.Types.UI.Dispatcher.depotId = depotId,
+          API.Types.UI.Dispatcher.reasonTag = reasonTag,
+          API.Types.UI.Dispatcher.reasonContent = reasonContent,
+          API.Types.UI.Dispatcher.createdAt = createdAt,
+          API.Types.UI.Dispatcher.updatedAt = updatedAt
+        }
