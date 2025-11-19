@@ -28,7 +28,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import Data.Ord
 import qualified Data.Text as T
-import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
+import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.Action.UI.Driver as DDriver
 import Domain.Action.UI.Ride.EndRide.Internal (getDriverFeeBillNumberKey, getDriverFeeCalcJobCache, getPlan, mkDriverFee, mkDriverFeeBillNumberKey, setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
 import Domain.Types.DriverFee
@@ -810,14 +810,23 @@ sendManualPaymentLink Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       endTime = jobData.endTime
       serviceName = jobData.serviceName
   now <- getCurrentTime
+  transporterConfig <- SCTC.findByMerchantOpCityId opCityId Nothing >>= fromMaybeM (TransporterConfigNotFound opCityId.getId)
   subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
-  let deepLinkExpiry = subscriptionConfigs.deepLinkExpiryTimeInMinutes
-  driverPlansToProccess <- findAllDriversToSendManualPaymentLinkWithLimit serviceName merchantId opCityId endTime subscriptionConfigs.genericBatchSizeForJobs
-  if null driverPlansToProccess
-    then return Complete
-    else do
-      processAndSendManualPaymentLink driverPlansToProccess subscriptionConfigs merchantId opCityId serviceName deepLinkExpiry endTime now
-      ReSchedule <$> getRescheduledTime subscriptionConfigs.genericJobRescheduleTime
+  -- Validate that the time difference since endTime does not exceed the max delay threshold
+  let nowLocalTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) now
+      timeDiffSinceEndTime = diffUTCTime nowLocalTime endTime
+  case subscriptionConfigs.sendManualPaymentLinkJobMaxDelay of
+    Just maxDelay
+      | timeDiffSinceEndTime > maxDelay ->
+        return $ Terminate $ "Job scheduled too late. Time since endTime: " <> show (timeDiffSinceEndTime / 3600) <> " hours, Maximum allowed delay: " <> show (maxDelay / 3600) <> " hours. Marking as Failed."
+    _ -> do
+      let deepLinkExpiry = subscriptionConfigs.deepLinkExpiryTimeInMinutes
+      driverPlansToProccess <- findAllDriversToSendManualPaymentLinkWithLimit serviceName merchantId opCityId endTime subscriptionConfigs.genericBatchSizeForJobs
+      if null driverPlansToProccess
+        then return Complete
+        else do
+          processAndSendManualPaymentLink driverPlansToProccess subscriptionConfigs merchantId opCityId serviceName deepLinkExpiry endTime now
+          ReSchedule <$> getRescheduledTime subscriptionConfigs.genericJobRescheduleTime
 
 processAndSendManualPaymentLink ::
   (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r) =>
@@ -833,28 +842,35 @@ processAndSendManualPaymentLink ::
 processAndSendManualPaymentLink driverPlansToProccess subscriptionConfigs merchantId opCityId serviceName mbDeepLinkExpiry endTime now = do
   forM_ driverPlansToProccess $ \driverPlanForManualCharge -> do
     let driverId = driverPlanForManualCharge.driverId
-    getPendingAndOverDueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName driverId [PAYMENT_OVERDUE, PAYMENT_PENDING] Nothing serviceName
-    updateStatusByIds PAYMENT_OVERDUE (map (.id) $ filter ((== PAYMENT_PENDING) . (.status)) getPendingAndOverDueDriverFees) now
-    let allowDeepLink = subscriptionConfigs.sendDeepLink
-    let mbDeepLinkData = if allowDeepLink then Just $ SPayment.DeepLinkData {sendDeepLink = Just True, expiryTimeInMinutes = mbDeepLinkExpiry} else Nothing
-    if not $ null getPendingAndOverDueDriverFees
-      then do
-        resp' <- withTryCatch "clearDriverDues:processAndSendManualPaymentLink" $ DDriver.clearDriverDues (driverId, merchantId, opCityId) serviceName Nothing mbDeepLinkData
-        errorCatchAndHandle
-          driverId
-          resp'
-          subscriptionConfigs
-          endTime
-          now
-          ( \resp -> do
-              let mbPaymentLink = resp.orderResp.payment_links
-                  payload = resp.orderResp.sdk_payload.payload
-                  mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
-              whatsAppResp <- withTryCatch "sendLinkTroughChannelProvided:processAndSendManualPaymentLink" $ SPayment.sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount (Just subscriptionConfigs.paymentLinkChannel) allowDeepLink WHATSAPP_SEND_MANUAL_PAYMENT_LINK
-              errorCatchAndHandle driverId whatsAppResp subscriptionConfigs endTime now (\_ -> QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName (Just endTime) driverId serviceName)
-          )
-      else do
-        QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName (Just endTime) driverId serviceName
+    -- Rate limiting check: max subscriptionConfigs.maxRetryCount messages per driver within configured expiry window
+    let rateLimitKey = mkPaymentLinkRateLimitKey driverId
+        expirySeconds = maybe 21600 (getSeconds . nominalDiffTimeToSeconds) subscriptionConfigs.manualPaymentLinkRateLimitExpirySeconds
+    currentCount <- incrWithExpiry rateLimitKey expirySeconds
+    let withinRateLimit = currentCount <= fromIntegral subscriptionConfigs.maxRetryCount
+    unless withinRateLimit $ logError $ "Rate limit exceeded for driver: " <> driverId.getId <> " (count: " <> show currentCount <> "). Skipping payment link send."
+    when withinRateLimit $ do
+      getPendingAndOverDueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName driverId [PAYMENT_OVERDUE, PAYMENT_PENDING] Nothing serviceName
+      updateStatusByIds PAYMENT_OVERDUE (map (.id) $ filter ((== PAYMENT_PENDING) . (.status)) getPendingAndOverDueDriverFees) now
+      let allowDeepLink = subscriptionConfigs.sendDeepLink
+      let mbDeepLinkData = if allowDeepLink then Just $ SPayment.DeepLinkData {sendDeepLink = Just True, expiryTimeInMinutes = mbDeepLinkExpiry} else Nothing --Nothing
+      if not $ null getPendingAndOverDueDriverFees
+        then do
+          resp' <- withTryCatch "clearDriverDues:processAndSendManualPaymentLink" $ DDriver.clearDriverDues (driverId, merchantId, opCityId) serviceName Nothing mbDeepLinkData
+          errorCatchAndHandle
+            driverId
+            resp'
+            subscriptionConfigs
+            endTime
+            now
+            ( \resp -> do
+                let mbPaymentLink = resp.orderResp.payment_links
+                    payload = resp.orderResp.sdk_payload.payload
+                    mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
+                whatsAppResp <- withTryCatch "sendLinkTroughChannelProvided:processAndSendManualPaymentLink" $ SPayment.sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount (Just subscriptionConfigs.paymentLinkChannel) allowDeepLink WHATSAPP_SEND_MANUAL_PAYMENT_LINK
+                errorCatchAndHandle driverId whatsAppResp subscriptionConfigs endTime now (\_ -> QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName (Just endTime) driverId serviceName)
+            )
+        else do
+          QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName (Just endTime) driverId serviceName
 
 errorCatchAndHandle ::
   (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
@@ -868,27 +884,33 @@ errorCatchAndHandle ::
 errorCatchAndHandle driverId resp' subscriptionConfig endTime _ function = do
   case resp' of
     Left _ -> do
-      eligibleForRetryInNextBatch <- isEligibleForRetryInNextBatch (mkManualLinkErrorTrackingByDriverIdKey driverId) subscriptionConfig.maxRetryCount
+      let expirySeconds = maybe 21600 (getSeconds . nominalDiffTimeToSeconds) subscriptionConfig.manualPaymentLinkRateLimitExpirySeconds
+      eligibleForRetryInNextBatch <- isEligibleForRetryInNextBatch (mkManualLinkErrorTrackingByDriverIdKey driverId) subscriptionConfig.maxRetryCount expirySeconds
       if eligibleForRetryInNextBatch
         then return ()
         else QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName (Just endTime) driverId subscriptionConfig.serviceName
     Right resp -> function resp
 
-isEligibleForRetryInNextBatch :: (MonadFlow m, CacheFlow m r) => Text -> Int -> m Bool
-isEligibleForRetryInNextBatch key maxCount = do
-  count <-
-    Hedis.get key >>= \case
-      Just count -> return count
-      Nothing -> return 0
-  if count < maxCount
-    then do
-      void $ Hedis.incr key
-      Hedis.expire key (60 * 60 * 6) ---- 6 hours expiry
-      return True
-    else return False
+-- | Increment a Redis key and ensure it has an expiry set
+-- Checks TTL after increment and sets expiry if missing (TTL = -1)
+-- This prevents keys from persisting indefinitely if process crashes between INCR and EXPIRE
+incrWithExpiry :: (MonadFlow m, CacheFlow m r) => Text -> Int -> m Integer
+incrWithExpiry key expirySeconds = do
+  count <- Hedis.incr key
+  ttl <- Hedis.ttl key
+  when (ttl == -1) $ Hedis.expire key expirySeconds
+  return count
+
+isEligibleForRetryInNextBatch :: (MonadFlow m, CacheFlow m r) => Text -> Int -> Int -> m Bool
+isEligibleForRetryInNextBatch key maxCount expirySeconds = do
+  count <- incrWithExpiry key expirySeconds
+  return $ count <= fromIntegral maxCount
 
 mkManualLinkErrorTrackingByDriverIdKey :: Id Driver -> Text
 mkManualLinkErrorTrackingByDriverIdKey driverId = "ErrorRetryCountFor:DriverId:" <> driverId.getId
+
+mkPaymentLinkRateLimitKey :: Id Driver -> Text
+mkPaymentLinkRateLimitKey driverId = "SendPaymentLink:RateLimit:DriverId:" <> driverId.getId
 
 getsetManualLinkErrorTrackingKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Maybe Int)
 getsetManualLinkErrorTrackingKey driverId = Hedis.get (mkManualLinkErrorTrackingByDriverIdKey driverId)

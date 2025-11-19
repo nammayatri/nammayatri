@@ -119,3 +119,13 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN show_manual_pl
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN disabled_variants_for_subscription text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN send_manual_payment_link_job_max_delay integer  default 43200;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN manual_payment_link_rate_limit_expiry_seconds integer  default 21600;
