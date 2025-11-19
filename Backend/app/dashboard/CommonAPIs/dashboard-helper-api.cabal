@@ -35,7 +35,6 @@ library
       Dashboard.Common.Merchant
       Dashboard.Common.Ride
       Dashboard.Common.SpecialZone
-      Dashboard.Common.Volunteer
       Dashboard.ProviderPlatform.CacAuth
       Dashboard.ProviderPlatform.Fleet.Driver
       Dashboard.ProviderPlatform.Fleet.RegistrationV2

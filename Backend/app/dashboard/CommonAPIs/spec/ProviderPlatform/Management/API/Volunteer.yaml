@@ -52,5 +52,3 @@ types:
     - isActive: Maybe Bool
     - derive: "'HideSecrets"
 
-extraOperations:
-  - EXTRA_API_COMMON_TYPES_FILE
