@@ -18,19 +18,18 @@ module Domain.Action.UI.Route
     getRoutes,
     getPickupRoutes,
     getTripRoutes,
-    GetPickupRoutesReq,
+    GetPickupRoutesReq (..),
   )
 where
 
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
 import Domain.Types.Ride
-import Environment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common (CacheFlow, MonadFlow, fromMaybeM)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -48,7 +47,16 @@ getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => (Id DP.Person, Id Mercha
 getRoutes (personId, merchantId) entityId req = do
   Maps.getRoutes Nothing personId merchantId Nothing entityId req
 
-getPickupRoutes :: (Id DP.Person, Id Merchant.Merchant) -> Maybe Text -> GetPickupRoutesReq -> Flow Maps.GetRoutesResp
+getPickupRoutes ::
+  ( ServiceFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    MonadFlow m
+  ) =>
+  (Id DP.Person, Id Merchant.Merchant) ->
+  Maybe Text ->
+  GetPickupRoutesReq ->
+  m Maps.GetRoutesResp
 getPickupRoutes (personId, merchantId) entityId GetPickupRoutesReq {..} = do
   mocId <- Maps.getMerchantOperatingCityId personId Nothing
   merchantConfig <- QMSUC.findByMerchantOperatingCityId mocId >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)

@@ -123,6 +123,7 @@ Ride:
     isSafetyPlus : Bool
     isInsured : Bool
     insuredAmount: Maybe Text
+    pickupEtaLogicVersion: Maybe Int
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -333,6 +334,10 @@ Ride:
       kvFunction: updateOneWithKV
       params: [cancellationChargesOnCancel]
       where: id
+    updatePickupEtaLogicVersion:
+      kvFunction: updateOneWithKV
+      params: [pickupEtaLogicVersion]
+      where: id
 
   excludedDefaultQueries:
     - create
@@ -342,6 +347,3 @@ Ride:
 
   extraOperations:
     - EXTRA_QUERY_FILE
-
-
-

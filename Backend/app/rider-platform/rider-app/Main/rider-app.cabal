@@ -415,6 +415,7 @@ library
       SharedLogic.PaymentVendorSplits
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
+      SharedLogic.PickupETA
       SharedLogic.PublicTransport
       SharedLogic.Quote
       SharedLogic.Referral
@@ -487,6 +488,7 @@ library
       Storage.CachedQueries.PartnerOrgStation
       Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
+      Storage.CachedQueries.PickupRoute
       Storage.CachedQueries.PlaceBasedServiceConfig
       Storage.CachedQueries.RideRelatedNotificationConfig
       Storage.CachedQueries.RoutePolylines
