@@ -56,7 +56,15 @@ apis:
   - GET:
       endpoint: /dispatcher/getVehiclesByDepotId/{depotId}
       params:
-        depotId: Int
+        depotId: Text
       auth: TokenAuth
       response:
         type: "[DepotVehicle]"
+
+  - GET:
+      endpoint: /dispatcher/getDepotNameById/{depotId}
+      params:
+        depotId: Text
+      auth: TokenAuth
+      response:
+        type: Text

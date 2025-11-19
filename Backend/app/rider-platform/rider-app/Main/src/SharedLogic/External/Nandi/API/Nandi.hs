@@ -50,6 +50,8 @@ type GetVehiclesFromDepotNameAPI = "getVehiclesFrom" :> QueryParam "depotName" T
 
 type GetVehiclesFromDepotIdAPI = "getVehiclesFrom" :> QueryParam "depotId" Kernel.Prelude.Int :> Get '[JSON] [DepotVehicle]
 
+type DepotNameByIdAPI = "getDepotNameById" :> Capture "depotId" Kernel.Prelude.Int :> Get '[JSON] Text
+
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
 
@@ -116,6 +118,9 @@ nandiGetVehiclesFromDepotNameAPI = Proxy
 nandiGetVehiclesFromDepotIdAPI :: Proxy GetVehiclesFromDepotIdAPI
 nandiGetVehiclesFromDepotIdAPI = Proxy
 
+nandiDepotNameByIdAPI :: Proxy DepotNameByIdAPI
+nandiDepotNameByIdAPI = Proxy
+
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
@@ -181,3 +186,6 @@ getNandiGetVehiclesFromByDepotName = ET.client nandiGetVehiclesFromDepotNameAPI
 
 getNandiGetVehiclesFromByDepotId :: Maybe Kernel.Prelude.Int -> ET.EulerClient [DepotVehicle]
 getNandiGetVehiclesFromByDepotId = ET.client nandiGetVehiclesFromDepotIdAPI
+
+getNandiDepotNameById :: Kernel.Prelude.Int -> ET.EulerClient Text
+getNandiDepotNameById = ET.client nandiDepotNameByIdAPI
