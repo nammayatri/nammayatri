@@ -19,6 +19,7 @@ Volunteer:
 
   beamType:
     isActive: Maybe Bool
+    vendorId: Text
 
   constraints:
     id: PrimaryKey
@@ -27,12 +28,15 @@ Volunteer:
 
   default:
     isActive: "true"
+    vendorId: "'DEFAULT_VENDOR'"
 
   fromTType:
     isActive : Kernel.Prelude.Just . Kernel.Prelude.fromMaybe True|I
+    vendorId : Kernel.Prelude.Just|I
 
   toTType:
     isActive : Kernel.Prelude.Just . Kernel.Prelude.fromMaybe True|I
+    vendorId: Kernel.Prelude.fromMaybe "DEFAULT_VENDOR"|I
 
 
   queries:

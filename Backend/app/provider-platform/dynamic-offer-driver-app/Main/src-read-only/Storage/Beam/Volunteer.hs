@@ -17,18 +17,18 @@ data VolunteerT f = VolunteerT
     isActive :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     place :: B.C f Data.Text.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    vendorId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    vendorId :: B.C f Data.Text.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text)
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table VolunteerT where
-  data PrimaryKey VolunteerT f = VolunteerId (B.C f Data.Text.Text) (B.C f (Kernel.Prelude.Maybe Data.Text.Text)) deriving (Generic, B.Beamable)
+  data PrimaryKey VolunteerT f = VolunteerId (B.C f Data.Text.Text) (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
   primaryKey = VolunteerId <$> id <*> vendorId
 
 type Volunteer = VolunteerT Identity
 
-$(enableKVPG ''VolunteerT ['id, 'vendorId] [])
+$(enableKVPG ''VolunteerT ['id, 'vendorId] [['place]])
 
 $(mkTableInstances ''VolunteerT "volunteer")

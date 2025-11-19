@@ -14,3 +14,11 @@ ALTER TABLE atlas_driver_offer_bpp.volunteer ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_driver_offer_bpp.volunteer ADD COLUMN vendor_id text ;
 ALTER TABLE atlas_driver_offer_bpp.volunteer ADD COLUMN is_active boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.volunteer ALTER COLUMN vendor_id SET DEFAULT 'DEFAULT_VENDOR';
+ALTER TABLE atlas_driver_offer_bpp.volunteer ALTER COLUMN vendor_id SET NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.volunteer DROP CONSTRAINT volunteer_pkey;
+ALTER TABLE atlas_driver_offer_bpp.volunteer ADD PRIMARY KEY ( id, vendor_id);

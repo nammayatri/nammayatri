@@ -32,10 +32,12 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 findByIdAndVendorId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> Kernel.Prelude.Maybe Data.Text.Text -> m (Maybe Domain.Types.Volunteer.Volunteer))
-findByIdAndVendorId id vendorId = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.vendorId $ Se.Eq vendorId]]
+findByIdAndVendorId id vendorId = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.vendorId $ Se.Eq (Kernel.Prelude.fromMaybe "DEFAULT_VENDOR" vendorId)]]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> m (Maybe Domain.Types.Volunteer.Volunteer))
-findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> Kernel.Prelude.Maybe Data.Text.Text -> m (Maybe Domain.Types.Volunteer.Volunteer))
+findByPrimaryKey id vendorId = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.vendorId $ Se.Eq (Kernel.Prelude.fromMaybe "DEFAULT_VENDOR" vendorId)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Volunteer.Volunteer -> m ())
 updateByPrimaryKey (Domain.Types.Volunteer.Volunteer {..}) = do
@@ -44,8 +46,11 @@ updateByPrimaryKey (Domain.Types.Volunteer.Volunteer {..}) = do
     [ Se.Set Beam.isActive ((Kernel.Prelude.Just . Kernel.Prelude.fromMaybe True) isActive),
       Se.Set Beam.place place,
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.vendorId vendorId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
-    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id),
+          Se.Is Beam.vendorId $ Se.Eq (Kernel.Prelude.fromMaybe "DEFAULT_VENDOR" vendorId)
+        ]
+    ]
