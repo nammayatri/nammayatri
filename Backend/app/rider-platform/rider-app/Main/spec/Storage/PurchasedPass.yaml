@@ -13,7 +13,7 @@ PurchasedPass:
 
   types:
     StatusType:
-      enum: "Pending,Active,PreBooked,Failed,Expired,RefundPending,RefundInitiated,Refunded,RefundFailed"
+      enum: "Pending,Active,PreBooked,Failed,Expired,RefundPending,RefundInitiated,Refunded,RefundFailed,Invalidated"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
 
     BenefitType:
@@ -50,18 +50,27 @@ PurchasedPass:
     status: StatusType
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    passTypeCode: Maybe Text
+    minAmount: HighPrecMoney
+    maxAmount: HighPrecMoney
 
   beamType:
     deviceSwitchCount: Maybe Int
     verificationValidity: Maybe Seconds
+    minAmount: Maybe HighPrecMoney
+    maxAmount: Maybe HighPrecMoney
 
   fromTType:
     deviceSwitchCount: (fromMaybe 0 deviceSwitchCount)|E
     verificationValidity: Kernel.Prelude.fromMaybe 9000|I
+    minAmount: (Kernel.Prelude.fromMaybe passAmount minAmount)|E
+    maxAmount: (Kernel.Prelude.fromMaybe passAmount maxAmount)|E
 
   toTType:
     deviceSwitchCount: Just deviceSwitchCount|E
     verificationValidity: Just verificationValidity|E
+    minAmount: Just minAmount|E
+    maxAmount: Just maxAmount|E
 
   sqlType:
     applicableVehicleServiceTiers: text[]
@@ -94,12 +103,24 @@ PurchasedPassPayment:
     endDate: Day
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    balance: HighPrecMoney
+
+  sqlType:
+    balance: double precision
+
+  fromTType:
+    balance: Kernel.Prelude.fromMaybe amount balance|E
+
+  toTType:
+    balance: Just balance|E
+
+  beamType:
+    balance: Maybe HighPrecMoney
 
   constraints:
     id: PrimaryKey
     orderId: SecondaryKey
     purchasedPassId: SecondaryKey
-
   queries:
     findOneByPaymentOrderId:
         kvFunction: findOneWithKV
@@ -162,6 +183,11 @@ PassVerifyTransaction:
     sourceStopCode: Maybe Text
     destinationStopCode: Maybe Text
     fleetId: Text
+    purchasePassPaymentId: Maybe (Id PurchasedPassPayment)
+    openingAmount: Maybe HighPrecMoney
+    entryGateId: Maybe Text
+    closingAmount: Maybe HighPrecMoney
+    exitGateId: Maybe Text
 
   constraints:
     id: PrimaryKey
@@ -171,6 +197,15 @@ PassVerifyTransaction:
     findAllByPurchasePassId:
       kvFunction: findAllWithKV
       where: purchasePassId
+    updateOngoingPassVerifyTransaction:
+      kvFunction: updateOneWithKV
+      params: [destinationStopCode, exitGateId, closingAmount]
+      where:
+        and:
+          - purchasePassId
+          - fleetId
+          - gte:
+            - validTill
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.PassType where
 
+import Domain.Types.PassType (PassClass (..))
 import qualified Domain.Types.PassType
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -18,6 +19,7 @@ instance FromTType' Beam.PassType Domain.Types.PassType.PassType where
       Just
         Domain.Types.PassType.PassType
           { catchline = catchline,
+            code = code,
             description = description,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -25,6 +27,7 @@ instance FromTType' Beam.PassType Domain.Types.PassType.PassType where
             name = name,
             order = order,
             passCategoryId = Kernel.Types.Id.Id passCategoryId,
+            passClass = fromMaybe Domain.Types.PassType.Unlimited passClass,
             title = title,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -34,6 +37,7 @@ instance ToTType' Beam.PassType Domain.Types.PassType.PassType where
   toTType' (Domain.Types.PassType.PassType {..}) = do
     Beam.PassTypeT
       { Beam.catchline = catchline,
+        Beam.code = code,
         Beam.description = description,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
@@ -41,6 +45,7 @@ instance ToTType' Beam.PassType Domain.Types.PassType.PassType where
         Beam.name = name,
         Beam.order = order,
         Beam.passCategoryId = Kernel.Types.Id.getId passCategoryId,
+        Beam.passClass = Just passClass,
         Beam.title = title,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

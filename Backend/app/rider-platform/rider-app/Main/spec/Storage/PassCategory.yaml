@@ -7,6 +7,7 @@ PassCategory:
 
   fields:
     id: Id PassCategory
+    code: Maybe Text
     name: Text
     description: Text
     merchantId: Id Merchant

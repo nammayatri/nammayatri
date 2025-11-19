@@ -5,6 +5,7 @@ module Storage.Beam.PassType where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.PassType
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -12,6 +13,7 @@ import Tools.Beam.UtilsTH
 
 data PassTypeT f = PassTypeT
   { catchline :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    code :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
@@ -19,6 +21,7 @@ data PassTypeT f = PassTypeT
     name :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     order :: B.C f Kernel.Prelude.Int,
     passCategoryId :: B.C f Kernel.Prelude.Text,
+    passClass :: B.C f (Kernel.Prelude.Maybe Domain.Types.PassType.PassClass),
     title :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
@@ -31,6 +34,6 @@ instance B.Table PassTypeT where
 
 type PassType = PassTypeT Identity
 
-$(enableKVPG ''PassTypeT ['id] [])
+$(enableKVPG ''PassTypeT ['id] [['passCategoryId]])
 
 $(mkTableInstances ''PassTypeT "pass_type")
