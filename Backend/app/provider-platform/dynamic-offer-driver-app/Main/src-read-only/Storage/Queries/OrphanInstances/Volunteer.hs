@@ -23,7 +23,7 @@ instance FromTType' Beam.Volunteer Domain.Types.Volunteer.Volunteer where
             isActive = (Kernel.Prelude.Just . Kernel.Prelude.fromMaybe True) isActive,
             place = place,
             updatedAt = updatedAt,
-            vendorId = vendorId,
+            vendorId = Kernel.Prelude.Just vendorId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
           }
@@ -36,7 +36,7 @@ instance ToTType' Beam.Volunteer Domain.Types.Volunteer.Volunteer where
         Beam.isActive = (Kernel.Prelude.Just . Kernel.Prelude.fromMaybe True) isActive,
         Beam.place = place,
         Beam.updatedAt = updatedAt,
-        Beam.vendorId = vendorId,
+        Beam.vendorId = Kernel.Prelude.fromMaybe "DEFAULT_VENDOR" vendorId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
       }
