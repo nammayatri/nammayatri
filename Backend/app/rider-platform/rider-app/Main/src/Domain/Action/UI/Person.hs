@@ -44,6 +44,8 @@ data PersonAPIEntity = PersonAPIEntity
     hasDisability :: Maybe Bool,
     disability :: Maybe Text,
     gender :: Gender,
+    businessEmail :: Maybe Text,
+    businessProfileVerified :: Maybe Bool,
     hasCompletedSafetySetup :: Bool,
     hasCompletedMockSafetyDrill :: Maybe Bool,
     bundleVersion :: Maybe Version,
