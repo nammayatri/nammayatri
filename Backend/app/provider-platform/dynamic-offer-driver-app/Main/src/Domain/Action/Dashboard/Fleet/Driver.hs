@@ -67,6 +67,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetDashboardAnalytics,
     getDriverDashboardFleetTripWaypoints,
     postDriverDashboardFleetEstimateRoute,
+    postDriverFleetTripTransactionsV2,
   )
 where
 
@@ -3044,7 +3045,15 @@ postDriverFleetGetNearbyDriversV2 merchantShortId _ fleetOwnerId req = do
                 rideId = driverLocation.rideDetails <&> (.rideId),
                 point = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
               }
-        _ -> Nothing
+        _ ->
+          Just $
+            Common.NearbyDriverDetails
+              { driverId = cast driverLocation.driverId,
+                rideInfo = Nothing,
+                rideStatus = Nothing,
+                rideId = Nothing,
+                point = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
+              }
 
     mkRideStatus = \case
       TR.INPROGRESS -> Common.ON_RIDE
@@ -3149,3 +3158,64 @@ postDriverDashboardFleetEstimateRoute merchantShortId opCity _fleetOwnerId req =
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let getRoutesReq = Maps.GetRoutesReq {waypoints = NE.fromList [req.start, req.end], mode = Just Maps.CAR, calcPoints = True}
   Maps.getRoutes merchant.id merchantOpCityId Nothing getRoutesReq
+
+postDriverFleetTripTransactionsV2 ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Common.TripStatus ->
+  Maybe Text ->
+  Maybe Text ->
+  Int ->
+  Int ->
+  Flow Common.TripTransactionRespT
+postDriverFleetTripTransactionsV2 merchantShortId opCity mbFrom mbTo mbVehicleNumber mbFleetOwnerId mbMemberPersonId mbStatus mbDriverId mbDutyType limit offset = do
+  memberPersonId <- mbMemberPersonId & fromMaybeM (InvalidRequest "Member Person ID is required")
+  merchant <- findMerchantByShortId merchantShortId
+  _ <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  fleetOwnerInfo <- getFleetOwnerIds memberPersonId mbFleetOwnerId
+  let fleetNameMap = Map.fromList fleetOwnerInfo
+      fleetOwnerIds = map fst fleetOwnerInfo
+  tripTransactions <- QTT.findAllTripTransactionByFleetOwnerIdAndTripType fleetOwnerIds DTT.PILOT (Just limit) (Just offset) (Id <$> mbDriverId) mbFrom mbTo (castTripStatus' <$> mbStatus) mbVehicleNumber mbDutyType
+  let trips = map (buildTripTransactionDetailsT fleetNameMap) tripTransactions
+      summary = Common.Summary {totalCount = 10000000, count = length trips}
+  pure $ Common.TripTransactionRespT {trips = trips, totalTrips = length tripTransactions, summary = summary}
+  where
+    buildTripTransactionDetailsT fleetNameMap tripTransaction =
+      Common.TripTransactionDetailT
+        { tripTransactionId = cast tripTransaction.id,
+          routeCode = tripTransaction.routeCode,
+          tripStartTime = tripTransaction.tripStartTime,
+          tripEndTime = tripTransaction.tripEndTime,
+          tripStatus = castTripStatus tripTransaction.status,
+          fleetOwnerId = tripTransaction.fleetOwnerId.getId,
+          fleetOwnerName = fromMaybe "" (Map.lookup (tripTransaction.fleetOwnerId.getId) fleetNameMap),
+          tripType = castTripType <$> tripTransaction.tripType,
+          scheduledTripTime = tripTransaction.scheduledTripTime,
+          dutyType = tripTransaction.dutyType,
+          vipName = tripTransaction.vipName,
+          startAddress = tripTransaction.pilotSource >>= (\point -> Just (Common.Address {point = point, address = tripTransaction.startAddress})),
+          endAddress = tripTransaction.pilotDestination >>= (\point -> Just (Common.Address {point = point, address = tripTransaction.endAddress})),
+          estimatedRouteDetails = tripTransaction.tripEstimatedRouteDetails >>= (\estimatedRoute -> Just (Common.EstimatedRouteDetails {distance = estimatedRoute.distance, duration = estimatedRoute.duration, polyline = estimatedRoute.polyline}))
+        }
+    castTripType = \case
+      DTT.PILOT -> Common.PILOT
+      DTT.WIMB -> Common.WIMB
+    castTripStatus = \case
+      TRIP_ASSIGNED -> Common.TRIP_ASSIGNED
+      IN_PROGRESS -> Common.IN_PROGRESS
+      PAUSED -> Common.PAUSED
+      COMPLETED -> Common.COMPLETED
+      CANCELLED -> Common.CANCELLED
+      UPCOMING -> Common.UPCOMING
+    castTripStatus' = \case
+      Common.TRIP_ASSIGNED -> TRIP_ASSIGNED
+      Common.IN_PROGRESS -> IN_PROGRESS
+      Common.PAUSED -> PAUSED
+      Common.COMPLETED -> COMPLETED
+      Common.CANCELLED -> CANCELLED
+      Common.UPCOMING -> UPCOMING

@@ -1189,6 +1189,23 @@ apis:
               type: EstimateRouteReq
             response:
               type: GetRoutesResp
+  - POST:
+      endpoint: /fleet/trip/transactions/v2
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - limit: Int
+        - offset: Int
+      query:
+        - mbFrom: UTCTime
+        - mbTo: UTCTime
+        - mbVehicleNumber: Text
+        - fleetOwnerId: Text
+        - mbMemberPersonId: Text
+        - mbStatus: TripStatus
+        - mbDriverId: Text
+        - mbDutyType: Text
+      response:
+        type: TripTransactionRespT
 types:
   EstimatedRouteDetails:
     - polyline: Maybe Text
@@ -1238,7 +1255,7 @@ types:
     - driverLocations: [TrackDriverLocation]
   TripStatus:
     - enum: "TRIP_ASSIGNED, CANCELLED, IN_PROGRESS, PAUSED, COMPLETED, UPCOMING"
-    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+    - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, HttpInstance"
   TripType:
     - enum: "PILOT,WIMB"
     - derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
