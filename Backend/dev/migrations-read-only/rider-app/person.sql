@@ -249,8 +249,8 @@ ALTER TABLE atlas_app.person ADD COLUMN comments text[] ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN business_profile_verified boolean ;
-ALTER TABLE atlas_app.person ADD COLUMN business_email_hash text ;
-ALTER TABLE atlas_app.person ADD COLUMN business_email_encrypted text ;
+ALTER TABLE atlas_app.person ADD COLUMN business_email_hash bytea ;
+ALTER TABLE atlas_app.person ADD COLUMN business_email_encrypted character varying(255) ;
 
 
 ------- SQL updates -------

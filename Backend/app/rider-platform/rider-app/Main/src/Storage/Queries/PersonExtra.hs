@@ -123,6 +123,7 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe Text ->
   Maybe (EncryptedHashed Text) ->
+  Maybe (EncryptedHashed Text) ->
   Maybe Text ->
   Maybe Text ->
   Maybe Language ->
@@ -148,7 +149,7 @@ updatePersonalInfo ::
   Maybe (Encrypted Text) ->
   Maybe Text ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId mbDateOfBirth mbProfilePicture mbVerificationChannel mbRegLat mbRegLon mbLatestLat mbLatestLon person mbLiveActivityToken mbMobileNumberEncrypted mbMobileCountryCode = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbEncBusinessEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId mbDateOfBirth mbProfilePicture mbVerificationChannel mbRegLat mbRegLon mbLatestLat mbLatestLon person mbLiveActivityToken mbMobileNumberEncrypted mbMobileCountryCode = do
   now <- getCurrentTime
   mobileNumberHash <- case mbMobileNumberEncrypted of
     Just encMobile -> do
@@ -157,6 +158,8 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
     Nothing -> pure Nothing
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
+  let mbBusinessEmailEncrypted = mbEncBusinessEmail <&> unEncrypted . (.encrypted)
+  let mbBusinessEmailHash = mbEncBusinessEmail <&> (.hash)
   updateWithKV
     ( [Se.Set BeamP.updatedAt now]
         <> [Se.Set BeamP.firstName mbFirstName | isJust mbFirstName]
@@ -169,6 +172,8 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         <> [Se.Set BeamP.language mbLanguage | isJust mbLanguage]
         <> [Se.Set BeamP.gender (fromJust mbGender) | isJust mbGender]
         <> [Se.Set BeamP.clientReactNativeVersion mbRnVersion | isJust mbRnVersion]
+        <> [Se.Set BeamP.businessEmailEncrypted mbBusinessEmailEncrypted | isJust mbBusinessEmailEncrypted]
+        <> [Se.Set BeamP.businessEmailHash mbBusinessEmailHash | isJust mbBusinessEmailHash]
         <> [Se.Set BeamP.clientSdkVersion (versionToText <$> mbClientVersion) | isJust mbClientVersion]
         <> [Se.Set BeamP.clientBundleVersion (versionToText <$> mbBundleVersion) | isJust mbBundleVersion]
         <> [Se.Set BeamP.clientConfigVersion (versionToText <$> mbClientConfigVersion) | isJust mbClientConfigVersion]
@@ -402,7 +407,7 @@ updatePersonComments personId comments = do
 updateBusinessProfileVerified :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Bool -> m ()
 updateBusinessProfileVerified personId isVerified = do
   now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.businessProfileVerified (Just isVerified),
       Se.Set BeamP.updatedAt now
     ]

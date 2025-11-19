@@ -137,6 +137,8 @@ data ProfileRes = ProfileRes
     hasTakenValidBikeRide :: Bool,
     hasTakenValidAmbulanceRide :: Bool,
     hasTakenValidTruckRide :: Bool,
+    businessEmail :: Maybe Text,
+    businessProfileVerified :: Maybe Bool,
     referralCode :: Maybe Text,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
     language :: Maybe Maps.Language,
@@ -180,6 +182,7 @@ data UpdateProfileReq = UpdateProfileReq
     gender :: Maybe Person.Gender,
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
+    businessEmail :: Maybe Text,
     disability :: Maybe Disability,
     hasDisability :: Maybe Bool,
     enableOtpLessRide :: Maybe Bool,
@@ -400,6 +403,7 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
   mPerson <- join <$> QPerson.findByEmailAndMerchantId merchantId `mapM` req.email
   whenJust mPerson (\person -> when (person.id /= personId) $ throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
+  mbEncBusinessEmail <- encrypt `mapM` req.businessEmail
   deploymentVersion <- asks (.version)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   fork "Triggering kafka marketing params event for person" $
@@ -418,6 +422,7 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       req.middleName
       req.lastName
       mbEncEmail
+      mbEncBusinessEmail
       req.deviceToken
       req.notificationToken
       req.language
