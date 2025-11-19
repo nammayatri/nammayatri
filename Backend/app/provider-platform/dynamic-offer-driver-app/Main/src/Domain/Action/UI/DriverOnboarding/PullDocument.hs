@@ -34,6 +34,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Environment
+import Kernel.External.Encryption (EncryptedHashed, decrypt, unEncrypted)
 import qualified Kernel.External.SharedLogic.DigiLocker.Error as DigiLockerError
 import qualified Kernel.External.Verification.Digilocker.Types as DigiTypes
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
@@ -92,8 +93,12 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
   -- Step 6: Verify session is active and within 1 hour
   verifySessionActive session req.docType
 
-  -- Step 7: Get access token from session
-  accessToken <- session.accessToken & fromMaybeM (InvalidRequest "DigiLocker session not authorized. Access token missing.")
+  -- Step 7: Get access token from session and decrypt it
+  let accessTokenEncryptedMaybe :: Maybe (EncryptedHashed Text) = session.accessToken
+  accessTokenEncrypted <- accessTokenEncryptedMaybe & fromMaybeM (InvalidRequest "DigiLocker session not authorized. Access token missing.")
+  logInfo $ "PullDocument - Before decryption, accessToken encrypted (first 20 chars): " <> T.take 20 (unEncrypted accessTokenEncrypted.encrypted) <> ", hash: " <> show accessTokenEncrypted.hash
+  accessToken <- decrypt accessTokenEncrypted
+  logInfo $ "PullDocument - After decryption, accessToken (plain, first 20 chars): " <> T.take 20 accessToken <> "..."
 
   -- Step 8: Get DigiLocker config
   digiLockerConfig <- DigilockerLockerShared.getDigiLockerConfig person.merchantOperatingCityId

@@ -9,12 +9,14 @@ import Domain.Types.Common ()
 import qualified Domain.Types.DigilockerVerification
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data DigilockerVerificationT f = DigilockerVerificationT
-  { accessToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { accessTokenEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    accessTokenHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     accessTokenExpiresAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     authorizationCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     codeChallenge :: B.C f Kernel.Prelude.Text,

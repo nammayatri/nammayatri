@@ -21,7 +21,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleCategory as VehicleCategory
 import Environment
-import Kernel.External.Encryption (encrypt)
+import Kernel.External.Encryption (decrypt, encrypt, unEncrypted)
 import qualified Kernel.External.SharedLogic.DigiLocker.Error as DigiLockerError
 import qualified Kernel.External.Tokenize.Digilocker.Types as TokenizeTypes
 import qualified Kernel.External.Tokenize.Interface as Tokenize
@@ -41,6 +41,7 @@ import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.Queries.AadhaarCard as QAC
 import qualified Storage.Queries.DigilockerVerification as QDV
+import qualified Storage.Queries.DigilockerVerificationExtra as QDVExtra
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverLicenseExtra as QDLE
 import qualified Storage.Queries.DriverPanCard as QDPC
@@ -174,11 +175,15 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
       <> show tokenResp.scope
 
   -- Step 7: Update session with access token, scope, and expiry
-  let accessToken = tokenResp.token
+  let accessTokenPlain = tokenResp.token
   let scope = tokenResp.scope
   let expiresAt = tokenResp.expiresAt
 
-  QDV.updateAccessToken (Just accessToken) expiresAt (Just code) scope stateParam
+  -- Encrypt access token before saving to database
+  logInfo $ "DigiLocker callback - Before encryption, accessToken (plain, first 20 chars): " <> T.take 20 accessTokenPlain <> "..."
+  accessTokenEncrypted <- encrypt accessTokenPlain
+  logInfo $ "DigiLocker callback - After encryption, accessToken encrypted (first 20 chars): " <> T.take 20 (unEncrypted accessTokenEncrypted.encrypted) <> ", hash: " <> show (accessTokenEncrypted.hash)
+  QDVExtra.updateAccessToken (Just accessTokenEncrypted) expiresAt (Just code) scope stateParam
 
   -- Step 8: Get required documents and already verified documents
   requiredDocs <- getRequiredDocuments person.merchantOperatingCityId session.vehicleCategory
@@ -217,8 +222,10 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
       QDV.updateSessionStatus DDV.SUCCESS Nothing Nothing session.id
 
       -- Step 14: Process documents in background (for issued docs only, pull docs require user input)
+      -- Decrypt access token for use in API calls
+      accessTokenPlainDecrypted <- decrypt accessTokenEncrypted
       fork "digilocker-verify-documents" $ do
-        processDocuments session person digiLockerConfig accessToken parsedDocs unavailableDocs
+        processDocuments session person digiLockerConfig accessTokenPlainDecrypted parsedDocs unavailableDocs
           `catchAny` \err -> do
             logError $ "DigiLocker - Catastrophic failure in background job - Error: " <> show err <> ", DriverId: " <> driverId.getId
             -- Update session status to FAILED (individual doc errors are already handled)

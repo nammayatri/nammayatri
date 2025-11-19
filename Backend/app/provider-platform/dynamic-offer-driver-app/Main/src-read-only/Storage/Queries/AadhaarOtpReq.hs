@@ -36,7 +36,6 @@ updateByPrimaryKey (Domain.Types.AadhaarOtpReq.AadhaarOtpReq {..}) = do
       Se.Set Beam.requestMessage requestMessage,
       Se.Set Beam.statusCode statusCode,
       Se.Set Beam.transactionId transactionId,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
