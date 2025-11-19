@@ -13,7 +13,7 @@
 -}
 
 module Domain.Action.UI.DriverOnboarding.PullDocument
-  ( pullDrivingLicenseDocument,
+  ( pullDocuments,
   )
 where
 
@@ -55,14 +55,14 @@ import qualified Tools.Verification as Verification
 
 -- | Pull driving license document from DigiLocker
 -- This endpoint is called when user submits DL details within 1 hour of starting DigiLocker session
-pullDrivingLicenseDocument ::
+pullDocuments ::
   ( Maybe (Id DP.Person),
     Id DM.Merchant,
     Id DMOC.MerchantOperatingCity
   ) ->
-  APITypes.PullDrivingLicenseReq ->
+  APITypes.PullDocumentReq ->
   Flow APISuccess
-pullDrivingLicenseDocument (mbDriverId, merchantId, merchantOpCityId) req = do
+pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
   -- Step 1: Extract driverId from auth token
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   logInfo $ "PullDocument - Starting pull for DriverId: " <> driverId.getId <> ", DocType: " <> show req.docType

@@ -1435,8 +1435,8 @@ postDriverDigilockerPullDocuments ::
     Id Domain.Types.Merchant.Merchant,
     Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
   ) ->
-  APITypes.PullDrivingLicenseReq ->
+  APITypes.PullDocumentReq ->
   Environment.Flow APISuccess
 postDriverDigilockerPullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
   logInfo $ "PullDocuments - Starting pull operation for DocType: " <> show req.docType
-  PullDocument.pullDrivingLicenseDocument (mbDriverId, merchantId, merchantOpCityId) req
+  PullDocument.pullDocuments (mbDriverId, merchantId, merchantOpCityId) req
