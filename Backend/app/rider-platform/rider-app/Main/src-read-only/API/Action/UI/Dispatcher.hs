@@ -45,7 +45,7 @@ type API =
       :> "depotIds"
       :> Get
            ('[JSON])
-           [Kernel.Prelude.Int]
+           [Kernel.Prelude.Text]
       :<|> TokenAuth
       :> "dispatcher"
       :> "getVehiclesByDepotName"
@@ -99,7 +99,7 @@ postDispatcherUpdateFleetSchedule a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.
 getDispatcherDepotNames :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [Kernel.Prelude.Text])
 getDispatcherDepotNames a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherDepotNames (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
-getDispatcherDepotIds :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [Kernel.Prelude.Int])
+getDispatcherDepotIds :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [Kernel.Prelude.Text])
 getDispatcherDepotIds a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherDepotIds (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getDispatcherGetVehiclesByDepotName ::

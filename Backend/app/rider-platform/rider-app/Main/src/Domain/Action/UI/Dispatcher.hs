@@ -104,7 +104,7 @@ getDispatcherDepotIds ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Environment.Flow [Kernel.Prelude.Int]
+    Environment.Flow [Kernel.Prelude.Text]
   )
 getDispatcherDepotIds (mbPersonId, _merchantId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
@@ -140,8 +140,7 @@ getDispatcherGetVehiclesByDepotId (mbPersonId, _merchantId) depotId = do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing person.merchantOperatingCityId BecknSpec.BUS DIBC.MULTIMODAL
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  depotIdInt <- readMaybe depotId & fromMaybeM (InvalidRequest $ "Invalid depotId: " <> depotId)
-  nandiVehicles <- Flow.getVehiclesFromByDepotId baseUrl (Just depotIdInt)
+  nandiVehicles <- Flow.getVehiclesFromByDepotId baseUrl (Just depotId)
   pure $ map (\(NandiTypes.DepotVehicle {fleet_no = f, status = s, vehicle_no = v}) -> API.Types.UI.Dispatcher.DepotVehicle {fleet_no = f, status = s, vehicle_no = v}) nandiVehicles
 
 getDispatcherGetDepotNameById ::
@@ -156,5 +155,4 @@ getDispatcherGetDepotNameById (mbPersonId, _merchantId) depotId = do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing person.merchantOperatingCityId BecknSpec.BUS DIBC.MULTIMODAL
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  depotIdInt <- readMaybe depotId & fromMaybeM (InvalidRequest $ "Invalid depotId: " <> depotId)
-  Flow.getDepotNameById baseUrl depotIdInt
+  Flow.getDepotNameById baseUrl depotId
