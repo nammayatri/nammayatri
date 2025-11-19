@@ -43,7 +43,7 @@ apis:
       endpoint: /dispatcher/depotIds
       auth: TokenAuth
       response:
-        type: "[Int]"
+        type: "[Text]"
 
   - GET:
       endpoint: /dispatcher/getVehiclesByDepotName/{depotName}
