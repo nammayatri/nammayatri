@@ -1133,10 +1133,11 @@ calculateFareParameters priceItems =
           }
 
       adultTotalQuantity = getQuantityFromPriceItem adultItem + getQuantityFromPriceItem femaleItem
+      adultItem' = adultItem' <|> femaleItem <&> (\item -> PriceItem {quantity = adultTotalQuantity, totalPrice = Price {amount = adultTotalAmount, amountInt = roundToIntegral adultTotalAmount, currency}, unitPrice = item.unitPrice})
       totalQuantity =
         adultTotalQuantity + getQuantityFromPriceItem childItem
    in FRFSFareParameters
-        { adultItem = adultItem,
+        { adultItem = adultItem',
           childItem = childItem,
           femaleItem = femaleItem,
           totalPrice = totalPrice,
