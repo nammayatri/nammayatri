@@ -131,7 +131,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
       else
         if isNothing dateOfIssue && documentVerificationConfig.checkExtraction && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
           then
-            if isJust req.isDLImageValidated
+            if req.isDLImageValidated == Just True
               then do
                 let nameOnTheCard = req.nameOnCard
                 let dateOfBirth = Just $ convertUTCTimetoDate req.driverDateOfBirth

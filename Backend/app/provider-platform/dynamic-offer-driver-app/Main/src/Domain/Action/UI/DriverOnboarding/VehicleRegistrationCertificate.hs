@@ -239,7 +239,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
     ( isNothing req.vehicleDetails && isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction
         && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
         && (not bulkUpload)
-        && not (isJust req.isRCImageValidated)
+        && (isNothing req.isRCImageValidated || req.isRCImageValidated == Just False)
     )
     $ do
       image <- getImage req.imageId

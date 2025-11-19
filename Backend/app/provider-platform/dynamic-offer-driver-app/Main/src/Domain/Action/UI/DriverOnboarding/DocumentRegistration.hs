@@ -60,7 +60,7 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
   logDebug $ "DocumentRegistration.validateDocument: Starting validation for personId=" <> show personId <> ", imageType=" <> show imageType
   imageResponse <- Image.validateImage isDashboard (personId, merchantId, merchantOpCityId) Image.ImageValidateRequest {image = image, imageType = imageType, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
   let imageId :: Id Domain.Image = imageResponse.imageId
-  imageData <- Image.getImage merchantId imageId
+  let imageData = image
   logDebug $ "DocumentRegistration.validateDocument: Image validated successfully, imageId=" <> show imageId
   operatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   (documentNumber, dateOfBirth, nameOnCard) <- case imageType of
