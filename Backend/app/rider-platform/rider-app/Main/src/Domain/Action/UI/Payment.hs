@@ -16,6 +16,7 @@ module Domain.Action.UI.Payment
   ( DPayment.PaymentStatusResp (..),
     createOrder,
     getStatus,
+    getStatusS2S,
     getOrder,
     juspayWebhookHandler,
     stripeWebhookHandler,
@@ -23,6 +24,7 @@ module Domain.Action.UI.Payment
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.Text
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
@@ -130,6 +132,15 @@ getStatus (personId, merchantId) orderId = do
       _ -> return Nothing
   let orderStatusCall = Payment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion
   SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
+
+-- order status s2s -----------------------------------------------------
+getStatusS2S :: Id DOrder.PaymentOrder -> Id DP.Person -> Id DM.Merchant -> Maybe Data.Text.Text -> Flow DPayment.PaymentStatusResp
+getStatusS2S orderId personId merchantId mbApiKey = do
+  -- Verify API key
+  apiKey <- mbApiKey & fromMaybeM (MissingHeader "api-key")
+  expectedApiKey <- asks (.parkingApiKey)
+  unless (apiKey == expectedApiKey) $ throwError (InvalidRequest "Invalid API key")
+  getStatus (personId, merchantId) orderId
 
 getOrder ::
   ( CacheFlow m r,

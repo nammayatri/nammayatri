@@ -95,6 +95,7 @@ type API =
            :<|> Profile.API
            :<|> RidePayment.API
            :<|> Payment.API
+           :<|> Payment.S2SAPI
            :<|> Search.API
            :<|> Select.API
            :<|> Quote.API
@@ -166,6 +167,7 @@ handler =
     :<|> Profile.handler
     :<|> RidePayment.handler
     :<|> Payment.handler
+    :<|> Payment.handlerS2S
     :<|> Search.handler
     :<|> Select.handler
     :<|> Quote.handler
