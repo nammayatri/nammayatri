@@ -44,13 +44,13 @@ type VehicleInfoAPI = "vehicle" :> Capture "gtfs_id" Text :> Capture "vehicle_no
 
 type DepotNamesAPI = "depotNames" :> Get '[JSON] [Text]
 
-type DepotIdsAPI = "depotIds" :> Get '[JSON] [Kernel.Prelude.Int]
+type DepotIdsAPI = "depotIds" :> Get '[JSON] [Text]
 
 type GetVehiclesFromDepotNameAPI = "getVehiclesFrom" :> QueryParam "depotName" Text :> Get '[JSON] [DepotVehicle]
 
-type GetVehiclesFromDepotIdAPI = "getVehiclesFrom" :> QueryParam "depotId" Kernel.Prelude.Int :> Get '[JSON] [DepotVehicle]
+type GetVehiclesFromDepotIdAPI = "getVehiclesFrom" :> QueryParam "depotId" Text :> Get '[JSON] [DepotVehicle]
 
-type DepotNameByIdAPI = "getDepotNameById" :> Capture "depotId" Kernel.Prelude.Int :> Get '[JSON] Text
+type DepotNameByIdAPI = "getDepotNameById" :> Capture "depotId" Text :> Get '[JSON] Text
 
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
@@ -178,14 +178,14 @@ getNandiVehicleInfo = ET.client nandiVehicleInfoAPI
 getNandiDepotNames :: ET.EulerClient [Text]
 getNandiDepotNames = ET.client nandiDepotNamesAPI
 
-getNandiDepotIds :: ET.EulerClient [Kernel.Prelude.Int]
+getNandiDepotIds :: ET.EulerClient [Text]
 getNandiDepotIds = ET.client nandiDepotIdsAPI
 
 getNandiGetVehiclesFromByDepotName :: Maybe Text -> ET.EulerClient [DepotVehicle]
 getNandiGetVehiclesFromByDepotName = ET.client nandiGetVehiclesFromDepotNameAPI
 
-getNandiGetVehiclesFromByDepotId :: Maybe Kernel.Prelude.Int -> ET.EulerClient [DepotVehicle]
+getNandiGetVehiclesFromByDepotId :: Maybe Text -> ET.EulerClient [DepotVehicle]
 getNandiGetVehiclesFromByDepotId = ET.client nandiGetVehiclesFromDepotIdAPI
 
-getNandiDepotNameById :: Kernel.Prelude.Int -> ET.EulerClient Text
+getNandiDepotNameById :: Text -> ET.EulerClient Text
 getNandiDepotNameById = ET.client nandiDepotNameByIdAPI
