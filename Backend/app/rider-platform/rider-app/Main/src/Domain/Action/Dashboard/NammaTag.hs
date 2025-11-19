@@ -42,7 +42,6 @@ import qualified Data.Aeson as A
 import Data.Default.Class
 import Data.Singletons
 import qualified Data.Text as Text
-import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.FRFSConfig as DFRFS
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig as DTM
@@ -56,7 +55,6 @@ import qualified Domain.Types.UiRiderConfig as DTRC
 import qualified Domain.Types.Yudhishthira
 import qualified Environment
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.Prelude as Prelude
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -89,6 +87,7 @@ import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 
 $(YTH.generateGenericDefault ''DTR.RiderConfig)
+$(YTH.generateGenericDefault ''CumulativeOfferReq)
 $(YTH.generateGenericDefault ''DTP.PayoutConfig)
 $(YTH.generateGenericDefault ''DTRN.RideRelatedNotificationConfig)
 $(YTH.generateGenericDefault ''DTM.MerchantConfig)
@@ -146,17 +145,6 @@ postNammaTagTagVerify _merchantShortId _opCity LYTU.VerifyNammaTagRequest {..} =
         A.Success res -> pure res
         A.Error err -> throwError $ InvalidRequest $ show err
 
-$(YTH.generateGenericDefault ''Payment.OfferListResp)
-
-instance (Default a) => Default (CumulativeOfferReq a) where
-  def =
-    CumulativeOfferReq
-      { offerListResp = case Prelude.listToMaybe $ YTH.genDef (Proxy @Payment.OfferListResp) of
-          Just x -> x
-          Nothing -> error "Failed to generate default Payment.OfferListResp: List was empty.",
-        extraParams = def
-      }
-
 postNammaTagAppDynamicLogicVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.AppDynamicLogicReq -> Environment.Flow LYTU.AppDynamicLogicResp)
 postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
@@ -181,9 +169,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       logicData :: EstimateTagsData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy EstimateTagsResult) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.CUMULATIVE_OFFER_POLICY -> do
-      logicData :: Maybe (CumulativeOfferReq EmptyDynamicParam) <- YudhishthiraFlow.mbCreateLogicData def (Prelude.listToMaybe req.inputData)
-      logicData' <- fromMaybeM (InvalidRequest "CumulativeOfferReq not found") logicData
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy (CumulativeOfferReq EmptyDynamicParam)) _riderConfig.dynamicLogicUpdatePassword req logicData'
+      defaultVal <- fromMaybeM (InvalidRequest "CumulativeOfferReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @CumulativeOfferReq))
+      logicData :: CumulativeOfferReq <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy CumulativeOfferResp) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.PayoutConfig -> do
       def' <- fromMaybeM (InvalidRequest "PayoutConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
       let configWrap = LYTU.Config def' Nothing 1

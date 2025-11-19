@@ -33,6 +33,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerToo
 import Kernel.Types.CacheFlow
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -418,8 +419,8 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
       )
         =<< TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion req
 
-mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r, ToJSON a) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> a -> m (Maybe CumulativeOfferResp)
-mkCumulativeOfferResp merchantOperatingCityId offerListResp extraParams = do
+mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> [JL.LegInfo] -> m (Maybe CumulativeOfferResp)
+mkCumulativeOfferResp merchantOperatingCityId offerListResp legInfos = do
   now <- getCurrentTime
   (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.CUMULATIVE_OFFER_POLICY) now Nothing Nothing
   if null logics
@@ -428,7 +429,7 @@ mkCumulativeOfferResp merchantOperatingCityId offerListResp extraParams = do
       pure Nothing
     else do
       logInfo $ "Running cumulative offer logic with " <> show (length logics) <> " rules"
-      result <- LYTU.runLogics logics (CumulativeOfferReq offerListResp extraParams)
+      result <- LYTU.runLogics logics (CumulativeOfferReq offerListResp legInfos)
       case A.fromJSON result.result :: A.Result CumulativeOfferResp of
         A.Success logicResult -> do
           logInfo $ "Cumulative offer logic result: " <> show logicResult

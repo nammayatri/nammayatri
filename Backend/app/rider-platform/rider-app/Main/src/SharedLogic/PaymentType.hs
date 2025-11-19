@@ -2,6 +2,7 @@ module SharedLogic.PaymentType where
 
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude
+import qualified Lib.JourneyModule.Types as JL
 
 data CumulativeOfferResp = CumulativeOfferResp
   { offerTitle :: Text,
@@ -12,8 +13,8 @@ data CumulativeOfferResp = CumulativeOfferResp
   deriving (Generic, Show, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CumulativeOfferReq extra = CumulativeOfferReq
+data CumulativeOfferReq = CumulativeOfferReq
   { offerListResp :: Payment.OfferListResp,
-    extraParams :: extra
+    extraParams :: [JL.LegInfo]
   }
   deriving (Generic, Show, FromJSON, ToJSON)
