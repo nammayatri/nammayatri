@@ -1,11 +1,9 @@
 module Domain.Action.UI.DriverOnboarding.DigiLockerCallback where
 
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
-import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), utctDay)
@@ -15,6 +13,7 @@ import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DLModule
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified Domain.Types.DigilockerVerification as DDV
+import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverPanCard as DPC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -35,7 +34,6 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (Error)
 import Servant hiding (throwError)
-import SharedLogic.DriverOnboarding.Digilocker (DocStatus (..), docStatusToText)
 import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -351,43 +349,28 @@ checkDocumentConsent requiredDocs parsedDocs =
       denied = filter (`notElem` availableDocs) requiredDocs
    in (granted, denied)
 
--- | Initialize docStatus JSON with document statuses
--- Format: {"PanCard": {"status": "DOC_PENDING", "responseCode": null, "responseDescription": null}}
+-- | Initialize DocStatusMap with document statuses
+-- Uses strongly-typed DocumentType as keys
 initializeDocStatus ::
   [DVC.DocumentType] ->
   [(DVC.DocumentType, DocumentAvailability)] ->
-  A.Value
+  DocStatus.DocStatusMap
 initializeDocStatus unavailableDocs parsedDocs =
-  let docMap = HM.fromList $ map createDocStatus unavailableDocs
-   in A.toJSON docMap
+  foldl' updateDocStatus DocStatus.emptyDocStatusMap unavailableDocs
   where
-    createDocStatus :: DVC.DocumentType -> (Text, A.Value)
-    createDocStatus docType =
+    updateDocStatus acc docType =
       let availability = getAvailability docType
-          status = case availability of
-            ConsentDenied -> docStatusToText DOC_CONSENT_DENIED
-            PullRequired -> docStatusToText DOC_PULL_REQUIRED
-            Issued _ -> docStatusToText DOC_PENDING
-          docStatusObj =
-            A.object
-              [ "status" A..= status,
-                "responseCode" A..= A.Null,
-                "responseDescription" A..= A.Null
-              ]
-       in (docTypeToText docType, docStatusObj)
+          docStatusEnum = case availability of
+            ConsentDenied -> DocStatus.DOC_CONSENT_DENIED
+            PullRequired -> DocStatus.DOC_PULL_REQUIRED
+            Issued _ -> DocStatus.DOC_PENDING
+       in DocStatus.updateDocStatus docType docStatusEnum Nothing Nothing acc
 
     getAvailability :: DVC.DocumentType -> DocumentAvailability
     getAvailability docType =
       case find (\(dt, _) -> dt == docType) parsedDocs of
         Just (_, avail) -> avail
         Nothing -> ConsentDenied
-
--- | Convert DocumentType to Text for JSON keys
-docTypeToText :: DVC.DocumentType -> Text
-docTypeToText DVC.PanCard = "PanCard"
-docTypeToText DVC.AadhaarCard = "AadhaarCard"
-docTypeToText DVC.DriverLicense = "DriverLicense"
-docTypeToText other = T.pack $ show other
 
 -- | Process all documents - call APIs and verify (background job)
 -- Each document is processed independently with try-catch to ensure one failure doesn't affect others
@@ -409,16 +392,16 @@ processDocuments session person _digiLockerConfig accessToken parsedDocs unavail
         case find (\(dt, _) -> dt == docType) parsedDocs of
           Nothing -> do
             logWarning $ "DigiLocker - No consent found for docType: " <> show docType
-            updateDocStatusField session.id docType (docStatusToText DOC_CONSENT_DENIED) (Just "NO_CONSENT") (Just "User did not grant consent for this document")
+            updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_CONSENT_DENIED) (Just "NO_CONSENT") (Just "User did not grant consent for this document")
           Just (_, availability) -> do
             case availability of
               PullRequired -> do
                 -- Mark as PULL_REQUIRED - user needs to provide document details
-                updateDocStatusField session.id docType (docStatusToText DOC_PULL_REQUIRED) Nothing Nothing
+                updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_PULL_REQUIRED) Nothing Nothing
                 logInfo $ "DigiLocker - Marked " <> show docType <> " as PULL_REQUIRED (user needs to enter details)"
               ConsentDenied -> do
                 -- Mark as CONSENT_DENIED
-                updateDocStatusField session.id docType (docStatusToText DOC_CONSENT_DENIED) (Just "NO_CONSENT") (Just "User denied consent")
+                updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_CONSENT_DENIED) (Just "NO_CONSENT") (Just "User denied consent")
                 logInfo $ "DigiLocker - Marked " <> show docType <> " as CONSENT_DENIED"
               Issued uri -> do
                 -- Process issued document - fetch and verify
@@ -427,7 +410,7 @@ processDocuments session person _digiLockerConfig accessToken parsedDocs unavail
       `catchAny` \err -> do
         -- If processing this document fails, log and mark as failed, but continue with other documents
         logError $ "DigiLocker - Failed to process " <> show docType <> ": " <> show err
-        updateDocStatusField session.id docType (docStatusToText DOC_FAILED) (Just "PROCESSING_ERROR") (Just $ T.pack $ show err)
+        updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_FAILED) (Just "PROCESSING_ERROR") (Just $ T.pack $ show err)
 
   logInfo $ "DigiLocker - Completed processing all documents"
 
@@ -481,7 +464,7 @@ processIssuedDocument session person accessToken docType uri = do
             -- Handle DigiLocker-specific errors with proper error codes
             let (errorCode, errorDesc) = extractDigiLockerError err
             logError $ "DigiLocker - Failed to fetch PDF for " <> show docType <> ": " <> errorCode <> " - " <> errorDesc
-            updateDocStatusField session.id docType (docStatusToText DOC_FAILED) (Just errorCode) (Just errorDesc)
+            updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_FAILED) (Just errorCode) (Just errorDesc)
             return Nothing
 
   -- Step 2: Fetch raw XML for Aadhaar (for S3 storage)
@@ -505,7 +488,7 @@ processIssuedDocument session person accessToken docType uri = do
           `catch` \(err :: DigiLockerError.DigiLockerError) -> do
             let (errorCode, errorDesc) = extractDigiLockerError err
             logError $ "DigiLocker - Failed to fetch Aadhaar XML: " <> errorCode <> " - " <> errorDesc
-            updateDocStatusField session.id docType (docStatusToText DOC_FAILED) (Just errorCode) (Just errorDesc)
+            updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_FAILED) (Just errorCode) (Just errorDesc)
             return Nothing
       else return Nothing
 
@@ -532,7 +515,7 @@ processIssuedDocument session person accessToken docType uri = do
           `catch` \(err :: DigiLockerError.DigiLockerError) -> do
             let (errorCode, errorDesc) = extractDigiLockerError err
             logError $ "DigiLocker - Failed to extract Aadhaar: " <> errorCode <> " - " <> errorDesc
-            updateDocStatusField session.id docType (docStatusToText DOC_FAILED) (Just errorCode) (Just errorDesc)
+            updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_FAILED) (Just errorCode) (Just errorDesc)
             return Nothing
     (Nothing, _) -> return Nothing -- PDF/XML fetch failed for non-Aadhaar docs, skip extraction
     (Just _pdfBytes, DVC.PanCard) ->
@@ -555,7 +538,7 @@ processIssuedDocument session person accessToken docType uri = do
         `catch` \(err :: DigiLockerError.DigiLockerError) -> do
           let (errorCode, errorDesc) = extractDigiLockerError err
           logError $ "DigiLocker - Failed to extract PAN: " <> errorCode <> " - " <> errorDesc
-          updateDocStatusField session.id docType (docStatusToText DOC_FAILED) (Just errorCode) (Just errorDesc)
+          updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_FAILED) (Just errorCode) (Just errorDesc)
           return Nothing
     (Just _pdfBytes, DVC.DriverLicense) ->
       ( do
@@ -577,11 +560,11 @@ processIssuedDocument session person accessToken docType uri = do
         `catch` \(err :: DigiLockerError.DigiLockerError) -> do
           let (errorCode, errorDesc) = extractDigiLockerError err
           logError $ "DigiLocker - Failed to extract DL: " <> errorCode <> " - " <> errorDesc
-          updateDocStatusField session.id docType (docStatusToText DOC_FAILED) (Just errorCode) (Just errorDesc)
+          updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_FAILED) (Just errorCode) (Just errorDesc)
           return Nothing
     (Just _pdfBytes, _) -> do
       logWarning $ "DigiLocker - Unsupported document type: " <> show docType
-      updateDocStatusField session.id docType (docStatusToText DOC_FAILED) (Just "UNSUPPORTED_TYPE") (Just $ "Document type not supported")
+      updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_FAILED) (Just "UNSUPPORTED_TYPE") (Just $ "Document type not supported")
       return Nothing
 
   -- Step 4: Verify and store data (with error handling)
@@ -595,13 +578,13 @@ processIssuedDocument session person accessToken docType uri = do
           -- Convert XML text to ByteString for storage
           let xmlBytes = BSL.fromStrict (TE.encodeUtf8 xmlText)
           verifyAndStoreAadhaar session person xmlBytes aadhaarResp
-          updateDocStatusField session.id docType (docStatusToText DOC_SUCCESS) (Just "200") (Just "Aadhaar card verified and stored successfully")
+          updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "200") (Just "Aadhaar card verified and stored successfully")
           logInfo $ "DigiLocker - Aadhaar card verification completed"
         )
         `catch` \(err :: DigiLockerError.DigiLockerError) -> do
           let (errorCode, errorDesc) = extractDigiLockerError err
           logError $ "DigiLocker - Verification failed for Aadhaar: " <> errorCode <> " - " <> errorDesc
-          updateDocStatusField session.id docType (docStatusToText DOC_FAILED) (Just errorCode) (Just errorDesc)
+          updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_FAILED) (Just errorCode) (Just errorDesc)
 
     -- PAN and DL: Both PDF and extracted data required
     (Just pdfBytes, Nothing, Just extractedData) -> do
@@ -611,7 +594,7 @@ processIssuedDocument session person accessToken docType uri = do
             ExtractedPan panResp -> do
               logInfo $ "DigiLocker - Verifying and storing PAN card data"
               verifyAndStorePAN session person pdfBytes panResp
-              updateDocStatusField session.id docType (docStatusToText DOC_SUCCESS) (Just "200") (Just "PAN card verified and stored successfully")
+              updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "200") (Just "PAN card verified and stored successfully")
               logInfo $ "DigiLocker - PAN card verification completed"
             ExtractedAadhaar _ -> do
               -- This case shouldn't happen (Aadhaar handled above)
@@ -620,14 +603,14 @@ processIssuedDocument session person accessToken docType uri = do
             ExtractedDL dlResp -> do
               logInfo $ "DigiLocker - Verifying and storing Driver License data"
               verifyAndStoreDL session person pdfBytes dlResp
-              updateDocStatusField session.id docType (docStatusToText DOC_SUCCESS) (Just "200") (Just "Driver License verified and stored successfully")
+              updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "200") (Just "Driver License verified and stored successfully")
               logInfo $ "DigiLocker - Driver License verification completed"
         )
         `catch` \(err :: DigiLockerError.DigiLockerError) -> do
           -- Handle DigiLocker-specific errors during verification
           let (errorCode, errorDesc) = extractDigiLockerError err
           logError $ "DigiLocker - Verification failed for " <> show docType <> ": " <> errorCode <> " - " <> errorDesc
-          updateDocStatusField session.id docType (docStatusToText DOC_FAILED) (Just errorCode) (Just errorDesc)
+          updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_FAILED) (Just errorCode) (Just errorDesc)
     _ -> do
       -- PDF/XML or extraction failed, error already logged
       logWarning $ "DigiLocker - Skipping verification for " <> show docType <> " due to fetch/extraction failures"
@@ -897,38 +880,35 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
     (Just vehicleCategory) -- vehicleCategory from session (driver's selection)
   logInfo $ "DigiLocker - Successfully stored DL via onVerifyDLHandler for DriverId: " <> person.id.getId
 
--- | Update a single document's status in docStatus JSON
+-- | Update a single document's status in DocStatusMap
 updateDocStatusField ::
   Id DDV.DigilockerVerification ->
   DVC.DocumentType ->
-  Text -> -- status
+  Text -> -- status text (e.g., "PENDING", "SUCCESS", "FAILED")
   Maybe Text -> -- response code
   Maybe Text -> -- response description
   Flow ()
-updateDocStatusField sessionId docType status respCode respDesc = do
+updateDocStatusField sessionId docType statusText respCode respDesc = do
   -- Fetch current session
   mbSession <- QDV.findById sessionId
   whenJust mbSession $ \session -> do
-    -- Parse current docStatus JSON
-    let currentDocStatus = session.docStatus
-    case A.fromJSON currentDocStatus of
-      A.Success (docMap :: HM.HashMap Text A.Value) -> do
-        -- Update the specific document status
-        let docKey = docTypeToText docType
-        let updatedDocObj =
-              A.object
-                [ "status" A..= status,
-                  "responseCode" A..= respCode,
-                  "responseDescription" A..= respDesc
-                ]
-        let updatedMap = HM.insert docKey updatedDocObj docMap
-        let updatedJson = A.toJSON updatedMap
+    -- Parse status text to DocStatusEnum
+    docStatusEnum <-
+      case DocStatus.textToDocStatusEnum statusText of
+        Just s -> pure s
+        Nothing -> do
+          logError $ "DigiLocker - Failed to parse status: " <> statusText
+          throwError $ InternalError $ "Invalid status: " <> statusText
 
-        -- Update in database
-        QDV.updateDocStatus updatedJson sessionId
-        logInfo $ "DigiLocker - Updated docStatus for " <> docKey <> " to " <> status
-      A.Error err -> do
-        logError $ "DigiLocker - Failed to parse docStatus JSON: " <> T.pack err
+    -- Get current DocStatusMap (already strongly-typed)
+    let currentDocStatusMap = session.docStatus
+
+    -- Update the DocStatusMap
+    let updatedDocStatusMap = DocStatus.updateDocStatus docType docStatusEnum respCode respDesc currentDocStatusMap
+
+    -- Update in database (DocStatusMap is handled directly by Beam)
+    QDV.updateDocStatus updatedDocStatusMap sessionId
+    logInfo $ "DigiLocker - Updated docStatus for " <> show docType <> " to " <> statusText
 
 -- NOTE: updateDocStatusOnError function removed
 -- Individual document errors are handled within processDocuments with proper DB updates

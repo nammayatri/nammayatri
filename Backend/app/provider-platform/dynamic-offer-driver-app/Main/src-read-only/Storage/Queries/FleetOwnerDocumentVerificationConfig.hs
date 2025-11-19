@@ -71,7 +71,6 @@ updateByPrimaryKey (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwner
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.order order,
       Se.Set Beam.title title,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [ Se.And

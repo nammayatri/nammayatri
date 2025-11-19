@@ -18,17 +18,16 @@ module Domain.Action.UI.DriverOnboarding.PullDocument
 where
 
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
-import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (defaultTimeLocale, diffDays, parseTimeM, utctDay)
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DLModule
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.DigilockerVerification as DDV
+import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -174,7 +173,7 @@ pullDrivingLicenseDocument (mbDriverId, merchantId, merchantOpCityId) req = do
       logInfo $ "PullDocument - Successfully stored DL in database"
 
       -- Step 14: Update docStatus in session to SUCCESS
-      updateDocStatusField session.id req.docType "DOC_SUCCESS" (Just "200") (Just "Driver License verified and stored successfully via pull")
+      updateDocStatusField session.id req.docType "SUCCESS" (Just "200") (Just "Driver License verified and stored successfully via pull")
       logInfo $ "PullDocument - Successfully completed pull operation for DriverId: " <> driverId.getId
     )
     `catch` \(err :: DigiLockerError.DigiLockerError) -> do
@@ -333,30 +332,27 @@ updateDocStatusField ::
   Maybe Text -> -- response code
   Maybe Text -> -- response description
   Flow ()
-updateDocStatusField sessionId docType status respCode respDesc = do
+updateDocStatusField sessionId docType statusText respCode respDesc = do
   -- Fetch current session
   mbSession <- QDV.findById sessionId
   whenJust mbSession $ \session -> do
-    -- Parse current docStatus JSON
-    let currentDocStatus = session.docStatus
-    case A.fromJSON currentDocStatus of
-      A.Success (docMap :: HM.HashMap Text A.Value) -> do
-        -- Update the specific document status
-        let docKey = docTypeToText docType
-        let updatedDocObj =
-              A.object
-                [ "status" A..= status,
-                  "responseCode" A..= respCode,
-                  "responseDescription" A..= respDesc
-                ]
-        let updatedMap = HM.insert docKey updatedDocObj docMap
-        let updatedJson = A.toJSON updatedMap
+    -- Parse status text to DocStatusEnum
+    docStatusEnum <-
+      case DocStatus.textToDocStatusEnum statusText of
+        Just s -> pure s
+        Nothing -> do
+          logError $ "PullDocument - Failed to parse status: " <> statusText
+          throwError $ InternalError $ "Invalid status: " <> statusText
 
-        -- Update in database
-        QDV.updateDocStatus updatedJson sessionId
-        logInfo $ "PullDocument - Updated docStatus for " <> docKey <> " to " <> status
-      A.Error err -> do
-        logError $ "PullDocument - Failed to parse docStatus JSON: " <> T.pack err
+    -- Get current DocStatusMap (already strongly-typed)
+    let currentDocStatusMap = session.docStatus
+
+    -- Update the DocStatusMap
+    let updatedDocStatusMap = DocStatus.updateDocStatus docType docStatusEnum respCode respDesc currentDocStatusMap
+
+    -- Update in database (DocStatusMap is handled directly by Beam)
+    QDV.updateDocStatus updatedDocStatusMap sessionId
+    logInfo $ "PullDocument - Updated docStatus for " <> show docType <> " to " <> statusText
 
 -- Helper functions
 base64Encode :: BS.ByteString -> Text
@@ -381,9 +377,6 @@ createCovDetails covs = map createCovDetail covs
           Idfy.cov = covText, -- The actual COV text (e.g., "MCWG", "LMV")
           Idfy.issue_date = Nothing -- DigiLocker doesn't provide per-COV issue dates
         }
-
-docTypeToText :: DVC.DocumentType -> Text
-docTypeToText = T.pack . show
 
 -- | Extract error code and description from DigiLocker error
 -- Maps DigiLockerError to (errorCode, errorDescription) tuple for storage in DB

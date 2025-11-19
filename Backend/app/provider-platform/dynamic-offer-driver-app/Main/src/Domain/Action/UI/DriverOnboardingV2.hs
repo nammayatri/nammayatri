@@ -6,8 +6,6 @@ import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
 import qualified Crypto.Hash as Hash
 import Crypto.Random (getRandomBytes)
-import Data.Aeson (Value (..), object)
-import qualified Data.Aeson.KeyMap as HM
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Base64 as B64
 import Data.Maybe
@@ -23,6 +21,7 @@ import Domain.Types.BackgroundVerification
 import Domain.Types.Common
 import qualified Domain.Types.CommonDriverOnboardingDocuments
 import qualified Domain.Types.DigilockerVerification as DDV
+import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as Domain
@@ -1222,23 +1221,23 @@ checkDocumentStatuses ::
   DVC.VehicleCategory -> -- Vehicle category for new session if needed
   Flow APITypes.DigiLockerInitiateResp
 checkDocumentStatuses driverId merchantId merchantOpCityId session now vehicleCategory = do
-  -- docStatus is already a Value type, no parsing needed
+  -- docStatus is already a strongly-typed DocStatusMap
   let docStatusMap = session.docStatus
 
   -- Check for PENDING documents
-  when (hasDocWithStatus docStatusMap (DigilockerLockerShared.docStatusToText DigilockerLockerShared.DOC_PENDING)) $ do
+  when (hasDocWithStatus docStatusMap (DocStatus.docStatusToText DocStatus.DOC_PENDING)) $ do
     logInfo $ "DigiLocker initiate - Found PENDING documents, returning 409"
     throwError DigiLockerDocumentsBeingVerified
 
   -- Check for FAILED or CONSENT_DENIED documents
-  if hasDocWithStatus docStatusMap (DigilockerLockerShared.docStatusToText DigilockerLockerShared.DOC_FAILED)
-    || hasDocWithStatus docStatusMap (DigilockerLockerShared.docStatusToText DigilockerLockerShared.DOC_CONSENT_DENIED)
+  if hasDocWithStatus docStatusMap (DocStatus.docStatusToText DocStatus.DOC_FAILED)
+    || hasDocWithStatus docStatusMap (DocStatus.docStatusToText DocStatus.DOC_CONSENT_DENIED)
     then do
       logInfo $ "DigiLocker initiate - Found FAILED or CONSENT_DENIED documents, creating new session"
       createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
     else -- Check for PULL_REQUIRED documents
 
-      if hasDocWithStatus docStatusMap (DigilockerLockerShared.docStatusToText DigilockerLockerShared.DOC_PULL_REQUIRED)
+      if hasDocWithStatus docStatusMap (DocStatus.docStatusToText DocStatus.DOC_PULL_REQUIRED)
         then handlePullRequiredDocs driverId merchantId merchantOpCityId session docStatusMap now vehicleCategory
         else -- If no problematic status, check actual document tables
           checkActualDocumentTables driverId merchantId merchantOpCityId vehicleCategory
@@ -1249,7 +1248,7 @@ handlePullRequiredDocs ::
   Id Domain.Types.Merchant.Merchant ->
   Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
   DDV.DigilockerVerification ->
-  Value ->
+  DocStatus.DocStatusMap ->
   UTCTime ->
   DVC.VehicleCategory -> -- Vehicle category for new session if needed
   Flow APITypes.DigiLockerInitiateResp
@@ -1346,7 +1345,7 @@ createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory 
             accessToken = Nothing,
             accessTokenExpiresAt = Nothing,
             scope = Nothing,
-            docStatus = object [], -- Empty JSON object
+            docStatus = DocStatus.emptyDocStatusMap, -- Empty DocStatusMap
             sessionStatus = DDV.PENDING,
             responseCode = Nothing,
             responseDescription = Nothing,
@@ -1369,18 +1368,14 @@ createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory 
 
 ----------- Helper Functions for JSON Parsing -----------
 
--- Check if any document has a specific status in the docStatus Value
-hasDocWithStatus :: Value -> Text -> Bool
-hasDocWithStatus (Object obj) targetStatus =
-  any (hasStatus targetStatus) (HM.elems obj)
+-- Check if any document has a specific status in the DocStatusMap
+hasDocWithStatus :: DocStatus.DocStatusMap -> Text -> Bool
+hasDocWithStatus docStatusMap targetStatus =
+  any (hasStatus targetStatus) (DocStatus.toList docStatusMap)
   where
-    hasStatus :: Text -> Value -> Bool
-    hasStatus target (Object docObj) =
-      case HM.lookup "status" docObj of
-        Just (String status) -> status == target
-        _ -> False
-    hasStatus _ _ = False
-hasDocWithStatus _ _ = False
+    hasStatus :: Text -> (Domain.DocumentType, DocStatus.DocumentStatus) -> Bool
+    hasStatus target (_, documentStatus) =
+      DocStatus.docStatusEnumToText documentStatus.status == target
 
 -- Helper: Base64URL encode without padding (as per RFC 7636)
 -- Implements: base64url_encode_without_padding

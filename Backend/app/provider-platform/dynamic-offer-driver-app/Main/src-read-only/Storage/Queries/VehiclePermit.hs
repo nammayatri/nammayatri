@@ -57,7 +57,6 @@ updateByPrimaryKey (Domain.Types.VehiclePermit.VehiclePermit {..}) = do
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

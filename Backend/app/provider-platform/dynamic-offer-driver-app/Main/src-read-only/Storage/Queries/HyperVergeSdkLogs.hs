@@ -48,7 +48,6 @@ updateByPrimaryKey (Domain.Types.HyperVergeSdkLogs.HyperVergeSdkLogs {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.callbackResponse callbackResponse,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.docType docType,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.failureReason failureReason,

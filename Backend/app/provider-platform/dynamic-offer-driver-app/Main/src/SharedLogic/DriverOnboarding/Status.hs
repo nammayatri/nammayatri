@@ -24,6 +24,7 @@ import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
+import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as DL
@@ -1135,9 +1136,17 @@ getResponseCode docType docStatusMap = do
     Just (A.String code) -> Just code
     _ -> Nothing
 
--- Parse JSON docStatus into a map
-parseDocStatus :: A.Value -> HM.HashMap Text (HM.HashMap Text A.Value)
-parseDocStatus val =
-  case A.fromJSON val of
-    A.Success docMap -> docMap
-    A.Error _ -> HM.empty
+-- Convert DocStatusMap to the expected format
+parseDocStatus :: DocStatus.DocStatusMap -> HM.HashMap Text (HM.HashMap Text A.Value)
+parseDocStatus docStatusMap =
+  let mapList = DocStatus.toList docStatusMap
+      convertDocStatus (docType, documentStatus) =
+        let docTypeText = T.pack $ show docType
+            docStatusObj =
+              HM.fromList
+                [ ("status", A.String $ DocStatus.docStatusEnumToText documentStatus.status),
+                  ("responseCode", maybe A.Null A.String documentStatus.responseCode),
+                  ("responseDescription", maybe A.Null A.String documentStatus.responseDescription)
+                ]
+         in (docTypeText, docStatusObj)
+   in HM.fromList $ map convertDocStatus mapList

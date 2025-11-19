@@ -4,6 +4,7 @@
 module Domain.Types.DigilockerVerification where
 
 import Data.Aeson
+import qualified Domain.Types.DocStatus
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -20,7 +21,7 @@ data DigilockerVerification = DigilockerVerification
     codeMethod :: Kernel.Prelude.Text,
     codeVerifier :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
-    docStatus :: Data.Aeson.Value,
+    docStatus :: Domain.Types.DocStatus.DocStatusMap,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.DigilockerVerification.DigilockerVerification,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
@@ -36,6 +37,6 @@ data DigilockerVerification = DigilockerVerification
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SessionStatus = PENDING | SUCCESS | FAILED | CONSENT_DENIED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data SessionStatus = PENDING | SUCCESS | FAILED | CONSENT_DENIED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SessionStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SessionStatus))

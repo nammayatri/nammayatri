@@ -309,6 +309,7 @@ library
       Domain.Types.Common
       Domain.Types.DeliveryDetails
       Domain.Types.DeliveryPersonDetails
+      Domain.Types.DocStatus
       Domain.Types.Driver.DriverInformation
       Domain.Types.DriverFlowStatus
       Domain.Types.DriverLocation

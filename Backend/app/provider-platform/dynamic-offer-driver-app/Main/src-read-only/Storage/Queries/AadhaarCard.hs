@@ -76,7 +76,6 @@ updateByPrimaryKey (Domain.Types.AadhaarCard.AadhaarCard {..}) = do
       Se.Set Beam.address address,
       Se.Set Beam.consent consent,
       Se.Set Beam.consentTimestamp consentTimestamp,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.dateOfBirth dateOfBirth,
       Se.Set Beam.driverGender driverGender,
       Se.Set Beam.driverImage driverImage,

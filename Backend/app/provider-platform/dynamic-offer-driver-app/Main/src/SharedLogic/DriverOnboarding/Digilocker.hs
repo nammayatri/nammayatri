@@ -1,7 +1,5 @@
 module SharedLogic.DriverOnboarding.Digilocker
-  ( DocStatus (..),
-    docStatusToText,
-    getDigiLockerConfig,
+  ( getDigiLockerConfig,
     verifyDigiLockerEnabled,
   )
 where
@@ -17,22 +15,6 @@ import Kernel.Utils.Common
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Tools.Error
-
-data DocStatus
-  = DOC_PENDING
-  | DOC_SUCCESS
-  | DOC_FAILED
-  | DOC_CONSENT_DENIED
-  | DOC_PULL_REQUIRED
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-docStatusToText :: DocStatus -> Text
-docStatusToText status = case status of
-  DOC_PENDING -> "PENDING"
-  DOC_SUCCESS -> "SUCCESS"
-  DOC_FAILED -> "FAILED"
-  DOC_CONSENT_DENIED -> "CONSENT_DENIED"
-  DOC_PULL_REQUIRED -> "PULL_REQUIRED"
 
 getDigiLockerConfig :: Id DMOC.MerchantOperatingCity -> Flow DigilockerTypes.DigiLockerCfg
 getDigiLockerConfig merchantOpCityId = do

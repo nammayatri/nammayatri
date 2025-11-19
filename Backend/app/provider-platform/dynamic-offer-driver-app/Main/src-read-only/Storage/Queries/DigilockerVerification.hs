@@ -4,8 +4,8 @@
 
 module Storage.Queries.DigilockerVerification where
 
-import qualified Data.Aeson
 import qualified Domain.Types.DigilockerVerification
+import qualified Domain.Types.DocStatus
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -26,7 +26,7 @@ createMany = traverse_ create
 deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByDriverId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.DigilockerVerification.DigilockerVerification])
+findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.DigilockerVerification.DigilockerVerification]))
 findAllByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findById ::
@@ -39,7 +39,7 @@ findByStateId stateId = do findOneWithKV [Se.Is Beam.stateId $ Se.Eq stateId]
 
 findLatestByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.DigilockerVerification.DigilockerVerification])
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.DigilockerVerification.DigilockerVerification]))
 findLatestByDriverId limit offset driverId = do findAllWithOptionsKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)] (Se.Desc Beam.createdAt) limit offset
 
 updateAccessToken ::
@@ -56,7 +56,7 @@ updateAccessToken accessToken accessTokenExpiresAt authorizationCode scope state
     ]
     [Se.Is Beam.stateId $ Se.Eq stateId]
 
-updateDocStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Aeson.Value -> Kernel.Types.Id.Id Domain.Types.DigilockerVerification.DigilockerVerification -> m ())
+updateDocStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DocStatus.DocStatusMap -> Kernel.Types.Id.Id Domain.Types.DigilockerVerification.DigilockerVerification -> m ())
 updateDocStatus docStatus id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.docStatus docStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateSessionStatus ::
@@ -87,7 +87,6 @@ updateByPrimaryKey (Domain.Types.DigilockerVerification.DigilockerVerification {
       Se.Set Beam.codeChallenge codeChallenge,
       Se.Set Beam.codeMethod codeMethod,
       Se.Set Beam.codeVerifier codeVerifier,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.docStatus docStatus,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

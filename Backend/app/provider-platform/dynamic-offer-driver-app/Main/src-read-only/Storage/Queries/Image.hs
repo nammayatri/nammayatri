@@ -106,7 +106,6 @@ updateByPrimaryKey (Domain.Types.Image.Image {..}) = do
       Se.Set Beam.s3Path s3Path,
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.workflowTransactionId workflowTransactionId,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

@@ -12,6 +12,7 @@ imports:
   encode: Data.Aeson
   decode: Data.Aeson
   DocumentType: Domain.Types.DocumentVerificationConfig
+  DocStatusMap: Domain.Types.DocStatus
   Image: Domain.Types.Image
   DriverOnboardingError: Tools.Error
   VerificationStatus: Kernel.Types.Documents
@@ -108,8 +109,8 @@ DigilockerVerification:
     accessTokenExpiresAt: Maybe UTCTime
     scope: Maybe Text
 
-    # Document Status (JSON)
-    docStatus: Value
+    # Document Status (strongly-typed JSON map)
+    docStatus: DocStatusMap
 
     # Session Status
     sessionStatus: SessionStatus
