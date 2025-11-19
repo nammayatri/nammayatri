@@ -60,14 +60,23 @@ type API =
       :> "getVehiclesByDepotId"
       :> Capture
            "depotId"
-           Kernel.Prelude.Int
+           Kernel.Prelude.Text
       :> Get
            ('[JSON])
            [API.Types.UI.Dispatcher.DepotVehicle]
+      :<|> TokenAuth
+      :> "dispatcher"
+      :> "getDepotNameById"
+      :> Capture
+           "depotId"
+           Kernel.Prelude.Text
+      :> Get
+           ('[JSON])
+           Kernel.Prelude.Text
   )
 
 handler :: Environment.FlowServer API
-handler = getDispatcherGetFleetInfo :<|> postDispatcherUpdateFleetSchedule :<|> getDispatcherDepotNames :<|> getDispatcherDepotIds :<|> getDispatcherGetVehiclesByDepotName :<|> getDispatcherGetVehiclesByDepotId
+handler = getDispatcherGetFleetInfo :<|> postDispatcherUpdateFleetSchedule :<|> getDispatcherDepotNames :<|> getDispatcherDepotIds :<|> getDispatcherGetVehiclesByDepotName :<|> getDispatcherGetVehiclesByDepotId :<|> getDispatcherGetDepotNameById
 
 getDispatcherGetFleetInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -106,7 +115,16 @@ getDispatcherGetVehiclesByDepotId ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Int ->
+    Kernel.Prelude.Text ->
     Environment.FlowHandler [API.Types.UI.Dispatcher.DepotVehicle]
   )
 getDispatcherGetVehiclesByDepotId a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherGetVehiclesByDepotId (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getDispatcherGetDepotNameById ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    Environment.FlowHandler Kernel.Prelude.Text
+  )
+getDispatcherGetDepotNameById a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherGetDepotNameById (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
