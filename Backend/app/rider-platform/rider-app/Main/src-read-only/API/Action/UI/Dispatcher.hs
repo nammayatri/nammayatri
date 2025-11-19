@@ -73,10 +73,22 @@ type API =
       :> Get
            ('[JSON])
            Kernel.Prelude.Text
+      :<|> TokenAuth
+      :> "dispatcher"
+      :> "history"
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> Get
+           ('[JSON])
+           [API.Types.UI.Dispatcher.DispatcherHistoryRes]
   )
 
 handler :: Environment.FlowServer API
-handler = getDispatcherGetFleetInfo :<|> postDispatcherUpdateFleetSchedule :<|> getDispatcherDepotNames :<|> getDispatcherDepotIds :<|> getDispatcherGetVehiclesByDepotName :<|> getDispatcherGetVehiclesByDepotId :<|> getDispatcherGetDepotNameById
+handler = getDispatcherGetFleetInfo :<|> postDispatcherUpdateFleetSchedule :<|> getDispatcherDepotNames :<|> getDispatcherDepotIds :<|> getDispatcherGetVehiclesByDepotName :<|> getDispatcherGetVehiclesByDepotId :<|> getDispatcherGetDepotNameById :<|> getDispatcherHistory
 
 getDispatcherGetFleetInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -128,3 +140,13 @@ getDispatcherGetDepotNameById ::
     Environment.FlowHandler Kernel.Prelude.Text
   )
 getDispatcherGetDepotNameById a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherGetDepotNameById (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getDispatcherHistory ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Environment.FlowHandler [API.Types.UI.Dispatcher.DispatcherHistoryRes]
+  )
+getDispatcherHistory a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

@@ -798,6 +798,7 @@ library
       Domain.Types.DepotManager
       Domain.Types.Disability
       Domain.Types.DisabilityTranslation
+      Domain.Types.DispatcherHistory
       Domain.Types.DraftTicketChange
       Domain.Types.DraftTicketChangeHistory
       Domain.Types.DriverOffer
@@ -945,6 +946,7 @@ library
       Storage.Beam.DepotManager
       Storage.Beam.Disability
       Storage.Beam.DisabilityTranslation
+      Storage.Beam.DispatcherHistory
       Storage.Beam.DraftTicketChange
       Storage.Beam.DraftTicketChangeHistory
       Storage.Beam.DriverOffer
@@ -1094,6 +1096,7 @@ library
       Storage.Queries.DepotManager
       Storage.Queries.Disability
       Storage.Queries.DisabilityTranslation
+      Storage.Queries.DispatcherHistory
       Storage.Queries.DraftTicketChange
       Storage.Queries.DraftTicketChangeHistory
       Storage.Queries.DriverOffer

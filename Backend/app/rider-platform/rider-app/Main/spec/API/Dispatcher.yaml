@@ -16,6 +16,18 @@ types:
     fleet_no: Text
     status: Maybe Text
     vehicle_no: Maybe Text
+  DispatcherHistoryRes:
+    id: Text
+    dispatcherId: Text
+    currentVehicle: Text
+    replacedVehicle: Text
+    historyDriverCode: Text
+    historyConductorCode: Text
+    depotId: Text
+    reasonTag: Text
+    reasonContent: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
 apis:
   - GET:
@@ -68,3 +80,12 @@ apis:
       auth: TokenAuth
       response:
         type: Text
+
+  - GET:
+      endpoint: /dispatcher/history
+      auth: TokenAuth
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[DispatcherHistoryRes]"
