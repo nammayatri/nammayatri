@@ -43,6 +43,8 @@ imports:
   SourceType: Domain.Types.RouteStopTimeTable
   FRFSCategorySelectionReq: API.Types.UI.FRFSTicketService
   FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
+  PaymentStatusResp: Lib.Payment.Domain.Action
+  CumulativeOfferResp: SharedLogic.PaymentType
 
 module: MultimodalConfirm
 
@@ -64,6 +66,7 @@ types:
     paymentOrderShortId: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder)
     result: Maybe Text # for backward compatibility hardcoding to Success in response
     isSingleMode: Maybe Bool
+    offer: Maybe CumulativeOfferResp
     derive: "Show"
 
   LegStatus:

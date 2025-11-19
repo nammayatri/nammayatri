@@ -35,6 +35,7 @@ import qualified Lib.JourneyModule.Types
 import qualified Lib.JourneyModule.Utils
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Servant
+import qualified SharedLogic.PaymentType
 import Tools.Auth
 
 data AvailableRoute = AvailableRoute
@@ -134,6 +135,7 @@ data JourneyInfoResp = JourneyInfoResp
     journeyStatus :: Domain.Types.Journey.JourneyStatus,
     legs :: [Lib.JourneyModule.Types.LegInfo],
     merchantOperatingCityName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    offer :: Kernel.Prelude.Maybe SharedLogic.PaymentType.CumulativeOfferResp,
     paymentOrderShortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),
     result :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

@@ -48,6 +48,7 @@ module Tools.Payment
     fetchOfferSKUConfig,
     extractSplitSettlementDetailsAmount,
     getPaymentOrderValidity,
+    offerList,
   )
 where
 
@@ -75,6 +76,7 @@ import Kernel.External.Payment.Interface as Reexport hiding
     getCustomer,
     getPaymentIntent,
     isSplitEnabled,
+    offerList,
     orderStatus,
     updateAmountInPaymentIntent,
     updateOrder,
@@ -103,6 +105,9 @@ updateOrder = runWithServiceConfigAndServiceName Payment.updateOrder
 
 orderStatus :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfigAndServiceName Payment.orderStatus
+
+offerList :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.OfferListReq -> m Payment.OfferListResp
+offerList = runWithServiceConfigAndServiceName Payment.offerList
 
 refundOrder :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id TicketPlace) -> PaymentServiceType -> Maybe Text -> Maybe Version -> Payment.AutoRefundReq -> m Payment.AutoRefundResp
 refundOrder = runWithServiceConfigAndServiceName Payment.autoRefunds

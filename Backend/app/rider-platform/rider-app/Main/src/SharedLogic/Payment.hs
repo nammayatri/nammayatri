@@ -1,6 +1,7 @@
 module SharedLogic.Payment where
 
 import qualified Beckn.ACL.Cancel as ACL
+import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.Cancel as DCancel
@@ -16,6 +17,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as Ride
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -28,6 +30,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerToo
 import Kernel.Types.CacheFlow
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -36,16 +39,21 @@ import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.JobScheduler
 import qualified SharedLogic.JobScheduler as JobScheduler
+import SharedLogic.PaymentType
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
+import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 import Tools.Metrics.BAPMetrics
 import qualified Tools.Notifications as TNotifications
@@ -231,6 +239,17 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
           case paymentService of
             DOrder.FRFSPassPurchase -> Pass.createPassReconEntry paymentStatusResponse domainTransactionId
             _ -> pure ()
+        when (newPaymentFulfillmentStatus /= oldPaymentFulfillmentStatus) $ do
+          -- Invalidate the Offer List Cache
+          case newPaymentFulfillmentStatus of
+            DPayment.FulfillmentSucceeded ->
+              -- If Fulfillment Succeeded post Payment with Offers, then invalidate the Offer List Cache
+              unless (null (fromMaybe [] paymentStatusResponse.offers)) $ do
+                fork "Invalidate Offer List Cache" $ do
+                  person <- QPerson.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
+                  let merchantOperatingCityId = maybe person.merchantOperatingCityId (cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity) paymentOrder.merchantOperatingCityId
+                  invalidateOfferListCache person merchantOperatingCityId (mkPrice (Just paymentOrder.currency) paymentOrder.amount)
+            _ -> pure ()
     _ -> pure ()
   fork "refund notifications" $ do
     when (paymentOrder.paymentFulfillmentStatus /= paymentStatusResponseWithFulfillmentStatus.paymentFulfillmentStatus) $ do
@@ -338,8 +357,8 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
   paymentServiceType <- paymentOrder.paymentServiceType & fromMaybeM (InvalidRequest "Payment service type not found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   processRefund person paymentOrder paymentServiceType
-  let merchanOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
-      orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchanOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
+  let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
+      orderStatusCall = TPayment.orderStatus (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
   paymentStatusResp <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
   refundStatusHandler paymentOrder paymentStatusResp.refunds paymentServiceType
   return paymentStatusResp
@@ -358,9 +377,9 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
       DOrder.PaymentServiceType ->
       m ()
     processRefund person paymentOrder paymentServiceType = do
-      let merchanOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
-      riderConfig <- QRC.findByMerchantOperatingCityId merchanOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchanOperatingCityId.getId)
-      let refundsOrderCall = TPayment.refundOrder (cast paymentOrder.merchantId) merchanOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
+      let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
+      riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+      let refundsOrderCall = TPayment.refundOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
       mbRefundResp <- DPayment.createRefundService paymentOrder.shortId refundsOrderCall
       whenJust mbRefundResp $ \refundResp -> do
         let refundRequestId = (listToMaybe refundResp.refunds) <&> (.requestId) -- TODO :: When will refunds be more than one ? even if more than 1 there requestId would be same right ?
@@ -371,7 +390,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
                   { JobScheduler.refundId = refundId,
                     JobScheduler.numberOfRetries = 0
                   }
-          createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just merchanOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
+          createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just merchantOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
           logInfo $ "Scheduled refund status check job for " <> refundId <> " in 24 hours (initial check)"
 
 validatePaymentInstrument :: (MonadThrow m, Log m) => Merchant.Merchant -> Maybe DMPM.PaymentInstrument -> Maybe Payment.PaymentMethodId -> m ()
@@ -391,3 +410,72 @@ validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do
 
 isOnlinePayment :: Maybe Merchant.Merchant -> Booking.Booking -> Bool
 isOnlinePayment mbMerchant booking = maybe False (.onlinePayment) mbMerchant && booking.paymentInstrument /= Just DMPM.Cash
+
+-------------------------------------------------------------------------------------------------------
+----------------------------------- Fetch Offers List With Caching ------------------------------------
+-------------------------------------------------------------------------------------------------------
+
+invalidateOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> Price -> m ()
+invalidateOfferListCache person merchantOperatingCityId price = do
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  req <- mkOfferListReq person price
+  let version = fromMaybe "N/A" riderConfig.offerListCacheVersion
+      key = makeOfferListCacheKey person version req
+  Redis.del key
+
+offerListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m Payment.OfferListResp
+offerListCache merchantId personId merchantOperatingCityId paymentServiceType price = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  req <- mkOfferListReq person price
+  let version = fromMaybe "N/A" riderConfig.offerListCacheVersion
+      key = makeOfferListCacheKey person version req
+  Redis.get key >>= \case
+    Just a -> return a
+    Nothing ->
+      ( \resp -> do
+          Redis.setExp key resp (7 * 86400) -- Cache for 7 days
+          return resp
+      )
+        =<< TPayment.offerList merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion req
+
+mkCumulativeOfferResp :: (MonadFlow m, EncFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> [JL.LegInfo] -> m (Maybe CumulativeOfferResp)
+mkCumulativeOfferResp merchantOperatingCityId offerListResp legInfos = do
+  now <- getCurrentTime
+  (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.CUMULATIVE_OFFER_POLICY) now Nothing Nothing
+  if null logics
+    then do
+      logInfo "No cumulative offer logic found."
+      pure Nothing
+    else do
+      logInfo $ "Running cumulative offer logic with " <> show (length logics) <> " rules"
+      result <- LYTU.runLogics logics (CumulativeOfferReq offerListResp legInfos)
+      case A.fromJSON result.result :: A.Result CumulativeOfferResp of
+        A.Success logicResult -> do
+          logInfo $ "Cumulative offer logic result: " <> show logicResult
+          pure $ Just logicResult
+        A.Error err -> do
+          logError $ "Failed to parse cumulative offer logic result: " <> show err
+          pure Nothing
+
+mkOfferListReq :: (MonadFlow m, EncFlow m r) => Person.Person -> Price -> m Payment.OfferListReq
+mkOfferListReq person price = do
+  now <- getCurrentTime
+  email <- mapM decrypt person.email
+  let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = price.amount, currency = price.currency}
+      customerReq = Payment.OfferCustomer {customerId = person.id.getId, email = email, mobile = Nothing}
+  return
+    Payment.OfferListReq
+      { order = offerOrder,
+        customer = Just customerReq,
+        -- These are used as filters for Driver, not required as of now, can be made generic in future.
+        planId = "dummy-not-required",
+        registrationDate = addUTCTime 19800 now,
+        dutyDate = addUTCTime 19800 now,
+        paymentMode = "dummy-not-required",
+        numOfRides = 0,
+        offerListingMetric = Nothing
+      }
+
+makeOfferListCacheKey :: Person.Person -> Text -> Payment.OfferListReq -> Text
+makeOfferListCacheKey person version _req = "OfferList:CId" <> person.id.getId <> ":V-" <> version

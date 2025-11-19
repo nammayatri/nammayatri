@@ -39,7 +39,7 @@ import qualified ConfigPilotFrontend.Flow as CPF
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Dashboard.Common as Common
 import qualified Data.Aeson as A
-import Data.Default.Class (def)
+import Data.Default.Class
 import Data.Singletons
 import qualified Data.Text as Text
 import qualified Domain.Types.FRFSConfig as DFRFS
@@ -73,6 +73,7 @@ import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.EstimateTags
 import SharedLogic.JobScheduler (RiderJobType (..))
 import SharedLogic.Merchant
+import SharedLogic.PaymentType
 import qualified SharedLogic.Scheduler.Jobs.Chakras as Chakras
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
@@ -86,6 +87,7 @@ import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 
 $(YTH.generateGenericDefault ''DTR.RiderConfig)
+$(YTH.generateGenericDefault ''CumulativeOfferReq)
 $(YTH.generateGenericDefault ''DTP.PayoutConfig)
 $(YTH.generateGenericDefault ''DTRN.RideRelatedNotificationConfig)
 $(YTH.generateGenericDefault ''DTM.MerchantConfig)
@@ -166,6 +168,10 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYTU.ESTIMATE_TAGS -> do
       logicData :: EstimateTagsData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy EstimateTagsResult) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.CUMULATIVE_OFFER_POLICY -> do
+      defaultVal <- fromMaybeM (InvalidRequest "CumulativeOfferReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @CumulativeOfferReq))
+      logicData :: CumulativeOfferReq <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (Proxy :: Proxy CumulativeOfferResp) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.RIDER_CONFIG LYTU.PayoutConfig -> do
       def' <- fromMaybeM (InvalidRequest "PayoutConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
       let configWrap = LYTU.Config def' Nothing 1
