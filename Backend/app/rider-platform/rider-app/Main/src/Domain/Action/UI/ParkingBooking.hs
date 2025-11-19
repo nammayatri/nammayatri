@@ -23,23 +23,19 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Payment as TPayment
 
 postMultimodalParkingBook ::
-  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-    ) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
+  ( Kernel.Prelude.Maybe Data.Text.Text ->
     API.Types.UI.ParkingBooking.ParkingBookingReq ->
     Environment.Flow API.Types.UI.ParkingBooking.ParkingBookingResponse
   )
-postMultimodalParkingBook (mbPersonId, merchantId) mbApiKey req = do
+postMultimodalParkingBook mbApiKey req = do
   -- Verify API key
   apiKey <- mbApiKey & fromMaybeM (MissingHeader "api-key")
   expectedApiKey <- asks (.parkingApiKey)
   unless (apiKey == expectedApiKey) $ throwError (InvalidRequest "Invalid API key")
 
   -- Get default merchant operating city
-  personId <- mbPersonId & fromMaybeM (PersonNotFound "Person not found")
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound "Person not found")
-  merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
+  person <- QPerson.findById req.customerId >>= fromMaybeM (PersonNotFound "Person not found")
+  merchantOpCity <- CQM.getDefaultMerchantOperatingCity person.merchantId
   let merchantOpCityId = merchantOpCity.id
 
   parkingTransactionId <- generateGUID
@@ -57,7 +53,7 @@ postMultimodalParkingBook (mbPersonId, merchantId) mbApiKey req = do
             paymentOrderId = Kernel.Types.Id.Id paymentOrderId,
             status = DPT.Pending,
             vehicleNumber = req.vehicleNumber,
-            merchantId = Just merchantId,
+            merchantId = Just person.merchantId,
             merchantOperatingCityId = Just merchantOpCityId,
             createdAt = now,
             updatedAt = now
@@ -65,8 +61,8 @@ postMultimodalParkingBook (mbPersonId, merchantId) mbApiKey req = do
 
   QPT.create parkingTransaction
 
-  isSplitEnabled <- TPayment.getIsSplitEnabled merchantId merchantOpCityId Nothing TPayment.ParkingBooking
-  isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId merchantOpCityId Nothing TPayment.ParkingBooking
+  isSplitEnabled <- TPayment.getIsSplitEnabled person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking
+  isPercentageSplitEnabled <- TPayment.getIsPercentageSplit person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking
   splitSettlementDetails <- TPayment.mkSplitSettlementDetails isSplitEnabled req.amount [] isPercentageSplitEnabled
 
   customerEmail <- fromMaybe "noreply@nammayatri.in" <$> mapM decrypt person.email
@@ -76,7 +72,7 @@ postMultimodalParkingBook (mbPersonId, merchantId) mbApiKey req = do
           { orderId = paymentOrderId,
             orderShortId = orderShortId.getShortId,
             amount = req.amount,
-            customerId = personId.getId,
+            customerId = req.customerId.getId,
             customerEmail,
             customerPhone,
             customerFirstName = person.firstName,
@@ -93,9 +89,9 @@ postMultimodalParkingBook (mbPersonId, merchantId) mbApiKey req = do
             basket = Nothing
           }
 
-  let commonMerchantId = Kernel.Types.Id.cast @Domain.Types.Merchant.Merchant @DPayment.Merchant merchantId
-      commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person personId
-      createOrderCall = TPayment.createOrder merchantId merchantOpCityId Nothing TPayment.ParkingBooking (Just personId.getId) person.clientSdkVersion
+  let commonMerchantId = Kernel.Types.Id.cast @Domain.Types.Merchant.Merchant @DPayment.Merchant person.merchantId
+      commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person req.customerId
+      createOrderCall = TPayment.createOrder person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking (Just req.customerId.getId) person.clientSdkVersion
 
   orderResp <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast merchantOpCityId) commonPersonId Nothing Nothing TPayment.ParkingBooking createOrderReq createOrderCall >>= fromMaybeM (InternalError "Failed to create payment order")
 

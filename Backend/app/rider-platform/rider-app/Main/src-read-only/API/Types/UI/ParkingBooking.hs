@@ -4,6 +4,7 @@ module API.Types.UI.ParkingBooking where
 
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
+import qualified Domain.Types.Person
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -18,7 +19,8 @@ data ParkingBookingReq = ParkingBookingReq
     parkingEndTime :: Kernel.Prelude.UTCTime,
     parkingStartTime :: Kernel.Prelude.UTCTime,
     slotNumber :: Data.Text.Text,
-    vehicleNumber :: Data.Text.Text
+    vehicleNumber :: Data.Text.Text,
+    customerId :: Kernel.Types.Id.Id Domain.Types.Person.Person
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
