@@ -12,6 +12,22 @@ data DepotVehicle = DepotVehicle {fleet_no :: Kernel.Prelude.Text, status :: Ker
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DispatcherHistoryRes = DispatcherHistoryRes
+  { createdAt :: Kernel.Prelude.UTCTime,
+    currentVehicle :: Kernel.Prelude.Text,
+    depotId :: Kernel.Prelude.Text,
+    dispatcherId :: Kernel.Prelude.Text,
+    historyConductorCode :: Kernel.Prelude.Text,
+    historyDriverCode :: Kernel.Prelude.Text,
+    id :: Kernel.Prelude.Text,
+    reasonContent :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    reasonTag :: Kernel.Prelude.Text,
+    replacedVehicle :: Kernel.Prelude.Text,
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DispatcherReq = DispatcherReq {reason :: ScheduleUpdateReasons, sourceFleetId :: Kernel.Prelude.Text, updatedFleetId :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
