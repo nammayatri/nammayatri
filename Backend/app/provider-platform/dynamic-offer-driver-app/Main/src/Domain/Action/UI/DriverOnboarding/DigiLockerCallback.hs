@@ -95,7 +95,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
   -- Step 1: Validate state parameter (if empty, we can't identify driver - set alert)
   when (T.null stateParam) $ do
     logError "DigiLocker callback - Missing required state parameter. Cannot identify driver."
-    throwError $ InternalError "DigiLocker callback received with empty state parameter"
+    throwError $ InvalidRequest "DigiLocker callback received with empty state parameter"
 
   -- Step 2: Handle OAuth error cases (e.g., access_denied)
   whenJust mbError $ \errorCode -> do
