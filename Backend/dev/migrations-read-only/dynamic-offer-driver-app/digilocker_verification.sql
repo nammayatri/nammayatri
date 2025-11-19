@@ -10,14 +10,13 @@ ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN created_at
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN doc_status json NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN driver_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN id character varying(36) NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN merchant_id character varying(36) ;
-ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN response_code text ;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN response_description text ;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN scope text ;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN session_status text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN state_id text NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN token_response text ;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN vehicle_category text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD PRIMARY KEY ( id);

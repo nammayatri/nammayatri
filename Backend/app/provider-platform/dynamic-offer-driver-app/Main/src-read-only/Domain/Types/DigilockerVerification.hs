@@ -24,14 +24,13 @@ data DigilockerVerification = DigilockerVerification
     docStatus :: Domain.Types.DocStatus.DocStatusMap,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.DigilockerVerification.DigilockerVerification,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     responseCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     responseDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     scope :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sessionStatus :: Domain.Types.DigilockerVerification.SessionStatus,
     stateId :: Kernel.Prelude.Text,
-    tokenResponse :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory
   }

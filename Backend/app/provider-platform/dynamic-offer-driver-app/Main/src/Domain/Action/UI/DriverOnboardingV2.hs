@@ -1349,10 +1349,9 @@ createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory 
             sessionStatus = DDV.PENDING,
             responseCode = Nothing,
             responseDescription = Nothing,
-            tokenResponse = Nothing,
             vehicleCategory = vehicleCategory, -- Store vehicle category for DL validation
-            merchantId = Just merchantId,
-            merchantOperatingCityId = Just merchantOpCityId,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOpCityId,
             createdAt = now,
             updatedAt = now
           }
