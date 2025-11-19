@@ -52,6 +52,7 @@ data SubscriptionConfig = SubscriptionConfig
     payoutServiceName :: Kernel.Prelude.Maybe Domain.Types.MerchantServiceConfig.ServiceName,
     sendDeepLink :: Kernel.Prelude.Bool,
     sendInAppFcmNotifications :: Kernel.Prelude.Bool,
+    sendManualPaymentLinkJobMaxDelay :: Kernel.Prelude.Maybe Data.Time.NominalDiffTime,
     serviceName :: Domain.Types.Plan.ServiceNames,
     sgstPercentageOneTimeSecurityDeposit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     showManualPlansInUI :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
