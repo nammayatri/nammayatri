@@ -6,6 +6,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver 
 import Data.Time.Calendar (Day)
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
+import qualified Kernel.Storage.ClickhouseV2.Internal.Types as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 import Kernel.Types.Common
 import qualified Storage.Queries.FleetOperatorDailyStatsExtra as FODSE
@@ -209,16 +210,14 @@ sumDriverEarningsByFleetOwnerIdAndDriverIds ::
   Maybe Common.FleetDriverListStatsSortOn ->
   m [FODSE.DriverEarningsAggregated]
 sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay limit offset mbSortDesc mbSortOn = do
-  let sortBy = case mbSortDesc of
-        Just True -> CH.desc
-        _ -> CH.asc
-  let sortOn = case mbSortOn of
-        Just Common.ONLINE_TOTAL_EARNING -> (\_ (_, _, onlineTotalEarning, _, _, _, _) -> sortBy onlineTotalEarning)
-        Just Common.CASH_TOTAL_EARNING -> (\_ (_, _, _, cashTotalEarning, _, _, _) -> sortBy cashTotalEarning)
-        Just Common.CASH_PLATFORM_FEES -> (\_ (_, _, _, _, cashPlatformFees, _, _) -> sortBy cashPlatformFees)
-        Just Common.ONLINE_PLATFORM_FEES -> (\_ (_, _, _, _, _, onlinePlatformFees, _) -> sortBy onlinePlatformFees)
-        -- Just Common.ONLINE_DURATION -> (\_ (_, _, _, _, _, _, onlineDuration) -> sortBy onlineDuration)
-        _ -> (\_ (_, _, onlineTotalEarning, _, _, _, _) -> sortBy onlineTotalEarning)
+  let sortOn _fos (_, _, onlineTotalEarning, cashTotalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration) = case mbSortOn of
+        Just Common.ONLINE_TOTAL_EARNING -> castSortBy mbSortDesc onlineTotalEarning
+        Just Common.CASH_TOTAL_EARNING -> castSortBy mbSortDesc cashTotalEarning
+        Just Common.CASH_PLATFORM_FEES -> castSortBy mbSortDesc cashPlatformFees
+        Just Common.ONLINE_PLATFORM_FEES -> castSortBy mbSortDesc onlinePlatformFees
+        Just Common.ONLINE_DURATION -> castSortBy mbSortDesc onlineDuration
+        _ -> castSortBy mbSortDesc onlineTotalEarning
+
   res <-
     CH.findAll $
       CH.select_
@@ -243,6 +242,11 @@ sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
                 )
                 (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorDailyStatsTTable)
   pure $ map (\(_fleetOperatorId, fleetDriverId, onlineTotalEarning, cashTotalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration) -> FODSE.mkDriverEarningsAggregated (fleetDriverId, onlineTotalEarning, cashTotalEarning, cashPlatformFees, onlinePlatformFees, onlineDuration)) res
+
+castSortBy :: forall ord. (CH.ClickhouseQuery ord, CH.IsOrderColumns ord) => Maybe Bool -> ord -> CH.OrderBy 'CH.ORDERED
+castSortBy mbSortDesc = case mbSortDesc of
+  Just True -> CH.desc @ord
+  _ -> CH.asc @ord
 
 mkDriverMetricsAggregated ::
   ( Text, -- fleetOperatorId
