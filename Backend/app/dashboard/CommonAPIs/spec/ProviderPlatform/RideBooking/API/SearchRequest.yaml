@@ -35,6 +35,12 @@ types:
   SearchRequestsRes:
     searchrequests: [SearchRequestOfDriver]
 
+  SearchReqInfoRes:
+    totalCount: Int
+    acceptedCount: Int
+    rejectedCount: Int
+    pulledCount: Int
+    emptyCount: Int
 # SearchRequest is different from SearchRequestForDriver
 # mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
 
@@ -59,3 +65,12 @@ apis:
         type: SearchRequestsRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SEARCH_REQUESTS LIST_SEARCH_REQUESTS
+  - GET:
+      endpoint: /info
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - driverId: Id Person
+      response:
+        type: SearchReqInfoRes
