@@ -264,6 +264,43 @@ findByDriverId driverId from to limit offset = do
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
 
+findByDriverIdForInfo ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  UTCTime ->
+  UTCTime ->
+  m (Int, Int, Int, Int)
+findByDriverIdForInfo driverId from to = do
+  acceptanceCount <- findSreqCountByDriverId driverId from to (Just DI.Accept)
+  rejectionCount <- findSreqCountByDriverId driverId from to (Just DI.Reject)
+  pulledCount <- findSreqCountByDriverId driverId from to (Just DI.Pulled)
+  totalCount <- findSreqCountByDriverId driverId from to Nothing
+  pure (acceptanceCount, rejectionCount, pulledCount, totalCount)
+
+findSreqCountByDriverId ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  UTCTime ->
+  UTCTime ->
+  Maybe DI.SearchRequestForDriverResponse ->
+  m Int
+findSreqCountByDriverId driverId from to status = do
+  res <-
+    CH.findAll $
+      CH.select_ (\srfd -> CH.aggregate $ CH.count_ srfd.id) $
+        -- CH.selectModifierOverride CH.NO_SELECT_MODIFIER $
+        CH.filter_
+          ( \srfd ->
+              srfd.driverId CH.==. driverId
+                CH.&&. srfd.createdAt >=. CH.DateTime from
+                CH.&&. srfd.createdAt <=. CH.DateTime to
+                CH.&&. case status of
+                  Just s -> srfd.response CH.==. Just s
+                  Nothing -> CH.isNotNull srfd.response
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
+  pure $ fromMaybe 0 (listToMaybe res)
+
 concatFun :: [(Maybe Text, Int, Int, Maybe DVC.VehicleCategory)] -> [(Maybe Text, Int, Maybe DVC.VehicleCategory)] -> [(Maybe Text, Int, Int, Int, Maybe DVC.VehicleCategory)]
 concatFun [] _ = []
 concatFun _ [] = []
