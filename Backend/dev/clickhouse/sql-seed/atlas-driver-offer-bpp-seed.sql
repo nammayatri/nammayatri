@@ -117,3 +117,22 @@ create table atlas_driver_offer_bpp.vehicle (
     `is_deleted` UInt8 DEFAULT 0
 ) ENGINE = ReplacingMergeTree(version, is_deleted)
 ORDER BY (driver_id);
+
+CREATE TABLE atlas_driver_offer_bpp.search_request_for_driver
+(
+    `id` String,
+    `driver_id` String,
+    `from_loc_geohash` Nullable(String),
+    `merchant_operating_city_id` Nullable(String),
+    `trip_estimated_distance` Nullable(Int32),
+    `trip_estimated_duration` Nullable(Int32),
+    `mode` Nullable(String),
+    `response` Nullable(String),
+    `vehicle_service_tier` Nullable(String),
+    `vehicle_category` Nullable(String),
+    `search_request_id` String,
+    `search_try_id` String,
+    `created_at` DateTime DEFAULT now()
+)
+ENGINE = ReplacingMergeTree()
+ORDER BY (created_at, driver_id, id);
