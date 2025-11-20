@@ -1257,6 +1257,7 @@ data DriverOnboardingError
   | DigiLockerSessionUnauthorized
   | DigiLockerMissingAccessToken
   | DigiLockerUnsupportedDocumentType Text
+  | DigiLockerMismatchedMerchantContext
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1329,6 +1330,7 @@ instance IsBaseError DriverOnboardingError where
     DigiLockerSessionUnauthorized -> Just "DigiLocker session is not authorized. Please complete the authorization flow."
     DigiLockerMissingAccessToken -> Just "DigiLocker session not authorized. Access token missing."
     DigiLockerUnsupportedDocumentType docType -> Just $ "Document type \"" <> docType <> "\" is not supported for DigiLocker pull operation. Only Driving License is supported."
+    DigiLockerMismatchedMerchantContext -> Just "DigiLocker pull requested with mismatched merchant/city context. The request context does not match the session context."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1400,6 +1402,7 @@ instance IsHTTPError DriverOnboardingError where
     DigiLockerSessionUnauthorized -> "DIGILOCKER_SESSION_UNAUTHORIZED"
     DigiLockerMissingAccessToken -> "DIGILOCKER_MISSING_ACCESS_TOKEN"
     DigiLockerUnsupportedDocumentType _ -> "DIGILOCKER_UNSUPPORTED_DOCUMENT_TYPE"
+    DigiLockerMismatchedMerchantContext -> "DIGILOCKER_MISMATCHED_MERCHANT_CONTEXT"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1469,6 +1472,7 @@ instance IsHTTPError DriverOnboardingError where
     DigiLockerSessionUnauthorized -> E401
     DigiLockerMissingAccessToken -> E401
     DigiLockerUnsupportedDocumentType _ -> E400
+    DigiLockerMismatchedMerchantContext -> E400
 
 instance IsAPIError DriverOnboardingError
 

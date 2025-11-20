@@ -99,7 +99,7 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
   -- Validate that incoming request matches session context
   when (sessionMerchantId /= merchantId || sessionMerchantOpCityId /= merchantOpCityId) $ do
     logError $ "PullDocument - Mismatched merchant context. Request: (" <> merchantId.getId <> ", " <> merchantOpCityId.getId <> "), Session: (" <> sessionMerchantId.getId <> ", " <> sessionMerchantOpCityId.getId <> ")"
-    throwError $ InvalidRequest "DigiLocker pull requested with mismatched merchant/city context"
+    throwError DigiLockerMismatchedMerchantContext
 
   -- Step 5: Verify document type is Driving License
   unless (req.docType == DVC.DriverLicense) $
@@ -110,7 +110,7 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
 
   -- Step 7: Get access token from session and decrypt it
   let accessTokenEncryptedMaybe :: Maybe (EncryptedHashed Text) = session.accessToken
-  accessTokenEncrypted <- accessTokenEncryptedMaybe & fromMaybeM (InvalidRequest "DigiLocker session not authorized. Access token missing.")
+  accessTokenEncrypted <- accessTokenEncryptedMaybe & fromMaybeM DigiLockerMissingAccessToken
   logInfo $ "PullDocument - Before decryption, accessToken encrypted (first 20 chars): " <> T.take 20 (unEncrypted accessTokenEncrypted.encrypted) <> ", hash: " <> show accessTokenEncrypted.hash
   accessToken <- decrypt accessTokenEncrypted
   logInfo $ "PullDocument - After decryption, accessToken (plain, first 20 chars): " <> T.take 20 accessToken <> "..."
