@@ -27,6 +27,7 @@ import Control.Applicative (liftA2, (<|>))
 import qualified Data.Text as T
 import Data.Time (nominalDay)
 import Data.Tuple.Extra (both)
+import qualified Domain.Action.Dashboard.Management.Driver as UnlinkDL
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VC
 import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
 import qualified Domain.Types.DocumentVerificationConfig as DTO
@@ -58,6 +59,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
+import qualified Storage.Cac.TransporterConfig as DTC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as QODC
 import qualified Storage.Queries.DriverInformation as DriverInfo
@@ -66,6 +68,7 @@ import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
+import qualified Tools.Analytics as Analytics
 import qualified Tools.DriverBackgroundVerification as DriverBackgroundVerification
 import Tools.Error
 import qualified Tools.Ticket as TT
@@ -167,9 +170,12 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
         mdriverLicense <- Query.findByDLNumber driverLicenseNumber
         case mdriverLicense of
           Just driverLicense -> do
-            unless (driverLicense.driverId == personId) $ throwImageError imageId1 DLAlreadyLinked
-            unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-            when (driverLicense.verificationStatus == Documents.VALID) $ throwError DLAlreadyUpdated
+            when (driverLicense.driverId /= personId) $
+              if fromMaybe False documentVerificationConfig.allowLicenseTransfer
+                then unlinkDLFromDriver driverLicense.driverId transporterConfig
+                else throwImageError imageId1 DLAlreadyLinked
+            unless (driverLicense.licenseExpiry > now || fromMaybe False documentVerificationConfig.allowLicenseTransfer) $ throwImageError imageId1 DLAlreadyUpdated
+            when (driverLicense.verificationStatus == Documents.VALID && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer)) $ throwError DLAlreadyUpdated
             if documentVerificationConfig.doStrictVerifcation
               then do
                 when (driverLicense.verificationStatus == Documents.INVALID) $ throwError DLInvalid
@@ -194,6 +200,11 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
       unless (imageMetadata.imageType == DTO.DriverLicense) $
         throwError (ImageInvalidType (show DTO.DriverLicense) "")
       S3.get $ T.unpack imageMetadata.s3Path
+
+    unlinkDLFromDriver :: Id Person.Person -> DTC.TransporterConfig -> Flow ()
+    unlinkDLFromDriver pId transporterConfig = do
+      Query.deleteByDriverId pId
+      Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig (cast pId) False (Just False)
 
     mkTicket description tConfig =
       Ticket.CreateTicketReq

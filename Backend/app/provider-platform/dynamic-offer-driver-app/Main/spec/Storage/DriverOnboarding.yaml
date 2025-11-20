@@ -466,6 +466,7 @@ DocumentVerificationConfig:
     documentCategory: Maybe DocumentCategory
     applicableTo: DocumentApplicableType
     documentFields: Maybe [FieldInfo]
+    allowLicenseTransfer: Maybe Bool
   default:
     order: "0"
     doStrictVerifcation: "true"
