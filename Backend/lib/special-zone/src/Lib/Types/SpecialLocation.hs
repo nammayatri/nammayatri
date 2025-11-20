@@ -64,6 +64,7 @@ data SpecialLocationType
 data Area
   = Pickup (Id SpecialLocation)
   | Drop (Id SpecialLocation)
+  | PickupDrop (Id SpecialLocation) (Id SpecialLocation)
   | Default
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (ToSchema, ToJSON)
@@ -89,14 +90,25 @@ instance Read Area where
             ++ [ (Drop (Id $ T.pack r1), "")
                  | r1 <- stripPrefix "Drop_" r
                ]
+            ++ [ ( let (pickupId, dropId) = splitOnUnderscore r1
+                    in (PickupDrop (Id $ T.pack pickupId) (Id $ T.pack dropId), "")
+                 )
+                 | r1 <- stripPrefix "PickupDrop_" r
+               ]
       )
     where
       app_prec = 10
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
+      splitOnUnderscore s =
+        let (x, rest) = break (== '_') s
+         in case rest of
+              ('_' : y) -> (x, y)
+              _ -> (x, "")
 
 instance Show Area where
   show (Pickup specialLocationId) = "Pickup_" <> T.unpack specialLocationId.getId
   show (Drop specialLocationId) = "Drop_" <> T.unpack specialLocationId.getId
+  show (PickupDrop pickupId dropId) = "PickupDrop_" <> T.unpack pickupId.getId <> "_" <> T.unpack dropId.getId
   show Default = "Default"
 
 $(mkBeamInstancesForEnum ''Area)
@@ -106,7 +118,7 @@ instance ToParamSchema Area where
     mempty
       & title ?~ "Area"
       & type_ ?~ OpenApiString
-      & format ?~ "Default,Pickup_<SpecialLocationId>,Drop_<SpecialLocationId>"
+      & format ?~ "Default,Pickup_<SpecialLocationId>,Drop_<SpecialLocationId>,PickupDrop_<PickupSpecialLocationId>_<DropSpecialLocationId>"
 
 instance FromHttpApiData Area where
   parseUrlPiece = parse . T.unpack

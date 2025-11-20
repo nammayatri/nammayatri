@@ -60,14 +60,35 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
   mbPickupSpecialLocation <- mapM (getPickupSpecialLocation merchantOpCityId) =<< QSpecialLocation.findPickupSpecialLocationByLatLong fromLocationLatLong
   mbDropSpecialLocation <- maybe (pure Nothing) (\toLoc -> mapM (getDropSpecialLocation merchantOpCityId) =<< Esq.runInReplica (QSpecialLocation.findSpecialLocationByLatLong' toLoc)) mToLocationLatLong
   case (mbPickupSpecialLocation, mbDropSpecialLocation) of
-    (Just (pickupSpecialLocation, pickupPriority), Just (dropSpecialLocation, dropPriority)) ->
-      if pickupPriority > dropPriority
-        then getDropFareProductsAndSpecialLocationTag dropSpecialLocation $ mkSpecialLocationTag pickupSpecialLocation.category dropSpecialLocation.category "Drop"
-        else getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation $ mkSpecialLocationTag pickupSpecialLocation.category dropSpecialLocation.category "Pickup"
+    (Just (pickupSpecialLocation, pickupPriority), Just (dropSpecialLocation, dropPriority)) -> do
+      mbPickupDropFareProducts <- getPickupDropFareProducts pickupSpecialLocation dropSpecialLocation $ mkSpecialLocationTag pickupSpecialLocation.category dropSpecialLocation.category "None"
+      case mbPickupDropFareProducts of
+        Just pickupDropFareProducts -> return pickupDropFareProducts
+        Nothing -> do
+          if pickupPriority > dropPriority
+            then getDropFareProductsAndSpecialLocationTag dropSpecialLocation $ mkSpecialLocationTag pickupSpecialLocation.category dropSpecialLocation.category "Drop"
+            else getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation $ mkSpecialLocationTag pickupSpecialLocation.category dropSpecialLocation.category "Pickup"
     (Just (pickupSpecialLocation, _), Nothing) -> getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation $ mkSpecialLocationTag pickupSpecialLocation.category "None" "Pickup"
     (Nothing, Just (dropSpecialLocation, _)) -> getDropFareProductsAndSpecialLocationTag dropSpecialLocation $ mkSpecialLocationTag "None" dropSpecialLocation.category "Drop"
     (Nothing, Nothing) -> getDefaultFareProducts
   where
+    getPickupDropFareProducts pickupSpecialLocation dropSpecialLocation specialLocationTag = do
+      let area = SL.PickupDrop pickupSpecialLocation.id dropSpecialLocation.id
+      areaProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory area
+      otherFareProducts <- QFareProduct.findAllUnboundedFareProductForArea merchantOpCityId searchSources area
+      if null areaProducts && null otherFareProducts
+        then return Nothing
+        else do
+          fareProducts <- mapM getBoundedOrDefaultFareProduct areaProducts
+          return $
+            Just $
+              FareProducts
+                { fareProducts,
+                  area,
+                  specialLocationName = Just pickupSpecialLocation.locationName,
+                  specialLocationTag = Just specialLocationTag
+                }
+
     getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation specialLocationTag = do
       let area = SL.Pickup pickupSpecialLocation.id
           specialLocationName = pickupSpecialLocation.locationName
