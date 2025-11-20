@@ -60,3 +60,13 @@ updateOtpByIdForPartnerOrgId (Id rtId) (Id orgId) authValueHash authExpiry = do
           Se.Is BeamRT.createdViaPartnerOrgId $ Se.Eq (Just orgId)
         ]
     ]
+
+updateOtpAndToken :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id RegistrationToken -> Text -> RegToken -> Int -> UTCTime -> m ()
+updateOtpAndToken (Id rtId) newOtp newToken newAttempts now = do
+  updateOneWithKV
+    [ Se.Set BeamRT.authValueHash newOtp,
+      Se.Set BeamRT.token newToken,
+      Se.Set BeamRT.attempts newAttempts,
+      Se.Set BeamRT.updatedAt now
+    ]
+    [Se.Is BeamRT.id (Se.Eq rtId)]

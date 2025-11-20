@@ -20,6 +20,15 @@ mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShif
           nightShiftEnd = nightShiftEnd'
         }
 
+mkBusinessDiscountInfo :: (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Double -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Domain.Types.Estimate.BusinessDiscountInfo)
+mkBusinessDiscountInfo businessDiscount businessDiscountPercentage currency =
+  ((,) <$> businessDiscount <*> businessDiscountPercentage)
+    <&> \(businessDiscount', businessDiscountPercentage') ->
+      DE.BusinessDiscountInfo
+        { businessDiscount = mkPriceWithDefault (Just businessDiscount') currency (round businessDiscount' :: Money),
+          businessDiscountPercentage = businessDiscountPercentage'
+        }
+
 mkTollChargesInfo :: (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Domain.Types.Estimate.TollChargesInfo)
 mkTollChargesInfo tollCharges tollNames currency =
   ((,) <$> tollCharges <*> tollNames)

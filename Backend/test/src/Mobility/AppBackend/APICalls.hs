@@ -110,6 +110,8 @@ logout :: RegToken -> ClientM APISuccess
 sendBusinessEmailVerification :: RegToken -> ClientM APISuccess
 verifyBusinessEmailWithoutAuth :: Reg.VerifyBusinessEmailReq -> ClientM Reg.VerifyBusinessEmailRes
 verifyBusinessEmailWithAuth :: RegToken -> Reg.VerifyBusinessEmailReq -> ClientM Reg.VerifyBusinessEmailRes
+verifyBusinessEmailRedirect :: Text -> ClientM Reg.HTMLResponse
+resendBusinessEmailVerification :: RegToken -> ClientM APISuccess
 appAuth
   :<|> appSignatureAuth
   :<|> appPasswordAuth
@@ -119,7 +121,7 @@ appAuth
   :<|> appGenerateTempAppCode
   :<|> appMakeSignature
   :<|> logout
-  :<|> (sendBusinessEmailVerification :<|> (verifyBusinessEmailWithoutAuth :<|> verifyBusinessEmailWithAuth)) =
+  :<|> (sendBusinessEmailVerification :<|> (verifyBusinessEmailWithoutAuth :<|> verifyBusinessEmailWithAuth) :<|> verifyBusinessEmailRedirect :<|> resendBusinessEmailVerification) =
     client (Proxy :: Proxy Reg.API)
 
 mkAuthReq :: Reg.AuthReq

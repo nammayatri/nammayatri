@@ -493,6 +493,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSel
         status = DEstimate.NEW,
         estimateBreakupList = estimateBreakupList',
         driversLocation = driversLocation,
+        businessDiscountInfo = Nothing, --------fix RITIKA
         nightShiftInfo =
           nightShiftInfo <&> \nightShiftInfo' ->
             DEstimate.NightShiftInfo

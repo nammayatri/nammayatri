@@ -160,6 +160,13 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
   let mbEmailHash = mbEncEmail <&> (.hash)
   let mbBusinessEmailEncrypted = mbEncBusinessEmail <&> unEncrypted . (.encrypted)
   let mbBusinessEmailHash = mbEncBusinessEmail <&> (.hash)
+
+  -- Check if business email is being changed - if yes, reset verification flag
+  let isBusinessEmailChanging = case (mbEncBusinessEmail, person.businessEmail) of
+        (Just newEmail, Just oldEmail) -> newEmail.hash /= oldEmail.hash
+        (Just _, Nothing) -> True -- New business email being added
+        _ -> False
+
   updateWithKV
     ( [Se.Set BeamP.updatedAt now]
         <> [Se.Set BeamP.firstName mbFirstName | isJust mbFirstName]
@@ -174,6 +181,7 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         <> [Se.Set BeamP.clientReactNativeVersion mbRnVersion | isJust mbRnVersion]
         <> [Se.Set BeamP.businessEmailEncrypted mbBusinessEmailEncrypted | isJust mbBusinessEmailEncrypted]
         <> [Se.Set BeamP.businessEmailHash mbBusinessEmailHash | isJust mbBusinessEmailHash]
+        <> [Se.Set BeamP.businessProfileVerified (Just False) | isBusinessEmailChanging] -- Reset verification flag when business email changes
         <> [Se.Set BeamP.clientSdkVersion (versionToText <$> mbClientVersion) | isJust mbClientVersion]
         <> [Se.Set BeamP.clientBundleVersion (versionToText <$> mbBundleVersion) | isJust mbBundleVersion]
         <> [Se.Set BeamP.clientConfigVersion (versionToText <$> mbClientConfigVersion) | isJust mbClientConfigVersion]
