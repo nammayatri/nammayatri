@@ -242,13 +242,12 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
 
         -- Invalidate the Offer List Cache
         case newPaymentFulfillmentStatus of
-          DPayment.FulfillmentSucceeded ->
+          DPayment.FulfillmentSucceeded -> do
             -- If Fulfillment Succeeded post Payment with Offers, then invalidate the Offer List Cache
-            unless (null (fromMaybe [] paymentStatusResponse.offers)) $ do
-              fork "Invalidate Offer List Cache" $ do
-                person <- QPerson.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
-                let merchantOperatingCityId = maybe person.merchantOperatingCityId (cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity) paymentOrder.merchantOperatingCityId
-                invalidateOfferListCache person merchantOperatingCityId (mkPrice (Just paymentOrder.currency) paymentOrder.amount)
+            fork "Invalidate Offer List Cache" $ do
+              person <- QPerson.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
+              let merchantOperatingCityId = maybe person.merchantOperatingCityId (cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity) paymentOrder.merchantOperatingCityId
+              invalidateOfferListCache person merchantOperatingCityId (mkPrice (Just paymentOrder.currency) paymentOrder.amount)
           _ -> pure ()
     _ -> pure ()
   fork "refund notifications" $ do
