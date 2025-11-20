@@ -239,17 +239,17 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
           case paymentService of
             DOrder.FRFSPassPurchase -> Pass.createPassReconEntry paymentStatusResponse domainTransactionId
             _ -> pure ()
-        when (newPaymentFulfillmentStatus /= oldPaymentFulfillmentStatus) $ do
-          -- Invalidate the Offer List Cache
-          case newPaymentFulfillmentStatus of
-            DPayment.FulfillmentSucceeded ->
-              -- If Fulfillment Succeeded post Payment with Offers, then invalidate the Offer List Cache
-              unless (null (fromMaybe [] paymentStatusResponse.offers)) $ do
-                fork "Invalidate Offer List Cache" $ do
-                  person <- QPerson.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
-                  let merchantOperatingCityId = maybe person.merchantOperatingCityId (cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity) paymentOrder.merchantOperatingCityId
-                  invalidateOfferListCache person merchantOperatingCityId (mkPrice (Just paymentOrder.currency) paymentOrder.amount)
-            _ -> pure ()
+
+        -- Invalidate the Offer List Cache
+        case newPaymentFulfillmentStatus of
+          DPayment.FulfillmentSucceeded ->
+            -- If Fulfillment Succeeded post Payment with Offers, then invalidate the Offer List Cache
+            unless (null (fromMaybe [] paymentStatusResponse.offers)) $ do
+              fork "Invalidate Offer List Cache" $ do
+                person <- QPerson.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
+                let merchantOperatingCityId = maybe person.merchantOperatingCityId (cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity) paymentOrder.merchantOperatingCityId
+                invalidateOfferListCache person merchantOperatingCityId (mkPrice (Just paymentOrder.currency) paymentOrder.amount)
+          _ -> pure ()
     _ -> pure ()
   fork "refund notifications" $ do
     when (paymentOrder.paymentFulfillmentStatus /= paymentStatusResponseWithFulfillmentStatus.paymentFulfillmentStatus) $ do
