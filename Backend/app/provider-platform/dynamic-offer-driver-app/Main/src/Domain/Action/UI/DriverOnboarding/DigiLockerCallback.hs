@@ -95,7 +95,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
   -- Step 1: Validate state parameter (if empty, we can't identify driver - set alert)
   when (T.null stateParam) $ do
     logError "DigiLocker callback - Missing required state parameter. Cannot identify driver."
-    throwError $ InvalidRequest "DigiLocker callback received with empty state parameter"
+    throwError DigiLockerEmptyStateParameter
 
   -- Step 2: Handle OAuth error cases (e.g., access_denied)
   whenJust mbError $ \errorCode -> do
@@ -109,16 +109,16 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
         QDV.updateSessionStatus DDV.CONSENT_DENIED (Just errorCode) (Just errorMsg) session.id
         logInfo $ "DigiLocker callback - Updated session status to CONSENT_DENIED for StateId: " <> stateParam
 
-    throwError $ InvalidRequest $ "DigiLocker OAuth Error: " <> errorCode <> " - " <> errorMsg
+    throwError $ DigiLockerOAuthError errorCode errorMsg
 
   -- Step 3: Validate authorization code
-  code <- mbCode & fromMaybeM (InvalidRequest "DigiLocker callback - Missing authorization code")
+  code <- mbCode & fromMaybeM DigiLockerMissingAuthorizationCode
   when (T.null code) $ do
     logError "DigiLocker callback - Authorization code is empty"
-    throwError $ InvalidRequest "DigiLocker callback received with empty authorization code"
+    throwError DigiLockerEmptyAuthorizationCode
 
   -- Step 4: Find session by stateId from DigilockerVerification table
-  session <- QDV.findByStateId stateParam >>= fromMaybeM (InvalidRequest "Invalid or expired state parameter from DigiLocker")
+  session <- QDV.findByStateId stateParam >>= fromMaybeM DigiLockerInvalidStateParameter
   let driverId = session.driverId
   logInfo $ "DigiLocker callback - Found session for DriverId: " <> driverId.getId
 
@@ -132,7 +132,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
 
   unless (transporterConfig.digilockerEnabled == Just True) $ do
     logError $ "DigiLocker callback - DigiLocker not enabled for merchantOpCityId: " <> person.merchantOperatingCityId.getId
-    throwError $ InvalidRequest "DigiLocker verification is not enabled for this merchant operating city"
+    throwError DigiLockerNotEnabled
 
   -- Step 6: Get DigiLocker config and call tokenize API
   digiLockerConfig <- SDDigilocker.getDigiLockerConfig person.merchantOperatingCityId
@@ -168,7 +168,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
       `catchAny` \err -> do
         logError $ "DigiLocker callback - Token API failed. Error: " <> show err
         QDV.updateSessionStatus DDV.FAILED (Just "TOKEN_API_FAILED") (Just $ T.pack $ show err) session.id
-        throwError $ InternalError "Failed to obtain access token from DigiLocker"
+        throwError DigiLockerTokenExchangeFailed
 
   logInfo $
     "DigiLocker callback - Token API success. Access token obtained, scope: "

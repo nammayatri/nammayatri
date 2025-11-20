@@ -41,7 +41,7 @@ getDigiLockerConfig merchantOpCityId = do
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   unless (transporterConfig.digilockerEnabled == Just True) $
-    throwError $ InvalidRequest "DigiLocker not enabled for this merchant"
+    throwError DigiLockerNotEnabled
 
   let serviceName = DMSC.VerificationService Verification.DigiLocker
   merchantServiceConfig <-
@@ -60,6 +60,6 @@ verifyDigiLockerEnabled merchantOpCityId = do
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   unless (fromMaybe False transporterConfig.digilockerEnabled) $
-    throwError $ InvalidRequest "DigiLocker is not enabled for this merchant+city"
+    throwError DigiLockerNotEnabled
 
   logInfo $ "DigiLocker initiate - Verified DigiLocker is enabled for merchantOpCityId: " <> merchantOpCityId.getId

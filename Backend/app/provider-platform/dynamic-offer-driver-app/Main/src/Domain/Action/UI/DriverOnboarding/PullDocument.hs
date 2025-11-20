@@ -78,17 +78,17 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
 
   unless (transporterConfig.digilockerEnabled == Just True) $ do
     logError $ "DigiLocker pull document - DigiLocker not enabled for merchantOpCityId: " <> person.merchantOperatingCityId.getId
-    throwError $ InvalidRequest "DigiLocker verification is not enabled for this merchant operating city"
+    throwError DigiLockerNotEnabled
 
   -- Step 4: Fetch latest DigiLocker session
   latestSession <- QDV.findLatestByDriverId (Just 1) (Just 0) driverId
   session <- case latestSession of
-    [] -> throwError $ InvalidRequest "No active DigiLocker session found. Please initiate DigiLocker first."
+    [] -> throwError DigiLockerNoActiveSession
     (s : _) -> return s
 
   -- Step 5: Verify document type is Driving License
   unless (req.docType == DVC.DriverLicense) $
-    throwError $ InvalidRequest "Only Driving License documents are supported for pull operation"
+    throwError $ DigiLockerUnsupportedDocumentType (show req.docType)
 
   -- Step 6: Verify session is active and within 1 hour
   verifySessionActive session req.docType
@@ -202,12 +202,12 @@ verifySessionActive session docType = do
   -- Check if session is within 1 hour
   when (sessionAge > oneHour) $ do
     updateDocStatusField session.id docType "FAILED" (Just "PULL_DOC_FAILED") (Just "DigiLocker session expired")
-    throwError $ InvalidRequest "DigiLocker session has expired. Please initiate a new session."
+    throwError DigiLockerSessionExpired
 
   -- Check if session has access token (which means it's authorized)
   unless (isJust session.accessToken) $ do
     updateDocStatusField session.id docType "FAILED" (Just "PULL_DOC_FAILED") (Just $ "DigiLocker session is not authorized. Current status: " <> show session.sessionStatus)
-    throwError $ InvalidRequest $ "DigiLocker session is not authorized. Current status: " <> show session.sessionStatus
+    throwError DigiLockerSessionUnauthorized
 
   logInfo $ "PullDocument - Verified session is active and within 1 hour"
 

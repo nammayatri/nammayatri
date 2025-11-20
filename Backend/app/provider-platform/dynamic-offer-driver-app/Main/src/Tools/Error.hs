@@ -1245,6 +1245,18 @@ data DriverOnboardingError
   | DigiLockerVerificationInProgress
   | DigiLockerDocumentsBeingVerified
   | DigiLockerPullRequired
+  | DigiLockerEmptyStateParameter
+  | DigiLockerOAuthError Text Text
+  | DigiLockerMissingAuthorizationCode
+  | DigiLockerEmptyAuthorizationCode
+  | DigiLockerInvalidStateParameter
+  | DigiLockerNotEnabled
+  | DigiLockerTokenExchangeFailed
+  | DigiLockerNoActiveSession
+  | DigiLockerSessionExpired
+  | DigiLockerSessionUnauthorized
+  | DigiLockerMissingAccessToken
+  | DigiLockerUnsupportedDocumentType Text
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1305,6 +1317,18 @@ instance IsBaseError DriverOnboardingError where
     DigiLockerVerificationInProgress -> Just "DigiLocker verification already in progress. Please complete the current session or wait for it to expire."
     DigiLockerDocumentsBeingVerified -> Just "Documents are being verified. Please check status or wait for completion."
     DigiLockerPullRequired -> Just "Some documents require manual pull. Please complete the pull operation or wait for the session to expire."
+    DigiLockerEmptyStateParameter -> Just "DigiLocker callback received with empty state parameter. Cannot identify driver session."
+    DigiLockerOAuthError errorCode errorMsg -> Just $ "DigiLocker OAuth Error: " <> errorCode <> " - " <> errorMsg
+    DigiLockerMissingAuthorizationCode -> Just "DigiLocker callback - Missing authorization code."
+    DigiLockerEmptyAuthorizationCode -> Just "DigiLocker callback received with empty authorization code."
+    DigiLockerInvalidStateParameter -> Just "Invalid or expired state parameter from DigiLocker. Please initiate a new DigiLocker session."
+    DigiLockerNotEnabled -> Just "DigiLocker verification is not enabled for this merchant operating city."
+    DigiLockerTokenExchangeFailed -> Just "Failed to obtain access token from DigiLocker. Please try again."
+    DigiLockerNoActiveSession -> Just "No active DigiLocker session found. Please initiate DigiLocker first."
+    DigiLockerSessionExpired -> Just "DigiLocker session has expired. Please initiate a new session."
+    DigiLockerSessionUnauthorized -> Just "DigiLocker session is not authorized. Please complete the authorization flow."
+    DigiLockerMissingAccessToken -> Just "DigiLocker session not authorized. Access token missing."
+    DigiLockerUnsupportedDocumentType docType -> Just $ "Document type \"" <> docType <> "\" is not supported for DigiLocker pull operation. Only Driving License is supported."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1364,6 +1388,18 @@ instance IsHTTPError DriverOnboardingError where
     DigiLockerVerificationInProgress -> "DIGILOCKER_VERIFICATION_IN_PROGRESS"
     DigiLockerDocumentsBeingVerified -> "DIGILOCKER_DOCUMENTS_BEING_VERIFIED"
     DigiLockerPullRequired -> "DIGILOCKER_PULL_REQUIRED"
+    DigiLockerEmptyStateParameter -> "DIGILOCKER_EMPTY_STATE_PARAMETER"
+    DigiLockerOAuthError _ _ -> "DIGILOCKER_OAUTH_ERROR"
+    DigiLockerMissingAuthorizationCode -> "DIGILOCKER_MISSING_AUTHORIZATION_CODE"
+    DigiLockerEmptyAuthorizationCode -> "DIGILOCKER_EMPTY_AUTHORIZATION_CODE"
+    DigiLockerInvalidStateParameter -> "DIGILOCKER_INVALID_STATE_PARAMETER"
+    DigiLockerNotEnabled -> "DIGILOCKER_NOT_ENABLED"
+    DigiLockerTokenExchangeFailed -> "DIGILOCKER_TOKEN_EXCHANGE_FAILED"
+    DigiLockerNoActiveSession -> "DIGILOCKER_NO_ACTIVE_SESSION"
+    DigiLockerSessionExpired -> "DIGILOCKER_SESSION_EXPIRED"
+    DigiLockerSessionUnauthorized -> "DIGILOCKER_SESSION_UNAUTHORIZED"
+    DigiLockerMissingAccessToken -> "DIGILOCKER_MISSING_ACCESS_TOKEN"
+    DigiLockerUnsupportedDocumentType _ -> "DIGILOCKER_UNSUPPORTED_DOCUMENT_TYPE"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1421,6 +1457,18 @@ instance IsHTTPError DriverOnboardingError where
     DigiLockerVerificationInProgress -> E409
     DigiLockerDocumentsBeingVerified -> E409
     DigiLockerPullRequired -> E409
+    DigiLockerEmptyStateParameter -> E400
+    DigiLockerOAuthError _ _ -> E400
+    DigiLockerMissingAuthorizationCode -> E400
+    DigiLockerEmptyAuthorizationCode -> E400
+    DigiLockerInvalidStateParameter -> E400
+    DigiLockerNotEnabled -> E400
+    DigiLockerTokenExchangeFailed -> E500
+    DigiLockerNoActiveSession -> E400
+    DigiLockerSessionExpired -> E400
+    DigiLockerSessionUnauthorized -> E401
+    DigiLockerMissingAccessToken -> E401
+    DigiLockerUnsupportedDocumentType _ -> E400
 
 instance IsAPIError DriverOnboardingError
 
