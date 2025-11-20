@@ -438,7 +438,7 @@ confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse v
     quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
     integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
     case integratedBppConfig.providerConfig of
-      DIBC.ONDC _ -> do
+      DIBC.ONDC _ | vehicleType == Spec.BUS -> do
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
         merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
         bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
