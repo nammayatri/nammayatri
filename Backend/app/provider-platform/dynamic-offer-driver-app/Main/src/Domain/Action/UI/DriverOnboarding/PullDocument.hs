@@ -377,7 +377,7 @@ diffInYears t1 t2 =
 -- | Convert list of COV texts to Idfy.CovDetail format
 -- DigiLocker provides COVs as [Text], but onVerifyDLHandler expects [Idfy.CovDetail]
 createCovDetails :: [Text] -> [Idfy.CovDetail]
-createCovDetails covs = map createCovDetail covs
+createCovDetails = map createCovDetail
   where
     createCovDetail :: Text -> Idfy.CovDetail
     createCovDetail covText =

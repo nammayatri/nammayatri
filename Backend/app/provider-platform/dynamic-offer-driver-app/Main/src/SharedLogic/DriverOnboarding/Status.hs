@@ -1126,7 +1126,7 @@ getDigilockerResponseCode driverId = do
 getDigilockerDocStatusMap :: Id DP.Person -> Flow (HM.HashMap Text (HM.HashMap Text A.Value))
 getDigilockerDocStatusMap driverId = do
   mbSession <- listToMaybe <$> QDV.findLatestByDriverId (Just 1) (Just 0) driverId
-  pure $ maybe HM.empty parseDocStatus (mbSession <&> (.docStatus))
+  pure $ maybe HM.empty (parseDocStatus . (.docStatus)) mbSession
 
 getResponseCode :: DDVC.DocumentType -> HM.HashMap Text (HM.HashMap Text A.Value) -> Maybe Text
 getResponseCode docType docStatusMap = do
