@@ -72,8 +72,8 @@ postDispatcherUpdateFleetSchedule (mbPersonId, _merchantId) req = do
   depotManager <- B.runInReplica $ QD.findByPersonId personId >>= fromMaybeM (DepotManagerNotFound personId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing person.merchantOperatingCityId BecknSpec.BUS DIBC.MULTIMODAL
   updatedFleetInfo <- OTPRest.getVehicleInfo integratedBPPConfig req.updatedFleetId >>= fromMaybeM (DepotFleetInfoNotFound req.updatedFleetId)
+  sourceFleetInfo <- OTPRest.getVehicleInfo integratedBPPConfig req.sourceFleetId >>= fromMaybeM (DepotFleetInfoNotFound req.sourceFleetId)
   unless depotManager.isAdmin $ do
-    sourceFleetInfo <- OTPRest.getVehicleInfo integratedBPPConfig req.sourceFleetId >>= fromMaybeM (DepotFleetInfoNotFound req.sourceFleetId)
     when (depotManager.depotCode.getId /= sourceFleetInfo.depotName) $ throwError $ DepotManagerDoesNotHaveAccessToFleet depotManager.personId.getId req.sourceFleetId
     when (depotManager.depotCode.getId /= updatedFleetInfo.depotName) $ throwError $ DepotManagerDoesNotHaveAccessToFleet depotManager.personId.getId req.updatedFleetId
   -- =========== validation done ===========
@@ -89,11 +89,11 @@ postDispatcherUpdateFleetSchedule (mbPersonId, _merchantId) req = do
             dispatcherId = personId,
             currentVehicle = req.sourceFleetId,
             replacedVehicle = req.updatedFleetId,
-            driverCode = updatedFleetInfo.driverCode,
-            conductorCode = updatedFleetInfo.conductorCode,
+            driverCode = sourceFleetInfo.driverCode,
+            conductorCode = sourceFleetInfo.conductorCode,
             merchantId = person.merchantId,
             merchantOperatingCityId = person.merchantOperatingCityId,
-            depotId = updatedFleetInfo.depotName,
+            depotId = depotManager.depotCode.getId,
             reasonTag = reasonTag,
             reasonContent = reasonContent,
             createdAt = now,
