@@ -838,6 +838,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         updatedAt = now,
         createdAt = now,
         documentCategory = castDocumentCategory <$> documentCategory,
+        allowLicenseTransfer = Just False,
         ..
       }
   where
