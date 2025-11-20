@@ -13,7 +13,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data DocumentVerificationConfig = DocumentVerificationConfig
-  { applicableTo :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
+  { allowLicenseTransfer :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    applicableTo :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
     checkExpiry :: Kernel.Prelude.Bool,
     checkExtraction :: Kernel.Prelude.Bool,
     dependencyDocumentType :: [Domain.Types.DocumentVerificationConfig.DocumentType],
@@ -114,16 +115,16 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, (Ord), (Read))
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentApplicableType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentApplicableType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentCategory))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentCategory)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FieldType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FieldType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SupportedVehicleClasses))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SupportedVehicleClasses)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VehicleClassCheckType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleClassCheckType)
