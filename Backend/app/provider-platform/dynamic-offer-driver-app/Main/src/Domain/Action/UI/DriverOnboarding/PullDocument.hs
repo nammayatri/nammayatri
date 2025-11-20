@@ -45,6 +45,10 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.DriverOnboarding.Digilocker
+  ( DocStatus (..),
+    docStatusToText,
+  )
 import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -86,6 +90,17 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
     [] -> throwError DigiLockerNoActiveSession
     (s : _) -> return s
 
+  -- Step 4.5: Extract and validate session-scoped merchant IDs
+  -- The session stores the merchant/opCity used during OAuth exchange
+  -- We must use these to prevent cross-tenant data leaks
+  let sessionMerchantId = fromMaybe merchantId session.merchantId
+  let sessionMerchantOpCityId = fromMaybe person.merchantOperatingCityId session.merchantOperatingCityId
+
+  -- Validate that incoming request matches session context
+  when (sessionMerchantId /= merchantId || sessionMerchantOpCityId /= merchantOpCityId) $ do
+    logError $ "PullDocument - Mismatched merchant context. Request: (" <> merchantId.getId <> ", " <> merchantOpCityId.getId <> "), Session: (" <> sessionMerchantId.getId <> ", " <> sessionMerchantOpCityId.getId <> ")"
+    throwError $ InvalidRequest "DigiLocker pull requested with mismatched merchant/city context"
+
   -- Step 5: Verify document type is Driving License
   unless (req.docType == DVC.DriverLicense) $
     throwError $ DigiLockerUnsupportedDocumentType (show req.docType)
@@ -100,8 +115,8 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
   accessToken <- decrypt accessTokenEncrypted
   logInfo $ "PullDocument - After decryption, accessToken (plain, first 20 chars): " <> T.take 20 accessToken <> "..."
 
-  -- Step 8: Get DigiLocker config
-  digiLockerConfig <- DigilockerLockerShared.getDigiLockerConfig person.merchantOperatingCityId
+  -- Step 8: Get DigiLocker config using session-scoped merchantOpCityId
+  digiLockerConfig <- DigilockerLockerShared.getDigiLockerConfig sessionMerchantOpCityId
 
   let orgId = digiLockerConfig.dlOrgId
   -- Step 9: Construct pull request with orgid from config
@@ -115,10 +130,11 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
           }
 
   -- Step 10: Call DigiLocker API to pull the document (with error handling)
+  -- Use session-scoped merchant IDs to ensure correct provider credentials
   mbPullResp <-
     ( do
-        logInfo $ "PullDocument - Calling DigiLocker pull API"
-        pullResp <- Verification.pullDigiLockerDrivingLicense merchantId merchantOpCityId pullReq
+        logInfo $ "PullDocument - Calling DigiLocker pull API with session merchant: " <> sessionMerchantId.getId <> ", opCity: " <> sessionMerchantOpCityId.getId
+        pullResp <- Verification.pullDigiLockerDrivingLicense sessionMerchantId sessionMerchantOpCityId pullReq
         logInfo $ "PullDocument - Successfully pulled DL document, URI: " <> pullResp.uri
         return $ Just pullResp
       )
@@ -131,15 +147,16 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
   pullResp <- mbPullResp & fromMaybeM (InternalError "Pull response is Nothing")
 
   -- Step 11: Fetch and extract DL data from DigiLocker (with error handling)
+  -- Use session-scoped merchant IDs
   mbExtractedResp <-
     ( do
-        logInfo $ "PullDocument - Fetching and extracting DL data"
+        logInfo $ "PullDocument - Fetching and extracting DL data with session merchant: " <> sessionMerchantId.getId <> ", opCity: " <> sessionMerchantOpCityId.getId
         let extractReq =
               DigiTypes.DigiLockerExtractDLReq
                 { accessToken = accessToken,
                   uri = pullResp.uri
                 }
-        extractedResp <- Verification.fetchAndExtractVerifiedDL merchantId merchantOpCityId extractReq
+        extractedResp <- Verification.fetchAndExtractVerifiedDL sessionMerchantId sessionMerchantOpCityId extractReq
         logInfo $ "PullDocument - Successfully extracted DL data"
         return $ Just extractedResp
       )
@@ -152,15 +169,16 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
   extractedResp <- mbExtractedResp & fromMaybeM (InternalError "Extracted response is Nothing")
 
   -- Step 12: Get PDF file from DigiLocker (with error handling)
+  -- Use session-scoped merchant IDs
   mbPdfBytes <-
     ( do
-        logInfo $ "PullDocument - Fetching PDF from DigiLocker"
+        logInfo $ "PullDocument - Fetching PDF from DigiLocker with session merchant: " <> sessionMerchantId.getId <> ", opCity: " <> sessionMerchantOpCityId.getId
         let fileReq =
               DigiTypes.DigiLockerGetFileReq
                 { accessToken = accessToken,
                   uri = pullResp.uri
                 }
-        pdfBytes <- Verification.getDigiLockerFile merchantId merchantOpCityId fileReq
+        pdfBytes <- Verification.getDigiLockerFile sessionMerchantId sessionMerchantOpCityId fileReq
         logInfo $ "PullDocument - Successfully fetched PDF"
         return $ Just pdfBytes
       )
@@ -179,7 +197,8 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
       logInfo $ "PullDocument - Successfully stored DL in database"
 
       -- Step 14: Update docStatus in session to SUCCESS
-      updateDocStatusField session.id req.docType "DOC_SUCCESS" (Just "200") (Just "Driver License verified and stored successfully via pull")
+      -- Use canonical docStatus value via shared helper to ensure consistency
+      updateDocStatusField session.id req.docType (docStatusToText DOC_SUCCESS) (Just "200") (Just "Driver License verified and stored successfully via pull")
       logInfo $ "PullDocument - Successfully completed pull operation for DriverId: " <> driverId.getId
     )
     `catch` \(err :: DigiLockerError.DigiLockerError) -> do
