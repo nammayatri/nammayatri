@@ -140,15 +140,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
 
   -- Step 7: Get DigiLocker config and call tokenize API
   digiLockerConfig <- SDDigilocker.getDigiLockerConfig person.merchantOperatingCityId
-  logInfo $
-    "DigiLocker callback - Loaded DigiLocker config for DriverId: "
-      <> driverId.getId
-      <> ", StateId: "
-      <> stateId
-      <> ", merchantOpCityId: "
-      <> person.merchantOperatingCityId.getId
-      <> ", baseUrl: "
-      <> show digiLockerConfig.url
+  logInfo $ "DigiLocker callback - Loaded DigiLocker config for DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", merchantOpCityId: " <> person.merchantOperatingCityId.getId <> ", baseUrl: " <> show digiLockerConfig.url
 
   let tokenReq =
         InterfaceTypes.TokenizationReq
@@ -167,14 +159,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
             redirectUri = digiLockerConfig.redirectUri
           }
 
-  logInfo $
-    "DigiLocker callback - Calling Tokenize.tokenize for DriverId: "
-      <> driverId.getId
-      <> ", StateId: "
-      <> stateId
-      <> ", codeVerifier present: "
-      <> show (isJust tokenReq.codeVerifier)
-      <> ", state: present"
+  logInfo $ "DigiLocker callback - Calling Tokenize.tokenize for DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", codeVerifier present: " <> show (isJust tokenReq.codeVerifier) <> ", state: present"
   tokenResp <-
     Tokenize.tokenize (InterfaceTypes.DigilockerTokenizationServiceConfig tokenizeConfig) tokenReq
       `catchAny` \err -> do
@@ -182,13 +167,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
         QDV.updateSessionStatus DDV.FAILED (Just "TOKEN_API_FAILED") (Just $ T.pack $ show err) session.id
         throwError $ InternalError "Failed to obtain access token from DigiLocker"
 
-  logInfo $
-    "DigiLocker callback - Token API success for DriverId: "
-      <> driverId.getId
-      <> ", StateId: "
-      <> stateId
-      <> ". Access token obtained, scope: "
-      <> show tokenResp.scope
+  logInfo $ "DigiLocker callback - Token API success for DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ". Access token obtained, scope: " <> show tokenResp.scope
 
   -- Step 8: Update session with access token, scope, and expiry
   let accessToken = tokenResp.token
@@ -464,34 +443,10 @@ processIssuedDocument session person accessToken docType uri = do
                     { accessToken = accessToken,
                       uri = uri
                     }
-            logInfo $
-              "DigiLocker - DriverId: "
-                <> driverId.getId
-                <> ", StateId: "
-                <> stateId
-                <> ", Calling getDigiLockerFile with uri: "
-                <> uri
-                <> ", merchantOpCityId: "
-                <> person.merchantOperatingCityId.getId
-            logInfo $
-              "DigiLocker - DriverId: "
-                <> driverId.getId
-                <> ", StateId: "
-                <> stateId
-                <> ", getDigiLockerFile input: merchantId="
-                <> person.merchantId.getId
-                <> ", merchantOpCityId="
-                <> person.merchantOperatingCityId.getId
-                <> ", uri="
-                <> uri
+            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling getDigiLockerFile with uri: " <> uri <> ", merchantOpCityId: " <> person.merchantOperatingCityId.getId
+            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", getDigiLockerFile input: merchantId=" <> person.merchantId.getId <> ", merchantOpCityId=" <> person.merchantOperatingCityId.getId <> ", uri=" <> uri
             pdfBytes <- Verification.getDigiLockerFile person.merchantId person.merchantOperatingCityId fileReq
-            logInfo $
-              "DigiLocker - DriverId: "
-                <> driverId.getId
-                <> ", StateId: "
-                <> stateId
-                <> ", getDigiLockerFile output bytes: "
-                <> show (BSL.length pdfBytes)
+            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", getDigiLockerFile output bytes: " <> show (BSL.length pdfBytes)
             logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully fetched PDF for " <> show docType
             return $ Just pdfBytes
         )
@@ -513,13 +468,7 @@ processIssuedDocument session person accessToken docType uri = do
                   DigiTypes.DigiLockerExtractAadhaarReq
                     { accessToken = accessToken
                     }
-            logInfo $
-              "DigiLocker - DriverId: "
-                <> driverId.getId
-                <> ", StateId: "
-                <> stateId
-                <> ", Calling getVerifiedAadhaarXML for merchantOpCityId: "
-                <> person.merchantOperatingCityId.getId
+            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling getVerifiedAadhaarXML for merchantOpCityId: " <> person.merchantOperatingCityId.getId
             xmlText <- Verification.getVerifiedAadhaarXML person.merchantId person.merchantOperatingCityId extractReq
             logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully fetched Aadhaar XML"
             return $ Just xmlText
@@ -544,13 +493,7 @@ processIssuedDocument session person accessToken docType uri = do
                   DigiTypes.DigiLockerExtractAadhaarReq
                     { accessToken = accessToken
                     }
-            logInfo $
-              "DigiLocker - DriverId: "
-                <> driverId.getId
-                <> ", StateId: "
-                <> stateId
-                <> ", Calling fetchAndExtractVerifiedAadhaar for merchantOpCityId: "
-                <> person.merchantOperatingCityId.getId
+            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedAadhaar for merchantOpCityId: " <> person.merchantOperatingCityId.getId
             extractedResp <- Verification.fetchAndExtractVerifiedAadhaar person.merchantId person.merchantOperatingCityId extractReq
             logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully extracted Aadhaar data"
             return $ Just (ExtractedAadhaar extractedResp)
@@ -569,15 +512,7 @@ processIssuedDocument session person accessToken docType uri = do
                   { accessToken = accessToken,
                     uri = uri
                   }
-          logInfo $
-            "DigiLocker - DriverId: "
-              <> driverId.getId
-              <> ", StateId: "
-              <> stateId
-              <> ", Calling fetchAndExtractVerifiedPan with uri: "
-              <> uri
-              <> ", merchantOpCityId: "
-              <> person.merchantOperatingCityId.getId
+          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedPan with uri: " <> uri <> ", merchantOpCityId: " <> person.merchantOperatingCityId.getId
           extractedResp <- Verification.fetchAndExtractVerifiedPan person.merchantId person.merchantOperatingCityId extractReq
           logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully extracted PAN data"
           return $ Just (ExtractedPan extractedResp)
@@ -595,15 +530,7 @@ processIssuedDocument session person accessToken docType uri = do
                   { accessToken = accessToken,
                     uri = uri
                   }
-          logInfo $
-            "DigiLocker - DriverId: "
-              <> driverId.getId
-              <> ", StateId: "
-              <> stateId
-              <> ", Calling fetchAndExtractVerifiedDL with uri: "
-              <> uri
-              <> ", merchantOpCityId: "
-              <> person.merchantOperatingCityId.getId
+          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedDL with uri: " <> uri <> ", merchantOpCityId: " <> person.merchantOperatingCityId.getId
           extractedResp <- Verification.fetchAndExtractVerifiedDL person.merchantId person.merchantOperatingCityId extractReq
           logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully extracted DL data"
           return $ Just (ExtractedDL extractedResp)
