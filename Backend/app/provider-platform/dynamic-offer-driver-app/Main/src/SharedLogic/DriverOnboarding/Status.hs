@@ -48,6 +48,7 @@ import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
@@ -93,7 +94,8 @@ data StatusRes' = StatusRes'
     manualVerificationRequired :: Maybe Bool,
     driverLicenseDetails :: Maybe [DLDetails],
     vehicleRegistrationCertificateDetails :: Maybe [RCDetails],
-    digilockerResponseCode :: Maybe Text
+    digilockerResponseCode :: Maybe Text,
+    digilockerAuthorizationUrl :: Maybe Text
   }
 
 data VehicleDocumentItem = VehicleDocumentItem
@@ -257,6 +259,12 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC
 
   digilockerResponseCode <- getDigilockerResponseCode personId
 
+  -- Get DigiLocker authorization URL if there's a pending session
+  digilockerAuthorizationUrl <-
+    if transporterConfig.digilockerEnabled == Just True
+      then SDDigilocker.getDigiLockerAuthorizationUrl personId
+      else pure Nothing
+
   return $
     StatusRes'
       { driverDocuments,
@@ -265,7 +273,8 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC
         manualVerificationRequired = transporterConfig.requiresOnboardingInspection,
         driverLicenseDetails = dlDetails,
         vehicleRegistrationCertificateDetails = rcDetails,
-        digilockerResponseCode = digilockerResponseCode
+        digilockerResponseCode = digilockerResponseCode,
+        digilockerAuthorizationUrl = digilockerAuthorizationUrl
       }
   where
     getVehicleDocuments allDocumentVerificationConfigs driverDocuments role vehicleDocumentsUnverified requiresOnboardingInspection = do

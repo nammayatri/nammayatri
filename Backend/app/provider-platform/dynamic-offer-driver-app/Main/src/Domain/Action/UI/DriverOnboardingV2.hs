@@ -4,12 +4,9 @@ import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
 import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
-import qualified Crypto.Hash as Hash
 import Crypto.Random (getRandomBytes)
 import Data.Aeson (Value (..), object)
 import qualified Data.Aeson.KeyMap as HM
-import qualified Data.ByteArray as BA
-import qualified Data.ByteString.Base64 as B64
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -48,7 +45,6 @@ import Kernel.External.Encryption
 import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (Language (..), ServiceFlow)
-import qualified Kernel.External.Verification.Digilocker.Types as DigilockerTypes
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.External.Verification.Interface.Types as Verification
 import qualified Kernel.Prelude
@@ -60,9 +56,15 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Network.HTTP.Types.URI as URI
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
+import SharedLogic.DriverOnboarding.Digilocker
+  ( base64UrlEncodeNoPadding,
+    constructDigiLockerAuthUrl,
+    generateCodeChallenge,
+    getDigiLockerConfig,
+    verifyDigiLockerEnabled,
+  )
 import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
@@ -1148,7 +1150,7 @@ postDriverDigilockerInitiate (mbDriverId, merchantId, merchantOpCityId) req = do
     throwError $ InvalidRequest $ "Vehicle category must be one of: auto, car, or bike. Received: " <> show req.vehicleCategory
 
   -- Step 1: Verify DigiLocker is enabled for this merchant+city
-  DigilockerLockerShared.verifyDigiLockerEnabled merchantOpCityId
+  verifyDigiLockerEnabled merchantOpCityId
 
   -- Step 2: Check for existing active session
   latestSession <- QDV.findLatestByDriverId (Just 1) (Just 0) driverId
@@ -1316,7 +1318,7 @@ createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory 
   logInfo $ "DigiLocker initiate - Creating new session for DriverId: " <> driverId.getId <> ", VehicleCategory: " <> show vehicleCategory
 
   -- Fetch DigiLocker credentials from MerchantServiceConfig
-  digiLockerConfig <- DigilockerLockerShared.getDigiLockerConfig merchantOpCityId
+  digiLockerConfig <- getDigiLockerConfig merchantOpCityId
   logInfo $ "DigiLocker initiate - Config retrieved for merchantOpCityId: " <> merchantOpCityId.getId
 
   -- Generate PKCE parameters
@@ -1381,50 +1383,6 @@ hasDocWithStatus (Object obj) targetStatus =
         _ -> False
     hasStatus _ _ = False
 hasDocWithStatus _ _ = False
-
--- Helper: Base64URL encode without padding (as per RFC 7636)
--- Implements: base64url_encode_without_padding
-base64UrlEncodeNoPadding :: ByteString -> Text
-base64UrlEncodeNoPadding bytes =
-  let base64Encoded = B64.encode bytes
-      base64Text = TE.decodeUtf8 base64Encoded
-      -- Convert Base64 to Base64URL: replace + with -, / with _, and remove padding =
-      base64UrlText = T.replace "+" "-" $ T.replace "/" "_" $ T.replace "=" "" base64Text
-   in base64UrlText
-
--- Helper: Generate code_challenge from code_verifier using SHA256 and Base64URL encoding
--- Implements: code_challenge = base64_url_encode_without_padding(sha256(code_verifier))
-generateCodeChallenge :: Text -> Text
-generateCodeChallenge codeVerifier =
-  let verifierBytes = TE.encodeUtf8 codeVerifier
-      digest = Hash.hashWith Hash.SHA256 verifierBytes
-      hashBytes = BA.convert digest :: ByteString
-   in base64UrlEncodeNoPadding hashBytes
-
--- Helper: Construct DigiLocker authorization URL with all required parameters
-constructDigiLockerAuthUrl :: DigilockerTypes.DigiLockerCfg -> Text -> Text -> Text
-constructDigiLockerAuthUrl config digiLockerState codeChallenge =
-  let baseUrl = Kernel.Prelude.showBaseUrl config.url
-      authPath = "/public/oauth2/1/authorize"
-      params =
-        [ ("response_type", "code"),
-          ("client_id", config.clientId),
-          ("redirect_uri", config.redirectUri),
-          ("state", digiLockerState),
-          ("code_challenge", codeChallenge),
-          ("code_challenge_method", config.codeChallengeMethod),
-          ("pla", "Y"),
-          ("plsignup", "Y"),
-          ("ulsignup", "Y"),
-          ("purpose", "verification")
-        ]
-      queryString = T.intercalate "&" $ map (\(k, v) -> k <> "=" <> encodeURIComponent v) params
-   in baseUrl <> authPath <> "?" <> queryString
-  where
-    -- URL encode text for query parameters
-    encodeURIComponent :: Text -> Text
-    encodeURIComponent txt =
-      TE.decodeUtf8 $ URI.urlEncode True $ TE.encodeUtf8 txt
 
 ----------- PULL DOCUMENTS FROM DIGILOCKER -----------
 
