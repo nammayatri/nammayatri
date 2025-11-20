@@ -16,6 +16,7 @@ import qualified Domain.Types.DigilockerVerification as DDV
 import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverPanCard as DPC
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleCategory as VehicleCategory
@@ -385,6 +386,17 @@ processDocuments session person _digiLockerConfig accessToken parsedDocs unavail
   let stateId = session.stateId
   logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Starting document processing for " <> show (length unavailableDocs) <> " documents"
 
+  -- Extract merchant/city from session (source of truth for OAuth flow)
+  let sessionMerchantId = session.merchantId
+  let sessionMerchantOpCityId = session.merchantOperatingCityId
+
+  -- Validate that session context matches person (prevent drift/replay)
+  when (sessionMerchantId /= person.merchantId || sessionMerchantOpCityId /= person.merchantOperatingCityId) $ do
+    logError $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Mismatched merchant/city context. Session: merchantId=" <> sessionMerchantId.getId <> ", merchantOpCityId=" <> sessionMerchantOpCityId.getId <> ", Person: merchantId=" <> person.merchantId.getId <> ", merchantOpCityId=" <> person.merchantOperatingCityId.getId
+    throwError $ InvalidRequest "DigiLocker callback received with mismatched merchant/city context"
+
+  logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Validated session context: merchantId=" <> sessionMerchantId.getId <> ", merchantOpCityId=" <> sessionMerchantOpCityId.getId
+
   -- Process each unavailable document type independently with error handling
   forM_ unavailableDocs $ \docType -> do
     -- Wrap each document processing in try-catch to ensure failures are independent
@@ -405,7 +417,7 @@ processDocuments session person _digiLockerConfig accessToken parsedDocs unavail
                 logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Marked " <> show docType <> " as CONSENT_DENIED"
               Issued uri -> do
                 -- Process issued document - fetch and verify
-                processIssuedDocument session person accessToken docType uri
+                processIssuedDocument session person sessionMerchantId sessionMerchantOpCityId accessToken docType uri
       )
       `catchAny` \err -> do
         -- If processing this document fails, log and mark as failed, but continue with other documents
@@ -416,14 +428,17 @@ processDocuments session person _digiLockerConfig accessToken parsedDocs unavail
 
 -- | Process a single issued document - fetch file (PDF), extract data (XML), and verify
 -- This function has internal error handling to ensure each API call is tried independently
+-- Uses session's merchant/city for all DigiLocker API calls to maintain OAuth flow integrity
 processIssuedDocument ::
   DDV.DigilockerVerification ->
   DP.Person ->
+  Id DM.Merchant -> -- session merchant ID (source of truth)
+  Id DMOC.MerchantOperatingCity -> -- session merchant operating city ID (source of truth)
   Text -> -- access token
   DVC.DocumentType ->
   Text -> -- URI
   Flow ()
-processIssuedDocument session person accessToken docType uri = do
+processIssuedDocument session person sessionMerchantId sessionMerchantOpCityId accessToken docType uri = do
   let driverId = session.driverId
   let stateId = session.stateId
   logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Processing issued document: " <> show docType <> ", URI: " <> uri
@@ -443,9 +458,9 @@ processIssuedDocument session person accessToken docType uri = do
                     { accessToken = accessToken,
                       uri = uri
                     }
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling getDigiLockerFile with uri: " <> uri <> ", merchantOpCityId: " <> person.merchantOperatingCityId.getId
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", getDigiLockerFile input: merchantId=" <> person.merchantId.getId <> ", merchantOpCityId=" <> person.merchantOperatingCityId.getId <> ", uri=" <> uri
-            pdfBytes <- Verification.getDigiLockerFile person.merchantId person.merchantOperatingCityId fileReq
+            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling getDigiLockerFile with uri: " <> uri <> ", merchantOpCityId: " <> sessionMerchantOpCityId.getId
+            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", getDigiLockerFile input: merchantId=" <> sessionMerchantId.getId <> ", merchantOpCityId=" <> sessionMerchantOpCityId.getId <> ", uri=" <> uri
+            pdfBytes <- Verification.getDigiLockerFile sessionMerchantId sessionMerchantOpCityId fileReq
             logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", getDigiLockerFile output bytes: " <> show (BSL.length pdfBytes)
             logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully fetched PDF for " <> show docType
             return $ Just pdfBytes
@@ -468,8 +483,8 @@ processIssuedDocument session person accessToken docType uri = do
                   DigiTypes.DigiLockerExtractAadhaarReq
                     { accessToken = accessToken
                     }
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling getVerifiedAadhaarXML for merchantOpCityId: " <> person.merchantOperatingCityId.getId
-            xmlText <- Verification.getVerifiedAadhaarXML person.merchantId person.merchantOperatingCityId extractReq
+            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling getVerifiedAadhaarXML for merchantOpCityId: " <> sessionMerchantOpCityId.getId
+            xmlText <- Verification.getVerifiedAadhaarXML sessionMerchantId sessionMerchantOpCityId extractReq
             logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully fetched Aadhaar XML"
             return $ Just xmlText
         )
@@ -493,8 +508,8 @@ processIssuedDocument session person accessToken docType uri = do
                   DigiTypes.DigiLockerExtractAadhaarReq
                     { accessToken = accessToken
                     }
-            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedAadhaar for merchantOpCityId: " <> person.merchantOperatingCityId.getId
-            extractedResp <- Verification.fetchAndExtractVerifiedAadhaar person.merchantId person.merchantOperatingCityId extractReq
+            logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedAadhaar for merchantOpCityId: " <> sessionMerchantOpCityId.getId
+            extractedResp <- Verification.fetchAndExtractVerifiedAadhaar sessionMerchantId sessionMerchantOpCityId extractReq
             logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully extracted Aadhaar data"
             return $ Just (ExtractedAadhaar extractedResp)
         )
@@ -512,8 +527,8 @@ processIssuedDocument session person accessToken docType uri = do
                   { accessToken = accessToken,
                     uri = uri
                   }
-          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedPan with uri: " <> uri <> ", merchantOpCityId: " <> person.merchantOperatingCityId.getId
-          extractedResp <- Verification.fetchAndExtractVerifiedPan person.merchantId person.merchantOperatingCityId extractReq
+          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedPan with uri: " <> uri <> ", merchantOpCityId: " <> sessionMerchantOpCityId.getId
+          extractedResp <- Verification.fetchAndExtractVerifiedPan sessionMerchantId sessionMerchantOpCityId extractReq
           logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully extracted PAN data"
           return $ Just (ExtractedPan extractedResp)
       )
@@ -530,8 +545,8 @@ processIssuedDocument session person accessToken docType uri = do
                   { accessToken = accessToken,
                     uri = uri
                   }
-          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedDL with uri: " <> uri <> ", merchantOpCityId: " <> person.merchantOperatingCityId.getId
-          extractedResp <- Verification.fetchAndExtractVerifiedDL person.merchantId person.merchantOperatingCityId extractReq
+          logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Calling fetchAndExtractVerifiedDL with uri: " <> uri <> ", merchantOpCityId: " <> sessionMerchantOpCityId.getId
+          extractedResp <- Verification.fetchAndExtractVerifiedDL sessionMerchantId sessionMerchantOpCityId extractReq
           logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Successfully extracted DL data"
           return $ Just (ExtractedDL extractedResp)
       )
