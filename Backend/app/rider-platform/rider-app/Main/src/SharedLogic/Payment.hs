@@ -233,12 +233,13 @@ orderStatusHandler paymentService paymentOrder paymentStatusResponse = do
               _ -> finalPaymentStatusResponse
           Left _ -> finalPaymentStatusResponse
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
-    Right (newPaymentFulfillmentStatus, _, Just domainTransactionId) -> do
+    Right (newPaymentFulfillmentStatus, _, domainTransactionId) -> do
       whenJust paymentOrder.paymentFulfillmentStatus $ \oldPaymentFulfillmentStatus -> do
-        when (newPaymentFulfillmentStatus == DPayment.FulfillmentSucceeded && newPaymentFulfillmentStatus /= oldPaymentFulfillmentStatus) $ do
-          case paymentService of
-            DOrder.FRFSPassPurchase -> Pass.createPassReconEntry paymentStatusResponse domainTransactionId
-            _ -> pure ()
+        whenJust domainTransactionId $ \transactionId -> do
+          when (newPaymentFulfillmentStatus == DPayment.FulfillmentSucceeded && newPaymentFulfillmentStatus /= oldPaymentFulfillmentStatus) $ do
+            case paymentService of
+              DOrder.FRFSPassPurchase -> Pass.createPassReconEntry paymentStatusResponse transactionId
+              _ -> pure ()
 
         -- Invalidate the Offer List Cache
         case newPaymentFulfillmentStatus of
