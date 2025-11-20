@@ -241,7 +241,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
         -- Pass only routeCodes which don't have route.buses and also don't serve our source stop
         let routesWithoutBuses = map (.routeId) $ filter (\route -> null route.buses) allRouteWithBuses
         let routesWithoutLiveTimings = filter (`notElem` liveRouteCodes) routeCodes
-        logDebug $ "allRouteWithBuses: " <> show (length allRouteWithBuses) <> " flattenedLiveRouteStopTimes: " <> show (length flattenedLiveRouteStopTimes)
+        logDebug $ "allRouteWithBuses: " <> show (length allRouteWithBuses) <> " flattenedLiveRouteStopTimes: " <> show flattenedLiveRouteStopTimes
         return (flattenedLiveRouteStopTimes, nub $ routesWithoutLiveTimings ++ routesWithoutBuses)
       else do
         return ([], routeCodes)
@@ -477,6 +477,15 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           )
           tierWithEarliest
   let groupedByTierReordered = map snd sortedTierGroups
+  let tierSummary =
+        map
+          ( \timingsForTier ->
+              let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
+                  routeCodesForTier = nub $ map (.routeCode) timingsForTier
+               in (serviceTierType, routeCodesForTier)
+          )
+          groupedByTierReordered
+  logDebug $ "findPossibleRoutes: groupedByTierReordered summary = " <> show tierSummary
   let serviceTierAlternatesMap :: M.Map Spec.ServiceTierType [Text] =
         M.fromList $
           map

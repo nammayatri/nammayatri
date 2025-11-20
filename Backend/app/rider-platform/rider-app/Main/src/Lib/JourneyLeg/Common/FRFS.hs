@@ -349,8 +349,21 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
           let endStationCode = (NE.last fareRouteDetails).endStopCode
           (_, possibleRoutes, _) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfig merchant.id merchantOperatingCity.id Enums.BUS True False False
           let selectedFareRouteCodes = mapMaybe (.routeCode) routeDetails
+          logDebug $ "filterAvailableBuses: selectedFareRouteCodes = " <> show selectedFareRouteCodes
+          logDebug $ "filterAvailableBuses: possibleRoutes count = " <> show (length possibleRoutes) <> ", details = " <> show (map (\r -> (r.serviceTier, map (.routeCode) r.availableRoutesInfo)) possibleRoutes)
+          let routeFilterResults =
+                map
+                  ( \route ->
+                      let routeCodes = map (.routeCode) route.availableRoutesInfo
+                          passesFilter = all (\rd -> rd `elem` routeCodes) selectedFareRouteCodes
+                       in (route.serviceTier, routeCodes, passesFilter)
+                  )
+                  possibleRoutes
+          logDebug $ "filterAvailableBuses: route filter analysis = " <> show routeFilterResults
           let possibleServiceTiers = map (.serviceTier) $ filter (\route -> all (\rd -> rd `elem` map (.routeCode) route.availableRoutesInfo) selectedFareRouteCodes) possibleRoutes
+          logDebug $ "filterAvailableBuses: final possibleServiceTiers = " <> show possibleServiceTiers
           let filteredFares = filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares
+          logDebug $ "filterAvailableBuses: returning possibleServiceTiers = " <> show possibleServiceTiers <> ", filteredFares count = " <> show (length filteredFares)
           return ((Just possibleServiceTiers, filteredFares), Just possibleRoutes)
         _ -> return ((Nothing, fares), Nothing)
 
