@@ -27,7 +27,6 @@ import Control.Applicative (liftA2, (<|>))
 import qualified Data.Text as T
 import Data.Time (nominalDay)
 import Data.Tuple.Extra (both)
--- import qualified Domain.Action.Dashboard.Management.Driver as UnlinkDL
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VC
 import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
 import qualified Domain.Types.DocumentVerificationConfig as DTO
@@ -67,7 +66,6 @@ import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
--- import qualified SharedLogic.Analytics as Analytics
 import qualified Tools.DriverBackgroundVerification as DriverBackgroundVerification
 import Tools.Error
 import qualified Tools.Ticket as TT
@@ -171,8 +169,9 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
           Just driverLicense -> do
             when (driverLicense.driverId /= personId) $
               if fromMaybe False documentVerificationConfig.allowLicenseTransfer
-                then unlinkDLFromDriver driverLicense.driverId
-                else throwImageError imageId1 DLAlreadyLinked
+                then pure ()
+                else -- unlinkDLFromDriver driverLicense.driverId
+                  throwImageError imageId1 DLAlreadyLinked
             unless (driverLicense.licenseExpiry > now || fromMaybe False documentVerificationConfig.allowLicenseTransfer) $ throwImageError imageId1 DLAlreadyUpdated
             when (driverLicense.verificationStatus == Documents.VALID && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer)) $ throwError DLAlreadyUpdated
             if documentVerificationConfig.doStrictVerifcation
@@ -200,10 +199,10 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
         throwError (ImageInvalidType (show DTO.DriverLicense) "")
       S3.get $ T.unpack imageMetadata.s3Path
 
-    unlinkDLFromDriver :: Id Person.Person -> Flow ()
-    unlinkDLFromDriver pId = do
-      Query.deleteByDriverId pId
-      DriverInfo.updateEnabledVerifiedState (cast pId) False (Just False)
+    -- unlinkDLFromDriver :: Id Person.Person -> Flow ()
+    -- unlinkDLFromDriver pId = do
+    --   Query.deleteByDriverId pId
+    --   DriverInfo.updateEnabledVerifiedState (cast pId) False (Just False)
 
     mkTicket description tConfig =
       Ticket.CreateTicketReq
