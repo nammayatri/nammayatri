@@ -61,7 +61,20 @@ data FareParameters = FareParameters
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     conditionalCharges :: [DAC.ConditionalCharges],
     shouldApplyBusinessDiscount :: Bool,
-    driverCancellationPenaltyAmount :: Maybe HighPrecMoney
+    driverCancellationPenaltyAmount :: Maybe HighPrecMoney,
+    -- | Payment processing fee (blended or method-specific)
+    -- TODO: Will be enhanced when payment context is available
+    paymentProcessingFee :: Maybe HighPrecMoney,
+    -- | VAT charge calculated based on vat_charge_config in fare_policy
+    -- Populated by calculateFareParametersV2. Included in pureFareSum.
+    rideVat :: Maybe HighPrecMoney,
+    -- | VAT on toll charges calculated based on toll_tax_charge_config in fare_policy
+    -- Populated by calculateFareParametersV2. Included in pureFareSum.
+    tollVat :: Maybe HighPrecMoney,
+    -- | Commission calculated based on commission_charge_config in fare_policy
+    -- Populated by calculateFareParametersV2.
+    -- NOTE: Commission is stored for breakdown/transparency but NOT included in pureFareSum (as per PRD).
+    commission :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
