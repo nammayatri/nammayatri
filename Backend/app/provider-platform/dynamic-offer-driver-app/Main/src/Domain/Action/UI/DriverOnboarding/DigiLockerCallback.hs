@@ -107,19 +107,35 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
     let errorMsg = fromMaybe "Unknown OAuth error" mbErrorDescription
     logError $ "DigiLocker OAuth Error - Code: " <> errorCode <> ", Description: " <> errorMsg <> driverIdStr
 
-    -- Update session status to CONSENT_DENIED if error is access_denied
-    when (errorCode == "access_denied") $ do
-      whenJust mbSession $ \session -> do
-        QDV.updateSessionStatus DDV.CONSENT_DENIED (Just errorCode) (Just errorMsg) session.id
-        logInfo $ "DigiLocker callback - Updated session status to CONSENT_DENIED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId
+    -- Update session status based on error type
+    whenJust mbSession $ \session -> do
+      if errorCode == "access_denied"
+        then do
+          QDV.updateSessionStatus DDV.CONSENT_DENIED (Just errorCode) (Just errorMsg) session.id
+          logInfo $ "DigiLocker callback - Updated session status to CONSENT_DENIED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId
+        else do
+          QDV.updateSessionStatus DDV.FAILED (Just errorCode) (Just errorMsg) session.id
+          logInfo $ "DigiLocker callback - Updated session status to FAILED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", ErrorCode: " <> errorCode
 
     throwError $ InvalidRequest $ "DigiLocker OAuth Error: " <> errorCode <> " - " <> errorMsg
 
   -- Step 4: Validate authorization code
-  code <- mbCode & fromMaybeM (InvalidRequest "DigiLocker callback - Missing authorization code")
-  when (T.null code) $ do
-    logError $ "DigiLocker callback - Authorization code is empty" <> driverIdStr
-    throwError $ InvalidRequest "DigiLocker callback received with empty authorization code"
+  code <- case mbCode of
+    Nothing -> do
+      logError $ "DigiLocker callback - Missing authorization code" <> driverIdStr
+      whenJust mbSession $ \session -> do
+        QDV.updateSessionStatus DDV.FAILED (Just "MISSING_CODE") (Just "DigiLocker callback received without authorization code") session.id
+        logInfo $ "DigiLocker callback - Updated session status to FAILED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", ErrorCode: MISSING_CODE"
+      throwError $ InvalidRequest "DigiLocker callback - Missing authorization code"
+    Just codeVal ->
+      if T.null codeVal
+        then do
+          logError $ "DigiLocker callback - Authorization code is empty" <> driverIdStr
+          whenJust mbSession $ \session -> do
+            QDV.updateSessionStatus DDV.FAILED (Just "EMPTY_CODE") (Just "DigiLocker callback received with empty authorization code") session.id
+            logInfo $ "DigiLocker callback - Updated session status to FAILED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", ErrorCode: EMPTY_CODE"
+          throwError $ InvalidRequest "DigiLocker callback received with empty authorization code"
+        else return codeVal
 
   -- Step 5: Ensure we have a valid session (already fetched above, but validate here)
   session <- mbSession & fromMaybeM (InvalidRequest "Invalid or expired state parameter from DigiLocker")
@@ -626,8 +642,9 @@ verifyAndStorePAN session person pdfBytes extractedPan = do
   panNumber <-
     panFlow.pan
       & fromMaybeM (InternalError "PAN number not found in DigiLocker XML")
+  let maskedPan = maskText panNumber
 
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Extracted PAN data: PAN=" <> panNumber <> ", Name=" <> show panFlow.name
+  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Extracted PAN data: PAN=" <> maskedPan <> ", Name=" <> show panFlow.name
 
   -- Step 2: Check for duplicate PAN BEFORE uploading to S3 (avoid waste)
   mbExistingPan <- QDPC.findUnInvalidByPanNumber panNumber
@@ -779,7 +796,9 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
       Just val -> pure val
       Nothing -> throwError $ InternalError "DL expiry not found in DigiLocker XML"
 
-  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Extracted DL data: DL=" <> dlNumber <> ", Name=" <> show dlFlow.name <> ", Expiry=" <> show dlExpiry
+  let maskedDl = maskText dlNumber
+
+  logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Extracted DL data: DL=" <> maskedDl <> ", Name=" <> show dlFlow.name <> ", Expiry=" <> show dlExpiry
 
   -- Step 2: Validate age (18-80 years) if DOB is present
   now <- getCurrentTime
