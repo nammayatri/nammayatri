@@ -67,6 +67,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetDashboardAnalytics,
     getDriverDashboardFleetTripWaypoints,
     postDriverDashboardFleetEstimateRoute,
+    postDriverFleetTripTransactionsV2,
   )
 where
 
@@ -588,3 +589,9 @@ postDriverDashboardFleetEstimateRoute merchantShortId opCity apiTokenInfo _ req 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId' <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverDashboardFleetEstimateRoute) fleetOwnerId' req
+
+postDriverFleetTripTransactionsV2 :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Common.TripStatus -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Environment.Flow Common.TripTransactionRespT)
+postDriverFleetTripTransactionsV2 merchantShortId opCity apiTokenInfo mbFrom mbTo mbVehicleNumber fleetOwnerId _ mbStatus mbDriverId mbDutyType limit offset = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let memberPersonId = apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetTripTransactionsV2) mbFrom mbTo mbVehicleNumber fleetOwnerId (Just memberPersonId) mbStatus mbDriverId mbDutyType limit offset
