@@ -677,10 +677,12 @@ verifyAndStorePAN session person pdfBytes extractedPan = do
           }
 
   -- Call existing PAN registration logic (handles duplicates, validation, storage)
+  -- Pass isDigiLockerFlow=True to skip verification (DigiLocker already verified the document)
   void $
     DriverOnboardingV2.postDriverRegisterPancardHelper
       (Just person.id, person.merchantId, person.merchantOperatingCityId)
       False -- isDashboard = False
+      True -- isDigiLockerFlow = True (server-controlled: DigiLocker callback path)
       panReq
 
   logInfo $ "DigiLocker - Successfully stored PAN card via postDriverRegisterPancardHelper for DriverId: " <> person.id.getId <> ", StateId: " <> stateId

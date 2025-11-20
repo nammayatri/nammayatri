@@ -616,18 +616,19 @@ postDriverRegisterPancard ::
     API.Types.UI.DriverOnboardingV2.DriverPanReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) False req
+postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) False False req
 
 postDriverRegisterPancardHelper ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Bool ->
+    Bool -> -- isDashboard
+    Bool -> -- isDigiLockerFlow (server-controlled flag to skip verification for DigiLocker-verified documents)
     API.Types.UI.DriverOnboardingV2.DriverPanReq ->
     Flow APISuccess
   )
-postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDashboard req = do
+postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDashboard isDigiLockerFlow req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchantServiceUsageConfig <-
@@ -648,7 +649,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "PAN"
   verificationStatus <-
-    if req.verifiedBy == Just DPC.DIGILOCKER
+    if isDigiLockerFlow
       then pure Documents.VALID
       else case mbPanVerificationService of
         Just VI.HyperVerge -> do
