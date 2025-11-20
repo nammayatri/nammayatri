@@ -1141,15 +1141,16 @@ postDriverDigilockerInitiate (mbDriverId, merchantId, merchantOpCityId) req = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   logInfo $ "DigiLocker initiate - Starting authorization flow for DriverId: " <> driverId.getId <> ", VehicleCategory: " <> show req.vehicleCategory
 
-  -- Validate vehicle category - only auto, car, and bike are allowed
-  let allowedVehicleCategories = [DVC.AUTO_CATEGORY, DVC.CAR, DVC.MOTORCYCLE]
-  unless (req.vehicleCategory `elem` allowedVehicleCategories) $
-    throwError $ InvalidRequest $ "Vehicle category must be one of: auto, car, or bike. Received: " <> show req.vehicleCategory
-
   -- Step 1: Verify DigiLocker is enabled for this merchant+city
   DigilockerLockerShared.verifyDigiLockerEnabled merchantOpCityId
 
-  -- Step 2: Check for existing active session
+  -- Step 2: Validate vehicle category against configured allowed categories (fetch after verification)
+  allowedVehicleCategories <- DigilockerLockerShared.getAllowedVehicleCategories merchantOpCityId
+  unless (req.vehicleCategory `elem` allowedVehicleCategories) $ do
+    let categoriesStr = T.intercalate ", " (map (T.toLower . show) allowedVehicleCategories)
+    throwError $ InvalidRequest $ "Vehicle category must be one of: " <> categoriesStr <> ". Received: " <> show req.vehicleCategory
+
+  -- Step 3: Check for existing active session
   latestSession <- QDV.findLatestByDriverId (Just 1) (Just 0) driverId
 
   case latestSession of
@@ -1159,7 +1160,7 @@ postDriverDigilockerInitiate (mbDriverId, merchantId, merchantOpCityId) req = do
       createNewDigiLockerSession driverId merchantId merchantOpCityId req.vehicleCategory
     (session : _) -> do
       -- Existing session found - validate and decide action
-      logInfo $ "DigiLocker initiate - Found existing session for DriverId: " <> driverId.getId <> ", SessionStatus: " <> show session.sessionStatus
+      logInfo $ "DigiLocker initiate - Found existing session for DriverId: " <> driverId.getId <> ", StateId: " <> session.stateId <> ", SessionStatus: " <> show session.sessionStatus
       handleExistingSession driverId merchantId merchantOpCityId session req.vehicleCategory
 
 ----------- Helper Functions for DigiLocker Initiate -----------
@@ -1179,10 +1180,10 @@ handleExistingSession driverId merchantId merchantOpCityId session vehicleCatego
     DDV.PENDING -> handlePendingSession driverId merchantId merchantOpCityId session now
     DDV.SUCCESS -> handleSuccessSession driverId merchantId merchantOpCityId session now vehicleCategory
     DDV.FAILED -> do
-      logInfo $ "DigiLocker initiate - Previous session FAILED, creating new session for DriverId: " <> driverId.getId
+      logInfo $ "DigiLocker initiate - Previous session FAILED, creating new session for DriverId: " <> driverId.getId <> ", StateId: " <> session.stateId
       createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
     DDV.CONSENT_DENIED -> do
-      logInfo $ "DigiLocker initiate - Previous session CONSENT_DENIED, creating new session for DriverId: " <> driverId.getId
+      logInfo $ "DigiLocker initiate - Previous session CONSENT_DENIED, creating new session for DriverId: " <> driverId.getId <> ", StateId: " <> session.stateId
       createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
 
 -- Handle PENDING session
@@ -1193,9 +1194,9 @@ handlePendingSession ::
   DDV.DigilockerVerification ->
   UTCTime ->
   Flow APITypes.DigiLockerInitiateResp
-handlePendingSession _driverId _merchantId _merchantOpCityId _session _now = do
+handlePendingSession driverId _merchantId _merchantOpCityId session _now = do
   -- Session is PENDING - callback hasn't been called yet
-  logInfo $ "DigiLocker initiate - Session PENDING, returning 409"
+  logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", StateId: " <> session.stateId <> ", Session PENDING, returning 409"
   throwError DigiLockerVerificationInProgress
 
 -- Handle SUCCESS session
@@ -1226,14 +1227,14 @@ checkDocumentStatuses driverId merchantId merchantOpCityId session now vehicleCa
 
   -- Check for PENDING documents
   when (hasDocWithStatus docStatusMap (DocStatus.docStatusToText DocStatus.DOC_PENDING)) $ do
-    logInfo $ "DigiLocker initiate - Found PENDING documents, returning 409"
+    logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", StateId: " <> session.stateId <> ", Found PENDING documents, returning 409"
     throwError DigiLockerDocumentsBeingVerified
 
   -- Check for FAILED or CONSENT_DENIED documents
   if hasDocWithStatus docStatusMap (DocStatus.docStatusToText DocStatus.DOC_FAILED)
     || hasDocWithStatus docStatusMap (DocStatus.docStatusToText DocStatus.DOC_CONSENT_DENIED)
     then do
-      logInfo $ "DigiLocker initiate - Found FAILED or CONSENT_DENIED documents, creating new session"
+      logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", StateId: " <> session.stateId <> ", Found FAILED or CONSENT_DENIED documents, creating new session"
       createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
     else -- Check for PULL_REQUIRED documents
 
@@ -1253,17 +1254,18 @@ handlePullRequiredDocs ::
   DVC.VehicleCategory -> -- Vehicle category for new session if needed
   Flow APITypes.DigiLockerInitiateResp
 handlePullRequiredDocs driverId merchantId merchantOpCityId session _docStatusMap now vehicleCategory = do
+  let stateId = session.stateId
   case session.accessTokenExpiresAt of
     Nothing -> do
-      logInfo $ "DigiLocker initiate - PULL_REQUIRED with no expiry, creating new session"
+      logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", PULL_REQUIRED with no expiry, creating new session"
       createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
     Just expiresAt ->
       if now < expiresAt
         then do
-          logInfo $ "DigiLocker initiate - PULL_REQUIRED with valid token, returning 409"
+          logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", PULL_REQUIRED with valid token, returning 409"
           throwError DigiLockerPullRequired
         else do
-          logInfo $ "DigiLocker initiate - PULL_REQUIRED with expired token, creating new session"
+          logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", PULL_REQUIRED with expired token, creating new session"
           createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
 
 -- Check actual document tables for verification status
@@ -1290,18 +1292,18 @@ checkActualDocumentTables driverId merchantId merchantOpCityId vehicleCategory =
 
   -- If any document is PENDING → Return 409
   when (any (== Just Documents.PENDING) allStatuses) $ do
-    logInfo $ "DigiLocker initiate - Found PENDING documents in tables, returning 409"
+    logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", Found PENDING documents in tables, returning 409"
     throwError DigiLockerDocumentsBeingVerified
 
   -- If all documents are VALID → Return error (already verified)
   let allDocumentsValid = all (== Just Documents.VALID) allStatuses
   if allDocumentsValid
     then do
-      logInfo $ "DigiLocker initiate - All documents already verified"
+      logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", All documents already verified"
       throwError $ InvalidRequest "All documents are already verified. You should not be calling this API."
     else do
       -- Else → Create new session (handles FAILED, INVALID, missing docs, etc.)
-      logInfo $ "DigiLocker initiate - Creating new session for document verification"
+      logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", Creating new session for document verification"
       createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
 
 -- Create new DigiLocker session
@@ -1316,7 +1318,7 @@ createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory 
 
   -- Fetch DigiLocker credentials from MerchantServiceConfig
   digiLockerConfig <- DigilockerLockerShared.getDigiLockerConfig merchantOpCityId
-  logInfo $ "DigiLocker initiate - Config retrieved for merchantOpCityId: " <> merchantOpCityId.getId
+  logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", Config retrieved for merchantOpCityId: " <> merchantOpCityId.getId
 
   -- Generate PKCE parameters
   randomBytes <- liftIO $ getRandomBytes 24
@@ -1358,7 +1360,7 @@ createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory 
 
   QDV.create newSession
 
-  logInfo $ "DigiLocker initiate - Created session with ID: " <> sessionId.getId <> ", StateId: " <> stateId <> ", VehicleCategory: " <> show vehicleCategory
+  logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", Created session with ID: " <> sessionId.getId <> ", StateId: " <> stateId <> ", VehicleCategory: " <> show vehicleCategory
 
   -- Construct authorization URL with config from MerchantServiceConfig
   let authUrl = constructDigiLockerAuthUrl digiLockerConfig stateId codeChallenge
