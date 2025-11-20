@@ -19,6 +19,10 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
+data SearchReqInfoRes = SearchReqInfoRes {acceptedCount :: Kernel.Prelude.Int, emptyCount :: Kernel.Prelude.Int, pulledCount :: Kernel.Prelude.Int, rejectedCount :: Kernel.Prelude.Int, totalCount :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SearchRequestOfDriver = SearchRequestOfDriver
   { createdAt :: Kernel.Prelude.UTCTime,
     fromLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
@@ -49,7 +53,7 @@ data SearchRequestsRes = SearchRequestsRes {searchrequests :: [SearchRequestOfDr
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("searchRequest" :> (PostSearchRequestSearchrequests :<|> GetSearchRequestList))
+type API = ("searchRequest" :> (PostSearchRequestSearchrequests :<|> GetSearchRequestList :<|> GetSearchRequestInfo))
 
 type PostSearchRequestSearchrequests = ("searchrequests" :> ReqBody '[JSON] SearchRequestsReq :> Post '[JSON] SearchRequestsRes)
 
@@ -68,19 +72,29 @@ type GetSearchRequestList =
            SearchRequestsRes
   )
 
+type GetSearchRequestInfo =
+  ( "info" :> MandatoryQueryParam "fromDate" Kernel.Prelude.UTCTime :> MandatoryQueryParam "toDate" Kernel.Prelude.UTCTime
+      :> MandatoryQueryParam
+           "driverId"
+           (Kernel.Types.Id.Id Domain.Types.Person.Person)
+      :> Get ('[JSON]) SearchReqInfoRes
+  )
+
 data SearchRequestAPIs = SearchRequestAPIs
-  { postSearchRequestSearchrequests :: SearchRequestsReq -> EulerHS.Types.EulerClient SearchRequestsRes,
-    getSearchRequestList :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient SearchRequestsRes
+  { postSearchRequestSearchrequests :: (SearchRequestsReq -> EulerHS.Types.EulerClient SearchRequestsRes),
+    getSearchRequestList :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient SearchRequestsRes),
+    getSearchRequestInfo :: (Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient SearchReqInfoRes)
   }
 
 mkSearchRequestAPIs :: (Client EulerHS.Types.EulerClient API -> SearchRequestAPIs)
 mkSearchRequestAPIs searchRequestClient = (SearchRequestAPIs {..})
   where
-    postSearchRequestSearchrequests :<|> getSearchRequestList = searchRequestClient
+    postSearchRequestSearchrequests :<|> getSearchRequestList :<|> getSearchRequestInfo = searchRequestClient
 
 data SearchRequestUserActionType
   = POST_SEARCH_REQUEST_SEARCHREQUESTS
   | GET_SEARCH_REQUEST_LIST
+  | GET_SEARCH_REQUEST_INFO
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
