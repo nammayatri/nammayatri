@@ -22,6 +22,8 @@ data EstimateT f = EstimateT
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     boostSearchPreSelectionServiceTierConfig :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),
     bppEstimateId :: B.C f Kernel.Prelude.Text,
+    businessDiscount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    businessDiscountPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientManufacturer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

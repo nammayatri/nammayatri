@@ -26,11 +26,15 @@ module API.UI.Registration
     DRegistration.SendBusinessEmailVerificationRes (..),
     DRegistration.VerifyBusinessEmailReq (..),
     DRegistration.VerifyBusinessEmailRes (..),
+    HTMLResponse (..),
     API,
     handler,
   )
 where
 
+import qualified Data.ByteString.Lazy as BS
+import Data.OpenApi (NamedSchema (..), ToSchema (..), binarySchema)
+import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.UI.Registration as DRegistration
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SP
@@ -42,6 +46,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
+import Kernel.Utils.Servant.HTML
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as Person
@@ -49,6 +54,19 @@ import Tools.Auth (TokenAuth)
 import Tools.Error
 import Tools.SignatureAuth (SignatureAuth, SignatureAuthResult (..))
 import Tools.SignatureResponseBody (SignedResponse)
+
+-- Newtype wrapper for HTML responses to support OpenAPI schema generation
+newtype HTMLResponse = HTMLResponse BS.ByteString
+  deriving (Show)
+
+instance ToSchema HTMLResponse where
+  declareNamedSchema _ = pure $ NamedSchema (Just "HTMLResponse") binarySchema
+
+instance MimeRender HTML HTMLResponse where
+  mimeRender _ (HTMLResponse bs) = bs
+
+instance MimeUnrender HTML HTMLResponse where
+  mimeUnrender _ bs = Right (HTMLResponse bs)
 
 ---- Registration Flow ------
 type API =
@@ -105,6 +123,12 @@ type API =
                                :> ReqBody '[JSON] DRegistration.VerifyBusinessEmailReq
                                :> Post '[JSON] DRegistration.VerifyBusinessEmailRes
                          )
+                    :<|> "verify-redirect"
+                      :> QueryParam' '[Required, Strict] "token" Text
+                      :> Get '[HTML] HTMLResponse
+                    :<|> "resend"
+                      :> TokenAuth
+                      :> Post '[JSON] APISuccess
                 )
        )
 
@@ -119,7 +143,7 @@ handler =
     :<|> generateTempAppCode
     :<|> makeSignature
     :<|> logout
-    :<|> (sendBusinessEmailVerification :<|> (verifyBusinessEmailWithoutAuth :<|> verifyBusinessEmailWithAuth))
+    :<|> (sendBusinessEmailVerification :<|> (verifyBusinessEmailWithoutAuth :<|> verifyBusinessEmailWithAuth) :<|> verifyBusinessEmailRedirect :<|> resendBusinessEmailVerification)
 
 auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
 auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor mbSenderHash =
@@ -163,3 +187,46 @@ verifyBusinessEmailWithoutAuth req = withFlowHandlerAPI $ DRegistration.verifyBu
 -- Verify business email with auth (for OTP entered in app)
 verifyBusinessEmailWithAuth :: (Id SP.Person, Id Merchant.Merchant) -> DRegistration.VerifyBusinessEmailReq -> FlowHandler DRegistration.VerifyBusinessEmailRes
 verifyBusinessEmailWithAuth (personId, _) req = withFlowHandlerAPI $ DRegistration.verifyBusinessEmail (Just personId) req
+
+-- Verify business email via magic link redirect (GET endpoint)
+verifyBusinessEmailRedirect :: Text -> FlowHandler HTMLResponse
+verifyBusinessEmailRedirect token = withFlowHandlerAPI $ do
+  -- Create the verification request with the token
+  let verifyReq = DRegistration.VerifyBusinessEmailReq {token = Just token, otp = Nothing}
+
+  -- Call the verification logic
+  result <- DRegistration.verifyBusinessEmail Nothing verifyReq
+
+  -- Return HTML response based on success/failure
+  if DRegistration.verified result
+    then return $ HTMLResponse $ BS.fromStrict $ TE.encodeUtf8 successHtml
+    else return $ HTMLResponse $ BS.fromStrict $ TE.encodeUtf8 errorHtml
+  where
+    successHtml =
+      "<!DOCTYPE html>\
+      \<html>\
+      \<head><title>Email Verified</title></head>\
+      \<body style='font-family: Arial; text-align: center; padding: 50px;'>\
+      \<h1 style='color: green;'>✓ Email Verified Successfully!</h1>\
+      \<p>Your business email has been verified.</p>\
+      \<p>You can now close this window and return to the app.</p>\
+      \</body>\
+      \</html>"
+
+    errorHtml =
+      "<!DOCTYPE html>\
+      \<html>\
+      \<head><title>Verification Failed</title></head>\
+      \<body style='font-family: Arial; text-align: center; padding: 50px;'>\
+      \<h1 style='color: red;'>✗ Verification Failed</h1>\
+      \<p>The verification link is invalid or has expired.</p>\
+      \<p>Please request a new verification email from the app.</p>\
+      \</body>\
+      \</html>"
+
+-- Resend business email verification OTP
+resendBusinessEmailVerification :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
+resendBusinessEmailVerification (personId, merchantId) = withFlowHandlerAPI $ do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  DRegistration.resendBusinessEmailVerification personId merchantId merchantOperatingCityId

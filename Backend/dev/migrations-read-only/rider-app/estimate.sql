@@ -591,3 +591,10 @@ ALTER TABLE atlas_app.estimate ADD COLUMN qar double precision ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN business_discount_percentage double precision ;
+ALTER TABLE atlas_app.estimate ADD COLUMN business_discount double precision ;

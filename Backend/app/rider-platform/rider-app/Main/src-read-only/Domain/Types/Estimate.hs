@@ -26,6 +26,7 @@ data Estimate = Estimate
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     boostSearchPreSelectionServiceTierConfig :: Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType],
     bppEstimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.BPPEstimate,
+    businessDiscountInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.BusinessDiscountInfo,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
@@ -85,6 +86,8 @@ data Estimate = Estimate
   deriving (Generic, Show)
 
 data BPPEstimate = BPPEstimate {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data BusinessDiscountInfo = BusinessDiscountInfo {businessDiscount :: Kernel.Types.Common.Price, businessDiscountPercentage :: Kernel.Prelude.Double} deriving (Generic, Show)
 
 data EstimateBreakup = EstimateBreakup
   { estimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,

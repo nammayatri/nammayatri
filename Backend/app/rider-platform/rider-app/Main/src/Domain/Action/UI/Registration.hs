@@ -44,6 +44,7 @@ module Domain.Action.UI.Registration
     makeSignature,
     sendBusinessEmailVerification,
     verifyBusinessEmail,
+    resendBusinessEmailVerification,
   )
 where
 
@@ -1102,8 +1103,9 @@ verifyBusinessEmail mbPersonId req = do
     (Nothing, Just otpValue, Just personId) -> do
       -- Find latest business email verification token for this person
       regTokens <- RegistrationToken.findAllByPersonId personId
+      let sortedTokens = sortOn (Down . (.createdAt)) regTokens -- Sort by createdAt descending to get latest first
       rt <-
-        find (\rt -> rt.info == Just "businessEmailVerification" && not rt.verified && rt.authValueHash == otpValue) regTokens
+        find (\rt -> rt.info == Just "businessEmailVerification" && not rt.verified && rt.authValueHash == otpValue) sortedTokens
           & fromMaybeM (InvalidRequest "No pending business email verification found")
       return rt
 
@@ -1126,3 +1128,57 @@ verifyBusinessEmail mbPersonId req = do
   void $ PersonExtra.updateBusinessProfileVerified person.id True
 
   return $ VerifyBusinessEmailRes {message = "Business email verified successfully", verified = True}
+
+resendBusinessEmailVerification ::
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "apiRateLimitOptions" ::: APIRateLimitOptions],
+    CacheFlow m r,
+    EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
+    EncFlow m r
+  ) =>
+  Id SP.Person ->
+  Id DMerchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m APISuccess
+resendBusinessEmailVerification personId _merchantId merchantOperatingCityId = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  businessEmail <- person.businessEmail & fromMaybeM (PersonFieldNotPresent "businessEmail")
+  decryptedBusinessEmail <- decrypt businessEmail
+
+  -- Check if person's business email is already verified
+  when (person.businessProfileVerified == Just True) $
+    throwError $ AuthBlocked "Business email already verified"
+
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  emailBusinessVerificationConfig <- riderConfig.emailBusinessVerificationConfig & fromMaybeM (RiderConfigNotFound $ "emailBusinessVerificationConfig not found for merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+
+  -- Find latest business email verification token for this person
+  regTokens <- RegistrationToken.findAllByPersonId personId
+  let sortedTokens = sortOn (Down . (.createdAt)) regTokens -- Sort by createdAt descending to get latest first
+  regToken <-
+    find (\rt -> rt.info == Just "businessEmailVerification" && not rt.verified) sortedTokens
+      & fromMaybeM (InvalidRequest "No pending business email verification found. Please send a new verification request.")
+
+  -- Check if attempts are remaining
+  unless (regToken.attempts > 0) $ throwError $ AuthBlocked "Resend attempts limit exceeded. Please request a new verification."
+
+  -- Check sliding window limit (similar to phone OTP resend)
+  checkSlidingWindowLimit (verifyHitsCountKey personId)
+
+  -- Check expiry - if expired, throw error asking for new verification
+  whenM (isExpired (realToFrac (regToken.authExpiry * 60)) regToken.updatedAt) $
+    throwError $ InvalidRequest "Verification token expired. Please request a new verification."
+
+  -- Generate new OTP and magic link token
+  newOtp <- generateOTPCode
+  newVerificationToken <- L.generateGUID
+  now <- getCurrentTime
+
+  -- Update the registration token with new OTP, token, decremented attempts, and updated timestamp
+  void $ RegistrationToken.updateOtpAndToken regToken.id newOtp newVerificationToken (regToken.attempts - 1) now
+
+  -- Send email with new OTP and magic link
+  withLogTag ("personId_" <> getId personId) $ do
+    L.runIO $ Email.sendBusinessVerificationEmail emailBusinessVerificationConfig [decryptedBusinessEmail] newOtp newVerificationToken
+
+  return AP.Success

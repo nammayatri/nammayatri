@@ -49,6 +49,8 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.backendConfigVersion (fmap Kernel.Utils.Version.versionToText backendConfigVersion),
       Se.Set Beam.boostSearchPreSelectionServiceTierConfig boostSearchPreSelectionServiceTierConfig,
       Se.Set Beam.bppEstimateId (Kernel.Types.Id.getId bppEstimateId),
+      Se.Set Beam.businessDiscount (businessDiscountInfo <&> ((.amount) . (.businessDiscount))),
+      Se.Set Beam.businessDiscountPercentage (businessDiscountInfo <&> (.businessDiscountPercentage)),
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
       Se.Set Beam.clientManufacturer (clientDevice >>= (.deviceManufacturer)),
