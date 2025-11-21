@@ -474,7 +474,7 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
             bookLater = fromMaybe False (mElement <&> (.skipBooking))
         let totalTicketQuantity =
               fromMaybe 0 ticketQuantity + fromMaybe 0 childTicketQuantity
-        let bookingAllowed' = leg.bookingAllowed || totalTicketQuantity /= 1
+        let bookingAllowed' = leg.bookingAllowed || ((fromMaybe False leg.hasApplicablePasses) && totalTicketQuantity /= 1)
         let updatedLeg = leg {JL.bookingAllowed = bookingAllowed'}
         let forcedBooking = Just leg.order == forcedBookedLegOrder
         let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
