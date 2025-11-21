@@ -295,7 +295,8 @@ data LegInfo = LegInfo
     totalFare :: Maybe PriceAPIEntity,
     entrance :: Maybe MultiModalLegGate,
     exit :: Maybe MultiModalLegGate,
-    validTill :: Maybe UTCTime
+    validTill :: Maybe UTCTime,
+    hasApplicablePasses :: Maybe Bool
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -659,7 +660,8 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
         totalFare = mkPriceAPIEntity <$> (mRide >>= (.totalFare)),
         entrance = journeyLeg.osmEntrance,
         exit = journeyLeg.osmExit,
-        validTill = Nothing
+        validTill = Nothing,
+        hasApplicablePasses = Just False
       }
   where
     getBookingDetailsConstructor :: DBooking.BookingDetails -> Text
@@ -737,7 +739,8 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
         totalFare = Nothing,
         entrance = journeyLeg.osmEntrance,
         exit = journeyLeg.osmExit,
-        validTill = Nothing
+        validTill = Nothing,
+        hasApplicablePasses = Just False
       }
 
 mkWalkLegInfoFromWalkLegData :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id DP.Person -> DJL.JourneyLeg -> m LegInfo
@@ -780,7 +783,8 @@ mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
         totalFare = Nothing,
         entrance = straightLineEntrance,
         exit = straightLineExit,
-        validTill = Nothing
+        validTill = Nothing,
+        hasApplicablePasses = Just False
       }
   where
     mkLocation now location name =
@@ -882,7 +886,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         totalFare = Just $ mkPriceAPIEntity booking.totalPrice,
         entrance = Nothing,
         exit = Nothing,
-        validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill
+        validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill,
+        hasApplicablePasses = Nothing
       }
   where
     mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters totalBookingAmount = do
@@ -1127,7 +1132,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         totalFare = Nothing,
         entrance = Nothing,
         exit = Nothing,
-        validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill)
+        validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill),
+        hasApplicablePasses = Just hasApplicablePass
       }
   where
     mkLegExtraInfo mbQuote mbFareParameters quoteCategories categories journeyLegInfo' = do
