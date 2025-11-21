@@ -19,7 +19,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 -- | FareCalculatorV2: Enhanced fare calculation with configurable charges
--- 
+--
 -- This module provides calculateFareParametersV2, which extends the base fare calculation
 -- with configurable VAT, commission, and toll tax charges. Charges can be configured
 -- via fare_policy table with percentage or fixed values, and can target specific
@@ -96,7 +96,7 @@ applyConfiguredCharges farePolicy fareParams = do
       vatAmount <- computeConfiguredCharge "vatCharge" componentMap (Just config)
       pure $ if vatAmount > 0 then Just vatAmount else Nothing
     Nothing -> pure Nothing -- No VAT if not configured
-  
+
   -- Calculate toll VAT: Only if configured in fare_policy.toll_tax_charge_config
   -- Example config: {"value":"25%","appliesOn":["TollChargesComponent"]}
   tollVatValue <- case farePolicy.tollTaxChargeConfig of
@@ -104,7 +104,7 @@ applyConfiguredCharges farePolicy fareParams = do
       tollVatAmount <- computeConfiguredCharge "tollTaxCharge" componentMap (Just config)
       pure $ if tollVatAmount > 0 then Just tollVatAmount else Nothing
     Nothing -> pure Nothing -- No toll VAT if not configured
-  
+
   -- Calculate commission: Only if configured in fare_policy.commission_charge_config
   -- Example config: {"value":"8%","appliesOn":["RideFare"]}
   -- Note: Commission is stored for breakdown but NOT included in final fare sum
@@ -113,7 +113,7 @@ applyConfiguredCharges farePolicy fareParams = do
       commAmount <- computeConfiguredCharge "commissionCharge" componentMap (Just config)
       pure $ if commAmount > 0 then Just commAmount else Nothing
     Nothing -> pure Nothing -- No commission if not configured
-  
+
   -- Return updated fare parameters with new breakdown fields
   pure $
     fareParams
