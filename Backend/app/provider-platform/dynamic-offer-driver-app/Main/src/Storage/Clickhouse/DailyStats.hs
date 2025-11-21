@@ -78,12 +78,12 @@ aggregatePeriodStatsWithBoundaries ::
   Day ->
   StatsPeriod ->
   m [EarningsBar]
-aggregatePeriodStatsWithBoundaries driverId fromDateU toDateU period = do
+aggregatePeriodStatsWithBoundaries driverId' fromDateU toDateU period = do
   res <-
     CH.findAll $
       CH.select_
         ( \ds ->
-            let periodStart = case period of
+            let periodStart' = case period of
                   WeeklyStats weekStartMode -> CH.toStartOfWeek ds.merchantLocalDate (CH.valColumn weekStartMode)
                   MonthlyStats -> CH.toStartOfMonth ds.merchantLocalDate
                 earnings = CH.sum_ ds.totalEarnings
@@ -91,19 +91,12 @@ aggregatePeriodStatsWithBoundaries driverId fromDateU toDateU period = do
                 rides = CH.sum_ ds.numRides
                 cancellationCharges = CH.sum_ ds.cancellationCharges
                 bonusEarnings = CH.sum_ ds.bonusEarnings
-             in CH.groupBy (ds.driverId, periodStart) $ \(driver, pStart) ->
-                  ( driver,
-                    pStart,
-                    earnings,
-                    distance,
-                    rides,
-                    cancellationCharges,
-                    bonusEarnings
-                  )
+             in CH.groupBy (ds.driverId, periodStart') $ \(driverId, periodStart) ->
+                  (driverId, periodStart, earnings, distance, rides, cancellationCharges, bonusEarnings)
         )
         $ CH.filter_
           ( \ds ->
-              ds.driverId ==. driverId
+              ds.driverId ==. driverId'
                 CH.&&. ds.merchantLocalDate >=. fromDateU
                 CH.&&. ds.merchantLocalDate <=. toDateU
           )

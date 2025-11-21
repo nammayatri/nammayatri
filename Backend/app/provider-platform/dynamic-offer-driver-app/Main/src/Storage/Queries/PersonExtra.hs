@@ -8,6 +8,7 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Text as T
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
 import qualified Database.Beam.Query ()
@@ -62,6 +63,35 @@ import qualified Storage.Queries.VehicleRegistrationCertificate ()
 
 getDriversByIdIn :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m [Person]
 getDriversByIdIn personIds = findAllWithKV [Se.Is BeamP.id $ Se.In $ getId <$> personIds]
+
+findPersonsByIdsForAnalytics ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id Person] ->
+  Maybe Text ->
+  Maybe DbHash ->
+  m [Person]
+findPersonsByIdsForAnalytics [] _ _ = pure []
+findPersonsByIdsForAnalytics personIds mbNameFilter mbMobileHash = do
+  persons <- findAllWithKV [Se.Is BeamP.id $ Se.In (getId <$> personIds)]
+  let normalizedName = T.toLower <$> mbNameFilter
+  let filteredByName = filter (matchesName normalizedName) persons
+      filteredPersons = filter (matchesMobile mbMobileHash) filteredByName
+  pure filteredPersons
+  where
+    matchesName Nothing _ = True
+    matchesName (Just query) person =
+      let haystacks =
+            [ T.toLower person.firstName,
+              maybe "" T.toLower person.middleName,
+              maybe "" T.toLower person.lastName
+            ]
+       in any (T.isInfixOf query) haystacks
+
+    matchesMobile Nothing _ = True
+    matchesMobile (Just hashVal) person =
+      let primary = person.mobileNumber <&> (.hash)
+          alternate = person.alternateMobileNumber <&> (.hash)
+       in Just hashVal == primary || Just hashVal == alternate
 
 updateMerchantIdAndMakeAdmin :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Merchant -> m ()
 updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
