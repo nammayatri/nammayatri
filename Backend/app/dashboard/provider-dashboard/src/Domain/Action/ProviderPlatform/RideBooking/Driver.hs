@@ -26,6 +26,8 @@ module Domain.Action.ProviderPlatform.RideBooking.Driver
     postDriverAddVehicle,
     postDriverSetRCStatus,
     postDriverExemptDriverFee,
+    postDriverDeleteAadhaar,
+    postDriverDeletePanCard,
   )
 where
 
@@ -165,3 +167,17 @@ getDriverFeedbackList :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Ma
 getDriverFeedbackList merchantShortId opCity apiTokenInfo personId mobileNumber mobileCountryCode = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.getDriverFeedbackList) personId mobileNumber mobileCountryCode
+
+postDriverDeleteAadhaar :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
+postDriverDeleteAadhaar merchantShortId opCity apiTokenInfo driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverDeleteAadhaar) driverId
+
+postDriverDeletePanCard :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
+postDriverDeletePanCard merchantShortId opCity apiTokenInfo driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverDeletePanCard) driverId
