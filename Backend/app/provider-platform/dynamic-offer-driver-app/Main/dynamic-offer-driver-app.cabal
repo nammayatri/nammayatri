@@ -658,6 +658,7 @@ library
       Storage.Queries.OperationHubExtra
       Storage.Queries.OperationHubRequestsExtra
       Storage.Queries.PayoutConfigExtra
+      Storage.Queries.PayoutInstanceCalculationExtra
       Storage.Queries.Person.GetNearestDrivers
       Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
       Storage.Queries.Person.GetNearestGoHomeDrivers
@@ -989,6 +990,8 @@ library
       Domain.Types.OperationHubRequests
       Domain.Types.Overlay
       Domain.Types.PayoutConfig
+      Domain.Types.PayoutInstanceCalculation
+      Domain.Types.PayoutSplitConfig
       Domain.Types.Person
       Domain.Types.PlaceNameCache
       Domain.Types.Plan
@@ -1036,6 +1039,7 @@ library
       Domain.Types.VehicleRouteMapping
       Domain.Types.VehicleServiceTier
       Domain.Types.VendorFee
+      Domain.Types.VendorSettlement
       Domain.Types.VendorSplitDetails
       Domain.Types.Volunteer
       Domain.Types.WhiteListOrg
@@ -1145,6 +1149,8 @@ library
       Storage.Beam.OperationHubRequests
       Storage.Beam.Overlay
       Storage.Beam.PayoutConfig
+      Storage.Beam.PayoutInstanceCalculation
+      Storage.Beam.PayoutSplitConfig
       Storage.Beam.Person
       Storage.Beam.PlaceNameCache
       Storage.Beam.Plan
@@ -1192,6 +1198,7 @@ library
       Storage.Beam.VehicleRouteMapping
       Storage.Beam.VehicleServiceTier
       Storage.Beam.VendorFee
+      Storage.Beam.VendorSettlement
       Storage.Beam.VendorSplitDetails
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
@@ -1360,6 +1367,7 @@ library
       Storage.Queries.OrphanInstances.OperationHub
       Storage.Queries.OrphanInstances.OperationHubRequests
       Storage.Queries.OrphanInstances.PayoutConfig
+      Storage.Queries.OrphanInstances.PayoutInstanceCalculation
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.Plan
       Storage.Queries.OrphanInstances.PurchaseHistory
@@ -1390,6 +1398,8 @@ library
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay
       Storage.Queries.PayoutConfig
+      Storage.Queries.PayoutInstanceCalculation
+      Storage.Queries.PayoutSplitConfig
       Storage.Queries.Person
       Storage.Queries.PlaceNameCache
       Storage.Queries.Plan
@@ -1437,6 +1447,7 @@ library
       Storage.Queries.VehicleRouteMapping
       Storage.Queries.VehicleServiceTier
       Storage.Queries.VendorFee
+      Storage.Queries.VendorSettlement
       Storage.Queries.VendorSplitDetails
       Storage.Queries.Volunteer
       Storage.Queries.WhiteListOrg
