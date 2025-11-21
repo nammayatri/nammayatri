@@ -19,6 +19,7 @@ module Domain.Action.UI.DriverOnboarding.DriverLicense
     verifyDL,
     onVerifyDL,
     cacheExtractedDl,
+    onVerifyDLHandler,
     convertUTCTimetoDate,
   )
 where

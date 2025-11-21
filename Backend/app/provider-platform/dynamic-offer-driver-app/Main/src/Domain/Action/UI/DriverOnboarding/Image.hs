@@ -74,7 +74,8 @@ data ImageValidateRequest = ImageValidateRequest
     validationStatus :: Maybe Domain.ValidationStatus,
     workflowTransactionId :: Maybe Text,
     vehicleCategory :: Maybe VehicleCategory,
-    sdkFailureReason :: Maybe Text -- used when frontend sdk is used for extraction.
+    sdkFailureReason :: Maybe Text, -- used when frontend sdk is used for extraction.
+    fileExtension :: Maybe Text
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -116,11 +117,20 @@ createPath ::
   Text ->
   Text ->
   DVC.DocumentType ->
+  Maybe Text ->
   m Text
-createPath driverId merchantId documentType = do
+createPath driverId merchantId documentType mbExtension = do
   pathPrefix <- asks (.s3Env.pathPrefix)
   now <- getCurrentTime
   let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
+      sanitizedExt =
+        case mbExtension of
+          Nothing -> "png"
+          Just ext ->
+            ext
+              & T.strip
+              & T.dropWhile (== '.')
+              & (\t -> if T.null t then "png" else T.toLower t)
   return
     ( pathPrefix <> "/driver-onboarding/" <> "org-" <> merchantId <> "/"
         <> driverId
@@ -128,7 +138,8 @@ createPath driverId merchantId documentType = do
         <> show documentType
         <> "/"
         <> fileName
-        <> ".png"
+        <> "."
+        <> sanitizedExt
     )
 
 validateImageHandler ::
@@ -194,7 +205,7 @@ validateImageHandler isDashboard (personId, _, merchantOpCityId) req@ImageValida
         )
         $ throwError $ DocumentAlreadyValidated (show imageType)
 
-      imagePath <- createPath personId.getId merchantId.getId imageType
+      imagePath <- createPath personId.getId merchantId.getId imageType fileExtension
       fork "S3 Put Image" do
         Redis.withLockRedis (imageS3Lock imagePath) 5 $
           S3.put (T.unpack imagePath) image
@@ -305,7 +316,7 @@ validateImageFile ::
   Flow ImageValidateResponse
 validateImageFile isDashboard (personId, merchantId, merchantOpCityId) ImageValidateFileRequest {..} = do
   image' <- L.runIO $ base64Encode <$> BS.readFile image
-  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber validationStatus workflowTransactionId Nothing Nothing
+  validateImage isDashboard (personId, merchantId, merchantOpCityId) $ ImageValidateRequest image' imageType rcNumber validationStatus workflowTransactionId Nothing Nothing Nothing
 
 mkImage ::
   (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>

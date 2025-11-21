@@ -586,6 +586,7 @@ castVerificationStatus = \case
   Documents.MANUAL_VERIFICATION_REQUIRED -> Common.MANUAL_VERIFICATION_REQUIRED
   Documents.INVALID -> Common.INVALID
   Documents.UNAUTHORIZED -> Common.UNAUTHORIZED
+  Documents.PULL_REQUIRED -> Common.PENDING
 
 ---------------------------------------------------------------------
 postDriverUnlinkVehicle ::
