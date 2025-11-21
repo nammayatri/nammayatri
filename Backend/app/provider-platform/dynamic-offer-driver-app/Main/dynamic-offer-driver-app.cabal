@@ -229,8 +229,8 @@ library
       Domain.Action.UI.DriverGoHomeRequest
       Domain.Action.UI.DriverHomeLocation
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
-      Domain.Action.UI.DriverOnboarding.DocumentRegistration
       Domain.Action.UI.DriverOnboarding.DigiLockerCallback
+      Domain.Action.UI.DriverOnboarding.DocumentRegistration
       Domain.Action.UI.DriverOnboarding.DriverLicense
       Domain.Action.UI.DriverOnboarding.GstVerification
       Domain.Action.UI.DriverOnboarding.HyperVergeWebhook

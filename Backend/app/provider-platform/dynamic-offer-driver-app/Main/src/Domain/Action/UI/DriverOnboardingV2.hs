@@ -4,8 +4,8 @@ import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
 import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
-import qualified Data.List as DL
 import Crypto.Random (getRandomBytes)
+import qualified Data.List as DL
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -13,8 +13,8 @@ import Data.Time (defaultTimeLocale, formatTime)
 import qualified Data.Time as DT
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
-import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VRC
 import qualified Domain.Action.UI.DriverOnboarding.PullDocument as PullDocument
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VRC
 import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
 import Domain.Types.Common

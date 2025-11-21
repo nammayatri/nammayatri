@@ -302,6 +302,7 @@ apis:
         offset: Int
       response:
         type: FleetRCListRes
+  # Digilocker
   - POST:
       endpoint: /driver/digilocker/initiate
       auth: TokenAuth PROVIDER_TYPE

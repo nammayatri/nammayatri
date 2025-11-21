@@ -199,6 +199,19 @@ type API =
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
+      :> "fleet"
+      :> "rcs"
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> Get
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.FleetRCListRes
+      :<|> TokenAuth
+      :> "driver"
       :> "digilocker"
       :> "initiate"
       :> ReqBody
@@ -217,19 +230,6 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
-      :<|> TokenAuth
-      :> "driver"
-      :> "fleet"
-      :> "rcs"
-      :> QueryParam
-           "limit"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "offset"
-           Kernel.Prelude.Int
-      :> Get
-           '[JSON]
-           API.Types.UI.DriverOnboardingV2.FleetRCListRes
   )
 
 handler :: Environment.FlowServer API

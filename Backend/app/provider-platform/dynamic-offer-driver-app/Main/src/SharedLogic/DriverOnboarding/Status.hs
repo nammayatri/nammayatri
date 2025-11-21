@@ -1161,6 +1161,7 @@ mkCommonDocumentItem doc =
     mapVerificationStatus Documents.INVALID = INVALID
     mapVerificationStatus Documents.MANUAL_VERIFICATION_REQUIRED = MANUAL_VERIFICATION_REQUIRED
     mapVerificationStatus _ = PENDING -- default case
+
 getDigilockerResponseCode :: Id DP.Person -> Flow (Maybe Text)
 getDigilockerResponseCode driverId = do
   mbSession <- listToMaybe <$> QDV.findLatestByDriverId (Just 1) (Just 0) driverId
