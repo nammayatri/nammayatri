@@ -23,6 +23,7 @@ data DriverFeeT f = DriverFeeT
     billNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationPenaltyAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     collectedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    collectedAtVendorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     collectedBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
