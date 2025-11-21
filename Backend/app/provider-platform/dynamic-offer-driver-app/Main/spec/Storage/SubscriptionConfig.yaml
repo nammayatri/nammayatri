@@ -5,6 +5,7 @@ imports:
   Merchant: Domain.Types.Merchant
   Id: Kernel.Types.Id
   VehicleCategory: Domain.Types.VehicleCategory
+  ServiceTierType: Domain.Types.Common
   ExternalWebhookConfigs: Domain.Types.WebhookExtra
   WebhookDeliveryType : Domain.Types.WebhookExtra
   WebhookEvent : Domain.Types.WebhookExtra
@@ -26,6 +27,8 @@ SubscriptionConfig:
     CurrentPlanEntites :
       enum : "SAFETY_PLUS"
       derive': "Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read"
+    VendorSplitApplicableAt:
+      enum: "RIDE_END, DRIVER_FEE_CALCULATION"
   fields:
     allowManualPaymentLinks: Bool
     useOverlayService: Bool
@@ -68,6 +71,9 @@ SubscriptionConfig:
     autopayEnabled: Maybe Bool
     showManualPlansInUI: Maybe Bool
     disabledVariantsForSubscription: "Maybe [Domain.Types.VehicleVariant.VehicleVariant]"
+    vendorSplitApplicableAt: Maybe VendorSplitApplicableAt
+    enableVendorPercentageSplit: Maybe Bool
+    defaultServiceTierForCategory: Maybe [(Domain.Types.VehicleCategory.VehicleCategory, ServiceTierType)]
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 
@@ -91,6 +97,10 @@ SubscriptionConfig:
     enableServiceUsageChargeDefault:  Kernel.Prelude.fromMaybe True|I
     waiveOffOfferTitle : Kernel.Prelude.fromMaybe "NAN" |I
     waiveOffOfferDescription :  Kernel.Prelude.fromMaybe "NAN" |I
+    vendorSplitApplicableAt: Kernel.Prelude.Just . Kernel.Prelude.fromMaybe Domain.Types.SubscriptionConfig.RIDE_END|I
+    enableVendorPercentageSplit: Kernel.Prelude.Just . Kernel.Prelude.fromMaybe False|I
+    defaultServiceTierForCategory: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< defaultServiceTierForCategory | E
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
@@ -109,6 +119,7 @@ SubscriptionConfig:
     genericNextJobScheduleTimeThreshold :  Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     waiveOffOfferTitle : Kernel.Prelude.Just|I
     waiveOffOfferDescription : Kernel.Prelude.Just|I
+    defaultServiceTierForCategory: Kernel.Prelude.toJSON <$> defaultServiceTierForCategory | E
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
@@ -127,6 +138,9 @@ SubscriptionConfig:
     genericNextJobScheduleTimeThreshold : Maybe Seconds
     waiveOffOfferTitle : Maybe Text
     waiveOffOfferDescription : Maybe Text
+    vendorSplitApplicableAt: Maybe VendorSplitApplicableAt
+    enableVendorPercentageSplit: Maybe Bool
+    defaultServiceTierForCategory: Maybe Value
   constraints:
     serviceName: PrimaryKey
     merchantOperatingCityId: PrimaryKey
@@ -154,6 +168,8 @@ SubscriptionConfig:
     payoutServiceName: "'Payout_Juspay'"
     autopayEnabled: "true"
     showManualPlansInUI: "false"
+    vendorSplitApplicableAt: "'RIDE_END'"
+    enableVendorPercentageSplit: "false"
 
   sqlType:
    executionEnabledForVehicleCategories: text[]
@@ -163,3 +179,4 @@ SubscriptionConfig:
    webhookConfig:  "json"
    dataEntityToSend: text[]
    disabledVariantsForSubscription: "text[]"
+   defaultServiceTierForCategory: "json"

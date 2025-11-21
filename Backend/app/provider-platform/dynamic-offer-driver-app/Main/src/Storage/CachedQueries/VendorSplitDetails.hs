@@ -16,6 +16,7 @@ module Storage.CachedQueries.VendorSplitDetails
   ( create,
     createMany,
     findAllByAreaIncludingDefaultAndCityAndVariant,
+    findAllByVariantSplitTypeAreaAndCity,
   )
 where
 
@@ -67,3 +68,41 @@ makeAreaIncludingDefaultAndCityAndVariantKey mbArea merchantOperatingCityId vehi
     <> Kernel.Types.Id.getId merchantOperatingCityId
     <> ":VehicleVariant-"
     <> show vehicleVariant
+
+findAllByVariantSplitTypeAreaAndCity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DVehicleVariant.VehicleVariant ->
+  DVSD.SplitType ->
+  Maybe SpecialLocation.Area ->
+  Id DMOC.MerchantOperatingCity ->
+  m [DVSD.VendorSplitDetails]
+findAllByVariantSplitTypeAreaAndCity vehicleVariant splitType mbArea merchantOperatingCityId = do
+  Hedis.safeGet (makeVariantSplitTypeAreaAndCityKey vehicleVariant splitType mbArea merchantOperatingCityId) >>= \case
+    Just a -> pure a
+    Nothing ->
+      ( \dataToBeCached -> do
+          expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+          Hedis.setExp (makeVariantSplitTypeAreaAndCityKey vehicleVariant splitType mbArea merchantOperatingCityId) dataToBeCached expTime
+      )
+        /=<< do
+          -- Query both the specific area and Default area
+          let areas = nub $ SpecialLocation.Default : maybeToList mbArea
+          Queries.findAllByVariantSplitTypeAreaAndCity areas splitType merchantOperatingCityId vehicleVariant
+
+makeVariantSplitTypeAreaAndCityKey ::
+  DVehicleVariant.VehicleVariant ->
+  DVSD.SplitType ->
+  Maybe SpecialLocation.Area ->
+  Id DMOC.MerchantOperatingCity ->
+  Text
+makeVariantSplitTypeAreaAndCityKey vehicleVariant splitType mbArea merchantOperatingCityId = do
+  let areaKey = case mbArea of
+        Just area -> if area == SpecialLocation.Default then "" else ":Area-" <> show area
+        Nothing -> ""
+  "driverOfferCachedQueries:VendorSplitDetails:VehicleVariant-"
+    <> show vehicleVariant
+    <> ":SplitType-"
+    <> show splitType
+    <> areaKey
+    <> ":IncludingDefault:MerchantOperatingCityId-"
+    <> Kernel.Types.Id.getId merchantOperatingCityId
