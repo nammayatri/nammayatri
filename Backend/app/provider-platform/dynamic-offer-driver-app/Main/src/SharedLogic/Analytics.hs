@@ -666,13 +666,37 @@ fallbackToClickHouseAndUpdateRedisForAllTimeFleet ::
   m CommonAllTimeFallbackRes
 fallbackToClickHouseAndUpdateRedisForAllTimeFleet fleetOwnerId fleetAllTimeKeysData = do
   logTagInfo "FallbackClickhouseAllTimeFleet" $ "Initiating ClickHouse query to retrieve analytics data for fleetOwnerId: " <> fleetOwnerId
-  driverIds <- CFDA.getDriverIdsByFleetOwnerId fleetOwnerId
-  let activeDriverCount = length driverIds
-  activeVehicleCount <- CVehicle.countByDriverIds driverIds
+  mbDriverIds <- CFDA.getDriverIdsByFleetOwnerId fleetOwnerId
+  let mbActiveDriverCount = length <$> mbDriverIds
+  mbActiveVehicleCount <- maybe (pure Nothing) (CVehicle.countByDriverIds) mbDriverIds
   currentOnlineDriverCount <- getOnlineDriverCount
   -- update redis (best-effort)
-  mapM_ (uncurry Redis.set) (zip fleetAllTimeKeysData [activeDriverCount, activeVehicleCount])
-  pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [activeDriverCount, activeVehicleCount]) currentOnlineDriverCount
+  case (mbActiveDriverCount, mbActiveVehicleCount) of
+    (Just activeDriverCount, Just activeVehicleCount) -> do
+      logTagInfo
+        "FallbackClickhouseAllTimeFleet"
+        ( "Both active driver count and active vehicle count found, updating both: "
+            <> show activeDriverCount
+            <> " and "
+            <> show activeVehicleCount
+        )
+      mapM_ (uncurry Redis.set) (zip fleetAllTimeKeysData [activeDriverCount, activeVehicleCount])
+      pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [activeDriverCount, activeVehicleCount]) currentOnlineDriverCount
+    (Just activeDriverCount, Nothing) -> do
+      logTagInfo
+        "FallbackClickhouseAllTimeFleet"
+        ("No active vehicle count found, updating active driver count: " <> show activeDriverCount)
+      mapM_ (uncurry Redis.set) [(makeFleetAnalyticsKey fleetOwnerId ACTIVE_DRIVER_COUNT, activeDriverCount)]
+      pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [activeDriverCount, 0]) currentOnlineDriverCount
+    (Nothing, Just activeVehicleCount) -> do
+      logTagInfo
+        "FallbackClickhouseAllTimeFleet"
+        ("No active driver count found, updating active vehicle count: " <> show activeVehicleCount)
+      mapM_ (uncurry Redis.set) [(makeFleetAnalyticsKey fleetOwnerId ACTIVE_VEHICLE_COUNT, activeVehicleCount)]
+      pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [0, activeVehicleCount]) currentOnlineDriverCount
+    (Nothing, Nothing) -> do
+      logTagError "FallbackClickhouseAllTimeFleet" "No active driver count or active vehicle count found"
+      pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [0, 0]) currentOnlineDriverCount
   where
     getOnlineDriverCount = do
       res <- DDF.getOnlineKeyValue fleetOwnerId

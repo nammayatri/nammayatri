@@ -51,7 +51,11 @@ handleCacheMissForDriverFlowStatus entityRole entityId allKeys = do
           logTagInfo "DriverStatus" $ "Acquired inProgress lock for entityId: " <> entityId <> ". Running ClickHouse query."
           res <- withTryCatch "handleCacheMissForDriverFlowStatus" $ do
             driverIds <- case entityRole of
-              DP.FLEET_OWNER -> CFDA.getDriverIdsByFleetOwnerId entityId
+              DP.FLEET_OWNER -> do
+                mbDriverIds <- CFDA.getDriverIdsByFleetOwnerId entityId
+                case mbDriverIds of
+                  Just driverIds -> pure driverIds
+                  Nothing -> pure []
               DP.OPERATOR -> getFleetDriverIdsAndDriverIdsByOperatorId entityId
               _ -> throwError (InvalidRequest "Invalid Data")
             logTagInfo "DriverStatus" $ "Fetched driverIds from association: " <> show driverIds
