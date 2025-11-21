@@ -594,7 +594,7 @@ processIssuedDocument session person sessionMerchantId sessionMerchantOpCityId a
           -- Convert XML text to ByteString for storage
           let xmlBytes = BSL.fromStrict (TE.encodeUtf8 xmlText)
           verifyAndStoreAadhaar session person xmlBytes aadhaarResp
-          updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "200") (Just "Aadhaar card verified and stored successfully")
+          updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "Document Verification Successfull") (Just "Aadhaar card verified and stored successfully")
           logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Aadhaar card verification completed"
         )
         `catch` \(err :: DigiLockerError.DigiLockerError) -> do
@@ -610,7 +610,7 @@ processIssuedDocument session person sessionMerchantId sessionMerchantOpCityId a
             ExtractedPan panResp -> do
               logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Verifying and storing PAN card data"
               verifyAndStorePAN session person pdfBytes panResp
-              updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "200") (Just "PAN card verified and stored successfully")
+              updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "Document Verification Successfull") (Just "PAN card verified and stored successfully")
               logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", PAN card verification completed"
             ExtractedAadhaar _ -> do
               -- This case shouldn't happen (Aadhaar handled above)
@@ -619,7 +619,7 @@ processIssuedDocument session person sessionMerchantId sessionMerchantOpCityId a
             ExtractedDL dlResp -> do
               logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Verifying and storing Driver License data"
               verifyAndStoreDL session person pdfBytes dlResp
-              updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "200") (Just "Driver License verified and stored successfully")
+              updateDocStatusField session.id docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "Document Verification Successfull") (Just "Driver License verified and stored successfully")
               logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Driver License verification completed"
         )
         `catch` \(err :: DigiLockerError.DigiLockerError) -> do
