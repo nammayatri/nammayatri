@@ -270,6 +270,10 @@ data VendorSplitDetails = VendorSplitDetails {splitAmount :: HighPrecMoney, spli
 roundToTwoDecimalPlaces :: HighPrecMoney -> HighPrecMoney
 roundToTwoDecimalPlaces x = fromIntegral (round (x * 100) :: Integer) / 100
 
+-- Round Double percentage to 2 decimal places
+roundPercentageToTwoDecimals :: Double -> Double
+roundPercentageToTwoDecimals x = fromIntegral (round (x * 100) :: Integer) / 100
+
 roundVendorFee :: VendorSplitDetails -> VendorSplitDetails
 roundVendorFee vf = vf {splitAmount = roundToTwoDecimalPlaces vf.splitAmount}
 
@@ -293,9 +297,11 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplit
             groupedVendorFees = groupBy ((==) `on` (\p -> (p.vendorId, p.ticketId))) sortedVendorFees
             mbVendorSplits = map (computePercentageSplit uuid) groupedVendorFees
             vendorPercentageSplits = catMaybes mbVendorSplits
-            -- Calculate marketplace percentage (100% - sum of vendor percentages)
+            -- Round each vendor percentage to 2 decimals and sum them
             totalVendorPercentage = sum $ map (\SplitPercentage {amountPercentage} -> amountPercentage) vendorPercentageSplits
-            marketplacePercentage = 100.0 - totalVendorPercentage
+            -- Calculate marketplace percentage (100% - sum of vendor percentages) and round to 2 decimals
+            -- This ensures the total is exactly 100.00
+            marketplacePercentage = roundPercentageToTwoDecimals (100.0 - totalVendorPercentage)
 
         when (marketplacePercentage < 0) $ do
           logError $ "Marketplace percentage is negative: " <> show marketplacePercentage <> " for vendorFees: " <> show vendorFees <> "totalVendorPercentage: " <> show totalVendorPercentage
@@ -354,9 +360,10 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplit
         (firstFee : _) ->
           let aggregatedAmount = roundToTwoDecimalPlaces $ sum (map splitAmount feesForVendor)
               percentageAmount = convertToPercentage aggregatedAmount totalAmount
+              roundedPercentage = roundPercentageToTwoDecimals (realToFrac percentageAmount)
            in Just $
                 SplitPercentage
-                  { amountPercentage = realToFrac percentageAmount,
+                  { amountPercentage = roundedPercentage,
                     merchantCommissionPercentage = 0,
                     subMid = firstFee.vendorId,
                     uniqueSplitId = fromMaybe uniqueId firstFee.ticketId
@@ -379,8 +386,9 @@ mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPer
                     let roundedFee = roundVendorFee fee
                         -- Convert absolute amount to percentage: (amount / totalAmount) * 100
                         percentageAmount = convertToPercentage (splitAmount roundedFee) totalAmount
+                        roundedPercentage = roundPercentageToTwoDecimals (realToFrac percentageAmount)
                      in SplitPercentage
-                          { amountPercentage = realToFrac percentageAmount,
+                          { amountPercentage = roundedPercentage,
                             merchantCommissionPercentage = 0,
                             subMid = vendorId roundedFee,
                             uniqueSplitId = fromMaybe uuid fee.ticketId
@@ -389,8 +397,10 @@ mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPer
                 vendorFees
 
             -- Calculate marketplace percentage (100% - sum of vendor percentages)
+            -- Round each vendor percentage to 2 decimals and sum them
             totalVendorPercentage = sum $ map (\SplitPercentage {amountPercentage} -> amountPercentage) vendorPercentageSplits
-            marketplacePercentage = 100.0 - totalVendorPercentage
+            -- Round marketplace percentage to 2 decimals to ensure total is exactly 100.00
+            marketplacePercentage = roundPercentageToTwoDecimals (100.0 - totalVendorPercentage)
 
         when (marketplacePercentage < 0) $ do
           logError $ "Marketplace percentage is negative: " <> show marketplacePercentage <> " for vendorFees: " <> show vendorFees <> "totalVendorPercentage: " <> show totalVendorPercentage
