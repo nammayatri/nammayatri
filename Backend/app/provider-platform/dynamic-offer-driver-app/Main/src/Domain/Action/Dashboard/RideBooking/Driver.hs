@@ -23,6 +23,8 @@ module Domain.Action.Dashboard.RideBooking.Driver
     getDriverFeedbackList,
     postDriverUnlinkVehicle,
     postDriverEndRCAssociation,
+    postDriverDeleteAadhaar,
+    postDriverDeletePanCard,
     postDriverSetRCStatus,
     postDriverAddVehicle,
     postDriverExemptDriverFee,
@@ -36,9 +38,12 @@ import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.Driver as Driver
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import Domain.Types.AadhaarCard
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverFee as DDF
+import Domain.Types.DriverInformation
 import Domain.Types.DriverLicense
+import Domain.Types.DriverPanCard
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.Feedback as DFeedback
 import Domain.Types.Image (Image)
@@ -73,12 +78,14 @@ import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
+import qualified Storage.Queries.DriverPanCard as QDriverPanCard
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FeedbackExtra as QFeedback
@@ -339,10 +346,12 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
   let driverId = driverWithRidesCount.person.id
   mbDriverLicense <- B.runInReplica $ QDriverLicense.findByDriverId driverId
   rcAssociationHistory <- B.runInReplica $ QRCAssociation.findAllByDriverId driverId
+  mbAadharAssociationHistory <- B.runInReplica $ QAadhaarCard.findByPrimaryKey driverId
+  mbPanCardAssociationHistory <- B.runInReplica $ QDriverPanCard.findByDriverId driverId
   blockHistory <- B.runInReplica $ QDBT.findByDriverId driverId
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
 
-  buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory blockHistory (fromMaybe 0 driverInfo.drunkAndDriveViolationCount)
+  buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory mbAadharAssociationHistory mbPanCardAssociationHistory blockHistory (fromMaybe 0 driverInfo.drunkAndDriveViolationCount) driverInfo
 
 getDriverFeedbackList ::
   ShortId DM.Merchant ->
@@ -386,13 +395,18 @@ buildDriverInfoRes ::
   QPerson.DriverWithRidesCount ->
   Maybe DriverLicense ->
   [(DriverRCAssociation, VehicleRegistrationCertificate)] ->
+  Maybe AadhaarCard ->
+  Maybe DriverPanCard ->
   [DTDBT.DriverBlockTransactions] ->
   Int ->
+  DriverInformation ->
   m Common.DriverInfoRes
-buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociationHistory blockHistory drunkAndDriveViolationCount = do
+buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociationHistory mbAadharAssociationHistory mbPanCardAssociationHistory blockHistory drunkAndDriveViolationCount driverInfo = do
   mobileNumber <- traverse decrypt person.mobileNumber
   let email = person.email
   driverLicenseDetails <- traverse buildDriverLicenseAPIEntity mbDriverLicense
+  aadharAssociationDetails <- traverse (buildAadhaarAssociationAPIEntity driverInfo) mbAadharAssociationHistory
+  panCardDetails <- traverse (buildPanCardAPIEntity driverInfo) mbPanCardAssociationHistory
   let blockDetails = map buildBlockedListAPIEntity blockHistory
   blockedCount <- B.runInReplica $ QDBT.blockCountByDriverId person.id (Just DTDBT.BLOCK)
   vehicleRegistrationDetails <- traverse buildRCAssociationAPIEntity rcAssociationHistory
@@ -453,6 +467,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         selectedServiceTiers,
         driverLicenseDetails,
         vehicleRegistrationDetails,
+        aadharAssociationDetails,
+        panCardDetails,
         rating = driverStats.rating,
         alternateNumber = unencryptedAlternateMobileNumber,
         availableMerchants = availableMerchants,
@@ -482,6 +498,34 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         driverMode = info.mode,
         lastOfflineTime = info.lastOfflineTime,
         drunkAndDriveViolationCount
+      }
+
+buildAadhaarAssociationAPIEntity :: EncFlow m r => DriverInformation -> AadhaarCard -> m Common.AadhaarAssociationAPIEntity
+buildAadhaarAssociationAPIEntity driverInfo AadhaarCard {..} = do
+  decryptedAadhaarNumber <- traverse decrypt driverInfo.aadhaarNumber
+  pure
+    Common.AadhaarAssociationAPIEntity
+      { nameOnCard = nameOnCard,
+        driverGender = driverGender,
+        driverDob = dateOfBirth,
+        aadharNumber = decryptedAadhaarNumber,
+        address = address,
+        verificationStatus = castVerificationStatus verificationStatus,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+      }
+
+buildPanCardAPIEntity :: EncFlow m r => DriverInformation -> DriverPanCard -> m Common.PanCardAPIEntity
+buildPanCardAPIEntity _driverInfo DriverPanCard {..} = do
+  decryptedPanCardNumber <- decrypt panCardNumber
+  pure
+    Common.PanCardAPIEntity
+      { panCardNumber = Just decryptedPanCardNumber,
+        verificationStatus = castVerificationStatus verificationStatus,
+        driverDob = driverDob,
+        driverName = driverName,
+        driverNameOnGovtDB = driverNameOnGovtDB,
+        verifiedBy = verifiedBy
       }
 
 buildDriverFeedbackAPIEntity :: [DFeedback.Feedback] -> [DRating.Rating] -> [Common.DriverFeedbackAPIEntity]
@@ -641,6 +685,68 @@ postDriverEndRCAssociation merchantShortId opCity reqDriverId = do
 
   Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
+  pure Success
+
+---------------------------------------------------------------------
+postDriverDeleteAadhaar ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Driver ->
+  Flow APISuccess
+postDriverDeleteAadhaar merchantShortId opCity reqDriverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let driverId = cast @Common.Driver @DP.Driver reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+
+  -- Check if Aadhaar Card exists
+  mbAadhaarCard <- B.runInReplica $ QAadhaarCard.findByPrimaryKey personId
+  unless (isJust mbAadhaarCard) $ throwError (InvalidRequest "Aadhaar Card does not exist for this driver")
+
+  -- Delete Aadhaar Card from database
+  QAadhaarCard.deleteByPersonId personId
+
+  -- Update DriverInformation to clear Aadhaar number
+  QDriverInfo.updateAadhaarNumber Nothing driverId
+
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
+  logTagInfo "dashboard -> deleteAadhaar : " (show personId)
+  pure Success
+
+---------------------------------------------------------------------
+postDriverDeletePanCard ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Driver ->
+  Flow APISuccess
+postDriverDeletePanCard merchantShortId opCity reqDriverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let driverId = cast @Common.Driver @DP.Driver reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+
+  -- Check if Pan Card exists
+  mbPanCard <- B.runInReplica $ QDriverPanCard.findByDriverId personId
+  unless (isJust mbPanCard) $ throwError (InvalidRequest "Pan Card does not exist for this driver")
+
+  -- Delete Pan Card from database
+  QDriverPanCard.deleteByDriverId personId
+
+  -- Update DriverInformation to clear Pan number
+  QDriverInfo.updatePanNumber Nothing driverId
+
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
+  logTagInfo "dashboard -> deletePanCard : " (show personId)
   pure Success
 
 ---------------------------------------------------------------------

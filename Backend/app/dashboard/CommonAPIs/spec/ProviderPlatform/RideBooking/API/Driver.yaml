@@ -17,6 +17,7 @@ imports:
   Feedback: Domain.Types.Feedback
   Rating: Domain.Types.Rating
   Ride: Domain.Types.Ride
+  VerifiedBy: Domain.Types.DriverPanCard
 module: Driver
 
 apis:
@@ -191,6 +192,20 @@ apis:
         endpoint: DriverAPI EndRCAssociationEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS END_RC_ASSOCIATION
+  - POST: # DeleteAadhaarAPI
+      endpoint: /{driverId}/deleteAadhaar
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+  - POST: # DeletePanCardAPI
+      endpoint: /{driverId}/deletePanCard
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
   - POST: # AddVehicleAPI
       endpoint: /{driverId}/addVehicle
       auth: ApiAuthV2
@@ -282,6 +297,8 @@ types:
     - selectedServiceTiers: [Text]
     - driverLicenseDetails: Maybe DriverLicenseAPIEntity
     - vehicleRegistrationDetails: [DriverRCAssociationAPIEntity]
+    - aadharAssociationDetails: Maybe AadhaarAssociationAPIEntity
+    - panCardDetails: Maybe PanCardAPIEntity
     - onboardingDate: Maybe UTCTime
     - lastActivityDate: Maybe UTCTime
     - createdAt: Maybe UTCTime
@@ -355,6 +372,22 @@ types:
     - details: VehicleRegistrationCertificateAPIEntity
     # - consent: Bool #do we need it?
     # - consentTimestamp: UTCTime
+  AadhaarAssociationAPIEntity:
+    - nameOnCard : Maybe Text
+    - driverGender : Maybe Text
+    - driverDob : Maybe Text
+    - aadharNumber : Maybe Text
+    - address : Maybe Text
+    - verificationStatus : VerificationStatus
+    - createdAt : UTCTime
+    - updatedAt : UTCTime
+  PanCardAPIEntity:
+    - panCardNumber: Maybe Text
+    - verificationStatus: VerificationStatus
+    - driverDob: Maybe UTCTime
+    - driverName: Maybe Text
+    - driverNameOnGovtDB: Maybe Text
+    - verifiedBy: Maybe VerifiedBy
   PlatformFee:
     - fee: HighPrecMoney
     - cgst: HighPrecMoney
