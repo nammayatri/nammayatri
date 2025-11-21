@@ -117,12 +117,12 @@ appAuth
   :<|> appSignatureAuth
   :<|> appPasswordAuth
   :<|> appGetToken
+  :<|> (sendBusinessEmailVerification :<|> (verifyBusinessEmailWithoutAuth :<|> verifyBusinessEmailWithAuth) :<|> verifyBusinessEmailRedirect :<|> resendBusinessEmailVerification)
   :<|> appVerify
   :<|> appReInitiateLogin
   :<|> appGenerateTempAppCode
   :<|> appMakeSignature
-  :<|> logout
-  :<|> (sendBusinessEmailVerification :<|> (verifyBusinessEmailWithoutAuth :<|> verifyBusinessEmailWithAuth) :<|> verifyBusinessEmailRedirect :<|> resendBusinessEmailVerification) =
+  :<|> logout =
     client (Proxy :: Proxy Reg.API)
 
 mkAuthReq :: Reg.AuthReq
