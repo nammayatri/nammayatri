@@ -26,7 +26,7 @@ createMany = traverse_ create
 findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.BusinessLicense.BusinessLicense))
 findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId documentImageId)]
 
-findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.BusinessLicense.BusinessLicense]))
+findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.BusinessLicense.BusinessLicense])
 findByPersonId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateVerificationStatusByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
@@ -44,8 +44,8 @@ updateByPrimaryKey (Domain.Types.BusinessLicense.BusinessLicense {..}) = do
     [ Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.licenseExpiry licenseExpiry,
-      Se.Set Beam.licenseNumberEncrypted (((licenseNumber & unEncrypted . encrypted))),
-      Se.Set Beam.licenseNumberHash ((licenseNumber & hash)),
+      Se.Set Beam.licenseNumberEncrypted (licenseNumber & unEncrypted . encrypted),
+      Se.Set Beam.licenseNumberHash (licenseNumber & hash),
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -77,8 +77,8 @@ instance ToTType' Beam.BusinessLicense Domain.Types.BusinessLicense.BusinessLice
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.licenseExpiry = licenseExpiry,
-        Beam.licenseNumberEncrypted = ((licenseNumber & unEncrypted . encrypted)),
-        Beam.licenseNumberHash = (licenseNumber & hash),
+        Beam.licenseNumberEncrypted = licenseNumber & unEncrypted . encrypted,
+        Beam.licenseNumberHash = licenseNumber & hash,
         Beam.verificationStatus = verificationStatus,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

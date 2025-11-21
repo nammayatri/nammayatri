@@ -105,7 +105,7 @@ DigilockerVerification:
     codeChallenge: Text
     codeMethod: Text
     authorizationCode: Maybe Text
-    accessToken: Maybe Text
+    accessToken: Maybe (EncryptedHashedField e Text)
     accessTokenExpiresAt: Maybe UTCTime
     scope: Maybe Text
 
@@ -131,10 +131,26 @@ DigilockerVerification:
   sqlType:
     docStatus: json
 
+  beamFields:
+    accessToken:
+      accessTokenEncrypted: Maybe Text
+      accessTokenHash: Maybe DbHash
+
+  fromTType:
+    accessToken: Storage.Queries.Transformers.DigilockerVerification.mkEncryptedItem accessTokenEncrypted accessTokenHash|E
+
+  toTType:
+    accessToken: Nothing|E
+    accessTokenEncrypted: Storage.Queries.Transformers.DigilockerVerification.mkFieldEncrypted
+    accessTokenHash: Storage.Queries.Transformers.DigilockerVerification.mkFieldHash
+
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
     stateId: SecondaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
   queries:
     findById:
@@ -153,10 +169,8 @@ DigilockerVerification:
       kvFunction: updateOneWithKV
       params: [sessionStatus, responseCode, responseDescription]
       where: id
-    updateAccessToken:
-      kvFunction: updateOneWithKV
-      params: [accessToken, accessTokenExpiresAt, authorizationCode, scope]
-      where: stateId
+    # updateAccessToken is defined in DigilockerVerificationExtra.hs to avoid type ambiguity
+    # with EncryptedHashedField e Text
     updateDocStatus:
       kvFunction: updateOneWithKV
       params: [docStatus]

@@ -29,7 +29,7 @@ findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ S
 
 findByRcIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.VehicleNOC.VehicleNOC]))
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehicleNOC.VehicleNOC])
 findByRcIdAndDriverId rcId driverId = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId), Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
 updateVerificationStatusByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
@@ -47,8 +47,8 @@ updateByPrimaryKey (Domain.Types.VehicleNOC.VehicleNOC {..}) = do
     [ Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.nocExpiry nocExpiry,
-      Se.Set Beam.nocNumberEncrypted (((nocNumber & unEncrypted . encrypted))),
-      Se.Set Beam.nocNumberHash ((nocNumber & hash)),
+      Se.Set Beam.nocNumberEncrypted (nocNumber & unEncrypted . encrypted),
+      Se.Set Beam.nocNumberHash (nocNumber & hash),
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
@@ -82,8 +82,8 @@ instance ToTType' Beam.VehicleNOC Domain.Types.VehicleNOC.VehicleNOC where
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.nocExpiry = nocExpiry,
-        Beam.nocNumberEncrypted = ((nocNumber & unEncrypted . encrypted)),
-        Beam.nocNumberHash = (nocNumber & hash),
+        Beam.nocNumberEncrypted = nocNumber & unEncrypted . encrypted,
+        Beam.nocNumberHash = nocNumber & hash,
         Beam.rcId = Kernel.Types.Id.getId rcId,
         Beam.verificationStatus = verificationStatus,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

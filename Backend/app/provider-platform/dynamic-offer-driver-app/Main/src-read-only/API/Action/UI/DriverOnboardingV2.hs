@@ -213,7 +213,7 @@ type API =
       :> "pullDocuments"
       :> ReqBody
            '[JSON]
-           API.Types.UI.DriverOnboardingV2.PullDrivingLicenseReq
+           API.Types.UI.DriverOnboardingV2.PullDocumentReq
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -405,7 +405,7 @@ postDriverDigilockerPullDocuments ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    API.Types.UI.DriverOnboardingV2.PullDrivingLicenseReq ->
+    API.Types.UI.DriverOnboardingV2.PullDocumentReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postDriverDigilockerPullDocuments a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverDigilockerPullDocuments (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

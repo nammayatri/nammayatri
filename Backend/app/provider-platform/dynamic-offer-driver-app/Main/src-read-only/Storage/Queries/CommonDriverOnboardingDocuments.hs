@@ -27,12 +27,12 @@ createMany = traverse_ create
 
 findByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m ([Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments])
 findByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId <$> driverId)]
 
 findByDriverIdAndDocumentType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Domain.Types.DocumentVerificationConfig.DocumentType -> m ([Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments])
 findByDriverIdAndDocumentType driverId documentType = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId <$> driverId), Se.Is Beam.documentType $ Se.Eq documentType]]
 
 findById ::

@@ -21,7 +21,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleCategory as VehicleCategory
 import Environment
-import Kernel.External.Encryption (encrypt)
+import Kernel.External.Encryption (decrypt, encrypt, unEncrypted)
 import qualified Kernel.External.SharedLogic.DigiLocker.Error as DigiLockerError
 import qualified Kernel.External.Tokenize.Digilocker.Types as TokenizeTypes
 import qualified Kernel.External.Tokenize.Interface as Tokenize
@@ -40,6 +40,7 @@ import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.Queries.AadhaarCard as QAC
 import qualified Storage.Queries.DigilockerVerification as QDV
+import qualified Storage.Queries.DigilockerVerificationExtra as QDVExtra
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverLicenseExtra as QDLE
 import qualified Storage.Queries.DriverPanCard as QDPC
@@ -93,7 +94,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
   -- Step 1: Validate state parameter (if empty, we can't identify driver - set alert)
   when (T.null stateParam) $ do
     logError "DigiLocker callback - Missing required state parameter. Cannot identify driver."
-    throwError $ InternalError "DigiLocker callback received with empty state parameter"
+    throwError DigiLockerEmptyStateParameter
 
   -- Step 2: Find session by stateId once at the beginning (for driver ID logging and later use)
   -- We fetch it early so we can log driver ID in error cases without duplicate DB calls
@@ -117,7 +118,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
           QDV.updateSessionStatus DDV.FAILED (Just errorCode) (Just errorMsg) session.id
           logInfo $ "DigiLocker callback - Updated session status to FAILED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", ErrorCode: " <> errorCode
 
-    throwError $ InvalidRequest $ "DigiLocker OAuth Error: " <> errorCode <> " - " <> errorMsg
+    throwError $ DigiLockerOAuthError errorCode errorMsg
 
   -- Step 4: Validate authorization code
   code <- case mbCode of
@@ -137,8 +138,8 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
           throwError $ InvalidRequest "DigiLocker callback received with empty authorization code"
         else return codeVal
 
-  -- Step 5: Ensure we have a valid session (already fetched above, but validate here)
-  session <- mbSession & fromMaybeM (InvalidRequest "Invalid or expired state parameter from DigiLocker")
+  -- Step 4: Find session by stateId from DigilockerVerification table
+  session <- QDV.findByStateId stateParam >>= fromMaybeM DigiLockerInvalidStateParameter
   let driverId = session.driverId
   let stateId = session.stateId
   logInfo $ "DigiLocker callback - Found session for DriverId: " <> driverId.getId <> ", StateId: " <> stateId
@@ -152,8 +153,8 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
       >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
 
   unless (transporterConfig.digilockerEnabled == Just True) $ do
-    logError $ "DigiLocker callback - DigiLocker not enabled for DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", merchantOpCityId: " <> person.merchantOperatingCityId.getId
-    throwError $ InvalidRequest "DigiLocker verification is not enabled for this merchant operating city"
+    logError $ "DigiLocker callback - DigiLocker not enabled for merchantOpCityId: " <> person.merchantOperatingCityId.getId
+    throwError DigiLockerNotEnabled
 
   -- Step 7: Get DigiLocker config and call tokenize API
   digiLockerConfig <- SDDigilocker.getDigiLockerConfig person.merchantOperatingCityId
@@ -182,16 +183,20 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
       `catchAny` \err -> do
         logError $ "DigiLocker callback - Token API failed for DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ". Error: " <> show err
         QDV.updateSessionStatus DDV.FAILED (Just "TOKEN_API_FAILED") (Just $ T.pack $ show err) session.id
-        throwError $ InternalError "Failed to obtain access token from DigiLocker"
+        throwError DigiLockerTokenExchangeFailed
 
   logInfo $ "DigiLocker callback - Token API success for DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ". Access token obtained, scope: " <> show tokenResp.scope
 
-  -- Step 8: Update session with access token, scope, and expiry
-  let accessToken = tokenResp.token
+  -- Step 7: Update session with access token, scope, and expiry
+  let accessTokenPlain = tokenResp.token
   let scope = tokenResp.scope
   let expiresAt = tokenResp.expiresAt
 
-  QDV.updateAccessToken (Just accessToken) expiresAt (Just code) scope stateParam
+  -- Encrypt access token before saving to database
+  logInfo $ "DigiLocker callback - Before encryption, accessToken (plain, first 20 chars): " <> T.take 20 accessTokenPlain <> "..."
+  accessTokenEncrypted <- encrypt accessTokenPlain
+  logInfo $ "DigiLocker callback - After encryption, accessToken encrypted (first 20 chars): " <> T.take 20 (unEncrypted accessTokenEncrypted.encrypted) <> ", hash: " <> show (accessTokenEncrypted.hash)
+  QDVExtra.updateAccessToken (Just accessTokenEncrypted) expiresAt (Just code) scope stateParam
 
   -- Step 9: Get required documents and already verified documents
   requiredDocs <- getRequiredDocuments person.merchantOperatingCityId session.vehicleCategory
@@ -229,9 +234,11 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
       -- Step 14: Mark session as SUCCESS (token obtained and consent given for all required docs)
       QDV.updateSessionStatus DDV.SUCCESS Nothing Nothing session.id
 
-      -- Step 15: Process documents in background (for issued docs only, pull docs require user input)
+      -- Step 14: Process documents in background (for issued docs only, pull docs require user input)
+      -- Decrypt access token for use in API calls
+      accessTokenPlainDecrypted <- decrypt accessTokenEncrypted
       fork "digilocker-verify-documents" $ do
-        processDocuments session person digiLockerConfig accessToken parsedDocs unavailableDocs
+        processDocuments session person digiLockerConfig accessTokenPlainDecrypted parsedDocs unavailableDocs
           `catchAny` \err -> do
             logError $ "DigiLocker - Catastrophic failure in background job - Error: " <> show err <> ", DriverId: " <> driverId.getId <> ", StateId: " <> stateId
             -- Update session status to FAILED (individual doc errors are already handled)
