@@ -20,6 +20,12 @@ invalidDriverCancellation = LYT.TagNameValue "DriverCancellation#Invalid"
 invalidCustomerCancellation :: LYT.TagNameValue
 invalidCustomerCancellation = LYT.TagNameValue "CustomerCancellation#Invalid"
 
+validUserNoShowCancellation :: LYT.TagNameValue
+validUserNoShowCancellation = LYT.TagNameValue "CustomerNoShowCancellation#Valid"
+
+invalidUserNoShowCancellation :: LYT.TagNameValue
+invalidUserNoShowCancellation = LYT.TagNameValue "CustomerNoShowCancellation#Invalid"
+
 validCancellationPenaltyApplicable :: LYT.TagNameValue
 validCancellationPenaltyApplicable = LYT.TagNameValue "CancellationPenaltyApplicable#Valid"
 
