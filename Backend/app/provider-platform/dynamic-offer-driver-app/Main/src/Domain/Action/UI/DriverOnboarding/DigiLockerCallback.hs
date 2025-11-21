@@ -195,7 +195,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
   -- Encrypt access token before saving to database
   logInfo $ "DigiLocker callback - Before encryption, accessToken (plain, first 20 chars): " <> T.take 20 accessTokenPlain <> "..."
   accessTokenEncrypted <- encrypt accessTokenPlain
-  logInfo $ "DigiLocker callback - After encryption, accessToken encrypted (first 20 chars): " <> T.take 20 (unEncrypted accessTokenEncrypted.encrypted) <> ", hash: " <> show (accessTokenEncrypted.hash)
+  logInfo $ "DigiLocker callback - After encryption, accessToken encrypted (first 20 chars): " <> T.take 20 (unEncrypted accessTokenEncrypted) <> "..."
   QDVExtra.updateAccessToken (Just accessTokenEncrypted) expiresAt (Just code) scope stateParam
 
   -- Step 9: Get required documents and already verified documents

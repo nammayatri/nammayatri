@@ -5,6 +5,8 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
   EncryptedHashedField: Kernel.External.Encryption
+  EncryptedField: Kernel.External.Encryption
+  AsEncrypted: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
   VehicleVariant: Domain.Types.VehicleVariant
   VehicleCategory: Domain.Types.VehicleCategory
@@ -105,7 +107,7 @@ DigilockerVerification:
     codeChallenge: Text
     codeMethod: Text
     authorizationCode: Maybe Text
-    accessToken: Maybe (EncryptedHashedField e Text)
+    accessToken: Maybe (EncryptedField 'AsEncrypted Text)
     accessTokenExpiresAt: Maybe UTCTime
     scope: Maybe Text
 
@@ -131,18 +133,14 @@ DigilockerVerification:
   sqlType:
     docStatus: json
 
-  beamFields:
-    accessToken:
-      accessTokenEncrypted: Maybe Text
-      accessTokenHash: Maybe DbHash
+  beamType:
+    accessToken: Maybe Text
 
   fromTType:
-    accessToken: Storage.Queries.Transformers.DigilockerVerification.mkEncryptedItem accessTokenEncrypted accessTokenHash|E
+    accessToken: Encrypted <$> accessToken|E
 
   toTType:
-    accessToken: Nothing|E
-    accessTokenEncrypted: Storage.Queries.Transformers.DigilockerVerification.mkFieldEncrypted
-    accessTokenHash: Storage.Queries.Transformers.DigilockerVerification.mkFieldHash
+    accessToken: accessToken <&> unEncrypted|E
 
   constraints:
     id: PrimaryKey

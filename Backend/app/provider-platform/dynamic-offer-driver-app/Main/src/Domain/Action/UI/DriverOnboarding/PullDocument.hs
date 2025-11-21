@@ -33,7 +33,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Environment
-import Kernel.External.Encryption (EncryptedHashed, decrypt, unEncrypted)
+import Kernel.External.Encryption (Encrypted, decrypt, unEncrypted)
 import qualified Kernel.External.SharedLogic.DigiLocker.Error as DigiLockerError
 import qualified Kernel.External.Verification.Digilocker.Types as DigiTypes
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
@@ -104,9 +104,9 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
   verifySessionActive session req.docType
 
   -- Step 7: Get access token from session and decrypt it
-  let accessTokenEncryptedMaybe :: Maybe (EncryptedHashed Text) = session.accessToken
+  let accessTokenEncryptedMaybe :: Maybe (Encrypted Text) = session.accessToken
   accessTokenEncrypted <- accessTokenEncryptedMaybe & fromMaybeM DigiLockerMissingAccessToken
-  logInfo $ "PullDocument - Before decryption, accessToken encrypted (first 20 chars): " <> T.take 20 (unEncrypted accessTokenEncrypted.encrypted) <> ", hash: " <> show accessTokenEncrypted.hash
+  logInfo $ "PullDocument - Before decryption, accessToken encrypted (first 20 chars): " <> T.take 20 (unEncrypted accessTokenEncrypted) <> "..."
   accessToken <- decrypt accessTokenEncrypted
   logInfo $ "PullDocument - After decryption, accessToken (plain, first 20 chars): " <> T.take 20 accessToken <> "..."
 

@@ -26,3 +26,13 @@ ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN access_tok
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

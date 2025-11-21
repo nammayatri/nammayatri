@@ -10,12 +10,13 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
-data DigilockerVerificationE e = DigilockerVerification
-  { accessToken :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
+data DigilockerVerification = DigilockerVerification
+  { accessToken :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedField 'AsEncrypted Kernel.Prelude.Text),
     accessTokenExpiresAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     authorizationCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     codeChallenge :: Kernel.Prelude.Text,
@@ -35,69 +36,7 @@ data DigilockerVerificationE e = DigilockerVerification
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory
   }
-  deriving (Generic)
-
-type DigilockerVerification = DigilockerVerificationE 'AsEncrypted
-
-type DecryptedDigilockerVerification = DigilockerVerificationE 'AsUnencrypted
-
-instance EncryptedItem DigilockerVerification where
-  type Unencrypted DigilockerVerification = (DecryptedDigilockerVerification, HashSalt)
-  encryptItem (entity, salt) = do
-    accessToken_ <- encryptItem $ (,salt) <$> accessToken entity
-    pure
-      DigilockerVerification
-        { accessToken = accessToken_,
-          accessTokenExpiresAt = accessTokenExpiresAt entity,
-          authorizationCode = authorizationCode entity,
-          codeChallenge = codeChallenge entity,
-          codeMethod = codeMethod entity,
-          codeVerifier = codeVerifier entity,
-          createdAt = createdAt entity,
-          docStatus = docStatus entity,
-          driverId = driverId entity,
-          id = id entity,
-          merchantId = merchantId entity,
-          merchantOperatingCityId = merchantOperatingCityId entity,
-          responseCode = responseCode entity,
-          responseDescription = responseDescription entity,
-          scope = scope entity,
-          sessionStatus = sessionStatus entity,
-          stateId = stateId entity,
-          updatedAt = updatedAt entity,
-          vehicleCategory = vehicleCategory entity
-        }
-  decryptItem entity = do
-    accessToken_ <- fmap fst <$> decryptItem (accessToken entity)
-    pure
-      ( DigilockerVerification
-          { accessToken = accessToken_,
-            accessTokenExpiresAt = accessTokenExpiresAt entity,
-            authorizationCode = authorizationCode entity,
-            codeChallenge = codeChallenge entity,
-            codeMethod = codeMethod entity,
-            codeVerifier = codeVerifier entity,
-            createdAt = createdAt entity,
-            docStatus = docStatus entity,
-            driverId = driverId entity,
-            id = id entity,
-            merchantId = merchantId entity,
-            merchantOperatingCityId = merchantOperatingCityId entity,
-            responseCode = responseCode entity,
-            responseDescription = responseDescription entity,
-            scope = scope entity,
-            sessionStatus = sessionStatus entity,
-            stateId = stateId entity,
-            updatedAt = updatedAt entity,
-            vehicleCategory = vehicleCategory entity
-          },
-        ""
-      )
-
-instance EncryptedItem' DigilockerVerification where
-  type UnencryptedItem DigilockerVerification = DecryptedDigilockerVerification
-  toUnencrypted a salt = (a, salt)
-  fromUnencrypted = fst
+  deriving (Generic, Show, ToJSON, FromJSON)
 
 data SessionStatus = PENDING | SUCCESS | FAILED | CONSENT_DENIED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 

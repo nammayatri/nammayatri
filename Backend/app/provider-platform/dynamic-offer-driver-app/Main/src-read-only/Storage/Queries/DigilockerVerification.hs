@@ -17,8 +17,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.DigilockerVerification as Beam
 import Storage.Queries.DigilockerVerificationExtra as ReExport
-import Storage.Queries.OrphanInstances.DigilockerVerification ()
-import qualified Storage.Queries.Transformers.DigilockerVerification
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DigilockerVerification.DigilockerVerification -> m ())
 create = createWithKV
@@ -70,8 +68,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DigilockerVerification.DigilockerVerification {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.accessTokenEncrypted (Storage.Queries.Transformers.DigilockerVerification.mkFieldEncrypted accessToken),
-      Se.Set Beam.accessTokenHash (Storage.Queries.Transformers.DigilockerVerification.mkFieldHash accessToken),
+    [ Se.Set Beam.accessToken (accessToken <&> unEncrypted),
       Se.Set Beam.accessTokenExpiresAt accessTokenExpiresAt,
       Se.Set Beam.authorizationCode authorizationCode,
       Se.Set Beam.codeChallenge codeChallenge,
@@ -79,8 +76,8 @@ updateByPrimaryKey (Domain.Types.DigilockerVerification.DigilockerVerification {
       Se.Set Beam.codeVerifier codeVerifier,
       Se.Set Beam.docStatus docStatus,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
-      Se.Set Beam.merchantId (Just $ Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.merchantOperatingCityId (Just $ Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.responseCode responseCode,
       Se.Set Beam.responseDescription responseDescription,
       Se.Set Beam.scope scope,

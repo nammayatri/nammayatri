@@ -3,7 +3,6 @@
 
 module Storage.Queries.OrphanInstances.DigilockerVerification where
 
-import qualified Data.Aeson as A
 import qualified Domain.Types.DigilockerVerification
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -12,14 +11,13 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.DigilockerVerification as Beam
-import qualified Storage.Queries.Transformers.DigilockerVerification
 
 instance FromTType' Beam.DigilockerVerification Domain.Types.DigilockerVerification.DigilockerVerification where
   fromTType' (Beam.DigilockerVerificationT {..}) = do
     pure $
       Just
         Domain.Types.DigilockerVerification.DigilockerVerification
-          { accessToken = Storage.Queries.Transformers.DigilockerVerification.mkEncryptedItem accessTokenEncrypted accessTokenHash,
+          { accessToken = Encrypted <$> accessToken,
             accessTokenExpiresAt = accessTokenExpiresAt,
             authorizationCode = authorizationCode,
             codeChallenge = codeChallenge,
@@ -29,8 +27,8 @@ instance FromTType' Beam.DigilockerVerification Domain.Types.DigilockerVerificat
             docStatus = docStatus,
             driverId = Kernel.Types.Id.Id driverId,
             id = Kernel.Types.Id.Id id,
-            merchantId = Kernel.Types.Id.Id $ fromMaybe "" merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id $ fromMaybe "" merchantOperatingCityId,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             responseCode = responseCode,
             responseDescription = responseDescription,
             scope = scope,
@@ -43,8 +41,7 @@ instance FromTType' Beam.DigilockerVerification Domain.Types.DigilockerVerificat
 instance ToTType' Beam.DigilockerVerification Domain.Types.DigilockerVerification.DigilockerVerification where
   toTType' (Domain.Types.DigilockerVerification.DigilockerVerification {..}) = do
     Beam.DigilockerVerificationT
-      { Beam.accessTokenEncrypted = Storage.Queries.Transformers.DigilockerVerification.mkFieldEncrypted accessToken,
-        Beam.accessTokenHash = Storage.Queries.Transformers.DigilockerVerification.mkFieldHash accessToken,
+      { Beam.accessToken = accessToken <&> unEncrypted,
         Beam.accessTokenExpiresAt = accessTokenExpiresAt,
         Beam.authorizationCode = authorizationCode,
         Beam.codeChallenge = codeChallenge,
@@ -54,8 +51,8 @@ instance ToTType' Beam.DigilockerVerification Domain.Types.DigilockerVerificatio
         Beam.docStatus = docStatus,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantId = Just $ Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.responseCode = responseCode,
         Beam.responseDescription = responseDescription,
         Beam.scope = scope,

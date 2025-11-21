@@ -11,13 +11,12 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DigilockerVerification as Beam
 import Storage.Queries.OrphanInstances.DigilockerVerification ()
-import qualified Storage.Queries.Transformers.DigilockerVerification as Transformer
 
--- Override updateAccessToken to use EncryptedHashed Text instead of EncryptedHashedField e Text
--- to avoid type ambiguity
+-- Override updateAccessToken to use EncryptedField instead of EncryptedHashedField
+-- since we don't need hash for searching
 updateAccessToken ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Maybe (EncryptedHashed Text) ->
+  Maybe (EncryptedField 'AsEncrypted Text) ->
   Maybe UTCTime ->
   Maybe Text ->
   Maybe Text ->
@@ -26,8 +25,7 @@ updateAccessToken ::
 updateAccessToken accessToken accessTokenExpiresAt authorizationCode scope stateId = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.accessTokenEncrypted (Transformer.mkFieldEncrypted accessToken),
-      Se.Set Beam.accessTokenHash (Transformer.mkFieldHash accessToken),
+    [ Se.Set Beam.accessToken (accessToken <&> unEncrypted),
       Se.Set Beam.accessTokenExpiresAt accessTokenExpiresAt,
       Se.Set Beam.authorizationCode authorizationCode,
       Se.Set Beam.scope scope,
