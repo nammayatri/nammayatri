@@ -52,6 +52,7 @@ data SubscriptionConfigT f = SubscriptionConfigT
     payoutServiceName :: B.C f (Kernel.Prelude.Maybe Domain.Types.MerchantServiceConfig.ServiceName),
     sendDeepLink :: B.C f Kernel.Prelude.Bool,
     sendInAppFcmNotifications :: B.C f Kernel.Prelude.Bool,
+    sendManualPaymentLinkJobMaxDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     serviceName :: B.C f Domain.Types.Plan.ServiceNames,
     sgstPercentageOneTimeSecurityDeposit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     showManualPlansInUI :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

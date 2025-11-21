@@ -68,6 +68,7 @@ SubscriptionConfig:
     autopayEnabled: Maybe Bool
     showManualPlansInUI: Maybe Bool
     disabledVariantsForSubscription: "Maybe [Domain.Types.VehicleVariant.VehicleVariant]"
+    sendManualPaymentLinkJobMaxDelay: Maybe Data.Time.NominalDiffTime
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 
@@ -91,6 +92,7 @@ SubscriptionConfig:
     enableServiceUsageChargeDefault:  Kernel.Prelude.fromMaybe True|I
     waiveOffOfferTitle : Kernel.Prelude.fromMaybe "NAN" |I
     waiveOffOfferDescription :  Kernel.Prelude.fromMaybe "NAN" |I
+    sendManualPaymentLinkJobMaxDelay: Kernel.Prelude.Just . Kernel.Utils.Common.secondsToNominalDiffTime . Kernel.Prelude.fromMaybe 43200|I
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
@@ -109,6 +111,7 @@ SubscriptionConfig:
     genericNextJobScheduleTimeThreshold :  Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     waiveOffOfferTitle : Kernel.Prelude.Just|I
     waiveOffOfferDescription : Kernel.Prelude.Just|I
+    sendManualPaymentLinkJobMaxDelay: Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 43200)|I
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
@@ -127,6 +130,7 @@ SubscriptionConfig:
     genericNextJobScheduleTimeThreshold : Maybe Seconds
     waiveOffOfferTitle : Maybe Text
     waiveOffOfferDescription : Maybe Text
+    sendManualPaymentLinkJobMaxDelay: Maybe Seconds
   constraints:
     serviceName: PrimaryKey
     merchantOperatingCityId: PrimaryKey
@@ -154,6 +158,7 @@ SubscriptionConfig:
     payoutServiceName: "'Payout_Juspay'"
     autopayEnabled: "true"
     showManualPlansInUI: "false"
+    sendManualPaymentLinkJobMaxDelay: "43200"
 
   sqlType:
    executionEnabledForVehicleCategories: text[]
