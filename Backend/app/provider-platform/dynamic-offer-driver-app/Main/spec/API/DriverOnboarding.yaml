@@ -163,7 +163,7 @@ types:
     vehicleCategory: VehicleCategory
   DigiLockerInitiateResp:
     authorizationUrl: Text
-  PullDrivingLicenseReq:
+  PullDocumentReq:
     docType: DocumentType
     drivingLicenseNumber: Text
 
@@ -301,6 +301,6 @@ apis:
       endpoint: /driver/digilocker/pullDocuments
       auth: TokenAuth PROVIDER_TYPE
       request:
-        type: PullDrivingLicenseReq
+        type: PullDocumentReq
       response:
         type: APISuccess

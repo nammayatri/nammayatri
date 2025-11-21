@@ -5,6 +5,8 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
   EncryptedHashedField: Kernel.External.Encryption
+  EncryptedField: Kernel.External.Encryption
+  AsEncrypted: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
   VehicleVariant: Domain.Types.VehicleVariant
   VehicleCategory: Domain.Types.VehicleCategory
@@ -99,13 +101,13 @@ DigilockerVerification:
     id: Id DigilockerVerification
     driverId: Id Person
 
-    # OAuth Session Fields
+    # OAuth Session Field
     stateId: Text
     codeVerifier: Text
     codeChallenge: Text
     codeMethod: Text
     authorizationCode: Maybe Text
-    accessToken: Maybe Text
+    accessToken: Maybe (EncryptedField 'AsEncrypted Text)
     accessTokenExpiresAt: Maybe UTCTime
     scope: Maybe Text
 
@@ -131,10 +133,22 @@ DigilockerVerification:
   sqlType:
     docStatus: json
 
+  beamType:
+    accessToken: Maybe Text
+
+  fromTType:
+    accessToken: Encrypted <$> accessToken|E
+
+  toTType:
+    accessToken: accessToken <&> unEncrypted|E
+
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
     stateId: SecondaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
   queries:
     findById:
@@ -153,10 +167,8 @@ DigilockerVerification:
       kvFunction: updateOneWithKV
       params: [sessionStatus, responseCode, responseDescription]
       where: id
-    updateAccessToken:
-      kvFunction: updateOneWithKV
-      params: [accessToken, accessTokenExpiresAt, authorizationCode, scope]
-      where: stateId
+    # updateAccessToken is defined in DigilockerVerificationExtra.hs to avoid type ambiguity
+    # with EncryptedHashedField e Text
     updateDocStatus:
       kvFunction: updateOneWithKV
       params: [docStatus]

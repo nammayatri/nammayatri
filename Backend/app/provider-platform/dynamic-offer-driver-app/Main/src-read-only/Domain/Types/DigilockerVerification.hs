@@ -9,12 +9,13 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleCategory
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data DigilockerVerification = DigilockerVerification
-  { accessToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { accessToken :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedField 'Kernel.External.Encryption.AsEncrypted Kernel.Prelude.Text),
     accessTokenExpiresAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     authorizationCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     codeChallenge :: Kernel.Prelude.Text,
@@ -34,7 +35,7 @@ data DigilockerVerification = DigilockerVerification
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON)
 
 data SessionStatus = PENDING | SUCCESS | FAILED | CONSENT_DENIED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 

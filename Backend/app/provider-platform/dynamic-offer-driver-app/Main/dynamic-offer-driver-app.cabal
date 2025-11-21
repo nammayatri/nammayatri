@@ -573,6 +573,7 @@ library
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
       Storage.Queries.DailyStatsExtra
+      Storage.Queries.DigilockerVerificationExtra
       Storage.Queries.DocumentVerificationConfigExtra
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
       Storage.Queries.DriverBankAccountExtra
@@ -1286,6 +1287,7 @@ library
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.DailyStats
+      Storage.Queries.OrphanInstances.DigilockerVerification
       Storage.Queries.OrphanInstances.DocumentVerificationConfig
       Storage.Queries.OrphanInstances.DriverBankAccount
       Storage.Queries.OrphanInstances.DriverBlockReason
