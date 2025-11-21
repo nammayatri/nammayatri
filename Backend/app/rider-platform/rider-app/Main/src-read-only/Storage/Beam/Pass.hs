@@ -25,12 +25,15 @@ data PassT f = PassT
     documentsRequired :: B.C f [Domain.Types.Pass.PassDocumentType],
     enable :: B.C f Kernel.Prelude.Bool,
     id :: B.C f Kernel.Prelude.Text,
+    maxAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     maxValidDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxValidTrips :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    minAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     name :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     order :: B.C f Kernel.Prelude.Int,
+    passTypeCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     passTypeId :: B.C f Kernel.Prelude.Text,
     purchaseEligibilityJsonLogic :: B.C f [Data.Aeson.Value],
     redeemEligibilityJsonLogic :: B.C f [Data.Aeson.Value],
@@ -46,6 +49,6 @@ instance B.Table PassT where
 
 type Pass = PassT Identity
 
-$(enableKVPG ''PassT ['id] [])
+$(enableKVPG ''PassT ['id] [['passTypeId]])
 
 $(mkTableInstances ''PassT "pass")

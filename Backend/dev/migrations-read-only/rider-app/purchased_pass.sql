@@ -37,3 +37,10 @@ ALTER TABLE atlas_app.purchased_pass ADD COLUMN pass_description text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN verification_validity integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass ADD COLUMN pass_type_code text ;
+ALTER TABLE atlas_app.purchased_pass ADD COLUMN min_amount double precision ;
+ALTER TABLE atlas_app.purchased_pass ADD COLUMN max_amount double precision ;

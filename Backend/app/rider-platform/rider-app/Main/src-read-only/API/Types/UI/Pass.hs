@@ -71,7 +71,17 @@ data PassTypeAPIEntity = PassTypeAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassVerifyReq = PassVerifyReq {currentLat :: Data.Maybe.Maybe Kernel.Prelude.Double, currentLon :: Data.Maybe.Maybe Kernel.Prelude.Double, stopId :: Data.Maybe.Maybe Data.Text.Text, vehicleNumber :: Data.Text.Text}
+data PassVerifyReq = PassVerifyReq
+  { amount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    currentLat :: Data.Maybe.Maybe Kernel.Prelude.Double,
+    currentLon :: Data.Maybe.Maybe Kernel.Prelude.Double,
+    gateId :: Data.Maybe.Maybe Data.Text.Text,
+    isEntry :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    stationCode :: Data.Maybe.Maybe Data.Text.Text,
+    stopId :: Data.Maybe.Maybe Data.Text.Text,
+    ticketNumber :: Data.Maybe.Maybe Data.Text.Text,
+    vehicleNumber :: Data.Text.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

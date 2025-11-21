@@ -17,10 +17,15 @@ instance FromTType' Beam.PassVerifyTransaction Domain.Types.PassVerifyTransactio
     pure $
       Just
         Domain.Types.PassVerifyTransaction.PassVerifyTransaction
-          { destinationStopCode = destinationStopCode,
+          { closingAmount = closingAmount,
+            destinationStopCode = destinationStopCode,
+            entryGateId = entryGateId,
+            exitGateId = exitGateId,
             fleetId = fleetId,
             id = Kernel.Types.Id.Id id,
+            openingAmount = openingAmount,
             purchasePassId = Kernel.Types.Id.Id purchasePassId,
+            purchasePassPaymentId = Kernel.Types.Id.Id <$> purchasePassPaymentId,
             sourceStopCode = sourceStopCode,
             validTill = validTill,
             verifiedAt = verifiedAt,
@@ -33,10 +38,15 @@ instance FromTType' Beam.PassVerifyTransaction Domain.Types.PassVerifyTransactio
 instance ToTType' Beam.PassVerifyTransaction Domain.Types.PassVerifyTransaction.PassVerifyTransaction where
   toTType' (Domain.Types.PassVerifyTransaction.PassVerifyTransaction {..}) = do
     Beam.PassVerifyTransactionT
-      { Beam.destinationStopCode = destinationStopCode,
+      { Beam.closingAmount = closingAmount,
+        Beam.destinationStopCode = destinationStopCode,
+        Beam.entryGateId = entryGateId,
+        Beam.exitGateId = exitGateId,
         Beam.fleetId = fleetId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.openingAmount = openingAmount,
         Beam.purchasePassId = Kernel.Types.Id.getId purchasePassId,
+        Beam.purchasePassPaymentId = Kernel.Types.Id.getId <$> purchasePassPaymentId,
         Beam.sourceStopCode = sourceStopCode,
         Beam.validTill = validTill,
         Beam.verifiedAt = verifiedAt,

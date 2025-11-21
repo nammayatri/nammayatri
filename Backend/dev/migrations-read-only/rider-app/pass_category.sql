@@ -8,3 +8,9 @@ ALTER TABLE atlas_app.pass_category ADD COLUMN name text NOT NULL;
 ALTER TABLE atlas_app.pass_category ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.pass_category ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.pass_category ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass_category ADD COLUMN code text ;

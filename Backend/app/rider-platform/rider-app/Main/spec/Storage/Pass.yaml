@@ -46,25 +46,36 @@ Pass:
     autoApply: Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    minAmount: HighPrecMoney
+    maxAmount: HighPrecMoney
+    passTypeCode: Maybe Text
 
   beamType:
     verificationValidity: Maybe Seconds
+    minAmount: Maybe HighPrecMoney
+    maxAmount: Maybe HighPrecMoney
 
   fromTType:
     verificationValidity: Kernel.Prelude.fromMaybe 9000|I
+    minAmount: (Kernel.Prelude.fromMaybe amount minAmount)|E
+    maxAmount: (Kernel.Prelude.fromMaybe amount maxAmount)|E
 
   toTType:
     verificationValidity: Kernel.Prelude.Just|I
+    minAmount: Just minAmount|E
+    maxAmount: Just maxAmount|E
 
   constraints:
     id: PrimaryKey
-    passTypeId: !SecondaryKey
+    passTypeId: "!SecondaryKey"
 
   sqlType:
     applicableVehicleServiceTiers: text[]
     documentsRequired: text[]
     purchaseEligibilityJsonLogic: jsonb[]
     redeemEligibilityJsonLogic: jsonb[]
+    minAmount: double precision
+    maxAmount: double precision
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -29,12 +29,14 @@ updateByPrimaryKey (Domain.Types.PassType.PassType {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.catchline catchline,
+      Se.Set Beam.code code,
       Se.Set Beam.description description,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
       Se.Set Beam.order order,
       Se.Set Beam.passCategoryId (Kernel.Types.Id.getId passCategoryId),
+      Se.Set Beam.passClass (Just passClass),
       Se.Set Beam.title title,
       Se.Set Beam.updatedAt _now
     ]
