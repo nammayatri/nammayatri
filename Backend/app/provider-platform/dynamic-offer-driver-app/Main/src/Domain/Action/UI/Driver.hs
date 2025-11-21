@@ -245,6 +245,7 @@ import SharedLogic.DriverPool as SDP
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import SharedLogic.FareCalculator
+import qualified SharedLogic.FareCalculatorV2 as FCV2
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -1649,7 +1650,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
         logError ("RideRequestAlreadyAcceptedOrCancelled " <> "in respond quote for searchTryId:" <> getId searchTry.id <> " estimateId:" <> estimateId <> " driverId:" <> getId driver.id <> " and srfdId:" <> getId sReqFD.id)
         throwError (RideRequestAlreadyAcceptedOrCancelled sReqFD.id.getId)
       fareParams <- do
-        calculateFareParameters
+        FCV2.calculateFareParametersV2
           CalculateFareParametersParams
             { farePolicy = farePolicy,
               actualDistance = searchReq.estimatedDistance,
