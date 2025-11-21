@@ -670,8 +670,22 @@ fallbackToClickHouseAndUpdateRedisForAllTimeFleet fleetOwnerId fleetAllTimeKeysD
   activeVehicleCount <- CVehicle.countByDriverIds driverIds
   currentOnlineDriverCount <- getOnlineDriverCount
   -- update redis (best-effort)
-  mapM_ (uncurry Redis.set) (zip fleetAllTimeKeysData [activeDriverCount, activeVehicleCount])
-  pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [activeDriverCount, activeVehicleCount]) currentOnlineDriverCount
+  case (activeDriverCount, activeVehicleCount) of
+    (Just activeDriverCount, Just activeVehicleCount) -> do
+      logTagInfo "fallbackToClickHouseAndUpdateRedisForAllTimeFleet" "Both active driver count and active vehicle count found, updating both" <> show (activeDriverCount, activeVehicleCount)
+      mapM_ (uncurry Redis.set) (zip fleetAllTimeKeysData [activeDriverCount, activeVehicleCount])
+      pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [activeDriverCount, activeVehicleCount]) currentOnlineDriverCount
+    (Just activeDriverCount, Nothing) -> do
+      logTagInfo "fallbackToClickHouseAndUpdateRedisForAllTimeFleet" "No active vehicle count found, updating active driver count" <> show activeDriverCount
+      mapM_ (uncurry Redis.set) [(ACTIVE_DRIVER_COUNT, activeDriverCount)]
+      pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [activeDriverCount, 0]) currentOnlineDriverCount
+    (Nothing, Just activeVehicleCount) -> do
+      logTagInfo "fallbackToClickHouseAndUpdateRedisForAllTimeFleet" "No active driver count found, updating active vehicle count" <> show activeVehicleCount
+      mapM_ (uncurry Redis.set) [(ACTIVE_VEHICLE_COUNT, activeVehicleCount)]
+      pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [0, activeVehicleCount]) currentOnlineDriverCount
+    (Nothing, Nothing) -> do
+      logTagError "fallbackToClickHouseAndUpdateRedisForAllTimeFleet" "No active driver count or active vehicle count found"
+      pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [0, 0]) currentOnlineDriverCount
   where
     getOnlineDriverCount = do
       res <- DDF.getOnlineKeyValue fleetOwnerId
