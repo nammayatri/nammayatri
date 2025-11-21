@@ -938,7 +938,7 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) = do
     createAccount :: Domain.Types.Person.Person -> UTCTime -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
     createAccount person now = do
       merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-      when (merchantOpCity.country `notElem` [Context.USA, Context.Netherlands]) $ throwError $ InvalidRequest "Bank account creation is only supported for USA and Netherlands"
+      when (merchantOpCity.country `notElem` [Context.USA, Context.Netherlands, Context.Finland]) $ throwError $ InvalidRequest "Bank account creation is only supported for USA, Netherlands and Finland"
 
       mbMobileNumber <- mapM decrypt person.mobileNumber
       mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "Mobile number is required for opening a bank account")
