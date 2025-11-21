@@ -94,24 +94,6 @@ type API =
            :<|> "get-token"
              :> ReqBody '[JSON] DRegistration.GetTokenReq
              :> Post '[JSON] DRegistration.AuthRes
-           :<|> Capture "authId" (Id SRT.RegistrationToken)
-             :> "verify"
-             :> ReqBody '[JSON] DRegistration.AuthVerifyReq
-             :> Post '[JSON] DRegistration.AuthVerifyRes
-           :<|> "otp"
-             :> Capture "authId" (Id SRT.RegistrationToken)
-             :> Header "x-sender-hash" Text
-             :> "resend"
-             :> Post '[JSON] DRegistration.ResendAuthRes
-           :<|> "generate-temp-app-code"
-             :> TokenAuth
-             :> Post '[JSON] DRegistration.TempCodeRes
-           :<|> "makeSignature"
-             :> TokenAuth
-             :> Post '[JSON] (SignedResponse DRegistration.CustomerSignatureRes)
-           :<|> "logout"
-             :> TokenAuth
-             :> Post '[JSON] APISuccess
            :<|> "business-email"
              :> ( "send-verification"
                     :> TokenAuth
@@ -130,6 +112,24 @@ type API =
                       :> TokenAuth
                       :> Post '[JSON] APISuccess
                 )
+           :<|> Capture "authId" (Id SRT.RegistrationToken)
+             :> "verify"
+             :> ReqBody '[JSON] DRegistration.AuthVerifyReq
+             :> Post '[JSON] DRegistration.AuthVerifyRes
+           :<|> "otp"
+             :> Capture "authId" (Id SRT.RegistrationToken)
+             :> Header "x-sender-hash" Text
+             :> "resend"
+             :> Post '[JSON] DRegistration.ResendAuthRes
+           :<|> "generate-temp-app-code"
+             :> TokenAuth
+             :> Post '[JSON] DRegistration.TempCodeRes
+           :<|> "makeSignature"
+             :> TokenAuth
+             :> Post '[JSON] (SignedResponse DRegistration.CustomerSignatureRes)
+           :<|> "logout"
+             :> TokenAuth
+             :> Post '[JSON] APISuccess
        )
 
 handler :: FlowServer API
@@ -138,12 +138,12 @@ handler =
     :<|> signatureAuth
     :<|> passwordBasedAuth
     :<|> getToken
+    :<|> (sendBusinessEmailVerification :<|> (verifyBusinessEmailWithoutAuth :<|> verifyBusinessEmailWithAuth) :<|> verifyBusinessEmailRedirect :<|> resendBusinessEmailVerification)
     :<|> verify
     :<|> resend
     :<|> generateTempAppCode
     :<|> makeSignature
     :<|> logout
-    :<|> (sendBusinessEmailVerification :<|> (verifyBusinessEmailWithoutAuth :<|> verifyBusinessEmailWithAuth) :<|> verifyBusinessEmailRedirect :<|> resendBusinessEmailVerification)
 
 auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
 auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor mbSenderHash =
