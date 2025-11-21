@@ -675,7 +675,6 @@ library
       Storage.Queries.Transformers.BookingLocation
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.DailyStats
-      Storage.Queries.Transformers.DigilockerVerification
       Storage.Queries.Transformers.DocumentVerificationConfig
       Storage.Queries.Transformers.DriverFee
       Storage.Queries.Transformers.DriverInformation

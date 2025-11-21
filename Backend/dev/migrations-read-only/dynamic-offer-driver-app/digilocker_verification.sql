@@ -20,19 +20,3 @@ ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN state_id t
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN vehicle_category text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD PRIMARY KEY ( id);
-ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN access_token_hash text ;
-ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN access_token_encrypted text ;
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-

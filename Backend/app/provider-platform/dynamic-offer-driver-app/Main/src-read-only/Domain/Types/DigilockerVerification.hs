@@ -9,14 +9,13 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleCategory
-import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data DigilockerVerification = DigilockerVerification
-  { accessToken :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedField 'AsEncrypted Kernel.Prelude.Text),
+  { accessToken :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedField 'Kernel.External.Encryption.AsEncrypted Kernel.Prelude.Text),
     accessTokenExpiresAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     authorizationCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     codeChallenge :: Kernel.Prelude.Text,

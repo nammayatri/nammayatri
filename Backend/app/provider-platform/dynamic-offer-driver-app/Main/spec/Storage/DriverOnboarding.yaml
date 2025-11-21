@@ -101,7 +101,7 @@ DigilockerVerification:
     id: Id DigilockerVerification
     driverId: Id Person
 
-    # OAuth Session Fields
+    # OAuth Session Field
     stateId: Text
     codeVerifier: Text
     codeChallenge: Text
