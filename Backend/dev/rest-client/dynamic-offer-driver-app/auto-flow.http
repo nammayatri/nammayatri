@@ -216,6 +216,18 @@ token: {{token2}}
 
 ###
 
+# @name driverArrivedPickup
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/arrived/pickup
+token: {{token2}}
+content-type: application/json
+
+{
+    "lat": 14.445332,
+    "lon": 75.919028
+}
+
+###
+
 @rideId = {{driverList.response.body.list[0].id}}
 @otp = {{list2.response.body.list[0].rideList[0].rideOtp}}
 
@@ -341,12 +353,12 @@ content-type: application/json
 
 # @name rideCancelByDriver
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/cancel
-token: {{token1}}
+token: {{token2}}
 content-type: application/json
 
 {
-  "reasonCode": "OTHER",
-  "additionalInfo" : "Rider is too cute"
+  "reasonCode": "CUSTOMER_NO_SHOW",
+  "additionalInfo" : "User does not showed after 4 minutes"
 }
 
 ###
