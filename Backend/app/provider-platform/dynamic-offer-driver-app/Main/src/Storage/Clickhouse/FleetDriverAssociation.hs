@@ -6,6 +6,7 @@ import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 import Kernel.Types.Id
+import Kernel.Utils.Common
 
 data FleetDriverAssociationT f = FleetDriverAssociationT
   { id :: C f (Id FDA.FleetDriverAssociation),
@@ -35,13 +36,19 @@ $(TH.mkClickhouseInstances ''FleetDriverAssociationT 'SELECT_FINAL_MODIFIER)
 getDriverIdsByFleetOwnerId ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Text ->
-  m [Id DP.Person]
-getDriverIdsByFleetOwnerId fleetOwnerId =
-  CH.findAll $
-    CH.select_ (\assoc -> CH.notGrouped (assoc.driverId)) $
-      CH.filter_
-        (\assoc -> assoc.fleetOwnerId CH.==. fleetOwnerId CH.&&. assoc.isActive CH.==. True)
-        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetDriverAssociationTTable)
+  m (Maybe [Id DP.Person])
+getDriverIdsByFleetOwnerId fleetOwnerId = do
+  res <-
+    CH.findAllEither $
+      CH.select_ (\assoc -> CH.notGrouped (assoc.driverId)) $
+        CH.filter_
+          (\assoc -> assoc.fleetOwnerId CH.==. fleetOwnerId CH.&&. assoc.isActive CH.==. True)
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetDriverAssociationTTable)
+  case res of
+    Left err -> do
+      logTagError "getDriverIdsByFleetOwnerId" (show err)
+      pure Nothing
+    Right driverIds -> pure (Just driverIds)
 
 getTotalDriverCountByFleetOwnerIdsInDateRange ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
