@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.TripTransaction where
 
+import qualified Data.Aeson
 import qualified Domain.Types.TripTransaction
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -27,6 +28,8 @@ instance FromTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransa
             driverFleetBadgeId = Kernel.Types.Id.Id <$> fleetBadgeId,
             driverId = Kernel.Types.Id.Id driverId,
             driverName = driverName,
+            dutyType = dutyType,
+            endAddress = endAddress,
             endLocation = Storage.Queries.Transformers.Ride.mkLatLong endLocationLat endLocationLon,
             endRideApprovalRequestId = Kernel.Types.Id.Id <$> endRideApprovalRequestId,
             endStopCode = endStopCode,
@@ -35,19 +38,26 @@ instance FromTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransa
             isCurrentlyDeviated = isCurrentlyDeviated,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            pilotDestination = Storage.Queries.Transformers.Ride.mkLatLong pilotDestinationLat pilotDestinationLon,
+            pilotSource = Storage.Queries.Transformers.Ride.mkLatLong pilotSourceLat pilotSourceLon,
             roundRouteCode = roundRouteCode,
             routeCode = routeCode,
+            scheduledTripTime = scheduledTripTime,
+            startAddress = startAddress,
             startLocation = Storage.Queries.Transformers.Ride.mkLatLong startLocationLat startLocationLon,
             startedNearStopCode = startedNearStopCode,
             status = status,
             tripCode = tripCode,
             tripEndTime = tripEndTime,
+            tripEstimatedRouteDetails = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< tripEstimatedRouteDetails,
             tripStartSource = tripStartSource,
             tripStartTime = tripStartTime,
             tripTerminationSource = tripTerminationSource,
+            tripType = tripType,
             updatedAt = updatedAt,
             vehicleNumber = vehicleNumber,
-            vehicleServiceTierType = vehicleServiceTierType
+            vehicleServiceTierType = vehicleServiceTierType,
+            vipName = vipName
           }
 
 instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransaction where
@@ -61,6 +71,8 @@ instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransact
         Beam.fleetBadgeId = Kernel.Types.Id.getId <$> driverFleetBadgeId,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.driverName = driverName,
+        Beam.dutyType = dutyType,
+        Beam.endAddress = endAddress,
         Beam.endLocationLat = Kernel.Prelude.fmap (.lat) endLocation,
         Beam.endLocationLon = Kernel.Prelude.fmap (.lon) endLocation,
         Beam.endRideApprovalRequestId = Kernel.Types.Id.getId <$> endRideApprovalRequestId,
@@ -70,18 +82,27 @@ instance ToTType' Beam.TripTransaction Domain.Types.TripTransaction.TripTransact
         Beam.isCurrentlyDeviated = isCurrentlyDeviated,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.pilotDestinationLat = Kernel.Prelude.fmap (.lat) pilotDestination,
+        Beam.pilotDestinationLon = Kernel.Prelude.fmap (.lon) pilotDestination,
+        Beam.pilotSourceLat = Kernel.Prelude.fmap (.lat) pilotSource,
+        Beam.pilotSourceLon = Kernel.Prelude.fmap (.lon) pilotSource,
         Beam.roundRouteCode = roundRouteCode,
         Beam.routeCode = routeCode,
+        Beam.scheduledTripTime = scheduledTripTime,
+        Beam.startAddress = startAddress,
         Beam.startLocationLat = Kernel.Prelude.fmap (.lat) startLocation,
         Beam.startLocationLon = Kernel.Prelude.fmap (.lon) startLocation,
         Beam.startedNearStopCode = startedNearStopCode,
         Beam.status = status,
         Beam.tripCode = tripCode,
         Beam.tripEndTime = tripEndTime,
+        Beam.tripEstimatedRouteDetails = Kernel.Prelude.toJSON <$> tripEstimatedRouteDetails,
         Beam.tripStartSource = tripStartSource,
         Beam.tripStartTime = tripStartTime,
         Beam.tripTerminationSource = tripTerminationSource,
+        Beam.tripType = tripType,
         Beam.updatedAt = updatedAt,
         Beam.vehicleNumber = vehicleNumber,
-        Beam.vehicleServiceTierType = vehicleServiceTierType
+        Beam.vehicleServiceTierType = vehicleServiceTierType,
+        Beam.vipName = vipName
       }

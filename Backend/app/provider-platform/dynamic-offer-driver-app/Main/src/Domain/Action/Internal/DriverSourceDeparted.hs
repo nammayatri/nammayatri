@@ -35,6 +35,6 @@ driverSourceDeparted req = do
       closestStop <- WMB.findClosestStop tripTransaction.routeCode req.location >>= fromMaybeM (StopNotFound)
       route <- QR.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
       (sourceStopInfo, destinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route tripTransaction.routeCode
-      void $ WMB.startTripTransaction tripTransaction route closestStop sourceStopInfo req.location destinationStopInfo.point True AutoDetect
+      void $ WMB.startTripTransaction tripTransaction (Just route) (Just closestStop) sourceStopInfo req.location destinationStopInfo.point True AutoDetect
     category -> throwError $ InvalidRequest ("Unsupported vehicle category, " <> show category)
   pure Success

@@ -15,6 +15,7 @@ imports:
   RouteDetails: API.Types.ProviderPlatform.Fleet.Endpoints.Driver
   AlertRequestStatus: Domain.Types.Alert.AlertRequestStatus
   FleetBadgeType: Domain.Types.FleetBadgeType
+  TripType: Domain.Types.TripTransaction
 
 module: WMB
 
@@ -61,6 +62,10 @@ types:
     destination: StopInfo
     status: TripStatus
     routeInfo: RouteInfo
+    dutyType: Maybe Text
+    vipName: Maybe Text
+    tripType: Maybe TripType
+    scheduledTripTime: Maybe UTCTime
 
   ActiveTripTransaction:
     tripTransactionDetails: Maybe TripTransactionDetails
