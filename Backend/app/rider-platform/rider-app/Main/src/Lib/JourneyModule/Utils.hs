@@ -8,7 +8,7 @@ import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HM
-import Data.List (groupBy, nub, sort, sortBy)
+import Data.List (groupBy, nub, nubBy, sort, sortBy)
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Strict as M
 import qualified Data.Map.Strict as Map
@@ -446,6 +446,26 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   logDebug $ "groupedByTier: " <> show groupedByTier <> " sortedTimings: " <> show sortedTimings <> " routeStopTimings: " <> show routeStopTimings
   let upcomingBusThresholdSec = fromMaybe (Seconds 3600) (mbRiderConfig >>= (.upcomingBusThresholdSec))
   let mbServiceTierRelationshipCfg :: Maybe [RCTypes.ServiceTierRelationshipCfg] = filter (\cfg -> cfg.vehicleType == vc) <$> ((.serviceTierRelationshipCfg) =<< mbRiderConfig)
+  let serviceTierCanBoardMap :: M.Map Spec.ServiceTierType [Spec.ServiceTierType] =
+        maybe
+          M.empty
+          (M.fromList . map (\cfg -> (cfg.serviceTierType, cfg.canBoardIn)))
+          mbServiceTierRelationshipCfg
+  let expandAvailableServiceTiers :: [LegServiceTier] -> [LegServiceTier]
+      expandAvailableServiceTiers tiers =
+        nubBy (\a b -> a.serviceTierType == b.serviceTierType) $
+          concatMap
+            ( \tier ->
+                let boardableTiers = M.findWithDefault [] tier.serviceTierType serviceTierCanBoardMap
+                    boardableTierEntries =
+                      map
+                        -- TODO: We are only updating the service tier type here. Don't use other fields from here.
+                        (\boardableTier -> (tier {serviceTierType = boardableTier}) :: LegServiceTier)
+                        boardableTiers
+                 in tier : boardableTierEntries
+            )
+            tiers
+  let mbAvailableServiceTiersWithAlternates = expandAvailableServiceTiers <$> mbAvailableServiceTiers
   let normalizeEtaSeconds tod =
         let eta = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime tod currentTime) currentTimeIST
             secondsValue = fromIntegral (getSeconds eta) :: Double
@@ -477,58 +497,12 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           )
           tierWithEarliest
   let groupedByTierReordered = map snd sortedTierGroups
-  let tierSummary =
-        map
-          ( \timingsForTier ->
-              let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
-                  routeCodesForTier = nub $ map (.routeCode) timingsForTier
-               in (serviceTierType, routeCodesForTier)
-          )
-          groupedByTierReordered
-  logDebug $ "findPossibleRoutes: groupedByTierReordered summary = " <> show tierSummary
-  let serviceTierAlternatesMap :: M.Map Spec.ServiceTierType [Text] =
-        M.fromList $
-          map
-            ( \timingsForTier -> do
-                let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
-                    routeCodesForTier = nub $ (map (.routeCode) timingsForTier)
-                (serviceTierType, routeCodesForTier)
-            )
-            groupedByTierReordered
-
-  let alternateRouteHashMap :: M.Map Spec.ServiceTierType [Text] =
-        case mbServiceTierRelationshipCfg of
-          Nothing -> serviceTierAlternatesMap
-          Just serviceTierRelationshipCfg ->
-            foldl'
-              ( \acc serviceTierRelationshipCfg' ->
-                  foldl'
-                    ( \accIn serviceTierType ->
-                        case M.lookup serviceTierType serviceTierAlternatesMap of
-                          Just alternateRouteIds ->
-                            case M.lookup serviceTierRelationshipCfg'.serviceTierType accIn of
-                              Just alternateRouteIds' ->
-                                M.insert serviceTierRelationshipCfg'.serviceTierType (nub $ alternateRouteIds ++ alternateRouteIds') accIn
-                              Nothing ->
-                                M.insert serviceTierRelationshipCfg'.serviceTierType alternateRouteIds accIn
-                          Nothing -> accIn
-                    )
-                    acc
-                    serviceTierRelationshipCfg'.canBoardIn
-              )
-              M.empty
-              serviceTierRelationshipCfg
-
-  let finalAlternateRouteHashMap =
-        M.union alternateRouteHashMap $
-          M.filterWithKey (\k _ -> not (M.member k alternateRouteHashMap)) serviceTierAlternatesMap
-
   -- For each service tier, collect route information
   results <-
     measureLatency
       ( (flip mapConcurrently) groupedByTierReordered $ \timingsForTier -> do
           let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
-              routeCodesForTier = nub $ fromMaybe (map (.routeCode) timingsForTier) (M.lookup serviceTierType finalAlternateRouteHashMap)
+              routeCodesForTier = nub $ map (.routeCode) timingsForTier
           logDebug $ "routeCodesForTier: " <> show routeCodesForTier <> "serviceTierType: " <> show serviceTierType
           let tierSource = maybe GTFS (\a -> a.source) $ find (\a -> a.source == LIVE) timingsForTier
 
@@ -554,7 +528,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           let nextAvailableTimings = timingsForTier <&> (\timing -> (timing.timeOfArrival, timing.timeOfDeparture))
 
           (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode) <- do
-            case mbAvailableServiceTiers of
+            case mbAvailableServiceTiersWithAlternates of
               Just availableServiceTiers -> do
                 let availableServiceTier = find (\tier -> tier.serviceTierType == serviceTierType) availableServiceTiers
                     quoteId = availableServiceTier <&> (.quoteId)
