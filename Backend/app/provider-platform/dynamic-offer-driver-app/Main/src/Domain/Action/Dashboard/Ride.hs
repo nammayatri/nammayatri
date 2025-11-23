@@ -433,7 +433,9 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         roundTrip = booking.roundTrip,
         deliveryParcelImageId = ride.deliveryFileIds >>= lastMay & fmap getId,
         estimatedReservedDuration = timeDiffInMinutes <$> booking.returnTime <*> (Just booking.startTime),
-        isPetRide = Just ride.isPetRide
+        isPetRide = Just ride.isPetRide,
+        cancellationPenaltyAmount = ride.driverCancellationPenaltyAmount,
+        cancellationPenaltyWaivedReason = ride.driverCancellationPenaltyWaivedReason
       }
 
 -- TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`

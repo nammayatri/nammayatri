@@ -269,6 +269,8 @@ types:
     - deliveryParcelImageId: Maybe Text
     - estimatedReservedDuration: Maybe Minutes
     - isPetRide: Maybe Bool
+    - cancellationPenaltyAmount: Maybe HighPrecMoney
+    - cancellationPenaltyWaivedReason: Maybe Text
   LocationAPIEntity:
     - lat: Double
     - lon: Double
