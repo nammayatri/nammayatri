@@ -270,6 +270,8 @@ types:
     - deliveryParcelImageId: Maybe Text
     - estimatedReservedDuration: Maybe Minutes
     - isPetRide: Maybe Bool
+    - cancellationPenaltyAmount: Maybe HighPrecMoney
+    - cancellationPenaltyWaivedReason: Maybe Text
   StopInformation:
     - stopId: Text
     - stopLocId: Text
