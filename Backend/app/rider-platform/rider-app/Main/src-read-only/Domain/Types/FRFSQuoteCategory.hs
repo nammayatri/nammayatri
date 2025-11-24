@@ -24,7 +24,7 @@ data FRFSQuoteCategory = FRFSQuoteCategory
     offeredPrice :: Kernel.Types.Common.Price,
     price :: Kernel.Types.Common.Price,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
-    selectedQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    selectedQuantity :: Kernel.Prelude.Int,
     ticketCategoryMetadataConfigId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

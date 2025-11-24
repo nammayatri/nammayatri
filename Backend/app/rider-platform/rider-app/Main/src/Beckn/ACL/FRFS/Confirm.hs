@@ -94,36 +94,21 @@ tfBilling (mRiderName, mRiderNumber) =
       }
 
 tfItems :: DBooking.FRFSTicketBooking -> [DCategorySelect] -> Maybe [Spec.Item]
-tfItems booking categories =
-  case categories of
-    -- TODO :: This is deprecated, should be removed post `quoteCategories` unification
-    [] ->
-      booking.quantity <&> \quantity ->
-        [ Spec.Item
+tfItems _ categories =
+  Just $
+    map
+      ( \category ->
+          Spec.Item
             { itemCategoryIds = Nothing,
               itemDescriptor = Nothing,
               itemFulfillmentIds = Nothing,
-              itemId = Just booking.bppItemId,
+              itemId = Just category.bppItemId,
               itemPrice = Nothing,
-              itemQuantity = tfQuantity quantity,
+              itemQuantity = tfQuantity category.quantity,
               itemTime = Nothing
             }
-        ]
-    _ ->
-      Just $
-        map
-          ( \category ->
-              Spec.Item
-                { itemCategoryIds = Nothing,
-                  itemDescriptor = Nothing,
-                  itemFulfillmentIds = Nothing,
-                  itemId = Just category.bppItemId,
-                  itemPrice = Nothing,
-                  itemQuantity = tfQuantity category.quantity,
-                  itemTime = Nothing
-                }
-          )
-          categories
+      )
+      categories
 
 tfQuantity :: Int -> Maybe Spec.ItemQuantity
 tfQuantity quantity =
@@ -139,8 +124,8 @@ tfQuantity quantity =
       }
 
 tfPayments :: DBooking.FRFSTicketBooking -> [DCategorySelect] -> Text -> Maybe BknPaymentParams -> Maybe Text -> Maybe [Spec.Payment]
-tfPayments booking categories txnId mPaymentParams mSettlementType = do
-  let fareParameters = FRFSUtils.calculateFareParametersWithBookingFallback (FRFSUtils.mkCategoryPriceItemFromDCategorySelect categories) booking
+tfPayments _ categories txnId mPaymentParams mSettlementType = do
+  let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromDCategorySelect categories)
   Just $
     singleton $
       Utils.mkPaymentForConfirmReq Spec.PAID (Just $ encodeToText fareParameters.totalPrice.amount) (Just txnId) mPaymentParams mSettlementType (Just fareParameters.currency) Nothing

@@ -68,11 +68,6 @@ updateFailureReasonById failureReason id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.failureReason failureReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateFinalPriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
-updateFinalPriceById finalPrice id = do
-  _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
 updateGoogleWalletLinkById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateGoogleWalletLinkById googleWalletJWTUrl id = do
   _now <- getCurrentTime
@@ -89,6 +84,11 @@ updateIsBookingCancellableByBookingId ::
 updateIsBookingCancellableByBookingId isBookingCancellable id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isBookingCancellable isBookingCancellable, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateIsFareChangedById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateIsFareChangedById isFareChanged id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.isFareChanged isFareChanged, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateOnInitDone :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateOnInitDone journeyOnInitDone id = do
@@ -111,9 +111,6 @@ updatePayoutStatusById ::
 updatePayoutStatusById cashbackStatus id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.cashbackStatus cashbackStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-updateQuantity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
-updateQuantity quantity id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.quantity quantity, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateQuoteAndBppItemIdAndRouteStationsJson ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -153,21 +150,6 @@ updateStatusValidTillAndPaymentTxnById status validTill paymentTxnId id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.status status, Se.Set Beam.validTill validTill, Se.Set Beam.paymentTxnId paymentTxnId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateTotalPriceAndQuantityById ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Common.Price -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
-updateTotalPriceAndQuantityById totalPrice quantity childTicketQuantity isFareChanged id = do
-  _now <- getCurrentTime
-  updateWithKV
-    [ Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
-      Se.Set Beam.price ((.amount) totalPrice),
-      Se.Set Beam.quantity quantity,
-      Se.Set Beam.childTicketQuantity childTicketQuantity,
-      Se.Set Beam.isFareChanged isFareChanged,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
 updateValidTillById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateValidTillById validTill id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.validTill validTill, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -190,13 +172,10 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.cancellationCharges cancellationCharges,
       Se.Set Beam.cashbackPayoutOrderId cashbackPayoutOrderId,
       Se.Set Beam.cashbackStatus cashbackStatus,
-      Se.Set Beam.childTicketQuantity childTicketQuantity,
       Se.Set Beam.customerCancelled customerCancelled,
       Se.Set Beam.discountedTickets discountedTickets,
-      Se.Set Beam.estimatedPrice (Kernel.Prelude.fmap (.amount) estimatedPrice),
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
       Se.Set Beam.failureReason failureReason,
-      Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice),
       Se.Set Beam.fromStationId fromStationCode,
       Se.Set Beam.googleWalletJWTUrl googleWalletJWTUrl,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
@@ -216,7 +195,6 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,
       Se.Set Beam.providerName providerName,
-      Se.Set Beam.quantity quantity,
       Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
       Se.Set Beam.recentLocationId (Kernel.Types.Id.getId <$> recentLocationId),
       Se.Set Beam.refundAmount refundAmount,

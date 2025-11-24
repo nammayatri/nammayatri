@@ -106,7 +106,6 @@ FRFSQuote:
     _type: FRFSQuoteType
     fromStationCode: Text
     toStationCode: Text
-    quantity: Maybe Int # TODO :: To be deprecated with FRFSQuoteCategory
     stationsJson: Text
     routeStationsJson: Maybe Text
     vehicleType: VehicleCategory
@@ -115,9 +114,6 @@ FRFSQuote:
     providerId: Text
     providerName: Text
     providerDescription: Maybe Text
-    price: Maybe Price # TODO :: To be deprecated with FRFSQuoteCategory
-    childPrice: Maybe Price # TODO :: To be deprecated with FRFSQuoteCategory
-    estimatedPrice: Maybe Price # TODO :: To be deprecated with FRFSQuoteCategory
     fareDetails: Maybe FRFSFareDetails
     validTill: UTCTime
     riderId: Id Person
@@ -130,20 +126,12 @@ FRFSQuote:
     discountedTickets: Maybe Int
     bppDelayedInterest: Maybe Int
     oldCacheDump: Maybe Text
-    childTicketQuantity: Maybe Int # TODO :: To be deprecated with FRFSQuoteCategory
     multimodalSearchRequestId: Maybe Text
   beamFields:
     fromStationCode:
       fromStationId: Text
     toStationCode:
       toStationId: Text
-    price:
-      currency: Maybe Currency
-      price: Maybe HighPrecMoney
-    childPrice:
-      childPrice: Maybe HighPrecMoney
-    estimatedPrice:
-      estimatedPrice: Maybe HighPrecMoney
     fareDetails:
       providerRouteId: Maybe Text
       distance: Maybe Meters
@@ -167,17 +155,11 @@ FRFSQuote:
       appSession: Int
 
   fromTType:
-    price: Kernel.Types.Common.mkPrice currency <$> price|E
-    childPrice: Kernel.Types.Common.mkPrice currency <$> childPrice|E
-    estimatedPrice: Kernel.Types.Common.mkPrice currency <$> estimatedPrice|E
     applicableDiscountIds: (Kernel.Types.Id.Id <$> ) <$>|I
     fareDetails: Domain.Types.FRFSQuote.FRFSFareDetails <$> appSession <*> distance <*> providerRouteId <*> ticketTypeCode <*> trainTypeCode <*> via|E
 
   toTType:
-    price: (Kernel.Prelude.fmap (.amount))|I
     currency: (Kernel.Prelude.fmap (.currency))|I
-    childPrice: Kernel.Prelude.fmap (.amount)|I
-    estimatedPrice: Kernel.Prelude.fmap (.amount)|I
     applicableDiscountIds: (Kernel.Types.Id.getId <$> ) <$>|I
     providerRouteId: (fareDetails <&> (.providerRouteId))|E
     distance: (fareDetails <&> (.distance))|E
@@ -188,12 +170,6 @@ FRFSQuote:
 
   sqlType:
     applicableDiscountIds: "text[]"
-
-  default:
-    price: "0"
-    childPrice: "0"
-    estimatedPrice: "0"
-    quantity: "0"
 
   constraints:
     id: PrimaryKey
@@ -223,7 +199,7 @@ FRFSQuoteCategory:
     price: Price # Single Item Quantity Price without any passes or offers determined in OnSearch.
     offeredPrice: Price # Single Item Quantity Discounted Price determined in OnSearch that would be less than or equal to `price`.
     finalPrice: Maybe Price # Single Item Quantity Final Price determined in OnInit that the customer would actually pay.
-    selectedQuantity: Maybe Int
+    selectedQuantity: Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
   constraints:
@@ -246,6 +222,7 @@ FRFSQuoteCategory:
     category: Maybe FRFSQuoteCategoryType
   default:
     ticketCategoryMetadataConfigId:  "'Unknown'"
+    selectedQuantity: "0"
 
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
@@ -304,8 +281,6 @@ FRFSTicketBooking:
     _type: FRFSQuoteType
     fromStationCode: Text
     toStationCode: Text
-    quantity: Maybe Int # TODO :: To be deprecated with FRFSQuoteCategory
-    childTicketQuantity: Maybe Int # TODO :: To be deprecated with FRFSQuoteCategory
     vehicleType: VehicleCategory
     bppSubscriberId: Text
     bppSubscriberUrl: Text
@@ -313,8 +288,6 @@ FRFSTicketBooking:
     providerName: Text
     providerDescription: Maybe Text
     totalPrice: Price # This is the total price multiplied for all the selected quantities of Quote Categories
-    estimatedPrice: Maybe Price # TODO :: To be deprecated with FRFSQuoteCategory
-    finalPrice: Maybe Price # TODO :: To be deprecated with FRFSQuoteCategory
     validTill: UTCTime
     paymentTxnId: Maybe Text
     bppBankAccountNumber: Maybe Text
@@ -348,8 +321,6 @@ FRFSTicketBooking:
 
   default:
     customerCancelled: "false"
-    quantity: "0"
-    estimatedPrice: "0"
 
   beamFields:
     fromStationCode:
@@ -359,10 +330,6 @@ FRFSTicketBooking:
     totalPrice:
       currency: Maybe Currency
       price: HighPrecMoney
-    estimatedPrice:
-      estimatedPrice: Maybe HighPrecMoney
-    finalPrice:
-      finalPrice: Maybe HighPrecMoney
 
   types:
     CashbackStatus:
@@ -370,12 +337,8 @@ FRFSTicketBooking:
 
   fromTType:
     totalPrice: Kernel.Types.Common.mkPrice currency price|E
-    estimatedPrice: Kernel.Types.Common.mkPrice currency <$> estimatedPrice|E
-    finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
 
   toTType:
-    estimatedPrice: Kernel.Prelude.fmap (.amount)|I
-    finalPrice: Kernel.Prelude.fmap (.amount)|I
     price: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
 
@@ -422,13 +385,9 @@ FRFSTicketBooking:
       kvFunction: updateWithKV
       params: [bppOrderId, updatedAt]
       where: id
-    updateFinalPriceById:
+    updateIsFareChangedById:
       kvFunction: updateWithKV
-      params: [finalPrice, updatedAt]
-      where: id
-    updateTotalPriceAndQuantityById:
-      kvFunction: updateWithKV
-      params: [totalPrice, quantity, childTicketQuantity, isFareChanged, updatedAt]
+      params: [isFareChanged, updatedAt]
       where: id
     updateBppBankDetailsById:
       kvFunction: updateWithKV
@@ -474,10 +433,6 @@ FRFSTicketBooking:
     updateQuoteAndBppItemIdAndRouteStationsJson:
       kvFunction: updateOneWithKV
       params: [quoteId, bppItemId, routeStationsJson]
-      where: id
-    updateQuantity:
-      kvFunction: updateWithKV
-      params: [quantity, updatedAt]
       where: id
     updateFailureReasonById:
       kvFunction: updateOneWithKV

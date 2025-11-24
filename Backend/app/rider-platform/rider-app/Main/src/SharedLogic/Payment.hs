@@ -183,8 +183,8 @@ orderStatusHandlerWithRefunds paymentService paymentOrder paymentStatusResponse 
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
     Right (newPaymentFulfillmentStatus, _, mbDomainTransactionId) -> do
       whenJust paymentOrder.paymentFulfillmentStatus $ \oldPaymentFulfillmentStatus -> do
+        let personId = cast @DPayment.Person @Person.Person paymentOrder.personId
         when (newPaymentFulfillmentStatus /= oldPaymentFulfillmentStatus) $ do
-          let personId = cast @DPayment.Person @Person.Person paymentOrder.personId
           -- Recon Entry
           whenJust mbDomainTransactionId $ \domainTransactionId -> do
             void $
@@ -200,16 +200,14 @@ orderStatusHandlerWithRefunds paymentService paymentOrder paymentStatusResponse 
               DPayment.FulfillmentRefundFailed -> TNotifications.notifyRefundNotification Notification.REFUND_FAILED paymentOrder.id personId paymentService
               DPayment.FulfillmentRefunded -> TNotifications.notifyRefundNotification Notification.REFUND_SUCCESS paymentOrder.id personId paymentService
               _ -> pure ()
-          -- Invalidate the Offer List Cache
-          case newPaymentFulfillmentStatus of
-            DPayment.FulfillmentSucceeded ->
-              -- If Fulfillment Succeeded post Payment with Offers, then invalidate the Offer List Cache
-              unless (null (fromMaybe [] paymentStatusResponse.offers)) $ do
-                fork "Invalidate Offer List Cache" $ do
-                  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-                  let merchantOperatingCityId = maybe person.merchantOperatingCityId (cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity) paymentOrder.merchantOperatingCityId
-                  invalidateOfferListCache person merchantOperatingCityId (mkPrice (Just paymentOrder.currency) paymentOrder.amount)
-            _ -> pure ()
+        -- Invalidate the Offer List Cache
+        case newPaymentFulfillmentStatus of
+          DPayment.FulfillmentSucceeded ->
+            fork "Invalidate Offer List Cache" $ do
+              person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+              let merchantOperatingCityId = maybe person.merchantOperatingCityId (cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity) paymentOrder.merchantOperatingCityId
+              invalidateOfferListCache person merchantOperatingCityId (mkPrice (Just paymentOrder.currency) paymentOrder.amount)
+          _ -> pure ()
     _ -> pure ()
   -- Update the Payment Order with the new payment fulfillment status, domain entity id and domain transaction id
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of

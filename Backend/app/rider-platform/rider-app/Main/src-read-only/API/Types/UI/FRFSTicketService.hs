@@ -142,7 +142,7 @@ data FRFSQuoteCategoryAPIEntity = FRFSQuoteCategoryAPIEntity
     finalPrice :: Data.Maybe.Maybe Kernel.Types.Common.PriceAPIEntity,
     offeredPrice :: Kernel.Types.Common.PriceAPIEntity,
     price :: Kernel.Types.Common.PriceAPIEntity,
-    selectedQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int
+    selectedQuantity :: Kernel.Prelude.Int
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

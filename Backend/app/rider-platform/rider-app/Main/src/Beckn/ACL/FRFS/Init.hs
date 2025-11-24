@@ -91,36 +91,21 @@ tfBilling (mRiderName, mRiderNumber) =
       }
 
 tfItems :: DTBooking.FRFSTicketBooking -> [DCategorySelect] -> Maybe [Spec.Item]
-tfItems tBooking categories =
-  case categories of
-    -- TODO :: This is deprecated, should be removed post `quoteCategories` unification
-    [] ->
-      tBooking.quantity <&> \quantity ->
-        [ Spec.Item
+tfItems _ categories =
+  Just $
+    map
+      ( \category ->
+          Spec.Item
             { itemCategoryIds = Nothing,
               itemDescriptor = Nothing,
               itemFulfillmentIds = Nothing,
-              itemId = Just tBooking.bppItemId,
+              itemId = Just category.bppItemId,
               itemPrice = Nothing,
-              itemQuantity = tfQuantity quantity,
+              itemQuantity = tfQuantity category.quantity,
               itemTime = Nothing
             }
-        ]
-    _ ->
-      Just $
-        map
-          ( \category ->
-              Spec.Item
-                { itemCategoryIds = Nothing,
-                  itemDescriptor = Nothing,
-                  itemFulfillmentIds = Nothing,
-                  itemId = Just category.bppItemId,
-                  itemPrice = Nothing,
-                  itemQuantity = tfQuantity category.quantity,
-                  itemTime = Nothing
-                }
-          )
-          categories
+      )
+      categories
 
 tfQuantity :: Int -> Maybe Spec.ItemQuantity
 tfQuantity quantity =
@@ -137,7 +122,7 @@ tfQuantity quantity =
 
 tfPayments :: DTBooking.FRFSTicketBooking -> [DCategorySelect] -> Maybe Text -> Maybe [Spec.Payment]
 tfPayments booking categories mSettlementType = do
-  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromDCategorySelect categories) booking
+  let fareParameters = mkFareParameters (mkCategoryPriceItemFromDCategorySelect categories)
   Just $
     singleton $
       Utils.mkPaymentForInitReq Spec.NOT_PAID (Just $ encodeToText fareParameters.totalPrice.amount) Nothing Nothing mSettlementType (Just fareParameters.currency) (show <$> booking.bppDelayedInterest)

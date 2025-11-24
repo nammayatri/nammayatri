@@ -103,7 +103,7 @@ types:
     price: PriceAPIEntity # Single Item Quantity Price without any passes or offers determined in OnSearch.
     offeredPrice: PriceAPIEntity # Single Item Quantity Discounted Price determined in OnSearch that would be less than or equal to `price`.
     finalPrice: Maybe PriceAPIEntity # Single Item Quantity Final Price determined in OnInit that the customer would actually pay.
-    selectedQuantity: Maybe Int
+    selectedQuantity: Int
     derive: "Show"
 
   FRFSTicketBookingStatusAPIRes:

@@ -200,17 +200,22 @@ onSearchHelper onSearchReq validatedReq integratedBPPConfig = do
   if null quotesCreatedByCache
     then QQuote.createMany quotes
     else do
-      zippedQuotes <- verifyAndZipQuotes quotesCreatedByCache quotes
-      let updatedQuotes = map updateQuotes zippedQuotes
-      for_ updatedQuotes \quote -> QQuote.updateCachedQuoteByPrimaryKey quote
+      quotesCreatedByCacheWithQuoteCategories <-
+        mapM
+          ( \quote -> do
+              quoteCategories' <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+              return (quote, quoteCategories')
+          )
+          quotesCreatedByCache
+      zippedQuotesWithQuoteCategories <- verifyAndZipQuotes quotesCreatedByCacheWithQuoteCategories quotesWithCategories
+      let updatedQuotes = map updateQuotes zippedQuotesWithQuoteCategories
+      for_ updatedQuotes QQuote.updateCachedQuoteByPrimaryKey
   QFRFSQuoteCategory.createMany quoteCategories
   let search = validatedReq.search
   mbRequiredQuote <- filterQuotes integratedBPPConfig quotesWithCategories mbJourneyLeg
   case mbRequiredQuote of
-    Just (requiredQuote, requiredQuoteCategories) -> do
-      let mbAdultPrice = find (\category -> category.category == ADULT) requiredQuoteCategories <&> (.price)
+    Just (requiredQuote, _requiredQuoteCategories) -> do
       void $ SLCF.createFares search.id.getId requiredQuote.id.getId
-      whenJust mbAdultPrice $ \adultPrice -> QJourneyLeg.updateEstimatedFaresBySearchId (Just adultPrice.amount) (Just adultPrice.amount) (Just validatedReq.search.id.getId)
     Nothing -> do
       QSearch.updateOnSearchFailed validatedReq.search.id (Just True)
   QSearch.updateIsOnSearchReceivedById (Just True) validatedReq.search.id
@@ -347,7 +352,6 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   uid <- generateGUID
   now <- getCurrentTime
   let mbAdultPrice = (find (\category -> category.category == ADULT) categories) <&> (.price)
-      mbChildPrice = (find (\category -> category.category == CHILD) categories) <&> (.price)
       (discountedTickets, eventDiscountAmount) =
         case mbAdultPrice of
           Just adultPrice -> SFU.getDiscountInfo isEventOngoing mbFreeTicketInterval mbMaxFreeTicketCashback adultPrice search.quantity ticketsBookedInEvent
@@ -362,13 +366,9 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             Quote.fromStationCode = startStation.code,
             Quote.toStationCode = endStation.code,
             Quote.id = uid,
-            Quote.price = mbAdultPrice,
-            Quote.childPrice = mbChildPrice,
-            Quote.estimatedPrice = mbAdultPrice,
             Quote.providerDescription = dOnSearch.providerDescription,
             Quote.providerId = dOnSearch.providerId,
             Quote.providerName = dOnSearch.providerName,
-            Quote.quantity = Just search.quantity,
             Quote.riderId = search.riderId,
             Quote.searchId = search.id,
             Quote.stationsJson = stationsJSON,
@@ -382,7 +382,6 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             Quote.createdAt = now,
             Quote.updatedAt = now,
             Quote.integratedBppConfigId = search.integratedBppConfigId,
-            Quote.childTicketQuantity = Nothing,
             Quote.multimodalSearchRequestId = search.multimodalSearchRequestId,
             bppDelayedInterest = readMaybe . T.unpack =<< dOnSearch.bppDelayedInterest,
             oldCacheDump = Nothing,
@@ -406,7 +405,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             merchantId = search.merchantId,
             merchantOperatingCityId = search.merchantOperatingCityId,
             ticketCategoryMetadataConfigId = ticketCategoryMetadataConfig' <&> (.id.getId),
-            selectedQuantity = if category.category == ADULT then Just search.quantity else Nothing, -- To Handle Partner Org
+            selectedQuantity = if category.category == ADULT then search.quantity else 0, -- To Handle Partner Org
             createdAt = now,
             updatedAt = now
           }
@@ -465,14 +464,16 @@ castVehicleServiceTierAPI DVehicleServiceTier {..} =
       isAirConditioned = isAirConditioned
     }
 
-isQuoteChanged :: (Quote.FRFSQuote, Quote.FRFSQuote) -> Bool
-isQuoteChanged (quotesFromCache, quotesFromOnSearch) = not $ quotesFromCache.price == quotesFromOnSearch.price && quotesFromCache.stationsJson == quotesFromOnSearch.stationsJson
-
-updateQuotes :: (Quote.FRFSQuote, Quote.FRFSQuote) -> Quote.FRFSQuote
-updateQuotes (quotesFromCache, quotesFromOnSearch) = do
+updateQuotes :: ((Quote.FRFSQuote, [FRFSQuoteCategory]), (Quote.FRFSQuote, [FRFSQuoteCategory])) -> Quote.FRFSQuote
+updateQuotes ((quotesFromCache, quotesFromCacheCategories), (quotesFromOnSearch, quotesFromOnSearchCategories)) = do
+  let fareParametersWithCacheCategories = SFU.mkFareParameters (SFU.mkCategoryPriceItemFromQuoteCategories quotesFromCacheCategories)
+      fareParametersWithOnSearchCategories = SFU.mkFareParameters (SFU.mkCategoryPriceItemFromQuoteCategories quotesFromOnSearchCategories)
+      singleAdultTicketPriceWithCacheCategories = find (\category -> category.categoryType == ADULT) fareParametersWithCacheCategories.priceItems <&> (.unitPrice)
+      singleAdultTicketPriceWithOnSearchCategories = find (\category -> category.categoryType == ADULT) fareParametersWithOnSearchCategories.priceItems <&> (.unitPrice)
+      isQuoteChanged = not $ singleAdultTicketPriceWithCacheCategories == singleAdultTicketPriceWithOnSearchCategories && quotesFromCache.stationsJson == quotesFromOnSearch.stationsJson
   let oldCacheDump =
-        if isQuoteChanged (quotesFromCache, quotesFromOnSearch)
-          then quotesFromCache.price <&> \price -> toJsonText FRFSCachedQuote {price = price, stationsJson = quotesFromCache.stationsJson}
+        if isQuoteChanged
+          then singleAdultTicketPriceWithCacheCategories <&> (\singleAdultTicketPrice -> toJsonText FRFSCachedQuote {price = singleAdultTicketPrice, stationsJson = quotesFromCache.stationsJson})
           else Nothing
 
   Quote.FRFSQuote
@@ -482,13 +483,9 @@ updateQuotes (quotesFromCache, quotesFromOnSearch) = do
       Quote.bppSubscriberUrl = quotesFromOnSearch.bppSubscriberUrl,
       Quote.fromStationCode = quotesFromCache.fromStationCode,
       Quote.id = quotesFromCache.id,
-      Quote.price = quotesFromOnSearch.price,
-      Quote.childPrice = quotesFromOnSearch.childPrice,
-      Quote.estimatedPrice = quotesFromOnSearch.estimatedPrice,
       Quote.providerDescription = quotesFromOnSearch.providerDescription,
       Quote.providerId = quotesFromCache.providerId,
       Quote.providerName = quotesFromCache.providerName,
-      Quote.quantity = quotesFromOnSearch.quantity,
       Quote.riderId = quotesFromCache.riderId,
       Quote.searchId = quotesFromCache.searchId,
       Quote.stationsJson = quotesFromCache.stationsJson,
@@ -508,28 +505,29 @@ updateQuotes (quotesFromCache, quotesFromOnSearch) = do
       Quote.eventDiscountAmount = quotesFromOnSearch.eventDiscountAmount,
       Quote.integratedBppConfigId = quotesFromOnSearch.integratedBppConfigId,
       Quote.discountedTickets = quotesFromOnSearch.discountedTickets,
-      Quote.childTicketQuantity = quotesFromOnSearch.childTicketQuantity,
       Quote.multimodalSearchRequestId = quotesFromOnSearch.multimodalSearchRequestId
     }
   where
     toJsonText :: FRFSCachedQuote -> Text
     toJsonText cachedQuote = toStrict $ decodeUtf8 $ encode cachedQuote
 
-verifyAndZipQuotes :: (MonadFlow m) => [Quote.FRFSQuote] -> [Quote.FRFSQuote] -> m [(Quote.FRFSQuote, Quote.FRFSQuote)]
-verifyAndZipQuotes quotesFromCache quotesFromOnSearch = do
+verifyAndZipQuotes :: (MonadFlow m) => [(Quote.FRFSQuote, [FRFSQuoteCategory])] -> [(Quote.FRFSQuote, [FRFSQuoteCategory])] -> m [((Quote.FRFSQuote, [FRFSQuoteCategory]), (Quote.FRFSQuote, [FRFSQuoteCategory]))]
+verifyAndZipQuotes quotesFromCacheWithQuoteCategories quotesFromOnSearchWithQuoteCategories = do
+  let quotesFromCache = map fst quotesFromCacheWithQuoteCategories
+      quotesFromOnSearch = map fst quotesFromOnSearchWithQuoteCategories
   if length quotesFromCache /= length quotesFromOnSearch
     then throwError $ CachedFRFSQuoteAnomaly (show quotesFromCache) (show quotesFromOnSearch)
-    else case (quotesFromCache, quotesFromOnSearch) of
-      ([q1], [q2]) ->
+    else case (quotesFromCacheWithQuoteCategories, quotesFromOnSearchWithQuoteCategories) of
+      ([fq1@(q1, _)], [fq2@(q2, _)]) ->
         if q1._type == q2._type
-          then return [(q1, q2)]
+          then return [(fq1, fq2)]
           else throwError $ CachedFRFSQuoteAnomaly (show quotesFromCache) (show quotesFromOnSearch)
       _ -> do
         let isBothQuotesValid = verifyQuote quotesFromCache && verifyQuote quotesFromOnSearch
         if isBothQuotesValid
           then do
-            let sortedQ1 = sortBy (comparing (Down . Quote._type)) quotesFromCache
-            let sortedQ2 = sortBy (comparing (Down . Quote._type)) quotesFromOnSearch
+            let sortedQ1 = sortBy (comparing (Down . Quote._type . fst)) quotesFromCacheWithQuoteCategories
+            let sortedQ2 = sortBy (comparing (Down . Quote._type . fst)) quotesFromOnSearchWithQuoteCategories
             return (zip sortedQ1 sortedQ2)
           else throwError $ CachedFRFSQuoteAnomaly (show quotesFromCache) (show quotesFromOnSearch)
   where

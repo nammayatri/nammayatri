@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Data.Text as T
 import qualified Data.UUID as UU
 import Domain.Types.FRFSQuoteCategory
+import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET hiding (Log)
@@ -32,8 +33,8 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
   paymentTxnId <- booking.paymentTxnId & fromMaybeM (InternalError $ "Payment Transaction Id Missing")
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
-      singleTicketPrice = (getUnitPriceFromPriceItem fareParameters.adultItem).amountInt.getMoney
+  let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
+      singleAdultTicketPrice = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice.amountInt.getMoney)
       totalTicketQuantity = fareParameters.totalQuantity
   ticketsData <-
     generateQRTickets config $
@@ -42,7 +43,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
           destination = toStation.code,
           ticketType = "SJT", -- TODO: FIX THIS
           noOfTickets = 1, -- Always set to 1 as per requirement
-          ticketFare = singleTicketPrice,
+          ticketFare = fromMaybe 0 singleAdultTicketPrice,
           customerMobileNo = fromMaybe "9999999999" mRiderNumber,
           uniqueTxnRefNo = orderId,
           bankRefNo = paymentTxnId,

@@ -98,15 +98,13 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
           onInitReq.categories
       )
       quoteCategories
-  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories) oldBooking
-      adultTicketQuantity = fareParameters.adultItem <&> (.quantity)
-      childTicketQuantity = fareParameters.childItem <&> (.quantity)
+  let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)
 
   when (totalPrice /= fareParameters.totalPrice) $ do
     throwError $ CategoriesAndTotalPriceMismatch (show fareParameters.totalPrice) (show totalPrice)
 
   -- TODO :: Remove Quantity update Booking Table post release of FRFSQuoteCategory
-  void $ QFRFSTicketBooking.updateTotalPriceAndQuantityById totalPrice adultTicketQuantity childTicketQuantity (Just isFareChanged) oldBooking.id -- Full Ticket Price (Multiplied By Quantity)
+  void $ QFRFSTicketBooking.updateIsFareChangedById (Just isFareChanged) oldBooking.id -- Full Ticket Price (Multiplied By Quantity)
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) oldBooking.id
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId oldBooking.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
   whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) oldBooking.id)
@@ -172,8 +170,6 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
   where
     markBookingApproved paymentOrder booking = do
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
-      -- TODO :: Remove Final Price update Booking Table post release of FRFSQuoteCategory
-      void $ QFRFSTicketBooking.updateFinalPriceById (Just booking.totalPrice) booking.id
       whenJust mbJourneyId $ \journeyId -> do
         void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) Nothing journeyId
     markBookingFailed booking = void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id

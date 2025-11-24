@@ -324,10 +324,6 @@ JourneyLeg:
       kvFunction: updateWithKV
       params: [duration, distance, endLocation]
       where: id
-    updateEstimatedFaresBySearchId:
-      kvFunction: updateWithKV
-      params: [estimatedMinFare, estimatedMaxFare]
-      where: legSearchId
 
   intermediateTransformers:
     fromTType:

@@ -7,8 +7,6 @@ import qualified Domain.Types.FRFSQuote
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
-import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -24,10 +22,7 @@ instance FromTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
             bppItemId = bppItemId,
             bppSubscriberId = bppSubscriberId,
             bppSubscriberUrl = bppSubscriberUrl,
-            childPrice = Kernel.Types.Common.mkPrice currency <$> childPrice,
-            childTicketQuantity = childTicketQuantity,
             discountedTickets = discountedTickets,
-            estimatedPrice = Kernel.Types.Common.mkPrice currency <$> estimatedPrice,
             eventDiscountAmount = eventDiscountAmount,
             fareDetails = Domain.Types.FRFSQuote.FRFSFareDetails <$> appSession <*> distance <*> providerRouteId <*> ticketTypeCode <*> trainTypeCode <*> via,
             fromStationCode = fromStationId,
@@ -39,11 +34,9 @@ instance FromTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
             oldCacheDump = oldCacheDump,
             partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
             partnerOrgTransactionId = Kernel.Types.Id.Id <$> partnerOrgTransactionId,
-            price = Kernel.Types.Common.mkPrice currency <$> price,
             providerDescription = providerDescription,
             providerId = providerId,
             providerName = providerName,
-            quantity = quantity,
             riderId = Kernel.Types.Id.Id riderId,
             routeStationsJson = routeStationsJson,
             searchId = Kernel.Types.Id.Id searchId,
@@ -63,10 +56,7 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.bppItemId = bppItemId,
         Beam.bppSubscriberId = bppSubscriberId,
         Beam.bppSubscriberUrl = bppSubscriberUrl,
-        Beam.childPrice = Kernel.Prelude.fmap (.amount) childPrice,
-        Beam.childTicketQuantity = childTicketQuantity,
         Beam.discountedTickets = discountedTickets,
-        Beam.estimatedPrice = Kernel.Prelude.fmap (.amount) estimatedPrice,
         Beam.eventDiscountAmount = eventDiscountAmount,
         Beam.appSession = fareDetails <&> (.appSession),
         Beam.distance = fareDetails <&> (.distance),
@@ -83,12 +73,9 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.oldCacheDump = oldCacheDump,
         Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
         Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
-        Beam.currency = Kernel.Prelude.fmap (.currency) price,
-        Beam.price = Kernel.Prelude.fmap (.amount) price,
         Beam.providerDescription = providerDescription,
         Beam.providerId = providerId,
         Beam.providerName = providerName,
-        Beam.quantity = quantity,
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.routeStationsJson = routeStationsJson,
         Beam.searchId = Kernel.Types.Id.getId searchId,

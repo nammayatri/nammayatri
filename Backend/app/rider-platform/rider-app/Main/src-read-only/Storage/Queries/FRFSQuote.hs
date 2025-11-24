@@ -9,7 +9,6 @@ import qualified Domain.Types.FRFSSearch
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -41,10 +40,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
-      Se.Set Beam.childPrice (Kernel.Prelude.fmap (.amount) childPrice),
-      Se.Set Beam.childTicketQuantity childTicketQuantity,
       Se.Set Beam.discountedTickets discountedTickets,
-      Se.Set Beam.estimatedPrice (Kernel.Prelude.fmap (.amount) estimatedPrice),
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
       Se.Set Beam.appSession (fareDetails <&> (.appSession)),
       Se.Set Beam.distance (fareDetails <&> (.distance)),
@@ -60,12 +56,9 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.oldCacheDump oldCacheDump,
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
-      Se.Set Beam.currency (Kernel.Prelude.fmap (.currency) price),
-      Se.Set Beam.price (Kernel.Prelude.fmap (.amount) price),
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,
       Se.Set Beam.providerName providerName,
-      Se.Set Beam.quantity quantity,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.routeStationsJson routeStationsJson,
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
