@@ -1094,6 +1094,7 @@ TransporterConfig:
     allowDisableDriverToTakeSpecialZoneRide: Maybe Bool
     payoutRideMoneyToDriver: Maybe Bool
     payoutRideScheduleTimeBuffer: Maybe Seconds
+    enableFareCalculatorV2: Maybe Bool
 
   beamType:
     currency: Maybe Currency

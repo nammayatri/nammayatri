@@ -28,7 +28,7 @@ ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN category text ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN final_price TYPE double precision;
+ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN final_price TYPE double precision USING final_price::double precision;
 
 
 ------- SQL updates -------

@@ -85,6 +85,7 @@ import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
+import qualified SharedLogic.FareCalculatorV2 as FareV2
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
@@ -186,7 +187,7 @@ buildEndRideHandle merchantId merchantOpCityId rideId = do
         endRideTransaction = RideEndInt.endRideTransaction,
         getFarePolicyByEstOrQuoteId = FarePolicy.getFarePolicyByEstOrQuoteId,
         getFarePolicyOnEndRide = FarePolicy.getFarePolicyOnEndRide,
-        calculateFareParameters = Fare.calculateFareParameters,
+        calculateFareParameters = FareV2.calculateFareParametersV2,
         putDiffMetric = RideEndInt.putDiffMetric,
         isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler,
         finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler,

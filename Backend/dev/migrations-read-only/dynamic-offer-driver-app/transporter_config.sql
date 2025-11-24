@@ -526,6 +526,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_driver_to
 ------- SQL updates -------
 
 
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_fare_calculator_v2 boolean ;
 
 
 ------- SQL updates -------

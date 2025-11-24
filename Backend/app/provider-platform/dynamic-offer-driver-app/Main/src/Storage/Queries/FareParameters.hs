@@ -164,6 +164,10 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 conditionalCharges = conditionalCharges',
                 businessDiscount = businessDiscount,
                 personalDiscount = personalDiscount,
+                paymentProcessingFee = paymentProcessingFee,
+                rideVat = rideVat,
+                tollVat = tollVat,
+                commission = commission,
                 ..
               }
       Nothing -> return Nothing
@@ -211,5 +215,9 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.petCharges = petCharges,
         BeamFP.businessDiscount = businessDiscount,
         BeamFP.personalDiscount = personalDiscount,
+        BeamFP.paymentProcessingFee = paymentProcessingFee,
+        BeamFP.rideVat = rideVat,
+        BeamFP.tollVat = tollVat,
+        BeamFP.commission = commission,
         ..
       }

@@ -436,6 +436,7 @@ library
       SharedLogic.External.LocationTrackingService.Flow
       SharedLogic.External.LocationTrackingService.Types
       SharedLogic.FareCalculator
+      SharedLogic.FareCalculatorV2
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
       SharedLogic.Fleet
