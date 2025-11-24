@@ -44,7 +44,8 @@ updateByPrimaryKey (Domain.Types.DispatcherHistory.DispatcherHistory {..}) = do
       Se.Set Beam.reasonContent reasonContent,
       Se.Set Beam.reasonTag reasonTag,
       Se.Set Beam.replacedVehicle replacedVehicle,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.waybillNo waybillNo
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -65,7 +66,8 @@ instance FromTType' Beam.DispatcherHistory Domain.Types.DispatcherHistory.Dispat
             reasonContent = reasonContent,
             reasonTag = reasonTag,
             replacedVehicle = replacedVehicle,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            waybillNo = waybillNo
           }
 
 instance ToTType' Beam.DispatcherHistory Domain.Types.DispatcherHistory.DispatcherHistory where
@@ -83,5 +85,6 @@ instance ToTType' Beam.DispatcherHistory Domain.Types.DispatcherHistory.Dispatch
         Beam.reasonContent = reasonContent,
         Beam.reasonTag = reasonTag,
         Beam.replacedVehicle = replacedVehicle,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.waybillNo = waybillNo
       }

@@ -386,6 +386,15 @@ getVehicleInfo integratedBPPConfig vehicleNumber = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getVehicleInfo baseUrl integratedBPPConfig.feedKey vehicleNumber
 
+getVehicleOperationInfo ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  m (Maybe VehicleOperationInfo)
+getVehicleOperationInfo integratedBPPConfig fleetNo = do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  Flow.getVehicleOperationInfo baseUrl fleetNo
+
 -- Get Stop Code From Provider Code
 
 getStopCodeFromProviderCode ::

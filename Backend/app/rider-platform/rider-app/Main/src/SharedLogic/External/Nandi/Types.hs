@@ -343,6 +343,17 @@ data VehicleInfoResponse = VehicleInfoResponse
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
+data VehicleOperationInfo = VehicleOperationInfo
+  { waybill_id :: Maybe Text,
+    waybill_no :: Maybe Text,
+    depot_id :: Text,
+    depot_name :: Text,
+    conductor_code :: Maybe Text,
+    driver_code :: Maybe Text,
+    schedule_no :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
 data DepotVehicle = DepotVehicle
   { fleet_no :: Kernel.Prelude.Text,
     status :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
