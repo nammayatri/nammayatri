@@ -38,13 +38,11 @@ IdfyVerification:
     documentNumber: EncryptedHashedField e Text
     imageExtractionValidation: ImageExtractionValidation
     idfyResponse: Maybe Text
-    multipleRC: Maybe Bool
     retryCount: Maybe Int
     airConditioned: Maybe Bool
     oxygen: Maybe Bool
     ventilator: Maybe Bool
     nameOnCard: Maybe Text
-  beamInstance: MakeTableInstancesWithTModifier [("multipleRC", "multiple_r_c")]
   types:
     ImageExtractionValidation:
       enum: "Success,Skipped,Failed"
@@ -1057,7 +1055,6 @@ HyperVergeVerification:
     documentNumber: EncryptedHashedField e Text
     imageExtractionValidation: ImageExtractionValidation
     hypervergeResponse: Maybe Text
-    multipleRC: Maybe Bool
     retryCount: Maybe Int
     airConditioned: Maybe Bool
     oxygen: Maybe Bool

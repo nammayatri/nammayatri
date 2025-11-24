@@ -316,7 +316,6 @@ data RegisterRCReq = RegisterRCReq
     operatingCity :: Kernel.Prelude.Text,
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    multipleRC :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory,

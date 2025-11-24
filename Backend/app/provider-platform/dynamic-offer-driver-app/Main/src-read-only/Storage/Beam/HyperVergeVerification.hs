@@ -27,7 +27,6 @@ data HyperVergeVerificationT f = HyperVergeVerificationT
     id :: (B.C f Kernel.Prelude.Text),
     imageExtractionValidation :: (B.C f Domain.Types.IdfyVerification.ImageExtractionValidation),
     issueDateOnDoc :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    multipleRC :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     nameOnCard :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     oxygen :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     requestId :: (B.C f Kernel.Prelude.Text),

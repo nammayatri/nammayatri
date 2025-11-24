@@ -567,7 +567,6 @@ data VerificationReqRecord = VerificationReqRecord
     id :: Text,
     imageExtractionValidation :: DIdfy.ImageExtractionValidation,
     issueDateOnDoc :: Maybe UTCTime,
-    multipleRC :: Maybe Bool,
     nameOnCard :: Maybe Text,
     oxygen :: Maybe Bool,
     requestId :: Text,

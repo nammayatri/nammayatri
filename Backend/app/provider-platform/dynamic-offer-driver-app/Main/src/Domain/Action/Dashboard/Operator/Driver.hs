@@ -290,7 +290,7 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
       let shouldActivateRc = False
       statusRes <-
         castStatusRes
-          <$> SStatus.statusHandler' (Just person) driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs -- FIXME: Need to change
+          <$> SStatus.statusHandler' (Just person) driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs -- FIXME: Need to change
       pure $
         API.Types.ProviderPlatform.Operator.Driver.DriverInfo
           { driverId = cast drvOpAsn.driverId,

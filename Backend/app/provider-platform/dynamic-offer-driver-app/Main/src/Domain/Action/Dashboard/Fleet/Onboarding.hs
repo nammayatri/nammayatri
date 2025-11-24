@@ -130,12 +130,11 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   mDL <- DLQuery.findByDriverId (Id personId)
-  let multipleRC = Nothing
   driverImages <- IQuery.findAllByPersonId transporterConfig (Id personId)
   now <- getCurrentTime
   let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Id personId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
   let shouldActivateRc = True
-  castStatusRes <$> SStatus.statusHandler' Nothing driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs
+  castStatusRes <$> SStatus.statusHandler' Nothing driverImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs
 
 postOnboardingVerify ::
   ShortId DM.Merchant ->

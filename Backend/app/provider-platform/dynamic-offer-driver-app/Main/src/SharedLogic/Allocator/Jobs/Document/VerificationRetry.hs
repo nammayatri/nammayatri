@@ -87,7 +87,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
             VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity res.requestId verificationReq res.transactionId
             _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
           CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
-        Verification.SyncResp res -> void $ VehicleRegistrationCert.onVerifyRC person Nothing res (Just verifyRes.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.multipleRC verificationReq.documentImageId1 (verificationReq.retryCount <&> (+ 1)) (Just "source_down_retrying") Nothing
+        Verification.SyncResp res -> void $ VehicleRegistrationCert.onVerifyRC person Nothing res (Just verifyRes.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 (verificationReq.retryCount <&> (+ 1)) (Just "source_down_retrying") Nothing
     callVerifyDL :: VerificationFlow m r => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyDL documentNum person verificationReq = do
       whenJust verificationReq.driverDateOfBirth $ \dob -> do

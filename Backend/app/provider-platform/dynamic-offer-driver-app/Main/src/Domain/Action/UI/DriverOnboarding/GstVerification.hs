@@ -125,7 +125,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
         let driverImagesInfo = IQuery.DriverImagesInfo {driverId = personId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
         let onlyMandatoryDocs = Just True
             shouldActivateRc = False
-        void $ SStatus.statusHandler' (Just person) driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
+        void $ SStatus.statusHandler' (Just person) driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->

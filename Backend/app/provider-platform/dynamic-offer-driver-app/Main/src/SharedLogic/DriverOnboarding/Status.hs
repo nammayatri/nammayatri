@@ -195,14 +195,13 @@ statusHandler' ::
   IQuery.DriverImagesInfo ->
   Maybe Bool ->
   Maybe Bool ->
-  Maybe Bool ->
   Maybe DVC.VehicleCategory ->
   Maybe DL.DriverLicense ->
   Maybe Bool ->
   Bool ->
   Maybe Bool ->
   Flow StatusRes'
-statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs = do
+statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs = do
   let merchantId = driverImagesInfo.merchantOperatingCity.merchantId
       merchantOperatingCity = driverImagesInfo.merchantOperatingCity
       merchantOpCityId = merchantOperatingCity.id
@@ -284,7 +283,7 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC
         when (allVehicleDocsVerified && allDriverDocsVerified && inspectionNotRequired && role == DP.DRIVER) $ enableDriver merchantOpCityId personId mDL
 
         mbVehicle <- QVehicle.findById personId -- check everytime
-        when (shouldActivateRc && isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC && inspectionNotRequired && role == DP.DRIVER) $
+        when (shouldActivateRc && isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && inspectionNotRequired && role == DP.DRIVER) $
           void $ withTryCatch "activateRCAutomatically:statusHandler" (activateRCAutomatically personId driverImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
         if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
@@ -938,8 +937,8 @@ getDLAndStatus driverImagesInfo language useHVSdkForDL = do
         return (status, message)
   return (status, mDriverLicense, message)
 
-getRCAndStatus :: IQuery.DriverImagesInfo -> Maybe Bool -> Language -> Flow (ResponseStatus, Maybe RC.VehicleRegistrationCertificate, Text)
-getRCAndStatus driverImagesInfo multipleRC language = do
+getRCAndStatus :: IQuery.DriverImagesInfo -> Language -> Flow (ResponseStatus, Maybe RC.VehicleRegistrationCertificate, Text)
+getRCAndStatus driverImagesInfo language = do
   let driverId = driverImagesInfo.driverId
   associations <- DRAQuery.findAllLinkedByDriverId driverId
   if null associations
@@ -949,10 +948,14 @@ getRCAndStatus driverImagesInfo multipleRC language = do
     else do
       mVehicleRCs <- RCQuery.findById `mapM` ((.rcId) <$> associations)
       let vehicleRCs = catMaybes mVehicleRCs
-      if isNothing multipleRC -- for backward compatibility
-        then do
-          let firstRC = listToMaybe vehicleRCs
-          case firstRC of
+      let mValidVehicleRC = find (\rc -> rc.verificationStatus == Documents.VALID) vehicleRCs
+      case mValidVehicleRC of
+        Just validVehicleRC -> do
+          msg <- toVerificationMessage DocumentValid language
+          return (VALID, Just validVehicleRC, msg)
+        Nothing -> do
+          let mVehicleRC = listToMaybe vehicleRCs
+          case mVehicleRC of
             Just vehicleRC -> do
               let status = mapStatus vehicleRC.verificationStatus
               message <- verificationStatusCheck status language DVC.VehicleRegistrationCertificate (Just vehicleRC.failedRules)
@@ -960,22 +963,6 @@ getRCAndStatus driverImagesInfo multipleRC language = do
             Nothing -> do
               msg <- toVerificationMessage NoDcoumentFound language
               return (NO_DOC_AVAILABLE, Nothing, msg)
-        else do
-          let mValidVehicleRC = find (\rc -> rc.verificationStatus == Documents.VALID) vehicleRCs
-          case mValidVehicleRC of
-            Just validVehicleRC -> do
-              msg <- toVerificationMessage DocumentValid language
-              return (VALID, Just validVehicleRC, msg)
-            Nothing -> do
-              let mVehicleRC = listToMaybe vehicleRCs
-              case mVehicleRC of
-                Just vehicleRC -> do
-                  let status = mapStatus vehicleRC.verificationStatus
-                  message <- verificationStatusCheck status language DVC.VehicleRegistrationCertificate (Just vehicleRC.failedRules)
-                  return (status, Just vehicleRC, message)
-                Nothing -> do
-                  msg <- toVerificationMessage NoDcoumentFound language
-                  return (NO_DOC_AVAILABLE, Nothing, msg)
 
 mapStatus :: Documents.VerificationStatus -> ResponseStatus
 mapStatus = \case

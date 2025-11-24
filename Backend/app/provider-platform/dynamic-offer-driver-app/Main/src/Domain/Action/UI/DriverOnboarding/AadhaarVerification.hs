@@ -172,7 +172,7 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
               QAadhaarCard.create aadhaarEntity
               DriverInfo.updateAadhaarVerifiedState True (cast personId)
               let onlyMandatoryDocs = Just True
-              void $ Status.statusHandler (person.id, person.merchantId, merchantOpCityId) (Just True) Nothing Nothing Nothing (Just False) onlyMandatoryDocs Nothing
+              void $ Status.statusHandler (person.id, person.merchantId, merchantOpCityId) (Just True) Nothing Nothing (Just False) onlyMandatoryDocs Nothing
               uploadCompressedAadhaarImage person merchantOpCityId res.image imageType >> pure ()
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
@@ -455,7 +455,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
         let driverImagesInfo = IQuery.DriverImagesInfo {driverId = personId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
         let onlyMandatoryDocs = Just True
             shouldActivateRc = False
-        void $ SStatus.statusHandler' (Just person) driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
+        void $ SStatus.statusHandler' (Just person) driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
       pure False
     role | DCommon.checkFleetOwnerRole role -> DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
     _ -> pure False
