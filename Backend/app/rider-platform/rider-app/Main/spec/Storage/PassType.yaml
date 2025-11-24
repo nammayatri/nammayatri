@@ -6,9 +6,15 @@ imports:
 PassType:
   tableName: pass_type
 
+  types:
+    PassClass:
+      enum: "Unlimited, StoredValuePass"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded"
+
   fields:
     id: Id PassType
     passCategoryId: Id PassCategory
+    code: Maybe Text
     name: Maybe Text
     catchline: Maybe Text
     title: Text
@@ -16,10 +22,23 @@ PassType:
     order: Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    passClass: PassClass
 
   constraints:
     id: PrimaryKey
-    passCategoryId: !SecondaryKey
+    passCategoryId: "!SecondaryKey"
+
+  beamType:
+    passClass: Maybe PassClass
+
+  fromTType:
+    passClass: fromMaybe Unlimited passClass|E
+
+  toTType:
+    passClass: Just passClass|E
+
+  sqlType:
+    passClass: character varying(255)
 
   extraOperations:
     - EXTRA_QUERY_FILE

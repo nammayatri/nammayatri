@@ -17,6 +17,7 @@ import qualified Tools.Beam.UtilsTH
 
 data PurchasedPassPayment = PurchasedPassPayment
   { amount :: Kernel.Types.Common.HighPrecMoney,
+    balance :: Kernel.Types.Common.HighPrecMoney,
     endDate :: Data.Time.Calendar.Day,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

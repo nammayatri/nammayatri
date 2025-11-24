@@ -26,15 +26,18 @@ data PurchasedPass = PurchasedPass
     deviceSwitchCount :: Kernel.Prelude.Int,
     endDate :: Data.Time.Calendar.Day,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
+    maxAmount :: Kernel.Types.Common.HighPrecMoney,
     maxValidDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxValidTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    minAmount :: Kernel.Types.Common.HighPrecMoney,
     passAmount :: Kernel.Types.Common.HighPrecMoney,
     passCode :: Kernel.Prelude.Text,
     passDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passNumber :: Kernel.Prelude.Int,
+    passTypeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passTypeId :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     startDate :: Data.Time.Calendar.Day,
@@ -58,6 +61,7 @@ data StatusType
   | RefundInitiated
   | Refunded
   | RefundFailed
+  | Invalidated
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''StatusType)

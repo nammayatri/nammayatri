@@ -12,3 +12,44 @@ ALTER TABLE atlas_app.pass_type ADD COLUMN title text NOT NULL;
 ALTER TABLE atlas_app.pass_type ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.pass_type ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.pass_type ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass_type ADD COLUMN pass_description character varying(255) ;
+ALTER TABLE atlas_app.pass_type ADD COLUMN code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass_type ADD COLUMN pass_class character varying(255) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 
 data PurchasedPassPaymentT f = PurchasedPassPaymentT
   { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    balance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     endDate :: B.C f Data.Time.Calendar.Day,
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
