@@ -26,9 +26,16 @@ module Tools.Verification
     verifySdkResp,
     getTask,
     nameCompare,
+    getDigiLockerFile,
+    pullDigiLockerDrivingLicense,
+    fetchAndExtractVerifiedDL,
+    fetchAndExtractVerifiedPan,
+    fetchAndExtractVerifiedAadhaar,
+    getVerifiedAadhaarXML,
   )
 where
 
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -41,7 +48,11 @@ import Kernel.External.Verification as Reexport hiding
     extractGSTImage,
     extractPanImage,
     extractRCImage,
+    fetchAndExtractVerifiedAadhaar,
+    fetchAndExtractVerifiedDL,
+    fetchAndExtractVerifiedPan,
     getTask,
+    getVerifiedAadhaarXML,
     nameCompare,
     searchAgent,
     validateFaceImage,
@@ -51,6 +62,7 @@ import Kernel.External.Verification as Reexport hiding
     verifySdkResp,
   )
 import qualified Kernel.External.Verification as Verification
+import qualified Kernel.External.Verification.Digilocker.Types as DigiTypes
 import Kernel.External.Verification.Interface.InternalScripts
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -204,3 +216,80 @@ callService merchantOpCityId vsc func req = do
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc' -> func vsc' req
     _ -> throwError $ InternalError "Unknown Service Config"
+
+-- DigiLocker specific functions
+
+-- | Get file (PDF) from DigiLocker for S3 storage
+getDigiLockerFile ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DigiTypes.DigiLockerGetFileReq ->
+  m BSL.ByteString
+getDigiLockerFile _merchantId merchantOpCityId req = do
+  logInfo $
+    "Tools.Verification.getDigiLockerFile - Request: merchantOpCityId="
+      <> merchantOpCityId.getId
+      <> ", uri="
+      <> req.uri
+  resp <- callService merchantOpCityId DigiLocker Verification.getFile req
+  logInfo $
+    "Tools.Verification.getDigiLockerFile - Response bytes: "
+      <> show (BSL.length resp)
+  pure resp
+
+-- | Pull Driving License from DigiLocker (requires DL number)
+pullDigiLockerDrivingLicense ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DigiTypes.DigiLockerPullDrivingLicenseReq ->
+  m DigiTypes.DigiLockerPullDocumentResponse
+pullDigiLockerDrivingLicense _merchantId merchantOpCityId req =
+  callService merchantOpCityId DigiLocker Verification.pullDrivingLicense req
+
+-- | Fetch and extract verified Driving License from DigiLocker
+-- Combines XML fetching and parsing in one call
+fetchAndExtractVerifiedDL ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DigiTypes.DigiLockerExtractDLReq ->
+  m ExtractedDigiLockerDLResp
+fetchAndExtractVerifiedDL _merchantId merchantOpCityId req =
+  callService merchantOpCityId DigiLocker Verification.fetchAndExtractVerifiedDL req
+
+-- | Fetch and extract verified PAN card from DigiLocker
+-- Combines XML fetching and parsing in one call
+fetchAndExtractVerifiedPan ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DigiTypes.DigiLockerExtractPanReq ->
+  m ExtractedDigiLockerPanResp
+fetchAndExtractVerifiedPan _merchantId merchantOpCityId req =
+  callService merchantOpCityId DigiLocker Verification.fetchAndExtractVerifiedPan req
+
+-- | Fetch and extract verified Aadhaar from DigiLocker
+-- Combines XML fetching and parsing in one call
+-- Note: Aadhaar uses different endpoint, doesn't require URI
+fetchAndExtractVerifiedAadhaar ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DigiTypes.DigiLockerExtractAadhaarReq ->
+  m ExtractedDigiLockerAadhaarResp
+fetchAndExtractVerifiedAadhaar _merchantId merchantOpCityId req =
+  callService merchantOpCityId DigiLocker Verification.fetchAndExtractVerifiedAadhaar req
+
+-- | Get verified Aadhaar XML from DigiLocker (raw XML for S3 storage)
+-- Returns raw XML text that can be stored in Image table
+-- Note: Aadhaar doesn't support getFile API, so we get XML directly
+getVerifiedAadhaarXML ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DigiTypes.DigiLockerExtractAadhaarReq ->
+  m Text
+getVerifiedAadhaarXML _merchantId merchantOpCityId req =
+  callService merchantOpCityId DigiLocker Verification.getVerifiedAadhaarXML req

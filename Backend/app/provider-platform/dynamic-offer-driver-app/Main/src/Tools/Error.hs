@@ -1242,6 +1242,26 @@ data DriverOnboardingError
   | DuplicateWebhookReceived
   | WebhookAuthFailed
   | RCBlockedByAnotherAccount
+  | DigiLockerVerificationInProgress
+  | DigiLockerDocumentsBeingVerified
+  | DigiLockerPullRequired
+  | DigiLockerEmptyStateParameter
+  | DigiLockerOAuthError Text Text
+  | DigiLockerMissingAuthorizationCode
+  | DigiLockerEmptyAuthorizationCode
+  | DigiLockerInvalidStateParameter
+  | DigiLockerNotEnabled
+  | DigiLockerTokenExchangeFailed
+  | DigiLockerNoActiveSession
+  | DigiLockerSessionExpired
+  | DigiLockerSessionUnauthorized
+  | DigiLockerMissingAccessToken
+  | DigiLockerUnsupportedDocumentType Text
+  | DigiLockerMismatchedMerchantContext
+  | DigiLockerOperationFailed Text
+  | DigiLockerInvalidDriverAge
+  | DigiLockerInvalidVehicleCategory Text
+  | DigiLockerAllDocumentsVerified
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1299,6 +1319,26 @@ instance IsBaseError DriverOnboardingError where
     DuplicateWebhookReceived -> Just "Multiple webhooks received for same request id."
     WebhookAuthFailed -> Just "Auth header data mismatch ocurred!!!!!!"
     RCBlockedByAnotherAccount -> Just "RC is Blocked By another Account"
+    DigiLockerVerificationInProgress -> Just "DigiLocker verification already in progress. Please complete the current session or wait for it to expire."
+    DigiLockerDocumentsBeingVerified -> Just "Documents are being verified. Please check status or wait for completion."
+    DigiLockerPullRequired -> Just "Some documents require manual pull. Please complete the pull operation or wait for the session to expire."
+    DigiLockerEmptyStateParameter -> Just "DigiLocker callback received with empty state parameter. Cannot identify driver session."
+    DigiLockerOAuthError errorCode errorMsg -> Just $ "DigiLocker OAuth Error: " <> errorCode <> " - " <> errorMsg
+    DigiLockerMissingAuthorizationCode -> Just "DigiLocker callback - Missing authorization code."
+    DigiLockerEmptyAuthorizationCode -> Just "DigiLocker callback received with empty authorization code."
+    DigiLockerInvalidStateParameter -> Just "Invalid or expired state parameter from DigiLocker. Please initiate a new DigiLocker session."
+    DigiLockerNotEnabled -> Just "DigiLocker verification is not enabled for this merchant operating city."
+    DigiLockerTokenExchangeFailed -> Just "Failed to obtain access token from DigiLocker. Please try again."
+    DigiLockerNoActiveSession -> Just "No active DigiLocker session found. Please initiate DigiLocker first."
+    DigiLockerSessionExpired -> Just "DigiLocker session has expired. Please initiate a new session."
+    DigiLockerSessionUnauthorized -> Just "DigiLocker session is not authorized. Please complete the authorization flow."
+    DigiLockerMissingAccessToken -> Just "DigiLocker session not authorized. Access token missing."
+    DigiLockerUnsupportedDocumentType docType -> Just $ "Document type \"" <> docType <> "\" is not supported for DigiLocker pull operation. Only Driving License is supported."
+    DigiLockerMismatchedMerchantContext -> Just "DigiLocker pull requested with mismatched merchant/city context. The request context does not match the session context."
+    DigiLockerOperationFailed msg -> Just $ "DigiLocker operation failed: " <> msg
+    DigiLockerInvalidDriverAge -> Just "Driver age must be between 18 and 80 years."
+    DigiLockerInvalidVehicleCategory category -> Just $ "Invalid vehicle category for DigiLocker: " <> category <> ". Please select a valid category."
+    DigiLockerAllDocumentsVerified -> Just "All documents are already verified. You should not be calling this API."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1355,6 +1395,26 @@ instance IsHTTPError DriverOnboardingError where
     DuplicateWebhookReceived -> "DUPLICATE_WEBHOOK_RECEIVED"
     WebhookAuthFailed -> "WEBHOOK_AUTH_FAILED"
     RCBlockedByAnotherAccount -> "RC_BLOCKED_BY_ANOTHER_ACCOUNT"
+    DigiLockerVerificationInProgress -> "DIGILOCKER_VERIFICATION_IN_PROGRESS"
+    DigiLockerDocumentsBeingVerified -> "DIGILOCKER_DOCUMENTS_BEING_VERIFIED"
+    DigiLockerPullRequired -> "DIGILOCKER_PULL_REQUIRED"
+    DigiLockerEmptyStateParameter -> "DIGILOCKER_EMPTY_STATE_PARAMETER"
+    DigiLockerOAuthError _ _ -> "DIGILOCKER_OAUTH_ERROR"
+    DigiLockerMissingAuthorizationCode -> "DIGILOCKER_MISSING_AUTHORIZATION_CODE"
+    DigiLockerEmptyAuthorizationCode -> "DIGILOCKER_EMPTY_AUTHORIZATION_CODE"
+    DigiLockerInvalidStateParameter -> "DIGILOCKER_INVALID_STATE_PARAMETER"
+    DigiLockerNotEnabled -> "DIGILOCKER_NOT_ENABLED"
+    DigiLockerTokenExchangeFailed -> "DIGILOCKER_TOKEN_EXCHANGE_FAILED"
+    DigiLockerNoActiveSession -> "DIGILOCKER_NO_ACTIVE_SESSION"
+    DigiLockerSessionExpired -> "DIGILOCKER_SESSION_EXPIRED"
+    DigiLockerSessionUnauthorized -> "DIGILOCKER_SESSION_UNAUTHORIZED"
+    DigiLockerMissingAccessToken -> "DIGILOCKER_MISSING_ACCESS_TOKEN"
+    DigiLockerUnsupportedDocumentType _ -> "DIGILOCKER_UNSUPPORTED_DOCUMENT_TYPE"
+    DigiLockerMismatchedMerchantContext -> "DIGILOCKER_MISMATCHED_MERCHANT_CONTEXT"
+    DigiLockerOperationFailed _ -> "DIGILOCKER_OPERATION_FAILED"
+    DigiLockerInvalidDriverAge -> "DIGILOCKER_INVALID_DRIVER_AGE"
+    DigiLockerInvalidVehicleCategory _ -> "DIGILOCKER_INVALID_VEHICLE_CATEGORY"
+    DigiLockerAllDocumentsVerified -> "DIGILOCKER_ALL_DOCUMENTS_VERIFIED"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1409,6 +1469,26 @@ instance IsHTTPError DriverOnboardingError where
     DuplicateWebhookReceived -> E400
     WebhookAuthFailed -> E401
     RCBlockedByAnotherAccount -> E400
+    DigiLockerVerificationInProgress -> E409
+    DigiLockerDocumentsBeingVerified -> E409
+    DigiLockerPullRequired -> E409
+    DigiLockerEmptyStateParameter -> E400
+    DigiLockerOAuthError _ _ -> E400
+    DigiLockerMissingAuthorizationCode -> E400
+    DigiLockerEmptyAuthorizationCode -> E400
+    DigiLockerInvalidStateParameter -> E400
+    DigiLockerNotEnabled -> E400
+    DigiLockerTokenExchangeFailed -> E500
+    DigiLockerNoActiveSession -> E400
+    DigiLockerSessionExpired -> E400
+    DigiLockerSessionUnauthorized -> E401
+    DigiLockerMissingAccessToken -> E401
+    DigiLockerUnsupportedDocumentType _ -> E400
+    DigiLockerMismatchedMerchantContext -> E400
+    DigiLockerOperationFailed _ -> E500
+    DigiLockerInvalidDriverAge -> E400
+    DigiLockerInvalidVehicleCategory _ -> E400
+    DigiLockerAllDocumentsVerified -> E400
 
 instance IsAPIError DriverOnboardingError
 
