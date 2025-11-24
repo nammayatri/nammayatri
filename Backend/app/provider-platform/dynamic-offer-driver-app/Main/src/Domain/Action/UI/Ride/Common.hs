@@ -45,6 +45,7 @@ import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeter
 import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
 import SharedLogic.FareCalculator (fareSum)
+import SharedLogic.Type (BillingCategory)
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
@@ -82,6 +83,7 @@ data DriverRideRes = DriverRideRes
     driverNumber :: Maybe Text,
     vehicleVariant :: DVeh.VehicleVariant,
     pickupDropOutsideOfThreshold :: Maybe Bool,
+    billingCategory :: BillingCategory,
     vehicleModel :: Text,
     vehicleColor :: Text,
     vehicleNumber :: Text,
@@ -277,6 +279,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         insuredAmount = ride.insuredAmount,
         isPetRide = booking.isPetRide,
         riderMobileNumber = mbRiderMobileNumber,
+        billingCategory = booking.billingCategory,
         paymentInstrument = booking.paymentInstrument
       }
 
