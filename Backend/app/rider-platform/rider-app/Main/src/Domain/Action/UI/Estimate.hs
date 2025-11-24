@@ -54,6 +54,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     estimatedPickupDuration :: Maybe Seconds,
     nightShiftRate :: Maybe NightShiftRateAPIEntity, -- TODO: doesn't make sense, to be removed
     nightShiftInfo :: Maybe NightShiftInfoAPIEntity,
+    businessDiscountInfo :: Maybe BusinessDiscountInfoAPIEntity,
     tollChargesInfo :: Maybe TollChargesInfoAPIEntity,
     waitingCharges :: WaitingChargesAPIEntity,
     driversLatLong :: [LatLong],
@@ -123,6 +124,7 @@ mkEstimateAPIEntity isReferredRide (Estimate {..}) = do
         estimatedTotalFareWithCurrency = mkPriceAPIEntity estimatedTotalFare,
         discountWithCurrency = mkPriceAPIEntity <$> discount,
         nightShiftInfo = mkNightShiftInfoAPIEntity <$> nightShiftInfo,
+        businessDiscountInfo = mkBusinessDiscountInfoAPIEntity <$> businessDiscountInfo,
         tollChargesInfo = mkTollChargesInfoAPIEntity <$> tollChargesInfo,
         waitingCharges = mkWaitingChargesAPIEntity waitingCharges,
         totalFareRange = mkFareRangeAPIEntity totalFareRange,
@@ -170,6 +172,18 @@ data NightShiftInfoAPIEntity = NightShiftInfoAPIEntity
     nightShiftEnd :: TimeOfDay
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data BusinessDiscountInfoAPIEntity = BusinessDiscountInfoAPIEntity
+  { businessDiscount :: Money,
+    businessDiscountWithCurrency :: PriceAPIEntity,
+    businessDiscountPercentage :: Double
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+mkBusinessDiscountInfoAPIEntity :: BusinessDiscountInfo -> BusinessDiscountInfoAPIEntity
+mkBusinessDiscountInfoAPIEntity BusinessDiscountInfo {..} = do
+  let businessDiscountWithCurrency = mkPriceAPIEntity businessDiscount
+  BusinessDiscountInfoAPIEntity {businessDiscount = businessDiscount.amountInt, ..}
 
 mkNightShiftInfoAPIEntity :: NightShiftInfo -> NightShiftInfoAPIEntity
 mkNightShiftInfoAPIEntity NightShiftInfo {..} = do
