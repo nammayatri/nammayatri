@@ -52,11 +52,11 @@ getDispatcherGetFleetInfo (mbPersonId, _merchantId) fleetId = do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   depotManager <- B.runInReplica $ QD.findByPersonId personId >>= fromMaybeM (DepotManagerNotFound personId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing person.merchantOperatingCityId BecknSpec.BUS DIBC.MULTIMODAL
-  vehicleInfo <- OTPRest.getVehicleInfo integratedBPPConfig fleetId >>= fromMaybeM (DepotFleetInfoNotFound fleetId)
+  vehicleInfo <- OTPRest.getVehicleOperationInfo integratedBPPConfig fleetId >>= fromMaybeM (DepotFleetInfoNotFound fleetId)
   unless depotManager.isAdmin $ do
-    when (depotManager.depotCode.getId /= vehicleInfo.depotName) $ throwError $ DepotManagerDoesNotHaveAccessToFleet depotManager.personId.getId fleetId
+    when (depotManager.depotCode.getId /= vehicleInfo.depot_id) $ throwError $ DepotManagerDoesNotHaveAccessToFleet depotManager.personId.getId fleetId
   -- =========== validation done ===========
-  pure $ API.Types.UI.Dispatcher.DispatcherRes {conductorCode = vehicleInfo.conductorCode, driverCode = vehicleInfo.driverCode, depotName = vehicleInfo.depotName, scheduleNo = vehicleInfo.scheduleNo}
+  pure $ API.Types.UI.Dispatcher.DispatcherRes {conductorCode = fromMaybe "" vehicleInfo.conductor_code, driverCode = fromMaybe "" vehicleInfo.driver_code, depotName = vehicleInfo.depot_name, scheduleNo = fromMaybe "" vehicleInfo.schedule_no}
 
 postDispatcherUpdateFleetSchedule ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -71,11 +71,11 @@ postDispatcherUpdateFleetSchedule (mbPersonId, _merchantId) req = do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   depotManager <- B.runInReplica $ QD.findByPersonId personId >>= fromMaybeM (DepotManagerNotFound personId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing person.merchantOperatingCityId BecknSpec.BUS DIBC.MULTIMODAL
-  updatedFleetInfo <- OTPRest.getVehicleInfo integratedBPPConfig req.updatedFleetId >>= fromMaybeM (DepotFleetInfoNotFound req.updatedFleetId)
-  sourceFleetInfo <- OTPRest.getVehicleInfo integratedBPPConfig req.sourceFleetId >>= fromMaybeM (DepotFleetInfoNotFound req.sourceFleetId)
+  sourceFleetInfo <- OTPRest.getVehicleOperationInfo integratedBPPConfig req.sourceFleetId >>= fromMaybeM (DepotFleetInfoNotFound req.sourceFleetId)
   unless depotManager.isAdmin $ do
-    when (depotManager.depotCode.getId /= sourceFleetInfo.depotName) $ throwError $ DepotManagerDoesNotHaveAccessToFleet depotManager.personId.getId req.sourceFleetId
-    when (depotManager.depotCode.getId /= updatedFleetInfo.depotName) $ throwError $ DepotManagerDoesNotHaveAccessToFleet depotManager.personId.getId req.updatedFleetId
+    updatedFleetInfo <- OTPRest.getVehicleOperationInfo integratedBPPConfig req.updatedFleetId >>= fromMaybeM (DepotFleetInfoNotFound req.updatedFleetId)
+    when (depotManager.depotCode.getId /= sourceFleetInfo.depot_id) $ throwError $ DepotManagerDoesNotHaveAccessToFleet depotManager.personId.getId req.sourceFleetId
+    when (depotManager.depotCode.getId /= updatedFleetInfo.depot_id) $ throwError $ DepotManagerDoesNotHaveAccessToFleet depotManager.personId.getId req.updatedFleetId
   -- =========== validation done ===========
   -- Record history
   now <- getCurrentTime
@@ -89,19 +89,20 @@ postDispatcherUpdateFleetSchedule (mbPersonId, _merchantId) req = do
             dispatcherId = personId,
             currentVehicle = req.sourceFleetId,
             replacedVehicle = req.updatedFleetId,
-            driverCode = sourceFleetInfo.driverCode,
-            conductorCode = sourceFleetInfo.conductorCode,
+            driverCode = sourceFleetInfo.driver_code,
+            conductorCode = sourceFleetInfo.conductor_code,
             merchantId = person.merchantId,
             merchantOperatingCityId = person.merchantOperatingCityId,
             depotId = depotManager.depotCode.getId,
             reasonTag = reasonTag,
             reasonContent = reasonContent,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            waybillNo = sourceFleetInfo.waybill_no
           }
   QDH.create dispatcherHistory
   -- adding fleet override info in redis for waybill.
-  Redis.setExp (fleetOverrideKey req.sourceFleetId) (req.updatedFleetId, updatedFleetInfo.waybillNo) 2400
+  Redis.setExp (fleetOverrideKey req.sourceFleetId) (req.updatedFleetId, sourceFleetInfo.waybill_no & fromMaybe "") 2400
   pure $ Kernel.Types.APISuccess.Success
 
 getFleetOverrideInfo :: (MonadFlow m, Redis.HedisFlow m r) => Text -> m (Maybe (Text, Text))
@@ -206,11 +207,12 @@ getDispatcherHistory (mbPersonId, _merchantId) mbLimit mbOffset = do
           API.Types.UI.Dispatcher.dispatcherId = Kernel.Types.Id.getId dispatcherId,
           API.Types.UI.Dispatcher.currentVehicle = currentVehicle,
           API.Types.UI.Dispatcher.replacedVehicle = replacedVehicle,
-          API.Types.UI.Dispatcher.historyDriverCode = driverCode,
-          API.Types.UI.Dispatcher.historyConductorCode = conductorCode,
+          API.Types.UI.Dispatcher.historyDriverCode = fromMaybe "" driverCode,
+          API.Types.UI.Dispatcher.historyConductorCode = fromMaybe "" conductorCode,
           API.Types.UI.Dispatcher.depotId = depotId,
           API.Types.UI.Dispatcher.reasonTag = reasonTag,
           API.Types.UI.Dispatcher.reasonContent = reasonContent,
           API.Types.UI.Dispatcher.createdAt = createdAt,
-          API.Types.UI.Dispatcher.updatedAt = updatedAt
+          API.Types.UI.Dispatcher.updatedAt = updatedAt,
+          API.Types.UI.Dispatcher.waybillNo = fromMaybe "" waybillNo
         }

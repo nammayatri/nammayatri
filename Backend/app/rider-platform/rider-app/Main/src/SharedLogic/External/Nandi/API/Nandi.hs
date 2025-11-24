@@ -42,6 +42,8 @@ type ExampleTripAPI = "example-trip" :> Capture "gtfs_id" Text :> Capture "route
 
 type VehicleInfoAPI = "vehicle" :> Capture "gtfs_id" Text :> Capture "vehicle_no" Text :> "info" :> Get '[JSON] VehicleInfoResponse
 
+type VehicleOperationDataAPI = "vehicle-operation-data" :> Capture "fleet_no" Text :> Get '[JSON] VehicleOperationInfo
+
 type DepotNamesAPI = "depotNames" :> Get '[JSON] [Text]
 
 type DepotIdsAPI = "depotIds" :> Get '[JSON] [Text]
@@ -105,6 +107,9 @@ nandiExampleTripAPI = Proxy
 
 nandiVehicleInfoAPI :: Proxy VehicleInfoAPI
 nandiVehicleInfoAPI = Proxy
+
+nandiVehicleOperationDataAPI :: Proxy VehicleOperationDataAPI
+nandiVehicleOperationDataAPI = Proxy
 
 nandiDepotNamesAPI :: Proxy DepotNamesAPI
 nandiDepotNamesAPI = Proxy
@@ -174,6 +179,9 @@ getNandiExampleTrip = ET.client nandiExampleTripAPI
 
 getNandiVehicleInfo :: Text -> Text -> ET.EulerClient VehicleInfoResponse
 getNandiVehicleInfo = ET.client nandiVehicleInfoAPI
+
+getNandiVehicleOperationData :: Text -> ET.EulerClient VehicleOperationInfo
+getNandiVehicleOperationData = ET.client nandiVehicleOperationDataAPI
 
 getNandiDepotNames :: ET.EulerClient [Text]
 getNandiDepotNames = ET.client nandiDepotNamesAPI
