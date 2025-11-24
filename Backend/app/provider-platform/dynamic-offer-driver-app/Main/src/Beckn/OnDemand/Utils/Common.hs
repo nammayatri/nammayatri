@@ -101,6 +101,7 @@ data Pricing = Pricing
     vehicleIconUrl :: Maybe BaseUrl,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
+    businessDiscount :: Maybe HighPrecMoney,
     qar :: Maybe Double
   }
 
@@ -1103,7 +1104,7 @@ buildAddressFromText fullAddress = do
   logDebug $ "Search Address:-" <> fullAddress
   if totalAddressComponents == 1
     then do
-      let addr = OS.Address {area_code = Nothing, building = Nothing, city = Nothing, country = Nothing, door = Nothing, locality = Nothing, state = Nothing, street = Nothing, ward = (Just fullAddress)}
+      let addr = OS.Address {area_code = Nothing, building = Nothing, city = Nothing, country = Nothing, door = Nothing, locality = Nothing, state = Nothing, street = Nothing, ward = Just fullAddress}
       logDebug $ "Parsed Single-Component Address Entity : " <> show addr
       pure addr
     else do
@@ -1397,6 +1398,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       smartTipReason = Nothing,
       tipOptions = Nothing,
       qar = Nothing,
+      businessDiscount = fareParams.businessDiscount,
       ..
     }
 
@@ -1422,6 +1424,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       smartTipReason = Nothing,
       tipOptions = Nothing,
       qar = Nothing,
+      businessDiscount = fareParams.businessDiscount,
       ..
     }
 
@@ -1440,6 +1443,7 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
         tagGroupList =
           specialLocationTagSingleton pricing.specialLocationTag
             <> specialLocationNameTag pricing.specialLocationName
+            <> businessDiscountTagSingleton
             <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
             <> isCustomerPrefferedSearchRouteSingleton pricing.isCustomerPrefferedSearchRoute
             <> isBlockedRouteSingleton pricing.isBlockedRoute
@@ -1480,6 +1484,21 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
                       descriptorShortDesc = Nothing
                     },
               tagValue = pricing.smartTipReason
+            }
+    businessDiscountTagSingleton
+      | isNothing pricing.businessDiscount || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.BUSINESS_DISCOUNT,
+                      descriptorName = Just "Business Discount",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> pricing.businessDiscount
             }
     qarTagSingleton
       | isNothing pricing.qar || not isValueAddNP = Nothing

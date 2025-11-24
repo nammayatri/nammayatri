@@ -50,6 +50,7 @@ Estimate:
       smartTipReason: Maybe Text
       congestionMultiplier : Maybe Centesimal
       distanceUnit: DistanceUnit
+      businessDiscount: Maybe HighPrecMoney
       fareParams: Maybe FareParameters|WithIdCreate
       farePolicy: Maybe FarePolicy|NoRelation
       specialLocationTag: Maybe Text
