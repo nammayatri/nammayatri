@@ -108,7 +108,6 @@ appGenerateTempAppCode :: RegToken -> ClientM Reg.TempCodeRes
 appMakeSignature :: RegToken -> ClientM (SignedResponse.SignedResponse Reg.CustomerSignatureRes)
 logout :: RegToken -> ClientM APISuccess
 sendBusinessEmailVerification :: RegToken -> ClientM APISuccess
-verifyBusinessEmailWithoutAuth :: Reg.VerifyBusinessEmailReq -> ClientM Reg.VerifyBusinessEmailRes
 verifyBusinessEmailWithAuth :: RegToken -> Reg.VerifyBusinessEmailReq -> ClientM Reg.VerifyBusinessEmailRes
 verifyBusinessEmailRedirect :: Text -> ClientM Reg.HTMLResponse
 resendBusinessEmailVerification :: RegToken -> ClientM APISuccess
@@ -116,7 +115,7 @@ appAuth
   :<|> appSignatureAuth
   :<|> appPasswordAuth
   :<|> appGetToken
-  :<|> (sendBusinessEmailVerification :<|> (verifyBusinessEmailWithoutAuth :<|> verifyBusinessEmailWithAuth) :<|> verifyBusinessEmailRedirect :<|> resendBusinessEmailVerification)
+  :<|> (sendBusinessEmailVerification :<|> verifyBusinessEmailWithAuth :<|> verifyBusinessEmailRedirect :<|> resendBusinessEmailVerification)
   :<|> appVerify
   :<|> appReInitiateLogin
   :<|> appGenerateTempAppCode

@@ -750,7 +750,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         then FCV2.calculateFareParametersV2 params {vehicleAge = Just 100000} -- high value
         else return fareParamsMax
     return (fareParamsMin, fareParamsMax)
-
+  let businessDiscount = if isJust fullFarePolicy.businessDiscountPercentage then calculateBusinessDiscount maxFareParams (fromMaybe 0.0 fullFarePolicy.businessDiscountPercentage) else Nothing
   estimateId <- Id <$> generateGUID
   now <- getCurrentTime
   void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
@@ -1045,4 +1045,7 @@ transformReserveRideEsttoEst :: (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow 
 transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
   farePolicy <- QFPolicy.findById Nothing (fromMaybe "" farePolicyId)
   fareParams <- QFP.findById (fromMaybe "" fareParamsId)
+  let businessDiscount = case (farePolicy, fareParams) of
+        (Just farePolicy', Just params) -> if isJust farePolicy'.businessDiscountPercentage then calculateBusinessDiscount params (fromMaybe 0.0 farePolicy'.businessDiscountPercentage) else Nothing
+        _ -> Nothing
   return DEst.Estimate {..}

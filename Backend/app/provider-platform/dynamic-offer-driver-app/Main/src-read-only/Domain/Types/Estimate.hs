@@ -17,7 +17,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data Estimate = Estimate
-  { congestionMultiplier :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
+  { businessDiscount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    congestionMultiplier :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,

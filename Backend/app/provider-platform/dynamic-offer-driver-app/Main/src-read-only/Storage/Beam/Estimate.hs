@@ -13,7 +13,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data EstimateT f = EstimateT
-  { congestionMultiplier :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
+  { businessDiscount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    congestionMultiplier :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),

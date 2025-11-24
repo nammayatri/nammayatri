@@ -381,7 +381,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       petChargesCaption = show Tags.PET_CHARGES
       petChargesItem = mkBreakupItem petChargesCaption . (mkValue . show) <$> farePolicy.petCharges
 
-      businessDiscountCaption = show Tags.BUSINESS_DISCOUNT
+      businessDiscountCaption = show Tags.BUSINESS_DISCOUNT_PERCENTAGE
       businessDiscountItem = mkBreakupItem businessDiscountCaption . (mkValue . show) <$> farePolicy.businessDiscountPercentage
 
       priorityChargesCaption = show Tags.PRIORITY_CHARGES

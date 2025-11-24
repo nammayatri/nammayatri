@@ -288,6 +288,28 @@ getNightShiftEnd tagGroups = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_SHIFT_END_TIME tagGroups
   readMaybe $ T.unpack tagValue
 
+buildBusinessDiscountInfo :: Spec.Item -> Currency -> Maybe OnSearch.BusinessDiscountInfo
+buildBusinessDiscountInfo item currency = do
+  let itemTags = item.itemTags
+  businessDiscount <- getBusinessDiscount itemTags currency
+  businessDiscountPercentage <- getBusinessDiscountPercentage itemTags
+  Just $
+    OnSearch.BusinessDiscountInfo
+      { businessDiscount = businessDiscount,
+        businessDiscountPercentage = businessDiscountPercentage
+      }
+
+getBusinessDiscount :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getBusinessDiscount tagGroups currency = do
+  tagValue <- Utils.getTagV2 Tag.INFO Tag.BUSINESS_DISCOUNT tagGroups
+  businessDiscount <- DecimalValue.valueFromString tagValue
+  Just $ decimalValueToPrice currency businessDiscount
+
+getBusinessDiscountPercentage :: Maybe [Spec.TagGroup] -> Maybe Double
+getBusinessDiscountPercentage tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.BUSINESS_DISCOUNT_PERCENTAGE tagGroups
+  readMaybe tagValue :: Maybe Double
+
 getBaseFare :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getBaseFare tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.MIN_FARE tagGroups

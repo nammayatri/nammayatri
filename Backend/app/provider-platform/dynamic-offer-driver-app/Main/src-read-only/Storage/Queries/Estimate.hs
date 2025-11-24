@@ -63,7 +63,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.congestionMultiplier congestionMultiplier,
+    [ Se.Set Beam.businessDiscount businessDiscount,
+      Se.Set Beam.congestionMultiplier congestionMultiplier,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.dpVersion dpVersion,
@@ -122,7 +123,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
     pure $
       Just
         Domain.Types.Estimate.Estimate
-          { congestionMultiplier = congestionMultiplier,
+          { businessDiscount = businessDiscount,
+            congestionMultiplier = congestionMultiplier,
             createdAt = createdAt,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
@@ -171,7 +173,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
 instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   toTType' (Domain.Types.Estimate.Estimate {..}) = do
     Beam.EstimateT
-      { Beam.congestionMultiplier = congestionMultiplier,
+      { Beam.businessDiscount = businessDiscount,
+        Beam.congestionMultiplier = congestionMultiplier,
         Beam.createdAt = createdAt,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,

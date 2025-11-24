@@ -99,11 +99,9 @@ type API =
                     :> TokenAuth
                     :> Post '[JSON] APISuccess
                     :<|> "verify"
-                      :> ( ReqBody '[JSON] DRegistration.VerifyBusinessEmailReq
+                      :> ( TokenAuth
+                             :> ReqBody '[JSON] DRegistration.VerifyBusinessEmailReq
                              :> Post '[JSON] DRegistration.VerifyBusinessEmailRes
-                             :<|> TokenAuth
-                               :> ReqBody '[JSON] DRegistration.VerifyBusinessEmailReq
-                               :> Post '[JSON] DRegistration.VerifyBusinessEmailRes
                          )
                     :<|> "verify-redirect"
                       :> QueryParam' '[Required, Strict] "token" Text
@@ -138,7 +136,7 @@ handler =
     :<|> signatureAuth
     :<|> passwordBasedAuth
     :<|> getToken
-    :<|> (sendBusinessEmailVerification :<|> (verifyBusinessEmailWithoutAuth :<|> verifyBusinessEmailWithAuth) :<|> verifyBusinessEmailRedirect :<|> resendBusinessEmailVerification)
+    :<|> (sendBusinessEmailVerification :<|> verifyBusinessEmailWithAuth :<|> verifyBusinessEmailRedirect :<|> resendBusinessEmailVerification)
     :<|> verify
     :<|> resend
     :<|> generateTempAppCode
@@ -181,8 +179,8 @@ sendBusinessEmailVerification (personId, merchantId) = withFlowHandlerAPI $ do
   DRegistration.sendBusinessEmailVerification personId merchantId merchantOperatingCityId
 
 -- Verify business email without auth (for magic link from email)
-verifyBusinessEmailWithoutAuth :: DRegistration.VerifyBusinessEmailReq -> FlowHandler DRegistration.VerifyBusinessEmailRes
-verifyBusinessEmailWithoutAuth req = withFlowHandlerAPI $ DRegistration.verifyBusinessEmail Nothing req
+_verifyBusinessEmailWithoutAuth :: DRegistration.VerifyBusinessEmailReq -> FlowHandler DRegistration.VerifyBusinessEmailRes
+_verifyBusinessEmailWithoutAuth req = withFlowHandlerAPI $ DRegistration.verifyBusinessEmail Nothing req
 
 -- Verify business email with auth (for OTP entered in app)
 verifyBusinessEmailWithAuth :: (Id SP.Person, Id Merchant.Merchant) -> DRegistration.VerifyBusinessEmailReq -> FlowHandler DRegistration.VerifyBusinessEmailRes
