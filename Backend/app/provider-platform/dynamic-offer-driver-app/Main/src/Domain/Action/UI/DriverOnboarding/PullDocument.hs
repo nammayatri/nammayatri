@@ -137,7 +137,7 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
         let (errorCode, errorDesc) = extractDigiLockerError err
         logError $ "PullDocument - Failed to pull DL: " <> errorCode <> " - " <> errorDesc
         updateDocStatusField session.id req.docType "FAILED" (Just errorCode) (Just errorDesc)
-        throwError $ InvalidRequest $ "Failed to pull driving license from DigiLocker: " <> errorDesc
+        throwError $ DigiLockerOperationFailed $ "Failed to pull driving license from DigiLocker: " <> errorDesc
 
   pullResp <- mbPullResp & fromMaybeM (InternalError "Pull response is Nothing")
 
@@ -159,7 +159,7 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
         let (errorCode, errorDesc) = extractDigiLockerError err
         logError $ "PullDocument - Failed to extract DL: " <> errorCode <> " - " <> errorDesc
         updateDocStatusField session.id req.docType "FAILED" (Just errorCode) (Just errorDesc)
-        throwError $ InvalidRequest $ "Failed to extract driving license data: " <> errorDesc
+        throwError $ DigiLockerOperationFailed $ "Failed to extract driving license data: " <> errorDesc
 
   extractedResp <- mbExtractedResp & fromMaybeM (InternalError "Extracted response is Nothing")
 
@@ -181,7 +181,7 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
         let (errorCode, errorDesc) = extractDigiLockerError err
         logError $ "PullDocument - Failed to fetch PDF: " <> errorCode <> " - " <> errorDesc
         updateDocStatusField session.id req.docType "FAILED" (Just errorCode) (Just errorDesc)
-        throwError $ InvalidRequest $ "Failed to fetch driving license PDF: " <> errorDesc
+        throwError $ DigiLockerOperationFailed $ "Failed to fetch driving license PDF: " <> errorDesc
 
   pdfBytes <- mbPdfBytes & fromMaybeM (InternalError "PDF bytes is Nothing")
 
@@ -200,7 +200,7 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
       let (errorCode, errorDesc) = extractDigiLockerError err
       logError $ "PullDocument - Verification failed: " <> errorCode <> " - " <> errorDesc
       updateDocStatusField session.id req.docType "FAILED" (Just errorCode) (Just errorDesc)
-      throwError $ InvalidRequest $ "Failed to verify and store driving license: " <> errorDesc
+      throwError $ DigiLockerOperationFailed $ "Failed to verify and store driving license: " <> errorDesc
 
   return Success
 
@@ -257,7 +257,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
       Just dobUTC -> do
         let age = diffInYears dobUTC now
         when (age < 18 || age > 80) $
-          throwError $ InvalidRequest $ "Driver age must be between 18 and 80 years. Current age: " <> show age
+          throwError DigiLockerInvalidDriverAge
       Nothing -> logWarning $ "PullDocument - Could not parse DOB: " <> dobText
 
   -- Step 3: Check for duplicate DL BEFORE uploading to S3 (avoid waste)

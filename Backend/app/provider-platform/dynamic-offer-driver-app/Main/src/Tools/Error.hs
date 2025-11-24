@@ -1258,6 +1258,10 @@ data DriverOnboardingError
   | DigiLockerMissingAccessToken
   | DigiLockerUnsupportedDocumentType Text
   | DigiLockerMismatchedMerchantContext
+  | DigiLockerOperationFailed Text
+  | DigiLockerInvalidDriverAge
+  | DigiLockerInvalidVehicleCategory Text
+  | DigiLockerAllDocumentsVerified
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1331,6 +1335,10 @@ instance IsBaseError DriverOnboardingError where
     DigiLockerMissingAccessToken -> Just "DigiLocker session not authorized. Access token missing."
     DigiLockerUnsupportedDocumentType docType -> Just $ "Document type \"" <> docType <> "\" is not supported for DigiLocker pull operation. Only Driving License is supported."
     DigiLockerMismatchedMerchantContext -> Just "DigiLocker pull requested with mismatched merchant/city context. The request context does not match the session context."
+    DigiLockerOperationFailed msg -> Just $ "DigiLocker operation failed: " <> msg
+    DigiLockerInvalidDriverAge -> Just "Driver age must be between 18 and 80 years."
+    DigiLockerInvalidVehicleCategory category -> Just $ "Invalid vehicle category for DigiLocker: " <> category <> ". Please select a valid category."
+    DigiLockerAllDocumentsVerified -> Just "All documents are already verified. You should not be calling this API."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1403,6 +1411,10 @@ instance IsHTTPError DriverOnboardingError where
     DigiLockerMissingAccessToken -> "DIGILOCKER_MISSING_ACCESS_TOKEN"
     DigiLockerUnsupportedDocumentType _ -> "DIGILOCKER_UNSUPPORTED_DOCUMENT_TYPE"
     DigiLockerMismatchedMerchantContext -> "DIGILOCKER_MISMATCHED_MERCHANT_CONTEXT"
+    DigiLockerOperationFailed _ -> "DIGILOCKER_OPERATION_FAILED"
+    DigiLockerInvalidDriverAge -> "DIGILOCKER_INVALID_DRIVER_AGE"
+    DigiLockerInvalidVehicleCategory _ -> "DIGILOCKER_INVALID_VEHICLE_CATEGORY"
+    DigiLockerAllDocumentsVerified -> "DIGILOCKER_ALL_DOCUMENTS_VERIFIED"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1473,6 +1485,10 @@ instance IsHTTPError DriverOnboardingError where
     DigiLockerMissingAccessToken -> E401
     DigiLockerUnsupportedDocumentType _ -> E400
     DigiLockerMismatchedMerchantContext -> E400
+    DigiLockerOperationFailed _ -> E500
+    DigiLockerInvalidDriverAge -> E400
+    DigiLockerInvalidVehicleCategory _ -> E400
+    DigiLockerAllDocumentsVerified -> E400
 
 instance IsAPIError DriverOnboardingError
 

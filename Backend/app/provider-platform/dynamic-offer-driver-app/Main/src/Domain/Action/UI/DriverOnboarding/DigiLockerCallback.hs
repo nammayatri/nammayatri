@@ -127,7 +127,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
       whenJust mbSession $ \session -> do
         QDV.updateSessionStatus DDV.FAILED (Just "MISSING_CODE") (Just "DigiLocker callback received without authorization code") session.id
         logInfo $ "DigiLocker callback - Updated session status to FAILED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", ErrorCode: MISSING_CODE"
-      throwError $ InvalidRequest "DigiLocker callback - Missing authorization code"
+      throwError DigiLockerMissingAuthorizationCode
     Just codeVal ->
       if T.null codeVal
         then do
@@ -135,7 +135,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
           whenJust mbSession $ \session -> do
             QDV.updateSessionStatus DDV.FAILED (Just "EMPTY_CODE") (Just "DigiLocker callback received with empty authorization code") session.id
             logInfo $ "DigiLocker callback - Updated session status to FAILED for DriverId: " <> session.driverId.getId <> ", StateId: " <> session.stateId <> ", ErrorCode: EMPTY_CODE"
-          throwError $ InvalidRequest "DigiLocker callback received with empty authorization code"
+          throwError DigiLockerEmptyAuthorizationCode
         else return codeVal
 
   -- Step 4: Find session by stateId from DigilockerVerification table
@@ -416,7 +416,7 @@ processDocuments session person _digiLockerConfig accessToken parsedDocs unavail
   -- Validate that session context matches person (prevent drift/replay)
   when (sessionMerchantId /= person.merchantId || sessionMerchantOpCityId /= person.merchantOperatingCityId) $ do
     logError $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Mismatched merchant/city context. Session: merchantId=" <> sessionMerchantId.getId <> ", merchantOpCityId=" <> sessionMerchantOpCityId.getId <> ", Person: merchantId=" <> person.merchantId.getId <> ", merchantOpCityId=" <> person.merchantOperatingCityId.getId
-    throwError $ InvalidRequest "DigiLocker callback received with mismatched merchant/city context"
+    throwError DigiLockerMismatchedMerchantContext
 
   logInfo $ "DigiLocker - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", Validated session context: merchantId=" <> sessionMerchantId.getId <> ", merchantOpCityId=" <> sessionMerchantOpCityId.getId
 
@@ -815,7 +815,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
       Just dobUTC -> do
         let age = diffInYears dobUTC now
         when (age < 18 || age > 80) $
-          throwError $ InvalidRequest $ "Driver age must be between 18 and 80 years. Current age: " <> show age
+          throwError DigiLockerInvalidDriverAge
       Nothing -> logWarning $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Could not parse DOB: " <> dobText
 
   -- Step 3: Check for duplicate DL BEFORE uploading to S3 (avoid waste)

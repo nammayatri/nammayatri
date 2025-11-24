@@ -1191,7 +1191,7 @@ postDriverDigilockerInitiate (mbDriverId, merchantId, merchantOpCityId) req = do
   allowedVehicleCategories <- DigilockerLockerShared.getAllowedVehicleCategories merchantOpCityId
   unless (req.vehicleCategory `elem` allowedVehicleCategories) $ do
     let categoriesStr = T.intercalate ", " (map (T.toLower . show) allowedVehicleCategories)
-    throwError $ InvalidRequest $ "Vehicle category must be one of: " <> categoriesStr <> ". Received: " <> show req.vehicleCategory
+    throwError $ DigiLockerInvalidVehicleCategory $ "Vehicle category must be one of: " <> categoriesStr <> ". Received: " <> show req.vehicleCategory
 
   -- Step 3: Check for existing active session
   latestSession <- QDV.findLatestByDriverId (Just 1) (Just 0) driverId
@@ -1343,7 +1343,7 @@ checkActualDocumentTables driverId merchantId merchantOpCityId vehicleCategory =
   if allDocumentsValid
     then do
       logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", All documents already verified"
-      throwError $ InvalidRequest "All documents are already verified. You should not be calling this API."
+      throwError DigiLockerAllDocumentsVerified
     else do
       -- Else → Create new session (handles FAILED, INVALID, missing docs, etc.)
       logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", Creating new session for document verification"
