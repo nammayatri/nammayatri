@@ -23,7 +23,6 @@ ALTER TABLE atlas_app.purchased_pass ADD COLUMN created_at timestamp with time z
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.purchased_pass ADD PRIMARY KEY ( id);
 ------- SQL updates -------
-ALTER TABLE atlas_app.purchased_pass ADD COLUMN used_trip_count integer ;
 
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN device_switch_count integer ;
 

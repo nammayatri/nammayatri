@@ -520,3 +520,12 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN subscription_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_driver_to_use_fleet_rcs boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_fare_calculator_v2 boolean ;
+
+
+------- SQL updates -------
+
