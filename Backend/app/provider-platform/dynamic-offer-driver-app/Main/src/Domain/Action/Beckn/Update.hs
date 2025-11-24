@@ -51,6 +51,7 @@ import Lib.LocationUpdates.Internal
 import SharedLogic.CallBAP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.FareCalculator
+import qualified SharedLogic.FareCalculatorV2 as FCV2
 import SharedLogic.FarePolicy
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
@@ -264,7 +265,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
               sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Auto rickshaw not allowed for toll route."
               throwError $ InvalidRequest "Auto rickshaw not allowed for toll route."
             fareParameters <-
-              calculateFareParameters
+              FCV2.calculateFareParametersV2
                 CalculateFareParametersParams
                   { farePolicy,
                     actualDistance = Just estimatedDistance,

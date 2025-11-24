@@ -13,7 +13,15 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 
-module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy, ReturnFee (..), BoothCharge (..)) where
+module Domain.Types.FarePolicy
+  ( module Reexport,
+    module Domain.Types.FarePolicy,
+    ReturnFee (..),
+    BoothCharge (..),
+    FareChargeComponent (..),
+    FareChargeConfig (..),
+  )
+where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as DPM
 import Data.Aeson.Types
@@ -76,6 +84,9 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
+    vatChargeConfig :: Maybe FareChargeConfig,
+    commissionChargeConfig :: Maybe FareChargeConfig,
+    tollTaxChargeConfig :: Maybe FareChargeConfig,
     farePolicyDetails :: FarePolicyDetailsD s,
     cancellationFarePolicyId :: Maybe (Id DTC.CancellationFarePolicy),
     description :: Maybe Text,
@@ -138,6 +149,57 @@ data CardCharge = CardCharge
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+data FareChargeComponent
+  = RideFare -- base fare without any charges
+  | WaitingCharge
+  | ServiceChargeComponent
+  | TollChargesComponent
+  | CongestionChargeComponent
+  | ParkingChargeComponent
+  | PetChargeComponent
+  | PriorityChargeComponent
+  | NightShiftChargeComponent
+  | InsuranceChargeComponent
+  | StopChargeComponent
+  | PlatformFeeComponent
+  | CustomerCancellationChargeComponent
+  | -- Progressive details
+    DeadKmFareComponent
+  | ExtraKmFareComponent
+  | RideDurationFareComponent
+  | -- Rental details
+    TimeBasedFareComponent
+  | DistBasedFareComponent
+  | -- InterCity details
+    TimeFareComponent
+  | DistanceFareComponent
+  | PickupChargeComponent
+  | ExtraDistanceFareComponent
+  | ExtraTimeFareComponent
+  | StateEntryPermitChargesComponent
+  | -- Ambulance details
+    AmbulanceDistBasedFareComponent
+  deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+-- | Configuration for a charge (VAT, commission, or toll tax)
+--
+-- Example JSON:
+--   {
+--     "value": "14%",  -- Percentage charge (e.g., "14%") or fixed amount (e.g., "50")
+--     "appliesOn": ["RideFare", "DeadKmFareComponent"]  -- Components to apply charge on
+--   }
+--
+-- The charge will be calculated as:
+-- - If percentage: (sum of appliesOn component values) * (percentage / 100)
+-- - If fixed: the fixed amount itself
+data FareChargeConfig = FareChargeConfig
+  { value :: Text, -- Charge value: percentage like "14%" or fixed like "50"
+    appliesOn :: [FareChargeComponent] -- List of fare components to apply charge on
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
 data CongestionChargeMultiplier
   = BaseFareAndExtraDistanceFare Centesimal
   | ExtraDistanceFare Centesimal
@@ -190,6 +252,9 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     smartTipReason :: Maybe Text,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
+    vatChargeConfig :: Maybe FareChargeConfig,
+    commissionChargeConfig :: Maybe FareChargeConfig,
+    tollTaxChargeConfig :: Maybe FareChargeConfig,
     farePolicyDetails :: FarePolicyDetailsD s,
     description :: Maybe Text,
     cancellationFarePolicy :: Maybe DTC.CancellationFarePolicy,

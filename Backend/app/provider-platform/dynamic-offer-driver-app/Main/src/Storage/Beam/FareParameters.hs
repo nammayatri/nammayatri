@@ -67,7 +67,11 @@ data FareParametersT f = FareParametersT
     driverCancellationPenaltyAmount :: B.C f (Maybe HighPrecMoney),
     updatedAt :: B.C f (Maybe UTCTime),
     merchantId :: B.C f (Maybe Text),
-    merchantOperatingCityId :: B.C f (Maybe Text)
+    merchantOperatingCityId :: B.C f (Maybe Text),
+    paymentProcessingFee :: B.C f (Maybe HighPrecMoney),
+    rideVat :: B.C f (Maybe HighPrecMoney),
+    tollVat :: B.C f (Maybe HighPrecMoney),
+    commission :: B.C f (Maybe HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 

@@ -247,6 +247,20 @@ fareSum fareParams conditionalChargeCategories = do
     - if fareParams.shouldApplyBusinessDiscount then fromMaybe 0.0 fareParams.businessDiscount else 0.0
 
 -- Pure fare without customerExtraFee and driverSelectedFare
+
+-- | Calculate the pure fare sum (final total fare amount)
+--
+-- Includes all fare components:
+-- - Base fare components (baseFare, serviceCharge, waitingCharge, etc.)
+-- - Additional charges (petCharges, stopCharges, priorityCharges, etc.)
+-- - Policy-specific details (progressive/rental/intercity components)
+-- - VAT charges (rideVat, tollVat) from calculateFareParametersV2
+-- - Payment processing fee
+-- - Conditional charges (filtered by category)
+--
+-- Note: Commission (fareParams.commission) is NOT included in the final sum.
+-- It is calculated and stored for breakdown/transparency purposes only,
+-- as per PRD requirements.
 pureFareSum :: FareParameters -> Maybe [DAC.ConditionalChargesCategories] -> HighPrecMoney
 pureFareSum fareParams conditionalChargeCategories = do
   let (partOfNightShiftCharge, notPartOfNightShiftCharge, platformFee) = countFullFareOfParamsDetails fareParams.fareParametersDetails
@@ -270,6 +284,10 @@ pureFareSum fareParams conditionalChargeCategories = do
     + fromMaybe 0.0 fareParams.boothCharge
     + fromMaybe 0.0 (fareParams.cardCharge >>= (.onFare))
     + fromMaybe 0.0 (fareParams.cardCharge >>= (.fixed))
+    + fromMaybe 0.0 fareParams.paymentProcessingFee
+    + fromMaybe 0.0 fareParams.rideVat
+    + fromMaybe 0.0 fareParams.tollVat
+    -- Commission is intentionally excluded - stored for breakdown only
     + (sum $ map (.charge) (filter (\addCharges -> maybe True (KP.elem addCharges.chargeCategory) conditionalChargeCategories) fareParams.conditionalCharges))
 
 perRideKmFareParamsSum :: FareParameters -> HighPrecMoney
@@ -399,6 +417,7 @@ calculateFareParameters params = do
             shouldApplyBusinessDiscount = params.shouldApplyBusinessDiscount,
             serviceCharge = fp.serviceCharge,
             parkingCharge = fp.parkingCharge,
+            baseFare = baseFare,
             petCharges = params.petCharges,
             priorityCharges = fp.priorityCharges,
             congestionCharge = Just finalCongestionCharge,
@@ -432,6 +451,7 @@ calculateFareParameters params = do
                   fareParametersDetails,
             customerCancellationDues = params.customerCancellationDues,
             tollCharges = addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing),
+            govtCharges = govtCharges,
             insuranceCharge = insuranceChargeResult,
             luggageCharge = luggageCharge,
             returnFeeCharge = returnFeeCharge,
@@ -452,7 +472,11 @@ calculateFareParameters params = do
             merchantOperatingCityId = params.merchantOperatingCityId,
             conditionalCharges = filter (\addCharges -> maybe True (\chargesCategories -> addCharges.chargeCategory `elem` chargesCategories) params.mbAdditonalChargeCategories) params.farePolicy.conditionalCharges,
             driverCancellationPenaltyAmount = fp.driverCancellationPenaltyAmount,
-            ..
+            businessDiscount = businessDiscount,
+            paymentProcessingFee = Nothing,
+            rideVat = Nothing,
+            tollVat = Nothing,
+            commission = Nothing
           }
   KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""

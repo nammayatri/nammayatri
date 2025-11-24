@@ -161,6 +161,10 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 merchantId = Id <$> merchantId,
                 merchantOperatingCityId = Id <$> merchantOperatingCityId,
                 conditionalCharges = conditionalCharges',
+                paymentProcessingFee = paymentProcessingFee,
+                rideVat = rideVat,
+                tollVat = tollVat,
+                commission = commission,
                 ..
               }
       Nothing -> return Nothing
@@ -204,5 +208,9 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         merchantId = getId <$> merchantId,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
         BeamFP.conditionalCharges = Just $ toJSON conditionalCharges,
+        BeamFP.paymentProcessingFee = paymentProcessingFee,
+        BeamFP.rideVat = rideVat,
+        BeamFP.tollVat = tollVat,
+        BeamFP.commission = commission,
         ..
       }

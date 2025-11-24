@@ -84,6 +84,7 @@ import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.BlockedRouteDetector
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
+import qualified SharedLogic.FareCalculatorV2 as FCV2
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
 import qualified SharedLogic.Merchant as SMerchant
@@ -626,7 +627,7 @@ buildQuote ::
 buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance
   fareParams <-
-    calculateFareParameters
+    FCV2.calculateFareParametersV2
       CalculateFareParametersParams
         { farePolicy = fullFarePolicy,
           actualDistance = Just dist,
@@ -743,10 +744,10 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               mbAdditonalChargeCategories = Nothing,
               numberOfLuggages = mbSearchReq >>= (.numberOfLuggages)
             }
-    fareParamsMax <- calculateFareParameters params
+    fareParamsMax <- FCV2.calculateFareParametersV2 params
     fareParamsMin <-
       if isAmbulanceEstimate
-        then calculateFareParameters params {vehicleAge = Just 100000} -- high value
+        then FCV2.calculateFareParametersV2 params {vehicleAge = Just 100000} -- high value
         else return fareParamsMax
     return (fareParamsMin, fareParamsMax)
 
