@@ -110,7 +110,7 @@ cancelExecutePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   merchantOpCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
   order <- QOrder.findById (cast rideId) >>= fromMaybeM (PaymentOrderNotFound rideId.getId)
-  mobileCountryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  let mobileCountryCode = person.mobileCountryCode
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   when (isNothing ride.cancellationFeeIfCancelled) $ do
     QRide.updateCancellationFeeIfCancelledField (Just cancellationAmount.amount) rideId
@@ -122,7 +122,7 @@ cancelExecutePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
       (merchant.driverOfferBaseUrl)
       (merchant.driverOfferMerchantId)
       mobileNumber
-      mobileCountryCode
+      (fromMaybe "+91" mobileCountryCode)
       (Just cancellationAmount.amount)
       (Just cancellationAmount)
       Nothing

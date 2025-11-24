@@ -939,15 +939,24 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (InternalError "RiderConfig not found")
   fork "Cancellation Settlement" $ do
     whenJust cancellationFee $ \fee -> do
-      person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-      case (riderConfig.settleCancellationFeeBeforeNextRide, mbRide, person.mobileCountryCode) of
-        (Just True, Just ride, Just _countryCode) -> do
+      case (riderConfig.settleCancellationFeeBeforeNextRide, mbRide) of
+        (Just True, Just ride) -> do
           -- creating cancellation execution job which charges cancellation fee from users stripe account
           let scheduleAfter = riderConfig.cancellationPaymentDelay
-              cancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData {bookingId = booking.id, personId = person.id, cancellationAmount = fee, rideId = ride.id}
+              cancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData {bookingId = booking.id, personId = booking.riderId, cancellationAmount = fee, rideId = ride.id}
           logDebug $ "Scheduling cancel execute payment intent job for order: " <> show scheduleAfter
           createJobIn @_ @'CancelExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (cancelExecutePaymentIntentJobData :: CancelExecutePaymentIntentJobData)
+        (_, Just ride) -> do
+          when ride.onlinePayment $ do
+            logInfo $ "Cancel payment intent due to rider configs: rideId: " <> ride.id.getId
+            void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
         _ -> pure ()
+    when (isNothing cancellationFee) $
+      whenJust mbRide $ \ride -> do
+        when ride.onlinePayment $ do
+          logInfo $ "Cancel payment intent as no cancellation fees found: rideId: " <> ride.id.getId
+          void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
+
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
   fork "Checking lifetime blocking condition for customer based on cancellation rate" $ do
