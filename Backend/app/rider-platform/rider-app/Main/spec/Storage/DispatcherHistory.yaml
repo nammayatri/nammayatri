@@ -11,8 +11,8 @@ DispatcherHistory:
     dispatcherId: Id Person
     currentVehicle: Text
     replacedVehicle: Text
-    driverCode: Text
-    conductorCode: Text
+    driverCode: Maybe Text
+    conductorCode: Maybe Text
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     depotId: Text
@@ -20,6 +20,7 @@ DispatcherHistory:
     reasonContent: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
+    waybillNo: Maybe Text
 
   sqlType:
     id: character varying(255)
@@ -33,6 +34,7 @@ DispatcherHistory:
     depotId: character varying(255)
     reasonTag: character varying(255)
     reasonContent: character varying(1000)
+    waybillNo: character varying(255)
 
   constraints:
     id: PrimaryKey
