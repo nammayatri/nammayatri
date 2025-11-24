@@ -27,6 +27,7 @@ module SharedLogic.FareCalculator
     UTCTime (UTCTime, utctDay),
     calculateCancellationCharges,
     calculateNoShowCharges,
+    calculateBusinessDiscount,
   )
 where
 
@@ -408,7 +409,7 @@ calculateFareParameters params = do
           + fromMaybe 0 govtCharges
       cardChargeOnFare = countCardChargeOnFare fullCompleteRideCost <$> (fp.cardCharge >>= (.perDistanceUnitMultiplier))
       rideCostForBusinessDiscount = fullRideCost + fromMaybe 0.0 resultNightShiftCharge + finalCongestionCharge + notPartOfNightShiftCharge ------------Business Discount includes Base Fare, Night Shift Charge, Congestion Charge, pickup charges, Duration Fare and distance Fare
-      businessDiscount = maybe Nothing (\discountPercentage -> Just $ HighPrecMoney $ (rideCostForBusinessDiscount.getHighPrecMoney * toRational discountPercentage) / 100) fp.businessDiscountPercentage
+      businessDiscount = if params.shouldApplyBusinessDiscount then maybe Nothing (\discountPercentage -> Just $ HighPrecMoney $ (rideCostForBusinessDiscount.getHighPrecMoney * toRational discountPercentage) / 100) fp.businessDiscountPercentage else Nothing
       fareParams =
         FareParameters
           { id,
@@ -777,6 +778,12 @@ calculateFareParameters params = do
     countCardChargeOnFare :: HighPrecMoney -> Double -> HighPrecMoney
     countCardChargeOnFare fullCompleteRideCost cardCharge =
       HighPrecMoney (fullCompleteRideCost.getHighPrecMoney * toRational (max 1 cardCharge)) - fullCompleteRideCost
+
+calculateBusinessDiscount :: FareParameters -> Double -> Maybe HighPrecMoney
+calculateBusinessDiscount fareParams businessDiscountPercentage = do
+  let (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParams.fareParametersDetails
+  let fullRideCost = fareParams.baseFare + partOfNightShiftCharge + notPartOfNightShiftCharge + fromMaybe 0.0 fareParams.congestionCharge + fromMaybe 0.0 fareParams.nightShiftCharge
+  return $ HighPrecMoney (fullRideCost.getHighPrecMoney * toRational businessDiscountPercentage / 100)
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)
 countFullFareOfParamsDetails = \case

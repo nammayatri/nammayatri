@@ -32,6 +32,7 @@ module Domain.Action.Beckn.OnSearch
     WaitingChargesInfo (..),
     onSearch,
     validateRequest,
+    BusinessDiscountInfo (..),
   )
 where
 
@@ -140,6 +141,7 @@ data EstimateInfo = EstimateInfo
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
     nightShiftInfo :: Maybe NightShiftInfo,
+    businessDiscountInfo :: Maybe BusinessDiscountInfo,
     tollChargesInfo :: Maybe TollChargesInfo,
     waitingCharges :: Maybe WaitingChargesInfo,
     driversLocation :: [LatLong],
@@ -174,6 +176,11 @@ data NightShiftInfo = NightShiftInfo
 data TollChargesInfo = TollChargesInfo
   { tollCharges :: Price,
     tollNames :: [Text]
+  }
+
+data BusinessDiscountInfo = BusinessDiscountInfo
+  { businessDiscount :: Price,
+    businessDiscountPercentage :: Double
   }
 
 newtype WaitingChargesInfo = WaitingChargesInfo
