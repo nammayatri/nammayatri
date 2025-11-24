@@ -187,7 +187,7 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
             drivingSince = Nothing,
             vehicleTags = [],
             otherImages = [],
-            profileImage = Nothing,
+            profileImage = profileImage,
             otherImageIds = []
           }
   where
