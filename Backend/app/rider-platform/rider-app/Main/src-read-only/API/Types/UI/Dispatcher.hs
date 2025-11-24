@@ -23,7 +23,8 @@ data DispatcherHistoryRes = DispatcherHistoryRes
     reasonContent :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     reasonTag :: Kernel.Prelude.Text,
     replacedVehicle :: Kernel.Prelude.Text,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    waybillNo :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

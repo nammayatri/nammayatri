@@ -28,6 +28,7 @@ types:
     reasonContent: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
+    waybillNo: Text
 
 apis:
   - GET:
