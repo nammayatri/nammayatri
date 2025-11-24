@@ -21,6 +21,7 @@ module Domain.Action.Beckn.Cancel
     validateCancelSearchRequest,
     cancelSearch,
     getCancellationCharges,
+    CancellationChargeType (..),
   )
 where
 
@@ -179,7 +180,7 @@ cancel req merchant booking mbActiveSearchTry = do
                       charges' <- case ride.cancellationFeeIfCancelled of
                         Just cancelCharges -> return (Just cancelCharges)
                         Nothing -> do
-                          cancellationdues <- customerCancellationChargesCalculation booking ride riderDetails bookingCR.reasonCode
+                          cancellationdues <- customerCancellationChargesCalculation booking ride riderDetails bookingCR.reasonCode CustomerCancellationCharge
                           case cancellationdues of
                             Just charges -> do
                               logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show charges)
