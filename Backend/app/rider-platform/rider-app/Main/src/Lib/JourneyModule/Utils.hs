@@ -1206,7 +1206,19 @@ createRecentLocationForMultimodal :: (MonadFlow m, EsqDBFlow m r, EncFlow m r, C
 createRecentLocationForMultimodal journey = do
   journeyLegs <- QJourneyLeg.getJourneyLegs journey.id
   let onlyPublicTransportLegs = filter (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) journeyLegs
-  let fare = foldl' (\acc leg -> acc + fromMaybe 0 leg.estimatedMinFare) 0 onlyPublicTransportLegs
+  fare <-
+    foldrM
+      ( \leg acc -> do
+          case leg.legPricingId of
+            Just pricingId -> do
+              quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId (Id pricingId)
+              let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
+                  adultUnitPrice = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice.amount)
+              return $ acc + fromMaybe 0 adultUnitPrice
+            Nothing -> return acc
+      )
+      (HighPrecMoney 0.0)
+      onlyPublicTransportLegs
   now <- getCurrentTime
   let legs = sortBy (comparing (.sequenceNumber)) onlyPublicTransportLegs
   let mbFirstLeg = listToMaybe legs
@@ -1475,10 +1487,10 @@ getServiceTierFromQuote :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> DFRFSQuote.
 getServiceTierFromQuote quoteCategories quote = do
   let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
       mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
-      fareParameters = calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) quote
+      fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
   mbServiceTier <&> \serviceTier -> do
     LegServiceTier
-      { fare = mkPriceAPIEntity <$> (fareParameters.adultItem <&> (.unitPrice)),
+      { fare = mkPriceAPIEntity <$> (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)),
         quoteId = quote.id,
         serviceTierName = serviceTier.shortName,
         serviceTierType = serviceTier._type,
@@ -1512,15 +1524,13 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
       newQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
       quantitySyncedQuoteCategories <-
         mergeQuoteCategoriesWithQuantitySelections
-          ( mapMaybe
-              ( \category -> do
-                  selectedQuantity <- category.selectedQuantity
-                  return (category.category, selectedQuantity)
+          ( map
+              ( \category -> (category.category, category.selectedQuantity)
               )
               oldQuoteCategories
           )
           newQuoteCategories
-      let fareParameters = calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromQuoteCategories quantitySyncedQuoteCategories) quote
+      let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quantitySyncedQuoteCategories)
           totalPriceForSwitchLeg =
             Price
               { amount = fareParameters.totalPrice.amount,
@@ -1532,8 +1542,7 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
               { DFRFSTicketBooking.quoteId = quoteId,
                 DFRFSTicketBooking.stationsJson = quote.stationsJson,
                 DFRFSTicketBooking.routeStationsJson = quote.routeStationsJson,
-                DFRFSTicketBooking.totalPrice = totalPriceForSwitchLeg,
-                DFRFSTicketBooking.estimatedPrice = Just totalPriceForSwitchLeg
+                DFRFSTicketBooking.totalPrice = totalPriceForSwitchLeg
               }
       void $ QFRFSTicketBooking.updateByPrimaryKey updatedBooking
     whenJust mbAlternateShortNames $ \(alternateShortNames, alternateRouteIds) -> do
@@ -1567,11 +1576,11 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
         updateCategory category =
           case find (\(categoryType, _) -> categoryType == category.category) categories of
             Just (_, quantity) -> do
-              QFRFSQuoteCategory.updateQuantityByQuoteCategoryId (Just quantity) category.id
-              return category {DFRFSQuoteCategory.selectedQuantity = Just quantity}
+              QFRFSQuoteCategory.updateQuantityByQuoteCategoryId quantity category.id
+              return category {DFRFSQuoteCategory.selectedQuantity = quantity}
             Nothing -> do
-              QFRFSQuoteCategory.updateQuantityByQuoteCategoryId Nothing category.id
-              return category {DFRFSQuoteCategory.selectedQuantity = Nothing}
+              QFRFSQuoteCategory.updateQuantityByQuoteCategoryId 0 category.id
+              return category {DFRFSQuoteCategory.selectedQuantity = 0}
 
 getLegTierOptionsUtil ::
   ( CacheFlow m r,

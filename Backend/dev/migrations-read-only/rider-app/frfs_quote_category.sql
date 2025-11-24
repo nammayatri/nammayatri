@@ -21,14 +21,10 @@ ALTER TABLE atlas_app.frfs_quote_category ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN tnc text ;
 ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN title text ;
-ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN final_price text ;
+ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN final_price double precision ;
 ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN description text ;
 ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN code text ;
 ALTER TABLE atlas_app.frfs_quote_category ADD COLUMN category text ;
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN final_price TYPE double precision USING final_price::double precision;
 
 
 ------- SQL updates -------
@@ -37,18 +33,7 @@ ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN ticket_category_metadata_
 ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN ticket_category_metadata_config_id DROP NOT NULL;
 
 
-
-
-
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
+ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN selected_quantity SET DEFAULT 0;
+ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN selected_quantity SET NOT NULL;

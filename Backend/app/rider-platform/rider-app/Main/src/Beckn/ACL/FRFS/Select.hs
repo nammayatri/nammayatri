@@ -64,36 +64,21 @@ tfOrder quote mSettlementType categories =
     }
 
 tfItems :: DQuote.FRFSQuote -> [DCategorySelect] -> Maybe [Spec.Item]
-tfItems quote categories =
-  case categories of
-    [] ->
-      -- TODO :: This is deprecated, should be removed post `quoteCategories` unification
-      quote.quantity <&> \quantity ->
-        [ Spec.Item
+tfItems _ categories =
+  Just $
+    map
+      ( \ondcReq ->
+          Spec.Item
             { itemCategoryIds = Nothing,
               itemDescriptor = Nothing,
               itemFulfillmentIds = Nothing,
-              itemId = Just quote.bppItemId,
+              itemId = Just ondcReq.bppItemId,
               itemPrice = Nothing,
-              itemQuantity = tfQuantity quantity,
+              itemQuantity = tfQuantity ondcReq.quantity,
               itemTime = Nothing
             }
-        ]
-    _ ->
-      Just $
-        map
-          ( \ondcReq ->
-              Spec.Item
-                { itemCategoryIds = Nothing,
-                  itemDescriptor = Nothing,
-                  itemFulfillmentIds = Nothing,
-                  itemId = Just ondcReq.bppItemId,
-                  itemPrice = Nothing,
-                  itemQuantity = tfQuantity ondcReq.quantity,
-                  itemTime = Nothing
-                }
-          )
-          categories
+      )
+      categories
 
 tfQuantity :: Int -> Maybe Spec.ItemQuantity
 tfQuantity quantity =
@@ -110,7 +95,7 @@ tfQuantity quantity =
 
 tfPayments :: DQuote.FRFSQuote -> [DCategorySelect] -> Maybe Text -> Maybe [Spec.Payment]
 tfPayments quote categories mSettlementType = do
-  let fareParameters = calculateFareParametersWithQuoteFallback (mkCategoryPriceItemFromDCategorySelect categories) quote
+  let fareParameters = mkFareParameters (mkCategoryPriceItemFromDCategorySelect categories)
   Just $
     singleton $
       Utils.mkPaymentForSelectReq Spec.NOT_PAID (Just $ encodeToText fareParameters.totalPrice.amount) Nothing Nothing mSettlementType (Just fareParameters.currency) (show <$> quote.bppDelayedInterest)

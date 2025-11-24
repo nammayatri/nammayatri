@@ -7,6 +7,7 @@ import qualified Data.Time as Time
 import Data.Time.Format
 import qualified Data.UUID as UU
 import Domain.Types.FRFSQuoteCategory
+import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig as DIBC
 import EulerHS.Types as ET hiding (Log)
@@ -121,7 +122,7 @@ getBppOrderId booking = do
 -- 16. UDF6
 -- {tt: [{t: "37001,37017,1,0,5,10-10-2024 19:04:54,2185755416,13,5185,,,,,130,,,"}]}
 getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, HasKafkaProducer r) => EBIXConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> [FRFSQuoteCategory] -> FRFSRouteStationsAPI -> m ProviderTicket
-getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeStation = do
+getTicketDetail config integratedBPPConfig qrTtl _ quoteCategories routeStation = do
   busTypeId <- routeStation.vehicleServiceTier <&> (.providerCode) & fromMaybeM (InternalError "Bus Provider Code Not Found.")
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
   let startStation = head routeStation.stations
@@ -138,10 +139,10 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
     uuid <- UU.fromText id & fromMaybeM (InternalError "Not being able to parse into UUID")
     return $ show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) :: Integer)
   let qrValidityIST = addUTCTime (secondsToNominalDiffTime 19800) qrValidity
-      fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
-      singleAdultTicketPrice = (getUnitPriceFromPriceItem fareParameters.adultItem).amount
-      adultQuantity = maybe 0 (.quantity) fareParameters.adultItem
-      childQuantity = maybe 0 (.quantity) fareParameters.childItem
+      fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
+      singleAdultTicketPrice = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice.amount)
+      adultQuantity = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
+      childQuantity = find (\category -> category.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)
   let ticketReq =
         SaveMobTicketReq
           { frRouteStopSrlNo = fromRoute.providerCode,
@@ -149,7 +150,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
             noAdult = show adultQuantity,
             noChild = show childQuantity,
             btypeId = busTypeId,
-            tktAmt = singleAdultTicketPrice,
+            tktAmt = fromMaybe 0 singleAdultTicketPrice,
             transNo = ticketNumber,
             transDate = T.pack $ formatTime Time.defaultTimeLocale "%Y-%m-%d %H:%M:%S" now,
             agentId = config.agentId

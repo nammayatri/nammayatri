@@ -58,7 +58,7 @@ handleCancelledStatus merchant booking refundAmount cancellationCharges messageI
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   paymentBooking <- QTBP.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
-  let fareParameters = FRFSUtils.calculateFareParametersWithBookingFallback (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
+  let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
   mRiderNumber <- mapM decrypt person.mobileNumber
   val :: Maybe Text <- Redis.get (FRFSUtils.makecancelledTtlKey booking.id)
   if val /= Just messageId && counterCancellationPossible

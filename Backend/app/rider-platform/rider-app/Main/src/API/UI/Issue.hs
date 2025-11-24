@@ -124,7 +124,7 @@ castFindFRFSTicketBookingById ticketBookingId = do
   mapM
     ( \booking -> do
         quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
-        let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
+        let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
         return $ castFRFSTicketBooking fareParameters booking
     )
     frfsTicketBooking
@@ -501,7 +501,7 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
 
     processTicketBookingIssue ticketBooking category option merchant person igmConfig reqBody = do
       quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId ticketBooking.quoteId
-      let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) ticketBooking
+      let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
       frfsTicketBookingDetails <- fromFRFSTicketBooking ticketBooking fareParameters
       merchantOperatingCity <- CQMOC.findById frfsTicketBookingDetails.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show frfsTicketBookingDetails.merchantOperatingCityId)
       (becknIssueReq, issueId, igmIssue) <- ACL.buildIssueReq frfsTicketBookingDetails category option reqBody.description merchant person igmConfig merchantOperatingCity Nothing Nothing Nothing
@@ -562,7 +562,7 @@ igmIssueStatus (personId, merchantId) = withFlowHandlerAPI $ do
         else
           QFTB.findById (Id issue.bookingId) >>= fromMaybeM (TicketBookingNotFound issue.bookingId) >>= \tb -> do
             quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId tb.quoteId
-            let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) tb
+            let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
             liftA2 (,) (fromFRFSTicketBooking tb fareParameters) (parseBaseUrl tb.bppSubscriberUrl)
 
     becknIssueStatusReq <- ACL.buildIssueStatusReq merchant merchantOperatingCity bookingDetails issue.id.getId issue.transactionId
@@ -591,7 +591,7 @@ resolveIGMIssue (personId, merchantId) issueReportId response rating = do
         Spec.PUBLIC_TRANSPORT -> do
           frfsBooking <- QFTB.findById (Id igmIssue.bookingId) >>= fromMaybeM (FRFSTicketBookingNotFound igmIssue.bookingId)
           quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId frfsBooking.quoteId
-          let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) frfsBooking
+          let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
           fromFRFSTicketBooking frfsBooking fareParameters
       option <- maybe (return Nothing) (`QIO.findById` CUSTOMER) issueReport.optionId
       category <- case issueReport.categoryId of

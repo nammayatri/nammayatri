@@ -92,7 +92,6 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Estimate as QEstimate
-import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.Person as QP
@@ -334,7 +333,6 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
       whenJust mbRequiredEstimate $ \requiredEstimate -> do
         shouldAutoSelect <- SLCF.createFares requestId.getId requiredEstimate.id.getId
-        QJourneyLeg.updateEstimatedFaresBySearchId (Just requiredEstimate.totalFareRange.minFare.amount) (Just requiredEstimate.totalFareRange.maxFare.amount) (Just requestId.getId)
         let shouldAutoSelectForReserved = isReservedSearch && isJust mbNySubscription
             shouldAutoSelectFinal = shouldAutoSelect || shouldAutoSelectForReserved
 

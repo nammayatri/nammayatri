@@ -6,6 +6,7 @@ import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNomi
 import qualified Data.Time as Time
 import qualified Data.UUID as UU
 import Domain.Types.FRFSQuoteCategory
+import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import ExternalBPP.ExternalAPI.Direct.Utils
@@ -36,7 +37,7 @@ getBppOrderId booking = do
   return orderId
 
 getTicketDetail :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => DIRECTConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> [FRFSQuoteCategory] -> FRFSRouteStationsAPI -> m ProviderTicket
-getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeStation = do
+getTicketDetail config integratedBPPConfig qrTtl _ quoteCategories routeStation = do
   busTypeId <- routeStation.vehicleServiceTier <&> (.providerCode) & fromMaybeM (InternalError "Bus Provider Code Not Found.")
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
   let startStation = head routeStation.stations
@@ -62,10 +63,10 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
           Redis.setExp otpKey otpCode endOfDayDiffInSeconds.getSeconds
           return otpCode
   let ticketDescription = "ROUTE: " <> route.shortName <> " | FROM: " <> fromStation.name <> " | TO: " <> toStation.name
-      fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
-      singleTicketPrice = (getUnitPriceFromPriceItem fareParameters.adultItem).amountInt
-      adultQuantity = maybe 0 (.quantity) fareParameters.adultItem
-      childQuantity = maybe 0 (.quantity) fareParameters.childItem
+      fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
+      singleAdultTicketPrice = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice.amountInt)
+      adultQuantity = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
+      childQuantity = find (\category -> category.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)
       qrValidityIST = addUTCTime (secondsToNominalDiffTime 19800) qrValidity
       qrRefreshAt = config.qrRefreshTtl <&> (\ttl -> addUTCTime (secondsToNominalDiffTime ttl) now)
   qrData <-
@@ -73,13 +74,13 @@ getTicketDetail config integratedBPPConfig qrTtl booking quoteCategories routeSt
       TicketPayload
         { fromRouteProviderCode = maybe "NANDI" (.providerCode) fromRoute,
           toRouteProviderCode = maybe "NANDI" (.providerCode) toRoute,
-          adultQuantity = adultQuantity,
-          childQuantity = childQuantity,
+          adultQuantity = fromMaybe 0 adultQuantity,
+          childQuantity = fromMaybe 0 childQuantity,
           vehicleTypeProviderCode = busTypeId,
           expiry = formatUtcTime qrValidityIST,
           expiryIST = qrValidityIST,
           ticketNumber,
-          ticketAmount = singleTicketPrice, -- TODO :: This `routeStation.priceWithCurrency.amount` is a fallback, should be removed once we have quoteCategories
+          ticketAmount = fromMaybe 0 singleAdultTicketPrice,
           refreshAt = qrRefreshAt,
           otpCode = Just otpCode
         }

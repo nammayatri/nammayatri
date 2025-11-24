@@ -177,16 +177,14 @@ select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote qu
         transactionId = quote.searchId.getId,
         messageId = quote.id.getId,
         categories =
-          mapMaybe
-            ( \category -> do
-                selectedQuantity <- category.selectedQuantity
-                return $
-                  DCategorySelect
-                    { bppItemId = category.bppItemId,
-                      quantity = selectedQuantity,
-                      category = category.category,
-                      price = category.offeredPrice
-                    }
+          map
+            ( \category ->
+                DCategorySelect
+                  { bppItemId = category.bppItemId,
+                    quantity = category.selectedQuantity,
+                    category = category.category,
+                    price = category.offeredPrice
+                  }
             )
             quoteCategories
       }
@@ -202,7 +200,7 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
     DOnInit
       { providerId = bapConfig.uniqueKeyId,
         totalPrice = booking.totalPrice,
-        categories = mapMaybe mkDCategorySelect quoteCategories,
+        categories = map mkDCategorySelect quoteCategories,
         fareBreakUp = [],
         validTill = validTill,
         transactionId = booking.searchId.getId,
@@ -212,15 +210,13 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
         bppOrderId = bppOrderId
       }
   where
-    mkDCategorySelect quoteCategory = do
-      quantity <- quoteCategory.selectedQuantity
-      return $
-        DCategorySelect
-          { bppItemId = CallAPI.getProviderName integratedBPPConfig,
-            quantity = quantity,
-            category = quoteCategory.category,
-            price = quoteCategory.offeredPrice
-          }
+    mkDCategorySelect quoteCategory =
+      DCategorySelect
+        { bppItemId = CallAPI.getProviderName integratedBPPConfig,
+          quantity = quoteCategory.selectedQuantity,
+          category = quoteCategory.category,
+          price = quoteCategory.offeredPrice
+        }
     mkPaymentDetails = \case
       Spec.BAP -> do
         let paymentParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson

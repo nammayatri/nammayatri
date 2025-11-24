@@ -149,8 +149,9 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote quo
         let categories =
               mapMaybe
                 ( \category -> do
-                    selectedQuantity <- FRFSUtils.nonZeroQuantity category.selectedQuantity
-                    return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity, category = category.category, price = category.price}
+                    if category.selectedQuantity > 0
+                      then Just $ DCategorySelect {bppItemId = category.bppItemId, quantity = category.selectedQuantity, category = category.category, price = category.price}
+                      else Nothing
                 )
                 quoteCategories
         providerUrl <- quote.bppSubscriberUrl & parseBaseUrl
@@ -171,8 +172,9 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       let categories =
             mapMaybe
               ( \category -> do
-                  selectedQuantity <- FRFSUtils.nonZeroQuantity category.selectedQuantity
-                  return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity, category = category.category, price = category.offeredPrice}
+                  if category.selectedQuantity > 0
+                    then Just $ DCategorySelect {bppItemId = category.bppItemId, quantity = category.selectedQuantity, category = category.category, price = category.offeredPrice}
+                    else Nothing
               )
               quoteCategories
       bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} merchantOperatingCity.city categories
@@ -257,8 +259,9 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
         let filteredDCategories :: [DCategorySelect] =
               mapMaybe
                 ( \category -> do
-                    selectedQuantity <- FRFSUtils.nonZeroQuantity category.selectedQuantity
-                    return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity, category = category.category, price = fromMaybe category.offeredPrice category.finalPrice}
+                    if category.selectedQuantity > 0
+                      then Just $ DCategorySelect {bppItemId = category.bppItemId, quantity = category.selectedQuantity, category = category.category, price = fromMaybe category.offeredPrice category.finalPrice}
+                      else Nothing
                 )
                 quoteCategories
         bknConfirmReq <- ACL.buildConfirmReq (mRiderName, mRiderNumber) booking bapConfig booking.searchId.getId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} merchantOperatingCity.city filteredDCategories

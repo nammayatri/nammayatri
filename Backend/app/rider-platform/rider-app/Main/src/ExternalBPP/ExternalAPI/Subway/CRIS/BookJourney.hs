@@ -13,9 +13,10 @@ import Data.Time.LocalTime
 import Data.UUID (UUID, fromText, toWords)
 import Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSQuoteCategory
+import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
-import EulerHS.Prelude hiding (find, readMaybe)
+import EulerHS.Prelude hiding (readMaybe)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
@@ -270,10 +271,10 @@ createOrder config integratedBPPConfig booking quoteCategories = do
   currentTime <- getCurrentTime
   let tpBookType = if config.enableBookType == Just True && booking.isSingleMode == Just True then 1 else 0
 
-  let fareParameters = calculateFareParametersWithBookingFallback (mkCategoryPriceItemFromQuoteCategories quoteCategories) booking
-      adultQuantity = fareParameters.adultItem <&> (.quantity)
-      childQuantity = fareParameters.childItem <&> (.quantity)
-      chargeableAmount = maybe booking.totalPrice.amountInt.getMoney ((.getMoney) . (.amountInt)) booking.finalPrice
+  let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
+      adultQuantity = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
+      childQuantity = find (\category -> category.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)
+      chargeableAmount = booking.totalPrice.amountInt.getMoney
   let bookJourneyReq =
         CRISBookingRequest
           { mob = fromMaybe "9999999999" mbMobileNumber,
