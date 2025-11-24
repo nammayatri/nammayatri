@@ -33,7 +33,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Environment
-import Kernel.External.Encryption (Encrypted, decrypt, unEncrypted)
+import Kernel.External.Encryption (Encrypted, decrypt)
 import qualified Kernel.External.SharedLogic.DigiLocker.Error as DigiLockerError
 import qualified Kernel.External.Verification.Digilocker.Types as DigiTypes
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
@@ -53,8 +53,6 @@ import qualified Storage.Queries.Person as PersonQuery
 import Tools.Error
 import qualified Tools.Verification as Verification
 
--- | Pull driving license document from DigiLocker
--- This endpoint is called when user submits DL details within 1 hour of starting DigiLocker session
 pullDocuments ::
   ( Maybe (Id DP.Person),
     Id DM.Merchant,
@@ -63,14 +61,11 @@ pullDocuments ::
   APITypes.PullDocumentReq ->
   Flow APISuccess
 pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
-  -- Step 1: Extract driverId from auth token
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   logInfo $ "PullDocument - Starting pull for DriverId: " <> driverId.getId <> ", DocType: " <> show req.docType
 
-  -- Step 2: Fetch person details
   person <- PersonQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
 
-  -- Step 3: Check if DigiLocker is enabled in transporter config
   transporterConfig <-
     CQTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing
       >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
@@ -79,53 +74,39 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
     logError $ "DigiLocker pull document - DigiLocker not enabled for merchantOpCityId: " <> person.merchantOperatingCityId.getId
     throwError DigiLockerNotEnabled
 
-  -- Step 4: Fetch latest DigiLocker session
   latestSession <- QDV.findLatestByDriverId (Just 1) (Just 0) driverId
   session <- case latestSession of
     [] -> throwError DigiLockerNoActiveSession
     (s : _) -> return s
 
-  -- Step 4.5: Extract and validate session-scoped merchant IDs
-  -- The session stores the merchant/opCity used during OAuth exchange
-  -- We must use these to prevent cross-tenant data leaks
   let sessionMerchantId = session.merchantId
   let sessionMerchantOpCityId = session.merchantOperatingCityId
 
-  -- Validate that incoming request matches session context
   when (sessionMerchantId /= merchantId || sessionMerchantOpCityId /= merchantOpCityId) $ do
     logError $ "PullDocument - Mismatched merchant context. Request: (" <> merchantId.getId <> ", " <> merchantOpCityId.getId <> "), Session: (" <> sessionMerchantId.getId <> ", " <> sessionMerchantOpCityId.getId <> ")"
     throwError DigiLockerMismatchedMerchantContext
 
-  -- Step 5: Verify document type is Driving License
   unless (req.docType == DVC.DriverLicense) $
     throwError $ DigiLockerUnsupportedDocumentType (show req.docType)
 
-  -- Step 6: Verify session is active and within 1 hour
   verifySessionActive session req.docType
 
-  -- Step 7: Get access token from session and decrypt it
   let accessTokenEncryptedMaybe :: Maybe (Encrypted Text) = session.accessToken
   accessTokenEncrypted <- accessTokenEncryptedMaybe & fromMaybeM DigiLockerMissingAccessToken
-  logInfo $ "PullDocument - Before decryption, accessToken encrypted (first 20 chars): " <> T.take 20 (unEncrypted accessTokenEncrypted) <> "..."
   accessToken <- decrypt accessTokenEncrypted
-  logInfo $ "PullDocument - After decryption, accessToken (plain, first 20 chars): " <> T.take 20 accessToken <> "..."
 
-  -- Step 8: Get DigiLocker config using session-scoped merchantOpCityId
   digiLockerConfig <- DigilockerLockerShared.getDigiLockerConfig sessionMerchantOpCityId
 
   let orgId = digiLockerConfig.dlOrgId
-  -- Step 9: Construct pull request with orgid from config
   let pullReq =
         DigiTypes.DigiLockerPullDrivingLicenseReq
           { accessToken = accessToken,
             orgid = orgId,
-            doctype = "DRVLC", -- Driving License document type
-            consent = "Y", -- Always Y as per requirement
+            doctype = "DRVLC",
+            consent = "Y",
             dlno = req.drivingLicenseNumber
           }
 
-  -- Step 10: Call DigiLocker API to pull the document (with error handling)
-  -- Use session-scoped merchant IDs to ensure correct provider credentials
   mbPullResp <-
     ( do
         logInfo $ "PullDocument - Calling DigiLocker pull API with session merchant: " <> sessionMerchantId.getId <> ", opCity: " <> sessionMerchantOpCityId.getId
@@ -141,8 +122,6 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
 
   pullResp <- mbPullResp & fromMaybeM (InternalError "Pull response is Nothing")
 
-  -- Step 11: Fetch and extract DL data from DigiLocker (with error handling)
-  -- Use session-scoped merchant IDs
   mbExtractedResp <-
     ( do
         logInfo $ "PullDocument - Fetching and extracting DL data with session merchant: " <> sessionMerchantId.getId <> ", opCity: " <> sessionMerchantOpCityId.getId
@@ -163,8 +142,6 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
 
   extractedResp <- mbExtractedResp & fromMaybeM (InternalError "Extracted response is Nothing")
 
-  -- Step 12: Get PDF file from DigiLocker (with error handling)
-  -- Use session-scoped merchant IDs
   mbPdfBytes <-
     ( do
         logInfo $ "PullDocument - Fetching PDF from DigiLocker with session merchant: " <> sessionMerchantId.getId <> ", opCity: " <> sessionMerchantOpCityId.getId
@@ -185,14 +162,11 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
 
   pdfBytes <- mbPdfBytes & fromMaybeM (InternalError "PDF bytes is Nothing")
 
-  -- Step 13: Verify and store DL data in database (with error handling)
   ( do
       logInfo $ "PullDocument - Verifying and storing DL data in database"
       verifyAndStoreDL session person pdfBytes extractedResp
       logInfo $ "PullDocument - Successfully stored DL in database"
 
-      -- Step 14: Update docStatus in session to SUCCESS
-      -- Use canonical docStatus value via shared helper to ensure consistency
       updateDocStatusField session.id req.docType (DocStatus.docStatusToText DocStatus.DOC_SUCCESS) (Just "200") (Just "Driver License verified and stored successfully via pull")
       logInfo $ "PullDocument - Successfully completed pull operation for DriverId: " <> driverId.getId
     )
@@ -204,7 +178,6 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
 
   return Success
 
--- | Verify session is active and within 1 hour of creation
 verifySessionActive :: DDV.DigilockerVerification -> DVC.DocumentType -> Flow ()
 verifySessionActive session docType = do
   now <- Kernel.Utils.Common.getCurrentTime
@@ -213,28 +186,23 @@ verifySessionActive session docType = do
 
   logInfo $ "PullDocument - Session age: " <> show sessionAge <> ", One hour: " <> show oneHour
 
-  -- Check if session is within 1 hour
   when (sessionAge > oneHour) $ do
     updateDocStatusField session.id docType "FAILED" (Just "PULL_DOC_FAILED") (Just "DigiLocker session expired")
     throwError DigiLockerSessionExpired
 
-  -- Check if session has access token (which means it's authorized)
   unless (isJust session.accessToken) $ do
     updateDocStatusField session.id docType "FAILED" (Just "PULL_DOC_FAILED") (Just $ "DigiLocker session is not authorized. Current status: " <> show session.sessionStatus)
     throwError DigiLockerSessionUnauthorized
 
   logInfo $ "PullDocument - Verified session is active and within 1 hour"
 
--- | Verify and store Driver License data
--- Extracts data from DigiLocker, uploads PDF to S3, and calls existing DL registration logic
 verifyAndStoreDL ::
   DDV.DigilockerVerification ->
   DP.Person ->
-  BSL.ByteString -> -- PDF data
-  VerificationTypes.ExtractedDigiLockerDLResp -> -- Extracted DL response
+  BSL.ByteString ->
+  VerificationTypes.ExtractedDigiLockerDLResp ->
   Flow ()
 verifyAndStoreDL session person pdfBytes extractedDL = do
-  -- Step 1: Extract DL data from DigiLocker response
   dlFlow <-
     extractedDL.extractedDL
       & fromMaybeM (InternalError "DL data not found in DigiLocker response")
@@ -249,10 +217,8 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
 
   logInfo $ "PullDocument - Extracted DL data: DL=" <> dlNumber <> ", Name=" <> show dlFlow.name <> ", Expiry=" <> show dlExpiry
 
-  -- Step 2: Validate age (18-80 years) if DOB is present
   now <- Kernel.Utils.Common.getCurrentTime
   whenJust dlFlow.dob $ \dobText -> do
-    -- Parse DOB text to UTCTime (format: DD-MM-YYYY from DigiLocker)
     case parseTimeM True defaultTimeLocale "%d-%m-%Y" (T.unpack dobText) of
       Just dobUTC -> do
         let age = diffInYears dobUTC now
@@ -260,31 +226,24 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
           throwError DigiLockerInvalidDriverAge
       Nothing -> logWarning $ "PullDocument - Could not parse DOB: " <> dobText
 
-  -- Step 3: Check for duplicate DL BEFORE uploading to S3 (avoid waste)
   mbExistingDL <- QDLE.findByDLNumber dlNumber
   whenJust mbExistingDL $ \existingDL -> do
-    -- Check if DL is linked to another driver
     when (existingDL.driverId /= person.id) $
       throwError $ DocumentAlreadyLinkedToAnotherDriver "DL"
-    -- Check if DL is under manual review
     when (existingDL.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
       throwError $ DocumentUnderManualReview "DL"
-    -- Check if DL is already validated
     when (existingDL.verificationStatus == Documents.VALID) $
       throwError $ DocumentAlreadyValidated "DL"
 
   logInfo $ "PullDocument - No blocking duplicate DL found, proceeding with upload"
 
-  -- Step 4: Upload PDF to S3 via validateImage
-  -- DigiLocker documents are government-verified, so we mark them as AUTO_APPROVED
-  -- to skip external Idfy verification
   let pdfBase64 = base64Encode (BSL.toStrict pdfBytes)
   let imageReq =
         Image.ImageValidateRequest
           { image = pdfBase64,
             imageType = DVC.DriverLicense,
             rcNumber = Nothing,
-            validationStatus = Just APITypes.AUTO_APPROVED, -- Skip Idfy verification for DigiLocker docs
+            validationStatus = Just APITypes.AUTO_APPROVED,
             workflowTransactionId = Nothing,
             vehicleCategory = Nothing,
             sdkFailureReason = Nothing,
@@ -294,12 +253,9 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
   Image.ImageValidateResponse {imageId} <- Image.validateImage False (person.id, person.merchantId, person.merchantOperatingCityId) imageReq
   logInfo $ "PullDocument - Uploaded DL PDF to S3 (DigiLocker verified), ImageId: " <> imageId.getId
 
-  -- Step 5: Get vehicle category from session (driver selected this during /initiate)
   let vehicleCategory = session.vehicleCategory
   logInfo $ "PullDocument - Using vehicle category from session: " <> show vehicleCategory
 
-  -- Step 6: Get DocumentVerificationConfig for validation
-  -- This config contains the supported COVs for the selected vehicle category
   documentVerificationConfig <-
     CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory
       person.merchantOperatingCityId
@@ -310,25 +266,17 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
 
   logInfo $ "PullDocument - Retrieved DocumentVerificationConfig for category: " <> show vehicleCategory
 
-  -- Step 7: Convert extracted data to format expected by onVerifyDLHandler
-  -- Convert COVs from [Text] to [Idfy.CovDetail]
-  -- classOfVehicles is Maybe [Text], so we need to handle the Maybe
   let covDetails = case dlFlow.classOfVehicles of
         Just covs -> Just (createCovDetails covs)
         Nothing -> Nothing
-  -- DigiLocker returns all dates as Text in DD-MM-YYYY format, no conversion needed for display
   let dlExpiryText = dlExpiry
   let dobText = dlFlow.dob
 
-  -- Parse dateOfIssue from Text to UTCTime (onVerifyDLHandler expects Maybe UTCTime)
   let dateOfIssueUTC =
         dlFlow.dateOfIssue >>= \dateText ->
           parseTimeM True defaultTimeLocale "%d-%m-%Y" (T.unpack dateText)
 
   logInfo $ "PullDocument - Calling onVerifyDLHandler with COVs: " <> show dlFlow.classOfVehicles <> ", VehicleCategory: " <> show vehicleCategory
-
-  -- Step 8: Call onVerifyDLHandler to validate and store DL
-  -- This will validate that DL's COVs match the selected vehicle category
   DLModule.onVerifyDLHandler
     person
     (Just dlNumber)
@@ -338,25 +286,22 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
     dobText
     documentVerificationConfig
     imageId
-    Nothing -- imageId2
-    dlFlow.name -- nameOnCard
-    dateOfIssueUTC -- dateOfIssue parsed to UTCTime
-    (Just vehicleCategory) -- vehicleCategory from session (driver's selection)
+    Nothing
+    dlFlow.name
+    dateOfIssueUTC
+    (Just vehicleCategory)
   logInfo $ "PullDocument - Successfully stored DL via onVerifyDLHandler for DriverId: " <> person.id.getId
 
--- | Update a single document's status in docStatus JSON
 updateDocStatusField ::
   Id DDV.DigilockerVerification ->
   DVC.DocumentType ->
-  Text -> -- status
-  Maybe Text -> -- response code
-  Maybe Text -> -- response description
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
   Flow ()
 updateDocStatusField sessionId docType statusText respCode respDesc = do
-  -- Fetch current session
   mbSession <- QDV.findById sessionId
   whenJust mbSession $ \session -> do
-    -- Parse status text to DocStatusEnum
     docStatusEnum <-
       case DocStatus.textToDocStatusEnum statusText of
         Just s -> pure s
@@ -364,17 +309,11 @@ updateDocStatusField sessionId docType statusText respCode respDesc = do
           logError $ "PullDocument - Failed to parse status: " <> statusText
           throwError $ InternalError $ "Invalid status: " <> statusText
 
-    -- Get current DocStatusMap (already strongly-typed)
     let currentDocStatusMap = session.docStatus
-
-    -- Update the DocStatusMap
     let updatedDocStatusMap = DocStatus.updateDocStatus docType docStatusEnum respCode respDesc currentDocStatusMap
-
-    -- Update in database (DocStatusMap is handled directly by Beam)
     QDV.updateDocStatus updatedDocStatusMap sessionId
     logInfo $ "PullDocument - Updated docStatus for " <> show docType <> " to " <> statusText
 
--- Helper functions
 base64Encode :: BS.ByteString -> Text
 base64Encode = TE.decodeUtf8 . B64.encode
 
@@ -385,21 +324,17 @@ diffInYears t1 t2 =
       daysDiff = abs $ diffDays days2 days1
    in fromIntegral daysDiff `div` 365
 
--- | Convert list of COV texts to Idfy.CovDetail format
--- DigiLocker provides COVs as [Text], but onVerifyDLHandler expects [Idfy.CovDetail]
 createCovDetails :: [Text] -> [Idfy.CovDetail]
 createCovDetails = map createCovDetail
   where
     createCovDetail :: Text -> Idfy.CovDetail
     createCovDetail covText =
       Idfy.CovDetail
-        { Idfy.category = Nothing, -- DigiLocker doesn't provide COV category
-          Idfy.cov = covText, -- The actual COV text (e.g., "MCWG", "LMV")
-          Idfy.issue_date = Nothing -- DigiLocker doesn't provide per-COV issue dates
+        { Idfy.category = Nothing,
+          Idfy.cov = covText,
+          Idfy.issue_date = Nothing
         }
 
--- | Extract error code and description from DigiLocker error
--- Maps DigiLockerError to (errorCode, errorDescription) tuple for storage in DB
 extractDigiLockerError :: DigiLockerError.DigiLockerError -> (Text, Text)
 extractDigiLockerError err = case err of
   DigiLockerError.DGLUnauthorizedError ->

@@ -274,7 +274,6 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC
 
   digilockerResponseCode <- getDigilockerResponseCode personId
 
-  -- Get DigiLocker authorization URL if there's a pending session
   digilockerAuthorizationUrl <-
     if transporterConfig.digilockerEnabled == Just True
       then SDDigilocker.getDigiLockerAuthorizationUrl personId
@@ -363,7 +362,6 @@ fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVeh
       transporterConfig = driverImagesInfo.transporterConfig
       isDigiLockerEnabled = fromMaybe False transporterConfig.digilockerEnabled
 
-  -- Only fetch DigiLocker doc status if DigiLocker is enabled for this city
   digilockerDocStatusMap <- if isDigiLockerEnabled then getDigilockerDocStatusMap driverId else pure HM.empty
 
   driverDocumentTypes <- getDriverDocTypes merchantOpCityId allDocumentVerificationConfigs possibleVehicleCategories role onlyMandatoryDocs
