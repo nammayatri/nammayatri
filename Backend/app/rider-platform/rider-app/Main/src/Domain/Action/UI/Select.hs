@@ -219,6 +219,7 @@ select2 :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSe
 select2 personId estimateId req@DSelectReq {..} = do
   runRequestValidation validateDSelectReq req
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  when ((not (fromMaybe False person.businessProfileVerified)) && billingCategory == Just BUSINESS) $ throwError (InvalidRequest "Business profile not verified for business billing category")
   merchant <- QM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
