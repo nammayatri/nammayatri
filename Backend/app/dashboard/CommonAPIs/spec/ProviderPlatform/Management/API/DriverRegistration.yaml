@@ -289,7 +289,6 @@ types:
     - operatingCity: Text
     - dateOfRegistration: Maybe UTCTime
     - airConditioned: Maybe Bool
-    - multipleRC: Maybe Bool
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
     - vehicleCategory: Maybe VehicleCategory

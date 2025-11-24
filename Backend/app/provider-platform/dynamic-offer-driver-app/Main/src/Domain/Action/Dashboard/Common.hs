@@ -106,7 +106,6 @@ runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet bul
             airConditioned = req.airConditioned,
             oxygen = req.oxygen,
             ventilator = req.ventilator,
-            multipleRC = Nothing,
             vehicleDetails = Nothing,
             vehicleCategory = req.vehicleCategory,
             isRCImageValidated = Nothing

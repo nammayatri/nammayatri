@@ -146,13 +146,13 @@ onVerify rsp respDump = do
       ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
       -- running statusHandler to enable Driver
       let onlyMandatoryDocs = Just True
-      void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) verificationReq.multipleRC Nothing Nothing (Just False) onlyMandatoryDocs Nothing
+      void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) Nothing Nothing (Just False) onlyMandatoryDocs Nothing
       return ack_
   where
     getResultStatus mbResult = mbResult >>= (\rslt -> (rslt.extraction_output >>= (.status)) <|> (rslt.source_output >>= (.status)))
     verifyDocument person verificationReq rslt mbRemPriorityList
       | isJust rslt.extraction_output =
-        maybe (pure Ack) (\resExtOp -> RC.onVerifyRC person (Just (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)) (Idfy.convertRCOutputToRCVerificationResponse resExtOp) mbRemPriorityList (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.multipleRC verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) (Just VT.Idfy)) rslt.extraction_output
+        maybe (pure Ack) (\resExtOp -> RC.onVerifyRC person (Just (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)) (Idfy.convertRCOutputToRCVerificationResponse resExtOp) mbRemPriorityList (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) (Just VT.Idfy)) rslt.extraction_output
       | isJust rslt.source_output =
         maybe (pure Ack) ((\rq -> DL.onVerifyDL (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq) rq VT.Idfy) . Idfy.convertDLOutputToDLVerificationOutput) rslt.source_output
       | otherwise = pure Ack
@@ -173,11 +173,11 @@ onVerify rsp respDump = do
                 Verification.AsyncResp res -> do
                   now <- getCurrentTime
                   case res.requestor of
-                    VT.Idfy -> IVQuery.create =<< RC.mkIdfyVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.multipleRC verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing
-                    VT.HyperVergeRCDL -> HVQuery.create =<< RC.mkHyperVergeVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.multipleRC verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing res.transactionId
+                    VT.Idfy -> IVQuery.create =<< RC.mkIdfyVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing
+                    VT.HyperVergeRCDL -> HVQuery.create =<< RC.mkHyperVergeVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing res.transactionId
                     _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
                   CQO.setVerificationPriorityList person.id resp'.remPriorityList
-                Verification.SyncResp res -> void $ RC.onVerifyRC person Nothing res (Just resp'.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.multipleRC verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) Nothing
+                Verification.SyncResp res -> void $ RC.onVerifyRC person Nothing res (Just resp'.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) Nothing
 
 scheduleRetryVerificationJob :: IV.IdfyVerification -> Flow ()
 scheduleRetryVerificationJob verificationReq = do

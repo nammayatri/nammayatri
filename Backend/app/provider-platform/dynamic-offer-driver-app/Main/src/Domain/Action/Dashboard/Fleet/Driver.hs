@@ -472,7 +472,6 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
             airConditioned = req.airConditioned,
             oxygen = req.oxygen,
             ventilator = req.ventilator,
-            multipleRC = req.multipleRC,
             vehicleCategory = req.vehicleCategory,
             vehicleDetails = Nothing,
             isRCImageValidated = Nothing
@@ -830,7 +829,6 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
       pure
         ( Common.RegisterRCReq
             { dateOfRegistration = Nothing,
-              multipleRC = Nothing,
               oxygen = Nothing,
               ventilator = Nothing,
               operatingCity = show moc.city,

@@ -297,7 +297,6 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
                   Common.operatingCity = "Delhi",
                   Common.dateOfRegistration = Just (UTCTime (fromGregorian 2022 1 1) 0),
                   Common.airConditioned = Just True,
-                  Common.multipleRC = Just False,
                   Common.oxygen = Just False,
                   Common.ventilator = Just False,
                   Common.vehicleCategory = Nothing,
@@ -310,12 +309,11 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
           (evaluate $ DDriverReg.postDriverRegistrationRegisterRc merchantShortId opCity driverId req)
 
         -- Validate the request structure
-        let Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber, Common.operatingCity = operatingCity, Common.airConditioned = airConditioned, Common.multipleRC = multipleRC, Common.oxygen = oxygen, Common.ventilator = ventilator} = req
+        let Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber, Common.operatingCity = operatingCity, Common.airConditioned = airConditioned, Common.oxygen = oxygen, Common.ventilator = ventilator} = req
 
         rcNumber @?= "RC123456789"
         operatingCity @?= "Delhi"
         airConditioned @?= Just True
-        multipleRC @?= Just False
         oxygen @?= Just False
         ventilator @?= Just False
 
@@ -323,7 +321,6 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
         (T.length rcNumber >= 9) @? "RC number should be at least 9 characters"
         (T.length operatingCity > 0) @? "Operating city should not be empty"
         isJust airConditioned @? "Air conditioned status should be specified"
-        isJust multipleRC @? "Multiple RC status should be specified"
         isJust oxygen @? "Oxygen status should be specified"
         isJust ventilator @? "Ventilator status should be specified"
 
@@ -337,8 +334,8 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
                 Environment.Flow Kernel.Types.APISuccess.APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different RC data and validates request handling" $ do
-        let req1 = Common.RegisterRCReq "RC123456789" (Kernel.Types.Id.Id "rc-image-1") "Delhi" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just True) (Just False) (Just False) (Just False) Nothing Nothing
-            req2 = Common.RegisterRCReq "RC987654321" (Kernel.Types.Id.Id "rc-image-2") "Mumbai" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just False) (Just True) (Just True) (Just True) Nothing Nothing
+        let req1 = Common.RegisterRCReq "RC123456789" (Kernel.Types.Id.Id "rc-image-1") "Delhi" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just True) (Just False) (Just False) Nothing Nothing
+            req2 = Common.RegisterRCReq "RC987654321" (Kernel.Types.Id.Id "rc-image-2") "Mumbai" (Just (UTCTime (fromGregorian 2020 1 1) 0)) (Just False) (Just True) (Just True) Nothing Nothing
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
             opCity = Context.Delhi
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver
