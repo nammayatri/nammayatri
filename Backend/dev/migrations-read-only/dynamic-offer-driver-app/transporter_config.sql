@@ -535,3 +535,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_fare_cal
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_mobile_number_validation boolean  default false;
