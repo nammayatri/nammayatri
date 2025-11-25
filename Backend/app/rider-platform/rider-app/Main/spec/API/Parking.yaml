@@ -2,6 +2,7 @@ imports:
   Text: Data.Text
   HighPrecMoney: Kernel.Types.Common
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  Person: Domain.Types.Person
 
 module: ParkingBooking
 types:
@@ -12,21 +13,27 @@ types:
     parkingEndTime: UTCTime
     slotNumber: Text
     vehicleNumber: Text
+    customerId : Id Person
     derive: "Show"
 
   ParkingBookingResponse:
     parkingLotId: Text
     paymentLink: Text
     orderId: Id PaymentOrder
+    orderShortId: Text
     derive: "Show"
 
 apis:
   - POST:
       endpoint: /multimodal/parking/book
+      auth: ApiAuthV2
       headers:
         api-key: Text
       request:
         type: ParkingBookingReq
       response:
         type: ParkingBookingResponse
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS AUTH
+        endpoint: RegistrationAPI RegistrationResendEndPoint
 
