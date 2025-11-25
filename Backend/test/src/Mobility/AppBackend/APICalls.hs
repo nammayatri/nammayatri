@@ -144,7 +144,8 @@ mkAuthReq =
       registrationLon = Nothing,
       enableOtpLessRide = Nothing,
       businessEmail = Nothing,
-      allowBlockedUserLogin = Nothing
+      allowBlockedUserLogin = Nothing,
+      isOperatorReq = Nothing
     }
 
 mkAuthVerifyReq :: Reg.AuthVerifyReq

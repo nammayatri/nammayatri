@@ -290,3 +290,6 @@ ALTER TABLE atlas_app.person ADD COLUMN business_email_encrypted character varyi
 
 ------- SQL updates -------
 
+
+
+------- SQL updates -------
