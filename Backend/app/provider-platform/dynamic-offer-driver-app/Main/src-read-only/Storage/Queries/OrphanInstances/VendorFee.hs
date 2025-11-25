@@ -7,6 +7,7 @@ import qualified Domain.Types.VendorFee
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -19,6 +20,8 @@ instance FromTType' Beam.VendorFee Domain.Types.VendorFee.VendorFee where
         Domain.Types.VendorFee.VendorFee
           { amount = amount,
             driverFeeId = Kernel.Types.Id.Id driverFeeId,
+            isVendorFeeProcessedAt = isVendorFeeProcessedAt,
+            splitMethod = (Kernel.Prelude.Just . Kernel.Prelude.fromMaybe Domain.Types.VendorFee.Normal) splitMethod,
             vendorId = vendorId,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -29,6 +32,8 @@ instance ToTType' Beam.VendorFee Domain.Types.VendorFee.VendorFee where
     Beam.VendorFeeT
       { Beam.amount = amount,
         Beam.driverFeeId = Kernel.Types.Id.getId driverFeeId,
+        Beam.isVendorFeeProcessedAt = isVendorFeeProcessedAt,
+        Beam.splitMethod = splitMethod,
         Beam.vendorId = vendorId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

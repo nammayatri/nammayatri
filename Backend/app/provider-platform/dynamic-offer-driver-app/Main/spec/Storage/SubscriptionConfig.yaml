@@ -68,6 +68,7 @@ SubscriptionConfig:
     autopayEnabled: Maybe Bool
     showManualPlansInUI: Maybe Bool
     disabledVariantsForSubscription: "Maybe [Domain.Types.VehicleVariant.VehicleVariant]"
+    enablePayoutSettlement: Maybe Bool
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 
@@ -91,6 +92,7 @@ SubscriptionConfig:
     enableServiceUsageChargeDefault:  Kernel.Prelude.fromMaybe True|I
     waiveOffOfferTitle : Kernel.Prelude.fromMaybe "NAN" |I
     waiveOffOfferDescription :  Kernel.Prelude.fromMaybe "NAN" |I
+    enablePayoutSettlement: Kernel.Prelude.Just . Kernel.Prelude.fromMaybe False|I
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
@@ -127,6 +129,7 @@ SubscriptionConfig:
     genericNextJobScheduleTimeThreshold : Maybe Seconds
     waiveOffOfferTitle : Maybe Text
     waiveOffOfferDescription : Maybe Text
+    enablePayoutSettlement: Maybe Bool
   constraints:
     serviceName: PrimaryKey
     merchantOperatingCityId: PrimaryKey
@@ -154,6 +157,7 @@ SubscriptionConfig:
     payoutServiceName: "'Payout_Juspay'"
     autopayEnabled: "true"
     showManualPlansInUI: "false"
+    enablePayoutSettlement: "false"
 
   sqlType:
    executionEnabledForVehicleCategories: text[]

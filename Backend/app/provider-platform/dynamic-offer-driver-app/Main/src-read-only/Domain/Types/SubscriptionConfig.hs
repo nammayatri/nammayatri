@@ -30,6 +30,7 @@ data SubscriptionConfig = SubscriptionConfig
     defaultCityVehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     disabledVariantsForSubscription :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant],
     enableCityBasedFeeSwitch :: Kernel.Prelude.Bool,
+    enablePayoutSettlement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableServiceUsageChargeDefault :: Kernel.Prelude.Bool,
     eventsEnabledForWebhook :: [Domain.Types.WebhookExtra.WebhookEvent],
     executionEnabledForVehicleCategories :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
