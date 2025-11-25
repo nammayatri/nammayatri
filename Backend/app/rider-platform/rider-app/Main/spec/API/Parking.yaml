@@ -18,6 +18,7 @@ types:
     parkingLotId: Text
     paymentLink: Text
     orderId: Id PaymentOrder
+    orderShortId: Text
     derive: "Show"
 
 apis:

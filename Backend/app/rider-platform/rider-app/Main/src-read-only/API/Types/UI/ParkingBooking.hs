@@ -25,6 +25,6 @@ data ParkingBookingReq = ParkingBookingReq
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ParkingBookingResponse = ParkingBookingResponse {orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder, parkingLotId :: Data.Text.Text, paymentLink :: Data.Text.Text}
+data ParkingBookingResponse = ParkingBookingResponse {orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder, parkingLotId :: Data.Text.Text, paymentLink :: Data.Text.Text, orderShortId :: Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
