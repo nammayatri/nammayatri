@@ -500,7 +500,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSel
         status = DEstimate.NEW,
         estimateBreakupList = estimateBreakupList',
         driversLocation = driversLocation,
-        businessDiscountInfo = Nothing, --------fix RITIKA
+        businessDiscountInfo = businessDiscountInfo <&> \businessDiscountInfo' -> DEstimate.BusinessDiscountInfo {businessDiscount = businessDiscountInfo'.businessDiscount, businessDiscountPercentage = businessDiscountInfo'.businessDiscountPercentage},
         nightShiftInfo =
           nightShiftInfo <&> \nightShiftInfo' ->
             DEstimate.NightShiftInfo
