@@ -218,6 +218,7 @@ data TicketBookingServiceDetails = TicketBookingServiceDetails
     businessHourId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour),
     categories :: [TicketBookingCategoryDetails],
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    noteInfo :: Kernel.Prelude.Maybe Data.Text.Text,
     slot :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     status :: Domain.Types.TicketBookingService.ServiceStatus,
     ticketServiceName :: Data.Text.Text,
@@ -288,7 +289,9 @@ data TicketServiceResp = TicketServiceResp
     id :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     maxVerification :: Kernel.Prelude.Int,
     name :: Data.Text.Text,
+    noteInfo :: Kernel.Prelude.Maybe Data.Text.Text,
     placesId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
+    priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     serviceDetails :: Kernel.Prelude.Maybe [Data.Text.Text],
     shortDesc :: Kernel.Prelude.Maybe Data.Text.Text,
     subPlaceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace)
