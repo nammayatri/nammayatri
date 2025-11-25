@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.PurchasedPassPayment where
+module Storage.Queries.PurchasedPassPayment (module Storage.Queries.PurchasedPassPayment, module ReExport) where
 
 import qualified Data.Time.Calendar
 import qualified Domain.Types.Person
@@ -17,6 +17,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.PurchasedPassPayment as Beam
+import Storage.Queries.PurchasedPassPaymentExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> m ())
 create = createWithKV
@@ -107,43 +108,3 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.PurchasedPassPayment where
-  fromTType' (Beam.PurchasedPassPaymentT {..}) = do
-    pure $
-      Just
-        Domain.Types.PurchasedPassPayment.PurchasedPassPayment
-          { amount = amount,
-            endDate = endDate,
-            id = Kernel.Types.Id.Id id,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            orderId = Kernel.Types.Id.Id orderId,
-            passCode = passCode,
-            passName = passName,
-            personId = Kernel.Types.Id.Id personId,
-            purchasedPassId = Kernel.Types.Id.Id purchasedPassId,
-            startDate = startDate,
-            status = status,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.PurchasedPassPayment where
-  toTType' (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..}) = do
-    Beam.PurchasedPassPaymentT
-      { Beam.amount = amount,
-        Beam.endDate = endDate,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.orderId = Kernel.Types.Id.getId orderId,
-        Beam.passCode = passCode,
-        Beam.passName = passName,
-        Beam.personId = Kernel.Types.Id.getId personId,
-        Beam.purchasedPassId = Kernel.Types.Id.getId purchasedPassId,
-        Beam.startDate = startDate,
-        Beam.status = status,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }

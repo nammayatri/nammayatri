@@ -644,7 +644,7 @@ getMultimodalPassList (mbCallerPersonId, merchantId) mbLanguage mbLimitParam mbO
   let today = DT.utctDay istTime
   forM_ passEntities $ \purchasedPass -> do
     when (purchasedPass.status == DPurchasedPass.PreBooked && purchasedPass.startDate <= today) $ do
-      QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id purchasedPass.startDate purchasedPass.endDate
+      QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id
 
     when (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && purchasedPass.endDate < today) $ do
       -- check if user has already renewed the pass
@@ -653,9 +653,11 @@ getMultimodalPassList (mbCallerPersonId, merchantId) mbLanguage mbLimitParam mbO
       case mbFirstPreBookedPayment of
         Just firstPreBookedPayment -> do
           let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
+          QPurchasedPassPayment.updateStatusByOrderId newStatus firstPreBookedPayment.orderId
           QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus
         Nothing -> do
-          QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id purchasedPass.startDate purchasedPass.endDate
+          QPurchasedPassPayment.expireOlderActivePaymentsByPurchasedPassId purchasedPass.id today
+          QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
 
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
   let passWithSameDevice = filter (\pass -> pass.deviceId == deviceId) allActivePurchasedPasses

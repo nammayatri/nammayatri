@@ -151,6 +151,9 @@ PurchasedPassPayment:
           - startDate
           - endDate
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
 PassVerifyTransaction:
   tableName: pass_verify_transaction
 

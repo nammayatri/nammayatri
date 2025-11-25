@@ -293,25 +293,25 @@ refundStatusHandler paymentOrder paymentServiceType = do
         Payment.REFUND_SUCCESS -> do
           QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.Refunded paymentOrder.id
           when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
-            QPurchasedPass.updateStatusById DPurchasedPass.Refunded purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate
+            QPurchasedPass.updateStatusById DPurchasedPass.Refunded purchasedPass.id
         Payment.REFUND_FAILURE -> do
           QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundFailed paymentOrder.id
           when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
-            QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate
+            QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id
         _ ->
           case refund.isApiCallSuccess of
             Nothing -> do
               QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundPending paymentOrder.id
               when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
-                QPurchasedPass.updateStatusById DPurchasedPass.RefundPending purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate
+                QPurchasedPass.updateStatusById DPurchasedPass.RefundPending purchasedPass.id
             Just True -> do
               QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundInitiated paymentOrder.id
               when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
-                QPurchasedPass.updateStatusById DPurchasedPass.RefundInitiated purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate
+                QPurchasedPass.updateStatusById DPurchasedPass.RefundInitiated purchasedPass.id
             Just False -> do
               QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundFailed paymentOrder.id
               when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
-                QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate
+                QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id
 
     parkingBookingRefundStatusHandler ::
       ( EsqDBFlow m r,
