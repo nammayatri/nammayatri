@@ -1053,7 +1053,6 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
   let isSearchFailed = fromMaybe False onSearchFailed
   let isCurrentLegBus = vehicleType == Spec.BUS
   let journeyModes = map (.mode) journeyLegs
-  let busLegCount = length $ filter (== castCategoryToMode Spec.BUS) journeyModes
   (mbServiceTier, mbQuote, quoteCategories, mbFareParameters) <- case journeyLeg.legPricingId of
     Just quoteId -> do
       mbQuote <- QFRFSQuote.findById (Id quoteId)
@@ -1065,7 +1064,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
   let serviceTierType = fmap (.serviceTierType) mbServiceTier
   let hasNonBusMode = any (\x -> x `elem` [DTrip.Subway, DTrip.Metro]) journeyModes
   let totalTicketQuantity = maybe 0 (.totalQuantity) mbFareParameters
-  let shouldCheckPass = isCurrentLegBus && busLegCount == 1 && totalTicketQuantity == 1 && hasNonBusMode
+  let shouldCheckPass = isCurrentLegBus && totalTicketQuantity == 1 && hasNonBusMode
   userPasses <-
     if shouldCheckPass
       then
