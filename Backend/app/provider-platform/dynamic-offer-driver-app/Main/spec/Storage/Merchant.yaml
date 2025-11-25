@@ -1112,6 +1112,7 @@ TransporterConfig:
     allowDriverToUseFleetRcs: Maybe Bool
     enableFareCalculatorV2: Maybe Bool
     enableVendorCheckForCollectingDues: Maybe Bool
+    enableMobileNumberValidation: Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1542,6 +1543,7 @@ TransporterConfig:
     driverWalletConfig:  '''{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minWalletAmountForCashRides": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7}'' :: json'
     analyticsConfig: '''{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "enableFleetOperatorDashboardAnalytics": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}'' :: json'
     subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}'' :: json'
+    enableMobileNumberValidation: "false"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

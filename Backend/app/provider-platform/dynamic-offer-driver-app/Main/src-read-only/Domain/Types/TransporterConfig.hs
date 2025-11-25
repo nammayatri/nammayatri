@@ -135,6 +135,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     enableExistingVehicleInBulkUpload :: Kernel.Prelude.Bool,
     enableFaceVerification :: Kernel.Prelude.Bool,
     enableFareCalculatorV2 :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableMobileNumberValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableOverchargingBlocker :: Kernel.Prelude.Bool,
     enableTollCrossedNotifications :: Kernel.Prelude.Bool,
     enableUdfForOffers :: Kernel.Prelude.Bool,
