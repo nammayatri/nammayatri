@@ -93,16 +93,13 @@ updatePurchaseData purchasedPassId startDate endDate status = do
         <> (if status == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0)] else [])
     )
     [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
-  QPurchasedPassPayment.updateStatusByPurchasedPassIdAndStartEndDate status purchasedPassId startDate endDate
 
 updateStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   DPurchasedPass.StatusType ->
   Id DPurchasedPass.PurchasedPass ->
-  Day ->
-  Day ->
   m ()
-updateStatusById status purchasedPassId startDate endDate = do
+updateStatusById status purchasedPassId = do
   now <- getCurrentTime
   updateWithKV
     ( [ Se.Set Beam.status status,
@@ -111,7 +108,6 @@ updateStatusById status purchasedPassId startDate endDate = do
         <> (if status == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0)] else [])
     )
     [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
-  QPurchasedPassPayment.updateStatusByPurchasedPassIdAndStartEndDate status purchasedPassId startDate endDate
 
 updateDeviceIdById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

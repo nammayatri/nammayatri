@@ -554,6 +554,7 @@ library
       Storage.Queries.PlaceBasedServiceConfigExtra
       Storage.Queries.PopularLocationExtra
       Storage.Queries.PurchasedPassExtra
+      Storage.Queries.PurchasedPassPaymentExtra
       Storage.Queries.QueriesExtra.RideLite
       Storage.Queries.QuoteExtra
       Storage.Queries.RatingExtra
@@ -1177,6 +1178,7 @@ library
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
       Storage.Queries.OrphanInstances.PopularLocation
       Storage.Queries.OrphanInstances.PurchasedPass
+      Storage.Queries.OrphanInstances.PurchasedPassPayment
       Storage.Queries.OrphanInstances.Quote
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.RecentLocation

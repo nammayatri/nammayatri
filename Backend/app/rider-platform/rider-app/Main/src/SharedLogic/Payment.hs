@@ -331,14 +331,22 @@ refundStatusHandler paymentOrder refunds paymentServiceType = do
       purchasedPass <- maybe (pure Nothing) (QPurchasedPass.findById . (.purchasedPassId)) mbPurchasedPassPayment >>= fromMaybeM (PurchasedPassNotFound paymentOrder.id.getId)
       case refund.status of
         Payment.REFUND_SUCCESS -> do
-          QPurchasedPass.updateStatusById DPurchasedPass.Refunded purchasedPass.id purchasedPass.startDate purchasedPass.endDate
+          QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.Refunded paymentOrder.id
+          QPurchasedPass.updateStatusById DPurchasedPass.Refunded purchasedPass.id
         Payment.REFUND_FAILURE -> do
-          QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id purchasedPass.startDate purchasedPass.endDate
+          QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundFailed paymentOrder.id
+          QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id
         _ ->
           case refund.isApiCallSuccess of
-            Nothing -> QPurchasedPass.updateStatusById DPurchasedPass.RefundPending purchasedPass.id purchasedPass.startDate purchasedPass.endDate
-            Just True -> QPurchasedPass.updateStatusById DPurchasedPass.RefundInitiated purchasedPass.id purchasedPass.startDate purchasedPass.endDate
-            Just False -> QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id purchasedPass.startDate purchasedPass.endDate
+            Nothing -> do
+              QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundPending paymentOrder.id
+              QPurchasedPass.updateStatusById DPurchasedPass.RefundPending purchasedPass.id
+            Just True -> do
+              QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundInitiated paymentOrder.id
+              QPurchasedPass.updateStatusById DPurchasedPass.RefundInitiated purchasedPass.id
+            Just False -> do
+              QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundFailed paymentOrder.id
+              QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id
 
 initiateRefundWithPaymentStatusRespSync ::
   ( EsqDBFlow m r,
