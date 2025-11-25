@@ -173,7 +173,7 @@ SearchRequest:
     distance: (Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> distance)|E
     distanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance)|E
     maxDistance: (Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> maxDistance)|E
-    maxDistanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit) <$> distance|E
+    maxDistanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit) <$> maxDistance|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     customerExtraFee: (customerExtraFee <&> (.amountInt))|E
     customerExtraFeeAmount: (customerExtraFee <&> (.amount))|E
