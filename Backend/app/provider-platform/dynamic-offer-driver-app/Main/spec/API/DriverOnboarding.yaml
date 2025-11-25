@@ -23,6 +23,7 @@ imports:
   Image: Domain.Types.Image
   PanType: Domain.Types.DriverPanCard
   LinkedRC: Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
+  VehicleCategory: Domain.Types.VehicleCategory
 
 module: DriverOnboardingV2
 types:
@@ -162,6 +163,9 @@ types:
   FleetRCListRes:
     recordType: NewType
     rcs: "[LinkedRC]"
+  LinkToFleetReq:
+    fleetOwnerId: Id Person
+    onboardingVehicleCategory: Maybe VehicleCategory
 
 apis:
   - GET:
@@ -294,3 +298,10 @@ apis:
         offset: Int
       response:
         type: FleetRCListRes
+  - POST:
+      endpoint: /driver/linkToFleet
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: LinkToFleetReq
+      response:
+        type: APISuccess

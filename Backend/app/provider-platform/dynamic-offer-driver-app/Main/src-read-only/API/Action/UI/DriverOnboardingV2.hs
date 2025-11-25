@@ -210,10 +210,19 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.DriverOnboardingV2.FleetRCListRes
+      :<|> TokenAuth
+      :> "driver"
+      :> "linkToFleet"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.LinkToFleetReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs :<|> postDriverLinkToFleet
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -393,3 +402,13 @@ getDriverFleetRcs ::
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.FleetRCListRes
   )
 getDriverFleetRcs a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverFleetRcs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postDriverLinkToFleet ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.LinkToFleetReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postDriverLinkToFleet a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverLinkToFleet (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

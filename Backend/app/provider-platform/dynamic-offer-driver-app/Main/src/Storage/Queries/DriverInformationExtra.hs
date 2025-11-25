@@ -498,3 +498,13 @@ updateLastOfflineTime driverId offlineTime = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+
+updateDob :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe UTCTime -> m ()
+updateDob (Id driverId) driverDob = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [ Se.Set BeamDI.updatedAt now
+      ]
+        <> [Se.Set BeamDI.driverDob driverDob | isJust driverDob]
+    )
+    [Se.Is BeamDI.driverId (Se.Eq driverId)]
