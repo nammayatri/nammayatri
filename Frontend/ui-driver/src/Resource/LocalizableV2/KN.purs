@@ -1893,4 +1893,7 @@ getKn =
     , select_bus_route: "ಬಸ್ ಮಾರ್ಗವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
     , link_trip: "ಪ್ರಯಾಣವನ್ನು ಲಿಂಕ್ ಮಾಡಿ"
     , driver_name: "ಡ್ರೈವರ್ ಹೆಸರು"
+    , you_can_cancel_the_ride_without_affecting_your_rating: "ನಿಮ್ಮ ರೇಟಿಂಗ್‌ಗೆ ಪರಿಣಾಮ ಬೀರುವುದಿಲ್ಲದೆ ನೀವು ಪ್ರಯಾಣವನ್ನು ರದ್ದು ಮಾಡಬಹುದು"
+    , customer_not_picking_up_the_call: "ಗ್ರಾಹಕರು ಕರೆ ಸ್ವೀಕರಿಸುತ್ತಿಲ್ಲ"
+    , your_rating_wont_be_affected: "(ನಿಮ್ಮ ರೇಟಿಂಗ್‌ಗೆ ಪರಿಣಾಮ ಬೀರುವುದಿಲ್ಲ)"
     }

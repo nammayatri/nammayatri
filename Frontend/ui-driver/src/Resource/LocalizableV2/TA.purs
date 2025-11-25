@@ -1893,4 +1893,7 @@ getTa =
     , cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking: "இந்த சவாரியை ரத்து செய்வது உங்கள் மதிப்பெண்ணை குறைக்கும் மற்றும் தடுப்புக்கு வழிவகுக்கும்"
     , your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "உங்கள் தினசரி ரத்து விகிதம் <b>%s%%</b> ஆக உயரும் மற்றும் உங்களை <b>%s மணி நேரம்</b> தடுக்கும்"
     , your_weekly_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "உங்கள் வாராந்திர ரத்து விகிதம் <b>%s%%</b> ஆக உயரும் மற்றும் உங்களை <b>%s மணி நேரம்</b> தடுக்கும்"
+    , you_can_cancel_the_ride_without_affecting_your_rating: "உங்கள் மதிப்பீட்டுக்கு பாதிப்பின்றி நீங்கள் சவாரியை ரத்து செய்யலாம்"
+    , customer_not_picking_up_the_call: "வாடிக்கையாளர் அழைப்பை எடுக்கவில்லை"
+    , your_rating_wont_be_affected: "(உங்கள் மதிப்பீடு பாதிக்கப்படாது)"
     }

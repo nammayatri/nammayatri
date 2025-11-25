@@ -537,6 +537,8 @@ data Action = NoAction
             | SelectBusDriver PopUpModal.Action
             | SelectBusConductor PopUpModal.Action
             | RideInsuranceCardAction PopUpModal.Action
+            | CallNotPickingUpAction PopUpModal.Action
+            | OpenCallNotPickUp 
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -2169,6 +2171,17 @@ eval (ShowLinkPopup (API.AvailableRoutesList availableRoutesList) fleetBadgeDriv
         }
       }
 
+eval (CallNotPickingUpAction action) state = do
+  case action of
+    PopUpModal.OnButton1Click ->
+      continue state { data {cancelRideConfirmationPopUp{delayInSeconds = if state.props.willCancellationBlock then 5 else 3,  continueEnabled=false}}, props{cancelConfirmationPopup = true, driverRatingOnCancellationUnaffected = true, callNotPickingUpPopUp = false}}
+    PopUpModal.OnButton2Click -> continue state {props {callNotPickingUpPopUp = false}}
+    PopUpModal.DismissPopup -> continue state {props {callNotPickingUpPopUp = false}}
+    _ -> update state
+
+eval OpenCallNotPickUp state = do
+  continue state {props {callNotPickingUpPopUp = true}}
+
 eval _ state = update state 
 
 checkPermissionAndUpdateDriverMarker :: Boolean -> Effect Unit
@@ -2354,7 +2367,7 @@ cancellationReasons state = [
     where
       customerNotPickingCall = [{
           reasonCode: "CUSTOMER_NOT_PICKING_CALL"
-        , description: (StringsV2.getStringV2 LT2.customer_not_picking_call)
+        , description: (StringsV2.getStringV2 LT2.customer_not_picking_call) <> " " <> (if state.props.driverRatingOnCancellationUnaffected then (getString LT.YOUR_RATING_WONT_BE_AFFECTED) else "")
         , textBoxRequired : false
         , subtext: Nothing
         }]

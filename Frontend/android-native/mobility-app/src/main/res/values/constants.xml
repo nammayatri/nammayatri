@@ -50,4 +50,5 @@
     <string name="REGISTRATION_APPROVED" translatable="false">REGISTRATION_APPROVED</string>
     <string name="ReAllocated" translatable="false">ReAllocated</string>
     <string name="FINDING_QUOTES_START_TIME" translatable="false">FINDING_QUOTES_START_TIME</string>
+    <string name="EXOTEL_CALL_UNREACHABLE" translatable="false">EXOTEL_CALL_UNREACHABLE</string>
 </resources>
