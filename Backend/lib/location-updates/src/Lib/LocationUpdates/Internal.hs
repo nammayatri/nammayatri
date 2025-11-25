@@ -212,6 +212,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
       isAtLeastBatchPlusOne <- atLeastBatchPlusOne
       when (snapToRoadCallCondition && isAtLeastBatchPlusOne) $ do
         currSnapToRoadState <- processSnapToRoadCall
+        updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls currSnapToRoadState.numberOfSelfTuned calculationFailed
         Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 86400 -- 24 hours
   where
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
