@@ -187,7 +187,9 @@ getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
                   businessHours,
                   shortDesc = service.shortDesc,
                   allowCancellation = service.allowCancellation,
-                  serviceDetails = service.serviceDetails
+                  serviceDetails = service.serviceDetails,
+                  noteInfo = service.note,
+                  priority = service.priority
                 }
         )
         ticketServices
@@ -698,6 +700,7 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
             amount = amount.amount,
             amountWithCurrency = mkPriceAPIEntity amount,
             allowCancellation = ticketService.allowCancellation,
+            noteInfo = ticketService.note,
             ..
           }
     mkTicketBookingCategoryDetails :: DTB.TicketBookingServiceCategory -> Environment.Flow API.Types.UI.TicketService.TicketBookingCategoryDetails

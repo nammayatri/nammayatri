@@ -45,6 +45,8 @@ types:
     shortDesc: Maybe Text
     serviceDetails: "Maybe [Text]"
     allowCancellation: Bool
+    noteInfo: Maybe Text
+    priority: Maybe Int
 
   BusinessHourResp:
     id: Id BusinessHour
@@ -164,6 +166,7 @@ types:
     slot: Maybe TimeOfDay
     expiryDate : Maybe UTCTime
     categories : [TicketBookingCategoryDetails]
+    noteInfo: Maybe Text
 
   TicketBookingCategoryDetails:
     id : Id TicketBookingServiceCategory
