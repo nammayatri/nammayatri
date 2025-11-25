@@ -139,7 +139,8 @@ data AuthReq = AuthReq
     registrationLat :: Maybe Double,
     registrationLon :: Maybe Double,
     enableOtpLessRide :: Maybe Bool,
-    allowBlockedUserLogin :: Maybe Bool
+    allowBlockedUserLogin :: Maybe Bool,
+    isOperatorReq :: Maybe Bool
   }
   deriving (Generic, ToJSON, Show, ToSchema)
 
@@ -165,6 +166,7 @@ instance A.FromJSON AuthReq where
         <*> obj .:? "registrationLon"
         <*> obj .:? "enableOtpLessRide"
         <*> obj .:? "allowBlockedUserLogin"
+        <*> obj .:? "isOperatorReq"
     A.String s ->
       case A.eitherDecodeStrict (TE.encodeUtf8 s) of
         Left err -> fail err
@@ -206,7 +208,8 @@ data PasswordAuthReq = PasswordAuthReq
     userMobileNumber :: Maybe Text,
     userCountryCode :: Maybe Text,
     userMerchantId :: Id Merchant,
-    userPassword :: Text
+    userPassword :: Text,
+    isOperatorReq :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -218,7 +221,7 @@ data AuthRes = AuthRes
     person :: Maybe PersonAPIEntity,
     isPersonBlocked :: Bool,
     depotCode :: Maybe (Id DDepot.Depot),
-    isAdmin :: Maybe Bool
+    isDepotAdmin :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -351,12 +354,13 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
           riderConfig.emailOtpConfig
           mbSenderHash
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
-  (mbDepotCode, mbIsAdmin) <- case identifierType of
-    SP.MOBILENUMBER -> do
-      mbDepotManager <- QDepotManager.findByPersonId person.id
-      return (mbDepotManager <&> (.depotCode), mbDepotManager <&> (.isAdmin))
-    _ -> return (Nothing, Nothing)
-  return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked mbDepotCode mbIsAdmin
+  (mbDepotCode, mbIsDepotAdmin) <-
+    if req.isOperatorReq == Just True
+      then do
+        mbDepotManager <- QDepotManager.findByPersonId person.id
+        return (mbDepotManager <&> (.depotCode), mbDepotManager <&> (.isAdmin))
+      else return (Nothing, Nothing)
+  return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked mbDepotCode mbIsDepotAdmin
   where
     castChannelToMedium :: SOTP.OTPChannel -> SR.Medium
     castChannelToMedium SOTP.SMS = SR.SMS
@@ -528,9 +532,13 @@ passwordBasedAuth req = do
   person <- fromMaybeM (PersonNotFound $ getId req.userMerchantId) mbPerson
   passwordHash <- getDbHash req.userPassword
   unless (person.passwordHash == Just passwordHash) $ throwError $ InvalidRequest "Invalid password"
-  mbDepotManager <- QDepotManager.findByPersonId person.id
-  let mbDepotCode = mbDepotManager <&> (.depotCode)
-      mbIsAdmin = mbDepotManager <&> (.isAdmin)
+
+  (mbDepotCode, mbIsDepotAdmin) <-
+    if req.isOperatorReq == Just True
+      then do
+        mbDepotManager <- QDepotManager.findByPersonId person.id
+        return (mbDepotManager <&> (.depotCode), mbDepotManager <&> (.isAdmin))
+      else return (Nothing, Nothing)
   let scfg =
         SmsSessionConfig
           { attempts = 3,
@@ -540,7 +548,7 @@ passwordBasedAuth req = do
   registrationToken <- makeSession method scfg person.id.getId req.userMerchantId.getId Nothing True
   _ <- RegistrationToken.create registrationToken
   _ <- RegistrationToken.deleteByPersonIdExceptNew person.id registrationToken.id
-  return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked mbDepotCode mbIsAdmin
+  return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked mbDepotCode mbIsDepotAdmin
 
 buildPerson ::
   ( HasFlowEnv m r '["version" ::: DeploymentVersion],
@@ -989,7 +997,8 @@ createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
                 registrationLat = Nothing,
                 registrationLon = Nothing,
                 enableOtpLessRide = Nothing,
-                allowBlockedUserLogin = Nothing
+                allowBlockedUserLogin = Nothing,
+                isOperatorReq = Nothing
               }
       createdPerson <-
         createPerson authReq SP.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing

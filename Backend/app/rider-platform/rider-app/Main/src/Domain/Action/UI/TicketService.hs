@@ -1263,7 +1263,8 @@ buildAuthReqForDirectBooking req countryCode merchant =
       registrationLat = Nothing,
       registrationLon = Nothing,
       enableOtpLessRide = Nothing,
-      allowBlockedUserLogin = Nothing
+      allowBlockedUserLogin = Nothing,
+      isOperatorReq = Nothing
     }
 
 -- Create a direct booking for cash payment, bypassing the normal payment flow
@@ -2021,7 +2022,8 @@ postTicketDashboardRegister merchant req = do
                 registrationLat = Nothing,
                 registrationLon = Nothing,
                 enableOtpLessRide = Nothing,
-                allowBlockedUserLogin = Nothing
+                allowBlockedUserLogin = Nothing,
+                isOperatorReq = Nothing
               }
       merchantOperatingCityId <-
         CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
