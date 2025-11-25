@@ -82,6 +82,7 @@ types:
     deviceMismatch: Bool
     deviceSwitchAllowed: Bool
     futureRenewals: [PurchasedPassTransactionAPIEntity]
+    profilePicture: Maybe Text
     derive: "Show"
 
   PassDetailsAPIEntity:

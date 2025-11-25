@@ -47,6 +47,7 @@ PurchasedPass:
     maxValidTrips: Maybe Int
     maxValidDays: Maybe Int
     usedTripCount: Maybe Int
+    profilePicture: Maybe Text
     status: StatusType
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity

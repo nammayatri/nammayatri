@@ -52,6 +52,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
       Se.Set Beam.passNumber passNumber,
       Se.Set Beam.passTypeId (Kernel.Types.Id.getId passTypeId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
+      Se.Set Beam.profilePicture profilePicture,
       Se.Set Beam.startDate startDate,
       Se.Set Beam.status status,
       Se.Set Beam.usedTripCount usedTripCount,
