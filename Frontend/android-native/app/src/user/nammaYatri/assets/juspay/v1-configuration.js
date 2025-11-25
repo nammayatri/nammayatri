@@ -1152,12 +1152,332 @@ const manaYatriConfig = function () {
   })
 }
 
-
+const bharatTaxiConfig = function () {
+  return JSON.stringify({
+    "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "LOCATION_PERMISSION_SUBTITLE_NEW_USER", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US", "LEARN_HOW_TEXT", "REPORT_ISSUE_CHAT_PLACEHOLDER", "CALL_SUPPORT_DESCRIPTION", "FARE_INFO_TEXT", "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE", "PLEASE_ENABLE_LOCATION_PERMISSION", "TAXI_FROM_ZONE", "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN", "WE_HOPE_THE_ISSUE_IS_RESOLVED"],
+    "isReferralEnabled": "true",
+    "showBookingPreference": "true",
+    "showRateCard": "true",
+    "showDashboard": "true",
+    "enableShareRide": "true",
+    "autoVariantEnabled": true,
+    "shareAppTitle": "Share Bharat Taxi!",
+    "shareAppContent": "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Bharat Taxi now! \nhttps://www.bharattaxiapp.com/link/rider/SJ8D \n\n #beOpen #chooseOpen",
+    "DOCUMENT_LINK": "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA",
+    "appLink": getAppLink(window.__OS),
+    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1crETbSJ7QDqh1BCBjOnDUvJzwV5zb3gC",
+    "showChargeDesc": false,
+    "isShareAppEnabled": "true",
+    "addFavouriteScreenBackArrow": "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png",
+    "showPickUpandDrop": true,
+    "apiLoaderLottie": "primary_button_loader.json",
+    "isEmergencyContacts": "true",
+    "showCorporateAddress": true,
+    "loaderColor": "",
+    "showHamMenu": true,
+    "showQuoteFindingText": false,
+    "isChatEnabled": "true",
+    "isGradient": "false",
+    "gradient": [],
+    "primaryTextColor": "#FCC32C",
+    "primaryBackground": "#2C2F3A",
+    "estimateConfirmText": "Request a Bharat Taxi Ride",
+    "autoConfirmingLoaderColor": "#80B2FF",
+    "quoteListModelBackground": "#2C2F3A",
+    "confirmPickUpLocationBorder": "#E5E7EB",
+    "currency": "₹",
+    "alertDialogPrimaryColor": "#2194FF",
+    "logs": ["JUSPAY", "FIREBASE", "CLEVERTAP"],
+    "primaryButtonCornerRadius": 8.0,
+    "cancelSearchTextColor": "#E55454",
+    "dashboardUrl": "https://www.bharattaxiapp.com/open?source=in-app",
+    "driverInfoConfig": {
+      "showTrackingButton": false
+    },
+    "dashboard": {
+      "url": "https://www.bharattaxiapp.com/open?source=in-app"
+      , "enable": true
+    },
+    "profileBackground": "#2C2F3A",
+    "profileName": "#FFFFFF",
+    "profileImage": "#012A72",
+    "feedbackBackground": "#2C2F3A",
+    "profileCompletion": "#FCC32C",
+    "cancelRideColor": "#E55454",
+    "merchantLogo": "ny_ic_ny_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_ny_logo.png",
+    "infoIconUrl": "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
+    "sideBarList": ["MyRides", "Favorites", "NammaSafety", "MetroTickets", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
+    "rateCardColor": "#2C2F3A",
+    "profileEditGravity": "center",
+    "nyBrandingVisibility": false,
+    "fontType": "Assets",
+    "black900": "#2C2F3A",
+    "black800": "#454545",
+    "red": "#E55454",
+    "popupBackground": "#FFFFFF",
+    "englishStrings": {
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER": "Welcome to Bharat Taxi! \nTo start booking rides, please allow us to find you!",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "Website: <u>https://www.bharattaxiapp.com/</u>",
+      "YOUR_FEEDBACK_HELPS_US": "Your feedback helps us improve the Bharat Taxi experience",
+      "LEARN_HOW_TEXT": "Learn how Bharat Taxi caters to your needs",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "Driver addition limits are calculated at 10% of the base fare rounded off to the nearest ₹10",
+      "FARE_INFO_TEXT": "The fare is based on the Karnataka State Government Rules factoring auto driver's additions and is not determined by Bharat Taxi.",
+      "PLEASE_ENABLE_LOCATION_PERMISSION": "Please enable location permissions for Bharat Taxi from the settings app to start looking for rides.",
+      "TAXI_FROM_ZONE": "from Bharat Taxi Zone",
+      "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN": "OTP for the Bharat Taxi zone has been expired, please try booking again",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER": "Describe your issue. Bharat Taxi will try to resolve it in under 24 hours.",
+      "CALL_SUPPORT_DESCRIPTION": "You are about to place a call to Bharat Taxi Support. Do you want to proceed?",
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED": "We hope the issue is resolved, feel free to write to us at support@bharattaxiapp.com for any queries."
+    },
+    "hindiStrings": {
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "आपका स्थान हमारे सिस्टम को आसपास के सभी ऑटो को मैप करने और आपको सबसे तेज़ सवारी दिलाने में मदद करता है।",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER": "भारत टैक्सी में आपका स्वागत है! \nसवारी बुक करना शुरू करने के लिए, कृपया हमें आपका स्थान खोजने की अनुमति दें!",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL": "वेबसाइट: <u>https://www.bharattaxiapp.com/</u>",
+      "YOUR_FEEDBACK_HELPS_US": "आपकी प्रतिक्रिया भारत टैक्सी अनुभव को बेहतर बनाने में हमारी मदद करती है।",
+      "LEARN_HOW_TEXT": "जानिए भारत टैक्सी आपकी ज़रूरतों को कैसे पूरा करता है।",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ड्राइवर द्वारा अतिरिक्त राशि की सीमा बेस किराए के 10% पर आधारित होती है और इसे निकटतम ₹10 तक गोल किया जाता है।",
+      "FARE_INFO_TEXT": "किराया कर्नाटक राज्य सरकार के नियमों और ऑटो चालक के अतिरिक्त शुल्क पर आधारित है; इसे भारत टैक्सी तय नहीं करता।",
+      "PLEASE_ENABLE_LOCATION_PERMISSION": "सवारी खोज शुरू करने के लिए कृपया सेटिंग्स ऐप से भारत टैक्सी के लिए लोकेशन अनुमति सक्षम करें।",
+      "TAXI_FROM_ZONE": "भारत टैक्सी ज़ोन से",
+      "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN": "भारत टैक्सी ज़ोन के लिए OTP समाप्त हो गया है, कृपया दोबारा बुकिंग करने का प्रयास करें।",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER": "अपनी समस्या का विवरण दें। भारत टैक्सी इसे 24 घंटे के भीतर हल करने का प्रयास करेगा।",
+      "CALL_SUPPORT_DESCRIPTION": "आप भारत टैक्सी सपोर्ट पर कॉल करने वाले हैं। क्या आप आगे बढ़ना चाहते हैं?",
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED": "हमें उम्मीद है कि समस्या हल हो गई है। किसी भी प्रश्न के लिए support@bharattaxiapp.com पर लिखें।"
+    },
+    "languageList": [{
+      "name": "English",
+      "value": "EN_US",
+      "subTitle": "ಆಂಗ್ಲ"
+    }, {
+      "name": "हिंदी",
+      "value": "HI_IN",
+      "subTitle": "Hindi"
+    }
+    ],
+    "bannerConfig": {
+      "backgroundColor": "#F0FAF0"
+      , "title": "Complete your profile for a personalised ride experience"
+      , "titleColor": "#21C179"
+      , "actionText": "Update now"
+      , "actionTextColor": "#27AE5F"
+      , "imageUrl": "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
+    },
+    "terminateBtnConfig": {
+      "visibility": false,
+      "title": "Namma Yatri",
+      "imageUrl": "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
+    }
+    , "showDeleteAccount": true
+    , "fontName": "PlusJakartaSans"
+    , "fontKannada": "NotoSansKannada"
+    , "showGenderBanner": true
+    , "homeScreen": {
+      "isServiceablePopupFullScreen": true,
+    }
+    , "tipEnabledCities": []
+    , "acPopupConfig": {
+      "enableAcPopup": true,
+      "enableNonAcPopup": true,
+      "showAfterTime": 5
+    }
+    , "autoSelectBackground": "#53BB6F"
+    , "enableMockLocation": true
+    , "defaultLanguage": "EN_US"
+    , "specialLocationView": false
+    , "geoCoder": {
+      "enableLLtoAddress": true
+      , "enableAddressToLL": false
+    }
+    , "navigationAppConfig": {
+      "query": "google.navigation:q=%f,%f"
+      , "packageName": "com.google.android.apps.maps"
+    }
+    , "purpleRideConfig": {
+      "genericVideoUrl": "https://www.youtube.com/watch?v=tzrf2Rdpkc4",
+      "visualImpairmentVideo": "https://www.youtube.com/watch?v=GllvoYpOUpc",
+      "physicalImpairmentVideo": "https://youtu.be/-ku9Gc8U5B8",
+      "hearingImpairmentVideo": "https://www.youtube.com/watch?v=QcKeSF9uiJ4"
+    }
+    , "SUPPORT_EMAIL": "support@bharattaxiapp.com"
+    , "OTP_MESSAGE_REGEX": "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+    , "internationalNumberEnabled": true
+    , "enableWhatsappOTP": ["BD", "US"]
+    , "countryCodeConfig": [
+      {
+        "countryName": "India"
+        , "countryCode": "+91"
+        , "countryShortCode": "IN"
+      }
+    ]
+    , "callOptions": ["ANONYMOUS", "DIRECT"]
+    , "tipDisplayDuration": 30
+    , "termsVersion": 2.0
+    , "showDisabilityBanner": false
+    , "privacyLink" : "https://docs.google.com/document/d/1Di7oP7t6X-hz9MI3ZIOl4oZI5OTLGNQtunhhZQaqht4"
+    , "enableContactSupport": false
+    , "enableGeocoder": true
+    , "isAdvancedBookingEnabled": true
+    , "metroTicketingConfig": [
+      {
+        "cityName": "kochi"
+        , "cityCode": "std:0484"
+        , "customEndTime": "23:59:59"
+        , "customDates": ["03/05/2024", "04/05/2024", "05/05/2024", "06/05/2024", "07/05/2024", "08/05/2024", "09/05/2024", "10/05/2024", "11/05/2024"]
+        , "metroStationTtl": 10080
+        , "metroHomeBannerImage": "ny_ic_kochi_metro_banner"
+        , "metroBookingBannerImage": "ny_ic_kochi_metro_banner"
+        , "bookingStartTime": "05:45:00"
+        , "bookingEndTime": "22:30:00"
+        , "ticketLimit": {
+          "roundTrip": 1
+          , "oneWay": 6
+        }
+      },
+      {
+        "cityName": "chennai"
+        , "cityCode": "std:040"
+        , "customEndTime": "01:00:00"
+        , "customDates": ["23/04/2024", "28/04/2024", "01/05/2024", "12/05/2024"]
+        , "metroStationTtl": 10080
+        , "metroHomeBannerImage": "ny_ic_chennai_metro_discount_banner"
+        , "metroBookingBannerImage": "ny_ic_chennai_metro_banner"
+        , "bookingStartTime": "04:30:00"
+        , "bookingEndTime": "22:30:00"
+        , "ticketLimit": {
+          "roundTrip": 6
+          , "oneWay": 6
+        }
+      }
+    ]
+    , "estimateAndQuoteConfig":
+    {
+      "variantTypes": [["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"], ["DELIVERY_BIKE"], ["EV_AUTO_RICKSHAW"]]
+      , "variantOrder": ["AUTO_RICKSHAW", "BOOK_ANY"]
+      , "variantInfo": {
+        "hatchback": {
+          "name": "Hatchback",
+          "image": "ic_hatchback_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_hatchback_ac.png",
+          "leftViewImage": "ny_ic_hatchback_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_hatchback_left_view.png"
+        },
+        "taxiPlus": {
+          "name": "AC Taxi",
+          "image": "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png",
+          "leftViewImage": "ny_ic_sedan_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_sedan_left_view.png"
+        },
+        "sedan": {
+          "name": "Sedan",
+          "image": "ny_ic_sedan_ac_new,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png",
+          "leftViewImage": "ny_ic_sedan_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_sedan_left_view.png"
+        },
+        "taxi": {
+          "name": "Non-AC Taxi",
+          "image": "ic_taxi,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_taxi.png",
+          "leftViewImage": "ny_ic_sedan_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_sedan_left_view.png"
+        },
+        "suv": {
+          "name": "SUV",
+          "image": "ic_suv_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_suv_ac.png",
+          "leftViewImage": "ny_ic_suv_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_suv_left_view.png"
+        },
+        "autoRickshaw": {
+          "name": "Auto Rickshaw",
+          "image": "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
+          "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
+        },
+        "evAutoRickshaw": {
+          "name": "EV Auto Rickshaw",
+          "image": "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
+          "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
+        },
+        "bookAny": {
+          "name": "Book Any",
+          "image": "ny_ic_cab_auto_green,https://assets.moving.tech/beckn/common/user/images/ny_ic_cab_auto_green.png",
+          "leftViewImage": ","
+        },
+        "bike": {
+          "name": "Bike",
+          "image": "ny_ic_bike_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_side.png",
+          "leftViewImage": "ny_ic_bike_left_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_left_side.png"
+        },
+        "suvPlus": {
+          "name": "XL Plus",
+          "image": "ny_ic_suv_plus_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_side.png",
+          "leftViewImage": "ny_ic_suv_plus_left_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_left_side.png"
+        },
+        "deliveryBike" : {
+            "name" : "2 Wheeler",
+            "image" : "ny_ic_bike_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_side.png",
+            "leftViewImage" : "ny_ic_bike_left_side,"
+          },
+          "ambulanceTaxi" : {
+            "name" : "Ambulance Taxi",
+            "image" : "ny_ic_ambulance_noac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_nooxy.png",
+            "leftViewImage" : "ny_ic_ambulance_noac_nooxy,"
+          },
+          "ambulanceTaxiOxy" : {
+            "name" : "Ambulance Taxi with Oxygen",
+            "image" : "ny_ic_ambulance_noac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_oxy.png",
+            "leftViewImage" : "ny_ic_ambulance_noac_oxy,"
+          },
+          "ambulanceAc" : {
+            "name" : "Ambulance AC",
+            "image" : "ny_ic_ambulance_ac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_nooxy.png",
+            "leftViewImage" : "ny_ic_ambulance_ac_nooxy,"
+          },
+          "ambulanceAcOxy" : {
+            "name" : "Ambulance AC with Oxygen",
+            "image" : "ny_ic_ambulance_ac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_oxy.png",
+            "leftViewImage" : "ny_ic_ambulance_ac_oxy,"
+          },
+          "ambulanceVentilator" : {
+            "name" : "Ambulance with Ventilator",
+            "image" : "ny_ic_ambulance_ventilator,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ventilator.png",
+            "leftViewImage" : "ny_ic_ambulance_ventilator,"
+          },
+          "heritageCab" : {
+            "name" : "Heritage Cab",
+            "image" : "ny_ic_heritage_cab_side,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_heritage_cab_side.png",
+            "leftViewImage" : "ny_ic_heritage_cab_left_side,https://assets.moving.tech/nammayatri/nammayatricommon/images/ny_ic_heritage_cab_left_side.png"
+          }
+      }
+      , "enableOnlyAuto": true
+      , "showNearByDrivers": false
+      , "enableBookingPreference": true
+      , "textColor": "#6D7280"
+      , "showInfoIcon": true
+    }
+    , "rideCompletedCardConfig": {
+      "topCard": {
+        "horizontalLineColor": "#454545"
+      }
+    }
+    , "feature": {
+      "enableSupport": false
+      , "enableSuggestions": true
+      , "enableEditPickupLocation": true
+      , "enableRepeatTripBackfilling": true
+      , "enableEditDestination": true
+    }
+    , "appData": {
+      "link": getAppLink(window.__OS)
+      , "supportMail": "support@bharattaxiapp.com"
+      , "name": "Bharat Taxi"
+      , "website": "https://www.bharattaxiapp.com/"
+    }
+    , "referral": {
+      "domain": "https://www.bharattaxiapp.com/"
+      , "customerAppId": "in.juspay.bharattaxiapp"
+    }
+  })
+}
 
 if (lowerCaseAppName.includes("odisha")) {
   window.getMerchantConfig = odishaYatriConfig;
 } else if (lowerCaseAppName.includes("mana")){
   window.getMerchantConfig = manaYatriConfig;
+} else if (lowerCaseAppName.includes("bharat")){
+  window.getMerchantConfig = bharatTaxiConfig;
 } else {
   window.getMerchantConfig = nammaYatriConfig;
 }
