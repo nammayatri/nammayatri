@@ -25,7 +25,7 @@ data AccessMatrixT f = AccessMatrixT
   { id :: B.C f Text,
     roleId :: B.C f Text,
     apiEntity :: B.C f Domain.ApiEntity,
-    userActionType :: B.C f Domain.UserActionTypeWrapper,
+    userActionType :: B.C f Text,
     userAccessType :: B.C f Domain.UserAccessType,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime

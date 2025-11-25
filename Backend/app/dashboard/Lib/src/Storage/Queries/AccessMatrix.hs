@@ -15,6 +15,7 @@
 
 module Storage.Queries.AccessMatrix where
 
+import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Functions
@@ -39,7 +40,7 @@ findByRoleIdAndEntityAndActionType roleId apiEntity userActionType =
     [ Se.And
         [ Se.Is BeamAM.roleId $ Se.Eq $ getId roleId,
           Se.Is BeamAM.apiEntity $ Se.Eq apiEntity,
-          Se.Is BeamAM.userActionType $ Se.Eq userActionType
+          Se.Is BeamAM.userActionType $ Se.Eq $ show userActionType
         ]
     ]
 
@@ -66,7 +67,7 @@ updateUserAccessType ::
 updateUserAccessType accessMatrixItemId userActionType userAccessType = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamAM.userActionType userActionType,
+    [ Se.Set BeamAM.userActionType $ show userActionType,
       Se.Set BeamAM.userAccessType userAccessType,
       Se.Set BeamAM.updatedAt now
     ]
@@ -74,11 +75,13 @@ updateUserAccessType accessMatrixItemId userActionType userAccessType = do
 
 instance FromTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
   fromTType' BeamAM.AccessMatrixT {..} = do
-    return $
-      Just
+    let parsedUserActionType = readMaybe (T.unpack userActionType) :: Maybe DMatrix.UserActionTypeWrapper
+    pure $
+      parsedUserActionType <&> \uat ->
         DMatrix.AccessMatrixItem
           { id = Id id,
             roleId = Id roleId,
+            userActionType = uat,
             ..
           }
 
@@ -87,5 +90,6 @@ instance ToTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
     BeamAM.AccessMatrixT
       { id = getId id,
         roleId = getId roleId,
+        userActionType = show userActionType,
         ..
       }
