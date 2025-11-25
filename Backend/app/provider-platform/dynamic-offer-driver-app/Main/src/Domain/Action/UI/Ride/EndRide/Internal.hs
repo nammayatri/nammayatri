@@ -796,7 +796,17 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
 
         plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing currentVehicleCategory
         fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
-        scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now
+        fork "Schedule driver fee calculation jobs" $ do
+          result <- withTryCatch "ScheduleDriverFeeCalculationJobs" $ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now
+          case result of
+            Left err -> do
+              logError $
+                "Failed to schedule driver fee calculation jobs: " <> show err
+                  <> " driverFeeId: "
+                  <> show driverFee.id.getId
+                  <> " driverId: "
+                  <> show driverFee.driverId.getId
+            Right _ -> pure ()
     mkVendorFee driverFeeId now vendorAmount = DVF.VendorFee {amount = HighPrecMoney (snd vendorAmount), driverFeeId = driverFeeId, vendorId = fst vendorAmount, createdAt = now, updatedAt = now}
     isEligibleForCharge transporterConfig isOnFreeTrial isSpecialZoneCharge = do
       let notOnFreeTrial = not isOnFreeTrial
@@ -843,7 +853,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
       let driverFeeToCreate = driverFee{siblingFeeId = elderSiblingId}
       QDF.create driverFeeToCreate
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> UTCTime -> m ()
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, Log m) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> UTCTime -> m ()
 scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now = do
   void $
     case transporterConfig.driverFeeCalculationTime of
