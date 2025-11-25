@@ -68,6 +68,8 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverDashboardFleetTripWaypoints,
     postDriverDashboardFleetEstimateRoute,
     postDriverFleetTripTransactionsV2,
+    postDriverFleetDriverUpdate,
+    postDriverFleetApproveDriver,
   )
 where
 
@@ -595,3 +597,19 @@ postDriverFleetTripTransactionsV2 merchantShortId opCity apiTokenInfo mbFrom mbT
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let memberPersonId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetTripTransactionsV2) mbFrom mbTo mbVehicleNumber fleetOwnerId (Just memberPersonId) mbStatus mbDriverId mbDutyType limit offset
+
+postDriverFleetApproveDriver :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.ApproveDriverReq -> Environment.Flow APISuccess)
+postDriverFleetApproveDriver merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req.driverId) (Just req)
+  T.withTransactionStoring transaction $ do
+    fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
+    Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetApproveDriver) fleetOwnerId req
+
+postDriverFleetDriverUpdate :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.Driver -> Common.UpdateDriverReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverFleetDriverUpdate merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
+  T.withTransactionStoring transaction $ do
+    fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
+    Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetDriverUpdate) driverId fleetOwnerId req

@@ -1112,3 +1112,12 @@ getDriverFleetRcs (mbDriverId, _, merchantOpCityId) limit offset = do
             isFleetRC = isJust rc.fleetOwnerId
           }
     effectiveLimit = Just $ min 10 (fromMaybe 10 limit)
+
+postDriverLinkToFleet ::
+  (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
+  APITypes.LinkToFleetReq ->
+  Flow APISuccess
+postDriverLinkToFleet (mbDriverId, _, _) req = do
+  driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
+  FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False
+  pure Success

@@ -1189,6 +1189,44 @@ apis:
               type: EstimateRouteReq
             response:
               type: GetRoutesResp
+  - POST: # ApproveDriverAPI
+      endpoint: /fleet/approveDriver
+      auth: ApiAuthV2
+      request:
+        type: ApproveDriverReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/approveDriver/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: ApproveDriverReq
+            response:
+              type: APISuccess
+
+  - POST: # UpdateDriverAPI
+      endpoint: /fleet/driver/{driverId}/update
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdateDriverReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/driver/{driverId}/update/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              fleetOwnerId: Text
+            request:
+              type: UpdateDriverReq
+            response:
+              type: APISuccess
   - POST:
       endpoint: /fleet/trip/transactions/v2
       auth: ApiAuthV2
@@ -1214,6 +1252,15 @@ types:
   EstimateRouteReq:
     - start: LatLong
     - end: LatLong
+  ApproveDriverReq:
+    - driverId: Id Driver
+    - derive: "'HideSecrets"
+  UpdateDriverReq:
+    - firstName: Maybe Text
+    - lastName: Maybe Text
+    - dob: Maybe Day
+    - email: Maybe Text
+    - derive: "'HideSecrets"
   NearbyDriverReq:
     - point: LatLong
     - radius: Int

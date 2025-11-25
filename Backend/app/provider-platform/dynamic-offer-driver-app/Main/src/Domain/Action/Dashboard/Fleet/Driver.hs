@@ -68,6 +68,8 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverDashboardFleetTripWaypoints,
     postDriverDashboardFleetEstimateRoute,
     postDriverFleetTripTransactionsV2,
+    postDriverFleetApproveDriver,
+    postDriverFleetDriverUpdate,
   )
 where
 
@@ -85,7 +87,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
-import Data.Time ()
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
@@ -154,6 +155,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.FleetBadgeAssociation as CFBA
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Clickhouse.FleetOperatorDailyStats as CFODS
 import qualified Storage.Clickhouse.Ride as CQRide
@@ -2447,7 +2449,6 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
       unless (fleetOwner.role == DP.FLEET_OWNER) $
         throwError (InvalidRequest "Invalid fleet owner")
-      DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
       process (processDriverByFleetOwner merchant merchantOpCity fleetOwner)
     Just requestorId -> do
       requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
@@ -3218,3 +3219,67 @@ postDriverFleetTripTransactionsV2 merchantShortId opCity mbFrom mbTo mbVehicleNu
       Common.COMPLETED -> COMPLETED
       Common.CANCELLED -> CANCELLED
       Common.UPCOMING -> UPCOMING
+
+postDriverFleetApproveDriver ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.ApproveDriverReq ->
+  Flow APISuccess
+postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let driverId = cast req.driverId
+  QFDV.approveFleetDriverAssociation driverId (Id fleetOwnerId)
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  Analytics.handleDriverAnalyticsAndFlowStatus
+    transporterConfig
+    driverId
+    Nothing
+    ( \driverInfo -> do
+        Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetOwnerId) driverId
+        mbOperator <- FOV.findByFleetOwnerId fleetOwnerId True
+        when (isNothing mbOperator) $ logTagError "AnalyticsApproveDriver" "Operator not found for fleet owner"
+        whenJust mbOperator $ \operator -> do
+          when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
+          Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
+    )
+    ( \driverInfo -> do
+        DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
+    )
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "FLEET_REQUEST_APPROVED" Nothing Nothing driver.language Nothing
+  whenJust mbMerchantPN $ \merchantPN -> do
+    let notification =
+          Notification.NotifReq
+            { title = "Fleet Request Approved",
+              message = "Congratulations, your request to join the fleet has been approved.",
+              entityId = driverId.getId
+            }
+    Notification.notifyDriverOnEvents merchantOpCityId driverId driver.deviceToken notification merchantPN.fcmNotificationType
+  pure Success
+
+postDriverFleetDriverUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Driver ->
+  Text ->
+  Common.UpdateDriverReq ->
+  Flow APISuccess
+postDriverFleetDriverUpdate merchantShortId opCity driverId fleetOwnerId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  _ <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  validateFleetDriverAssociation fleetOwnerId driver
+  when (isJust req.firstName || isJust req.lastName || isJust req.email) $ do
+    let updDriver =
+          driver
+            { DP.firstName = fromMaybe driver.firstName req.firstName,
+              DP.lastName = req.lastName,
+              DP.email = req.email
+            }
+    QPerson.updatePersonDetails updDriver
+  for_ req.dob $ \dob ->
+    QDriverInfo.updateDob personId (Just (UTCTime dob 0))
+  pure Success
