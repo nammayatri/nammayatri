@@ -1065,6 +1065,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
   let hasNonBusMode = any (\x -> x `elem` [DTrip.Subway, DTrip.Metro]) journeyModes
   let totalTicketQuantity = maybe 0 (.totalQuantity) mbFareParameters
   let shouldCheckPass = isCurrentLegBus && totalTicketQuantity == 1 && hasNonBusMode
+  imeiNumber <- decrypt `mapM` person.imeiNumber
   userPasses <-
     if shouldCheckPass
       then
@@ -1079,7 +1080,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         shouldCheckPass
           && any
             ( \p ->
-                maybe False (`elem` DPurchasedPass.applicableVehicleServiceTiers p) serviceTierType
+                (maybe False (`elem` DPurchasedPass.applicableVehicleServiceTiers p) serviceTierType && (shouldMatchDeviceId p imeiNumber))
             )
             userPasses
   let bookingAllowedForVehicleType =
@@ -1135,6 +1136,12 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         hasApplicablePasses = Just hasApplicablePass
       }
   where
+    shouldMatchDeviceId :: DPurchasedPass.PurchasedPass -> Maybe Text -> Bool
+    shouldMatchDeviceId purchasedPass' mbImeiNumber = do
+      case mbImeiNumber of
+        Nothing -> True
+        Just imeiNo -> purchasedPass'.deviceId == imeiNo
+
     mkLegExtraInfo mbQuote mbFareParameters quoteCategories categories journeyLegInfo' = do
       case vehicleType of
         Spec.METRO -> do
