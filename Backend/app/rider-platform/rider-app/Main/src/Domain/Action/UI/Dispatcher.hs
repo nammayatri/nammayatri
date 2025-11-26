@@ -102,7 +102,7 @@ postDispatcherUpdateFleetSchedule (mbPersonId, _merchantId) req = do
           }
   QDH.create dispatcherHistory
   -- adding fleet override info in redis for waybill.
-  Redis.setExp (fleetOverrideKey req.updatedFleetId) (req.sourceFleetId, sourceFleetInfo.waybill_no & fromMaybe "") 2400
+  Redis.setExp (fleetOverrideKey req.updatedFleetId) (req.sourceFleetId, sourceFleetInfo.waybill_no & fromMaybe "") 86400
   pure $ Kernel.Types.APISuccess.Success
 
 getFleetOverrideInfo :: (MonadFlow m, Redis.HedisFlow m r) => Text -> m (Maybe (Text, Text))
