@@ -31,6 +31,7 @@ data TransporterConfigT f = TransporterConfigT
     allowDuplicateAadhaar :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowDuplicateGst :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowDuplicatePan :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    allowRcUnlinkWhenDriverOffline :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowedReferralEntities :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     analyticsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     approxRideDistanceDiffThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,

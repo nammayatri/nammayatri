@@ -1113,6 +1113,7 @@ TransporterConfig:
     enableFareCalculatorV2: Maybe Bool
     enableVendorCheckForCollectingDues: Maybe Bool
     enableMobileNumberValidation: Maybe Bool
+    allowRcUnlinkWhenDriverOffline: Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1544,6 +1545,7 @@ TransporterConfig:
     analyticsConfig: '''{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "enableFleetOperatorDashboardAnalytics": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}'' :: json'
     subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}'' :: json'
     enableMobileNumberValidation: "false"
+    allowRcUnlinkWhenDriverOffline: "false"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
