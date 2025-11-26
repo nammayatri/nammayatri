@@ -74,6 +74,7 @@ dependencies:
   - containers
   - cryptonite
   - data-default-class
+  - directory
   - double-conversion
   - exceptions
   - euler-hs

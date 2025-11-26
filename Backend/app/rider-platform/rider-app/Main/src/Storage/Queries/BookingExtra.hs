@@ -371,3 +371,22 @@ fetchRidesCount personId = do
             do
               B.all_ (BeamCommon.booking BeamCommon.atlasDB)
   pure $ either (const Nothing) (\r -> if null r then Nothing else Just (head r)) res
+
+-- | Find bookings for invoice generation with optional filters
+-- Note: Filtering by ride types and billing categories is done in Haskell after fetching
+-- Only completed bookings are included in invoices
+findBookingsForInvoice ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  UTCTime ->
+  UTCTime ->
+  m [Booking]
+findBookingsForInvoice personId startDate endDate = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamB.riderId $ Se.Eq (getId personId),
+          Se.Is BeamB.status $ Se.Eq COMPLETED,
+          Se.Is BeamB.createdAt $ Se.GreaterThanOrEq startDate,
+          Se.Is BeamB.createdAt $ Se.LessThanOrEq endDate
+        ]
+    ]
