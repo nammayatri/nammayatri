@@ -15,6 +15,7 @@
 
 module Domain.Action.UI.Feedback
   ( FeedbackReq (..),
+    FeedbackAnswer (..),
     FeedbackRes (..),
     DriverProfileResponse (..),
     feedback,
@@ -32,6 +33,7 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 import qualified Domain.Types.Booking as DBooking
+import Domain.Types.FeedbackForm (BadgeDetail (..), FeedbackForm)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -45,6 +47,7 @@ import qualified EulerHS.Language as L
 import qualified IssueManagement.Common as IC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -54,6 +57,7 @@ import SharedLogic.Person as SLP
 import qualified SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
 import qualified Slack.AWS.Flow as Slack
 import Storage.Beam.IssueManagement ()
+import qualified Storage.CachedQueries.FeedbackForm as CQFF
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
@@ -66,6 +70,12 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Ticket as Ticket
 
+data FeedbackAnswer = FeedbackAnswer
+  { questionId :: Text,
+    answer :: [Text]
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
 data FeedbackReq = FeedbackReq
   { rideId :: Id DRide.Ride,
     rating :: Int,
@@ -73,7 +83,8 @@ data FeedbackReq = FeedbackReq
     wasRideSafe :: Maybe Bool,
     shouldFavDriver :: Maybe Bool,
     wasOfferedAssistance :: Maybe Bool,
-    mbAudio :: Maybe Text
+    mbAudio :: Maybe Text,
+    feedbackAnswers :: Maybe [FeedbackAnswer] -- Question-based feedback with badge keys
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -94,7 +105,8 @@ data FeedbackRes = FeedbackRes
     riderPhoneNum :: Maybe Text,
     isValueAddNP :: Bool,
     filePath :: Maybe Text,
-    riderName :: Text
+    riderName :: Text,
+    badgeMetadata :: Maybe [CallBPPInternal.BadgeMetadata]
   }
 
 data DriverProfileResponse = DriverProfileResponse
@@ -114,6 +126,11 @@ feedback request personId = do
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+  badgeMetadata <- case request.feedbackAnswers of
+    Just feedbackAnswers
+      | not (null feedbackAnswers) ->
+        Just <$> extractBadgeMetadata ratingValue feedbackAnswers
+    _ -> pure Nothing
   filePath <- case request.mbAudio of
     Just audio -> do
       let fileType = S3.Audio
@@ -158,6 +175,7 @@ feedback request personId = do
         shouldFavDriver = request.shouldFavDriver,
         riderPhoneNum = unencryptedMobileNumber,
         riderName = fromMaybe "User" person.firstName,
+        badgeMetadata = badgeMetadata,
         ..
       }
   where
@@ -284,3 +302,41 @@ audioFeedbackUpload (_personId, merchantId) audio filePath = do
   where
     getFileSize :: Text -> Int
     getFileSize = B.length . TE.encodeUtf8
+
+extractBadgeMetadata :: Int -> [FeedbackAnswer] -> App.Flow [CallBPPInternal.BadgeMetadata]
+extractBadgeMetadata rating feedbackAnswers = do
+  feedbackForms <- CQFF.findAllFeedbackByRating rating
+  let badgeMetadataList = concatMap (extractFromAnswerKeys feedbackForms) feedbackAnswers
+  pure badgeMetadataList
+
+extractFromAnswerKeys :: [FeedbackForm] -> FeedbackAnswer -> [CallBPPInternal.BadgeMetadata]
+extractFromAnswerKeys feedbackForms (FeedbackAnswer questionId badgeKeys) =
+  case find (\ff -> ff.id.getId == questionId) feedbackForms of
+    Nothing -> []
+    Just ff ->
+      case ff.badges of
+        Nothing -> []
+        Just badgeDetails ->
+          mapMaybe (findByBadgeKey badgeKeys) badgeDetails
+
+findByBadgeKey :: [Text] -> BadgeDetail -> Maybe CallBPPInternal.BadgeMetadata
+findByBadgeKey selectedBadgeKeys badgeDetail =
+  if badgeDetail.key `elem` selectedBadgeKeys
+    then
+      Just $
+        CallBPPInternal.BadgeMetadata
+          { badgeKey = badgeDetail.key,
+            sendPN = badgeDetail.sendPN,
+            priority = badgeDetail.priority,
+            badgeText = extractEnglishTranslation badgeDetail.contentWithTranslations badgeDetail.key
+          }
+    else Nothing
+
+extractEnglishTranslation :: Maybe [IC.Translation] -> Text -> Text
+extractEnglishTranslation mbTranslations fallbackKey =
+  case mbTranslations of
+    Nothing -> fallbackKey
+    Just translations ->
+      case find (\t -> t.language == ENGLISH) translations of
+        Just t -> IC.translation t
+        Nothing -> fallbackKey

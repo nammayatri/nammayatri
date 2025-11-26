@@ -222,6 +222,13 @@ data IssueBreachEntityData = IssueBreachEntityData
   }
   deriving (Generic, ToJSON, Eq, FromJSON, Show)
 
+data FeedbackBadgeEntityData = FeedbackBadgeEntityData
+  { badgeKey :: Maybe Text,
+    rating :: Int,
+    badgeCount :: Maybe Int
+  }
+  deriving (Generic, ToJSON, Eq, FromJSON, Show)
+
 notifySoftBlocked :: (CacheFlow m r, EsqDBFlow m r) => Person -> IssueBreachEntityData -> m ()
 notifySoftBlocked person entity = do
   dynamicFCMNotifyPerson
@@ -238,6 +245,26 @@ notifySoftBlocked person entity = do
     Nothing
   where
     blockedSTiers = T.intercalate ", " $ map show entity.blockedSTiers
+
+sendFeedbackBadgeNotification ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  FeedbackBadgeEntityData ->
+  m ()
+sendFeedbackBadgeNotification merchantOpCityId driver entityData = do
+  dynamicFCMNotifyPerson
+    merchantOpCityId
+    driver.id
+    driver.deviceToken
+    (fromMaybe ENGLISH driver.language)
+    Nothing
+    (createFCMReq "FEEDBACK_BADGE_PN" driver.id.getId FCM.Person identity)
+    (Just entityData)
+    [ ("rating", show entityData.rating),
+      ("badgeCount", maybe "0" show entityData.badgeCount)
+    ]
+    Nothing
 
 -- NEW_RIDE_AVAILABLE
 -- title = FCMNotificationTitle "New ride available for offering"

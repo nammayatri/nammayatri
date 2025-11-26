@@ -318,7 +318,6 @@ library
       Domain.Types.Extra.DriverFee
       Domain.Types.Extra.DriverHomeLocation
       Domain.Types.Extra.DriverPlan
-      Domain.Types.Extra.Feedback
       Domain.Types.Extra.Location
       Domain.Types.Extra.MerchantClientConfig
       Domain.Types.Extra.MerchantMessage
@@ -378,6 +377,7 @@ library
       SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver
+      SharedLogic.Allocator.Jobs.SendFeedbackPN
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
@@ -473,8 +473,6 @@ library
       Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
-      Storage.Beam.Feedback.FeedbackBadge
-      Storage.Beam.Feedback.FeedbackForm
       Storage.Beam.Geometry
       Storage.Beam.Geometry.Geometry
       Storage.Beam.Geometry.GeometryGeom
@@ -625,8 +623,7 @@ library
       Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Queries.FareProductExtra
-      Storage.Queries.Feedback.FeedbackBadge
-      Storage.Queries.Feedback.FeedbackForm
+      Storage.Queries.FeedbackBadgeExtra
       Storage.Queries.FeedbackExtra
       Storage.Queries.FleetBadgeAssociationExtra
       Storage.Queries.FleetBadgeExtra
@@ -936,6 +933,7 @@ library
       Domain.Types.Exophone
       Domain.Types.FareProduct
       Domain.Types.Feedback
+      Domain.Types.FeedbackBadge
       Domain.Types.FleetBadge
       Domain.Types.FleetBadgeAssociation
       Domain.Types.FleetBookingAssignments
@@ -1092,6 +1090,7 @@ library
       Storage.Beam.Exophone
       Storage.Beam.FareProduct
       Storage.Beam.Feedback
+      Storage.Beam.FeedbackBadge
       Storage.Beam.FleetBadge
       Storage.Beam.FleetBadgeAssociation
       Storage.Beam.FleetBookingAssignments
@@ -1252,6 +1251,7 @@ library
       Storage.Queries.Exophone
       Storage.Queries.FareProduct
       Storage.Queries.Feedback
+      Storage.Queries.FeedbackBadge
       Storage.Queries.FleetBadge
       Storage.Queries.FleetBadgeAssociation
       Storage.Queries.FleetBookingAssignments
@@ -1334,6 +1334,7 @@ library
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareProduct
       Storage.Queries.OrphanInstances.Feedback
+      Storage.Queries.OrphanInstances.FeedbackBadge
       Storage.Queries.OrphanInstances.FleetBadge
       Storage.Queries.OrphanInstances.FleetBadgeAssociation
       Storage.Queries.OrphanInstances.FleetBookingAssignments

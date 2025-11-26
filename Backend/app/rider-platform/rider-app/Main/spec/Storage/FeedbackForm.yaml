@@ -1,28 +1,14 @@
 imports:
   Ride: Domain.Types.Ride
+  Translation: IssueManagement.Common
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Value: Data.Aeson
 
 FeedbackForm:
   tableName: feedback_form
 
   types:
-    FeedbackFormReq:
-      rideId: Id Ride
-      feedback: "[FeedbackAnswer]"
-
-    FeedbackAnswer:
-      questionId: Text
-      answer: "[Text]"
-
-    FeedbackFormList:
-      recordType: NewType
-      _data: "[FeedbackFormAPIEntity]"
-      derive: Eq
-
-    FeedbackFormAPIEntity:
-      categoryName: Category
-      feedbackForm: "[FeedbackFormItem]"
-      derive: Eq
-
     Category:
       enum: "RIDE,DRIVER,VEHICLE"
 
@@ -30,12 +16,49 @@ FeedbackForm:
       id: Id FeedbackFormItem
       rating: Maybe Int
       question: Text
+      questionTranslations: Maybe [Translation]
       answer: '[Text]'
       answerType: AnswerType
+      badges: Maybe [BadgeDetail]
+      derive: Eq
+
+    BadgeDetail:
+      sendPN: Bool
+      key: Text
+      priority: Maybe Int
+      contentWithTranslations: Maybe [Translation]
       derive: Eq
 
     AnswerType:
       enum: "Text,Checkbox,Radio"
+
+    # API Types for feedback form submission
+    FeedbackFormReq:
+      rideId: Id Ride
+      feedback: Maybe [FeedbackAnswer]
+
+    FeedbackAnswer:
+      questionId: Text
+      answer: '[Text]'
+
+    # API Types for feedback form response
+    FeedbackFormList:
+      recordType: NewType
+      _data: '[FeedbackFormAPIEntity]'
+
+    FeedbackFormAPIEntity:
+      rating: Maybe Int
+      questions: '[FeedbackQuestion]'
+
+    FeedbackQuestion:
+      questionId: Text
+      question: Text
+      questionTranslations: Maybe [Translation]
+      badges: '[BadgeItem]'
+
+    BadgeItem:
+      key: Text
+      translations: Maybe [Translation]
 
   derives: Generic,Show,FromJSON,ToJSON,ToSchema,Eq
   fields:
@@ -43,8 +66,14 @@ FeedbackForm:
     id: Id FeedbackFormItem
     rating: Maybe Int
     question: Text
+    questionTranslations: Maybe [Translation]
     answer: '[Text]'
     answerType: AnswerType
+    badges: Maybe [BadgeDetail]
+
+  beamType:
+    questionTranslations: Maybe Value
+    badges: Maybe Value
 
   sqlType:
     categoryName: character varying(255)
@@ -52,12 +81,33 @@ FeedbackForm:
     question: character varying(255)
     answer: text[]
     answerType: character varying(255)
+    merchantOperatingCityId: character varying(36)
+    merchantId: character varying(36)
+    questionTranslations: json
+    badges: jsonb
+
+  toTType:
+    questionTranslations: Data.Aeson.toJSON <$> questionTranslations|E
+    badges: Data.Aeson.toJSON <$> badges|E
+
+  fromTType:
+    questionTranslations: Kernel.Utils.JSON.valueToMaybe =<< questionTranslations|E
+    badges: Kernel.Utils.JSON.valueToMaybe =<< badges|E
 
   excludedFields:
-    - merchantId
-    - merchantOperatingCityId
     - createdAt
     - updatedAt
+
+  queries:
+    findAllFeedbackByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+    findAllFeedbackByMerchantOpCityIdAndRating:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, rating]
+
   cachedQueries:
     findAllFeedback:
       keyParams: []
@@ -68,6 +118,20 @@ FeedbackForm:
       dbQuery: findAllFeedbackByRating
       dbQueryParams:
         - rating: Int
+    findAllFeedbackByMerchantOpCityId:
+      keyParams:
+        - merchantOperatingCityId: Id MerchantOperatingCity
+      dbQuery: findAllFeedbackByMerchantOpCityId
+      dbQueryParams:
+        - (Kernel.Prelude.Just merchantOperatingCityId)|CIM
+    findAllFeedbackByMerchantOpCityIdAndRating:
+      keyParams:
+        - merchantOperatingCityId: Id MerchantOperatingCity
+        - rating: Int
+      dbQuery: findAllFeedbackByMerchantOpCityIdAndRating
+      dbQueryParams:
+        - (Kernel.Prelude.Just merchantOperatingCityId)|CIM
+        - (Kernel.Prelude.Just rating)|CIM
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE

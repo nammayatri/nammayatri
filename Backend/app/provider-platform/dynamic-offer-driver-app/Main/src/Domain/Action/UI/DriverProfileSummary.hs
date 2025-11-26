@@ -15,7 +15,7 @@ module Domain.Action.UI.DriverProfileSummary where
 
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.DriverInformation as DriverInfo
-import Domain.Types.Feedback (FeedbackBadge)
+import Domain.Types.FeedbackBadge (FeedbackBadge)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
@@ -39,7 +39,7 @@ import Storage.Queries.DriverStats
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as FPPDQ
-import qualified Storage.Queries.Feedback.FeedbackBadge as QFB
+import qualified Storage.Queries.FeedbackBadge as QFB
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Rating as QRating
@@ -111,7 +111,7 @@ getDriverProfileSummary (driverId, _, mocId) fleetInfo = do
         setMissedEarnings (cast person.id) missedEarnings
         QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
       else QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
-  feedbackBadgeList <- B.runInReplica $ QFB.findAllFeedbackBadgeForDriver person.id
+  feedbackBadgeList <- B.runInReplica $ QFB.findByDriverId person.id
   totalUsersRated <- B.runInReplica $ QRating.findAllRatingUsersCountByPerson driverId
 
   let driverSummary =
