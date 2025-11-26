@@ -733,7 +733,7 @@ types:
   VehicleClassCheckType:
     - enum: "Infix, Prefix, Suffix"
   DocumentType:
-    - enum: "RC, DL, Permissions, SubscriptionPlan, ProfilePhoto, AadhaarCard, PanCard, VehiclePermit, VehicleFitnessCertificate, VehicleInsurance, VehiclePUC, ProfileDetails, SocialSecurityNumber, VehicleInspectionForm, UploadProfile, GSTCertificate, BackgroundVerification, VehicleFront, VehicleBack, VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, VehicleNOC, BusinessLicense, Odometer, InspectionHub, KIWADriverCard, KIWATaxiPermit, KvKChamberOfCommerceRegistration, TAXDetails, BankingDetails, VehicleDetails, SchipolAirportAgreement, SchipolSmartcardProof, TXQualityMark, TaxiDriverPermit, TaxiTransportLicense, FinnishIDResidencePermit, BusinessRegistrationExtract"
+    - enum: "RC, DL, Permissions, SubscriptionPlan, ProfilePhoto, AadhaarCard, PanCard, VehiclePermit, VehicleFitnessCertificate, VehicleInsurance, VehiclePUC, ProfileDetails, SocialSecurityNumber, VehicleInspectionForm, UploadProfile, GSTCertificate, BackgroundVerification, VehicleFront, VehicleBack, VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, VehicleNOC, BusinessLicense, Odometer, InspectionHub, KIWADriverCard, KIWATaxiPermit, KvKChamberOfCommerceRegistration, TAXDetails, BankingDetails, VehicleDetails, SchipolAirportAgreement, SchipolSmartcardProof, TXQualityMark, TaxiDriverPermit, TaxiTransportLicense, FinnishIDResidencePermit, BusinessRegistrationExtract,PersonalId"
     - derive: "HttpInstance"
   DocumentVerificationConfigUpdateReq:
     - checkExtraction: Maybe (MandatoryValue Bool)

@@ -705,3 +705,4 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.TaxiTransportLicense -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.TaxiTransportLicense
   Domain.Types.DocumentVerificationConfig.FinnishIDResidencePermit -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.FinnishIDResidencePermit
   Domain.Types.DocumentVerificationConfig.BusinessRegistrationExtract -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BusinessRegistrationExtract
+  Domain.Types.DocumentVerificationConfig.PersonalId -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PersonalId
