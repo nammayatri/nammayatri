@@ -108,6 +108,7 @@ library
     , data-default-class
     , deriving-aeson
     , dhall
+    , directory
     , double-conversion
     , either
     , esqueleto
