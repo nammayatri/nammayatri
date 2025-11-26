@@ -65,6 +65,11 @@ types:
     paymentOrder: Maybe CreateOrderResp
     derive: "Show"
 
+  PassSelectReq:
+    startDate: Day
+    imeiNumber: Text
+    profilePicture: Text
+
   PassSwitchDeviceIdReq:
     deviceId: Maybe Text
     imeiNumber: Maybe Text
@@ -121,6 +126,16 @@ apis:
         deviceId: Text
         imeiNumber: Text
         profilePicture: Text
+      response:
+        type: PassSelectionAPIEntity
+
+  - POST:
+      endpoint: /multimodal/pass/v2/{passId}/select
+      auth: TokenAuth
+      params:
+        passId: Id Pass
+      request:
+        type: PassSelectReq
       response:
         type: PassSelectionAPIEntity
 
