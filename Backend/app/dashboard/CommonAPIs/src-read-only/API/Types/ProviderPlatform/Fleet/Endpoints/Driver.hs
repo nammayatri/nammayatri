@@ -504,6 +504,9 @@ data FleetOwnerInfoRes = FleetOwnerInfoRes
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registeredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     businessLicenseNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    stripeAddress :: Kernel.Prelude.Maybe Dashboard.Common.Driver.StripeAddress,
+    stripeIdNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
@@ -847,7 +850,10 @@ data UpdateFleetOwnerInfoReq = UpdateFleetOwnerInfoReq
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    email :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    stripeAddress :: Kernel.Prelude.Maybe Dashboard.Common.Driver.StripeAddress,
+    stripeIdNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

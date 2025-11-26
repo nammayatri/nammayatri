@@ -20,6 +20,7 @@ imports:
   FleetBadgeType: Domain.Types.FleetBadgeType
   Role: Dashboard.Common
   GetRoutesResp: Kernel.External.Maps
+  StripeAddress: Dashboard.Common.Driver
 module: Driver
 
 apis:
@@ -1601,6 +1602,9 @@ types:
     - mobileNo: Maybe Text
     - mobileCountryCode: Maybe Text
     - email: Maybe Text
+    - fleetDob: Maybe UTCTime
+    - stripeAddress: Maybe StripeAddress
+    - stripeIdNumber: Maybe Text
     - derive: "'HideSecrets"
   CreateDriversReq:
     - file: FilePath
@@ -1633,6 +1637,9 @@ types:
     - referralCode: Maybe Text
     - registeredAt: Maybe UTCTime
     - businessLicenseNumber: Maybe Text
+    - fleetDob: Maybe UTCTime
+    - stripeAddress: Maybe StripeAddress
+    - stripeIdNumber: Maybe Text
     - updatedAt: UTCTime
     - derive: "'HideSecrets"
   FleetConfig:

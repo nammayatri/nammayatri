@@ -1531,7 +1531,22 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
             DP.firstName = fromMaybe driver.firstName req.firstName,
             DP.lastName = req.lastName
           }
+  mbUpdFleetOwnerinfo <-
+    if (isJust req.stripeAddress || isJust req.stripeIdNumber || isJust req.fleetDob)
+      then do
+        fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
+        reqStripeIdNumber <- forM req.stripeIdNumber encrypt
+        let updFleetOwnerInfo =
+              fleetOwnerInfo
+                { DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
+                  DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
+                  DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob
+                }
+        pure $ Just updFleetOwnerInfo
+      else pure Nothing
+
   QPerson.updateFleetOwnerDetails personId updDriver
+  whenJust mbUpdFleetOwnerinfo FOI.updateStripeIdNumberAddressAndDob
   pure Success
 
 ---------------------------------------------------------------------
@@ -1585,6 +1600,9 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
             roleName = Just (show person.role),
             referredByOperatorId = Nothing,
             isEligibleForSubscription = Nothing,
+            fleetDob = Nothing,
+            stripeAddress = Nothing,
+            stripeIdNumber = Nothing,
             updatedAt = person.updatedAt
           }
     Just fleetOwnerInfo -> do
@@ -1614,6 +1632,7 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
       panNumber' <- decryptWithDefault panNumber panNumberDec
       aadhaarNumber' <- decryptWithDefault aadhaarNumber aadhaarNumberDec
       businessLicenseNumber' <- decryptWithDefault businessLicenseNumber businessLicenseNumberDec
+      stripeIdNumber' <- forM stripeIdNumber decrypt
       let name = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.middleName <> maybe "" (" " <>) fleetOwner.lastName
       mobileNo' <- mapM decrypt fleetOwner.mobileNumber
       return $
@@ -1624,6 +1643,7 @@ getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
             panNumber = panNumber',
             aadhaarNumber = aadhaarNumber',
             businessLicenseNumber = businessLicenseNumber',
+            stripeIdNumber = stripeIdNumber',
             approvedBy = Nothing,
             id = fleetOwnerPersonId.getId,
             name = Just name,

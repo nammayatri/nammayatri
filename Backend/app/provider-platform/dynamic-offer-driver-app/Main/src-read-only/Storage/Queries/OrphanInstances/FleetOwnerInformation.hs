@@ -7,9 +7,11 @@ import qualified Domain.Types.FleetOwnerInformation
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.FleetOwnerInformation as Beam
 import qualified Storage.Queries.Transformers.FleetOwnerInformation
 
@@ -27,6 +29,7 @@ instance FromTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformatio
             businessLicenseNumber = Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem businessLicenseNumberEncrypted businessLicenseNumberHash,
             businessLicenseNumberDec = businessLicenseNumber,
             enabled = enabled,
+            fleetDob = fleetDob,
             fleetOwnerPersonId = Kernel.Types.Id.Id fleetOwnerPersonId,
             fleetType = fleetType,
             gstImageId = gstImageId,
@@ -42,6 +45,8 @@ instance FromTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformatio
             prepaidSubscriptionBalance = prepaidSubscriptionBalance,
             referredByOperatorId = referredByOperatorId,
             registeredAt = registeredAt,
+            stripeAddress = stripeAddress >>= Kernel.Utils.JSON.valueToMaybe,
+            stripeIdNumber = Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem stripeIdNumberEncrypted stripeIdNumberHash,
             ticketPlaceId = ticketPlaceId,
             verified = verified,
             createdAt = createdAt,
@@ -62,6 +67,7 @@ instance ToTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformation.
         Beam.businessLicenseNumberHash = Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash businessLicenseNumber,
         Beam.businessLicenseNumber = Nothing,
         Beam.enabled = enabled,
+        Beam.fleetDob = fleetDob,
         Beam.fleetOwnerPersonId = Kernel.Types.Id.getId fleetOwnerPersonId,
         Beam.fleetType = fleetType,
         Beam.gstImageId = gstImageId,
@@ -79,6 +85,9 @@ instance ToTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformation.
         Beam.prepaidSubscriptionBalance = prepaidSubscriptionBalance,
         Beam.referredByOperatorId = referredByOperatorId,
         Beam.registeredAt = registeredAt,
+        Beam.stripeAddress = Kernel.Prelude.fmap toJSON stripeAddress,
+        Beam.stripeIdNumberEncrypted = Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted stripeIdNumber,
+        Beam.stripeIdNumberHash = Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash stripeIdNumber,
         Beam.ticketPlaceId = ticketPlaceId,
         Beam.verified = verified,
         Beam.createdAt = createdAt,

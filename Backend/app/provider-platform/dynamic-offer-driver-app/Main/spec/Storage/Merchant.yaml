@@ -47,7 +47,6 @@ imports:
   ServiceName: Domain.Types.Extra.MerchantServiceConfig
   GatewayAndRegistryService: Domain.Types
   Role: Domain.Types.Person
-  Version: Kernel.Types.Version
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
