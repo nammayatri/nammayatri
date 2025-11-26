@@ -93,3 +93,7 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN stripe_add
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN fleet_dob timestamp with time zone ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN stripe_id_number_hash text ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN stripe_id_number_encrypted text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN merchant_operating_city_id character varying(36) ;

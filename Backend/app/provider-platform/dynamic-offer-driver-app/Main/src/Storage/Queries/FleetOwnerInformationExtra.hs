@@ -1,6 +1,7 @@
 module Storage.Queries.FleetOwnerInformationExtra where
 
 import qualified Domain.Types.FleetOwnerInformation
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -13,6 +14,27 @@ import qualified Storage.Beam.FleetOwnerInformation as Beam
 import Storage.Queries.OrphanInstances.FleetOwnerInformation ()
 import qualified Storage.Queries.Transformers.FleetOwnerInformation
 import Tools.Encryption (encryptWithDefault)
+
+findFleetOwners ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Domain.Types.FleetOwnerInformation.FleetType ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Int ->
+  Maybe Int ->
+  m [Domain.Types.FleetOwnerInformation.FleetOwnerInformation]
+findFleetOwners merchantOperatingCityId mbFleetType mbOnlyEnabled mbBlocked limit offset =
+  findAllWithOptionsKV filteredList (Se.Desc Beam.createdAt) limit offset
+  where
+    enabledFleets =
+      [Se.Is Beam.enabled $ Se.Eq enabled | Just enabled <- [mbOnlyEnabled]]
+    combinedFilters =
+      [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just $ getId merchantOperatingCityId)]
+        <> [Se.Is Beam.fleetType $ Se.Eq fleetType | Just fleetType <- [mbFleetType]]
+        <> enabledFleets
+        <> [Se.Is Beam.blocked $ Se.Eq blocked | Just blocked <- [mbBlocked]]
+    filteredList = [Se.And combinedFilters | not (null combinedFilters)]
 
 findByPersonIdAndEnabledAndVerified ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

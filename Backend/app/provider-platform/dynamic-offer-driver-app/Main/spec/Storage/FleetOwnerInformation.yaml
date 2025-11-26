@@ -6,6 +6,7 @@ imports:
   DbHash: Kernel.External.Encryption
   Value: Data.Aeson
   Address: Kernel.External.Payment.Stripe.Types
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
 
 FleetOwnerInformation:
   tableName: fleet_owner_information
@@ -37,6 +38,7 @@ FleetOwnerInformation:
     prepaidSubscriptionBalance: Maybe HighPrecMoney
     lienAmount: Maybe HighPrecMoney
     planExpiryDate: Maybe UTCTime
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     fleetDob: Maybe UTCTime
     stripeAddress: Maybe Address
 
