@@ -50,6 +50,7 @@ PurchasedPass:
     status: StatusType
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    profilePicture: Maybe Text
 
   beamType:
     deviceSwitchCount: Maybe Int
@@ -94,6 +95,7 @@ PurchasedPassPayment:
     endDate: Day
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    profilePicture: Maybe Text
 
   constraints:
     id: PrimaryKey

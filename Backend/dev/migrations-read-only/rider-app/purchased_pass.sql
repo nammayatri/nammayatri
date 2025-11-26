@@ -37,3 +37,8 @@ ALTER TABLE atlas_app.purchased_pass ADD COLUMN pass_description text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN verification_validity integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass ADD COLUMN profile_picture text ;

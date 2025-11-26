@@ -40,11 +40,17 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Pass.Pass)
       :> "select"
       :> QueryParam
-           "startDate"
-           Data.Time.Day
-      :> MandatoryQueryParam
            "deviceId"
            Data.Text.Text
+      :> QueryParam
+           "imeiNumber"
+           Data.Text.Text
+      :> QueryParam
+           "profilePicture"
+           Data.Text.Text
+      :> QueryParam
+           "startDate"
+           Data.Time.Day
       :> Post
            '[JSON]
            API.Types.UI.Pass.PassSelectionAPIEntity
@@ -52,6 +58,12 @@ type API =
       :> "multimodal"
       :> "pass"
       :> "list"
+      :> QueryParam
+           "deviceId"
+           Data.Text.Text
+      :> QueryParam
+           "imeiNumber"
+           Data.Text.Text
       :> QueryParam
            "language"
            Kernel.External.Types.Language
@@ -64,9 +76,6 @@ type API =
       :> QueryParam
            "status"
            Domain.Types.PurchasedPass.StatusType
-      :> MandatoryQueryParam
-           "deviceId"
-           Data.Text.Text
       :> Get
            '[JSON]
            [API.Types.UI.Pass.PurchasedPassAPIEntity]
@@ -125,24 +134,27 @@ postMultimodalPassSelect ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Pass.Pass ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Data.Time.Day ->
-    Data.Text.Text ->
     Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity
   )
-postMultimodalPassSelect a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalPassSelect a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 getMultimodalPassList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Kernel.External.Types.Language ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Domain.Types.PurchasedPass.StatusType ->
-    Data.Text.Text ->
     Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassAPIEntity]
   )
-getMultimodalPassList a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.getMultimodalPassList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+getMultimodalPassList a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.getMultimodalPassList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
 
 postMultimodalPassVerify ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

@@ -66,7 +66,8 @@ types:
     derive: "Show"
 
   PassSwitchDeviceIdReq:
-    deviceId: Text
+    deviceId: Maybe Text
+    imeiNumber: Maybe Text
 
   PurchasedPassAPIEntity:
     id: Id PurchasedPass
@@ -81,6 +82,7 @@ types:
     expiryDate: Day
     deviceMismatch: Bool
     deviceSwitchAllowed: Bool
+    profilePicture: Maybe Text
     futureRenewals: [PurchasedPassTransactionAPIEntity]
     derive: "Show"
 
@@ -116,8 +118,9 @@ apis:
         passId: Id Pass
       query:
         startDate: Day
-      mandatoryQuery:
         deviceId: Text
+        imeiNumber: Text
+        profilePicture: Text
       response:
         type: PassSelectionAPIEntity
 
@@ -129,8 +132,8 @@ apis:
         limit: Int
         offset: Int
         language: Language
-      mandatoryQuery:
         deviceId: Text
+        imeiNumber: Text
       response:
         type: "[PurchasedPassAPIEntity]"
 
