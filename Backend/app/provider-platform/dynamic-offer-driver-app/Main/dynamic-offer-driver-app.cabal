@@ -249,6 +249,7 @@ library
       Domain.Action.UI.ExotelEndRide
       Domain.Action.UI.FareCalculator
       Domain.Action.UI.FleetDriverAssociation
+      Domain.Action.UI.FleetOwnerList
       Domain.Action.UI.Insurance
       Domain.Action.UI.Invoice
       Domain.Action.UI.KioskLocation
@@ -814,6 +815,7 @@ library
       API.Action.UI.DriverWallet
       API.Action.UI.EditBooking
       API.Action.UI.FareCalculator
+      API.Action.UI.FleetOwnerList
       API.Action.UI.Insurance
       API.Action.UI.Invoice
       API.Action.UI.LmsModule
@@ -869,6 +871,7 @@ library
       API.Types.UI.DriverWallet
       API.Types.UI.EditBooking
       API.Types.UI.FareCalculator
+      API.Types.UI.FleetOwnerList
       API.Types.UI.Insurance
       API.Types.UI.Invoice
       API.Types.UI.LmsModule

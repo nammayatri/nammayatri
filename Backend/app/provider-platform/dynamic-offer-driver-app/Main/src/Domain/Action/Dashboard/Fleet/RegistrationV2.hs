@@ -254,11 +254,11 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   void $ QP.create person
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
-  fork "creating fleet owner info" $ createFleetOwnerInfo person.id merchantId enabled
+  fork "creating fleet owner info" $ createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId)
   pure person
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Flow ()
-createFleetOwnerInfo personId merchantId enabled = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow ()
+createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId = do
   now <- getCurrentTime
   let fleetOwnerInfo =
         FOI.FleetOwnerInformation
@@ -292,7 +292,8 @@ createFleetOwnerInfo personId merchantId enabled = do
             prepaidSubscriptionBalance = Nothing,
             planExpiryDate = Nothing,
             fleetDob = Nothing,
-            stripeAddress = Nothing
+            stripeAddress = Nothing,
+            merchantOperatingCityId = mbMerchantOperatingCityId
           }
   QFOI.create fleetOwnerInfo
 

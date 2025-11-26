@@ -5,6 +5,7 @@ module Domain.Types.FleetOwnerInformation where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Stripe.Types
@@ -32,6 +33,7 @@ data FleetOwnerInformationE e = FleetOwnerInformation
     isEligibleForSubscription :: Kernel.Prelude.Bool,
     lienAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     panImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     panNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     panNumberDec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -80,6 +82,7 @@ instance EncryptedItem FleetOwnerInformation where
           isEligibleForSubscription = isEligibleForSubscription entity,
           lienAmount = lienAmount entity,
           merchantId = merchantId entity,
+          merchantOperatingCityId = merchantOperatingCityId entity,
           panImageId = panImageId entity,
           panNumber = panNumber_,
           panNumberDec = panNumberDec entity,
@@ -120,6 +123,7 @@ instance EncryptedItem FleetOwnerInformation where
             isEligibleForSubscription = isEligibleForSubscription entity,
             lienAmount = lienAmount entity,
             merchantId = merchantId entity,
+            merchantOperatingCityId = merchantOperatingCityId entity,
             panImageId = panImageId entity,
             panNumber = panNumber_,
             panNumberDec = panNumberDec entity,
