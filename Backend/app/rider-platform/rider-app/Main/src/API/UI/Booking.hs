@@ -22,6 +22,7 @@ module API.UI.Booking
 where
 
 import qualified Domain.Action.UI.Booking as DBooking
+import qualified Domain.Action.UI.InvoiceGeneration as DInvoice
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.Booking.API (BookingAPIEntity, BookingRequestType, BookingStatusAPIEntity)
 import qualified Domain.Types.BookingStatus as SRB
@@ -91,6 +92,10 @@ type API =
              :> "editStop"
              :> ReqBody '[JSON] DBooking.StopReq
              :> Post '[JSON] APISuccess
+           :<|> "generateInvoice"
+             :> TokenAuth
+             :> ReqBody '[JSON] DInvoice.GenerateInvoiceReq
+             :> Post '[JSON] DInvoice.GenerateInvoiceRes
        )
 
 handler :: FlowServer API
@@ -102,6 +107,7 @@ handler =
     :<|> favouriteBookingList
     :<|> addStop
     :<|> editStop
+    :<|> generateInvoice
 
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler BookingAPIEntity
 bookingStatus bookingId = withFlowHandlerAPI . DBooking.bookingStatus bookingId
@@ -123,3 +129,6 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DBooking.DriverNo -> FlowHandler DBooking.FavouriteBookingListRes
 favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId driver = withFlowHandlerAPI . DBooking.favouriteBookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbClientId driver
+
+generateInvoice :: (Id Person.Person, Id Merchant.Merchant) -> DInvoice.GenerateInvoiceReq -> FlowHandler DInvoice.GenerateInvoiceRes
+generateInvoice (personId, merchantId) req = withFlowHandlerAPI . withPersonIdLogTag personId $ DInvoice.generateInvoice (personId, merchantId) req
