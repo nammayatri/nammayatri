@@ -1,6 +1,7 @@
 module Domain.Action.UI.Pass
   ( getMultimodalPassAvailablePasses,
     postMultimodalPassSelect,
+    postMultimodalPassV2Select,
     getMultimodalPassList,
     postMultimodalPassVerify,
     passOrderStatusHandler,
@@ -318,6 +319,17 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId mbPr
 
     makeLastPassNumberKey :: Text
     makeLastPassNumberKey = "CachedQueries:Pass:NextPassNumber"
+
+postMultimodalPassV2Select ::
+  ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    Id.Id DPass.Pass ->
+    PassAPI.PassSelectReq ->
+    Environment.Flow PassAPI.PassSelectionAPIEntity
+  )
+postMultimodalPassV2Select (mbPersonId, merchantId) passId req =
+  postMultimodalPassSelect (mbPersonId, merchantId) passId Nothing (Just req.imeiNumber) (Just req.profilePicture) (Just req.startDate)
 
 -- Generate Redis lock key for pass purchase
 mkPassPurchaseLockKey :: Id.Id DP.Person -> Id.Id DPassType.PassType -> Text

@@ -50,6 +50,10 @@ data PassInfoAPIEntity = PassInfoAPIEntity {passCategory :: PassCategoryAPIEntit
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PassSelectReq = PassSelectReq {imeiNumber :: Data.Text.Text, profilePicture :: Data.Text.Text, startDate :: Data.Time.Day}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PassSelectionAPIEntity = PassSelectionAPIEntity
   { paymentOrder :: Data.Maybe.Maybe Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp,
     purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass
