@@ -25,6 +25,7 @@ data PurchasedPassPayment = PurchasedPassPayment
     passCode :: Kernel.Prelude.Text,
     passName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
     startDate :: Data.Time.Calendar.Day,
     status :: Domain.Types.PurchasedPass.StatusType,

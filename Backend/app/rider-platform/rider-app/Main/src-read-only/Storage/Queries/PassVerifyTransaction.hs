@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByPurchasePassId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m [Domain.Types.PassVerifyTransaction.PassVerifyTransaction])
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m ([Domain.Types.PassVerifyTransaction.PassVerifyTransaction]))
 findAllByPurchasePassId purchasePassId = do findAllWithKV [Se.Is Beam.purchasePassId $ Se.Eq (Kernel.Types.Id.getId purchasePassId)]
 
 findByPrimaryKey ::

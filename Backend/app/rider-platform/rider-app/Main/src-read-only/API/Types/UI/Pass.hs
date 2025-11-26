@@ -57,7 +57,7 @@ data PassSelectionAPIEntity = PassSelectionAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassSwitchDeviceIdReq = PassSwitchDeviceIdReq {deviceId :: Data.Text.Text}
+data PassSwitchDeviceIdReq = PassSwitchDeviceIdReq {deviceId :: Data.Maybe.Maybe Data.Text.Text, imeiNumber :: Data.Maybe.Maybe Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -85,6 +85,7 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
     lastVerifiedVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,
     passEntity :: PassDetailsAPIEntity,
     passNumber :: Data.Text.Text,
+    profilePicture :: Data.Maybe.Maybe Data.Text.Text,
     purchaseDate :: Data.Time.Day,
     startDate :: Data.Time.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
