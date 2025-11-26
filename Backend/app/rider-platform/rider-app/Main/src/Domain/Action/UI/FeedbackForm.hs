@@ -14,9 +14,9 @@
 
 module Domain.Action.UI.FeedbackForm where
 
-import Data.List (groupBy)
+import Data.List (groupBy, sortOn)
 import Domain.Types.FeedbackForm
-import Domain.Types.Person ()
+import qualified Domain.Types.Person as Person
 import Domain.Types.Ride ()
 import Environment
 import Kernel.Prelude
@@ -28,6 +28,7 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.FeedbackForm as CQFF
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 
 makeFeedbackFormList :: [FeedbackFormAPIEntity] -> FeedbackFormList
@@ -37,35 +38,52 @@ makeFeedbackFormList item =
     }
 
 makeFeedbackFormAPIEntity :: [FeedbackForm] -> [FeedbackFormAPIEntity]
-makeFeedbackFormAPIEntity response = map convertGroup groupedEntities
+makeFeedbackFormAPIEntity response = map convertRatingGroup ratingGroups
   where
-    groupedEntities = groupBy (\a b -> a.categoryName == b.categoryName) response
-    convertGroup :: [FeedbackForm] -> FeedbackFormAPIEntity
-    convertGroup [] = FeedbackFormAPIEntity {categoryName = RIDE, feedbackForm = []} -- should we throw error instead?
-    convertGroup group@(res : _) =
+    sortedResponse = sortOn (\f -> (f.rating, f.question)) response
+
+    ratingGroups = groupBy (\a b -> a.rating == b.rating) sortedResponse
+
+    convertRatingGroup :: [FeedbackForm] -> FeedbackFormAPIEntity
+    convertRatingGroup [] = FeedbackFormAPIEntity {rating = Nothing, questions = []}
+    convertRatingGroup group@(res : _) =
       FeedbackFormAPIEntity
-        { categoryName = res.categoryName,
-          feedbackForm = map convertResponse group
-        }
-    convertResponse :: FeedbackForm -> FeedbackFormItem
-    convertResponse res =
-      FeedbackFormItem
-        { id = res.id,
-          rating = res.rating,
-          question = res.question,
-          answer = res.answer,
-          answerType = res.answerType
+        { rating = res.rating,
+          questions = map convertQuestionGroup (groupBy (\a b -> a.question == b.question) group)
         }
 
-feedbackForm :: (CacheFlow m r, EsqDBFlow m r, HasCacheFeedbackFormConfig r) => Maybe Int -> m FeedbackFormList
-feedbackForm ratingValue =
-  do
-    case ratingValue of
-      Just rating -> do
-        formList <- CQFF.findAllFeedbackByRating rating
-        pure $ makeFeedbackFormList (makeFeedbackFormAPIEntity formList)
-      Nothing -> do
-        makeFeedbackFormList . makeFeedbackFormAPIEntity <$> CQFF.findAllFeedback
+    convertQuestionGroup :: [FeedbackForm] -> FeedbackQuestion
+    convertQuestionGroup [] = FeedbackQuestion {questionId = "", question = "", questionTranslations = Nothing, badges = []}
+    convertQuestionGroup group@(res : _) =
+      FeedbackQuestion
+        { questionId = res.id.getId,
+          question = res.question,
+          questionTranslations = res.questionTranslations,
+          badges = concatMap extractBadges group
+        }
+
+    extractBadges :: FeedbackForm -> [BadgeItem]
+    extractBadges form =
+      case form.badges of
+        Nothing -> []
+        Just badgeList -> map badgeToBadgeItem badgeList
+
+    badgeToBadgeItem :: BadgeDetail -> BadgeItem
+    badgeToBadgeItem badge =
+      BadgeItem
+        { key = badge.key,
+          translations = badge.contentWithTranslations
+        }
+
+feedbackForm :: (CacheFlow m r, EsqDBFlow m r, HasCacheFeedbackFormConfig r) => Id Person.Person -> Maybe Int -> m FeedbackFormList
+feedbackForm personId ratingValue = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  formList <- case ratingValue of
+    Just rating -> CQFF.findAllFeedbackByMerchantOpCityIdAndRating merchantOperatingCityId rating
+    Nothing -> CQFF.findAllFeedbackByMerchantOpCityId merchantOperatingCityId
+
+  pure $ makeFeedbackFormList (makeFeedbackFormAPIEntity formList)
 
 submitFeedback :: FeedbackFormReq -> Flow APISuccess
 submitFeedback req = do
@@ -73,4 +91,12 @@ submitFeedback req = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchant <- QMerchant.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  CallBPPInternal.feedbackForm merchant.driverOfferBaseUrl req {rideId = cast ride.bppRideId}
+  let bppReq =
+        CallBPPInternal.FeedbackFormReq
+          { rideId = ride.bppRideId.getId,
+            rating = Nothing,
+            feedbackDetails = Nothing,
+            badges = Nothing,
+            feedback = req.feedback
+          }
+  CallBPPInternal.feedbackForm merchant.driverOfferBaseUrl bppReq

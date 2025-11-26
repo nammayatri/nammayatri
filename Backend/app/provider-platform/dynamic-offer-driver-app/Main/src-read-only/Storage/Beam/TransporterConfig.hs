@@ -145,6 +145,7 @@ data TransporterConfigT f = TransporterConfigT
     fcmServiceAccount :: B.C f Kernel.Prelude.Text,
     fcmTokenKeyPrefix :: B.C f Kernel.Prelude.Text,
     fcmUrl :: B.C f Kernel.Prelude.Text,
+    feedbackNotificationConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     fleetAlertThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     freeTrialDays :: B.C f Kernel.Prelude.Int,
     generateReferralCodeForFleet :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

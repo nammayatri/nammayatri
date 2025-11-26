@@ -21,7 +21,7 @@ import Data.Text as T
 
 import Data.Time.Calendar (Day)
 import Domain.Types.Common
-import Domain.Types.FeedbackForm
+import qualified Domain.Types.FeedbackForm as DFF
 import Domain.Types.Merchant
 import qualified Domain.Types.RefereeLink as LibTypes
 import EulerHS.Types (EulerClient, client)
@@ -123,6 +123,23 @@ callCustomerFCM ::
 callCustomerFCM apiKey internalUrl bppRideId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callCustomerFCMClient bppRideId (Just apiKey)) "CallCustomerFCM" callCustomerFCMApi
+
+data FeedbackFormReq = FeedbackFormReq
+  { rideId :: Text,
+    rating :: Maybe Int,
+    feedbackDetails :: Maybe Text,
+    badges :: Maybe [BadgeMetadata],
+    feedback :: Maybe [DFF.FeedbackAnswer]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data BadgeMetadata = BadgeMetadata
+  { badgeKey :: Text,
+    sendPN :: Bool,
+    priority :: Maybe Int,
+    badgeText :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 type FeedbackFormAPI =
   "internal"
