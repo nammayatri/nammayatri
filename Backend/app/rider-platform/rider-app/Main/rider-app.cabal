@@ -240,6 +240,7 @@ library
       Domain.Action.UI.InsuranceInternal
       Domain.Action.UI.InterCityDetails
       Domain.Action.UI.Invoice
+      Domain.Action.UI.InvoiceGeneration
       Domain.Action.UI.Location
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
@@ -620,6 +621,7 @@ library
       Tools.Event
       Tools.HTTPManager
       Tools.Insurance
+      Tools.InvoicePDF
       Tools.JSON
       Tools.Maps
       Tools.Metrics
@@ -1365,6 +1367,7 @@ library
     , payment
     , persistent
     , postgresql-simple
+    , process
     , prometheus-client
     , prometheus-metrics-ghc
     , pureMD5
@@ -1503,6 +1506,7 @@ executable rider-app-exe
     , passetto-client
     , persistent
     , postgresql-simple
+    , process
     , prometheus-client
     , prometheus-metrics-ghc
     , pureMD5
@@ -1638,6 +1642,7 @@ test-suite rider-app-test
     , passetto-client
     , persistent
     , postgresql-simple
+    , process
     , prometheus-client
     , prometheus-metrics-ghc
     , pureMD5

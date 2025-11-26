@@ -111,6 +111,7 @@ dependencies:
   - sequelize
   - casing
   - postgresql-simple
+  - process
   - random
   - cassava
   - split
