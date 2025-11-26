@@ -423,10 +423,6 @@ postMerchantConfigOperatingCityWhiteList merchantShortId opCity apiTokenInfo req
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityWhiteList) req
 
-postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes
-postMerchantConfigMerchantCreate merchantShortId opCity apiTokenInfo req = do
-  processMerchantCreateRequest merchantShortId opCity apiTokenInfo True req
-
 processMerchantCreateRequest ::
   ShortId DM.Merchant ->
   City.City ->
@@ -466,3 +462,6 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           enabled = Just enableForMerchant,
           ..
         }
+
+postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes
+postMerchantConfigMerchantCreate merchantShortId opCity apiTokenInfo req = processMerchantCreateRequest merchantShortId opCity apiTokenInfo True req
