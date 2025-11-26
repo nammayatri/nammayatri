@@ -901,10 +901,35 @@ getDriverRegisterBankAccountLink ::
 getDriverRegisterBankAccountLink (mbPersonId, _, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let fetchPersonStripeInfo = do
+        driverLicense <- runInReplica $ QDL.findByDriverId person.id >>= fromMaybeM (DriverDLNotFound person.id.getId)
+        pure
+          PersonStripeInfo
+            { personDob = driverLicense.driverDob,
+              address = Nothing, -- will add later
+              idNumber = Nothing -- will add later
+            }
+  let driverRegisterBankAccountLinkHandle = PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
+  getPersonRegisterBankAccountLink driverRegisterBankAccountLinkHandle person
 
-  mDriverBankAccount <- runInReplica $ QDBA.findByPrimaryKey personId
+data PersonStripeInfo = PersonStripeInfo
+  { personDob :: Maybe UTCTime,
+    address :: Maybe Payment.Address,
+    idNumber :: Maybe (EncryptedHashed Text)
+  }
+
+newtype PersonRegisterBankAccountLinkHandle = PersonRegisterBankAccountLinkHandle
+  { fetchPersonStripeInfo :: Flow PersonStripeInfo
+  }
+
+getPersonRegisterBankAccountLink ::
+  PersonRegisterBankAccountLinkHandle ->
+  Domain.Types.Person.Person ->
+  Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
+getPersonRegisterBankAccountLink h person = do
+  mPersonBankAccount <- runInReplica $ QDBA.findByPrimaryKey person.id
   now <- getCurrentTime
-  case mDriverBankAccount of
+  case mPersonBankAccount of
     Just bankAccount -> do
       when bankAccount.chargesEnabled $ throwError $ InvalidRequest "Bank account already enabled"
       case (bankAccount.currentAccountLink, bankAccount.currentAccountLinkExpiry) of
@@ -918,12 +943,12 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) = do
                     accountUrlExpiry = expiry,
                     detailsSubmitted = bankAccount.detailsSubmitted
                   }
-            else refreshLink person bankAccount
-        _ -> refreshLink person bankAccount
-    _ -> createAccount person now
+            else refreshLink bankAccount
+        _ -> refreshLink bankAccount
+    _ -> createAccount now
   where
-    refreshLink :: Domain.Types.Person.Person -> DDBA.DriverBankAccount -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-    refreshLink person bankAccount = do
+    refreshLink :: DDBA.DriverBankAccount -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
+    refreshLink bankAccount = do
       resp <- TPayment.retryAccountLink person.merchantId person.merchantOperatingCityId bankAccount.accountId
       accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
       QDBA.updateAccountLink (Just accountUrl) (Just resp.accountUrlExpiry) person.id
@@ -935,18 +960,17 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) = do
             detailsSubmitted = bankAccount.detailsSubmitted
           }
 
-    createAccount :: Domain.Types.Person.Person -> UTCTime -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-    createAccount person now = do
+    createAccount :: UTCTime -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
+    createAccount now = do
       merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
       when (merchantOpCity.country `notElem` [Context.USA, Context.Netherlands, Context.Finland]) $ throwError $ InvalidRequest "Bank account creation is only supported for USA, Netherlands and Finland"
 
       mbMobileNumber <- mapM decrypt person.mobileNumber
       mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "Mobile number is required for opening a bank account")
 
-      driverLicense <- runInReplica $ QDL.findByDriverId person.id >>= fromMaybeM (DriverDLNotFound person.id.getId)
-      driverDob <- driverLicense.driverDob & fromMaybeM (InvalidRequest "Driver DOB is required for opening a bank account")
-      -- idNumber <- decrypt driverLicense.licenseNumber
-
+      personStripeInfo <- h.fetchPersonStripeInfo
+      personDob <- personStripeInfo.personDob & fromMaybeM (InvalidRequest "Driver DOB is required for opening a bank account")
+      idNumber <- forM personStripeInfo.idNumber decrypt
       ssnLast4 <-
         if merchantOpCity.country == Context.USA
           then do
@@ -959,12 +983,12 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) = do
             Payment.IndividualConnectAccountReq
               { country = merchantOpCity.country,
                 email = person.email,
-                dateOfBirth = DT.utctDay driverDob,
+                dateOfBirth = DT.utctDay personDob,
                 firstName = person.firstName,
                 lastName = person.lastName,
-                address = Nothing, -- will add later
+                address = personStripeInfo.address,
                 ssnLast4 = ssnLast4,
-                idNumber = Nothing,
+                idNumber,
                 mobileNumber
               }
       resp <- TPayment.createIndividualConnectAccount person.merchantId person.merchantOperatingCityId createAccountReq
@@ -1001,7 +1025,13 @@ getDriverRegisterBankAccountStatus ::
 getDriverRegisterBankAccountStatus (mbPersonId, _, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  driverBankAccount <- runInReplica $ QDBA.findByPrimaryKey personId >>= fromMaybeM (DriverBankAccountNotFound personId.getId)
+  getPersonRegisterBankAccountStatus person
+
+getPersonRegisterBankAccountStatus ::
+  Domain.Types.Person.Person ->
+  Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountResp
+getPersonRegisterBankAccountStatus person = do
+  driverBankAccount <- runInReplica $ QDBA.findByPrimaryKey person.id >>= fromMaybeM (DriverBankAccountNotFound person.id.getId)
   if driverBankAccount.chargesEnabled
     then
       return $
@@ -1011,7 +1041,7 @@ getDriverRegisterBankAccountStatus (mbPersonId, _, _) = do
           }
     else do
       resp <- TPayment.getAccount person.merchantId person.merchantOperatingCityId driverBankAccount.accountId
-      QDBA.updateAccountStatus resp.chargesEnabled resp.detailsSubmitted personId
+      QDBA.updateAccountStatus resp.chargesEnabled resp.detailsSubmitted person.id
       return $
         API.Types.UI.DriverOnboardingV2.BankAccountResp
           { chargesEnabled = resp.chargesEnabled,

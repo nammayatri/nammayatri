@@ -115,6 +115,21 @@ updatePanImage panNumber panImageId fleetOwnerPersonId = do
     ]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
+updateStripeIdNumberAddressAndDob ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Domain.Types.FleetOwnerInformation.FleetOwnerInformation ->
+  m ()
+updateStripeIdNumberAddressAndDob fleetOwnerInfo = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.stripeIdNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted fleetOwnerInfo.stripeIdNumber),
+      Se.Set Beam.stripeIdNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash fleetOwnerInfo.stripeIdNumber),
+      Se.Set Beam.stripeAddress (fmap toJSON fleetOwnerInfo.stripeAddress),
+      Se.Set Beam.fleetDob fleetOwnerInfo.fleetDob,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerInfo.fleetOwnerPersonId)]
+
 updateByPrimaryKey ::
   (EncFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Domain.Types.FleetOwnerInformation.FleetOwnerInformation ->

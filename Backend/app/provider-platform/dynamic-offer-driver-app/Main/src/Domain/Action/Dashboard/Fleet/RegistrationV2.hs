@@ -9,15 +9,19 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
     fleetOwnerLogin,
     enableFleetIfPossible,
     castRoleToFleetType,
+    postRegistrationV2RegisterBankAccountLink,
+    getRegistrationV2RegisterBankAccountStatus,
   )
 where
 
 import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2 as Common
+import qualified API.Types.UI.DriverOnboardingV2 as Onboarding
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.Dashboard.Fleet.Registration as DRegistration
 import qualified Domain.Action.Internal.DriverMode as DriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
+import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -278,6 +282,7 @@ createFleetOwnerInfo personId merchantId enabled = do
             panImageId = Nothing,
             panNumber = Nothing,
             panNumberDec = Nothing,
+            stripeIdNumber = Nothing,
             createdAt = now,
             updatedAt = now,
             registeredAt = Nothing,
@@ -285,7 +290,9 @@ createFleetOwnerInfo personId merchantId enabled = do
             ticketPlaceId = Nothing,
             lienAmount = Nothing,
             prepaidSubscriptionBalance = Nothing,
-            planExpiryDate = Nothing
+            planExpiryDate = Nothing,
+            fleetDob = Nothing,
+            stripeAddress = Nothing
           }
   QFOI.create fleetOwnerInfo
 
@@ -395,3 +402,53 @@ makeMobileNumberOtpKey mobileNumber = "MobileNumberOtp:V2:mobileNumber-" <> mobi
 
 makeMobileNumberHitsCountKey :: Text -> Text
 makeMobileNumberHitsCountKey mobileNumber = "MobileNumberOtp:V2:mobileNumberHits-" <> mobileNumber <> ":hitsCount"
+
+postRegistrationV2RegisterBankAccountLink ::
+  ShortId DMerchant.Merchant ->
+  City.City ->
+  Maybe Text ->
+  Text ->
+  Flow Common.FleetBankAccountLinkResp
+postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerId requestorId = do
+  fleetOwner <- checkRequestorAcccessToFleet mbFleetOwnerId requestorId
+  let fetchPersonStripeInfo = do
+        fleetOwnerInfo <- runInReplica (QFOI.findByPrimaryKey fleetOwner.id) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
+        stripeAddress <- fleetOwnerInfo.stripeAddress & fromMaybeM (InvalidRequest "Stripe address is required for opening a bank account")
+        stripeIdNumber <- fleetOwnerInfo.stripeIdNumber & fromMaybeM (InvalidRequest "Stripe idNumber is required for opening a bank account")
+        pure
+          DOnboarding.PersonStripeInfo
+            { personDob = fleetOwnerInfo.fleetDob,
+              address = Just stripeAddress,
+              idNumber = Just stripeIdNumber
+            }
+  let fleetRegisterBankAccountLinkHandle = DOnboarding.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
+  castFleetBankAccountLinkResp <$> DOnboarding.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle fleetOwner
+
+castFleetBankAccountLinkResp :: Onboarding.BankAccountLinkResp -> Common.FleetBankAccountLinkResp
+castFleetBankAccountLinkResp Onboarding.BankAccountLinkResp {..} = Common.FleetBankAccountLinkResp {..}
+
+getRegistrationV2RegisterBankAccountStatus ::
+  ShortId DMerchant.Merchant ->
+  City.City ->
+  Maybe Text ->
+  Text ->
+  Flow Common.FleetBankAccountResp
+getRegistrationV2RegisterBankAccountStatus _merchantShortId _opCity mbFleetOwnerId requestorId = do
+  fleetOwner <- checkRequestorAcccessToFleet mbFleetOwnerId requestorId
+  castFleetBankAccountResp <$> DOnboarding.getPersonRegisterBankAccountStatus fleetOwner
+
+castFleetBankAccountResp :: Onboarding.BankAccountResp -> Common.FleetBankAccountResp
+castFleetBankAccountResp Onboarding.BankAccountResp {..} = Common.FleetBankAccountResp {..}
+
+checkRequestorAcccessToFleet :: Maybe Text -> Text -> Flow DP.Person
+checkRequestorAcccessToFleet mbFleetOwnerId requestorId = do
+  requestor <- runInReplica $ QP.findById (Id @DP.Person requestorId) >>= fromMaybeM (PersonNotFound requestorId)
+  case requestor.role of
+    DP.ADMIN -> do
+      fleetOwnerId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "Fleet owner required")
+      runInReplica $ QP.findById (Id @DP.Person fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetOwnerId)
+    role | role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS] -> do
+      whenJust mbFleetOwnerId $ \fleetOwnerId -> do
+        unless (fleetOwnerId == requestorId) $ throwError AccessDenied
+      pure requestor
+    _ -> throwError AccessDenied

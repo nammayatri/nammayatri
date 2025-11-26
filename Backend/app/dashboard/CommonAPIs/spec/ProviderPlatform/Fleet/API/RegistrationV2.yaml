@@ -1,6 +1,7 @@
 imports:
   Person: Dashboard.Common
   City: Kernel.Types.Beckn.Context
+  BaseUrl: Kernel.Prelude
 
 module: RegistrationV2
 apiPrefix: fleet
@@ -61,6 +62,42 @@ apis:
             response:
               type: FleetOwnerRegisterResV2
 
+  - POST:
+      endpoint: /register/bankAccount/link
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+      response:
+        type: FleetBankAccountLinkResp
+      helperApi:
+        - POST:
+            endpoint: /register/bankAccount/link
+            auth: ApiAuthV2
+            query:
+              - fleetOwnerId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: FleetBankAccountLinkResp
+
+  - GET:
+      endpoint: /register/bankAccount/status
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+      response:
+        type: FleetBankAccountResp
+      helperApi:
+        - GET:
+            endpoint: /register/bankAccount/status
+            auth: ApiAuthV2
+            query:
+              - fleetOwnerId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: FleetBankAccountResp
+
 types:
   FleetOwnerLoginReqV2:
     - mobileNumber: Text
@@ -94,11 +131,20 @@ types:
     - fleetType: Maybe FleetType
     - operatorReferralCode: Maybe Text
     - adminApprovalRequired: Maybe Bool
+    - setIsEnabled: Maybe Bool
   FleetType:
     - enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
   FleetOwnerRegisterResV2:
     - enabled: Bool
     - recordType: NewType
+  FleetBankAccountLinkResp:
+    - chargesEnabled: Bool
+    - detailsSubmitted: Bool
+    - accountLink: BaseUrl
+    - accountUrlExpiry: UTCTime
+  FleetBankAccountResp:
+    - chargesEnabled: Bool
+    - detailsSubmitted: Bool
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

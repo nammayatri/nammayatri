@@ -5,6 +5,8 @@ module Domain.Action.ProviderPlatform.Fleet.RegistrationV2
     postRegistrationV2Register',
     RegisterClientCall,
     buildFleetOwnerRegisterReqV2,
+    postRegistrationV2RegisterBankAccountLink,
+    getRegistrationV2RegisterBankAccountStatus,
   )
 where
 
@@ -151,3 +153,25 @@ postRegistrationV2Register' clientCall merchantShortId opCity apiTokenInfo req =
       Just Common.NORMAL_FLEET -> DRole.FLEET_OWNER
       Just Common.BUSINESS_FLEET -> DRole.FLEET_OWNER
       Nothing -> DRole.FLEET_OWNER
+
+postRegistrationV2RegisterBankAccountLink ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Maybe Text ->
+  Flow Common.FleetBankAccountLinkResp
+postRegistrationV2RegisterBankAccountLink merchantShortId opCity apiTokenInfo fleetOwnerId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2RegisterBankAccountLink) fleetOwnerId apiTokenInfo.personId.getId
+
+getRegistrationV2RegisterBankAccountStatus ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Maybe Text ->
+  Flow Common.FleetBankAccountResp
+getRegistrationV2RegisterBankAccountStatus merchantShortId opCity apiTokenInfo fleetOwnerId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.getRegistrationV2RegisterBankAccountStatus) fleetOwnerId apiTokenInfo.personId.getId

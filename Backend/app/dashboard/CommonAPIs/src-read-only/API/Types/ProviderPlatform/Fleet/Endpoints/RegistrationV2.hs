@@ -16,6 +16,14 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
+data FleetBankAccountLinkResp = FleetBankAccountLinkResp {chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool, accountLink :: Kernel.Prelude.BaseUrl, accountUrlExpiry :: Kernel.Prelude.UTCTime}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetBankAccountResp = FleetBankAccountResp {chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FleetOwnerLoginReqV2 = FleetOwnerLoginReqV2 {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -52,7 +60,8 @@ data FleetOwnerRegisterTReqV2 = FleetOwnerRegisterTReqV2
     personId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person),
     fleetType :: Kernel.Prelude.Maybe FleetType,
     operatorReferralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    adminApprovalRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    adminApprovalRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    setIsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -72,7 +81,7 @@ data FleetType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("fleet" :> (PostRegistrationV2V2LoginOtpHelper :<|> PostRegistrationV2V2VerifyOtpHelper :<|> PostRegistrationV2V2RegisterHelper))
+type API = ("fleet" :> (PostRegistrationV2V2LoginOtpHelper :<|> PostRegistrationV2V2VerifyOtpHelper :<|> PostRegistrationV2V2RegisterHelper :<|> PostRegistrationV2RegisterBankAccountLinkHelper :<|> GetRegistrationV2RegisterBankAccountStatusHelper))
 
 type PostRegistrationV2LoginOtp = ("v2" :> "login" :> "otp" :> ReqBody '[JSON] FleetOwnerLoginReqV2 :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
@@ -96,21 +105,45 @@ type PostRegistrationV2V2RegisterHelper =
            FleetOwnerRegisterResV2
   )
 
+type PostRegistrationV2RegisterBankAccountLink = ("register" :> "bankAccount" :> "link" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text :> Post '[JSON] FleetBankAccountLinkResp)
+
+type PostRegistrationV2RegisterBankAccountLinkHelper =
+  ( "register" :> "bankAccount" :> "link" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
+      :> MandatoryQueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Post '[JSON] FleetBankAccountLinkResp
+  )
+
+type GetRegistrationV2RegisterBankAccountStatus = ("register" :> "bankAccount" :> "status" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text :> Get '[JSON] FleetBankAccountResp)
+
+type GetRegistrationV2RegisterBankAccountStatusHelper =
+  ( "register" :> "bankAccount" :> "status" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
+      :> MandatoryQueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Get '[JSON] FleetBankAccountResp
+  )
+
 data RegistrationV2APIs = RegistrationV2APIs
   { postRegistrationV2LoginOtp :: Kernel.Prelude.Bool -> FleetOwnerLoginReqV2 -> EulerHS.Types.EulerClient FleetOwnerLoginResV2,
     postRegistrationV2VerifyOtp :: FleetOwnerVerifyReqV2 -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postRegistrationV2Register :: Kernel.Prelude.Text -> FleetOwnerRegisterReqV2 -> EulerHS.Types.EulerClient FleetOwnerRegisterResV2
+    postRegistrationV2Register :: Kernel.Prelude.Text -> FleetOwnerRegisterReqV2 -> EulerHS.Types.EulerClient FleetOwnerRegisterResV2,
+    postRegistrationV2RegisterBankAccountLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountLinkResp,
+    getRegistrationV2RegisterBankAccountStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountResp
   }
 
 mkRegistrationV2APIs :: (Client EulerHS.Types.EulerClient API -> RegistrationV2APIs)
 mkRegistrationV2APIs registrationV2Client = (RegistrationV2APIs {..})
   where
-    postRegistrationV2LoginOtp :<|> postRegistrationV2VerifyOtp :<|> postRegistrationV2Register = registrationV2Client
+    postRegistrationV2LoginOtp :<|> postRegistrationV2VerifyOtp :<|> postRegistrationV2Register :<|> postRegistrationV2RegisterBankAccountLink :<|> getRegistrationV2RegisterBankAccountStatus = registrationV2Client
 
 data RegistrationV2UserActionType
   = POST_REGISTRATION_V2_LOGIN_OTP
   | POST_REGISTRATION_V2_VERIFY_OTP
   | POST_REGISTRATION_V2_REGISTER
+  | POST_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_LINK
+  | GET_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_STATUS
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

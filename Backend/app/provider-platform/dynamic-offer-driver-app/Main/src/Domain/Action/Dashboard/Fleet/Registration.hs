@@ -197,6 +197,7 @@ createFleetOwnerInfo personId merchantId mbFleetType mbEnabled mbGstNumber mbRef
             aadhaarFrontImageId = Nothing,
             aadhaarNumber = Nothing,
             aadhaarNumberDec = Nothing,
+            stripeIdNumber = Nothing,
             createdAt = now,
             updatedAt = now,
             registeredAt = Nothing,
@@ -204,7 +205,9 @@ createFleetOwnerInfo personId merchantId mbFleetType mbEnabled mbGstNumber mbRef
             ticketPlaceId = mbTicketPlaceId,
             lienAmount = Nothing,
             prepaidSubscriptionBalance = Nothing,
-            planExpiryDate = Nothing
+            planExpiryDate = Nothing,
+            fleetDob = Nothing,
+            stripeAddress = Nothing
           }
   QFOI.create fleetOwnerInfo
 

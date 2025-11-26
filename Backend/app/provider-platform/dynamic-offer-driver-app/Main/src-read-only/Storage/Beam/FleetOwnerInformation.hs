@@ -3,6 +3,7 @@
 
 module Storage.Beam.FleetOwnerInformation where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.FleetOwnerInformation
@@ -25,6 +26,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     businessLicenseNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     businessLicenseNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     enabled :: B.C f Kernel.Prelude.Bool,
+    fleetDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fleetOwnerPersonId :: B.C f Kernel.Prelude.Text,
     fleetType :: B.C f Domain.Types.FleetOwnerInformation.FleetType,
     gstImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -42,6 +44,9 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     prepaidSubscriptionBalance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     referredByOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registeredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    stripeAddress :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    stripeIdNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    stripeIdNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     ticketPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     verified :: B.C f Kernel.Prelude.Bool,
     createdAt :: B.C f Kernel.Prelude.UTCTime,

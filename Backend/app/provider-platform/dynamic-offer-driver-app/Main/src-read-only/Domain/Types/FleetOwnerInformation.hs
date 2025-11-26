@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Stripe.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -22,6 +23,7 @@ data FleetOwnerInformationE e = FleetOwnerInformation
     businessLicenseNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     businessLicenseNumberDec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
+    fleetDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fleetOwnerPersonId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     fleetType :: Domain.Types.FleetOwnerInformation.FleetType,
     gstImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -37,6 +39,8 @@ data FleetOwnerInformationE e = FleetOwnerInformation
     prepaidSubscriptionBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     referredByOperatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registeredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    stripeAddress :: Kernel.Prelude.Maybe Kernel.External.Payment.Stripe.Types.Address,
+    stripeIdNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     ticketPlaceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verified :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -55,6 +59,7 @@ instance EncryptedItem FleetOwnerInformation where
     businessLicenseNumber_ <- encryptItem $ (,salt) <$> businessLicenseNumber entity
     gstNumber_ <- encryptItem $ (,salt) <$> gstNumber entity
     panNumber_ <- encryptItem $ (,salt) <$> panNumber entity
+    stripeIdNumber_ <- encryptItem $ (,salt) <$> stripeIdNumber entity
     pure
       FleetOwnerInformation
         { aadhaarBackImageId = aadhaarBackImageId entity,
@@ -66,6 +71,7 @@ instance EncryptedItem FleetOwnerInformation where
           businessLicenseNumber = businessLicenseNumber_,
           businessLicenseNumberDec = businessLicenseNumberDec entity,
           enabled = enabled entity,
+          fleetDob = fleetDob entity,
           fleetOwnerPersonId = fleetOwnerPersonId entity,
           fleetType = fleetType entity,
           gstImageId = gstImageId entity,
@@ -81,6 +87,8 @@ instance EncryptedItem FleetOwnerInformation where
           prepaidSubscriptionBalance = prepaidSubscriptionBalance entity,
           referredByOperatorId = referredByOperatorId entity,
           registeredAt = registeredAt entity,
+          stripeAddress = stripeAddress entity,
+          stripeIdNumber = stripeIdNumber_,
           ticketPlaceId = ticketPlaceId entity,
           verified = verified entity,
           createdAt = createdAt entity,
@@ -91,6 +99,7 @@ instance EncryptedItem FleetOwnerInformation where
     businessLicenseNumber_ <- fmap fst <$> decryptItem (businessLicenseNumber entity)
     gstNumber_ <- fmap fst <$> decryptItem (gstNumber entity)
     panNumber_ <- fmap fst <$> decryptItem (panNumber entity)
+    stripeIdNumber_ <- fmap fst <$> decryptItem (stripeIdNumber entity)
     pure
       ( FleetOwnerInformation
           { aadhaarBackImageId = aadhaarBackImageId entity,
@@ -102,6 +111,7 @@ instance EncryptedItem FleetOwnerInformation where
             businessLicenseNumber = businessLicenseNumber_,
             businessLicenseNumberDec = businessLicenseNumberDec entity,
             enabled = enabled entity,
+            fleetDob = fleetDob entity,
             fleetOwnerPersonId = fleetOwnerPersonId entity,
             fleetType = fleetType entity,
             gstImageId = gstImageId entity,
@@ -117,6 +127,8 @@ instance EncryptedItem FleetOwnerInformation where
             prepaidSubscriptionBalance = prepaidSubscriptionBalance entity,
             referredByOperatorId = referredByOperatorId entity,
             registeredAt = registeredAt entity,
+            stripeAddress = stripeAddress entity,
+            stripeIdNumber = stripeIdNumber_,
             ticketPlaceId = ticketPlaceId entity,
             verified = verified entity,
             createdAt = createdAt entity,

@@ -21,6 +21,7 @@ where
 
 import Dashboard.Common as Reexport
 import Data.Aeson
+import qualified Kernel.External.Payment.Stripe.Types as Stripe
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto (derivePersistField)
@@ -174,3 +175,6 @@ data DriverFeeStatus
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance CH.ClickhouseValue DriverFeeStatus
+
+-- to avoid naming conflict
+type StripeAddress = Stripe.Address
