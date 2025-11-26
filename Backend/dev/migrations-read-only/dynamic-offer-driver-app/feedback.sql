@@ -12,3 +12,13 @@ ALTER TABLE atlas_driver_offer_bpp.feedback ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_driver_offer_bpp.feedback ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.feedback ADD COLUMN merchant_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.feedback ADD COLUMN badge_key character varying (255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.feedback ADD COLUMN rating integer ;

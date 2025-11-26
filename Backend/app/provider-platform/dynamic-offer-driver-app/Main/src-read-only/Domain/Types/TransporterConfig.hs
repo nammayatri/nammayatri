@@ -148,6 +148,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     fareRecomputeDailyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,
     fareRecomputeWeeklyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,
     fcmConfig :: Kernel.External.Notification.FCM.Types.FCMConfig,
+    feedbackNotificationConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.FeedbackNotificationConfig,
     fleetAlertThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     freeTrialDays :: Kernel.Prelude.Int,
     generateReferralCodeForFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -374,6 +375,9 @@ data DriverWalletConfig = DriverWalletConfig
     minimumWalletPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
     payoutCutOffDays :: Kernel.Prelude.Int
   }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data FeedbackNotificationConfig = FeedbackNotificationConfig {enableFeedbackNotification :: Kernel.Prelude.Bool, feedbackNotificationDelayInSec :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}

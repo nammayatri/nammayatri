@@ -1,30 +1,35 @@
 imports:
+  Person: Domain.Types.Person
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  Ride: Domain.Types.Ride
-  Person: Domain.Types.Person
 
-Feedback:
-  tableName: feedback
+FeedbackBadge:
+  tableName: feedback_badge
 
   fields:
-    id : Id Feedback
-    rideId : Id Ride
+    id : Id FeedbackBadge
     driverId : Id Person
     badge : Text
     badgeKey : Maybe Text
+    badgeCount : Int
     createdAt : UTCTime
-    rating : Maybe Int
+    updatedAt : UTCTime
 
   constraints:
     id: PrimaryKey
 
-  extraOperations:
-    - EXTRA_QUERY_FILE
-
   sqlType:
     badge: character varying (255)
     badgeKey: character varying (255)
-
+    badgeCount: integer
 
   excludedFields: [createdAt, updatedAt]
+
+  queries:
+    findByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+
+
+

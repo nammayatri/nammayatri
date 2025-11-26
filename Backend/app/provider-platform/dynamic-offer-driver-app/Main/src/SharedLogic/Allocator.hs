@@ -76,6 +76,7 @@ data AllocatorJobType
   | ScheduledFCMS
   | CheckDashCamInstallationStatus
   | MediaFileDocumentComplete
+  | SendFeedbackPN
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -117,6 +118,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SScheduledFCMS jobData = AnyJobInfo <$> restoreJobInfo SScheduledFCMS jobData
   restoreAnyJobInfo SCheckDashCamInstallationStatus jobData = AnyJobInfo <$> restoreJobInfo SCheckDashCamInstallationStatus jobData
   restoreAnyJobInfo SMediaFileDocumentComplete jobData = AnyJobInfo <$> restoreJobInfo SMediaFileDocumentComplete jobData
+  restoreAnyJobInfo SSendFeedbackPN jobData = AnyJobInfo <$> restoreJobInfo SSendFeedbackPN jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -437,3 +439,14 @@ newtype MediaFileDocumentCompleteJobData = MediaFileDocumentCompleteJobData
 instance JobInfoProcessor 'MediaFileDocumentComplete
 
 type instance JobContent 'MediaFileDocumentComplete = MediaFileDocumentCompleteJobData
+
+data SendFeedbackPNJobData = SendFeedbackPNJobData
+  { driverId :: Id DP.Person,
+    badgeKey :: Maybe Text,
+    rating :: Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SendFeedbackPN
+
+type instance JobContent 'SendFeedbackPN = SendFeedbackPNJobData

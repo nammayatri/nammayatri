@@ -8,7 +8,6 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.FeedbackForm as BFF
 import Storage.Queries.OrphanInstances.FeedbackForm ()
 
--- Extra code goes here --
 findAllFeedback :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [FeedbackForm]
 findAllFeedback = findAllWithDb [Se.Is BFF.id $ Se.Not $ Se.Eq ""]
 

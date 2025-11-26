@@ -563,7 +563,7 @@ postMultimodalJourneyFeedback (mbPersonId, merchantId) journeyId journeyFeedback
             let mbRatingValue = legFeedback.rating <|> maybe Nothing (bool (Just 1) (Just 5)) legFeedback.isExperienceGood
             case (mbRide, mbRatingValue) of
               (Just ride, Just ratingValue) -> do
-                let feedbackReq = Rating.FeedbackReq {rideId = ride.id, rating = ratingValue, wasRideSafe = Nothing, shouldFavDriver = Nothing, wasOfferedAssistance = Nothing, feedbackDetails = journeyFeedbackForm.additionalFeedBack, mbAudio = Nothing}
+                let feedbackReq = Rating.FeedbackReq {rideId = ride.id, rating = ratingValue, wasRideSafe = Nothing, shouldFavDriver = Nothing, wasOfferedAssistance = Nothing, feedbackDetails = journeyFeedbackForm.additionalFeedBack, mbAudio = Nothing, feedbackAnswers = Nothing}
                 withTryCatch "processRating:postFeedbackJourney" (Rating.processRating (riderId, merchantId) feedbackReq)
                   >>= \case
                     Right _ -> pure ()
