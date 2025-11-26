@@ -124,6 +124,19 @@ updateDeviceIdById deviceId deviceSwitchCount purchasedPassId = do
     ]
     [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
 
+updateProfilePictureById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Id DPurchasedPass.PurchasedPass ->
+  m ()
+updateProfilePictureById mbProfilePicture purchasedPassId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.profilePicture mbProfilePicture,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
+
 getLastPassNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   m Int

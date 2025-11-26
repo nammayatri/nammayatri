@@ -44,6 +44,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Id as Id
+import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JLU
@@ -107,11 +108,13 @@ postMultimodalPassSelect ::
       Id.Id DM.Merchant
     ) ->
     Id.Id DPass.Pass ->
+    Maybe Text ->
+    Maybe Text ->
+    Maybe Text ->
     Maybe DT.Day ->
-    Text ->
     Environment.Flow PassAPI.PassSelectionAPIEntity
   )
-postMultimodalPassSelect (mbPersonId, merchantId) passId mbStartDay deviceId = do
+postMultimodalPassSelect (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture mbStartDay = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   pass <- B.runInReplica $ QPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
@@ -120,10 +123,11 @@ postMultimodalPassSelect (mbPersonId, merchantId) passId mbStartDay deviceId = d
 
   -- Check if user has all required documents
   validateRequiredDocuments person pass.documentsRequired
+  deviceId <- getDeviceId person mbDeviceIdParam mbImeiParam
 
   -- Use Redis lock to prevent race condition when purchasing pass
   let lockKey = mkPassPurchaseLockKey personId pass.passTypeId
-  Redis.whenWithLockRedisAndReturnValue lockKey 60 (purchasePassWithPayment person pass merchantId personId mbStartDay deviceId) >>= \case
+  Redis.whenWithLockRedisAndReturnValue lockKey 60 (purchasePassWithPayment person pass merchantId personId mbStartDay deviceId mbProfilePicture) >>= \case
     Left _ -> do
       logError $ "Pass purchase already in progress for personId: " <> personId.getId <> " and passTypeId: " <> pass.passTypeId.getId
       throwError (InvalidRequest "Pass purchase already in progress, please try again")
@@ -143,8 +147,9 @@ purchasePassWithPayment ::
   Id.Id DP.Person ->
   Maybe DT.Day ->
   Text ->
+  Maybe Text ->
   m PassAPI.PassSelectionAPIEntity
-purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
+purchasePassWithPayment person pass merchantId personId mbStartDay deviceId mbProfilePicture = do
   -- Check if pass is already purchased and active
   now <- getCurrentTime
   purchasedPassPaymentId <- generateGUID
@@ -211,7 +216,8 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
                   maxValidTrips = pass.maxValidTrips,
                   maxValidDays = pass.maxValidDays,
                   deviceSwitchCount = 0,
-                  deviceId,
+                  profilePicture = mbProfilePicture <|> person.profilePicture,
+                  deviceId = deviceId,
                   status = initialStatus,
                   merchantId = pass.merchantId,
                   usedTripCount = Just 0,
@@ -238,6 +244,7 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId = do
             passName = pass.name,
             merchantId = pass.merchantId,
             merchantOperatingCityId = pass.merchantOperatingCityId,
+            profilePicture = mbProfilePicture <|> person.profilePicture,
             createdAt = now,
             updatedAt = now
           }
@@ -473,12 +480,12 @@ checkEligibility logics personData = do
 buildPurchasedPassAPIEntity ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Maybe Lang.Language ->
-  Id.Id DP.Person ->
+  DP.Person ->
   Text ->
   DT.Day ->
   DPurchasedPass.PurchasedPass ->
   m PassAPI.PurchasedPassAPIEntity
-buildPurchasedPassAPIEntity mbLanguage personId deviceId today purchasedPass = do
+buildPurchasedPassAPIEntity mbLanguage person deviceId today purchasedPass = do
   let deviceMismatch = purchasedPass.deviceId /= deviceId
   passType <- B.runInReplica $ QPassType.findById purchasedPass.passTypeId >>= fromMaybeM (PassTypeNotFound purchasedPass.passTypeId.getId)
   passCategory <- B.runInReplica $ QPassCategory.findById passType.passCategoryId >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
@@ -488,7 +495,7 @@ buildPurchasedPassAPIEntity mbLanguage personId deviceId today purchasedPass = d
         Just maxTrips -> Just $ max 0 (maxTrips - fromMaybe 0 purchasedPass.usedTripCount)
         Nothing -> Nothing
 
-  passAPIEntity <- buildPassAPIEntityFromPurchasedPass mbLanguage personId purchasedPass
+  passAPIEntity <- buildPassAPIEntityFromPurchasedPass mbLanguage person.id purchasedPass
   let passDetailsEntity =
         PassAPI.PassDetailsAPIEntity
           { category = buildPassCategoryAPIEntity passCategory,
@@ -510,6 +517,7 @@ buildPurchasedPassAPIEntity mbLanguage personId deviceId today purchasedPass = d
         startDate = purchasedPass.startDate,
         deviceMismatch,
         deviceSwitchAllowed = purchasedPass.deviceSwitchCount == 0,
+        profilePicture = purchasedPass.profilePicture <|> person.profilePicture,
         daysToExpire = daysToExpire,
         purchaseDate = DT.utctDay purchasedPass.createdAt,
         expiryDate = purchasedPass.endDate,
@@ -535,6 +543,9 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
         QPurchasedPassPayment.updateStatusByOrderId passStatus paymentOrderId
         when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
           QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus
+        -- If payment results in an active/prebooked pass, update purchased_pass.profilePicture from payment
+        when (passStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
+          QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
       case mbPassStatus of
         Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
         Just DPurchasedPass.PreBooked -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
@@ -624,15 +635,18 @@ getMultimodalPassList ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
       Id.Id DM.Merchant
     ) ->
+    Maybe Text ->
+    Maybe Text ->
     Kernel.Prelude.Maybe Lang.Language ->
     Maybe Int ->
     Maybe Int ->
     Maybe DPurchasedPass.StatusType ->
-    Text ->
     Environment.Flow [PassAPI.PurchasedPassAPIEntity]
   )
-getMultimodalPassList (mbCallerPersonId, merchantId) mbLanguage mbLimitParam mbOffsetParam mbStatusParam deviceId = do
+getMultimodalPassList (mbCallerPersonId, merchantId) mbDeviceIdParam mbImeiParam mbLanguage mbLimitParam mbOffsetParam mbStatusParam = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  deviceId <- getDeviceId person mbDeviceIdParam mbImeiParam
 
   let mbStatus = case mbStatusParam of
         Just DPurchasedPass.Active -> Just [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired]
@@ -660,10 +674,11 @@ getMultimodalPassList (mbCallerPersonId, merchantId) mbLanguage mbLimitParam mbO
           QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
 
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
+
   let passWithSameDevice = filter (\pass -> pass.deviceId == deviceId) allActivePurchasedPasses
   let purchasedPasses = if null passWithSameDevice then allActivePurchasedPasses else passWithSameDevice
 
-  mapM (buildPurchasedPassAPIEntity mbLanguage personId deviceId today) purchasedPasses
+  mapM (buildPurchasedPassAPIEntity mbLanguage person deviceId today) purchasedPasses
 
 postMultimodalPassVerify ::
   ( ( Maybe (Id.Id DP.Person),
@@ -745,10 +760,12 @@ postMultimodalPassSwitchDeviceId ::
   )
 postMultimodalPassSwitchDeviceId (mbCallerPersonId, merchantId) req = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  deviceId <- getDeviceId person req.deviceId req.imeiNumber
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId (Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]) Nothing Nothing
   forM_ allActivePurchasedPasses $ \purchasedPass -> do
-    when (purchasedPass.deviceId /= req.deviceId) $ do
-      QPurchasedPass.updateDeviceIdById req.deviceId (purchasedPass.deviceSwitchCount + 1) purchasedPass.id
+    when (purchasedPass.deviceId /= deviceId) $ do
+      QPurchasedPass.updateDeviceIdById deviceId (purchasedPass.deviceSwitchCount + 1) purchasedPass.id
   return APISuccess.Success
 
 getMultimodalPassTransactions ::
@@ -777,3 +794,11 @@ buildPurchasedPassPaymentAPIEntity purchasedPassPayment =
       passCode = purchasedPassPayment.passCode,
       createdAt = purchasedPassPayment.createdAt
     }
+
+getDeviceId :: DP.Person -> Maybe Text -> Maybe Text -> Environment.Flow Text
+getDeviceId person mbDeviceId mbImei = do
+  case mbImei of
+    Just imei -> pure imei
+    Nothing -> case mbDeviceId of
+      Just devId -> return $ if (person.clientDevice <&> (.deviceType)) == Just IOS then devId else fromMaybe devId person.androidId
+      Nothing -> throwError (InvalidRequest "Device ID or IMEI is required")
