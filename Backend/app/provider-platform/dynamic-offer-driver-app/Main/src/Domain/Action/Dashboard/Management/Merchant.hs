@@ -48,6 +48,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantPayoutConfigUpdate,
     postMerchantConfigUpsertPlanAndConfigSubscription,
     postMerchantConfigOperatingCityWhiteList,
+    postMerchantConfigMerchantCreate,
   )
 where
 
@@ -692,6 +693,7 @@ castDDocumentType = \case
   DVC.TaxiTransportLicense -> Common.TaxiTransportLicense
   DVC.FinnishIDResidencePermit -> Common.FinnishIDResidencePermit
   DVC.BusinessRegistrationExtract -> Common.BusinessRegistrationExtract
+  DVC.PersonalId -> Common.PersonalId
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -781,6 +783,7 @@ castDocumentType = \case
   Common.TaxiTransportLicense -> DVC.TaxiTransportLicense
   Common.FinnishIDResidencePermit -> DVC.FinnishIDResidencePermit
   Common.BusinessRegistrationExtract -> DVC.BusinessRegistrationExtract
+  Common.PersonalId -> DVC.PersonalId
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::
@@ -2911,3 +2914,6 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
         whiteListMessage = "Success",
         whiteListError = Nothing
       }
+
+postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
+postMerchantConfigMerchantCreate = postMerchantConfigOperatingCityCreate

@@ -155,6 +155,7 @@ data DocumentType
   | TaxiTransportLicense
   | FinnishIDResidencePermit
   | BusinessRegistrationExtract
+  | PersonalId
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

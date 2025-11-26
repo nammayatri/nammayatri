@@ -282,6 +282,7 @@ mapDocumentType Common.TaxiDriverPermit = Domain.TaxiDriverPermit
 mapDocumentType Common.TaxiTransportLicense = Domain.TaxiTransportLicense
 mapDocumentType Common.FinnishIDResidencePermit = Domain.FinnishIDResidencePermit
 mapDocumentType Common.BusinessRegistrationExtract = Domain.BusinessRegistrationExtract
+mapDocumentType Common.PersonalId = Domain.PersonalId
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
