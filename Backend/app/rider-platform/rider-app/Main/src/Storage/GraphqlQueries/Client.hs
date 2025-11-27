@@ -120,9 +120,21 @@ mapToServiceTierType routeCode =
    in fromMaybe BecknV2.FRFS.Enums.NON_AC $ lookup serviceCode serviceTierMapping
 
 extractServiceCode :: Text -> Text
-extractServiceCode routeCode = maybe "O" snd (find match patterns)
+extractServiceCode routeCode = maybe (fromMaybe "O" infixMatch) (\x -> x) startMatch
   where
-    patterns =
+    startPatterns =
+      [ ("XS", "XS"),
+        ("OS", "OS"),
+        ("S", "S"),
+        ("X", "X"),
+        ("O", "O"),
+        ("Z", "Z")
+      ]
+
+    startMatch =
+      snd <$> find (\(p, _) -> p `Text.isPrefixOf` routeCode) startPatterns
+
+    infixPatterns =
       [ ("-Z-", "Z"),
         ("-XS-", "XS"),
         ("-OS-", "OS"),
@@ -136,4 +148,6 @@ extractServiceCode routeCode = maybe "O" snd (find match patterns)
         ("X", "X"),
         ("O", "O")
       ]
-    match (pat, _) = pat `isInfixOf` Text.unpack routeCode
+
+    infixMatch =
+      snd <$> find (\(p, _) -> p `isInfixOf` Text.unpack routeCode) infixPatterns
