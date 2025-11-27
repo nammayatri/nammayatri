@@ -14,7 +14,8 @@
 {-# LANGUAGE ApplicativeDo #-}
 
 module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
-  ( DriverRCReq (..),
+  ( DriverVehicleDetails (..),
+    DriverRCReq (..),
     DriverRCRes,
     RCStatusReq (..),
     RCValidationReq (..),

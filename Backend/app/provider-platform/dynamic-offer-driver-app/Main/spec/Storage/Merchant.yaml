@@ -1035,6 +1035,7 @@ TransporterConfig:
     variantsToEnableForSubscription: "[Domain.Types.VehicleVariant.VehicleVariant]"
     considerDriversForSearch: Bool
     dlNumberVerification: Maybe Bool
+    allowDashboardToPassVehicleDetails: Maybe Bool
     pastDaysRideCounter: Int
     placeNameCacheExpiryDays: Maybe Int
     emailOtpConfig: Maybe Email.Types.EmailOTPConfig
