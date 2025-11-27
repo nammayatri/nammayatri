@@ -16,21 +16,29 @@
 
 module Domain.Action.UI.NearbyDrivers (postNearbyDrivers) where
 
+import qualified API.Types.UI.NearbyBuses as NB
 import qualified API.Types.UI.NearbyDrivers as ND
+import qualified BecknV2.FRFS.Enums as Spe
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as A
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Map as Map
+import Domain.Action.UI.NearbyBuses (getSimpleNearbyBuses)
 import Domain.Action.UI.Serviceability (getNearestOperatingAndCurrentCity)
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.Person as DP
 import Domain.Types.RiderConfig (RingBucketCfg)
+import qualified Domain.Types.RiderConfig as DomainRiderConfig
 import qualified Domain.Types.ServiceTierType as DST
+import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.VehicleVariant as DV
 import Domain.Utils (safeLast)
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.HasCoordinates as Maps
+import qualified Kernel.External.Maps.Types as MapsTypes
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
@@ -70,30 +78,53 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
   let reqCity = cityRes.currentCity.city
   moc <- CQMOC.findByMerchantIdAndCity merchantId reqCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId:" <> merchantId.getId <> "city:" <> show reqCity)
   riderConfig <- CQRC.findByMerchantOperatingCityId moc.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
-  variantListForNearByReq <- (req.vehicleVariants <|> riderConfig.variantListForNearByReq) & fromMaybeM (RiderConfigFieldIsEmpty "variantListForNearByReq" moc.id.getId)
-  ringBucketCfg' <- riderConfig.nearByDriverRingBucketCfg & fromMaybeM (RiderConfigFieldIsEmpty "nearByDriverRingBucketCfg" moc.id.getId)
-  let sortedRingBucketCfgs = sortOn (.radiusInMeters) ringBucketCfg'
-  maxRadiusBucket <- safeLast sortedRingBucketCfgs & fromMaybeM (RiderConfigFieldIsEmpty "nearByDriverRingBucketCfg list is empty" moc.id.getId)
-  nearbyDriverLocations <- LF.nearBy $ buildNearByReq merchant variantListForNearByReq (min maxRadiusBucket.radiusInMeters req.radius)
-  let vvToSttMapping = getVariantToApplicableServiceTierTypeMapping
-  let sttToVvMapping = getServiceTierTypeToVariantMapping
-  buckets <- buildBuckets vvToSttMapping sortedRingBucketCfgs nearbyDriverLocations
-  let variantLevelCountMap =
-        foldr'
-          ( \driverLoc acc -> do
-              let variant = driverLoc.vehicleType
-              let !existingCount = Map.findWithDefault 0 variant acc
-              Map.insert variant (existingCount + 1) acc
-          )
-          (Map.empty :: Map DV.VehicleVariant Int)
-          nearbyDriverLocations
+  case req.travelMode of
+    Just DTrip.Bus -> do
+      vehicleDataBuckets <- getNearbyBusesAsBuckets moc.id riderConfig req.location
+      return $
+        ND.NearbyDriverRes
+          { serviceTierTypeToVehicleVariant = A.Null,
+            variantLevelDriverCount = A.Null,
+            buckets = [],
+            vehicleDataBuckets = vehicleDataBuckets
+          }
+    _ -> do
+      variantListForNearByReq <- (req.vehicleVariants <|> riderConfig.variantListForNearByReq) & fromMaybeM (RiderConfigFieldIsEmpty "variantListForNearByReq" moc.id.getId)
+      ringBucketCfg' <- riderConfig.nearByDriverRingBucketCfg & fromMaybeM (RiderConfigFieldIsEmpty "nearByDriverRingBucketCfg" moc.id.getId)
+      let sortedRingBucketCfgs = sortOn (.radiusInMeters) ringBucketCfg'
+      maxRadiusBucket <- safeLast sortedRingBucketCfgs & fromMaybeM (RiderConfigFieldIsEmpty "nearByDriverRingBucketCfg list is empty" moc.id.getId)
+      nearbyDriverLocations <- LF.nearBy $ buildNearByReq merchant variantListForNearByReq (min maxRadiusBucket.radiusInMeters req.radius)
+      let vvToSttMapping = getVariantToApplicableServiceTierTypeMapping
+      let sttToVvMapping = getServiceTierTypeToVariantMapping
+      buckets <- buildBuckets vvToSttMapping sortedRingBucketCfgs nearbyDriverLocations
+      let variantLevelCountMap =
+            foldr'
+              ( \driverLoc acc -> do
+                  let variant = driverLoc.vehicleType
+                  let !existingCount = Map.findWithDefault 0 variant acc
+                  Map.insert variant (existingCount + 1) acc
+              )
+              (Map.empty :: Map DV.VehicleVariant Int)
+              nearbyDriverLocations
 
-  return $
-    ND.NearbyDriverRes
-      { serviceTierTypeToVehicleVariant = transformToObject sttToVvMapping,
-        variantLevelDriverCount = transformToObject variantLevelCountMap,
-        buckets
-      }
+      let vehicleDataBuckets =
+            map
+              ( \bucket ->
+                  ND.VehicleDataBucket
+                    { radius = bucket.radius,
+                      travelMode = DTrip.Taxi,
+                      vehicleInfo = ND.Taxi bucket
+                    }
+              )
+              buckets
+
+      return $
+        ND.NearbyDriverRes
+          { serviceTierTypeToVehicleVariant = transformToObject sttToVvMapping,
+            variantLevelDriverCount = transformToObject variantLevelCountMap,
+            buckets,
+            vehicleDataBuckets = vehicleDataBuckets
+          }
   where
     nearByDriverHitsCountKey :: Text
     nearByDriverHitsCountKey = "BAP:API:UI:NearByDriver:PersonId:" <> personId.getId <> ":hitsCount"
@@ -192,3 +223,101 @@ checkRateLimit ::
 checkRateLimit hitsCountKey = do
   rateLimitOptions <- asks (.nearByDriverAPIRateLimitOptions)
   checkSlidingWindowLimitWithOptions hitsCountKey rateLimitOptions
+
+getNearbyBusesAsBuckets ::
+  Id MerchantOperatingCity ->
+  DomainRiderConfig.RiderConfig ->
+  MapsTypes.LatLong ->
+  Environment.Flow [ND.VehicleDataBucket]
+getNearbyBusesAsBuckets merchantOperatingCityId riderConfig location = do
+  let nearbyBusesReq =
+        NB.NearbyBusesRequest
+          { userLat = location.lat,
+            userLon = location.lon,
+            vehicleType = Spe.BUS,
+            platformType = DIBC.MULTIMODAL,
+            requireNearbyBuses = True,
+            requireRecentRide = False
+          }
+
+  nearbyBuses <- getSimpleNearbyBuses merchantOperatingCityId riderConfig nearbyBusesReq
+  logDebug $ "NearbyDrivers: Got " <> show (length nearbyBuses) <> " nearby buses"
+
+  -- Convert NearbyBus to PublicTransportInfo with distance calculation
+  let busesWithDistance =
+        map
+          ( \bus ->
+              let dist = case bus.distance of
+                    Just d -> d
+                    Nothing ->
+                      let busLatLong = bus.currentLocation
+                       in realToFrac $ distanceBetweenInMeters location busLatLong
+               in ( bus,
+                    ND.PublicTransportInfo
+                      { vehicleNumber = bus.vehicleNumber,
+                        routeCode = bus.routeCode,
+                        currentLocation = bus.currentLocation,
+                        distance = Just dist,
+                        shortName = bus.shortName,
+                        routeState = bus.routeState,
+                        bearing = Nothing
+                      },
+                    dist
+                  )
+          )
+          nearbyBuses
+
+  let nearbyBusRadiusBucketStep :: Meters = fromMaybe 100 riderConfig.nearbyBusRadiusBucketStep
+
+  let nearbyBusSearchRadiusKm :: Double = fromMaybe 0.5 riderConfig.nearbyBusSearchRadius
+  let nearbyBusSearchRadiusMeters :: Meters = Meters . round $ nearbyBusSearchRadiusKm * 1000
+
+  let radiusBuckets = generateRadiusBuckets nearbyBusRadiusBucketStep nearbyBusSearchRadiusMeters
+
+  let groupedBuckets = groupByRadiusAndServiceType radiusBuckets busesWithDistance
+
+  let vehicleDataBuckets =
+        map
+          ( \((bucketRadius, mbServiceType, mbServiceTierName), buses) ->
+              ND.VehicleDataBucket
+                { radius = bucketRadius,
+                  travelMode = DTrip.Bus,
+                  vehicleInfo =
+                    ND.PublicTransport $
+                      ND.PublicTransportBucket
+                        { serviceType = mbServiceType,
+                          serviceTierName = mbServiceTierName,
+                          vehicles = sortOn (.distance) buses
+                        }
+                }
+          )
+          groupedBuckets
+
+  return vehicleDataBuckets
+  where
+    generateRadiusBuckets :: Meters -> Meters -> [Meters]
+    generateRadiusBuckets step maxRadius =
+      takeWhile (<= maxRadius) [step, step + step ..]
+
+    findBucket :: [Meters] -> Double -> Maybe Meters
+    findBucket buckets dist =
+      let distMeters = Meters (round dist)
+       in find (>= distMeters) buckets
+
+    groupByRadiusAndServiceType ::
+      [Meters] ->
+      [(NB.NearbyBus, ND.PublicTransportInfo, Double)] ->
+      [((Meters, Maybe Spe.ServiceTierType, Maybe Text), [ND.PublicTransportInfo])]
+    groupByRadiusAndServiceType buckets buses =
+      let grouped =
+            foldr
+              ( \(bus, info, dist) acc ->
+                  case findBucket buckets dist of
+                    Nothing -> acc
+                    Just bucket ->
+                      let key = (bucket, bus.serviceType, bus.serviceTierName)
+                       in Map.insertWith (++) key [info] acc
+              )
+              Map.empty
+              buses
+       in Map.toList grouped
