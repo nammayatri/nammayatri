@@ -54,6 +54,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import SharedLogic.Offer as SOffer
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -373,11 +374,10 @@ buildPassTypeAPIEntity passType =
     }
 
 buildPassAPIEntity ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Maybe Lang.Language ->
   Id.Id DP.Person ->
   DPass.Pass ->
-  m PassAPI.PassAPIEntity
+  Environment.Flow PassAPI.PassAPIEntity
 buildPassAPIEntity mbLanguage personId pass = do
   -- Get person details for eligibility check
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -408,6 +408,13 @@ buildPassAPIEntity mbLanguage personId pass = do
   let name = maybe pass.name (Just . (.message)) nameTranslation
   let benefitDescription = maybe pass.benefitDescription (.message) benefitTranslation
   let description = maybe pass.description (Just . (.message)) descriptionTranslation
+
+  offer <-
+    withTryCatch "getMultimodalPassAvailablePasses:offerListCache" (SOffer.offerListCache person.merchantId personId person.merchantOperatingCityId DOrder.FRFSBusBooking (mkPrice (Just INR) pass.amount))
+      >>= \case
+        Left _ -> return Nothing
+        Right offersResp -> SOffer.mkCumulativeOfferResp person.merchantOperatingCityId offersResp []
+
   return $
     PassAPI.PassAPIEntity
       { id = pass.id,
@@ -423,6 +430,7 @@ buildPassAPIEntity mbLanguage personId pass = do
         name = name,
         description = description,
         code = pass.code,
+        offer,
         autoApply = pass.autoApply
       }
 
@@ -467,6 +475,7 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         eligibility = True,
         name = name,
         code = purchasedPass.passCode,
+        offer = Nothing,
         autoApply = False -- Auto-apply not relevant for already purchased passes
       }
 

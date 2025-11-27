@@ -75,7 +75,7 @@ import Lib.JourneyModule.Utils
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfo as GD
-import SharedLogic.Payment as SPayment
+import SharedLogic.Offer as SOffer
 import SharedLogic.Search
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
@@ -1346,10 +1346,10 @@ generateJourneyInfoResponse journey legs = do
   let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
   let unifiedQRV2 = getUnifiedQRV2 unifiedQR
   offer <-
-    withTryCatch "generateJourneyInfoResponse:offerListCache" (SPayment.offerListCache journey.merchantId journey.riderId journey.merchantOperatingCityId DOrder.FRFSMultiModalBooking (mkPrice mbCurrency estimatedMinFareAmount))
+    withTryCatch "generateJourneyInfoResponse:offerListCache" (SOffer.offerListCache journey.merchantId journey.riderId journey.merchantOperatingCityId DOrder.FRFSMultiModalBooking (mkPrice mbCurrency estimatedMinFareAmount))
       >>= \case
         Left _ -> return Nothing
-        Right offersResp -> SPayment.mkCumulativeOfferResp journey.merchantOperatingCityId offersResp legs
+        Right offersResp -> SOffer.mkCumulativeOfferResp journey.merchantOperatingCityId offersResp legs
   pure $
     APITypes.JourneyInfoResp
       { estimatedDuration = journey.estimatedDuration,
