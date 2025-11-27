@@ -5,6 +5,8 @@ imports:
   Meters: Kernel.Types.Distance
   ServiceTierType: Domain.Types.ServiceTierType
   Value: Data.Aeson
+  MultimodalTravelMode: Domain.Types.Trip
+  RouteState: Storage.CachedQueries.Merchant.MultiModalBus
 
 module: NearbyDrivers
 types:
@@ -12,16 +14,40 @@ types:
     location: LatLong
     radius: Meters
     vehicleVariants: Maybe [VehicleVariant]
+    travelMode: Maybe MultimodalTravelMode
 
   NearbyDriverRes:
     serviceTierTypeToVehicleVariant: Value # ServiceTierType -> VehicleVariant
     variantLevelDriverCount: Value # VehicleVariant -> Int
-    buckets: "[NearByDriversBucket]"
+    buckets: "[NearByDriversBucket]" # will be deprecated
+    vehicleDataBuckets: "[VehicleDataBucket]"
+
+  VehicleDataBucket:
+    radius: Meters
+    travelMode: MultimodalTravelMode
+    vehicleInfo: VehicleInfo
+
+  VehicleInfo:
+    enum: "PublicTransport PublicTransportBucket | Taxi NearByDriversBucket"
 
   NearByDriversBucket:
-    radius: Meters
+    radius: Meters # will be deprecated
     variant: VehicleVariant
     driverInfo: "[DriverInfo]"
+
+  PublicTransportBucket:
+    serviceType: Maybe BecknV2.FRFS.Enums.ServiceTierType
+    serviceTierName: Maybe Text
+    vehicles: "[PublicTransportInfo]"
+
+  PublicTransportInfo:
+    vehicleNumber: Maybe Text
+    routeCode: Text
+    currentLocation: LatLong
+    distance: Maybe Double
+    shortName: Maybe Text
+    routeState: Maybe RouteState
+    bearing: Maybe Int
 
   DriverInfo:
     lat: Double

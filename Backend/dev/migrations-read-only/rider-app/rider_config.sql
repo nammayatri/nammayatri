@@ -502,3 +502,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN frfs_metrics_api_key text ;
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN subway_restriction_start_time time without time zone ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN subway_restriction_end_time time without time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN nearby_bus_radius_bucket_step integer ;
