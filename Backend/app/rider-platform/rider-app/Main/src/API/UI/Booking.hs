@@ -92,7 +92,8 @@ type API =
              :> "editStop"
              :> ReqBody '[JSON] DBooking.StopReq
              :> Post '[JSON] APISuccess
-           :<|> "generateInvoice"
+           :<|> "invoice"
+             :> "generate"
              :> TokenAuth
              :> ReqBody '[JSON] DInvoice.GenerateInvoiceReq
              :> Post '[JSON] DInvoice.GenerateInvoiceRes
