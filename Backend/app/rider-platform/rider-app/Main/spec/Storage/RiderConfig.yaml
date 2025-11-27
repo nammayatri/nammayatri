@@ -182,6 +182,7 @@ RiderConfig:
     frfsMetricsApiKey: Maybe Text
     subwayRestrictionStartTime: Maybe TimeOfDay
     subwayRestrictionEndTime: Maybe TimeOfDay
+    nearbyBusRadiusBucketStep: Maybe Meters
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
