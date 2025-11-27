@@ -124,7 +124,7 @@ postMultimodalPassSelect (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiP
   unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")
 
   -- Check if user has all required documents
-  validateRequiredDocuments person pass.documentsRequired
+  validateRequiredDocuments mbProfilePicture person pass.documentsRequired
   deviceId <- getDeviceId person mbDeviceIdParam mbImeiParam
 
   -- Use Redis lock to prevent race condition when purchasing pass
@@ -338,17 +338,17 @@ mkPassPurchaseLockKey personId passTypeId =
   "PassPurchase:PersonId:" <> personId.getId <> ":PassTypeId:" <> passTypeId.getId
 
 -- Validate that the person has all required documents for the pass
-validateRequiredDocuments :: (MonadFlow m) => DP.Person -> [DPass.PassDocumentType] -> m ()
-validateRequiredDocuments person requiredDocs = do
-  let missingDocs = filter (not . hasDocument person) requiredDocs
+validateRequiredDocuments :: (MonadFlow m) => Maybe Text -> DP.Person -> [DPass.PassDocumentType] -> m ()
+validateRequiredDocuments mbProfilePicture person requiredDocs = do
+  let missingDocs = filter (not . hasDocument mbProfilePicture person) requiredDocs
   unless (null missingDocs) $ do
     let missingDocNames = show missingDocs
     throwError $ InvalidRequest $ "Missing required documents: " <> missingDocNames
 
 -- Check if person has a specific document
-hasDocument :: DP.Person -> DPass.PassDocumentType -> Bool
-hasDocument person docType = case docType of
-  DPass.ProfilePicture -> isJust person.profilePicture
+hasDocument :: Maybe Text -> DP.Person -> DPass.PassDocumentType -> Bool
+hasDocument mbProfilePicture person docType = case docType of
+  DPass.ProfilePicture -> isJust (mbProfilePicture <|> person.profilePicture)
   DPass.Aadhaar -> person.aadhaarVerified
 
 -- Construct message keys for Pass fields
