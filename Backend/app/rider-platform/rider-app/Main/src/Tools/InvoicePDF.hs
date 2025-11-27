@@ -14,6 +14,7 @@
 
 module Tools.InvoicePDF where
 
+import Control.Exception (try)
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.Booking as DRB
@@ -21,14 +22,29 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Kernel.External.Encryption (decrypt)
-import Kernel.Prelude
+import Kernel.Prelude hiding (try)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import System.Directory (createDirectoryIfMissing)
-import System.Process (callCommand)
+import System.Directory (createDirectoryIfMissing, doesFileExist, getTemporaryDirectory)
+import System.Exit (ExitCode (..))
+import System.FilePath ((</>))
+import System.Process (readProcessWithExitCode)
+import System.Timeout (timeout)
 
--- import Kernel.Types.Common (EncFlow)
+-- import Kernel.External.Encryption (decrypt)
+
+-- | HTML escape function to prevent XSS attacks
+-- Escapes: < > & " ' to their HTML entity equivalents
+escapeHtml :: Text -> Text
+escapeHtml = T.concatMap escapeChar
+  where
+    escapeChar '<' = "&lt;"
+    escapeChar '>' = "&gt;"
+    escapeChar '&' = "&amp;"
+    escapeChar '"' = "&quot;"
+    escapeChar '\'' = "&#x27;"
+    escapeChar c = T.singleton c
 
 data InvoiceData = InvoiceData
   { invoiceId :: Text,
@@ -76,33 +92,65 @@ generateInvoicePDF invoiceId person bookings merchant = do
   -- Generate HTML
   let html = generateInvoiceHTML invoiceData
 
-  -- Create assets directory if it doesn't exist
-  liftIO $ createDirectoryIfMissing True "src/assets"
+  -- Get temporary directory and create invoice subdirectory
+  tempDir <- liftIO getTemporaryDirectory
+  let invoiceDir = tempDir </> "nammayatri_invoices"
+  liftIO $ createDirectoryIfMissing True invoiceDir
 
   -- Save HTML file
-  let htmlPath = "src/assets/invoice_" <> T.unpack invoiceId <> ".html"
-      pdfPath = "src/assets/invoice_" <> T.unpack invoiceId <> ".pdf"
+  let htmlPath = invoiceDir </> ("invoice_" <> T.unpack invoiceId <> ".html")
+      pdfPath = invoiceDir </> ("invoice_" <> T.unpack invoiceId <> ".pdf")
 
   liftIO $ writeFile htmlPath (T.unpack html)
 
   -- Convert HTML to PDF using wkhtmltopdf (fallback to HTML if not available)
-  pdfGenerated <- liftIO $ generatePDFFromHTML htmlPath pdfPath
+  pdfGenerated <- generatePDFFromHTML htmlPath pdfPath
 
   if pdfGenerated
     then do
-      logInfo $ "PDF generated successfully: " <> T.pack pdfPath
-      return pdfPath
+      -- Verify PDF file was actually created
+      pdfExists <- liftIO $ doesFileExist pdfPath
+      if pdfExists
+        then do
+          logInfo $ "PDF generated and verified successfully: " <> T.pack pdfPath
+          return pdfPath
+        else do
+          logWarning $ "PDF generation succeeded but file not found at: " <> T.pack pdfPath <> ", using HTML instead"
+          return htmlPath
     else do
-      logWarning "wkhtmltopdf not available, using HTML file instead"
+      logWarning "wkhtmltopdf not available or failed, using HTML file instead"
       return htmlPath
 
 -- | Generate PDF from HTML using wkhtmltopdf
-generatePDFFromHTML :: FilePath -> FilePath -> IO Bool
+generatePDFFromHTML :: (MonadFlow m, Log m) => FilePath -> FilePath -> m Bool
 generatePDFFromHTML htmlPath pdfPath = do
-  -- Try to generate PDF, catch errors if wkhtmltopdf is not installed
-  (try :: IO () -> IO (Either SomeException ())) (callCommand $ "wkhtmltopdf " <> htmlPath <> " " <> pdfPath) >>= \case
-    Right _ -> return True
-    Left _ -> return False
+  -- Verify input HTML file exists
+  htmlExists <- liftIO $ doesFileExist htmlPath
+  unless htmlExists $ do
+    logError $ "HTML file not found at: " <> T.pack htmlPath
+
+  -- Try to generate PDF with 60 second timeout
+  result <-
+    liftIO $
+      timeout 60000000 $ -- 60 seconds in microseconds
+        (try (readProcessWithExitCode "wkhtmltopdf" ["--enable-local-file-access", htmlPath, pdfPath] "") :: IO (Either SomeException (ExitCode, String, String)))
+
+  case result of
+    Just (Right (ExitSuccess, _stdout, stderr)) -> do
+      logInfo $ "wkhtmltopdf succeeded: " <> T.pack pdfPath
+      unless (null stderr) $ logWarning $ "wkhtmltopdf stderr: " <> T.pack stderr
+      return True
+    Just (Right (exitCode, stdout, stderr)) -> do
+      logError $ "wkhtmltopdf failed with exit code: " <> T.pack (show exitCode)
+      logError $ "wkhtmltopdf stdout: " <> T.pack stdout
+      logError $ "wkhtmltopdf stderr: " <> T.pack stderr
+      return False
+    Just (Left ex) -> do
+      logError $ "wkhtmltopdf exception: " <> T.pack (show ex)
+      return False
+    Nothing -> do
+      logError "wkhtmltopdf timeout after 60 seconds"
+      return False
 
 -- | Calculate total amount from bookings
 calculateTotalAmount :: [DRB.Booking] -> Maybe HighPrecMoney
@@ -115,13 +163,20 @@ generateInvoiceHTML :: InvoiceData -> Text
 generateInvoiceHTML InvoiceData {..} =
   let formattedDate = T.pack $ DT.formatTime DT.defaultTimeLocale "%B %d, %Y" invoiceDate
       formattedAmount = maybe "N/A" (T.pack . show . getHighPrecMoney) totalAmount
+      -- Escape all user-controlled data to prevent XSS
+      safeInvoiceId = escapeHtml invoiceId
+      safeMerchantName = escapeHtml merchantName
+      safeMerchantAddress = escapeHtml <$> merchantAddress
+      safeCustomerName = escapeHtml customerName
+      safeCustomerEmail = escapeHtml <$> customerEmail
+      safeCustomerMobile = escapeHtml <$> customerMobile
    in T.concat
         [ "<!DOCTYPE html>",
           "<html>",
           "<head>",
           "<meta charset='UTF-8'>",
           "<title>Invoice ",
-          invoiceId,
+          safeInvoiceId,
           "</title>",
           "<style>",
           invoiceCSS,
@@ -133,14 +188,14 @@ generateInvoiceHTML InvoiceData {..} =
           "<div class='header'>",
           "<div class='logo'>",
           "<h1>",
-          merchantName,
+          safeMerchantName,
           "</h1>",
-          maybe "" (\addr -> "<p>" <> addr <> "</p>") merchantAddress,
+          maybe "" (\addr -> "<p>" <> addr <> "</p>") safeMerchantAddress,
           "</div>",
           "<div class='invoice-info'>",
           "<h2>INVOICE</h2>",
           "<p><strong>Invoice #:</strong> ",
-          invoiceId,
+          safeInvoiceId,
           "</p>",
           "<p><strong>Date:</strong> ",
           formattedDate,
@@ -151,10 +206,10 @@ generateInvoiceHTML InvoiceData {..} =
           "<div class='customer-info'>",
           "<h3>Bill To:</h3>",
           "<p><strong>",
-          customerName,
+          safeCustomerName,
           "</strong></p>",
-          maybe "" (\email -> "<p>Email: " <> email <> "</p>") customerEmail,
-          maybe "" (\mobile -> "<p>Mobile: " <> mobile <> "</p>") customerMobile,
+          maybe "" (\email -> "<p>Email: " <> email <> "</p>") safeCustomerEmail,
+          maybe "" (\mobile -> "<p>Mobile: " <> mobile <> "</p>") safeCustomerMobile,
           "</div>",
           -- Bookings Table
           "<table class='bookings-table'>",
@@ -190,7 +245,7 @@ generateInvoiceHTML InvoiceData {..} =
           -- Footer
           "<div class='footer'>",
           "<p>Thank you for choosing ",
-          merchantName,
+          safeMerchantName,
           "!</p>",
           "<p class='note'>This is a computer-generated invoice and does not require a signature.</p>",
           "</div>",
@@ -210,10 +265,14 @@ generateBookingRow booking =
         Just loc -> fromMaybe "Unknown" loc.address.area
         Nothing -> "N/A"
       amount = T.pack . show . getHighPrecMoney $ booking.estimatedTotalFare.amount
+      -- Escape all user-controlled data to prevent XSS
+      safeBookingId = escapeHtml (T.take 8 bookingId)
+      safeFromLocation = escapeHtml fromLocation
+      safeToLocation = escapeHtml toLocation
    in T.concat
         [ "<tr>",
           "<td>",
-          T.take 8 bookingId,
+          safeBookingId,
           "...</td>",
           "<td>",
           createdAt,
@@ -222,10 +281,10 @@ generateBookingRow booking =
           rideType,
           "</td>",
           "<td>",
-          fromLocation,
+          safeFromLocation,
           "</td>",
           "<td>",
-          toLocation,
+          safeToLocation,
           "</td>",
           "<td>₹ ",
           amount,

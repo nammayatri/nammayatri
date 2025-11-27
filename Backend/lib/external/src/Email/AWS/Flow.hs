@@ -70,9 +70,9 @@ sendEmailWithAttachment ::
   IO ()
 sendEmailWithAttachment from to subject bodyText pdfPath fileName = do
   -- Check if file exists
-  _fileExists <- doesFileExist pdfPath
-  -- unless fileExists $ do
-  --   error ("Attachment file not found: " ++ pdfPath)
+  fileExists <- doesFileExist pdfPath
+  unless fileExists $ do
+    error ("Attachment file not found: " <> T.pack pdfPath)
 
   -- Read PDF file and encode to base64
   pdfContent <- BS.readFile pdfPath
