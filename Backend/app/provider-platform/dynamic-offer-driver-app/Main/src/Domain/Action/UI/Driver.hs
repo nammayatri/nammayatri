@@ -940,7 +940,7 @@ deactivateGoHomeFeature (personId, _, merchantOpCityId) = do
   when (driverInfo.blocked) $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   ghInfo <- getDriverGoHomeRequestInfo driverId merchantOpCityId (Just goHomeConfig)
   ghrId <- fromMaybeM DriverGoHomeRequestNotPresent ghInfo.driverGoHomeRequestId
-  currentRide <- Ride.findNewOrInProgressRideByGHRId ghrInfo.driverGoHomeRequestId
+  currentRide <- Ride.findNewOrInProgressRideByGHRId ghrId
   when (isJust currentRide) $ throwError $ DriverGoHomeRequestRideInProgress
   succRide <- Ride.findCompletedRideByGHRId ghrId
   if isJust succRide
