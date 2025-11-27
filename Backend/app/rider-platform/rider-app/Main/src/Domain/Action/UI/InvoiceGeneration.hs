@@ -30,6 +30,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.Queries.BookingExtra as QBE
 import qualified Storage.Queries.Person as QPerson
+import System.Directory (doesFileExist)
 import Tools.Error
 import Tools.InvoicePDF as PDF
 
@@ -113,7 +114,8 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
   -- Step 7: Fork async job to generate PDF and email (uses email from request)
   fork "generate_and_email_invoice" $ do
     generateAndEmailInvoice invoiceId person bookings merchantId email
-
+      `catch` \(e :: SomeException) ->
+        logError $ "Invoice generation failed for " <> invoiceId.getId <> ": " <> show e <> "personId: " <> personId.getId <> "merchantId: " <> merchantId.getId <> "email: " <> email
   -- Step 8: Return immediate response
   logInfo $ "Invoice generation initiated for person: " <> personId.getId <> ", invoiceId: " <> invoiceId.getId <> ", total bookings: " <> show totalCount
 
@@ -212,7 +214,8 @@ generateAndEmailInvoice ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    Log m
   ) =>
   Id Text ->
   DP.Person ->
@@ -225,9 +228,9 @@ generateAndEmailInvoice invoiceId person bookings merchantId email = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
   -- Get rider config to fetch email configuration
-  let merchantOperatingCityId = case bookings of
-        (firstBooking : _) -> firstBooking.merchantOperatingCityId
-        [] -> error "No bookings provided" -- This should never happen as we validate bookings exist
+  merchantOperatingCityId <- case bookings of
+    (firstBooking : _) -> return firstBooking.merchantOperatingCityId
+    [] -> throwError $ InvalidRequest "No bookings provided for invoice generation" -- This should never happen as we validate bookings exist
   riderConfig <- CQRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
 
   -- Get fromEmail from rider config (use emailOtpConfig if available, otherwise default)
@@ -235,6 +238,12 @@ generateAndEmailInvoice invoiceId person bookings merchantId email = do
 
   -- Generate PDF
   pdfPath <- PDF.generateInvoicePDF invoiceId.getId person bookings merchant
+
+  -- Verify file exists before attempting to send
+  fileExists <- liftIO $ doesFileExist pdfPath
+  unless fileExists $ do
+    logError $ "Generated invoice file not found at path: " <> T.pack pdfPath
+    throwError $ InternalError "Invoice file generation failed - file not found"
 
   -- Send email with PDF attachment
   let subject = "Your Namma Yatri Invoice - " <> invoiceId.getId

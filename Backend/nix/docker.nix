@@ -27,6 +27,7 @@ in
               htop
               wget
               zbar
+              wkhtmltopdf-bin
             ];
             name = "beckn-root";
             pathsToLink = [

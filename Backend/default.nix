@@ -11,6 +11,14 @@
   ];
   perSystem = { config, self', pkgs, lib, system, ... }:
     let
+      # Platform-specific wkhtmltopdf configuration
+      # x86_64 (Intel): Use wkhtmltopdf-bin (pre-compiled, no issues)
+      # aarch64 (Apple Silicon): Skip for local dev (not available), works in Docker/production
+      wkhtmltopdfPkgs =
+        if pkgs.stdenv.isAarch64 && pkgs.stdenv.isDarwin
+        then [ ] # Skip on Apple Silicon - not available
+        else [ pkgs.wkhtmltopdf-bin ];
+
       cacConfig = p: p.overrideAttrs (oa: {
         inherit (config.haskellProjects.default.outputs.finalPackages) cac_client;
         preBuild = ''
@@ -164,7 +172,7 @@
           newman
           config.mission-control.wrapper
           gtfstidy
-        ];
+        ] ++ wkhtmltopdfPkgs;
         # cf. https://haskell.flake.page/devshell#composing-devshells
         inputsFrom = [
           config.pre-commit.devShell
@@ -174,6 +182,21 @@
         ];
         shellHook = ''
           export DYLD_LIBRARY_PATH="${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
+
+          ${lib.optionalString (pkgs.stdenv.isAarch64 && pkgs.stdenv.isDarwin) ''
+            echo ""
+            echo "⚠️  Note: wkhtmltopdf is NOT available on Apple Silicon for local development"
+            echo "   (it requires packages not supported on ARM Macs)"
+            echo ""
+            echo "   Invoice PDF generation will:"
+            echo "   ✅ Fall back to HTML email (your code handles this gracefully)"
+            echo "   ✅ Work normally in Docker/staging/production (x86_64 Linux)"
+            echo ""
+            echo "   To test PDF generation locally, you can:"
+            echo "   - Use Docker: docker run --rm -v /tmp:/tmp wkhtmltopdf-image"
+            echo "   - Deploy to staging and test there"
+            echo ""
+          ''}
         '';
       };
     };
