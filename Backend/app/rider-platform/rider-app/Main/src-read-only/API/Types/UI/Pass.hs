@@ -17,6 +17,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
+import qualified SharedLogic.Offer
 import Tools.Auth
 
 data PassAPIEntity = PassAPIEntity
@@ -32,6 +33,7 @@ data PassAPIEntity = PassAPIEntity
     maxDays :: Data.Maybe.Maybe Kernel.Prelude.Int,
     maxTrips :: Data.Maybe.Maybe Kernel.Prelude.Int,
     name :: Data.Maybe.Maybe Data.Text.Text,
+    offer :: Data.Maybe.Maybe SharedLogic.Offer.CumulativeOfferResp,
     savings :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType]
   }

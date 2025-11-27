@@ -73,7 +73,7 @@ import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.EstimateTags
 import SharedLogic.JobScheduler (RiderJobType (..))
 import SharedLogic.Merchant
-import SharedLogic.PaymentType
+import SharedLogic.Offer
 import qualified SharedLogic.Scheduler.Jobs.Chakras as Chakras
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()

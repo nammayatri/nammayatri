@@ -1,7 +1,6 @@
 module SharedLogic.Payment where
 
 import qualified Beckn.ACL.Cancel as ACL
-import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.Cancel as DCancel
@@ -17,7 +16,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as Ride
-import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -30,7 +28,6 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerToo
 import Kernel.Types.CacheFlow
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -39,21 +36,17 @@ import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
-import Lib.Yudhishthira.Storage.Beam.BeamFlow
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
-import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.JobScheduler
 import qualified SharedLogic.JobScheduler as JobScheduler
-import SharedLogic.PaymentType
+import SharedLogic.Offer
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
-import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 import Tools.Metrics.BAPMetrics
 import qualified Tools.Notifications as TNotifications

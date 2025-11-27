@@ -44,7 +44,7 @@ imports:
   FRFSCategorySelectionReq: API.Types.UI.FRFSTicketService
   FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
   PaymentStatusResp: Lib.Payment.Domain.Action
-  CumulativeOfferResp: SharedLogic.PaymentType
+  CumulativeOfferResp: SharedLogic.Offer
 
 module: MultimodalConfirm
 

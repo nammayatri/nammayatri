@@ -14,6 +14,7 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   Day: Data.Time
   Language: Kernel.External.Types
+  CumulativeOfferResp: SharedLogic.Offer
 
 module: Pass
 types:
@@ -45,6 +46,7 @@ types:
     name: Maybe Text
     description: Maybe Text
     code: Text
+    offer: Maybe CumulativeOfferResp
     autoApply: Bool
     derive: "Show"
 
