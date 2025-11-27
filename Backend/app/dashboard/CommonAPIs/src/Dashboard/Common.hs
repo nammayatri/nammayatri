@@ -105,7 +105,8 @@ data DriverVehicleDetails = DriverVehicleDetails
     vehicleModel :: Text,
     vehicleColour :: Text,
     vehicleDoors :: Maybe Int,
-    vehicleSeatBelts :: Maybe Int
+    vehicleSeatBelts :: Maybe Int,
+    vehicleModelYear :: Maybe Int
   }
   deriving (Generic, ToSchema, Show, ToJSON, FromJSON)
 

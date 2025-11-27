@@ -429,18 +429,34 @@ postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.Registe
         ..
       }
 
+castVehicleDetails :: Common.DriverVehicleDetails -> DriverVehicleDetails
+castVehicleDetails Common.DriverVehicleDetails {..} =
+  DriverVehicleDetails
+    { vehicleManufacturer = vehicleManufacturer,
+      vehicleModel = vehicleModel,
+      vehicleColour = vehicleColour,
+      vehicleDoors = vehicleDoors,
+      vehicleSeatBelts = vehicleSeatBelts,
+      vehicleModelYear = vehicleModelYear
+    }
+
 postDriverRegistrationRegisterRc :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RegisterRCReq -> Flow APISuccess
-postDriverRegistrationRegisterRc merchantShortId opCity driverId_ Common.RegisterRCReq {..} = do
+postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.RegisterRCReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let (vehicleDetailsToPass, vehicleCategoryToPass) =
+        if transporterConfig.allowDashboardToPassVehicleDetails == Just True
+          then (castVehicleDetails <$> req.vehicleDetails, req.vehicleCategory)
+          else (Nothing, Nothing)
   verifyRC
     True
     (Just merchant)
     (cast driverId_, cast merchant.id, merchantOpCityId)
     ( DriverRCReq
         { imageId = cast imageId,
-          vehicleCategory = Nothing,
-          vehicleDetails = Nothing,
+          vehicleCategory = vehicleCategoryToPass,
+          vehicleDetails = vehicleDetailsToPass,
           isRCImageValidated = Nothing,
           ..
         }

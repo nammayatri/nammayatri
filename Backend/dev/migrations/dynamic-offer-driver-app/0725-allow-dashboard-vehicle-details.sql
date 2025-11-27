@@ -1,0 +1,1 @@
+update atlas_driver_offer_bpp.transporter_config set allow_dashboard_to_pass_vehicle_details = true where merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Helsinki');

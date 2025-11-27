@@ -548,6 +548,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_mobile_n
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_rc_unlink_when_driver_offline boolean  default false;
 
 
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_dashboard_to_pass_vehicle_details boolean ;
+
+
 
 ------- SQL updates -------
 
