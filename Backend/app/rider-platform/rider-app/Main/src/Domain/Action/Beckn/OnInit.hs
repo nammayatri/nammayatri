@@ -48,7 +48,8 @@ data OnInitReq = OnInitReq
     -- estimatedTotalFare :: Price,
     paymentUrl :: Maybe Text,
     paymentId :: Maybe Text,
-    fareBreakups :: [DCommon.DFareBreakup]
+    fareBreakups :: [DCommon.DFareBreakup],
+    commission :: Maybe HighPrecMoney
   }
   deriving (Show, Generic)
 
@@ -93,6 +94,7 @@ onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r, Metrics.Has
 onInit req = do
   whenJust req.bppBookingId $ QRideB.updateBPPBookingId req.bookingId
   void $ QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedFare req.paymentUrl -- TODO : 4th parameter is discounted fare (not implemented)
+  whenJust req.commission $ QRideB.updateCommission req.bookingId . Just
   booking <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)

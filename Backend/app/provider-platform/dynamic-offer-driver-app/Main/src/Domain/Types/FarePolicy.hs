@@ -179,6 +179,9 @@ data FareChargeComponent
   | StateEntryPermitChargesComponent
   | -- Ambulance details
     AmbulanceDistBasedFareComponent
+  | -- VAT components
+    RideVatComponent
+  | TollVatComponent
   deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 

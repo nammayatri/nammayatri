@@ -369,6 +369,9 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         insuredAmount = booking.insuredAmount,
         cancellationChargesOnCancel = Nothing,
         pickupEtaLogicVersion = Nothing,
+        -- Commission is provider-side data, calculated on BPP. On BAP side, it remains Nothing.
+        -- If commission is needed on BAP, it should be calculated here or received from BPP.
+        commission = booking.commission,
         ..
       }
 
@@ -442,7 +445,7 @@ rideAssignedReqHandler req = do
     assignRideUpdate req'@ValidatedRideAssignedReq {..} mbMerchant rideStatus now = do
       let BookingDetails {..} = req'.bookingDetails
       ride <- buildRide req' mbMerchant now rideStatus
-      let applicationFeeAmount = applicationFeeAmountForRide $ fromMaybe [] fareBreakups
+      let applicationFeeAmount = fromMaybe 0 booking.commission
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
         let createPaymentIntentReq =
               Payment.CreatePaymentIntentReq
@@ -671,7 +674,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              tollConfidence,
              rideEndTime,
              paymentStatus = if SPayment.isOnlinePayment mbMerchant booking then DRide.NotInitiated else DRide.Completed,
-             endOdometerReading
+             endOdometerReading,
+             -- Commission is provider-side data. On BAP side, booking.commission will be Nothing.
+             -- If commission is needed, it should be calculated here or received from BPP.
+             commission = booking.commission
             }
   breakups <- traverse (buildFareBreakup ride.id) fareBreakups
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
@@ -701,7 +707,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   -- we should create job for collecting money from customer
   let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
   when onlinePayment $ do
-    let applicationFeeAmount = applicationFeeAmountForRide fareBreakups
+    let applicationFeeAmount = fromMaybe 0 booking.commission
     let scheduleAfter = riderConfig.executePaymentDelay
         executePaymentIntentJobData = ExecutePaymentIntentJobData {personId = person.id, rideId = ride.id, fare = totalFare, applicationFeeAmount = applicationFeeAmount}
     logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter

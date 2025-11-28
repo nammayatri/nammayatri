@@ -129,6 +129,12 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       boothChargeCaption = show Enums.BOOTH_CHARGE
       mbBoothChargeItem = mkBreakupItem boothChargeCaption . mkPrice <$> fareParams.boothCharge
 
+      baseVatCaption = show Enums.RIDE_VAT
+      mbBaseVatItem = mkBreakupItem baseVatCaption . mkPrice <$> fareParams.rideVat
+
+      tollVatCaption = show Enums.TOLL_VAT
+      mbTollVatItem = mkBreakupItem tollVatCaption . mkPrice <$> fareParams.tollVat
+
       detailsBreakups = processFareParamsDetails fareParams.fareParametersDetails
       additionalChargesBreakup = map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToEnum addCharges.chargeCategory) $ mkPrice addCharges.charge) fareParams.conditionalCharges
   catMaybes
@@ -153,7 +159,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbRideStopChargeItem,
       mbLuggageChargeItem,
       mbReturnFeeChargeItem,
-      mbBoothChargeItem
+      mbBoothChargeItem,
+      mbBaseVatItem,
+      mbTollVatItem
     ]
     <> detailsBreakups
     <> additionalChargesBreakup
@@ -259,7 +267,8 @@ fareSum fareParams conditionalChargeCategories = do
 -- - Payment processing fee
 -- - Conditional charges (filtered by category)
 --
--- Note: Commission (fareParams.commission) is NOT included in the final sum.
+-- Note: Commission is NOT part of FareParameters and is NOT included in the final sum.
+-- Commission is calculated separately and stored in Booking/Ride tables.
 -- It is calculated and stored for breakdown/transparency purposes only,
 -- as per PRD requirements.
 pureFareSum :: FareParameters -> Maybe [DAC.ConditionalChargesCategories] -> HighPrecMoney
@@ -476,8 +485,7 @@ calculateFareParameters params = do
             businessDiscount = businessDiscount,
             paymentProcessingFee = Nothing,
             rideVat = Nothing,
-            tollVat = Nothing,
-            commission = Nothing
+            tollVat = Nothing
           }
   KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""

@@ -16,6 +16,7 @@ module Beckn.ACL.OnInit (buildOnInitReqV2) where
 
 import Beckn.ACL.Common as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Text as T
@@ -25,6 +26,7 @@ import Domain.Types.Booking (BPPBooking, Booking)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
+import qualified Kernel.Types.Common as Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Tools.Error
@@ -42,6 +44,7 @@ buildOnInitReqV2 req = do
     let order = message.confirmReqMessageOrder
     fareParamsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "Missing Quote Breakups.")
     let fareBreakups = mapMaybe ACL.mkDFareBreakup fareParamsQuotationBreakup
+        commission = extractCommissionFromPaymentTags order.orderPayments
     case parsedData of
       Left err -> throwError . InvalidBecknSchema $ "on_init req," <> "on_init error: " <> show err
       Right (bookingId, bppBookingId, estimatedFare, paymentId, currency) -> do
@@ -51,6 +54,7 @@ buildOnInitReqV2 req = do
               { estimatedFare = Utils.decimalValueToPrice currency estimatedFare,
                 discount = Nothing, -- TODO : replace when actual discount logic is implemented
                 paymentUrl = Nothing, -- TODO check with ONDC
+                commission = commission,
                 ..
               }
   where
@@ -90,6 +94,14 @@ buildOnInitReqV2 req = do
 
     parseDecimalValue :: Text -> Maybe DecimalValue.DecimalValue
     parseDecimalValue = DecimalValue.valueFromString
+
+    extractCommissionFromPaymentTags :: Maybe [Spec.Payment] -> Maybe Common.HighPrecMoney
+    extractCommissionFromPaymentTags mbPayments = do
+      payments <- mbPayments
+      payment <- listToMaybe payments
+      paymentTags <- payment.paymentTags
+      commissionText <- ACL.getTagV2' Tags.SETTLEMENT_DETAILS Tags.COMMISSION (Just paymentTags)
+      Common.highPrecMoneyFromText commissionText
 
 handleErrorV2 ::
   (MonadFlow m) =>

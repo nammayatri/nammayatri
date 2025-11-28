@@ -205,6 +205,15 @@ findByTransactionIdAndStatus transactionId statusList =
     (Just (Se.Desc BeamB.createdAt))
     <&> listToMaybe
 
+updateCommission :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe HighPrecMoney -> m ()
+updateCommission rbId mbCommission = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.commission mbCommission,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
+
 updatePaymentInfo :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Price -> Maybe Price -> Price -> Maybe Text -> m ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
   now <- getCurrentTime

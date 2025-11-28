@@ -113,6 +113,7 @@ updateMultiple rideId ride = do
       Se.Set BeamR.fare (ride.fare <&> (.amount)),
       Se.Set BeamR.totalFare (ride.totalFare <&> (.amount)),
       Se.Set BeamR.currency (ride.fare <&> (.currency)),
+      Se.Set BeamR.commission ride.commission,
       Se.Set BeamR.chargeableDistance (distanceToHighPrecMeters <$> ride.chargeableDistance),
       Se.Set BeamR.chargeableDistanceValue $ distanceToHighPrecDistance distanceUnit <$> ride.chargeableDistance,
       Se.Set BeamR.traveledDistance (distanceToHighPrecMeters <$> ride.traveledDistance),
