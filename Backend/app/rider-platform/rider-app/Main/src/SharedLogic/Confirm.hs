@@ -373,6 +373,10 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           recentLocationId = searchRequest.recentLocationId,
           isMultimodalSearch = searchRequest.isMultimodalSearch,
           multimodalSearchRequestId = searchRequest.multimodalSearchRequestId,
+          -- Commission is calculated on BPP side (requires fare policy config).
+          -- BAP doesn't have access to fare policy, so commission remains Nothing here.
+          -- If commission is needed on BAP, it should flow from BPP via Beckn protocol extension.
+          commission = Nothing,
           ..
         },
       bookingParties

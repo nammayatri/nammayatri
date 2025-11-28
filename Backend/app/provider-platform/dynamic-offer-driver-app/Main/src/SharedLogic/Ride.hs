@@ -48,6 +48,8 @@ import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FareCalculatorV2 as FCV2
+import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -109,7 +111,9 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   let isDriverOnRide = bool (Just False) (previousRideInprogress >>= Just . isJust <$> (.driverTripEndLocation)) (isJust previousRideInprogress)
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId
+  mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  commission <- FCV2.calculateCommission booking.fareParams mbFarePolicy
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission
   rideDetails <- buildRideDetails booking ride driver vehicle
 
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
@@ -232,8 +236,9 @@ buildRide ::
   Bool ->
   Maybe Bool ->
   Maybe (Id Person) ->
+  Maybe HighPrecMoney ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
@@ -322,6 +327,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         hasStops = booking.hasStops,
         isPickupOrDestinationEdited = Just False,
         isInsured = booking.isInsured,
+        commission = commission,
         insuredAmount = booking.insuredAmount,
         reactBundleVersion = driver.reactBundleVersion,
         driverCancellationPenaltyFeeId = Nothing,

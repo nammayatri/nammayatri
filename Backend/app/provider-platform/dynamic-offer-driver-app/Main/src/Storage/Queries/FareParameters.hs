@@ -164,8 +164,15 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 paymentProcessingFee = paymentProcessingFee,
                 rideVat = rideVat,
                 tollVat = tollVat,
-                commission = commission,
-                ..
+                businessDiscount = businessDiscount,
+                congestionChargeViaDp = congestionChargeViaDp,
+                luggageCharge = luggageCharge,
+                returnFeeCharge = returnFeeCharge,
+                boothCharge = boothCharge,
+                platformFee = platformFee,
+                sgst = sgst,
+                cgst = cgst,
+                driverCancellationPenaltyAmount = driverCancellationPenaltyAmount
               }
       Nothing -> return Nothing
 
@@ -211,6 +218,15 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.paymentProcessingFee = paymentProcessingFee,
         BeamFP.rideVat = rideVat,
         BeamFP.tollVat = tollVat,
-        BeamFP.commission = commission,
-        ..
+        BeamFP.commission = Nothing,
+        BeamFP.petCharges = petCharges,
+        BeamFP.businessDiscount = businessDiscount,
+        BeamFP.congestionChargeViaDp = congestionChargeViaDp,
+        BeamFP.luggageCharge = luggageCharge,
+        BeamFP.returnFeeCharge = returnFeeCharge,
+        BeamFP.boothCharge = boothCharge,
+        BeamFP.platformFee = platformFee,
+        BeamFP.sgst = sgst,
+        BeamFP.cgst = cgst,
+        BeamFP.driverCancellationPenaltyAmount = driverCancellationPenaltyAmount
       }

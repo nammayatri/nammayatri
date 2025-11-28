@@ -16,6 +16,7 @@ module Beckn.ACL.OnInit where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import BecknV2.OnDemand.Utils.Payment
@@ -25,6 +26,7 @@ import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import Kernel.Prelude
+import qualified Kernel.Types.Common as Common
 import Kernel.Utils.Common
 
 mkOnInitMessageV2 :: DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
@@ -53,6 +55,36 @@ tfOrder res becknConfig mbFarePolicy = do
       orderUpdatedAt = Just res.booking.updatedAt
     }
 
+mkCommissionTagGroup :: Maybe Common.HighPrecMoney -> Maybe [Spec.TagGroup]
+mkCommissionTagGroup mbCommission = do
+  commission <- mbCommission
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.SETTLEMENT_DETAILS,
+                  descriptorName = Nothing,
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.COMMISSION,
+                            descriptorName = Nothing,
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ Common.highPrecMoneyToText commission,
+                    tagDisplay = Just False
+                  }
+              ]
+        }
+    ]
+
 tfFulfillments :: DInit.InitRes -> Maybe [Spec.Fulfillment]
 tfFulfillments res =
   Just
@@ -73,7 +105,14 @@ tfPayments :: DInit.InitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bppConfig = do
   let mPrice = Just $ mkPrice (Just res.booking.currency) res.booking.estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
-  Just . L.singleton $ mkPayment (show res.transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice (Just res.paymentId) mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False
+  let basePayment = mkPayment (show res.transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice (Just res.paymentId) mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False
+      commissionTagGroup = mkCommissionTagGroup res.booking.commission
+      updatedPaymentTags = case (basePayment.paymentTags, commissionTagGroup) of
+        (Just existingTags, Just commissionTags) -> Just (existingTags <> commissionTags)
+        (Just existingTags, Nothing) -> Just existingTags
+        (Nothing, Just commissionTags) -> Just commissionTags
+        (Nothing, Nothing) -> Nothing
+  Just . L.singleton $ basePayment {Spec.paymentTags = updatedPaymentTags}
 
 tfVehicle :: DInit.InitRes -> Maybe Spec.Vehicle
 tfVehicle res = do

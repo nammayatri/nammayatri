@@ -32,6 +32,7 @@
 -- - Backward compatible (extends v1 calculation, doesn't replace it)
 module SharedLogic.FareCalculatorV2
   ( calculateFareParametersV2,
+    calculateCommission,
   )
 where
 
@@ -55,14 +56,17 @@ data ParsedCodeValue
   = ParsedPercentage Rational -- e.g., "14%" -> 0.14
   | ParsedFixed HighPrecMoney -- e.g., "50" -> 50.0
 
--- | Calculate fare parameters with configurable charges (VAT, commission, toll tax)
+-- | Calculate fare parameters with configurable charges (VAT, toll tax)
 --
 -- This function:
 -- 1. Calls the base v1 fare calculation to get standard fare components
 -- 2. Checks if enableFareCalculatorV2 is enabled in TransporterConfig
--- 3. If enabled, applies configurable charges (VAT, commission, toll tax) based on fare_policy configuration
+-- 3. If enabled, applies configurable charges (VAT, toll tax) based on fare_policy configuration
 -- 4. If disabled, returns the base fare parameters (fallback to v1 behavior)
--- 5. Returns FareParameters with new breakdown fields (rideVat, tollVat, commission)
+-- 5. Returns FareParameters with new breakdown fields (rideVat, tollVat)
+--
+-- Note: Commission is NOT stored in FareParameters. It's calculated separately using
+-- calculateCommission and stored in Booking/Ride tables.
 --
 -- The new charges are stored separately in fare_parameters table for transparency,
 -- and are included in pureFareSum for final fare calculation.
@@ -121,22 +125,13 @@ applyConfiguredCharges farePolicy fareParams = do
       pure $ if tollVatAmount > 0 then Just tollVatAmount else Nothing
     Nothing -> pure Nothing -- No toll VAT if not configured
 
-  -- Calculate commission: Only if configured in fare_policy.commission_charge_config
-  -- Example config: {"value":"8%","appliesOn":["RideFare"]}
-  -- Note: Commission is stored for breakdown but NOT included in final fare sum
-  commissionValue <- case farePolicy.commissionChargeConfig of
-    Just config -> do
-      commAmount <- computeConfiguredCharge "commissionCharge" componentMap (Just config)
-      pure $ if commAmount > 0 then Just commAmount else Nothing
-    Nothing -> pure Nothing -- No commission if not configured
-
   -- Return updated fare parameters with new breakdown fields
+  -- Note: Commission is NOT stored in FareParameters - it's calculated separately via calculateCommission and stored in Booking/Ride tables
   pure $
     fareParams
       { paymentProcessingFee = Nothing, -- TODO: Will be enhanced when payment context is available
         rideVat = rideVatValue,
-        tollVat = tollVatValue,
-        commission = commissionValue
+        tollVat = tollVatValue
       }
 
 -- | Compute a configured charge (VAT, commission, or toll tax)
@@ -233,7 +228,9 @@ buildComponentMap FareParameters {..} =
             (InsuranceChargeComponent, maybeZero insuranceCharge),
             (StopChargeComponent, maybeZero stopCharges),
             (CustomerCancellationChargeComponent, maybeZero customerCancellationDues),
-            (PlatformFeeComponent, maybeZero platformFee)
+            (PlatformFeeComponent, maybeZero platformFee),
+            (RideVatComponent, maybeZero rideVat),
+            (TollVatComponent, maybeZero tollVat)
           ]
       -- Detail map: Additional components based on fare policy type
       detailMap = case fareParametersDetails of
@@ -271,3 +268,29 @@ buildComponentMap FareParameters {..} =
 -- Returns 0 if the component is not found
 componentAmount :: ComponentMap -> FareChargeComponent -> HighPrecMoney
 componentAmount mp key = Map.findWithDefault 0 key mp
+
+-- | Calculate commission separately (not part of fare)
+--
+-- This function calculates commission based on fare_policy.commission_charge_config
+-- and FareParameters. Commission is NOT included in the fare sum - it's stored
+-- separately in booking and ride tables for transparency.
+--
+-- Example: If fare_policy has commission_charge_config = {"value":"8%","appliesOn":["RideFare"]},
+-- then commission will be calculated as 8% of RideFare.
+--
+-- Returns Nothing if commission is not configured or if amount is 0.
+calculateCommission ::
+  MonadFlow m =>
+  FareParameters ->
+  Maybe FullFarePolicy ->
+  m (Maybe HighPrecMoney)
+calculateCommission fareParams mbFarePolicy = do
+  case mbFarePolicy of
+    Nothing -> pure Nothing
+    Just farePolicy -> do
+      let componentMap = buildComponentMap fareParams
+      case farePolicy.commissionChargeConfig of
+        Just config -> do
+          commAmount <- computeConfiguredCharge "commissionCharge" componentMap (Just config)
+          pure $ if commAmount > 0 then Just commAmount else Nothing
+        Nothing -> pure Nothing

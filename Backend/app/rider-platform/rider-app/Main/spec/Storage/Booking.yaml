@@ -246,6 +246,7 @@ Booking:
     driverInsuredAmount: Maybe Text
     isMultimodalSearch: Maybe Bool
     multimodalSearchRequestId: Maybe Text
+    commission: Maybe HighPrecMoney
 
   beamFields:
     estimatedDistance:
