@@ -37,7 +37,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler
-import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobInWithCheck)
 import SharedLogic.Allocator
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -94,7 +94,8 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
         case reschuleTimeDiff of
           Just timeDiff' -> do
             logDebug $ "Rescheduling the Job for Next Day"
-            createJobIn @_ @'DriverReferralPayout (Just merchantId) (Just merchantOpCityId) timeDiff' $
+            now <- getCurrentTime
+            createJobInWithCheck @_ @'DriverReferralPayout (Just merchantId) (Just merchantOpCityId) timeDiff' (addUTCTime timeDiff' now) (addUTCTime (timeDiff' + 3600) now) "DriverReferralPayout" (Just 1) $
               DriverReferralPayoutJobData
                 { merchantId = merchantId,
                   merchantOperatingCityId = merchantOpCityId,
