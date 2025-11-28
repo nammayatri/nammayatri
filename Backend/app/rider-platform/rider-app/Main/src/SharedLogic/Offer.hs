@@ -44,12 +44,12 @@ data CumulativeOfferReq = CumulativeOfferReq
 ----------------------------------- Fetch Offers List With Caching ------------------------------------
 -------------------------------------------------------------------------------------------------------
 
-invalidateOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> Price -> m ()
-invalidateOfferListCache person merchantOperatingCityId price = do
+invalidateOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m ()
+invalidateOfferListCache person merchantOperatingCityId paymentServiceType price = do
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   req <- mkOfferListReq person price
   let version = fromMaybe "N/A" riderConfig.offerListCacheVersion
-      key = makeOfferListCacheKey person version req
+      key = makeOfferListCacheKey person version paymentServiceType
   Redis.withCrossAppRedis $ Redis.del key
 
 offerListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r) => Id Merchant.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m Payment.OfferListResp
@@ -58,7 +58,7 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   req <- mkOfferListReq person price
   let version = fromMaybe "N/A" riderConfig.offerListCacheVersion
-      key = makeOfferListCacheKey person version req
+      key = makeOfferListCacheKey person version paymentServiceType
   Redis.withCrossAppRedis $ do
     Redis.get key >>= \case
       Just a -> return a
@@ -107,5 +107,5 @@ mkOfferListReq person price = do
         offerListingMetric = Nothing
       }
 
-makeOfferListCacheKey :: Person.Person -> Text -> Payment.OfferListReq -> Text
-makeOfferListCacheKey person version _req = "OfferList:CId" <> person.id.getId <> ":V-" <> version
+makeOfferListCacheKey :: Person.Person -> Text -> DOrder.PaymentServiceType -> Text
+makeOfferListCacheKey person version serviceType = "OfferList:CId" <> person.id.getId <> ":V-" <> version <> ":ST-" <> show serviceType
