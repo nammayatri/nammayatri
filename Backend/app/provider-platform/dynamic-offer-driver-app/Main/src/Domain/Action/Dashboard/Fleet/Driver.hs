@@ -162,8 +162,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Clickhouse.FleetDriverAssociation as CFDA
 import qualified Storage.Clickhouse.FleetOperatorDailyStats as CFODS
-import qualified Storage.Clickhouse.Person as CHPerson
 import qualified Storage.Clickhouse.FleetRcDailyStats as CFRDSExtra
+import qualified Storage.Clickhouse.Person as CHPerson
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
