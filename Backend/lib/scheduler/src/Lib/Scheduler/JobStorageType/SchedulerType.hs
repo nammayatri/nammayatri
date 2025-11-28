@@ -87,7 +87,7 @@ createJobIn merchantId merchantOperatingCityId inTime jobData = do
 
 createJobInWithCheck ::
   forall t (e :: t) m r.
-  (JobFlow t e, JobCreator r m, FromTType'' BeamST.SchedulerJob (AnyJob t)) =>
+  (JobFlow t e, JobCreator r m, FromTType'' BeamST.SchedulerJob (AnyJob t), ToJSON (JobContent e)) =>
   Maybe (Id (MerchantType t)) ->
   Maybe (Id (MerchantOperatingCityType t)) ->
   NominalDiffTime ->
@@ -98,7 +98,7 @@ createJobInWithCheck ::
   JobContent e ->
   m ()
 createJobInWithCheck merchantId merchantOperatingCityId inTime minScheduleTime maxScheduleTime jobType upperLimit jobData = do
-  jobs <- getJobByTypeAndScheduleTime @t jobType minScheduleTime maxScheduleTime
+  jobs <- DBQ.getJobByTypeTimeAndData @t @e jobType minScheduleTime maxScheduleTime jobData
   case upperLimit of
     Just uL -> do
       if length jobs >= uL
