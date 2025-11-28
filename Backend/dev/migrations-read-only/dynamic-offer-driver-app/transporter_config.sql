@@ -556,17 +556,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_dashboard
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN feedback_notification_config text[] ;
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN feedback_notification_config TYPE json;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN feedback_notification_config json;
 
 
 ------- SQL updates -------
