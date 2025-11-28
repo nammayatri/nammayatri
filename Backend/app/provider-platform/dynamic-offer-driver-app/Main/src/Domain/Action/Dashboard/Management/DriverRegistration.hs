@@ -445,6 +445,7 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  isFleetOwner <- QFOI.findByPrimaryKey (cast driverId_)
   let (vehicleDetailsToPass, vehicleCategoryToPass) =
         if transporterConfig.allowDashboardToPassVehicleDetails == Just True
           then (castVehicleDetails <$> req.vehicleDetails, req.vehicleCategory)
@@ -462,7 +463,7 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
         }
     )
     False
-    Nothing
+    (bool Nothing (Just (cast driverId_)) (isJust isFleetOwner))
 
 postDriverRegistrationRegisterAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AadhaarCardReq -> Flow APISuccess
 postDriverRegistrationRegisterAadhaar merchantShortId opCity driverId req = do

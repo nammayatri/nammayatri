@@ -47,7 +47,6 @@ updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
   updateWithKV
     [ Se.Set Beam.city city,
       Se.Set Beam.country country,
-      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.description description,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.fleetOwnerEnabledCheck fleetOwnerEnabledCheck,
