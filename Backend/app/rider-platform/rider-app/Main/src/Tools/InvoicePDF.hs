@@ -15,6 +15,7 @@
 module Tools.InvoicePDF where
 
 import Control.Exception (try)
+import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.Booking as DRB
@@ -101,7 +102,7 @@ generateInvoicePDF invoiceId person bookings merchant = do
   let htmlPath = invoiceDir </> ("invoice_" <> T.unpack invoiceId <> ".html")
       pdfPath = invoiceDir </> ("invoice_" <> T.unpack invoiceId <> ".pdf")
 
-  liftIO $ writeFile htmlPath (T.unpack html)
+  liftIO $ BS.writeFile htmlPath (encodeUtf8 html)
 
   -- Convert HTML to PDF using wkhtmltopdf (fallback to HTML if not available)
   pdfGenerated <- generatePDFFromHTML htmlPath pdfPath
