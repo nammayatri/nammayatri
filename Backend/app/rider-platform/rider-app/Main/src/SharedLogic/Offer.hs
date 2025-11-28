@@ -47,7 +47,7 @@ data CumulativeOfferReq = CumulativeOfferReq
 invalidateOfferListCache :: (MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> DOrder.PaymentServiceType -> Price -> m ()
 invalidateOfferListCache person merchantOperatingCityId paymentServiceType price = do
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
-  req <- mkOfferListReq person price
+  _req <- mkOfferListReq person price
   let version = fromMaybe "N/A" riderConfig.offerListCacheVersion
       key = makeOfferListCacheKey person version paymentServiceType
   Redis.withCrossAppRedis $ Redis.del key
