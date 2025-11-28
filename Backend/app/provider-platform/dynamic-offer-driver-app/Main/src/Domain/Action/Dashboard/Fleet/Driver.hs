@@ -1474,7 +1474,9 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
   driverIdObjs <-
     if useDBForAnalytics == Just True
       then QFDAExtra.getActiveDriverIdsByFleetOwnerId fleetOwnerId
-      else CFDA.getDriverIdsByFleetOwnerId fleetOwnerId
+      else do
+        maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId fleetOwnerId
+        pure $ fromMaybe [] maybeDriverIds
   let driverIdTexts = map (.getId) driverIdObjs
       mbSearchTerm = do
         raw <- mbSearch
