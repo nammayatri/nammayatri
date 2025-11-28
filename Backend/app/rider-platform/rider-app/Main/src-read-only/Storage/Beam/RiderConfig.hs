@@ -92,6 +92,7 @@ data RiderConfigT f = RiderConfigT
     multimodalTesting :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     nearByDriverRingBucketCfg :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     nearbyBusMaxTimeThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    nearbyBusRadiusBucketStep :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     nearbyBusSearchRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     nearbyDriverSearchRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     noOfRideRequestsConfig :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
