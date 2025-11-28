@@ -628,6 +628,7 @@ mkDocumentVerificationConfigRes DVC.DocumentVerificationConfig {..} =
       vehicleClassCheckType = castDVehicleClassCheckType vehicleClassCheckType,
       supportedVehicleClasses = castDSupportedVehicleClasses supportedVehicleClasses,
       rcNumberPrefixList = Just rcNumberPrefixList,
+      documentFlowGrouping = castDocumentFlowGrouping $ fromMaybe DVC.STANDARD documentFlowGrouping,
       ..
     }
 
@@ -649,6 +650,11 @@ castDVehicleClassCheckType = \case
   DVC.Infix -> Common.Infix
   DVC.Prefix -> Common.Prefix
   DVC.Suffix -> Common.Suffix
+
+castDocumentFlowGrouping :: DVC.DocumentFlowGrouping -> Common.DocumentFlowGrouping
+castDocumentFlowGrouping = \case
+  DVC.COMMON -> Common.COMMON
+  DVC.STANDARD -> Common.STANDARD
 
 castDDocumentType :: DVC.DocumentType -> Common.DocumentType
 castDDocumentType = \case
@@ -713,7 +719,8 @@ postMerchantConfigOnboardingDocumentUpdate merchantShortId opCity reqDocumentTyp
                supportedVehicleClasses = maybe config.supportedVehicleClasses castSupportedVehicleClasses req.supportedVehicleClasses,
                vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType,
                rcNumberPrefixList = maybe config.rcNumberPrefixList (.value) req.rcNumberPrefixList,
-               maxRetryCount = maybe config.maxRetryCount (.value) req.maxRetryCount
+               maxRetryCount = maybe config.maxRetryCount (.value) req.maxRetryCount,
+               documentFlowGrouping = maybe config.documentFlowGrouping (Just . castDocumentFlowGroupingFromReq . (.value)) req.documentFlowGrouping
               }
   _ <- CQDVC.update updConfig
   CQDVC.clearCache merchantOpCityId
@@ -838,6 +845,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         updatedAt = now,
         createdAt = now,
         documentCategory = castDocumentCategory <$> documentCategory,
+        documentFlowGrouping = Just $ maybe DVC.STANDARD castDocumentFlowGroupingFromReq documentFlowGrouping,
         allowLicenseTransfer = Just False,
         ..
       }
@@ -848,6 +856,11 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Vehicle -> DVC.Vehicle
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission -> DVC.Permission
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training -> DVC.Training
+
+castDocumentFlowGroupingFromReq :: Common.DocumentFlowGrouping -> DVC.DocumentFlowGrouping
+castDocumentFlowGroupingFromReq = \case
+  Common.COMMON -> DVC.COMMON
+  Common.STANDARD -> DVC.STANDARD
 
 ---------------------------------------------------------------------
 postMerchantServiceConfigMapsUpdate ::

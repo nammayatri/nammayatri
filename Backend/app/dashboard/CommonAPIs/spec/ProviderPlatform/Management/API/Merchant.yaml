@@ -726,6 +726,7 @@ types:
     - checkExpiry: Bool
     - supportedVehicleClasses: SupportedVehicleClasses
     - vehicleClassCheckType: VehicleClassCheckType
+    - documentFlowGrouping: DocumentFlowGrouping
     - rcNumberPrefixList: Maybe [Text]
     - maxRetryCount: Int
     - createdAt: UTCTime
@@ -735,6 +736,8 @@ types:
   DocumentType:
     - enum: "RC, DL, Permissions, SubscriptionPlan, ProfilePhoto, AadhaarCard, PanCard, VehiclePermit, VehicleFitnessCertificate, VehicleInsurance, VehiclePUC, ProfileDetails, SocialSecurityNumber, VehicleInspectionForm, UploadProfile, GSTCertificate, BackgroundVerification, VehicleFront, VehicleBack, VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, VehicleNOC, BusinessLicense, Odometer, InspectionHub, KIWADriverCard, KIWATaxiPermit, KvKChamberOfCommerceRegistration, TAXDetails, BankingDetails, VehicleDetails, SchipolAirportAgreement, SchipolSmartcardProof, TXQualityMark, TaxiDriverPermit, TaxiTransportLicense, FinnishIDResidencePermit, BusinessRegistrationExtract"
     - derive: "HttpInstance"
+  DocumentFlowGrouping:
+    - enum: "COMMON, STANDARD"
   DocumentVerificationConfigUpdateReq:
     - checkExtraction: Maybe (MandatoryValue Bool)
     - checkExpiry: Maybe (MandatoryValue Bool)
@@ -743,6 +746,7 @@ types:
     - rcNumberPrefixList: Maybe (MandatoryValue [Text])
     - maxRetryCount: Maybe (MandatoryValue Int)
     - vehicleClassCheckType: Maybe (MandatoryValue VehicleClassCheckType)
+    - documentFlowGrouping: Maybe (MandatoryValue DocumentFlowGrouping)
     - derive: "'HideSecrets"
   DocumentVerificationConfigCreateReq:
     - checkExtraction: Bool
@@ -765,6 +769,7 @@ types:
     - defaultStepFeeWithCurrency: Maybe PriceAPIEntity
     - filterForOldApks: Maybe Bool
     - documentCategory: Maybe DocumentCategory
+    - documentFlowGrouping: Maybe DocumentFlowGrouping
     - derive: "'HideSecrets"
   CreateFPDriverExtraFeeReq:
     - minFee: Money

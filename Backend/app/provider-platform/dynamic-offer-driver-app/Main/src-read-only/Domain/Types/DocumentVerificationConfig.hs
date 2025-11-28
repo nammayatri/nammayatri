@@ -23,6 +23,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     doStrictVerifcation :: Kernel.Prelude.Bool,
     documentCategory :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory,
     documentFields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
+    documentFlowGrouping :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDefaultEnabledOnManualVerification :: Kernel.Prelude.Bool,
@@ -48,6 +49,8 @@ data DocumentVerificationConfig = DocumentVerificationConfig
 data DocumentApplicableType = FLEET | INDIVIDUAL | FLEET_AND_INDIVIDUAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data DocumentCategory = Driver | Vehicle | Permission | Training deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data DocumentFlowGrouping = COMMON | STANDARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data DocumentType
   = DriverLicense
@@ -120,6 +123,8 @@ data VehicleClassVariantMap = VehicleClassVariantMap
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentApplicableType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentCategory)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentFlowGrouping)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentType)
 
