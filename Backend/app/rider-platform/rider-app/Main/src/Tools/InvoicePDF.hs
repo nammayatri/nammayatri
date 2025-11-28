@@ -16,7 +16,7 @@ module Tools.InvoicePDF where
 
 import Control.Exception (try)
 import qualified Data.ByteString as BS
-import qualified Data.List as List
+-- import qualified Data.List as List
 import qualified Data.Text as T
 -- import Data.Text.Encoding (encodeUtf8)
 import qualified Data.Time as DT
@@ -138,11 +138,22 @@ generatePDFFromHTML htmlPath pdfPath = do
   unless htmlExists $ do
     logError $ "HTML file not found at: " <> T.pack htmlPath
 
-  -- Try to generate PDF with 60 second timeout
+  -- Try to generate PDF with 60 second timeout and color preservation
   result <-
     liftIO $
       timeout 60000000 $ -- 60 seconds in microseconds
-        (try (readProcessWithExitCode "wkhtmltopdf" ["--enable-local-file-access", htmlPath, pdfPath] "") :: IO (Either SomeException (ExitCode, String, String)))
+        ( try
+            ( readProcessWithExitCode
+                "wkhtmltopdf"
+                [ "--enable-local-file-access",
+                  "--print-media-type", -- Use print CSS for better rendering
+                  htmlPath,
+                  pdfPath
+                ]
+                ""
+            ) ::
+            IO (Either SomeException (ExitCode, String, String))
+        )
 
   case result of
     Just (Right (ExitSuccess, _stdout, stderr)) -> do
@@ -175,8 +186,6 @@ generateInvoiceHTML InvoiceData {..} =
       formattedAmount = maybe "N/A" (\amt -> T.pack $ printf "%.2f" (fromRational (getHighPrecMoney amt) :: Double)) totalAmount
       -- Escape all user-controlled data to prevent XSS
       safeCustomerName = escapeHtml customerName
-      -- Group bookings by date
-      groupedBookings = groupBookingsByDate bookings
    in T.concat
         [ "<!DOCTYPE html>",
           "<html>",
@@ -210,45 +219,27 @@ generateInvoiceHTML InvoiceData {..} =
           "</p>",
           "</div>",
           "</div>",
-          -- Rides grouped by date
-          T.concat $ map generateDateGroup groupedBookings,
+          -- Rides with date header for each
+          T.concat $ map generateRideCardWithDate bookings,
           "</div>",
           "</body>",
           "</html>"
         ]
 
--- | Group bookings by date
-groupBookingsByDate :: [DBAPI.BookingAPIEntity] -> [(Text, [DBAPI.BookingAPIEntity])]
-groupBookingsByDate bookings =
-  let grouped = List.groupBy (\b1 b2 -> sameDay b1.createdAt b2.createdAt) bookings
-      withDates =
-        map
-          ( \grp -> case grp of
-              (booking : _) -> (formatDateHeader booking.createdAt, grp)
-              [] -> ("", [])
-          )
-          grouped
-   in withDates
-  where
-    sameDay t1 t2 =
-      let (y1, m1, d1) = DT.toGregorian (DT.utctDay t1)
-          (y2, m2, d2) = DT.toGregorian (DT.utctDay t2)
-       in (y1, m1, d1) == (y2, m2, d2)
-    formatDateHeader time = T.pack $ DT.formatTime DT.defaultTimeLocale "%-d %b, %Y" time
-
--- | Generate HTML for a date group
-generateDateGroup :: (Text, [DBAPI.BookingAPIEntity]) -> Text
-generateDateGroup (dateHeader, bookings) =
-  T.concat
-    [ "<div class='date-section'>",
-      "<div class='date-header'>",
-      "<span class='date'>",
-      dateHeader,
-      "</span>",
-      "</div>",
-      T.concat $ map generateRideCard bookings,
-      "</div>"
-    ]
+-- | Generate ride card with date header for each ride
+generateRideCardWithDate :: DBAPI.BookingAPIEntity -> Text
+generateRideCardWithDate booking =
+  let dateHeader = T.pack $ DT.formatTime DT.defaultTimeLocale "%-d %b, %Y" booking.createdAt
+   in T.concat
+        [ "<div class='date-section'>",
+          "<div class='date-header'>",
+          "<span class='date'>",
+          dateHeader,
+          "</span>",
+          "</div>",
+          generateRideCard booking,
+          "</div>"
+        ]
 
 -- | Generate ride card matching the screenshot format
 generateRideCard :: DBAPI.BookingAPIEntity -> Text
@@ -266,8 +257,8 @@ generateRideCard booking =
       fromAddress = buildFullAddress booking.fromLocation
       toAddress = maybe "Unknown" buildFullAddress $ getToLocationFromBooking booking
 
-      -- Ride details - format amount properly (estimatedTotalFare is in paise/cents)
-      amount = T.pack $ printf "%.2f" (fromIntegral booking.estimatedTotalFare / 100.0 :: Double)
+      -- Ride details - format amount properly (estimatedTotalFare is Money type, already in rupees)
+      amount = T.pack $ printf "%.0f" (fromIntegral booking.estimatedTotalFare :: Double)
       driverName = maybe "N/A" (.driverName) mbRide
       vehicleNumber = maybe "N/A" (.vehicleNumber) mbRide
       rideId = maybe (T.take 10 $ getId booking.id) (.shortRideId.getShortId) mbRide
