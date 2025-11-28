@@ -1405,6 +1405,7 @@ TransporterConfig:
     analyticsConfig: json
     driverWalletConfig: json
     subscriptionConfig: json
+    feedbackNotificationConfig: json
 
   default:
     mediaFileUrlPattern: |-
