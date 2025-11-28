@@ -249,6 +249,7 @@ Booking:
     isMultimodalSearch: Maybe Bool
     multimodalSearchRequestId: Maybe Text
     dashboardAgentId: Maybe Text
+    commission: Maybe HighPrecMoney
 
   beamFields:
     estimatedDistance:

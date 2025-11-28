@@ -44,6 +44,8 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Booking
 import SharedLogic.Cancel
+import qualified SharedLogic.FareCalculatorV2 as FCV2
+import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.RiderDetails as SRD
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
@@ -186,6 +188,8 @@ handler merchantId req validatedReq = do
           isTollApplicable = isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest DExophone.CALL_RIDE
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
+      mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
+      commission <- FCV2.calculateCommission driverQuote.fareParams mbFarePolicy
       let bapUri = showBaseUrl req.bapUri
       (initiatedAs, senderDetails, receiverDetails) <- do
         case tripCategory of
@@ -248,6 +252,7 @@ handler merchantId req validatedReq = do
             parcelType = searchRequest.parcelType,
             parcelQuantity = searchRequest.parcelQuantity,
             isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges,
+            commission = commission,
             isInsured = fromMaybe False req.isInsured,
             insuredAmount = req.insuredAmount,
             exotelDeclinedCallStatusReceivingTime = Nothing,

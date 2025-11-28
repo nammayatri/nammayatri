@@ -33,6 +33,7 @@ data RideT f = RideT
     clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    commission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     deliveryFileIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

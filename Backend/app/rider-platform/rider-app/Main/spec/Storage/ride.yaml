@@ -125,6 +125,7 @@ Ride:
     isInsured : Bool
     insuredAmount: Maybe Text
     pickupEtaLogicVersion: Maybe Int
+    commission: Maybe HighPrecMoney
 
   sqlType:
     allowedEditLocationAttempts: int

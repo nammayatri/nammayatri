@@ -41,6 +41,7 @@ data RideT f = RideT
     clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    commission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     destinationReachedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),

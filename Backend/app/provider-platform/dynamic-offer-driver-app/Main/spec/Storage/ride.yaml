@@ -131,6 +131,7 @@ Ride:
     driverCancellationPenaltyAmount: Maybe HighPrecMoney
     driverCancellationPenaltyWaivedReason: Maybe Text
     driverGpsTurnedOff: Maybe Bool
+    commission: Maybe HighPrecMoney
 
   sqlType:
     id: character(36)

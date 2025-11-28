@@ -176,3 +176,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN payment_instrument text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN toll_ids text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN commission double precision ;

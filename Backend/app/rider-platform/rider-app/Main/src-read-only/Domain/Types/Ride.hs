@@ -41,6 +41,7 @@ data RideE e = Ride
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,
     clientId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Client.Client),
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    commission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
@@ -106,9 +107,9 @@ data RideE e = Ride
   }
   deriving (Generic)
 
-type Ride = RideE 'AsEncrypted
+type Ride = RideE ('AsEncrypted)
 
-type DecryptedRide = RideE 'AsUnencrypted
+type DecryptedRide = RideE ('AsUnencrypted)
 
 instance EncryptedItem Ride where
   type Unencrypted Ride = (DecryptedRide, HashSalt)
@@ -132,6 +133,7 @@ instance EncryptedItem Ride where
           clientDevice = clientDevice entity,
           clientId = clientId entity,
           clientSdkVersion = clientSdkVersion entity,
+          commission = commission entity,
           createdAt = createdAt entity,
           destinationReachedAt = destinationReachedAt entity,
           distanceUnit = distanceUnit entity,
@@ -215,6 +217,7 @@ instance EncryptedItem Ride where
             clientDevice = clientDevice entity,
             clientId = clientId entity,
             clientSdkVersion = clientSdkVersion entity,
+            commission = commission entity,
             createdAt = createdAt entity,
             destinationReachedAt = destinationReachedAt entity,
             distanceUnit = distanceUnit entity,
@@ -302,10 +305,10 @@ data SosJourneyStatus
 
 data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SosJourneyStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''UnexpectedConditionStage))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PaymentStatus)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''PaymentStatus))

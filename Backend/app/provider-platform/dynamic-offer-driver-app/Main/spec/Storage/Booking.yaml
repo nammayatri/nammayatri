@@ -101,6 +101,7 @@ Booking:
     exotelDeclinedCallStatusReceivingTime: Maybe UTCTime
     numberOfLuggages: Maybe Int
     paymentInstrument: Maybe PaymentInstrument
+    commission: Maybe HighPrecMoney
 
   excludedFields:
     - merchantId

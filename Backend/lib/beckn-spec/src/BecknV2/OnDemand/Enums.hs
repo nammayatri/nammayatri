@@ -175,6 +175,8 @@ data QuoteBreakupTitle
   | FIXED_GOVERNMENT_RATE
   | SGST
   | CGST
+  | RIDE_VAT
+  | TOLL_VAT
   | PLATFORM_FEE -- should this be in quote breakup?
   | TIME_BASED_FARE
   | DIST_BASED_FARE
@@ -191,6 +193,7 @@ data QuoteBreakupTitle
   | BOOTH_CHARGE
   | PER_STOP_CHARGES
   | NYREGULAR_SUBSCRIPTION_CHARGE
+  | COMMISSION
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data CancellationReasonId

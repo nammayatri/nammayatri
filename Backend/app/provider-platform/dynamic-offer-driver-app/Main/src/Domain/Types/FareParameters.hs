@@ -72,11 +72,7 @@ data FareParameters = FareParameters
     rideVat :: Maybe HighPrecMoney,
     -- | VAT on toll charges calculated based on toll_tax_charge_config in fare_policy
     -- Populated by calculateFareParametersV2. Included in pureFareSum.
-    tollVat :: Maybe HighPrecMoney,
-    -- | Commission calculated based on commission_charge_config in fare_policy
-    -- Populated by calculateFareParametersV2.
-    -- NOTE: Commission is stored for breakdown/transparency but NOT included in pureFareSum (as per PRD).
-    commission :: Maybe HighPrecMoney
+    tollVat :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
