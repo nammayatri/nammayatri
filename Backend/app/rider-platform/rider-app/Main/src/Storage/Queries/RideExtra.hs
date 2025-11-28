@@ -575,3 +575,6 @@ updateIsSafetyPlus rideId isSafetyPlus = do
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+findCompletedRideByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
+findCompletedRideByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId, Se.Is BeamR.status $ Se.Eq Ride.COMPLETED] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
