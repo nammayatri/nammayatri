@@ -630,6 +630,7 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
         documentCategory = castDocumentCategory <$> documentCategory,
         isMandatoryForEnabling = isMandatory,
         documentFields = Nothing,
+        documentFlowGrouping = castDocumentFlowGrouping DVC.STANDARD,
         ..
       }
 
@@ -638,6 +639,11 @@ castDocumentApplicableType = \case
   Domain.Types.DocumentVerificationConfig.FLEET -> API.Types.ProviderPlatform.Fleet.Onboarding.FLEET
   Domain.Types.DocumentVerificationConfig.INDIVIDUAL -> API.Types.ProviderPlatform.Fleet.Onboarding.INDIVIDUAL
   Domain.Types.DocumentVerificationConfig.FLEET_AND_INDIVIDUAL -> API.Types.ProviderPlatform.Fleet.Onboarding.FLEET_AND_INDIVIDUAL
+
+castDocumentFlowGrouping :: Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping -> API.Types.ProviderPlatform.Fleet.Onboarding.DocumentFlowGrouping
+castDocumentFlowGrouping = \case
+  Domain.Types.DocumentVerificationConfig.COMMON -> API.Types.ProviderPlatform.Fleet.Onboarding.COMMON
+  Domain.Types.DocumentVerificationConfig.STANDARD -> API.Types.ProviderPlatform.Fleet.Onboarding.STANDARD
 
 castDocumentFieldInfo :: Domain.Types.DocumentVerificationConfig.FieldInfo -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldInfo
 castDocumentFieldInfo Domain.Types.DocumentVerificationConfig.FieldInfo {..} =

@@ -125,6 +125,7 @@ types:
     documentType: DocumentType
     applicableTo: DocumentApplicableType
     documentFields: Maybe [FieldInfo]
+    documentFlowGrouping: DocumentFlowGrouping
     title: Text
     description: Maybe Text
     isMandatory: Bool
@@ -140,6 +141,8 @@ types:
     documentCategory: Maybe DocumentCategory
   DocumentCategory:
     enum: "Driver,Vehicle,Permission,Training"
+  DocumentFlowGrouping:
+    enum: "COMMON,STANDARD"
   FieldType:
     enum: "FieldText,FieldInt,FieldDouble"
   FieldInfo:

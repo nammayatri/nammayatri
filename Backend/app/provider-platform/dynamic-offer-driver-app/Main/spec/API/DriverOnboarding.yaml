@@ -4,6 +4,7 @@ imports:
   DocumentType: Domain.Types.DocumentVerificationConfig
   DocumentCategory: Domain.Types.DocumentVerificationConfig
   DocumentApplicableType: Domain.Types.DocumentVerificationConfig
+  DocumentFlowGrouping: Domain.Types.DocumentVerificationConfig
   FieldType: Domain.Types.DocumentVerificationConfig
   FieldInfo: Domain.Types.DocumentVerificationConfig
   ServiceTierType: Domain.Types.Common
@@ -41,6 +42,7 @@ types:
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     documentCategory: Maybe DocumentCategory
+    documentFlowGrouping: DocumentFlowGrouping
     title: Text
     description: Maybe Text
     isMandatory: Bool

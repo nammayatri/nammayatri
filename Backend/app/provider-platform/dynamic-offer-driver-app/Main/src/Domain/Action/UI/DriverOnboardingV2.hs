@@ -103,6 +103,7 @@ mkDocumentVerificationConfigAPIEntity language Domain.Types.DocumentVerification
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
         applicableTo = applicableTo,
         documentFields = documentFields,
+        documentFlowGrouping = fromMaybe Domain.STANDARD documentFlowGrouping,
         ..
       }
 
