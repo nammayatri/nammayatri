@@ -18,10 +18,12 @@ import qualified Data.Text as T
 import qualified Data.Time as DT
 import Data.Time.Calendar (toGregorian)
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Booking.API as DBAPI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Email.AWS.Flow as Email
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -76,7 +78,9 @@ generateInvoice ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   GenerateInvoiceReq ->
@@ -107,8 +111,8 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
   invoiceIdShort <- generateShortId
   let invoiceId = Id invoiceIdShort.getShortId
 
-  -- Step 6: Calculate total amount
-  let totalAmount = PDF.calculateTotalAmount bookings
+  -- Step 6: Calculate total amount from raw bookings (before conversion)
+  let totalAmount = calculateTotalAmountFromBookings bookings
       totalCount = length bookings
 
   -- Step 7: Fork async job to generate PDF and email (uses email from request)
@@ -191,6 +195,12 @@ matchesBillingCategory categories booking =
   let bookingCategory = getBillingCategoryFromBooking booking.billingCategory
    in bookingCategory `elem` categories
 
+-- | Calculate total amount from raw bookings
+calculateTotalAmountFromBookings :: [DRB.Booking] -> Maybe HighPrecMoney
+calculateTotalAmountFromBookings bookings =
+  let amounts = map (getHighPrecMoney . (.estimatedTotalFare.amount)) bookings
+   in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts)
+
 -- | Convert SharedLogic.Type.BillingCategory to our BillingCategory type
 getBillingCategoryFromBooking :: SLT.BillingCategory -> BillingCategory
 getBillingCategoryFromBooking = \case
@@ -213,6 +223,7 @@ getRideTypeFromBookingDetails = \case
 generateAndEmailInvoice ::
   ( MonadFlow m,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     CacheFlow m r,
     EncFlow m r,
     Log m
@@ -236,8 +247,15 @@ generateAndEmailInvoice invoiceId person bookings merchantId email = do
   -- Get fromEmail from rider config (use emailOtpConfig if available, otherwise default)
   let fromEmail = maybe "noreply@nammayatri.in" (.fromEmail) riderConfig.emailOtpConfig
 
+  -- Get the date range from the first and last booking
+  let actualStartDate = minimum $ map (.createdAt) bookings
+      actualEndDate = maximum $ map (.createdAt) bookings
+
+  -- Convert bookings to BookingAPIEntity (includes ride data)
+  bookingAPIEntities <- mapM (`DBAPI.buildBookingAPIEntity` person.id) bookings
+
   -- Generate PDF
-  pdfPath <- PDF.generateInvoicePDF invoiceId.getId person bookings merchant
+  pdfPath <- PDF.generateInvoicePDF invoiceId.getId person bookingAPIEntities merchant actualStartDate actualEndDate
 
   -- Verify file exists before attempting to send
   fileExists <- liftIO $ doesFileExist pdfPath

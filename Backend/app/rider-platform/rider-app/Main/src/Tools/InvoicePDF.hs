@@ -16,10 +16,13 @@ module Tools.InvoicePDF where
 
 import Control.Exception (try)
 import qualified Data.ByteString as BS
+import qualified Data.List as List
 import qualified Data.Text as T
+-- import qualified Data.Text.Encoding as TE
 import qualified Data.Time as DT
-import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Location as DL
+import qualified Domain.Types.Booking.API as DBAPI
+import Domain.Types.Location (LocationAPIEntity)
+-- import qualified Domain.Types.Extra.Ride as DRide
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Kernel.External.Encryption (decrypt)
@@ -49,17 +52,18 @@ escapeHtml = T.concatMap escapeChar
 
 data InvoiceData = InvoiceData
   { invoiceId :: Text,
-    invoiceDate :: UTCTime,
+    startDate :: UTCTime,
+    endDate :: UTCTime,
     customerName :: Text,
     customerEmail :: Maybe Text,
     customerMobile :: Maybe Text,
     merchantName :: Text,
     merchantAddress :: Maybe Text,
-    bookings :: [DRB.Booking],
+    bookings :: [DBAPI.BookingAPIEntity], -- Now using BookingAPIEntity which includes ride data
     totalAmount :: Maybe HighPrecMoney,
     totalRides :: Int
   }
-  deriving (Generic, Show)
+  deriving (Generic)
 
 -- | Generate invoice PDF from booking data
 generateInvoicePDF ::
@@ -68,24 +72,26 @@ generateInvoicePDF ::
   ) =>
   Text ->
   DP.Person ->
-  [DRB.Booking] ->
+  [DBAPI.BookingAPIEntity] -> -- Now takes BookingAPIEntity directly
   DM.Merchant ->
+  UTCTime ->
+  UTCTime ->
   m FilePath
-generateInvoicePDF invoiceId person bookings merchant = do
-  now <- getCurrentTime
+generateInvoicePDF invoiceId person bookings merchant startDate endDate = do
   decryptedEmail <- mapM decrypt person.email
   decryptedMobile <- mapM decrypt person.mobileNumber
 
   let invoiceData =
         InvoiceData
           { invoiceId = invoiceId,
-            invoiceDate = now,
+            startDate = startDate,
+            endDate = endDate,
             customerName = fromMaybe "" person.firstName <> maybe "" (\ln -> " " <> ln) person.lastName,
             customerEmail = decryptedEmail,
             customerMobile = maskText <$> decryptedMobile,
             merchantName = merchant.name,
             merchantAddress = Just $ show merchant.defaultCity <> ", " <> show merchant.defaultState,
-            bookings = bookings,
+            bookings = bookings, -- Already has ride data in rideList
             totalAmount = calculateTotalAmount bookings,
             totalRides = length bookings
           }
@@ -98,10 +104,11 @@ generateInvoicePDF invoiceId person bookings merchant = do
   let invoiceDir = tempDir </> "nammayatri_invoices"
   liftIO $ createDirectoryIfMissing True invoiceDir
 
-  -- Save HTML file
+  -- Save HTML file with UTF-8 encoding (important for Rupee symbol ₹ and other Unicode)
   let htmlPath = invoiceDir </> ("invoice_" <> T.unpack invoiceId <> ".html")
       pdfPath = invoiceDir </> ("invoice_" <> T.unpack invoiceId <> ".pdf")
 
+  -- Use BS.writeFile with encodeUtf8 to ensure proper UTF-8 encoding
   liftIO $ BS.writeFile htmlPath (encodeUtf8 html)
 
   -- Convert HTML to PDF using wkhtmltopdf (fallback to HTML if not available)
@@ -154,31 +161,27 @@ generatePDFFromHTML htmlPath pdfPath = do
       return False
 
 -- | Calculate total amount from bookings
-calculateTotalAmount :: [DRB.Booking] -> Maybe HighPrecMoney
+calculateTotalAmount :: [DBAPI.BookingAPIEntity] -> Maybe HighPrecMoney
 calculateTotalAmount bookings =
-  let amounts = map (getHighPrecMoney . (.estimatedTotalFare.amount)) bookings
+  let amounts = map (\b -> fromIntegral b.estimatedTotalFare) bookings
    in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts)
 
 -- | Generate HTML invoice
 generateInvoiceHTML :: InvoiceData -> Text
 generateInvoiceHTML InvoiceData {..} =
-  let formattedDate = T.pack $ DT.formatTime DT.defaultTimeLocale "%B %d, %Y" invoiceDate
-      formattedAmount = maybe "N/A" (T.pack . show . getHighPrecMoney) totalAmount
+  let formattedStartDate = T.pack $ DT.formatTime DT.defaultTimeLocale "%b %-d" startDate
+      formattedEndDate = T.pack $ DT.formatTime DT.defaultTimeLocale "%b %-d, %Y" endDate
+      formattedAmount = maybe "N/A" (\amt -> T.pack $ show $ getHighPrecMoney amt) totalAmount
       -- Escape all user-controlled data to prevent XSS
-      safeInvoiceId = escapeHtml invoiceId
-      safeMerchantName = escapeHtml merchantName
-      safeMerchantAddress = escapeHtml <$> merchantAddress
       safeCustomerName = escapeHtml customerName
-      safeCustomerEmail = escapeHtml <$> customerEmail
-      safeCustomerMobile = escapeHtml <$> customerMobile
+      -- Group bookings by date
+      groupedBookings = groupBookingsByDate bookings
    in T.concat
         [ "<!DOCTYPE html>",
           "<html>",
           "<head>",
           "<meta charset='UTF-8'>",
-          "<title>Invoice ",
-          safeInvoiceId,
-          "</title>",
+          "<title>Your Invoice</title>",
           "<style>",
           invoiceCSS,
           "</style>",
@@ -187,160 +190,213 @@ generateInvoiceHTML InvoiceData {..} =
           "<div class='invoice-container'>",
           -- Header
           "<div class='header'>",
-          "<div class='logo'>",
-          "<h1>",
-          safeMerchantName,
-          "</h1>",
-          maybe "" (\addr -> "<p>" <> addr <> "</p>") safeMerchantAddress,
-          "</div>",
-          "<div class='invoice-info'>",
-          "<h2>INVOICE</h2>",
-          "<p><strong>Invoice #:</strong> ",
-          safeInvoiceId,
-          "</p>",
-          "<p><strong>Date:</strong> ",
-          formattedDate,
-          "</p>",
-          "</div>",
-          "</div>",
-          -- Customer Info
-          "<div class='customer-info'>",
-          "<h3>Bill To:</h3>",
-          "<p><strong>",
+          "<div class='header-left'>",
+          "<h1>Hey ",
           safeCustomerName,
-          "</strong></p>",
-          maybe "" (\email -> "<p>Email: " <> email <> "</p>") safeCustomerEmail,
-          maybe "" (\mobile -> "<p>Mobile: " <> mobile <> "</p>") safeCustomerMobile,
-          "</div>",
-          -- Bookings Table
-          "<table class='bookings-table'>",
-          "<thead>",
-          "<tr>",
-          "<th>Booking ID</th>",
-          "<th>Date</th>",
-          "<th>Ride Type</th>",
-          "<th>From</th>",
-          "<th>To</th>",
-          "<th>Amount</th>",
-          "</tr>",
-          "</thead>",
-          "<tbody>",
-          T.concat $ map generateBookingRow bookings,
-          "</tbody>",
-          "</table>",
-          -- Summary
-          "<div class='summary'>",
-          "<div class='summary-row'>",
-          "<span class='summary-label'>Total Rides:</span>",
-          "<span class='summary-value'>",
+          ", here's your invoice</h1>",
+          "<p class='date-range'>",
           T.pack $ show totalRides,
-          "</span>",
+          " rides taken on ",
+          formattedStartDate,
+          " - ",
+          formattedEndDate,
+          "</p>",
           "</div>",
-          "<div class='summary-row total'>",
-          "<span class='summary-label'>Total Amount:</span>",
-          "<span class='summary-value'>₹ ",
+          "<div class='header-right'>",
+          "<p class='total-label'>Total Fare</p>",
+          "<p class='total-amount'>₹",
           formattedAmount,
-          "</span>",
+          "</p>",
           "</div>",
           "</div>",
-          -- Footer
-          "<div class='footer'>",
-          "<p>Thank you for choosing ",
-          safeMerchantName,
-          "!</p>",
-          "<p class='note'>This is a computer-generated invoice and does not require a signature.</p>",
-          "</div>",
+          -- Rides grouped by date
+          T.concat $ map generateDateGroup groupedBookings,
           "</div>",
           "</body>",
           "</html>"
         ]
 
--- | Generate table row for a booking
-generateBookingRow :: DRB.Booking -> Text
-generateBookingRow booking =
-  let bookingId = getId booking.id
-      createdAt = T.pack $ DT.formatTime DT.defaultTimeLocale "%Y-%m-%d %H:%M" booking.createdAt
-      rideType = getRideType booking.bookingDetails
-      fromLocation = fromMaybe "Unknown" booking.fromLocation.address.area
-      toLocation = case getToLocation booking.bookingDetails of
-        Just loc -> fromMaybe "Unknown" loc.address.area
-        Nothing -> "N/A"
-      amount = T.pack . show . getHighPrecMoney $ booking.estimatedTotalFare.amount
-      -- Escape all user-controlled data to prevent XSS
-      safeBookingId = escapeHtml (T.take 8 bookingId)
-      safeFromLocation = escapeHtml fromLocation
-      safeToLocation = escapeHtml toLocation
+-- | Group bookings by date
+groupBookingsByDate :: [DBAPI.BookingAPIEntity] -> [(Text, [DBAPI.BookingAPIEntity])]
+groupBookingsByDate bookings =
+  let grouped = List.groupBy (\b1 b2 -> sameDay b1.createdAt b2.createdAt) bookings
+      withDates =
+        map
+          ( \grp -> case grp of
+              (booking : _) -> (formatDateHeader booking.createdAt, grp)
+              [] -> ("", [])
+          )
+          grouped
+   in withDates
+  where
+    sameDay t1 t2 =
+      let (y1, m1, d1) = DT.toGregorian (DT.utctDay t1)
+          (y2, m2, d2) = DT.toGregorian (DT.utctDay t2)
+       in (y1, m1, d1) == (y2, m2, d2)
+    formatDateHeader time = T.pack $ DT.formatTime DT.defaultTimeLocale "%-d %b, %Y" time
+
+-- | Generate HTML for a date group
+generateDateGroup :: (Text, [DBAPI.BookingAPIEntity]) -> Text
+generateDateGroup (dateHeader, bookings) =
+  T.concat
+    [ "<div class='date-section'>",
+      "<div class='date-header'>",
+      "<span class='date'>",
+      dateHeader,
+      "</span>",
+      "</div>",
+      T.concat $ map generateRideCard bookings,
+      "</div>"
+    ]
+
+-- | Generate ride card matching the screenshot format
+generateRideCard :: DBAPI.BookingAPIEntity -> Text
+generateRideCard booking =
+  let -- Get first ride from rideList (most recent completed ride)
+      mbRide = listToMaybe booking.rideList
+
+      -- Time formatting - use ride times if available, fallback to booking times
+      pickupTime = fromMaybe booking.rideScheduledTime (mbRide >>= (.rideStartTime))
+      dropTime = fromMaybe booking.updatedAt (mbRide >>= (.rideEndTime))
+      formattedPickupTime = T.pack $ DT.formatTime DT.defaultTimeLocale "%-I:%M %p" pickupTime
+      formattedDropTime = T.pack $ DT.formatTime DT.defaultTimeLocale "%-I:%M %p" dropTime
+
+      -- Location details - build full address from LocationAPIEntity fields
+      fromAddress = buildFullAddress booking.fromLocation
+      toAddress = maybe "Unknown" buildFullAddress $ getToLocationFromBooking booking
+
+      -- Ride details
+      amount = T.pack $ show booking.estimatedTotalFare
+      driverName = maybe "N/A" (.driverName) mbRide
+      vehicleNumber = maybe "N/A" (.vehicleNumber) mbRide
+      rideId = maybe (T.take 10 $ getId booking.id) (.shortRideId.getShortId) mbRide
+
+      -- Escape all user-controlled data
+      safeFromAddress = escapeHtml fromAddress
+      safeToAddress = escapeHtml toAddress
+      safeDriverName = escapeHtml driverName
+      safeVehicleNumber = escapeHtml vehicleNumber
+      safeRideId = escapeHtml rideId
    in T.concat
-        [ "<tr>",
-          "<td>",
-          safeBookingId,
-          "...</td>",
-          "<td>",
-          createdAt,
-          "</td>",
-          "<td>",
-          rideType,
-          "</td>",
-          "<td>",
-          safeFromLocation,
-          "</td>",
-          "<td>",
-          safeToLocation,
-          "</td>",
-          "<td>₹ ",
+        [ "<div class='ride-card'>",
+          "<div class='ride-header'>",
+          "<span class='ride-fare'>Ride Fare: ₹",
           amount,
-          "</td>",
-          "</tr>"
+          "</span>",
+          "</div>",
+          -- Pickup location
+          "<div class='location-row'>",
+          "<span class='dot green-dot'></span>",
+          "<div class='location-details'>",
+          "<div class='time'>",
+          formattedPickupTime,
+          "</div>",
+          "<div class='address'>",
+          safeFromAddress,
+          "</div>",
+          "</div>",
+          "</div>",
+          -- Drop location
+          "<div class='location-row'>",
+          "<span class='dot red-dot'></span>",
+          "<div class='location-details'>",
+          "<div class='time'>",
+          formattedDropTime,
+          "</div>",
+          "<div class='address'>",
+          safeToAddress,
+          "</div>",
+          "</div>",
+          "</div>",
+          -- Driver and vehicle details
+          "<div class='ride-footer'>",
+          "<div class='detail-item'>",
+          "<div class='detail-label'>Driver Name</div>",
+          "<div class='detail-value'>",
+          safeDriverName,
+          "</div>",
+          "</div>",
+          "<div class='detail-item'>",
+          "<div class='detail-label'>Vehicle Number</div>",
+          "<div class='detail-value'>",
+          safeVehicleNumber,
+          "</div>",
+          "</div>",
+          "<div class='detail-item'>",
+          "<div class='detail-label'>Ride ID</div>",
+          "<div class='detail-value'>",
+          safeRideId,
+          "</div>",
+          "</div>",
+          "</div>",
+          "</div>"
         ]
 
--- | Get ride type from booking details
-getRideType :: DRB.BookingDetails -> Text
-getRideType = \case
-  DRB.OneWayDetails _ -> "One Way"
-  DRB.RentalDetails _ -> "Rental"
-  DRB.InterCityDetails _ -> "Inter City"
-  DRB.AmbulanceDetails _ -> "Ambulance"
-  DRB.DeliveryDetails _ -> "Delivery"
-  DRB.MeterRideDetails _ -> "Meter Ride"
-  DRB.DriverOfferDetails _ -> "Driver Offer"
-  DRB.OneWaySpecialZoneDetails _ -> "Special Zone"
+-- | Get to location from booking API details
+getToLocationFromBooking :: DBAPI.BookingAPIEntity -> Maybe LocationAPIEntity
+getToLocationFromBooking booking =
+  case booking.bookingDetails of
+    DBAPI.OneWayAPIDetails details -> Just details.toLocation
+    DBAPI.RentalAPIDetails details -> details.stopLocation
+    DBAPI.InterCityAPIDetails details -> Just details.toLocation
+    DBAPI.AmbulanceAPIDetails details -> Just details.toLocation
+    DBAPI.DeliveryAPIDetails details -> Just details.toLocation
+    DBAPI.MeterRideAPIDetails details -> details.toLocation
+    DBAPI.DriverOfferAPIDetails details -> Just details.toLocation
+    DBAPI.OneWaySpecialZoneAPIDetails details -> Just details.toLocation
 
--- | Get to location from booking details
-getToLocation :: DRB.BookingDetails -> Maybe DL.Location
-getToLocation = \case
-  DRB.OneWayDetails details -> Just details.toLocation
-  DRB.RentalDetails details -> details.stopLocation
-  DRB.InterCityDetails details -> Just details.toLocation
-  DRB.AmbulanceDetails details -> Just details.toLocation
-  DRB.DeliveryDetails details -> Just details.toLocation
-  DRB.MeterRideDetails details -> details.toLocation
-  DRB.DriverOfferDetails details -> Just details.toLocation
-  DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+-- | Build full address from LocationAPIEntity fields
+buildFullAddress :: LocationAPIEntity -> Text
+buildFullAddress loc =
+  let parts =
+        catMaybes
+          [ loc.door,
+            loc.building,
+            loc.street,
+            loc.area,
+            loc.city,
+            loc.state
+          ]
+   in if null parts
+        then fromMaybe "Unknown Location" loc.area
+        else T.intercalate ", " parts
 
--- | CSS styles for invoice
+-- | CSS styles for invoice matching the screenshot
 invoiceCSS :: Text
 invoiceCSS =
   T.concat
     [ "* { margin: 0; padding: 0; box-sizing: border-box; }",
-      "body { font-family: 'Arial', sans-serif; color: #333; background: #f5f5f5; padding: 20px; }",
-      ".invoice-container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }",
-      ".header { display: flex; justify-content: space-between; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #FFC629; }",
-      ".logo h1 { color: #FFC629; font-size: 28px; margin-bottom: 5px; }",
-      ".logo p { color: #666; font-size: 14px; }",
-      ".invoice-info { text-align: right; }",
-      ".invoice-info h2 { color: #333; font-size: 24px; margin-bottom: 10px; }",
-      ".invoice-info p { margin: 5px 0; color: #666; }",
-      ".customer-info { margin-bottom: 30px; }",
-      ".customer-info h3 { color: #FFC629; margin-bottom: 10px; font-size: 18px; }",
-      ".customer-info p { margin: 5px 0; color: #666; }",
-      ".bookings-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }",
-      ".bookings-table th { background-color: #FFC629; color: white; padding: 12px; text-align: left; font-weight: bold; }",
-      ".bookings-table td { padding: 12px; border-bottom: 1px solid #eee; }",
-      ".bookings-table tr:hover { background-color: #f9f9f9; }",
-      ".summary { border-top: 2px solid #FFC629; padding-top: 20px; }",
-      ".summary-row { display: flex; justify-content: space-between; padding: 8px 0; }",
-      ".summary-row.total { font-size: 20px; font-weight: bold; color: #FFC629; border-top: 1px solid #eee; margin-top: 10px; padding-top: 15px; }",
-      ".footer { margin-top: 40px; text-align: center; padding-top: 20px; border-top: 1px solid #eee; }",
-      ".footer p { color: #666; margin: 5px 0; }",
-      ".footer .note { font-size: 12px; color: #999; margin-top: 10px; }"
+      "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #2d2d2d; background: #f7f7f7; padding: 20px; }",
+      ".invoice-container { max-width: 800px; margin: 0 auto; background: white; padding: 0; }",
+      -- Header styles
+      ".header { display: flex; justify-content: space-between; align-items: flex-start; padding: 32px 32px 24px 32px; background: white; }",
+      ".header-left h1 { font-size: 22px; font-weight: 500; color: #2d2d2d; margin-bottom: 8px; }",
+      ".date-range { font-size: 15px; color: #6b7280; font-weight: 400; }",
+      ".header-right { text-align: right; }",
+      ".total-label { font-size: 15px; color: #6b7280; margin-bottom: 4px; }",
+      ".total-amount { font-size: 28px; font-weight: 600; color: #2d2d2d; }",
+      -- Date section
+      ".date-section { margin-bottom: 0; }",
+      ".date-header { padding: 16px 32px; background: #f9fafb; }",
+      ".date { font-size: 16px; font-weight: 500; color: #2d2d2d; }",
+      ".date-header .ride-fare-header { float: right; font-size: 14px; color: #6b7280; }",
+      -- Ride card styles
+      ".ride-card { background: white; padding: 24px 32px; border-bottom: 1px solid #e5e7eb; }",
+      ".ride-header { margin-bottom: 20px; text-align: right; }",
+      ".ride-fare { font-size: 14px; color: #6b7280; }",
+      -- Location row styles
+      ".location-row { display: flex; align-items: flex-start; margin-bottom: 20px; position: relative; }",
+      ".location-row:last-of-type { margin-bottom: 24px; }",
+      ".location-row:not(:last-of-type)::after { content: ''; position: absolute; left: 7px; top: 20px; bottom: -20px; width: 2px; background: #e5e7eb; }",
+      ".dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; margin-right: 16px; margin-top: 2px; z-index: 1; position: relative; }",
+      ".green-dot { background-color: #10b981; }",
+      ".red-dot { background-color: #ef4444; }",
+      ".location-details { flex: 1; }",
+      ".time { font-size: 15px; font-weight: 600; color: #2d2d2d; margin-bottom: 4px; }",
+      ".address { font-size: 14px; color: #6b7280; line-height: 1.5; }",
+      -- Footer details
+      ".ride-footer { display: flex; justify-content: space-between; padding-top: 16px; border-top: 1px solid #e5e7eb; }",
+      ".detail-item { flex: 1; }",
+      ".detail-label { font-size: 12px; color: #9ca3af; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }",
+      ".detail-value { font-size: 14px; color: #2d2d2d; font-weight: 500; }"
     ]
