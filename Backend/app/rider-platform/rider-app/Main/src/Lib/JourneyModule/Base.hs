@@ -497,7 +497,7 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
                 )
                 leg.pricingId
             else return categorySelectionReq'
-        let totalTicketQuantity = sum $ map (.selectedQuantity) categorySelectionReq
+        let totalTicketQuantity = sum $ map (.quantity) categorySelectionReq
             bookingAllowed' = leg.bookingAllowed || ((fromMaybe False leg.hasApplicablePasses) && totalTicketQuantity /= 1)
             updatedLeg = leg {JL.bookingAllowed = bookingAllowed'}
         JLI.confirm forcedBooking bookLater updatedLeg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer
