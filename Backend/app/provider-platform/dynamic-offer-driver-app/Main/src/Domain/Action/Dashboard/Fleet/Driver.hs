@@ -912,6 +912,8 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         Nothing
         ( \driverInfo -> do
             Analytics.decrementFleetOwnerAnalyticsActiveDriverCount (Just entityId) personId
+            -- This function called here also because when flow status will not enable but analytics will enable then we should only compute online status only. And if both the feature is enabled then we should called only one time which I called in flow status section.
+            when (not transporterConfig.analyticsConfig.allowCacheDriverFlowStatus) $ DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus True
             mbOperator <- FOV.findByFleetOwnerId entityId True
             when (isNothing mbOperator) $ logTagError "AnalyticsRemoveDriver" "Operator not found for fleet owner"
             whenJust mbOperator $ \operator -> do
@@ -919,7 +921,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
               Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
         )
         ( \driverInfo -> do
-            DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
+            DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus False
         )
     DP.OPERATOR -> do
       DOV.endOperatorDriverAssociation entityId personId
@@ -928,11 +930,13 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         personId
         Nothing
         ( \driverInfo -> do
+            -- This function called here also because when flow status will not enable but analytics will enable then we should only compute online status only. And if both the feature is enabled then we should called only one time which I called in flow status section.
+            when (not transporterConfig.analyticsConfig.allowCacheDriverFlowStatus) $ DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR entityId driverInfo.driverFlowStatus True
             when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig entityId
             Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig entityId
         )
         ( \driverInfo -> do
-            DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR entityId driverInfo.driverFlowStatus
+            DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR entityId driverInfo.driverFlowStatus False
         )
     _ -> throwError (InvalidRequest "Invalid Data")
   pure Success
@@ -1133,7 +1137,7 @@ getDriverFleetStatus merchantShortId opCity requestorId mbFleetOwnerId = do
   unless allowCacheDriverFlowStatus $ throwError (InvalidRequest "Cache driver flow status is not allowed in this merchant")
   requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
   (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
-  let allKeys = DDF.allKeys entityId
+  let allKeys = DDF.allKeys entityId False
   logTagInfo "DriverStatus" $ "Checking Redis for keys: " <> show allKeys <> ", entityRole: " <> show entityRole <> ", entityId: " <> entityId
   redisCounts <-
     mapM
@@ -1149,7 +1153,7 @@ getDriverFleetStatus merchantShortId opCity requestorId mbFleetOwnerId = do
       pure $ SDF.toDriverStatusRes (zip (map Just DDF.statusList) (map (fromMaybe 0) redisCounts))
     else do
       logTagInfo "DriverStatus" $ "Cache miss for some statuses for entityId: " <> entityId <> ". Checking inProgress key. Redis counts: " <> show redisCounts
-      SDF.handleCacheMissForDriverFlowStatus entityRole entityId allKeys
+      SDF.handleCacheMissForDriverFlowStatus entityRole entityId allKeys False
 
 ---------------------------------------------------------------------
 getDriverFleetDriverVehicleAssociation ::
@@ -1794,6 +1798,8 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
         Nothing
         ( \driverInfo -> do
             Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetOwnerId) person.id
+            -- This function called here also because when flow status will not enable but analytics will enable then we should only compute online status only. And if both the feature is enabled then we should called only one time which I called in flow status section.
+            when (not transporterConfig.analyticsConfig.allowCacheDriverFlowStatus) $ DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus True
             mOperator <- FOV.findByFleetOwnerId fleetOwnerId True
             when (isNothing mOperator) $ logTagError "AnalyticsAddDriver" "Operator not found for fleet owner"
             whenJust mOperator $ \operator -> do
@@ -1801,7 +1807,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
               Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
         )
         ( \driverInfo -> do
-            DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
+            DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus False
         )
 
   pure Success

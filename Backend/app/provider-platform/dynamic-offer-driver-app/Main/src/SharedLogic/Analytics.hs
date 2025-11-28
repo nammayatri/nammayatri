@@ -677,7 +677,7 @@ fallbackToClickHouseAndUpdateRedisForAllTimeFleet fleetOwnerId fleetAllTimeKeysD
       res <- DDF.getOnlineKeyValue fleetOwnerId
       if isNothing res
         then do
-          void $ SDFStatus.handleCacheMissForDriverFlowStatus DP.FLEET_OWNER fleetOwnerId (DDF.allKeys fleetOwnerId)
+          void $ SDFStatus.handleCacheMissForDriverFlowStatus DP.FLEET_OWNER fleetOwnerId (DDF.allKeys fleetOwnerId True) True
           onlineRes <- DDF.getOnlineKeyValue fleetOwnerId
           pure (fromMaybe 0 onlineRes)
         else pure (fromMaybe 0 res)
