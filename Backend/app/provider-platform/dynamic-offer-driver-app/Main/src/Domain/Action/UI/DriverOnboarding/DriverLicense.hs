@@ -26,7 +26,7 @@ where
 import qualified AWS.S3 as S3
 import Control.Applicative (liftA2, (<|>))
 import qualified Data.Text as T
-import Data.Time (nominalDay)
+import Data.Time (nominalDay, utctDay)
 import Data.Tuple.Extra (both)
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VC
 import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
@@ -195,7 +195,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
             if documentVerificationConfig.doStrictVerifcation
               then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
-              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
+              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
   if VC.isNameCompareRequired transporterConfig verifyBy
     then Redis.withWaitOnLockRedisWithExpiry (VC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody

@@ -40,6 +40,7 @@ import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
+import qualified Domain.Action.UI.DriverOnboarding.Status as DStatus
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Types.BusinessLicense as DBL
@@ -719,8 +720,8 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
               }
       QFC.create fitnessCert
 
-approveAndUpdateDL :: Common.DLApproveDetails -> Flow ()
-approveAndUpdateDL req = do
+approveAndUpdateDL :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Common.DLApproveDetails -> Flow ()
+approveAndUpdateDL merchantId merchantOpCityId req = do
   let imageId = Id req.documentImageId.getId
   dl <- QDL.findByImageId imageId >>= fromMaybeM (InternalError "DL not found by image id")
   licenseNumber <- mapM encrypt req.driverLicenseNumber
@@ -733,6 +734,8 @@ approveAndUpdateDL req = do
           }
   QDL.updateByPrimaryKey updatedDL
   void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (flip (QImage.updateVerificationStatusByIdAndType VALID) Domain.DriverLicense)) (Just dl.documentImageId1, dl.documentImageId2)
+  fork "call status Handler" $
+    void $ DStatus.statusHandler (dl.driverId, merchantId, merchantOpCityId) (Just True) Nothing Nothing (Just False) Nothing Nothing
 
 approveAndUpdateNOC :: Common.NOCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
@@ -882,7 +885,7 @@ castReqTypeToDomain = \case
 handleApproveRequest :: Common.ApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 handleApproveRequest approveReq merchantId merchantOperatingCityId = do
   case approveReq of
-    Common.DL dlReq -> approveAndUpdateDL dlReq
+    Common.DL dlReq -> approveAndUpdateDL merchantId merchantOperatingCityId dlReq
     Common.RC rcApproveReq -> approveAndUpdateRC rcApproveReq
     Common.VehicleInsurance vInsuranceReq -> approveAndUpdateInsurance vInsuranceReq merchantId merchantOperatingCityId
     Common.VehiclePUC pucReq -> approveAndUpdatePUC pucReq merchantId merchantOperatingCityId
