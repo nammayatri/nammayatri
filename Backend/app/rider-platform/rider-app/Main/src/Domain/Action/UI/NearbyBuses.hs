@@ -1,4 +1,4 @@
-module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextVehicleDetails, utcToIST, getTimetableStop) where
+module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextVehicleDetails, utcToIST, getTimetableStop, getSimpleNearbyBuses) where
 
 import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe

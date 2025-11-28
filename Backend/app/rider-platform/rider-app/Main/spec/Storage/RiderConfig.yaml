@@ -176,6 +176,7 @@ RiderConfig:
     specialVehicleNotificationConfigs: "Maybe [SpecialVehicleNotificationConfig]"
     offerListCacheVersion: Maybe Text
     frfsMetricsApiKey: Maybe Text
+    nearbyBusRadiusBucketStep: Maybe Meters
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
