@@ -758,6 +758,9 @@ calculateFareParameters params = do
             AC_PRIORITY -> avgSpeedOfVehicle.sedan.getKilometers
             BIKE_PLUS -> avgSpeedOfVehicle.bikeplus.getKilometers
             E_RICKSHAW -> avgSpeedOfVehicle.erickshaw.getKilometers
+            AUTO_DIDI -> avgSpeedOfVehicle.autorickshaw.getKilometers
+            CAB_DIDI -> avgSpeedOfVehicle.sedan.getKilometers
+            BIKE_DIDI -> avgSpeedOfVehicle.bike.getKilometers
       if avgSpeedOfVehicle' > 0
         then do
           let distanceInKilometer = realToFrac @_ @Double distance.getMeters / 1000
