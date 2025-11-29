@@ -27,7 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Time ()
 import Lib.Scheduler.Environment
-import Lib.Scheduler.JobStorageType.DB.Queries as DBQ
+import qualified Lib.Scheduler.JobStorageType.DB.Queries as DBQ
 import qualified Lib.Scheduler.JobStorageType.DB.Table as BeamST
 import qualified Lib.Scheduler.JobStorageType.Redis.Queries as RQ
 import Lib.Scheduler.Types
@@ -84,6 +84,28 @@ createJobIn merchantId merchantOperatingCityId inTime jobData = do
     DbBased -> do
       logDebug "DB BASED JOB "
       DBQ.createJobIn @t @e merchantId merchantOperatingCityId uuid inTime maxShards jobData
+
+createJobInWithCheck ::
+  forall t (e :: t) m r.
+  (JobFlow t e, JobCreator r m, FromTType'' BeamST.SchedulerJob (AnyJob t), ToJSON (JobContent e)) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
+  NominalDiffTime ->
+  UTCTime ->
+  UTCTime ->
+  Text ->
+  Maybe Int ->
+  JobContent e ->
+  m ()
+createJobInWithCheck merchantId merchantOperatingCityId inTime minScheduleTime maxScheduleTime jobType upperLimit jobData = do
+  jobs <- DBQ.getJobByTypeTimeAndData @t @e jobType minScheduleTime maxScheduleTime jobData
+  case upperLimit of
+    Just uL -> do
+      if length jobs >= uL
+        then pure ()
+        else createJobIn @_ @e merchantId merchantOperatingCityId inTime jobData
+    Nothing ->
+      createJobIn @_ @e merchantId merchantOperatingCityId inTime jobData
 
 isLongRunning :: (HasJobInfoMap r, JobMonad r m) => Text -> m Bool
 isLongRunning jType = do
