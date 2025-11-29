@@ -748,6 +748,7 @@ data DriverGoHomeRequestError
   | DriverGoHomeRequestAlreadyActive
   | DriverGoHomeRequestNotPresent
   | GoHomeFeaturePermanentlyDisabled
+  | DriverGoHomeRequestRideInProgress
   | DriverCloseToHomeLocation
   | CannotEnableGoHomeForDifferentCity
   | GoHomeRequestInProgress
@@ -763,6 +764,7 @@ instance IsBaseError DriverGoHomeRequestError where
     DriverGoHomeRequestAlreadyActive -> Just "GoHome feature is already active."
     DriverGoHomeRequestNotPresent -> Just "GoHome feature is not activated"
     GoHomeFeaturePermanentlyDisabled -> Just "GoHome feature is permanently disabled."
+    DriverGoHomeRequestRideInProgress -> Just "A ride is already in progress for this GoHome request."
     DriverCloseToHomeLocation -> Just "Driver is close to home location."
     CannotEnableGoHomeForDifferentCity -> Just "Cannot Enable Go To For a Location outside currentCity."
     GoHomeRequestInProgress -> Just "A Go Home request is already in progress."
@@ -775,6 +777,7 @@ instance IsHTTPError DriverGoHomeRequestError where
     DriverGoHomeRequestAlreadyActive -> "DRIVER_GO_HOME_REQUEST_ALREADY_ACTIVE"
     DriverGoHomeRequestNotPresent -> "DRIVER_GO_HOME_REQUEST_NOT_PRESENT"
     GoHomeFeaturePermanentlyDisabled -> "GO_HOME_FEATURE_PERMANENTLY_DISABLED"
+    DriverGoHomeRequestRideInProgress -> "DRIVER_GO_HOME_REQUEST_RIDE_IN_PROGRESS"
     DriverCloseToHomeLocation -> "DRIVER_CLOSE_TO_HOME_LOCATION"
     CannotEnableGoHomeForDifferentCity -> "CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY"
     GoHomeRequestInProgress -> "GO_HOME_REQUEST_IN_PROGRESS"
@@ -785,6 +788,7 @@ instance IsHTTPError DriverGoHomeRequestError where
     DriverGoHomeRequestAlreadyActive -> E400
     DriverGoHomeRequestNotPresent -> E400
     GoHomeFeaturePermanentlyDisabled -> E400
+    DriverGoHomeRequestRideInProgress -> E400
     DriverCloseToHomeLocation -> E400
     CannotEnableGoHomeForDifferentCity -> E400
     GoHomeRequestInProgress -> E400
