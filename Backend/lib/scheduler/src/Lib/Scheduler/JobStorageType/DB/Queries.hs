@@ -28,7 +28,7 @@ import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common (Log, MonadTime (getCurrentTime))
 import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common (encodeToText, fromMaybeM)
 import Kernel.Utils.Error (throwError)
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.DB.Table hiding (Id)
@@ -157,6 +157,25 @@ getJobByTypeAndScheduleTime jobType minScheduleTime maxScheduleTime = do
           Se.Is BeamST.scheduledAt $ Se.GreaterThan (T.utcToLocalTime T.utc minScheduleTime),
           Se.Is BeamST.scheduledAt $ Se.LessThan (T.utcToLocalTime T.utc maxScheduleTime),
           Se.Is BeamST.jobType $ Se.Eq jobType
+        ]
+    ]
+
+getJobByTypeTimeAndData ::
+  forall t (e :: t) m r.
+  (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m, ToJSON (JobContent e)) =>
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  JobContent e ->
+  m [AnyJob t]
+getJobByTypeTimeAndData jobType minScheduleTime maxScheduleTime jobData = do
+  findAllWithKVScheduler
+    [ Se.And
+        [ Se.Is BeamST.status $ Se.Eq Pending,
+          Se.Is BeamST.scheduledAt $ Se.GreaterThan (T.utcToLocalTime T.utc minScheduleTime),
+          Se.Is BeamST.scheduledAt $ Se.LessThan (T.utcToLocalTime T.utc maxScheduleTime),
+          Se.Is BeamST.jobType $ Se.Eq jobType,
+          Se.Is BeamST.jobData $ Se.Eq (encodeToText jobData)
         ]
     ]
 
