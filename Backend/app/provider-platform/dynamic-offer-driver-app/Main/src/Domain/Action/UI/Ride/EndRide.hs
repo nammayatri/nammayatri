@@ -114,7 +114,8 @@ data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq 
 data EndRideResp = EndRideResp
   { result :: Text,
     homeLocationReached :: Maybe Bool,
-    driverRideRes :: Maybe DUIRideCommon.DriverRideRes
+    driverRideRes :: Maybe DUIRideCommon.DriverRideRes,
+    paymentMethod :: Maybe DMPM.PaymentMethodInfo
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -544,7 +545,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     EndRideResp
       { result = "Success",
         homeLocationReached = homeLocationReached',
-        driverRideRes = driverRideRes
+        driverRideRes = driverRideRes,
+        paymentMethod = mbPaymentMethodInfo
       }
   where
     clearEditDestinationWayAndSnappedPoints driverId = LocUpdInternal.deleteEditDestinationSnappedWaypoints driverId >> LocUpdInternal.deleteEditDestinationWaypoints driverId
