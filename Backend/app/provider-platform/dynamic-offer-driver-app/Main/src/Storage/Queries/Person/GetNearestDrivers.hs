@@ -10,7 +10,6 @@ where
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
-import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.Driver.DriverInformation as DIAPI
@@ -111,7 +110,7 @@ getNearestDrivers NearestDriversReq {..} = do
   logDebug $ "MetroWarriorDebugging Result:- getNearestDrivers --------person tags driverInfos----" <> show (DIAPI.convertToDriverInfoAPIEntity <$> driverInfos)
   driverBankAccounts <-
     if onlinePayment
-      then QDBA.getDrivers (driverLocs <&> (.driverId))
+      then QDBA.getDriverOrFleetBankAccounts (driverLocs <&> (.driverId))
       else return []
 
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos_) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
@@ -125,7 +124,7 @@ getNearestDrivers NearestDriversReq {..} = do
           -- driverStatsHashMap = HashMap.fromList $ (\stats -> (stats.driverId, stats)) <$> driverStats
           driverInfoHashMap = HashMap.fromList $ (\info -> (info.driverId, info)) <$> driverInformations
           vehicleHashMap = HashMap.fromList $ (\v -> (v.driverId, v)) <$> vehicles
-          driverBankAccountHashMap = HashMap.fromList $ catMaybes $ (\dba -> if dba.chargesEnabled then Just (dba.driverId, dba.accountId) else Nothing) <$> driverBankAccounts
+          driverBankAccountHashMap = HashMap.fromList $ mapMaybe (\(personId, dba) -> if dba.chargesEnabled then Just (personId, dba.accountId) else Nothing) driverBankAccounts
        in concat $ mapMaybe (buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverBankAccountHashMap) driverLocations
 
     buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverBankAccountHashMap location = do
@@ -134,7 +133,8 @@ getNearestDrivers NearestDriversReq {..} = do
       -- driverStats <- HashMap.lookup driverId' driverStatsHashMap
       vehicle <- HashMap.lookup driverId' vehicleHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
-      _ <- if onlinePayment then HashMap.lookup driverId' driverBankAccountHashMap else Just T.empty -- is there any better way to do this?
+      when onlinePayment $ do
+        guard (isJust $ HashMap.lookup driverId' driverBankAccountHashMap)
       let dist = (realToFrac $ distanceBetweenInMeters fromLocLatLong $ LatLong {lat = location.lat, lon = location.lon}) :: Double
       -- ideally should be there inside the vehicle.selectedServiceTiers but still to make sure we have a default service tier for the driver
       let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers

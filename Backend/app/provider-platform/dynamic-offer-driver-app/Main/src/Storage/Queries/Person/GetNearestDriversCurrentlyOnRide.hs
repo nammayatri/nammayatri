@@ -5,7 +5,6 @@ module Storage.Queries.Person.GetNearestDriversCurrentlyOnRide where
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
-import qualified Data.Text as T
 import Domain.Types as DVST
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.Driver.DriverInformation as DIAPI
@@ -109,7 +108,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
   drivers <- Int.getDrivers vehicles
   driverBankAccounts <-
     if onlinePayment
-      then QDBA.getDrivers (driverLocs <&> (.driverId))
+      then QDBA.getDriverOrFleetBankAccounts (driverLocs <&> (.driverId))
       else return []
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
   let driversCurrentlyOnRideForForwardBatch = filter (\di -> (isJust di.onRideTripCategory && show (fromJust di.onRideTripCategory) `elem` currentRideTripCategoryValidForForwardBatching) && (isJust di.driverTripEndLocation) && (di.hasRideStarted == Just True)) driverInfos
@@ -123,7 +122,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
           personHashMap = HashMap.fromList $ (\p -> (p.id, p)) <$> persons
           -- driverStatsHashMap = HashMap.fromList $ (\stats -> (stats.driverId, stats)) <$> driverStats
           driverInfoHashMap = HashMap.fromList $ (\info -> (info.driverId, info)) <$> driverInformations
-          driverBankAccountHashMap = HashMap.fromList $ catMaybes $ (\dba -> if dba.chargesEnabled then Just (dba.driverId, dba.accountId) else Nothing) <$> driverBankAccounts
+          driverBankAccountHashMap = HashMap.fromList $ mapMaybe (\(personId, dba) -> if dba.chargesEnabled then Just (personId, dba.accountId) else Nothing) driverBankAccounts
        in concat $ mapMaybe (buildFullDriverListOnRide locationHashMap driverInfoHashMap personHashMap driverBankAccountHashMap onRideRadius) vehicles
 
     buildFullDriverListOnRide locationHashMap driverInfoHashMap personHashMap driverBankAccountHashMap onRideRadius vehicle = do
@@ -131,7 +130,8 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       location <- HashMap.lookup driverId' locationHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
       person <- HashMap.lookup driverId' personHashMap
-      _ <- if onlinePayment then HashMap.lookup driverId' driverBankAccountHashMap else Just T.empty -- is there any better way to do this?
+      when onlinePayment $ do
+        guard (isJust $ HashMap.lookup driverId' driverBankAccountHashMap)
       -- driverStats <- HashMap.lookup driverId' driverStatsHashMap
       rideToLocation <- info.driverTripEndLocation
       let driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}

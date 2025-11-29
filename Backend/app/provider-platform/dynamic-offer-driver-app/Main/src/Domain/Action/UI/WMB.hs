@@ -60,6 +60,7 @@ import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.AlertRequest as QAR
+import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.FleetBadge as QFB
 import qualified Storage.Queries.FleetBadgeAssociation as QFBA
@@ -486,6 +487,7 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId transporterConfig driver
 
   FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
+  when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId
   Analytics.handleDriverAnalyticsAndFlowStatus
     transporterConfig
     fleetDriverAssociation.driverId

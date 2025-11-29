@@ -8,7 +8,6 @@ import qualified Data.List as DL
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time (defaultTimeLocale, formatTime)
-import qualified Data.Time as DT
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VRC
 import qualified Domain.Types.AadhaarCard
@@ -18,7 +17,6 @@ import qualified Domain.Types.CommonDriverOnboardingDocuments
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as Domain
-import qualified Domain.Types.DriverBankAccount as DDBA
 import qualified Domain.Types.DriverGstin as DGST
 import qualified Domain.Types.DriverPanCard as DPC
 import Domain.Types.DriverSSN
@@ -38,13 +36,11 @@ import Kernel.Beam.Functions
 import qualified Kernel.External.BackgroundVerification.Interface as BackgroundVerification
 import Kernel.External.Encryption
 import Kernel.External.Maps (LatLong (..))
-import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (Language (..), ServiceFlow)
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
-import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
@@ -55,6 +51,7 @@ import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Merchant as SMerchant
+import qualified SharedLogic.PersonBankAccount as SPBA
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as CQTC
@@ -65,7 +62,6 @@ import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
-import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
@@ -83,7 +79,6 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCE
 import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
-import qualified Tools.Payment as TPayment
 import qualified Tools.Verification as Verification
 import Utils.Common.Cac.KeyNameConstants
 
@@ -904,116 +899,13 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) = do
   let fetchPersonStripeInfo = do
         driverLicense <- runInReplica $ QDL.findByDriverId person.id >>= fromMaybeM (DriverDLNotFound person.id.getId)
         pure
-          PersonStripeInfo
+          SPBA.PersonStripeInfo
             { personDob = driverLicense.driverDob,
               address = Nothing, -- will add later
               idNumber = Nothing -- will add later
             }
-  let driverRegisterBankAccountLinkHandle = PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
-  getPersonRegisterBankAccountLink driverRegisterBankAccountLinkHandle person
-
-data PersonStripeInfo = PersonStripeInfo
-  { personDob :: Maybe UTCTime,
-    address :: Maybe Payment.Address,
-    idNumber :: Maybe (EncryptedHashed Text)
-  }
-
-newtype PersonRegisterBankAccountLinkHandle = PersonRegisterBankAccountLinkHandle
-  { fetchPersonStripeInfo :: Flow PersonStripeInfo
-  }
-
-getPersonRegisterBankAccountLink ::
-  PersonRegisterBankAccountLinkHandle ->
-  Domain.Types.Person.Person ->
-  Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-getPersonRegisterBankAccountLink h person = do
-  mPersonBankAccount <- runInReplica $ QDBA.findByPrimaryKey person.id
-  now <- getCurrentTime
-  case mPersonBankAccount of
-    Just bankAccount -> do
-      when bankAccount.chargesEnabled $ throwError $ InvalidRequest "Bank account already enabled"
-      case (bankAccount.currentAccountLink, bankAccount.currentAccountLinkExpiry) of
-        (Just link, Just expiry) -> do
-          if expiry > now
-            then
-              return $
-                API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-                  { chargesEnabled = bankAccount.chargesEnabled,
-                    accountLink = link,
-                    accountUrlExpiry = expiry,
-                    detailsSubmitted = bankAccount.detailsSubmitted
-                  }
-            else refreshLink bankAccount
-        _ -> refreshLink bankAccount
-    _ -> createAccount now
-  where
-    refreshLink :: DDBA.DriverBankAccount -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-    refreshLink bankAccount = do
-      resp <- TPayment.retryAccountLink person.merchantId person.merchantOperatingCityId bankAccount.accountId
-      accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
-      QDBA.updateAccountLink (Just accountUrl) (Just resp.accountUrlExpiry) person.id
-      return $
-        API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-          { chargesEnabled = bankAccount.chargesEnabled,
-            accountLink = accountUrl,
-            accountUrlExpiry = resp.accountUrlExpiry,
-            detailsSubmitted = bankAccount.detailsSubmitted
-          }
-
-    createAccount :: UTCTime -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-    createAccount now = do
-      merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-      when (merchantOpCity.country `notElem` [Context.USA, Context.Netherlands, Context.Finland]) $ throwError $ InvalidRequest "Bank account creation is only supported for USA, Netherlands and Finland"
-
-      mbMobileNumber <- mapM decrypt person.mobileNumber
-      mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "Mobile number is required for opening a bank account")
-
-      personStripeInfo <- h.fetchPersonStripeInfo
-      personDob <- personStripeInfo.personDob & fromMaybeM (InvalidRequest "Driver DOB is required for opening a bank account")
-      idNumber <- forM personStripeInfo.idNumber decrypt
-      ssnLast4 <-
-        if merchantOpCity.country == Context.USA
-          then do
-            driverSSN <- runInReplica $ QDriverSSN.findByDriverId person.id >>= fromMaybeM (DriverSSNNotFound person.id.getId)
-            ssnNumber <- decrypt driverSSN.ssn
-            return $ Just $ T.takeEnd 4 ssnNumber
-          else return Nothing
-
-      let createAccountReq =
-            Payment.IndividualConnectAccountReq
-              { country = merchantOpCity.country,
-                email = person.email,
-                dateOfBirth = DT.utctDay personDob,
-                firstName = person.firstName,
-                lastName = person.lastName,
-                address = personStripeInfo.address,
-                ssnLast4 = ssnLast4,
-                idNumber,
-                mobileNumber
-              }
-      resp <- TPayment.createIndividualConnectAccount person.merchantId person.merchantOperatingCityId createAccountReq
-      accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
-      let driverBankAccount =
-            DDBA.DriverBankAccount
-              { accountId = resp.accountId,
-                chargesEnabled = resp.chargesEnabled,
-                currentAccountLink = Just accountUrl,
-                currentAccountLinkExpiry = Just resp.accountUrlExpiry,
-                detailsSubmitted = resp.detailsSubmitted,
-                driverId = person.id,
-                merchantId = Just person.merchantId,
-                merchantOperatingCityId = Just person.merchantOperatingCityId,
-                createdAt = now,
-                updatedAt = now
-              }
-      QDBA.create driverBankAccount
-      return $
-        API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-          { chargesEnabled = resp.chargesEnabled,
-            accountLink = accountUrl,
-            accountUrlExpiry = resp.accountUrlExpiry,
-            detailsSubmitted = resp.detailsSubmitted
-          }
+  let driverRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
+  SPBA.getPersonRegisterBankAccountLink driverRegisterBankAccountLinkHandle person
 
 getDriverRegisterBankAccountStatus ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -1025,28 +917,7 @@ getDriverRegisterBankAccountStatus ::
 getDriverRegisterBankAccountStatus (mbPersonId, _, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  getPersonRegisterBankAccountStatus person
-
-getPersonRegisterBankAccountStatus ::
-  Domain.Types.Person.Person ->
-  Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountResp
-getPersonRegisterBankAccountStatus person = do
-  driverBankAccount <- runInReplica $ QDBA.findByPrimaryKey person.id >>= fromMaybeM (DriverBankAccountNotFound person.id.getId)
-  if driverBankAccount.chargesEnabled
-    then
-      return $
-        API.Types.UI.DriverOnboardingV2.BankAccountResp
-          { chargesEnabled = driverBankAccount.chargesEnabled,
-            detailsSubmitted = driverBankAccount.detailsSubmitted
-          }
-    else do
-      resp <- TPayment.getAccount person.merchantId person.merchantOperatingCityId driverBankAccount.accountId
-      QDBA.updateAccountStatus resp.chargesEnabled resp.detailsSubmitted person.id
-      return $
-        API.Types.UI.DriverOnboardingV2.BankAccountResp
-          { chargesEnabled = resp.chargesEnabled,
-            detailsSubmitted = resp.detailsSubmitted
-          }
+  SPBA.getPersonRegisterBankAccountStatus person
 
 postDriverRegisterLogHvSdkCall ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

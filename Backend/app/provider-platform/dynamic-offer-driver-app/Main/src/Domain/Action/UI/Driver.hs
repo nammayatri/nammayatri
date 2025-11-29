@@ -856,7 +856,10 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
           let isVehicleVariantDisabledForSubscription = maybe False (`elem` (fromMaybe [] vehicleVariantsDisabledForSubscription)) (mbVehicle <&> (.variant))
           when ((planBasedChecks || changeBasedChecks) && (not isVehicleVariantDisabledForSubscription)) $ throwError (NoPlanSelected personId.getId)
           when merchant.onlinePayment $ do
-            driverBankAccount <- QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
+            driverBankAccount <-
+              QFDA.findByDriverId driverId True >>= \case
+                Just fleetDriverAssociation -> QDBA.findByPrimaryKey (Id @SP.Person fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
+                Nothing -> QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
             unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
           unless (driverInfo.enabled) $ throwError DriverAccountDisabled
           unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
