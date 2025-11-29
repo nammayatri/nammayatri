@@ -567,6 +567,8 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
         -- If payment results in an active/prebooked pass, update purchased_pass.profilePicture from payment
         when (passStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
           QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
+          when (passStatus == DPurchasedPass.Active && purchasedPassPayment.startDate <= purchasedPass.startDate && purchasedPassPayment.endDate <= purchasedPass.endDate) $
+            QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus
       case mbPassStatus of
         Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
         Just DPurchasedPass.PreBooked -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
