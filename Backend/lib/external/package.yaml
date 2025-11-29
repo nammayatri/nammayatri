@@ -60,6 +60,10 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
+  - RebindableSyntax
 
 dependencies:
   - aeson
@@ -124,7 +128,6 @@ dependencies:
   - stm
   - unix
   - record-hasfield
-  - record-dot-preprocessor
   - openapi3
   - fast-logger
   - persistent
@@ -159,7 +162,6 @@ ghc-options:
   - -Widentities
   - -fhide-source-paths
   - -Werror
-  - -fplugin=RecordDotPreprocessor
   - -Wwarn=ambiguous-fields
 
 library:

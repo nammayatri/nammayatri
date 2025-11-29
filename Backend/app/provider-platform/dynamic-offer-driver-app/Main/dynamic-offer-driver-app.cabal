@@ -1,4 +1,4 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
 -- This file has been generated from package.yaml by hpack version 0.35.2.
 --
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -1461,6 +1461,8 @@ library
       Storage.Queries.WhiteListOrg
   other-modules:
       Paths_dynamic_offer_driver_app
+  autogen-modules:
+      Paths_dynamic_offer_driver_app
   hs-source-dirs:
       src
       src-read-only
@@ -1497,10 +1499,16 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  extra-libraries:
+      cac_client
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -1552,7 +1560,6 @@ library
     , prometheus-client
     , pureMD5
     , random
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , scheduler
@@ -1589,8 +1596,6 @@ library
     , xml-conduit
     , xmlbf
     , yudhishthira
-  extra-libraries:
-      cac_client
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -1634,10 +1639,16 @@ executable dynamic-offer-driver-app-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
+  extra-libraries:
+      cac_client
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -1686,7 +1697,6 @@ executable dynamic-offer-driver-app-exe
     , prometheus-client
     , pureMD5
     , random
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , scheduler
@@ -1719,8 +1729,6 @@ executable dynamic-offer-driver-app-exe
     , xml-conduit
     , xmlbf
     , yudhishthira
-  extra-libraries:
-      cac_client
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
