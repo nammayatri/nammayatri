@@ -88,6 +88,7 @@ data TransporterConfigT f = TransporterConfigT
     dailyOffenceSuspensionTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     deactivateRCOnUnlink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     defaultPopupDelay :: B.C f Kernel.Types.Common.Seconds,
+    deleteDriverBankAccountWhenLinkToFleet :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     demandHotspotsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     disableDriverWhenUnlinkingVehicle :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     disableListScheduledBookingAPI :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

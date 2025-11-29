@@ -443,6 +443,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.Payment
       SharedLogic.Person
+      SharedLogic.PersonBankAccount
       SharedLogic.Pricing
       SharedLogic.Ride
       SharedLogic.RiderDetails

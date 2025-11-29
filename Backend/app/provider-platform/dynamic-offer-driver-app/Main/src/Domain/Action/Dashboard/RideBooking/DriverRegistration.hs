@@ -26,6 +26,7 @@ import qualified SharedLogic.DriverOnboarding as DomainRC
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import Tools.Error
@@ -79,6 +80,7 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
     when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
     assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId mbOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFDV.create assoc
+    when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById res.person.id
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig
       res.person.id

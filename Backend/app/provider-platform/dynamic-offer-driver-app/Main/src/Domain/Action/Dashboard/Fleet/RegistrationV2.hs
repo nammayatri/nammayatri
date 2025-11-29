@@ -21,7 +21,6 @@ import qualified Domain.Action.Dashboard.Fleet.Registration as DRegistration
 import qualified Domain.Action.Internal.DriverMode as DriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
-import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -46,6 +45,7 @@ import Kernel.Utils.Validation
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.PersonBankAccount as SPBA
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as FODVC
 import Storage.CachedQueries.Merchant as QMerchant
@@ -417,13 +417,13 @@ postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerI
         stripeAddress <- fleetOwnerInfo.stripeAddress & fromMaybeM (InvalidRequest "Stripe address is required for opening a bank account")
         stripeIdNumber <- fleetOwnerInfo.stripeIdNumber & fromMaybeM (InvalidRequest "Stripe idNumber is required for opening a bank account")
         pure
-          DOnboarding.PersonStripeInfo
+          SPBA.PersonStripeInfo
             { personDob = fleetOwnerInfo.fleetDob,
               address = Just stripeAddress,
               idNumber = Just stripeIdNumber
             }
-  let fleetRegisterBankAccountLinkHandle = DOnboarding.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
-  castFleetBankAccountLinkResp <$> DOnboarding.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle fleetOwner
+  let fleetRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
+  castFleetBankAccountLinkResp <$> SPBA.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle fleetOwner
 
 castFleetBankAccountLinkResp :: Onboarding.BankAccountLinkResp -> Common.FleetBankAccountLinkResp
 castFleetBankAccountLinkResp Onboarding.BankAccountLinkResp {..} = Common.FleetBankAccountLinkResp {..}
@@ -436,7 +436,7 @@ getRegistrationV2RegisterBankAccountStatus ::
   Flow Common.FleetBankAccountResp
 getRegistrationV2RegisterBankAccountStatus _merchantShortId _opCity mbFleetOwnerId requestorId = do
   fleetOwner <- checkRequestorAcccessToFleet mbFleetOwnerId requestorId
-  castFleetBankAccountResp <$> DOnboarding.getPersonRegisterBankAccountStatus fleetOwner
+  castFleetBankAccountResp <$> SPBA.getPersonRegisterBankAccountStatus fleetOwner
 
 castFleetBankAccountResp :: Onboarding.BankAccountResp -> Common.FleetBankAccountResp
 castFleetBankAccountResp Onboarding.BankAccountResp {..} = Common.FleetBankAccountResp {..}

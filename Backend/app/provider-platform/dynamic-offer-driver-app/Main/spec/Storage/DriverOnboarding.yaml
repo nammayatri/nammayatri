@@ -865,6 +865,9 @@ DriverBankAccount:
       kvFunction: updateOneWithKV
       params: [chargesEnabled, detailsSubmitted]
       where: driverId
+    deleteById:
+      kvFunction: deleteWithKV
+      where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
 

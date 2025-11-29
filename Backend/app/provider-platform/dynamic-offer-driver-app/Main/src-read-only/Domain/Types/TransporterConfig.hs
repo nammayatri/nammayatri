@@ -93,6 +93,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     dailyOffenceSuspensionTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     deactivateRCOnUnlink :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     defaultPopupDelay :: Kernel.Types.Common.Seconds,
+    deleteDriverBankAccountWhenLinkToFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     demandHotspotsConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DemandHotspotsConfig,
     disableDriverWhenUnlinkingVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     disableListScheduledBookingAPI :: Kernel.Prelude.Bool,

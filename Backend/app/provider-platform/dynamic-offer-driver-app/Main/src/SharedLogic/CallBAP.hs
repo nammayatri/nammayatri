@@ -125,6 +125,7 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RideDetails as QRideDetails
@@ -370,7 +371,10 @@ rideAssignedCommon booking ride driver veh = do
   driverAccountId <-
     if ride.onlinePayment && isValueAddNP
       then do
-        mDriverBankAccount <- runInReplica $ QDBA.findByPrimaryKey ride.driverId
+        mDriverBankAccount <-
+          QFDA.findByDriverId ride.driverId True >>= \case
+            Just fleetDriverAssociation -> runInReplica $ QDBA.findByPrimaryKey (Id @DP.Person fleetDriverAssociation.fleetOwnerId)
+            Nothing -> runInReplica $ QDBA.findByPrimaryKey ride.driverId
         return $ (.accountId) <$> mDriverBankAccount
       else pure Nothing
   pure $ (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}

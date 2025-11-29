@@ -562,3 +562,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN feedback_notifi
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_db_for_analytics boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN delete_driver_bank_account_when_link_to_fleet boolean ;
