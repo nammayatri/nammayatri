@@ -44,7 +44,7 @@ SELECT
         },
         {
             "key": "FELT_UNSAFE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Felt unsafe"},
@@ -58,7 +58,7 @@ SELECT
         },
         {
             "key": "RECKLESS_DRIVING",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 3,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Reckless driving"},
@@ -86,7 +86,7 @@ SELECT
         },
         {
             "key": "TRIP_DELAYED",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 5,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Trip delayed"},
@@ -121,7 +121,7 @@ SELECT
     '[
         {
             "key": "UNCLEAN_VEHICLE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 1,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Unclean Vehicle"},
@@ -135,7 +135,7 @@ SELECT
         },
         {
             "key": "HIGH_FARE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "High Fare"},
@@ -184,7 +184,7 @@ SELECT
         },
         {
             "key": "FELT_UNSAFE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Felt unsafe"},
@@ -198,7 +198,7 @@ SELECT
         },
         {
             "key": "RECKLESS_DRIVING",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 3,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Reckless driving"},
@@ -226,7 +226,7 @@ SELECT
         },
         {
             "key": "TRIP_DELAYED",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 5,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Trip delayed"},
@@ -261,7 +261,7 @@ SELECT
     '[
         {
             "key": "UNCLEAN_VEHICLE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 1,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Unclean Vehicle"},
@@ -275,7 +275,7 @@ SELECT
         },
         {
             "key": "HIGH_FARE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "High Fare"},
@@ -310,7 +310,7 @@ SELECT
     '[
         {
             "key": "UNPROFESSIONAL_DRIVING",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 1,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Unprofessional driving"},
@@ -352,7 +352,7 @@ SELECT
         },
         {
             "key": "UNCOMFORTABLE_RIDE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 4,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Uncomfortable ride"},
@@ -361,12 +361,12 @@ SELECT
                 {"language": "TAMIL", "translation": "சங்கடமான சவாரி"},
                 {"language": "TELUGU", "translation": "అసౌకర్య రైడ్"},
                 {"language": "BENGALI", "translation": "অস্বস্তিকর যাত্রা"},
-                {"language": "ODIA", "translation": "ଅସହଜ ରାଇଡ୍"}
+                {"language": "ODIA", "translation": "ଅସಹଜ ରାଇଡ୍"}
             ]
         },
         {
             "key": "TRIP_DELAYED",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 5,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Trip delayed"},
@@ -380,7 +380,7 @@ SELECT
         },
         {
             "key": "FELT_UNSAFE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 6,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Felt unsafe"},
@@ -415,7 +415,7 @@ SELECT
     '[
         {
             "key": "UNCLEAN_VEHICLE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 1,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Unclean Vehicle"},
@@ -429,7 +429,7 @@ SELECT
         },
         {
             "key": "HIGH_FARE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "High Fare"},
@@ -464,7 +464,7 @@ SELECT
     '[
         {
             "key": "POLITE_DRIVER",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 1,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Polite driver"},
@@ -478,7 +478,7 @@ SELECT
         },
         {
             "key": "EXPERT_DRIVING",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Expert driving"},
@@ -506,7 +506,7 @@ SELECT
         },
         {
             "key": "SAFE_RIDE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 4,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Safe ride"},
@@ -569,7 +569,7 @@ SELECT
     '[
         {
             "key": "CLEAN_VEHICLE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 1,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Clean vehicle"},
@@ -583,7 +583,7 @@ SELECT
         },
         {
             "key": "RIGHT_FARE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Right Fare"},
@@ -618,7 +618,7 @@ SELECT
     '[
         {
             "key": "POLITE_DRIVER",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 1,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Polite driver"},
@@ -632,7 +632,7 @@ SELECT
         },
         {
             "key": "EXPERT_DRIVING",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Expert driving"},
@@ -646,7 +646,7 @@ SELECT
         },
         {
             "key": "ON_TIME",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 3,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "On time"},
@@ -660,7 +660,7 @@ SELECT
         },
         {
             "key": "SKILLED_NAVIGATOR",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 4,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Skilled navigator"},
@@ -674,7 +674,7 @@ SELECT
         },
         {
             "key": "SAFE_RIDE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 5,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Safe ride"},
@@ -709,7 +709,7 @@ SELECT
     '[
         {
             "key": "CLEAN_VEHICLE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 1,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Clean vehicle"},
@@ -723,7 +723,7 @@ SELECT
         },
         {
             "key": "RIGHT_FARE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Right Fare"},
@@ -779,7 +779,7 @@ SELECT
         },
         {
             "key": "FELT_UNSAFE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Felt unsafe"},
@@ -793,14 +793,14 @@ SELECT
         },
         {
             "key": "RECKLESS_DRIVING",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 3,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Reckless driving"},
                 {"language": "HINDI", "translation": "लापरवाह ड्राइविंग"},
                 {"language": "KANNADA", "translation": "ಅಜಾಗರೂಕ ಚಾಲನೆ"},
                 {"language": "TAMIL", "translation": "பொறுப்பற்ற வாகனம் ஓட்டுதல்"},
-                {"language": "TELUGU", "translation": "నిర్లక్ష్యంగా డ్రైవింగ్"},
+                {"language": "TELUGU", "translation": "నిర్లక్ష్యంగా డ్రైविंिंग"},
                 {"language": "BENGALI", "translation": "বেপরোয়া গাড়ি চালানো"},
                 {"language": "ODIA", "translation": "ବେପରୁଆ ଡ୍ରାଇଭିଂ"}
             ]
@@ -821,7 +821,7 @@ SELECT
         },
         {
             "key": "AC_WAS_NOT_ON",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 5,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "AC was not ON"},
@@ -835,7 +835,7 @@ SELECT
         },
         {
             "key": "BAD_UNCLEAN_VEHICLE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 6,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Bad/Unclean Vehicle"},
@@ -849,7 +849,7 @@ SELECT
         },
         {
             "key": "APP_ISSUES",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 7,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "App issues"},
@@ -863,7 +863,7 @@ SELECT
         },
         {
             "key": "ROUTE_NOT_FOLLOWED",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 8,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Route not Followed"},
@@ -913,7 +913,7 @@ SELECT
         },
         {
             "key": "FELT_UNSAFE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Felt unsafe"},
@@ -927,7 +927,7 @@ SELECT
         },
         {
             "key": "RECKLESS_DRIVING",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 3,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Reckless driving"},
@@ -955,7 +955,7 @@ SELECT
         },
         {
             "key": "AC_WAS_NOT_ON",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 5,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "AC was not ON"},
@@ -969,7 +969,7 @@ SELECT
         },
         {
             "key": "BAD_UNCLEAN_VEHICLE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 6,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Bad/Unclean Vehicle"},
@@ -983,7 +983,7 @@ SELECT
         },
         {
             "key": "APP_ISSUES",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 7,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "App issues"},
@@ -997,7 +997,7 @@ SELECT
         },
         {
             "key": "ROUTE_NOT_FOLLOWED",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 8,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Route not Followed"},
@@ -1033,7 +1033,7 @@ SELECT
     '[
         {
             "key": "UNPROFESSIONAL_DRIVING",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 1,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Unprofessional driving"},
@@ -1047,7 +1047,7 @@ SELECT
         },
         {
             "key": "ASKED_FOR_EXTRA",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Asked for Extra"},
@@ -1075,7 +1075,7 @@ SELECT
         },
         {
             "key": "ROUTE_NOT_FOLLOWED",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 4,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Route not Followed"},
@@ -1089,7 +1089,7 @@ SELECT
         },
         {
             "key": "APP_ISSUES",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 5,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "App issues"},
@@ -1103,7 +1103,7 @@ SELECT
         },
         {
             "key": "FELT_UNSAFE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 6,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Felt Unsafe"},
@@ -1117,7 +1117,7 @@ SELECT
         },
         {
             "key": "UNCLEAN_VEHICLE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 7,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Unclean Vehicle"},
@@ -1131,7 +1131,7 @@ SELECT
         },
         {
             "key": "AC_NOT_COOLING",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 8,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "AC not cooling"},
@@ -1161,13 +1161,13 @@ SELECT
     'DRIVER', 4,
     'Driver related feedback',
     '[{"language": "ENGLISH", "translation": "Driver related feedback"}, {"language": "HINDI", "translation": "ड्राइवर से संबंधित प्रतिक्रिया"}, {"language": "KANNADA", "translation": "ಚಾಲಕ ಸಂಬಂಧಿತ ಪ್ರತಿಕ್ರಿಯೆ"}, {"language": "TAMIL", "translation": "ஓட்டுனர் தொடர்பான கருத்து"}, {"language": "TELUGU", "translation": "డ్రైవర్ సంబంధిత అభిప్రాయం"}, {"language": "BENGALI", "translation": "ড্রাইভার সম্পর্কিত প্রতিক্রিয়া"}, {"language": "ODIA", "translation": "ଡ୍ରାଇଭର ସମ୍ବନ୍ଧୀୟ ମତାମତ"}]'::json,
-    ARRAY['Polite Driver', 'Expert Driver', 'Asked for Extra Fare', 'Safe Ride', 'Uncomfortable Ride', 'Route not Followed', 'Clean Vehicle', 'Love the App <3']::text[],
+    ARRAY['Polite Driver', 'Expert Driver', 'Asked for Extra Fare', 'Safe Ride', 'Uncomfortable Ride', 'Route not Followed', 'Clean Vehicle', 'Love the App <3', 'Comfortable ride']::text[],
     'Checkbox',
     moc.id, moc.merchant_id,
     '[
         {
             "key": "POLITE_DRIVER",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 1,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Polite Driver"},
@@ -1181,7 +1181,7 @@ SELECT
         },
         {
             "key": "EXPERT_DRIVER",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Expert Driver"},
@@ -1209,7 +1209,7 @@ SELECT
         },
         {
             "key": "SAFE_RIDE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 4,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Safe Ride"},
@@ -1251,7 +1251,7 @@ SELECT
         },
         {
             "key": "CLEAN_VEHICLE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 7,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Clean Vehicle"},
@@ -1265,7 +1265,7 @@ SELECT
         },
         {
             "key": "LOVE_THE_APP",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 8,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Love the App <3"},
@@ -1301,7 +1301,7 @@ SELECT
     '[
         {
             "key": "POLITE_DRIVER",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 1,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Polite Driver"},
@@ -1315,7 +1315,7 @@ SELECT
         },
         {
             "key": "EXPERT_DRIVING",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 2,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Expert Driving"},
@@ -1329,7 +1329,7 @@ SELECT
         },
         {
             "key": "ON_TIME",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 3,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "On Time"},
@@ -1343,7 +1343,7 @@ SELECT
         },
         {
             "key": "SKILLED_NAVIGATOR",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 4,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Skilled Navigator"},
@@ -1357,7 +1357,7 @@ SELECT
         },
         {
             "key": "SAFE_RIDE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 5,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Safe Ride"},
@@ -1371,7 +1371,7 @@ SELECT
         },
         {
             "key": "CLEAN_VEHICLE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 6,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Clean Vehicle"},
@@ -1385,7 +1385,7 @@ SELECT
         },
         {
             "key": "LOVE_THE_APP",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 7,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Love the App <3"},
@@ -1399,7 +1399,7 @@ SELECT
         },
         {
             "key": "COMFORTABLE_RIDE",
-            "sendPN": true,
+            "sendPN": false,
             "priority": 8,
             "contentWithTranslations": [
                 {"language": "ENGLISH", "translation": "Comfortable ride"},
@@ -1414,4 +1414,3 @@ SELECT
     ]'::jsonb
 FROM atlas_app.merchant_operating_city moc
 WHERE moc.state = 'West Bengal';
-
