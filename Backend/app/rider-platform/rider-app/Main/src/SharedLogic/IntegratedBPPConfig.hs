@@ -5,6 +5,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
@@ -182,3 +183,9 @@ findAllIntegratedBPPConfigAcrossCities ::
   m [IntegratedBPPConfig]
 findAllIntegratedBPPConfigAcrossCities vehicleCategory platformType = do
   CQIBC.findAllByPlatformAndVehicleCategory (show Spec.FRFS) vehicleCategory platformType
+
+resolveOndcCity :: IntegratedBPPConfig -> Context.City -> Context.City
+resolveOndcCity IntegratedBPPConfig {providerConfig} city =
+  case providerConfig of
+    ONDC ondcConfig -> fromMaybe city ondcConfig.overrideCity
+    _ -> city
