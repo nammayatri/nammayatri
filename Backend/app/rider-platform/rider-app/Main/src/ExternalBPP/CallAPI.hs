@@ -80,7 +80,8 @@ type FRFSSelectFlow m r c =
 discoverySearch :: FRFSSearchFlow m r => Merchant -> BecknConfig -> IntegratedBPPConfig -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> m ()
 discoverySearch merchant bapConfig integratedBPPConfig req = do
   transactionId <- generateGUID
-  bknSearchReq <- ACL.buildSearchReq transactionId req.vehicleType bapConfig Nothing Nothing req.city
+  let requestCity = SIBC.resolveOndcCity integratedBPPConfig req.city
+  bknSearchReq <- ACL.buildSearchReq transactionId req.vehicleType bapConfig Nothing Nothing requestCity
   logDebug $ "FRFS Discovery SearchReq " <> encodeToText bknSearchReq
   case integratedBPPConfig.providerConfig of
     ONDC ONDCBecknConfig {networkHostUrl} -> do
@@ -119,13 +120,14 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
     callOndcSearch :: Maybe BaseUrl -> (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => m ()
     callOndcSearch networkHostUrl = do
       let providerUrl = fromMaybe bapConfig.gatewayUrl networkHostUrl
+          cityForOndc = SIBC.resolveOndcCity integratedBPPConfig merchantOperatingCity.city
       fromStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.fromStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound searchReq.fromStationCode)
       toStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.toStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound searchReq.toStationCode)
       routeStopMappingFromStation <- OTPRest.getRouteStopMappingByStopCode searchReq.fromStationCode integratedBPPConfig
       routeStopMappingToStation <- OTPRest.getRouteStopMappingByStopCode searchReq.toStationCode integratedBPPConfig
       let fromStationProviderCode = fromMaybe searchReq.fromStationCode (listToMaybe routeStopMappingFromStation <&> (.providerCode))
           toStationProviderCode = fromMaybe searchReq.toStationCode (listToMaybe routeStopMappingToStation <&> (.providerCode))
-      bknSearchReq <- ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType bapConfig (Just $ fromStation {DStation.code = fromStationProviderCode}) (Just $ toStation {DStation.code = toStationProviderCode}) merchantOperatingCity.city
+      bknSearchReq <- ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType bapConfig (Just $ fromStation {DStation.code = fromStationProviderCode}) (Just $ toStation {DStation.code = toStationProviderCode}) cityForOndc
       logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
       void $ CallFRFSBPP.search providerUrl bknSearchReq merchant.id
 
@@ -154,7 +156,8 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote quo
                 )
                 quoteCategories
         providerUrl <- quote.bppSubscriberUrl & parseBaseUrl
-        bknSelectReq <- ACL.buildSelectReq quote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} merchantOperatingCity.city categories
+        let requestCity = SIBC.resolveOndcCity integratedBPPConfig merchantOperatingCity.city
+        bknSelectReq <- ACL.buildSelectReq quote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} requestCity categories
         logDebug $ "FRFS SelectReq " <> encodeToText bknSelectReq
         void $ CallFRFSBPP.select providerUrl bknSelectReq merchant.id
     _ -> do
@@ -175,7 +178,8 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
                   return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity, category = category.category, price = category.offeredPrice}
               )
               quoteCategories
-      bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} merchantOperatingCity.city categories
+      let requestCity = SIBC.resolveOndcCity integratedBPPConfig merchantOperatingCity.city
+      bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} requestCity categories
       logDebug $ "FRFS InitReq " <> encodeToText bknInitReq
       void $ CallFRFSBPP.init providerUrl bknInitReq merchant.id
     _ -> do
@@ -220,7 +224,8 @@ cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
         ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
         messageId <- generateGUID
         when (cancellationType == Spec.CONFIRM_CANCEL) $ Redis.setExp (FRFSUtils.makecancelledTtlKey booking.id) messageId ttl
-        bknCancelReq <- ACL.buildCancelReq messageId booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} frfsConfig.cancellationReasonId cancellationType merchantOperatingCity.city
+        let requestCity = SIBC.resolveOndcCity integratedBPPConfig merchantOperatingCity.city
+        bknCancelReq <- ACL.buildCancelReq messageId booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} frfsConfig.cancellationReasonId cancellationType requestCity
         logDebug $ "FRFS CancelReq " <> encodeToText bknCancelReq
         void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
     _ -> return ()
@@ -260,7 +265,8 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
                     return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity, category = category.category, price = fromMaybe category.offeredPrice category.finalPrice}
                 )
                 quoteCategories
-        bknConfirmReq <- ACL.buildConfirmReq (mRiderName, mRiderNumber) booking bapConfig booking.searchId.getId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} merchantOperatingCity.city filteredDCategories
+        let requestCity = SIBC.resolveOndcCity integratedBPPConfig merchantOperatingCity.city
+        bknConfirmReq <- ACL.buildConfirmReq (mRiderName, mRiderNumber) booking bapConfig booking.searchId.getId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} requestCity filteredDCategories
         logDebug $ "FRFS ConfirmReq " <> encodeToText bknConfirmReq
         void $ CallFRFSBPP.confirm providerUrl bknConfirmReq merchant.id
     _ -> do
@@ -302,7 +308,8 @@ status merchantId merchantOperatingCity bapConfig booking = do
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       Redis.setExp (Utils.mkCheckInprogressKey booking.searchId.getId) False 86400 -- 24hours
-      void $ CallFRFSBPP.callBPPStatus booking bapConfig merchantOperatingCity.city merchantId
+      let requestCity = SIBC.resolveOndcCity integratedBPPConfig merchantOperatingCity.city
+      void $ CallFRFSBPP.callBPPStatus booking bapConfig requestCity merchantId
     _ -> do
       onStatusReq <- Flow.status merchantId merchantOperatingCity integratedBPPConfig bapConfig booking
       void $ processOnStatus onStatusReq
