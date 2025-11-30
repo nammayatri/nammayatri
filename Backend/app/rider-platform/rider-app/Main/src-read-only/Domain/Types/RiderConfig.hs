@@ -93,6 +93,7 @@ data RiderConfig = RiderConfig
     multimodalTesting :: Kernel.Prelude.Bool,
     nearByDriverRingBucketCfg :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.RingBucketCfg],
     nearbyBusMaxTimeThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nearbyBusRadiusBucketStep :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     nearbyBusSearchRadius :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     nearbyDriverSearchRadius :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     noOfRideRequestsConfig :: Kernel.Prelude.Int,

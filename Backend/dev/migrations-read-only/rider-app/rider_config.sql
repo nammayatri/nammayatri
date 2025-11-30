@@ -488,3 +488,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN frfs_metrics_api_key text ;
 
 
 ------- SQL updates -------
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN nearby_bus_radius_bucket_step integer ;

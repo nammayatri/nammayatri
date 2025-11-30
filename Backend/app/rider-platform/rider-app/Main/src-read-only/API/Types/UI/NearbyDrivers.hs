@@ -2,16 +2,19 @@
 
 module API.Types.UI.NearbyDrivers where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.Trip
 import qualified Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Distance
 import Servant
+import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import Tools.Auth
 
 data BusRideInfo = BusRideInfo
@@ -45,11 +48,32 @@ data NearByDriversBucket = NearByDriversBucket {driverInfo :: [DriverInfo], radi
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data NearbyDriverReq = NearbyDriverReq {location :: Kernel.External.Maps.Types.LatLong, radius :: Kernel.Types.Distance.Meters, vehicleVariants :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant]}
+data NearbyDriverReq = NearbyDriverReq
+  { location :: Kernel.External.Maps.Types.LatLong,
+    radius :: Kernel.Types.Distance.Meters,
+    travelMode :: Kernel.Prelude.Maybe Domain.Types.Trip.MultimodalTravelMode,
+    vehicleVariants :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data NearbyDriverRes = NearbyDriverRes {buckets :: [NearByDriversBucket], serviceTierTypeToVehicleVariant :: Data.Aeson.Value, variantLevelDriverCount :: Data.Aeson.Value}
+data NearbyDriverRes = NearbyDriverRes {buckets :: [NearByDriversBucket], serviceTierTypeToVehicleVariant :: Data.Aeson.Value, variantLevelDriverCount :: Data.Aeson.Value, vehicleDataBuckets :: [VehicleDataBucket]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PublicTransportBucket = PublicTransportBucket {serviceTierName :: Kernel.Prelude.Maybe Data.Text.Text, serviceType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType, vehicles :: [PublicTransportInfo]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PublicTransportInfo = PublicTransportInfo
+  { bearing :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    currentLocation :: Kernel.External.Maps.Types.LatLong,
+    distance :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    routeCode :: Data.Text.Text,
+    routeState :: Kernel.Prelude.Maybe Storage.CachedQueries.Merchant.MultiModalBus.RouteState,
+    shortName :: Kernel.Prelude.Maybe Data.Text.Text,
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -60,5 +84,15 @@ data RideDetails = RideDetails {rideId :: Data.Text.Text, rideInfo :: Kernel.Pre
 data RideInfo
   = Bus BusRideInfo
   | Car CarRideInfo
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleDataBucket = VehicleDataBucket {radius :: Kernel.Types.Distance.Meters, travelMode :: Domain.Types.Trip.MultimodalTravelMode, vehicleInfo :: VehicleInfo}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleInfo
+  = PublicTransport PublicTransportBucket
+  | Taxi NearByDriversBucket
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
