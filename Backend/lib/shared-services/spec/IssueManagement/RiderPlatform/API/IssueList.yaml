@@ -3,6 +3,9 @@ imports:
   Value: Data.Aeson
   Person: IssueManagement.Common
   Quote: IssueManagement.Common
+  IssueChat: IssueManagement.Domain.Types.Issue.IssueChat
+  IssueReport: IssueManagement.Domain.Types.Issue.IssueReport
+  Ride: IssueManagement.Common
 
 module: IssueList
 apiPrefix: issue
@@ -33,6 +36,15 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE TICKET_STATUS_CALL_BACK
+  - GET:
+      endpoint: /chats
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - date: Day
+      response:
+        type: "[DashboardIssueChat]"
 
 types:
   IssueListRes:
@@ -53,3 +65,10 @@ types:
   Summary:
     - totalCount: Int
     - count: Int
+  DashboardIssueChat:
+    - ticketId: Text
+    - rideId: Maybe (Id Ride)
+    - personId: Id Person
+    - kaptureData: Maybe Value
+    - issueReportId: Maybe (Id IssueReport)
+    - createdAt: UTCTime
