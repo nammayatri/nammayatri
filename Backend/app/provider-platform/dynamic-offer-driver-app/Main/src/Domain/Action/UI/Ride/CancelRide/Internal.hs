@@ -40,7 +40,7 @@ import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
-import Kernel.Prelude hiding (any, elem, map)
+import Kernel.Prelude hiding (any, elem, map, notElem)
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -154,8 +154,13 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               if transporterConfig.canAddCancellationFee
                 then do
                   rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
-                  if validCustomerCancellation `elem` rideTags
-                    then getCancellationCharges booking ride
+                  let tagsForCancellationCharges = [validCustomerCancellation, validUserNoShowCancellation]
+                  let cancellationType =
+                        if bookingCReason.source == SBCR.ByDriver && validUserNoShowCancellation `elem` rideTags
+                          then DCT.CancellationByDriver
+                          else DCT.CancellationByCustomer
+                  if any (`elem` rideTags) tagsForCancellationCharges
+                    then getCancellationCharges booking ride cancellationType bookingCReason.reasonCode
                     else return Nothing
                 else return Nothing
             userNoShowCharges <- case noShowCharges of
@@ -282,6 +287,8 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
   QRide.updateRideTags allTags ride.id
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let tags = fromMaybe [] allTags
+  when (bookingCReason.reasonCode == Just userNoShowCancellationReason && validUserNoShowCancellation `notElem` tags) $
+    logError $ "Customer no show tag was not applied: rideId: " <> ride.id.getId
   when (validDriverCancellation `elem` tags) $ do
     when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsCancelCount transporterConfig ride.driverId
     QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
@@ -357,8 +364,10 @@ customerCancellationChargesCalculation ::
   SRB.Booking ->
   DRide.Ride ->
   RiderDetails.RiderDetails ->
+  DCT.CancellationType ->
+  Maybe DTCR.CancellationReasonCode ->
   m (Maybe HighPrecMoney)
-customerCancellationChargesCalculation booking ride riderDetails = do
+customerCancellationChargesCalculation booking ride riderDetails cancellationType reasonCode = do
   transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   (cancellationDisToPickup, _mbLocation) <- getDistanceToPickup booking (Just ride)
   now <- getCurrentTime
@@ -385,7 +394,7 @@ customerCancellationChargesCalculation booking ride riderDetails = do
       driverWaitingTime = if isJust ride.driverArrivalTime then Just (round $ diffUTCTime now (fromJust ride.driverArrivalTime)) else Nothing
   let logicInput =
         UserCancellationDues.UserCancellationDuesData
-          { cancelledBy = DCT.CancellationByCustomer,
+          { cancelledBy = cancellationType,
             timeOfDriverCancellation = timeOfCancellation,
             timeOfCustomerCancellation = timeOfCancellation,
             isArrivedAtPickup = isArrivedAtPickup,
@@ -400,14 +409,15 @@ customerCancellationChargesCalculation booking ride riderDetails = do
             validCancellations = riderDetails.validCancellations,
             cancellationDueRides = riderDetails.cancellationDueRides,
             serviceTier = booking.vehicleServiceTier,
-            tripCategory = booking.tripCategory
+            tripCategory = booking.tripCategory,
+            cancellationReasonSelected = reasonCode
           }
   if transporterConfig.canAddCancellationFee
     then do
       localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
       (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES localTime Nothing Nothing
       response <- withTryCatch "runLogics:UserCancellationDues" $ LYTU.runLogics allLogics logicInput
-      case response of
+      cancellationCharge <- case response of
         Left e -> do
           logError $ "Error in running UserCancellationDuesLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics
           return (Just 0)
@@ -419,7 +429,13 @@ customerCancellationChargesCalculation booking ride riderDetails = do
             A.Error e -> do
               logError $ "Error in parsing UserCancellationDuesResult - " <> show e <> " - " <> show resp.result <> " - " <> show logicInput <> " - " <> show allLogics
               return (Just 0)
+      when (reasonCode == Just userNoShowCancellationReason && fromMaybe 0 cancellationCharge <= 0) $
+        logError $ "User no show charges was not applied: " <> show cancellationCharge <> ": rideId: " <> ride.id.getId <> ". Please check dynamic logic"
+      pure cancellationCharge
     else return Nothing
+
+userNoShowCancellationReason :: DTCR.CancellationReasonCode
+userNoShowCancellationReason = DTCR.CancellationReasonCode "CUSTOMER_NO_SHOW"
 
 getCancellationCharges ::
   ( EsqDBFlow m r,
@@ -432,8 +448,10 @@ getCancellationCharges ::
   ) =>
   SRB.Booking ->
   DRide.Ride ->
+  DCT.CancellationType ->
+  Maybe DTCR.CancellationReasonCode ->
   m (Maybe PriceAPIEntity)
-getCancellationCharges booking ride = do
+getCancellationCharges booking ride cancellationType reasonCode = do
   transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   case booking.riderId of
     Nothing -> return Nothing
@@ -441,7 +459,7 @@ getCancellationCharges booking ride = do
       riderDetails <- QRiderDetails.findById rid >>= fromMaybeM (RiderDetailsNotFound rid.getId)
       if transporterConfig.canAddCancellationFee
         then do
-          charges' <- customerCancellationChargesCalculation booking ride riderDetails
+          charges' <- customerCancellationChargesCalculation booking ride riderDetails cancellationType reasonCode
           case charges' of
             Just charges -> do
               return $ Just $ PriceAPIEntity {amount = charges, currency = booking.currency}

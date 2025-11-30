@@ -28,6 +28,7 @@ import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Cancel as DCancel
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.CancellationReason as DTCR
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OnCancel as OC
@@ -40,6 +41,7 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import qualified Lib.DriverCoins.Types as DCT
 import Servant hiding (throwError)
 import qualified SharedLogic.SearchTryLocker as STL
 import Storage.Beam.SystemConfigs ()
@@ -112,7 +114,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
                     pure buildOnCancelMessageV2
         Just Enums.SOFT_CANCEL -> do
           mbRide <- QRide.findActiveByRBId booking.id
-          cancellationCharges <- maybe (return Nothing) (\ride -> DCancel.getCancellationCharges booking ride) mbRide
+          cancellationCharges <- maybe (return Nothing) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer $ DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason) mbRide
           void $ case (cancellationCharges, mbRide) of
             (Just priceEntity, Just ride) -> QRide.updateCancellationFeeIfCancelledField (Just priceEntity.amount) ride.id
             _ -> return ()
