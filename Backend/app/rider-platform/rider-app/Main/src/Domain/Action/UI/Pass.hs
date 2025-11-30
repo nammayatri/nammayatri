@@ -680,7 +680,16 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (InvalidRequest $ "Pass will be active from " <> show purchasedPass.startDate)
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   (integratedBPPConfig, vehicleLiveRouteInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs passVerifyReq.vehicleNumber >>= fromMaybeM (InvalidRequest $ "Entered Bus OTP: " <> passVerifyReq.vehicleNumber <> " is invalid. Please check again.")
-  unless (vehicleLiveRouteInfo.serviceType `elem` purchasedPass.applicableVehicleServiceTiers) $
+
+  -- Use serviceType with defensive handling - if evaluation fails, default to ORDINARY
+  actualServiceType <-
+    withTryCatch "passVerify:serviceTypeAccess" (pure vehicleLiveRouteInfo.serviceType) >>= \case
+      Right serviceType -> pure serviceType
+      Left _ -> do
+        logWarning $ "Failed to access serviceType for fleet number: " <> passVerifyReq.vehicleNumber <> ", using ORDINARY service type"
+        pure Spec.ORDINARY
+
+  unless (actualServiceType `elem` purchasedPass.applicableVehicleServiceTiers) $
     throwError $ InvalidRequest ("This pass is only " <> purchasedPass.benefitDescription)
   routeStopMapping <-
     case vehicleLiveRouteInfo.routeCode of
