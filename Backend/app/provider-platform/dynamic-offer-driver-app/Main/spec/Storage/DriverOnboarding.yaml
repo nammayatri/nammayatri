@@ -427,6 +427,8 @@ DocumentVerificationConfig:
       enum: "Infix,Prefix,Suffix"
     DocumentCategory:
       enum: "Driver,Vehicle,Permission,Training"
+    DocumentFlowGrouping:
+      enum: "COMMON,STANDARD"
     DocumentApplicableType:
       enum: "FLEET,INDIVIDUAL,FLEET_AND_INDIVIDUAL"
     FieldType:
@@ -462,6 +464,7 @@ DocumentVerificationConfig:
     order: Int
     filterForOldApks: Maybe Bool
     documentCategory: Maybe DocumentCategory
+    documentFlowGrouping: Maybe DocumentFlowGrouping
     applicableTo: DocumentApplicableType
     documentFields: Maybe [FieldInfo]
     allowLicenseTransfer: Maybe Bool
@@ -472,6 +475,7 @@ DocumentVerificationConfig:
     isImageValidationRequired: "true"
     filterForOldApks: false
     applicableTo: "'FLEET_AND_INDIVIDUAL'"
+    documentFlowGrouping: "'STANDARD'"
   constraints:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey

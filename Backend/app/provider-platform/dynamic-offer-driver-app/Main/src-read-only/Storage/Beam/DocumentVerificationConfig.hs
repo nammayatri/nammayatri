@@ -24,6 +24,7 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     doStrictVerifcation :: B.C f Kernel.Prelude.Bool,
     documentCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory),
     documentFieldsJSON :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    documentFlowGrouping :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping),
     documentType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
     filterForOldApks :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDefaultEnabledOnManualVerification :: B.C f Kernel.Prelude.Bool,

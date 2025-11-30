@@ -57,6 +57,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.doStrictVerifcation doStrictVerifcation,
       Se.Set Beam.documentCategory documentCategory,
       Se.Set Beam.documentFieldsJSON (Data.Aeson.toJSON <$> documentFields),
+      Se.Set Beam.documentFlowGrouping documentFlowGrouping,
       Se.Set Beam.filterForOldApks filterForOldApks,
       Se.Set Beam.isDefaultEnabledOnManualVerification isDefaultEnabledOnManualVerification,
       Se.Set Beam.isDisabled isDisabled,

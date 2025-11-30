@@ -35,6 +35,12 @@ data DocumentCategory
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DocumentFlowGrouping
+  = COMMON
+  | STANDARD
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DocumentStatusItem = DocumentStatusItem
   { documentType :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType,
     verificationMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -53,6 +59,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     documentCategory :: Kernel.Prelude.Maybe DocumentCategory,
     documentFields :: Kernel.Prelude.Maybe [FieldInfo],
+    documentFlowGrouping :: DocumentFlowGrouping,
     documentType :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,

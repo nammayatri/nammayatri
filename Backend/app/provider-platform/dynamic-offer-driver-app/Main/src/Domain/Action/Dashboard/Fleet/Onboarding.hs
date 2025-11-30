@@ -92,7 +92,8 @@ castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPI
       isMandatoryForEnabling = isMandatoryForEnabling,
       rcNumberPrefixList = rcNumberPrefixList,
       applicableTo = SDO.castDocumentApplicableType applicableTo,
-      documentFields = fmap (map SDO.castDocumentFieldInfo) documentFields
+      documentFields = fmap (map SDO.castDocumentFieldInfo) documentFields,
+      documentFlowGrouping = SDO.castDocumentFlowGrouping documentFlowGrouping
     }
 
 getOnboardingGetReferralDetails ::

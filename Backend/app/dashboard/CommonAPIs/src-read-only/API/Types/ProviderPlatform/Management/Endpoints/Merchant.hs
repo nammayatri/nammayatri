@@ -90,6 +90,12 @@ data CreateFPDriverExtraFeeReq = CreateFPDriverExtraFeeReq
 instance Kernel.Types.HideSecrets.HideSecrets CreateFPDriverExtraFeeReq where
   hideSecrets = Kernel.Prelude.identity
 
+data DocumentFlowGrouping
+  = COMMON
+  | STANDARD
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DocumentType
   = RC
   | DL
@@ -155,7 +161,8 @@ data DocumentVerificationConfigCreateReq = DocumentVerificationConfigCreateReq
     stepFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     defaultStepFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    documentCategory :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.DocumentCategory
+    documentCategory :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.DocumentCategory,
+    documentFlowGrouping :: Kernel.Prelude.Maybe DocumentFlowGrouping
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -169,6 +176,7 @@ data DocumentVerificationConfigItem = DocumentVerificationConfigItem
     checkExpiry :: Kernel.Prelude.Bool,
     supportedVehicleClasses :: Dashboard.Common.Merchant.SupportedVehicleClasses,
     vehicleClassCheckType :: VehicleClassCheckType,
+    documentFlowGrouping :: DocumentFlowGrouping,
     rcNumberPrefixList :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     maxRetryCount :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -186,7 +194,8 @@ data DocumentVerificationConfigUpdateReq = DocumentVerificationConfigUpdateReq
     rcNumberPrefix :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Prelude.Text),
     rcNumberPrefixList :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue [Kernel.Prelude.Text]),
     maxRetryCount :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Prelude.Int),
-    vehicleClassCheckType :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue VehicleClassCheckType)
+    vehicleClassCheckType :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue VehicleClassCheckType),
+    documentFlowGrouping :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue DocumentFlowGrouping)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
