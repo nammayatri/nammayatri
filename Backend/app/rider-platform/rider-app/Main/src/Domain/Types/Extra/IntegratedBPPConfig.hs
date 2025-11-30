@@ -6,6 +6,7 @@ import Data.Aeson
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Base64
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Time
 import qualified Text.Show (show)
 
@@ -57,7 +58,8 @@ data ONDCBecknConfig = ONDCBecknConfig
     mergeQuoteCriteria :: Maybe MergeQuoteCriteria,
     routeBasedQuoteSelection :: Maybe Bool,
     providerInfo :: Maybe ProviderLevelInfo,
-    routeBasedVehicleTracking :: Maybe Bool
+    routeBasedVehicleTracking :: Maybe Bool,
+    overrideCity :: Maybe Context.City
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
