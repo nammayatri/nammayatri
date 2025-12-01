@@ -18,6 +18,7 @@ module API
   )
 where
 
+import qualified API.BharatTaxi.User as BharatTaxiUser
 import qualified "lib-dashboard" API.Dashboard as Dashboard
 import qualified API.Exotel as Exotel
 import qualified API.Fleet.Registration as FReg
@@ -43,6 +44,7 @@ type MainAPI =
     :<|> BPP.API
     :<|> Exotel.API
     :<|> FReg.API
+    :<|> BharatTaxiUser.API
     :<|> SpecialZone.API
 
 handler :: FlowServer API
@@ -58,6 +60,7 @@ mainServer =
     :<|> BPP.handler
     :<|> Exotel.handler
     :<|> FReg.handler
+    :<|> BharatTaxiUser.handler
     :<|> SpecialZone.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
