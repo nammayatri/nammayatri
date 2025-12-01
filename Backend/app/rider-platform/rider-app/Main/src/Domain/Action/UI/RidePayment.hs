@@ -26,6 +26,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Payment as Payment
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.PaymentCustomer as QPaymentCustomer
@@ -215,19 +216,37 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
     unless (ride.status == Domain.Types.RideStatus.COMPLETED) $
       throwError $ RideInvalidStatus ("Ride is not completed yet." <> Text.pack (show ride.status))
+    booking <- QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    unless (booking.riderId == personId) $ throwError $ InvalidRequest "Person is not the owner of the ride"
     unless ride.onlinePayment $ throwError (InvalidRequest "Could not add tip for Cash ride")
     fareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
     when (any (\fb -> fb.description == tipFareBreakupTitle) fareBreakups) $ throwError $ InvalidRequest "Tip already added"
+    customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
+    paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
+    driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+    email <- mapM decrypt person.email
     if ride.paymentStatus == Domain.Types.Ride.NotInitiated
       then do
         -- we will add this tip amount in ride end and charge it in job which is already created in ride end
-        QRide.updateTipByRideId (Just $ mkPrice (Just tipRequest.amount.currency) tipRequest.amount.amount) rideId -- update tip in ride
+        let tipAmount = mkPrice (Just tipRequest.amount.currency) tipRequest.amount.amount
+        totalFare <- ride.totalFare & fromMaybeM (RideFieldNotPresent "totalFare")
+        fareWithTip <- totalFare `addPrice` tipAmount
+        let applicationFeeAmount = fromMaybe 0 booking.commission
+        let createPaymentIntentReq =
+              Payment.CreatePaymentIntentReq
+                { orderShortId = ride.shortId.getShortId,
+                  amount = fareWithTip.amount,
+                  applicationFeeAmount,
+                  currency = fareWithTip.currency,
+                  customer = customerPaymentId,
+                  paymentMethod = paymentMethodId,
+                  receiptEmail = email,
+                  driverAccountId
+                }
+        void $ Payment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
+        QRide.updateTipByRideId (Just tipAmount) rideId -- update tip in ride
       else do
         -- Here we creating a new payment intent for tip if the ride payment status is already initiated
-        customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
-        paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
-        driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
-        email <- mapM decrypt person.email
         let createPaymentIntentReq =
               Payment.CreatePaymentIntentReq
                 { orderShortId = ride.shortId.getShortId,

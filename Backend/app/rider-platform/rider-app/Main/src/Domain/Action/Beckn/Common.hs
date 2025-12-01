@@ -638,6 +638,7 @@ rideCompletedReqHandler ::
     SchedulerFlow r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
@@ -710,6 +711,23 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     let applicationFeeAmount = fromMaybe 0 booking.commission
     let scheduleAfter = riderConfig.executePaymentDelay
         executePaymentIntentJobData = ExecutePaymentIntentJobData {personId = person.id, rideId = ride.id, fare = totalFare, applicationFeeAmount = applicationFeeAmount}
+    logDebug $ "Update payment intent for order: " <> ride.id.getId
+    customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
+    paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
+    driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+    email <- mapM decrypt person.email
+    let createPaymentIntentReq =
+          Payment.CreatePaymentIntentReq
+            { orderShortId = ride.shortId.getShortId,
+              amount = totalFare.amount,
+              applicationFeeAmount,
+              currency = totalFare.currency,
+              customer = customerPaymentId,
+              paymentMethod = paymentMethodId,
+              receiptEmail = email,
+              driverAccountId
+            }
+    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq)
     logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
     createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 
