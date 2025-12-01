@@ -45,7 +45,6 @@ import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Id as Id
-import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JLU
@@ -823,5 +822,7 @@ getDeviceId person mbDeviceId mbImei = do
   case mbImei of
     Just imei -> pure imei
     Nothing -> case mbDeviceId of
-      Just devId -> return $ if (person.clientDevice <&> (.deviceType)) == Just IOS then devId else fromMaybe devId person.androidId
+      Just devId -> do
+        fallbackImeiNumber <- decrypt `mapM` person.imeiNumber
+        return $ fromMaybe devId fallbackImeiNumber
       Nothing -> throwError (InvalidRequest "Device ID or IMEI is required")
