@@ -7,6 +7,7 @@ module Storage.Queries.Image (module Storage.Queries.Image, module ReExport) whe
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -67,6 +68,18 @@ updateDocumentExpiry :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.P
 updateDocumentExpiry documentExpiry id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.documentExpiry documentExpiry, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateMerchantIdAndCityIdByPersonId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateMerchantIdAndCityIdByPersonId merchantId merchantOperatingCityId personId = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 updateVerificationStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

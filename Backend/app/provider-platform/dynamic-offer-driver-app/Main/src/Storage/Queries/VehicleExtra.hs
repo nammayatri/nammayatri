@@ -117,3 +117,13 @@ findAllByVariantRegNumMerchantId variantM mbRegNum limitVal offsetVal (Id mercha
 findByDriverIdAndRegistrationNo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Text -> m (Maybe Vehicle)
 findByDriverIdAndRegistrationNo driverId registrationNo = do
   findOneWithKV [Se.Is BeamV.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is BeamV.registrationNo $ Se.Eq registrationNo]
+
+updateMerchantIdAndCityIdByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Merchant -> Maybe Text -> m ()
+updateMerchantIdAndCityIdByDriverId driverId merchantId mbMerchantOperatingCityId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamV.merchantId (getId merchantId),
+      Se.Set BeamV.merchantOperatingCityId mbMerchantOperatingCityId,
+      Se.Set BeamV.updatedAt now
+    ]
+    [Se.Is BeamV.driverId (Se.Eq $ getId driverId)]

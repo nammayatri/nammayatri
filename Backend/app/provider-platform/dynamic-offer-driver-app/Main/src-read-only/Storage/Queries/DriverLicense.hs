@@ -6,10 +6,12 @@ module Storage.Queries.DriverLicense (module Storage.Queries.DriverLicense, modu
 
 import qualified Domain.Types.DriverLicense
 import qualified Domain.Types.Image
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Documents
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -32,6 +34,13 @@ findByDriverId driverId = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverLicense.DriverLicense -> m (Maybe Domain.Types.DriverLicense.DriverLicense))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateMerchantIdByDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateMerchantIdByDriverId merchantId driverId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateVerificationStatus verificationStatus documentImageId1 = do

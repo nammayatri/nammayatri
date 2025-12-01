@@ -156,6 +156,11 @@ DailyStats:
       where:
         and: [driverId, merchantLocalDate]
 
+    updateMerchantIdAndCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOperatingCityId]
+      where: driverId
+
   extraOperations:
     - EXTRA_QUERY_FILE
 
