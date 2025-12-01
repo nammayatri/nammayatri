@@ -987,7 +987,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         else do
           buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentSuccess
     DFRFSTicketBooking.CONFIRMED -> do
-      void $ CallExternalBPP.status merchant.id merchantOperatingCity bapConfig booking
+      fork "FRFS Booking Status" $ CallExternalBPP.status merchant.id merchantOperatingCity bapConfig booking
       buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentSuccess
     DFRFSTicketBooking.APPROVED -> do
       withPaymentStatusResponseHandler $ \(paymentBooking, paymentOrder, paymentStatusResp) -> do
