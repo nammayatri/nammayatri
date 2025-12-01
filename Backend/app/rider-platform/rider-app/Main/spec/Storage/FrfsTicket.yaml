@@ -951,6 +951,10 @@ FRFSVehicleServiceTier:
       kvFunction: findAllWithKV
       where:
         and: [providerCode, merchantOperatingCityId]
+    findByProviderCodeAndisAirConditioned:
+      kvFunction: findAllWithKV
+      where:
+        and: [providerCode, isAirConditioned, merchantOperatingCityId]
     findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId:
       kvFunction: findOneWithKV
       where:
