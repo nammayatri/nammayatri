@@ -860,6 +860,7 @@ TransporterConfig:
       allowCacheDriverFlowStatus: Bool
       enableFleetOperatorDashboardAnalytics: Bool
       maxOnlineDurationDays: Int
+      useDbForEarningAndMetrics: Bool
       onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     DriverWalletConfig:
@@ -1513,7 +1514,7 @@ TransporterConfig:
     bookAnyVehicleDowngradeLevel: "-1"
     canSwitchToInterCity: "true"
     acStatusCheckGap: "7"
-    useDBForAnalytics: "false"
+    useDBForAnalytics: "false" # drop this column after proper release of analyticsConfig
     automaticRCActivationCutOff: "432000"
     crossTravelCities: "'{}'"
     driverAutoPayExecutionTimeFallBack: "93600"
@@ -1555,7 +1556,7 @@ TransporterConfig:
     distanceWeightage: "20"
     driverCallingOption: "'AnonymousCall'"
     driverWalletConfig:  '''{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minWalletAmountForCashRides": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7}'' :: json'
-    analyticsConfig: '''{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "enableFleetOperatorDashboardAnalytics": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}'' :: json'
+    analyticsConfig: '''{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "enableFleetOperatorDashboardAnalytics": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null, "useDbForEarningAndMetrics": false}'' :: json'
     subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}'' :: json'
     enableMobileNumberValidation: "false"
     allowRcUnlinkWhenDriverOffline: "false"

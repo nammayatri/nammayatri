@@ -2071,10 +2071,7 @@ type GetDriverFleetVehicleListStats =
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
-      :> QueryParam "useDb" Kernel.Prelude.Bool
-      :> MandatoryQueryParam
-           "from"
-           Data.Time.Day
+      :> MandatoryQueryParam "from" Data.Time.Day
       :> MandatoryQueryParam
            "to"
            Data.Time.Day
@@ -2089,9 +2086,6 @@ type GetDriverFleetVehicleListStatsHelper =
            "limit"
            Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
-      :> QueryParam
-           "useDb"
-           Kernel.Prelude.Bool
       :> MandatoryQueryParam
            "from"
            Data.Time.Day
@@ -2158,7 +2152,7 @@ data DriverAPIs = DriverAPIs
     postDriverFleetApproveDriver :: Kernel.Prelude.Text -> ApproveDriverReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetDriverUpdate :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> UpdateDriverReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetTripTransactionsV2 :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe TripStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient TripTransactionRespT,
-    getDriverFleetVehicleListStats :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Data.Time.Day -> Data.Time.Day -> EulerHS.Types.EulerClient FleetVehicleStatsRes
+    getDriverFleetVehicleListStats :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Data.Time.Day -> Data.Time.Day -> EulerHS.Types.EulerClient FleetVehicleStatsRes
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)

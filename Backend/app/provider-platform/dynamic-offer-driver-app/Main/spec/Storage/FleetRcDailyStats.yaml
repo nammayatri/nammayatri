@@ -25,11 +25,6 @@ FleetRcDailyStats:
     rideDistance: "0"
     rideDuration: "0"
 
-  sqlType:
-    totalEarnings: bigint
-    rideDistance: bigint
-    rideDuration: bigint
-
   constraints:
     fleetOwnerId: PrimaryKey
     rcId: PrimaryKey
