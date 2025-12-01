@@ -1506,7 +1506,7 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
             then QFODSExtra.sumDriverEarningsByFleetOwnerIdAndDriverIdsDB fleetOwnerId filteredDriverIds fromDay toDay limit offset sortDesc sortOnField
             else CFODS.sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId filteredDriverIds fromDay toDay limit offset sortDesc sortOnField
         nameMap <- ensureNameMap preloadedMap (map (.driverId) earningsStats) useDBForAnalytics
-        let statsList = map buildEarningsResponse earningsStats
+        let statsList = map (buildEarningsResponse transporterConfig) earningsStats
         forM statsList $ \(driverId, statRes) -> do
           let driverName = fromMaybe "Unknown" $ Map.lookup driverId nameMap
           pure $ Common.EarningsList $ statRes {Common.driverName = driverName}
@@ -1547,8 +1547,8 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
         persons <- fetchPersons (map Id driverIds) Nothing Nothing useDBForAnalytics
         pure $ Map.fromList $ map (\person -> (person.personId, buildDriverFullName person)) persons
 
-    buildEarningsResponse :: QFODSExtra.DriverEarningsAggregated -> (Text, Common.FleetDriverEarningsStatsRes)
-    buildEarningsResponse agg =
+    buildEarningsResponse :: DTC.TransporterConfig -> QFODSExtra.DriverEarningsAggregated -> (Text, Common.FleetDriverEarningsStatsRes)
+    buildEarningsResponse config agg =
       let onlineEarningGross = fromMaybe (HighPrecMoney 0.0) agg.onlineTotalEarningSum
           cashEarningGross = fromMaybe (HighPrecMoney 0.0) agg.cashTotalEarningSum
           totalEarningGross = onlineEarningGross + cashEarningGross
@@ -1568,7 +1568,8 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
                 platformFeeTotal = platformFeeTotal,
                 totalEarningNet = totalEarningNet,
                 inAppEarningNet = inAppEarningNet,
-                cashEarningNet = cashEarningNet
+                cashEarningNet = cashEarningNet,
+                currency = config.currency
               }
           )
 
@@ -3329,7 +3330,11 @@ getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId mbResponseT
   case mbResponseType of
     Just Common.EARNINGS -> do
       -- Get earnings data from ClickHouse using aggregated daily stats
-      earningsAgg <- CFODS.sumFleetEarningsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay
+      let useDBForAnalytics = transporterConfig.analyticsConfig.useDbForEarningAndMetrics
+      earningsAgg <-
+        if useDBForAnalytics
+          then QFODSExtra.sumFleetEarningsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay
+          else CFODS.sumFleetEarningsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay
       let grossEarningsAmount = fromMaybe (HighPrecMoney 0.0) earningsAgg.totalEarningSum
           cashPlatformFeesAmount = fromMaybe (HighPrecMoney 0.0) earningsAgg.cashPlatformFeesSum
           onlinePlatformFeesAmount = fromMaybe (HighPrecMoney 0.0) earningsAgg.onlinePlatformFeesSum

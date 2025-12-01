@@ -454,7 +454,8 @@ data FleetDriverEarningsStatsRes = FleetDriverEarningsStatsRes
     platformFeeTotal :: Kernel.Types.Common.HighPrecMoney,
     totalEarningNet :: Kernel.Types.Common.HighPrecMoney,
     inAppEarningNet :: Kernel.Types.Common.HighPrecMoney,
-    cashEarningNet :: Kernel.Types.Common.HighPrecMoney
+    cashEarningNet :: Kernel.Types.Common.HighPrecMoney,
+    currency :: Kernel.Types.Common.Currency
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

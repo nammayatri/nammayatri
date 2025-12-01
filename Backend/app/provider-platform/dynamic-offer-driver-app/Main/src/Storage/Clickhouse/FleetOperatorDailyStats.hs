@@ -66,13 +66,6 @@ instance CH.ClickhouseValue Seconds where
 
 $(TH.mkClickhouseInstances ''FleetOperatorDailyStatsT 'SELECT_FINAL_MODIFIER)
 
-getTotalEarningSum :: Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney
-getTotalEarningSum mote mcte = case (mote, mcte) of
-  (Just ote, Just cte) -> Just (ote + cte)
-  (Just ote, Nothing) -> Just ote
-  (Nothing, Just cte) -> Just cte
-  (Nothing, Nothing) -> Nothing
-
 data DailyFleetMetricsAggregated = DailyFleetMetricsAggregated
   { totalEarningSum :: Maybe HighPrecMoney,
     totalCompletedRidesSum :: Maybe Int,
@@ -101,7 +94,7 @@ mkDailyFleetMetricsAggregated ::
   DailyFleetMetricsAggregated
 mkDailyFleetMetricsAggregated (ote, cte, cr, td, tr, rr, pr, ar, dc, cc) =
   DailyFleetMetricsAggregated
-    { totalEarningSum = getTotalEarningSum ote cte,
+    { totalEarningSum = FODSE.getTotalEarningSum ote cte,
       totalCompletedRidesSum = cr,
       totalDistanceSum = td,
       totalRequestCountSum = tr,
@@ -146,36 +139,12 @@ sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorDailyStatsTTable)
   pure $ maybe (DailyFleetMetricsAggregated Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing) mkDailyFleetMetricsAggregated (listToMaybe res)
 
-data DailyFleetEarningsAggregated = DailyFleetEarningsAggregated
-  { totalEarningSum :: Maybe HighPrecMoney,
-    cashPlatformFeesSum :: Maybe HighPrecMoney,
-    onlinePlatformFeesSum :: Maybe HighPrecMoney,
-    onlineDurationSum :: Maybe Seconds
-  }
-  deriving (Show, Generic)
-
-mkDailyFleetEarningsAggregated ::
-  ( Maybe HighPrecMoney,
-    Maybe HighPrecMoney,
-    Maybe HighPrecMoney,
-    Maybe HighPrecMoney,
-    Maybe Seconds
-  ) ->
-  DailyFleetEarningsAggregated
-mkDailyFleetEarningsAggregated (ote, cte, cpf, opf, od) =
-  DailyFleetEarningsAggregated
-    { totalEarningSum = getTotalEarningSum ote cte,
-      cashPlatformFeesSum = cpf,
-      onlinePlatformFeesSum = opf,
-      onlineDurationSum = od
-    }
-
 sumFleetEarningsByFleetOwnerIdAndDateRange ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Text ->
   Day ->
   Day ->
-  m DailyFleetEarningsAggregated
+  m FODSE.DailyFleetEarningsAggregated
 sumFleetEarningsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
   res <-
     CH.findAll $
@@ -197,7 +166,7 @@ sumFleetEarningsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
                 CH.&&. fos.merchantLocalDate CH.<=. toDay
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorDailyStatsTTable)
-  pure $ maybe (DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing) mkDailyFleetEarningsAggregated (listToMaybe res)
+  pure $ maybe (FODSE.DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing) FODSE.mkDailyFleetEarningsAggregated (listToMaybe res)
 
 sumDriverEarningsByFleetOwnerIdAndDriverIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
