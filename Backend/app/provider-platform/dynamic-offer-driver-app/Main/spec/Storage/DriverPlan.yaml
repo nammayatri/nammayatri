@@ -161,6 +161,10 @@ DriverPlan:
       params: [isOnFreeTrial, updatedAt]
       where:
         and: [driverId, serviceName]
+    updateMerchantIdAndCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOpCityId]
+      where: driverId
 
   sqlType:
     mandateId: text

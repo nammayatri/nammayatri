@@ -556,3 +556,23 @@ updatePersonRole personId role = do
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
+
+updateMerchantIdAndCityId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+updateMerchantIdAndCityId personId merchantId merchantOperatingCityId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.merchantId (getId merchantId),
+      Se.Set BeamP.merchantOperatingCityId (Just $ getId merchantOperatingCityId),
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
+findByMobileNumberAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Id Merchant -> m (Maybe Person)
+findByMobileNumberAndMerchant mobileNumberHash (Id merchantId) =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash),
+          Se.Is BeamP.merchantId $ Se.Eq merchantId
+        ]
+    ]

@@ -29,6 +29,8 @@ imports:
   TagNameValue: Lib.Yudhishthira.Types
   UpdateTagBulkReq: Dashboard.Common
   UpdateTagBulkRes: Dashboard.Common
+  Merchant: Dashboard.Common
+  MerchantOperatingCity: Dashboard.Common
 
 module: Driver
 
@@ -549,6 +551,16 @@ apis:
             response:
               type: EarningPeriodStatsRes
 
+  - POST: # UpdateDriverMerchantAPI
+      endpoint: /{driverId}/updateMerchant
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdateDriverMerchantReq
+      response:
+        type: APISuccess
+
 types:
   DriverListRes:
     - totalItems: Int # for backward compatibility
@@ -762,6 +774,10 @@ types:
     - totalRides: Int
     - cancellationCharges: Money
     - tipAmount: Money
+  UpdateDriverMerchantReq:
+    - newMerchantId: Id Merchant
+    - newMerchantOperatingCityId: Id MerchantOperatingCity
+    - derive: "'HideSecrets"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
