@@ -85,6 +85,37 @@ data Payload
         merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
         updatedAt :: UTCTime
       }
+  | MarketingParams
+      { personId :: Id Person,
+        gclId :: Maybe Text,
+        utmCampaign :: Maybe Text,
+        utmContent :: Maybe Text,
+        utmCreativeFormat :: Maybe Text,
+        utmMedium :: Maybe Text,
+        utmSource :: Maybe Text,
+        utmTerm :: Maybe Text,
+        appName :: Maybe Text,
+        userType :: Maybe UserType,
+        entityType :: Maybe Text,
+        merchantId :: Maybe (Id Merchant),
+        merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
+        createdAt :: UTCTime,
+        updatedAt :: UTCTime
+      }
+  | MarketingParamsPreLogin
+      { gclId :: Maybe Text,
+        utmCampaign :: Maybe Text,
+        utmContent :: Maybe Text,
+        utmCreativeFormat :: Maybe Text,
+        utmMedium :: Maybe Text,
+        utmSource :: Maybe Text,
+        utmTerm :: Maybe Text,
+        appName :: Maybe Text,
+        userType :: Maybe UserType,
+        entityType :: Maybe Text,
+        createdAt :: UTCTime,
+        updatedAt :: UTCTime
+      }
   deriving (Show, Eq, Generic)
 
 instance ToJSON Payload where
@@ -153,6 +184,39 @@ data EventTrackerData = EventTrackerData
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
+
+data MarketingParamsEventData = MarketingParamsEventData
+  { personId :: Id Person,
+    gclId :: Maybe Text,
+    utmCampaign :: Maybe Text,
+    utmContent :: Maybe Text,
+    utmCreativeFormat :: Maybe Text,
+    utmMedium :: Maybe Text,
+    utmSource :: Maybe Text,
+    utmTerm :: Maybe Text,
+    appName :: Maybe Text,
+    userType :: Maybe UserType,
+    merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+
+data MarketingParamsEventPreLoginData = MarketingParamsEventPreLoginData
+  { gclId :: Maybe Text,
+    utmCampaign :: Maybe Text,
+    utmContent :: Maybe Text,
+    utmCreativeFormat :: Maybe Text,
+    utmMedium :: Maybe Text,
+    utmSource :: Maybe Text,
+    utmTerm :: Maybe Text,
+    appName :: Maybe Text,
+    userType :: Maybe UserType,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+
+data UserType = OLD | NEW deriving (Show, Eq, Generic, FromJSON, ToJSON, ToSchema)
 
 data EventName = DRIVER_FEE_AUTO_PAY_TO_MANUAL | AUTO_PAY_STATUS_TOGGLE | SERVICE_USAGE_CHARGE_TOGGLE | REFUND_SECURITY_DEPOSIT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -276,4 +340,55 @@ triggerEventTrackerEvent ::
 triggerEventTrackerEvent EventTrackerData {..} = do
   let eventTrackerPayload = EventTrackerPayLoad {..}
   event <- createEvent Nothing (maybe "" getId merchantId) EventTracker DYNAMIC_OFFER_DRIVER_APP System (Just eventTrackerPayload) (Just id) (getId <$> merchantOperatingCityId)
+  triggerEvent event
+
+triggerMarketingParamEvent ::
+  ( EventStreamFlow m r
+  ) =>
+  MarketingParamsEventData ->
+  m ()
+triggerMarketingParamEvent marketingData = do
+  let marketingPayload =
+        MarketingParams
+          { personId = marketingData.personId,
+            gclId = marketingData.gclId,
+            utmCampaign = marketingData.utmCampaign,
+            utmContent = marketingData.utmContent,
+            utmCreativeFormat = marketingData.utmCreativeFormat,
+            utmMedium = marketingData.utmMedium,
+            utmSource = marketingData.utmSource,
+            utmTerm = marketingData.utmTerm,
+            appName = marketingData.appName,
+            userType = marketingData.userType,
+            entityType = Just "DRIVER",
+            merchantId = Just marketingData.merchantId,
+            merchantOperatingCityId = Just marketingData.merchantOperatingCityId,
+            createdAt = marketingData.createdAt,
+            updatedAt = marketingData.updatedAt
+          }
+  event <- createEvent (Just $ getId marketingData.personId) (getId marketingData.merchantId) MarketingParamsData DYNAMIC_OFFER_DRIVER_APP System (Just marketingPayload) (Just $ getId marketingData.personId) (Just $ getId marketingData.merchantOperatingCityId)
+  triggerEvent event
+
+triggerMarketingParamEventPreLogin ::
+  ( EventStreamFlow m r
+  ) =>
+  MarketingParamsEventPreLoginData ->
+  m ()
+triggerMarketingParamEventPreLogin marketingData = do
+  let marketingPayload =
+        MarketingParamsPreLogin
+          { gclId = marketingData.gclId,
+            utmCampaign = marketingData.utmCampaign,
+            utmContent = marketingData.utmContent,
+            utmCreativeFormat = marketingData.utmCreativeFormat,
+            utmMedium = marketingData.utmMedium,
+            utmSource = marketingData.utmSource,
+            utmTerm = marketingData.utmTerm,
+            appName = marketingData.appName,
+            userType = marketingData.userType,
+            entityType = Just "DRIVER",
+            createdAt = marketingData.createdAt,
+            updatedAt = marketingData.updatedAt
+          }
+  event <- createEvent Nothing (fromMaybe "" marketingData.appName) MarketingParamsPreLoginData DYNAMIC_OFFER_DRIVER_APP System (Just marketingPayload) Nothing Nothing
   triggerEvent event

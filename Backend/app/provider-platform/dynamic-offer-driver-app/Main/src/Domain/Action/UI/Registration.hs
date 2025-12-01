@@ -19,6 +19,8 @@ module Domain.Action.UI.Registration
     ResendAuthRes,
     AuthVerifyReq (..),
     AuthVerifyRes (..),
+    MarketingParams (..),
+    MarketEventReq (..),
     auth,
     authWithOtp,
     verify,
@@ -27,6 +29,8 @@ module Domain.Action.UI.Registration
     cleanCachedTokens,
     createDriverWithDetails,
     makePerson,
+    marketingEventsPreLogin,
+    marketingEventsPostLogin,
   )
 where
 
@@ -71,6 +75,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
+import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -86,6 +91,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
+import qualified Tools.Event as TE
 import Tools.MarketingEvents as TM
 import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
@@ -144,6 +150,24 @@ data AuthVerifyRes = AuthVerifyRes
     person :: SP.PersonAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data MarketingParams = MarketingParams
+  { gclId :: Maybe Text,
+    utmCampaign :: Maybe Text,
+    utmContent :: Maybe Text,
+    utmCreativeFormat :: Maybe Text,
+    utmMedium :: Maybe Text,
+    utmSource :: Maybe Text,
+    utmTerm :: Maybe Text,
+    appName :: Maybe Text,
+    userType :: Maybe TE.UserType
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+data MarketEventReq = MarketEventReq
+  { marketingParams :: MarketingParams
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BPP:Registration:auth:" <> getId person.id <> ":hitsCount"
@@ -612,4 +636,68 @@ logout (personId, _, merchantOpCityId) = do
     driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
     let newFlowStatus = DDriverMode.getDriverFlowStatus (Just DriverInfo.OFFLINE) False
     DDriverMode.updateDriverModeAndFlowStatus uperson.id transporterConfig False (Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing
+  pure Success
+
+marketingEventsPreLogin ::
+  ( MonadFlow m,
+    EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EventStreamFlow m r
+  ) =>
+  MarketEventReq ->
+  m APISuccess
+marketingEventsPreLogin req = do
+  let params = req.marketingParams
+  now <- getCurrentTime
+  let marketingParamsData =
+        TE.MarketingParamsEventPreLoginData
+          { gclId = params.gclId,
+            utmCampaign = params.utmCampaign,
+            utmContent = params.utmContent,
+            utmCreativeFormat = params.utmCreativeFormat,
+            utmMedium = params.utmMedium,
+            utmSource = params.utmSource,
+            utmTerm = params.utmTerm,
+            appName = params.appName,
+            userType = params.userType,
+            createdAt = now,
+            updatedAt = now
+          }
+  TE.triggerMarketingParamEventPreLogin marketingParamsData
+  pure Success
+
+marketingEventsPostLogin ::
+  ( MonadFlow m,
+    EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EventStreamFlow m r
+  ) =>
+  (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->
+  MarketEventReq ->
+  m APISuccess
+marketingEventsPostLogin (personId, merchantId, merchantOpCityId) req = do
+  let params = req.marketingParams
+  now <- getCurrentTime
+  let marketingParamsData =
+        TE.MarketingParamsEventData
+          { personId = personId,
+            gclId = params.gclId,
+            utmCampaign = params.utmCampaign,
+            utmContent = params.utmContent,
+            utmCreativeFormat = params.utmCreativeFormat,
+            utmMedium = params.utmMedium,
+            utmSource = params.utmSource,
+            utmTerm = params.utmTerm,
+            appName = params.appName,
+            userType = params.userType,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOpCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+  TE.triggerMarketingParamEvent marketingParamsData
   pure Success

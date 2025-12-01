@@ -38,6 +38,7 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as DCommon
 import qualified Domain.Action.UI.Driver as DDriver
+import qualified Domain.Action.UI.Registration as DRegistration
 import Domain.Types
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Common as DI
@@ -68,7 +69,7 @@ type API =
            :> MandatoryQueryParam "active" Bool
            :> QueryParam "mode" DI.DriverMode
            :> Post '[JSON] APISuccess
-             :<|> "goHome"
+           :<|> "goHome"
            :> ( "activate" :> TokenAuth
                   :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
                   :> MandatoryQueryParam "currentLocation" LatLong
@@ -93,19 +94,19 @@ type API =
                   :> ReqBody '[JSON] DDriver.UpdateHomeLocationReq
                   :> Post '[JSON] APISuccess
               )
-             :<|> "nearbyRideRequest"
+           :<|> "nearbyRideRequest"
            :> ( TokenAuth
                   :> QueryParam "searchTryId" (Id DTST.SearchTry)
                   :> Get '[JSON] DDriver.GetNearbySearchRequestsRes
               )
-             :<|> "searchRequest"
+           :<|> "searchRequest"
            :> TokenAuth
            :> Header "x-package" Text
            :> "quote"
            :> "offer"
            :> ReqBody '[JSON] DDriver.DriverOfferReq
            :> Post '[JSON] APISuccess
-             :<|> "searchRequest"
+           :<|> "searchRequest"
            :> TokenAuth
            :> Header "x-package" Text
            :> "quote"
@@ -117,7 +118,7 @@ type API =
            :> Header "x-device" Text
            :> ReqBody '[JSON] DDriver.DriverRespondReq
            :> Post '[JSON] APISuccess
-             :<|> "profile"
+           :<|> "profile"
            :> ( TokenAuth
                   :> Header "x-package" Text
                   :> QueryParam "toss" Int
@@ -173,11 +174,11 @@ type API =
                              :> Get '[JSON] Text
                        )
               )
-             :<|> "metaData"
+           :<|> "metaData"
            :> TokenAuth
            :> ReqBody '[JSON] DDriver.MetaDataReq
            :> Post '[JSON] APISuccess
-             :<|> "alternateNumber"
+           :<|> "alternateNumber"
            :> ( "validate"
                   :> TokenAuth
                   :> ReqBody '[JSON] DDriver.DriverAlternateNumberReq
@@ -194,7 +195,7 @@ type API =
                     :> TokenAuth
                     :> Delete '[JSON] APISuccess
               )
-             :<|> "payments"
+           :<|> "payments"
            :> "history"
            :> TokenAuth
            :> QueryParam "from" Day -- rides with window start date >= from
@@ -203,11 +204,11 @@ type API =
            :> QueryParam "limit" Int
            :> QueryParam "offset" Int
            :> Get '[JSON] [DDriver.DriverPaymentHistoryResp]
-             :<|> "cleardues"
+           :<|> "cleardues"
            :> TokenAuth
            :> QueryParam "serviceName" DPlan.ServiceNames
            :> Get '[JSON] DDriver.ClearDuesRes
-             :<|> "v2"
+           :<|> "v2"
            :> "payments"
            :> "history"
            :> TokenAuth
@@ -216,7 +217,7 @@ type API =
            :> QueryParam "offset" Int
            :> QueryParam "serviceName" DPlan.ServiceNames
            :> Get '[JSON] DDriver.HistoryEntityV2
-             :<|> "v2"
+           :<|> "v2"
            :> "payments"
            :> "history"
            :> Capture "invoiceId" Text
@@ -224,20 +225,20 @@ type API =
            :> TokenAuth
            :> QueryParam "serviceName" DPlan.ServiceNames
            :> Get '[JSON] DDriver.HistoryEntryDetailsEntityV2
-             :<|> ( "city"
-                      :> ReqBody '[JSON] DDriver.GetCityReq
-                      :> Post '[JSON] DDriver.GetCityResp
-                  )
-             :<|> "invoice"
+           :<|> ( "city"
+                    :> ReqBody '[JSON] DDriver.GetCityReq
+                    :> Post '[JSON] DDriver.GetCityResp
+                )
+           :<|> "invoice"
            :> TokenAuth
            :> MandatoryQueryParam "from" Day
            :> QueryParam "to" Day
            :> Get '[JSON] [DDriver.DriverFeeResp]
-             :<|> "getDummyRideRequest"
+           :<|> "getDummyRideRequest"
            :> ( TokenAuth
                   :> Get '[JSON] APISuccess
               )
-             :<|> "scheduledBooking"
+           :<|> "scheduledBooking"
            :> "list"
            :> TokenAuth
            :> QueryParam "limit" Integer
@@ -247,16 +248,21 @@ type API =
            :> QueryParam "tripCategory" TripCategory
            :> QueryParam "currentLocation" LatLong
            :> Get '[JSON] DDriver.ScheduledBookingRes
-             :<|> "accept"
+           :<|> "accept"
            :> "scheduledBooking"
            :> TokenAuth
            :> Header "x-package" Text
            :> MandatoryQueryParam "bookingId" (Id DRB.Booking)
            :> Post '[JSON] APISuccess
-             :<|> "consent"
+           :<|> "consent"
            :> "respond"
            :> TokenAuth
            :> ReqBody '[JSON] DDriver.GetConsentReq
+           :> Post '[JSON] APISuccess
+           :<|> "marketing"
+           :> "events"
+           :> TokenAuth
+           :> ReqBody '[JSON] DRegistration.MarketEventReq
            :> Post '[JSON] APISuccess
        )
 
@@ -300,9 +306,13 @@ handler =
     :<|> listScheduledBookings
     :<|> acceptScheduledBooking
     :<|> consentResponse
+    :<|> marketingEventsPostLogin
 
 getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> FlowHandler DDriver.DriverInformationRes
 getInformation (personId, driverId, merchantOpCityId) mbClientId toss tenant context serviceName = withFlowHandlerAPI $ DDriver.getInformation (personId, driverId, merchantOpCityId) mbClientId toss tenant context serviceName Nothing
+
+marketingEventsPostLogin :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DRegistration.MarketEventReq -> FlowHandler APISuccess
+marketingEventsPostLogin auth req = withFlowHandlerAPI $ DRegistration.marketingEventsPostLogin auth req
 
 setActivity :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DI.DriverMode -> FlowHandler APISuccess
 setActivity (personId, driverId, merchantOpCityId) isActive = withFlowHandlerAPI . DDriver.setActivity (personId, driverId, merchantOpCityId) isActive
