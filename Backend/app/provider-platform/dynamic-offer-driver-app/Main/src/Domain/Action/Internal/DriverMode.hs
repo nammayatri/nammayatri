@@ -91,8 +91,9 @@ updateFleetOperatorStatusKeyForDriver ::
   Id DP.Person ->
   DDFS.DriverFlowStatus ->
   DI.DriverInformation ->
+  Bool ->
   m ()
-updateFleetOperatorStatusKeyForDriver driverId newStatus driverInfo = do
+updateFleetOperatorStatusKeyForDriver driverId newStatus driverInfo computeOnlineStatusOnly = do
   let oldStatus = fromMaybe DDFS.INACTIVE driverInfo.driverFlowStatus
   -- Try to find active FleetDriverAssociation
   mbFleetDriverAssociation <- QFleetDriverAssociationExtra.findByDriverId driverId True
@@ -103,13 +104,13 @@ updateFleetOperatorStatusKeyForDriver driverId newStatus driverInfo = do
       mbDriverOperatorAssociation <- QDriverOperatorAssociationExtra.findByDriverId driverId True
       pure $ fmap (\doa -> (doa.operatorId, DP.OPERATOR)) mbDriverOperatorAssociation
   whenJust mbEntity $ \(entityId, entityType) -> do
-    decrementFleetOperatorStatusKeyForDriver entityType entityId (Just oldStatus)
-    incrementFleetOperatorStatusKeyForDriver entityType entityId (Just newStatus)
+    decrementFleetOperatorStatusKeyForDriver entityType entityId (Just oldStatus) computeOnlineStatusOnly
+    incrementFleetOperatorStatusKeyForDriver entityType entityId (Just newStatus) computeOnlineStatusOnly
     when (entityType == DP.FLEET_OWNER) $ do
       mbFleetOperatorAssociation <- QFleetOperatorAssociation.findByFleetOwnerId entityId True
       whenJust mbFleetOperatorAssociation $ \foa -> do
-        decrementFleetOperatorStatusKeyForDriver DP.OPERATOR foa.operatorId (Just oldStatus)
-        incrementFleetOperatorStatusKeyForDriver DP.OPERATOR foa.operatorId (Just newStatus)
+        decrementFleetOperatorStatusKeyForDriver DP.OPERATOR foa.operatorId (Just oldStatus) computeOnlineStatusOnly
+        incrementFleetOperatorStatusKeyForDriver DP.OPERATOR foa.operatorId (Just newStatus) computeOnlineStatusOnly
 
 updateAtomicallyFleetOperatorStatusKeyForDriver ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
@@ -117,8 +118,9 @@ updateAtomicallyFleetOperatorStatusKeyForDriver ::
   DP.Role ->
   Text ->
   Maybe DDFS.DriverFlowStatus ->
+  Bool ->
   m ()
-updateAtomicallyFleetOperatorStatusKeyForDriver redisOp entityType entityId mbStatus = do
+updateAtomicallyFleetOperatorStatusKeyForDriver redisOp entityType entityId mbStatus computeOnlineStatusOnly = do
   let tag = "FleetOperatorStatusUpdate"
       status = fromMaybe DDFS.INACTIVE mbStatus
       key = DDFS.getStatusKey entityId status
@@ -130,7 +132,7 @@ updateAtomicallyFleetOperatorStatusKeyForDriver redisOp entityType entityId mbSt
   if isNothing keyExists
     then fork msg $ do
       logTagError tag $ "Key does not exist. Handling cache miss for entityType=" <> show entityType <> ", entityId=" <> entityId <> ", key=" <> key
-      void $ SDF.handleCacheMissForDriverFlowStatus entityType entityId (DDFS.allKeys entityId)
+      void $ SDF.handleCacheMissForDriverFlowStatus entityType entityId (DDFS.allKeys entityId computeOnlineStatusOnly) computeOnlineStatusOnly
       logTagInfo tag $ "Retrying redisOp after cache miss for key=" <> key
       void $ redisOp key
       logTagInfo tag $ "Updated key after cache miss: key=" <> key <> ", entityId=" <> entityId
@@ -150,6 +152,7 @@ incrementFleetOperatorStatusKeyForDriver ::
   DP.Role ->
   Text ->
   Maybe DDFS.DriverFlowStatus ->
+  Bool ->
   m ()
 incrementFleetOperatorStatusKeyForDriver = updateAtomicallyFleetOperatorStatusKeyForDriver Redis.incr
 
@@ -164,6 +167,7 @@ decrementFleetOperatorStatusKeyForDriver ::
   DP.Role ->
   Text ->
   Maybe DDFS.DriverFlowStatus ->
+  Bool ->
   m ()
 decrementFleetOperatorStatusKeyForDriver = updateAtomicallyFleetOperatorStatusKeyForDriver Redis.decr
 
@@ -178,11 +182,12 @@ updateAtomicallyOperatorStatusKeyForFleetOwner ::
   (Text -> Integer -> m Integer) ->
   Text ->
   Text ->
+  Bool ->
   m ()
-updateAtomicallyOperatorStatusKeyForFleetOwner redisOp operatorId fleetOwnerId = do
+updateAtomicallyOperatorStatusKeyForFleetOwner redisOp operatorId fleetOwnerId computeOnlineStatusOnly = do
   let tag = "OperatorStatusUpdate"
-      fleetOwnerKeys = DDFS.allKeys fleetOwnerId
-      operatorKeys = DDFS.allKeys operatorId
+      fleetOwnerKeys = DDFS.allKeys fleetOwnerId computeOnlineStatusOnly
+      operatorKeys = DDFS.allKeys operatorId computeOnlineStatusOnly
 
   logTagInfo tag $ "Fetching Redis counts for fleetOwnerId=" <> fleetOwnerId <> ", operatorId=" <> operatorId
   fleetRedisCount <- mapM (Redis.get @Int) fleetOwnerKeys
@@ -197,7 +202,7 @@ updateAtomicallyOperatorStatusKeyForFleetOwner redisOp operatorId fleetOwnerId =
 
       handleFallback role entityId keyData = do
         logTagInfo tag $ "Handling cache miss for role=" <> show role <> ", entityId=" <> entityId <> ", keys=" <> show keyData
-        void $ SDF.handleCacheMissForDriverFlowStatus role entityId keyData
+        void $ SDF.handleCacheMissForDriverFlowStatus role entityId keyData computeOnlineStatusOnly
         counts <- mapM (Redis.get @Int) keyData
         logTagInfo tag $ "Fetched counts after cache miss: " <> show counts
         pure counts
@@ -234,6 +239,7 @@ incrementOperatorStatusKeyForFleetOwner ::
   ) =>
   Text ->
   Text ->
+  Bool ->
   m ()
 incrementOperatorStatusKeyForFleetOwner = updateAtomicallyOperatorStatusKeyForFleetOwner Redis.incrby
 
@@ -247,6 +253,7 @@ decrementOperatorStatusKeyForFleetOwner ::
   ) =>
   Text ->
   Text ->
+  Bool ->
   m ()
 decrementOperatorStatusKeyForFleetOwner = updateAtomicallyOperatorStatusKeyForFleetOwner Redis.decrby
 
@@ -263,10 +270,14 @@ updateDriverModeAndFlowStatus ::
   m ()
 updateDriverModeAndFlowStatus driverId transporterConfig isActive mbNewMode newFlowStatus oldDriverInfo mbHasRideStarted = do
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-  if allowCacheDriverFlowStatus
-    then do
+  let allowAnalytics = transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics
+  case (allowCacheDriverFlowStatus, allowAnalytics) of
+    (True, _) -> do
       QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode (Just newFlowStatus) mbHasRideStarted driverId
-      updateFleetOperatorStatusKeyForDriver driverId newFlowStatus oldDriverInfo
-    else QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode Nothing mbHasRideStarted driverId
+      updateFleetOperatorStatusKeyForDriver driverId newFlowStatus oldDriverInfo False
+    (False, True) -> do
+      QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode (Just newFlowStatus) mbHasRideStarted driverId
+      updateFleetOperatorStatusKeyForDriver driverId newFlowStatus oldDriverInfo True
+    (False, False) -> QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode Nothing mbHasRideStarted driverId
   fork "update driver online duration" $
     processingChangeOnline driverId transporterConfig mbNewMode oldDriverInfo.mode

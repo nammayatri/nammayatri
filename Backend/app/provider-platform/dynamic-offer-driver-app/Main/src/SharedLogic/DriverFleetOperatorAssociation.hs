@@ -66,6 +66,8 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
           Nothing
           ( \driverInfo -> do
               Analytics.decrementFleetOwnerAnalyticsActiveDriverCount (Just existingAssociation.fleetOwnerId) existingAssociation.driverId
+              -- This function called here also because when flow status will not enable but analytics will enable then we should only compute online status only. And if both the feature is enabled then we should called only one time which I called in flow status section.
+              when (not transporterConfig.analyticsConfig.allowCacheDriverFlowStatus) $ DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER existingAssociation.fleetOwnerId driverInfo.driverFlowStatus True
               mbOperator <- QFOA.findByFleetOwnerId existingAssociation.fleetOwnerId True
               when (isNothing mbOperator) $ logTagError "AnalyticsRemoveDriver" "Operator not found for fleet owner"
               whenJust mbOperator $ \operator -> do
@@ -73,7 +75,7 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
                 Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
           )
           ( \driverInfo -> do
-              DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER existingAssociation.fleetOwnerId driverInfo.driverFlowStatus
+              DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER existingAssociation.fleetOwnerId driverInfo.driverFlowStatus False
           )
 
         -- send notification to existing fleet owner about driver unlink
@@ -97,11 +99,13 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
           existingAssociation.driverId
           Nothing
           ( \driverInfo -> do
+              -- This function called here also because when flow status will not enable but analytics will enable then we should only compute online status only. And if both the feature is enabled then we should called only one time which I called in flow status section.
+              when (not transporterConfig.analyticsConfig.allowCacheDriverFlowStatus) $ DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR existingAssociation.operatorId driverInfo.driverFlowStatus True
               when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig existingAssociation.operatorId
               Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig existingAssociation.operatorId
           )
           ( \driverInfo -> do
-              DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR existingAssociation.operatorId driverInfo.driverFlowStatus
+              DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR existingAssociation.operatorId driverInfo.driverFlowStatus False
           )
 
         -- send notification to existing operator about driver unlink
@@ -131,7 +135,7 @@ endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetO
         QFOA.endFleetOperatorAssociation (Id existingAssociation.fleetOwnerId) (Id existingAssociation.operatorId)
         let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
         when allowCacheDriverFlowStatus $ do
-          DDriverMode.decrementOperatorStatusKeyForFleetOwner existingAssociation.operatorId existingAssociation.fleetOwnerId
+          DDriverMode.decrementOperatorStatusKeyForFleetOwner existingAssociation.operatorId existingAssociation.fleetOwnerId False
 
         -- send notification to existing operator about fleet unlink
         mbExistingOperator <- B.runInReplica $ QP.findById (Id existingAssociation.operatorId :: Id DP.Person)
