@@ -40,6 +40,18 @@ findByProviderCode providerCode merchantOperatingCityId = do
         ]
     ]
 
+findByProviderCodeAndisAirConditioned ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
+findByProviderCodeAndisAirConditioned providerCode isAirConditioned merchantOperatingCityId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.providerCode $ Se.Eq providerCode,
+          Se.Is Beam.isAirConditioned $ Se.Eq isAirConditioned,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+        ]
+    ]
+
 findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (BecknV2.FRFS.Enums.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier))
