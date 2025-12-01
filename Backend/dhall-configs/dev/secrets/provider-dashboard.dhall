@@ -8,4 +8,5 @@
 , exotelToken = "some-secret-exotel-token"
 , specialZoneToken = "some-secret-dashboard-token-for-special-zone"
 , slackToken = "xoxb-slack-token"
+, bharatTaxiToken = "da6fbae2-f0c9-49de-bc48-3a40a09208b9"
 }
