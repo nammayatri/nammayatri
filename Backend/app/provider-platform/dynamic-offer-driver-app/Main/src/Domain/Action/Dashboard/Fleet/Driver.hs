@@ -1465,7 +1465,7 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
-  let useDBForAnalytics = transporterConfig.useDBForAnalytics
+  let useDBForAnalytics = transporterConfig.analyticsConfig.useDbForEarningAndMetrics
 
   now <- getCurrentTime
   let fromDay = fromMaybe (utctDay now) mbFrom
@@ -1476,7 +1476,7 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
 
   -- Fetch driver ids from ClickHouse association
   driverIdObjs <-
-    if useDBForAnalytics == Just True
+    if useDBForAnalytics
       then QFDAExtra.getActiveDriverIdsByFleetOwnerId fleetOwnerId
       else do
         maybeDriverIds <- CFDA.getDriverIdsByFleetOwnerId fleetOwnerId
@@ -1502,7 +1502,7 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
     case responseType of
       Common.EARNINGS_LIST -> do
         earningsStats <-
-          if useDBForAnalytics == Just True
+          if useDBForAnalytics
             then QFODSExtra.sumDriverEarningsByFleetOwnerIdAndDriverIdsDB fleetOwnerId filteredDriverIds fromDay toDay limit offset sortDesc sortOnField
             else CFODS.sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId filteredDriverIds fromDay toDay limit offset sortDesc sortOnField
         nameMap <- ensureNameMap preloadedMap (map (.driverId) earningsStats) useDBForAnalytics
@@ -1512,7 +1512,7 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
           pure $ Common.EarningsList $ statRes {Common.driverName = driverName}
       Common.METRICS_LIST -> do
         metricsStats <-
-          if useDBForAnalytics == Just True
+          if useDBForAnalytics
             then QFODSExtra.sumDriverMetricsByFleetOwnerIdAndDriverIdsDB fleetOwnerId filteredDriverIds fromDay toDay limit offset sortDesc sortOnField
             else CFODS.sumDriverMetricsByFleetOwnerIdAndDriverIds fleetOwnerId filteredDriverIds fromDay toDay limit offset sortDesc sortOnField
         nameMap <- ensureNameMap preloadedMap (map (.driverId) metricsStats) useDBForAnalytics
@@ -1532,15 +1532,15 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
         then Just <$> getDbHash txt
         else pure Nothing
 
-    fetchPersons :: [Id DP.Person] -> Maybe Text -> Maybe DbHash -> Maybe Bool -> Flow [CHPerson.PersonBasic]
+    fetchPersons :: [Id DP.Person] -> Maybe Text -> Maybe DbHash -> Bool -> Flow [CHPerson.PersonBasic]
     fetchPersons ids mbNameFilter mbMobileHash useDBForAnalytics =
-      if useDBForAnalytics == Just True
+      if useDBForAnalytics
         then do
           dbPersons <- QPersonExtra.findPersonsByIdsForAnalytics ids mbNameFilter mbMobileHash
           pure $ map personToBasic dbPersons
         else CHPerson.findPersonsByIds ids mbNameFilter mbMobileHash
 
-    ensureNameMap :: Map.Map Text Text -> [Text] -> Maybe Bool -> Flow (Map.Map Text Text)
+    ensureNameMap :: Map.Map Text Text -> [Text] -> Bool -> Flow (Map.Map Text Text)
     ensureNameMap existingMap driverIds useDBForAnalytics
       | not (Map.null existingMap) || null driverIds = pure existingMap
       | otherwise = do
@@ -3536,8 +3536,8 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId fleetOwnerId req = d
     QDriverInfo.updateDob personId (Just (UTCTime dob 0))
   pure Success
 
-getDriverFleetVehicleListStats :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe Bool -> Day -> Day -> Flow Common.FleetVehicleStatsRes
-getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbVehicleNo mbLimit mbOffset mbUseDb fromDay toDay = do
+getDriverFleetVehicleListStats :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Int -> Maybe Int -> Day -> Day -> Flow Common.FleetVehicleStatsRes
+getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbVehicleNo mbLimit mbOffset fromDay toDay = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -3549,15 +3549,15 @@ getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbVehicleNo m
       mbRc <- VRCQuery.findLastVehicleRCFleet' vehicleNo fleetOwnerId
       pure $ (.id.getId) <$> mbRc
     Nothing -> pure Nothing
-  agg <- case mbUseDb of
-    Just True -> QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromDay toDay
+  agg <- case transporterConfig.analyticsConfig.useDbForEarningAndMetrics of
+    True -> QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromDay toDay
     _ -> CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromDay toDay
   let rcIds = map (\vehicleStat -> Id vehicleStat.rcId) agg
   vehicleRegistrationCertificates <- VRCQuery.findAllById rcIds
   let vehicleMap = Map.fromList $ map (\rc -> (rc.id.getId, rc)) vehicleRegistrationCertificates
   let agg' = convertToFleetVehicleStatsItem transporterConfig agg vehicleMap
 
-  pure $ Common.FleetVehicleStatsRes {fleetOwnerId = fleetOwnerId, listItem = agg', summary = Common.Summary {totalCount = 0, count = 0}}
+  pure $ Common.FleetVehicleStatsRes {fleetOwnerId = fleetOwnerId, listItem = agg', summary = Common.Summary {totalCount = 10000, count = length agg}}
   where
     maxLimit = 10
     defaultLimit = 5

@@ -1291,7 +1291,6 @@ apis:
         - vehicleNo: Text
         - limit: Int
         - offset: Int
-        - useDb: Bool
       response:
         type: FleetVehicleStatsRes
       helperApi:
@@ -1307,7 +1306,6 @@ apis:
               - vehicleNo: Text
               - limit: Int
               - offset: Int
-              - useDb: Bool
             response:
               type: FleetVehicleStatsRes
 

@@ -21,6 +21,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Price
 import Kernel.Utils.Common (CacheFlow, EncFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Logging
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.FleetRcDailyStats as Beam
@@ -81,4 +82,6 @@ sumVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromD
 
   case res of
     Right result -> pure $ map (\(fleetOwnerId', rcId, totalEarnings, totalCompletedRides, totalDistance, totalDuration) -> mkFleetRcDailyStatsAggregated fleetOwnerId' rcId totalEarnings totalCompletedRides totalDistance totalDuration) result
-    Left _ -> pure []
+    Left err -> do
+      logTagError "FleetOperatorDailyStats" ("DB failure. Error: " <> show err)
+      pure []

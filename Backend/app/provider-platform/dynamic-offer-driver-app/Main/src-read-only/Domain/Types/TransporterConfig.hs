@@ -272,6 +272,7 @@ data AnalyticsConfig = AnalyticsConfig
     enableFleetOperatorDashboardAnalytics :: Kernel.Prelude.Bool,
     maxOnlineDurationDays :: Kernel.Prelude.Int,
     onlineDurationCalculateFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    useDbForEarningAndMetrics :: Kernel.Prelude.Bool,
     weekStartMode :: Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
