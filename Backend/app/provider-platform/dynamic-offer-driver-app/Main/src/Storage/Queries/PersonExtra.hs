@@ -565,6 +565,28 @@ clearDeviceTokenByPersonId personId = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
+updateMobileNumberByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> DbHash -> Text -> m ()
+updateMobileNumberByPersonId (Id personId) encMobile mobileNumberHash mobileCountryCode = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.mobileNumberEncrypted (Just $ unEncrypted (encMobile.encrypted)),
+      Se.Set BeamP.mobileNumberHash (Just mobileNumberHash),
+      Se.Set BeamP.mobileCountryCode (Just mobileCountryCode)
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateEmailByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m ()
+updateEmailByPersonId (Id personId) encEmail = do
+  now <- getCurrentTime
+  let encVal = unEncrypted (encEmail.encrypted)
+  -- emailHash = encEmail.hash
+  updateWithKV
+    [ Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.email (Just encVal)
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 updatePersonMobileByFleetRole :: (MonadFlow m, EsqDBFlow m r) => Text -> EncryptedHashed Text -> m ()
 updatePersonMobileByFleetRole personId encMobileNumber = do
   now <- getCurrentTime
