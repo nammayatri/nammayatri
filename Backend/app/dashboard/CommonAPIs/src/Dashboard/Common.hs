@@ -78,6 +78,10 @@ data CoinsConfig
 
 data Person
 
+data Merchant
+
+data MerchantOperatingCity
+
 data IntegratedBPPConfig
 
 data Role = DRIVER | FLEET

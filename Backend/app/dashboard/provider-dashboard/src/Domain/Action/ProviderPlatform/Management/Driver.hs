@@ -55,6 +55,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     getDriverStats,
     getDriverEarnings,
     postDriverUpdateTagBulk,
+    postDriverUpdateMerchant,
   )
 where
 
@@ -363,3 +364,10 @@ postDriverUpdateTagBulk merchantShortId opCity apiTokenInfo req = do
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverUpdateTagBulk)) req
+
+postDriverUpdateMerchant :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverMerchantReq -> Environment.Flow APISuccess
+postDriverUpdateMerchant merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateMerchant) driverId req

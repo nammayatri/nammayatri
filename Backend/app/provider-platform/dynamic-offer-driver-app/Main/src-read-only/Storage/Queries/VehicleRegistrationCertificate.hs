@@ -6,6 +6,8 @@ module Storage.Queries.VehicleRegistrationCertificate (module Storage.Queries.Ve
 
 import qualified Data.Time.Calendar
 import qualified Domain.Types.Image
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -71,6 +73,18 @@ updateManufacturing ::
 updateManufacturing mYManufacturing id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.mYManufacturing mYManufacturing, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateMerchantIdAndCityIdById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updateMerchantIdAndCityIdById merchantId merchantOperatingCityId id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateOxygen ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

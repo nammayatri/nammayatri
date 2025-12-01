@@ -83,6 +83,10 @@ IdfyVerification:
     deleteByPersonId:
       kvFunction: deleteWithKV
       where: driverId
+    updateMerchantIdAndCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOperatingCityId]
+      where: driverId
 
 AadhaarOtpVerify:
   tableName: aadhaar_otp_verify
@@ -161,6 +165,10 @@ DriverLicense:
       kvFunction: updateWithKV
       params: [verificationStatus]
       where: documentImageId1
+    updateMerchantIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId]
+      where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -253,6 +261,10 @@ VehicleRegistrationCertificate:
       kvFunction: updateOneWithKV
       params: [approved]
       where: id
+    updateMerchantIdAndCityIdById:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOperatingCityId]
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -291,6 +303,10 @@ DriverRCAssociation:
       params: [isRcActive]
       where:
         and: [driverId, rcId]
+    updateMerchantIdAndCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOperatingCityId]
+      where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -358,6 +374,10 @@ Image:
     deleteById:
       kvFunction: deleteWithKV
       where: id
+    updateMerchantIdAndCityIdByPersonId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOperatingCityId]
+      where: personId
   extraOperations:
     - EXTRA_QUERY_FILE
   domainInstance:
@@ -782,6 +802,10 @@ DriverPanCard:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
       where: documentImageId1
+    updateMerchantIdAndCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOperatingCityId]
+      where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -970,6 +994,10 @@ AadhaarCard:
       kvFunction: updateOneWithKV
       params: [driverImagePath]
       where: driverId
+    updateMerchantIdAndCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOperatingCityId]
+      where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -1041,6 +1069,10 @@ HyperVergeSdkLogs:
       orderBy:
         field: createdAt
         order: asc
+    updateMerchantIdAndCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOperatingCityId]
+      where: driverId
 
 HyperVergeVerification:
   tableName: hyperverge_verification
@@ -1100,6 +1132,10 @@ HyperVergeVerification:
       where: requestId
     deleteByPersonId:
       kvFunction: deleteWithKV
+      where: driverId
+    updateMerchantIdAndCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOperatingCityId]
       where: driverId
 
 RCValidationRules:

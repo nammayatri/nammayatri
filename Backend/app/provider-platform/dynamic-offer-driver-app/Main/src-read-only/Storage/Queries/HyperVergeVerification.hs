@@ -7,6 +7,8 @@ module Storage.Queries.HyperVergeVerification where
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.HyperVergeVerification
 import qualified Domain.Types.IdfyVerification
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -61,6 +63,18 @@ updateExtractValidationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => 
 updateExtractValidationStatus imageExtractionValidation requestId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.imageExtractionValidation imageExtractionValidation, Se.Set Beam.updatedAt _now] [Se.Is Beam.requestId $ Se.Eq requestId]
+
+updateMerchantIdAndCityIdByDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateMerchantIdAndCityIdByDriverId merchantId merchantOperatingCityId driverId = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateResponse :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
 updateResponse status hypervergeResponse requestId = do

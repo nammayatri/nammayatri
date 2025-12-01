@@ -508,3 +508,13 @@ updateDob (Id driverId) driverDob = do
         <> [Se.Set BeamDI.driverDob driverDob | isJust driverDob]
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
+updateMerchantIdAndCityIdByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+updateMerchantIdAndCityIdByDriverId driverId merchantId merchantOperatingCityId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.merchantId (Just $ getId merchantId),
+      Se.Set BeamDI.merchantOperatingCityId (Just $ getId merchantOperatingCityId),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq $ getId driverId)]

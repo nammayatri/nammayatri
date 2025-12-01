@@ -59,6 +59,7 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverEarnings,
     isAssociationBetweenTwoPerson,
     postDriverUpdateTagBulk,
+    postDriverUpdateMerchant,
   )
 where
 
@@ -140,14 +141,20 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperator
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverPlan as QDP
+import qualified Storage.Queries.DriverProfileQuestions as QDriverProfileQuestions
+import qualified Storage.Queries.DriverRCAssociation as QDriverRCAssociation
+import qualified Storage.Queries.DriverReferral as QDriverReferral
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperator
-import qualified Storage.Queries.HyperVergeSdkLogs as QSdkLogs
+import qualified Storage.Queries.HyperVergeSdkLogs as QHyperVergeSdkLogs
+import qualified Storage.Queries.HyperVergeVerification as QHyperVergeVerification
+import qualified Storage.Queries.IdfyVerification as QIdfyVerification
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.RegistrationToken as QReg
@@ -1120,7 +1127,7 @@ getDriverPanAadharSelfieDetailsList merchantShortId _opCity docType' driverID = 
   let personId = cast @Common.Driver @DP.Person driverID
   merchant <- findMerchantByShortId merchantShortId
   documentType <- convertToDomainType docType'
-  hvSdkLogs <- QSdkLogs.findAllByDriverIdAndDocType Nothing Nothing personId $ Just documentType
+  hvSdkLogs <- QHyperVergeSdkLogs.findAllByDriverIdAndDocType Nothing Nothing personId $ Just documentType
   imageDetails <- filter (isJust . (.workflowTransactionId)) <$> QImage.findImagesByPersonAndType Nothing Nothing merchant.id personId documentType
   let txnIdsInLogs = HS.fromList $ map (Just . (.txnId)) hvSdkLogs
       (imagesAvaialbleInLogs, imagesNotAvailableInLogs) = partition ((`HS.member` txnIdsInLogs) . (.workflowTransactionId)) imageDetails
@@ -1255,3 +1262,115 @@ getDriverEarnings merchantShortId opCity from to earningType dId requestorId = d
         (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation driverDetails.id requestedPersonDetails.id
         (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
         _ -> return False
+
+---------------------------------------------------------------------
+-- Update merchant for a driver (handles duplicate driver migration)
+postDriverUpdateMerchant :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverMerchantReq -> Flow APISuccess
+postDriverUpdateMerchant merchantShortId _opCity reqDriverId req = do
+  _ <- findMerchantByShortId merchantShortId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+  let newMerchantId = cast @Dashboard.Common.Merchant @DM.Merchant req.newMerchantId
+  let newMerchantOperatingCityId = cast @Dashboard.Common.MerchantOperatingCity @DMOC.MerchantOperatingCity req.newMerchantOperatingCityId
+
+  -- Find the person to migrate (ny-bt entry)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  let mobileNumberHash = person.mobileNumber <&> (.hash)
+
+  -- Check if person already has the new merchantId (nothing to do)
+  when (person.merchantId == newMerchantId) $
+    throwError $ InvalidRequest "Driver already belongs to the target merchant"
+
+  -- Find driver information for the ny-bt entry
+  nyDriverInfo <- QDriverInfo.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+  let nyEnabled = nyDriverInfo.enabled
+
+  -- Find duplicate entry with same mobile number and new merchantId (bt-bt entry)
+  mbDuplicatePerson <- case mobileNumberHash of
+    Nothing -> pure Nothing
+    Just hash -> QPerson.findByMobileNumberAndMerchant hash newMerchantId
+
+  case mbDuplicatePerson of
+    Nothing ->
+      -- Case 5: ny-bt enabled, no bt-bt entry -> migrate
+      if nyEnabled
+        then do
+          logTagInfo "postDriverUpdateMerchant" $ "Case 5: Migrating driver " <> show personId <> " to new merchant (no duplicate found)"
+          updateMerchantInAllTables personId newMerchantId newMerchantOperatingCityId
+          pure Success
+        else throwError $ InvalidRequest "Cannot migrate: Driver is not enabled and no duplicate entry exists"
+    Just duplicatePerson -> do
+      -- Get driver info for bt-bt entry
+      btDriverInfo <- QDriverInfo.findById (cast duplicatePerson.id) >>= fromMaybeM DriverInfoNotFound
+      let btEnabled = btDriverInfo.enabled
+
+      case (nyEnabled, btEnabled) of
+        (True, True) ->
+          -- Case 1: Both enabled -> do nothing, return error
+          throwError $ InvalidRequest "Cannot migrate: Both old and new merchant entries are enabled. We won't migrate it as the driver has already migrated to the new merchant."
+        (False, False) ->
+          -- Case 2: Both disabled -> do nothing, return error
+          throwError $ InvalidRequest "Cannot migrate: Both old and new merchant entries are disabled. When driver logs in he will be using the Bharat Taxi merchant automatically."
+        (True, False) -> do
+          -- Case 3: ny-bt enabled, bt-bt disabled -> migrate ny-bt to bt, delete bt-bt
+          logTagInfo "postDriverUpdateMerchant" $ "Case 3: Migrating driver " <> show personId <> " to new merchant and deleting duplicate " <> show duplicatePerson.id
+          updateMerchantInAllTables personId newMerchantId newMerchantOperatingCityId
+          void $ DeleteDriver.deleteDriver merchantShortId duplicatePerson.id
+          pure Success
+        (False, True) ->
+          -- Case 4: ny-bt disabled, bt-bt enabled -> do nothing, return error
+          throwError $ InvalidRequest "Cannot migrate: Old merchant entry is disabled but new merchant entry is enabled. The new entry should be used."
+
+-- Helper function to update merchant in all affected tables
+updateMerchantInAllTables :: Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+updateMerchantInAllTables personId merchantId merchantOperatingCityId = do
+  -- Update Person table
+  QPerson.updateMerchantIdAndCityId personId merchantId merchantOperatingCityId
+
+  -- Update DriverInformation table
+  QDriverInfo.updateMerchantIdAndCityIdByDriverId personId merchantId merchantOperatingCityId
+
+  -- Update Vehicle table
+  QVehicle.updateMerchantIdAndCityIdByDriverId personId merchantId (Just $ getId merchantOperatingCityId)
+
+  -- Update DailyStats table
+  QDailyStats.updateMerchantIdAndCityIdByDriverId (Just merchantId) (Just merchantOperatingCityId) personId
+
+  -- Update AadhaarCard table
+  QAadhaarCard.updateMerchantIdAndCityIdByDriverId merchantId merchantOperatingCityId personId
+
+  -- Update IdfyVerification table
+  QIdfyVerification.updateMerchantIdAndCityIdByDriverId (Just merchantId) (Just merchantOperatingCityId) personId
+
+  -- Update Image table
+  QImage.updateMerchantIdAndCityIdByPersonId merchantId (Just merchantOperatingCityId) personId
+
+  -- Update DriverReferral table
+  QDriverReferral.updateMerchantIdAndCityIdByDriverId (Just merchantId) (Just merchantOperatingCityId) personId
+
+  -- Update DriverLicense table (only has merchantId)
+  QDriverLicense.updateMerchantIdByDriverId (Just merchantId) personId
+
+  -- Update DriverPanCard table
+  QPanCard.updateMerchantIdAndCityIdByDriverId (Just merchantId) (Just merchantOperatingCityId) personId
+
+  -- Update DriverPlan table
+  QDP.updateMerchantIdAndCityIdByDriverId merchantId merchantOperatingCityId personId
+
+  -- Update DriverProfileQuestions table (only has merchantOperatingCityId in Beam type)
+  QDriverProfileQuestions.updateMerchantOperatingCityIdByDriverId merchantOperatingCityId personId
+
+  -- Update DriverRCAssociation table
+  QDriverRCAssociation.updateMerchantIdAndCityIdByDriverId (Just merchantId) (Just merchantOperatingCityId) personId
+
+  -- Update HyperVergeSdkLogs table
+  QHyperVergeSdkLogs.updateMerchantIdAndCityIdByDriverId merchantId merchantOperatingCityId personId
+
+  -- Update HyperVergeVerification table
+  QHyperVergeVerification.updateMerchantIdAndCityIdByDriverId (Just merchantId) (Just merchantOperatingCityId) personId
+
+  -- Update VehicleRegistrationCertificate table (needs RC IDs from associations)
+  rcAssociations <- QDriverRCAssociation.findAllByDriverId personId
+  forM_ rcAssociations $ \(assoc, _) ->
+    RCQuery.updateMerchantIdAndCityIdById (Just merchantId) (Just merchantOperatingCityId) assoc.rcId
+
+  logTagInfo "updateMerchantInAllTables" $ "Updated merchant for driver " <> show personId <> " in all tables"

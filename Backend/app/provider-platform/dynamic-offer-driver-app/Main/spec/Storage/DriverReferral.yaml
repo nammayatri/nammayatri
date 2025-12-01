@@ -64,5 +64,10 @@ DriverReferral:
       kvFunction: findOneWithKV
       where: driverId
 
+    updateMerchantIdAndCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOperatingCityId]
+      where: driverId
+
   extraOperations:
     - EXTRA_QUERY_FILE

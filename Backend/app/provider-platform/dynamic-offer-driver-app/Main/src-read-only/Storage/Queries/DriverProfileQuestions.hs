@@ -5,6 +5,7 @@
 module Storage.Queries.DriverProfileQuestions (module Storage.Queries.DriverProfileQuestions, module ReExport) where
 
 import qualified Domain.Types.DriverProfileQuestions
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -24,6 +25,13 @@ createMany = traverse_ create
 
 findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverProfileQuestions.DriverProfileQuestions))
 findByPersonId driverId = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateMerchantOperatingCityIdByDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateMerchantOperatingCityIdByDriverId merchantOperatingCityId driverId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverProfileQuestions.DriverProfileQuestions))
 findByPrimaryKey driverId = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
