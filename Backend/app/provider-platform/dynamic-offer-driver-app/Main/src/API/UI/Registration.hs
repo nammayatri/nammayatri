@@ -18,6 +18,7 @@ module API.UI.Registration
     DRegistration.ResendAuthRes,
     DRegistration.AuthVerifyReq (..),
     DRegistration.AuthVerifyRes (..),
+    DRegistration.MarketEventReq (..),
     API,
     handler,
   )
@@ -59,6 +60,10 @@ type API =
            :<|> "logout"
              :> TokenAuth
              :> Post '[JSON] APISuccess
+           :<|> "marketing"
+             :> "events"
+             :> ReqBody '[JSON] DRegistration.MarketEventReq
+             :> Post '[JSON] APISuccess
        )
 
 handler :: FlowServer API
@@ -67,6 +72,7 @@ handler =
     :<|> verify
     :<|> resend
     :<|> logout
+    :<|> marketingEvents
 
 auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
 auth req mbBundleVersionText mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice = withFlowHandlerAPI $ DRegistration.auth False req mbBundleVersionText mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice
@@ -79,3 +85,6 @@ resend = withFlowHandlerAPI . DRegistration.resend
 
 logout :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 logout = withFlowHandlerAPI . DRegistration.logout
+
+marketingEvents :: DRegistration.MarketEventReq -> FlowHandler APISuccess
+marketingEvents = withFlowHandlerAPI . DRegistration.marketingEventsPreLogin
