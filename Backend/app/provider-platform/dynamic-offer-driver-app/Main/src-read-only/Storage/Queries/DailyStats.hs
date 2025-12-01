@@ -7,6 +7,8 @@ module Storage.Queries.DailyStats (module Storage.Queries.DailyStats, module ReE
 import qualified Data.Text
 import qualified Data.Time.Calendar
 import qualified Domain.Types.DailyStats
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -46,6 +48,18 @@ updateByDriverId totalEarnings numRides totalDistance tollCharges bonusEarnings 
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
+
+updateMerchantIdAndCityIdByDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateMerchantIdAndCityIdByDriverId merchantId merchantOperatingCityId driverId = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateNumDriversOnboardedByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ())
 updateNumDriversOnboardedByDriverId numDriversOnboarded driverId merchantLocalDate = do

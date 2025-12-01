@@ -7,6 +7,8 @@ module Storage.Queries.DriverPlan (module Storage.Queries.DriverPlan, module ReE
 import qualified Domain.Types.DriverPlan
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Mandate
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Plan
 import Kernel.Beam.Functions
@@ -111,6 +113,18 @@ updateMandateSetupDateByDriverIdAndServiceName mandateSetupDate driverId service
           Se.Is Beam.serviceName $ Se.Eq (Kernel.Prelude.Just serviceName)
         ]
     ]
+
+updateMerchantIdAndCityIdByDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateMerchantIdAndCityIdByDriverId merchantId merchantOpCityId driverId = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.merchantId (Kernel.Prelude.Just (Kernel.Types.Id.getId merchantId)),
+      Se.Set Beam.merchantOpCityId (Kernel.Prelude.Just (Kernel.Types.Id.getId merchantOpCityId)),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updatePaymentModeByDriverIdAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
