@@ -32,6 +32,7 @@ import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Journey as DJourney
 import Domain.Types.Location (Location, LocationAPIEntity)
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
@@ -130,7 +131,8 @@ data BookingAPIEntity = BookingAPIEntity
     isSafetyPlus :: Bool,
     isInsured :: Maybe Bool,
     insuredAmount :: Maybe Text,
-    mbJourneyId :: Maybe (Id DJourney.Journey)
+    mbJourneyId :: Maybe (Id DJourney.Journey),
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -321,6 +323,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         sosStatus = mbSosStatus,
         isBookingUpdated = booking.isBookingUpdated,
         isValueAddNP,
+        merchantOperatingCityId = booking.merchantOperatingCityId,
         isPetRide = booking.isPetRide,
         vehicleServiceTierType = booking.vehicleServiceTierType,
         vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
