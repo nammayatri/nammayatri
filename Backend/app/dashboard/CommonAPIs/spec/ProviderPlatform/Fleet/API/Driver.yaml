@@ -5,6 +5,7 @@ imports:
   VehicleCategory: Dashboard.Common
   VehicleVariant: Dashboard.Common
   VerificationStatus: Dashboard.Common
+  Currency: Kernel.Types.Common
   TripTransaction: Dashboard.Common
   ServiceNames: Dashboard.Common.Driver
   FCMRecipientToken: Kernel.External.Notification.FCM.Types
@@ -1551,6 +1552,7 @@ types:
     - totalEarningNet: HighPrecMoney
     - inAppEarningNet: HighPrecMoney
     - cashEarningNet: HighPrecMoney
+    - currency: Currency
   FleetDriverMetricsStatsRes:
     - driverName: Text
     - rating: Maybe Double
