@@ -30,7 +30,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
-import qualified Storage.Queries.BookingExtra as QBE
+import qualified Storage.Queries.Booking as QBE
 import qualified Storage.Queries.Person as QPerson
 import System.Directory (doesFileExist)
 import Tools.Error
@@ -40,31 +40,19 @@ import Tools.InvoicePDF as PDF
 data GenerateInvoiceReq = GenerateInvoiceReq
   { startDate :: UTCTime,
     endDate :: UTCTime,
-    rideTypes :: Maybe [RideType],
-    billingCategories :: Maybe [BillingCategory],
-    email :: Text
+    rideTypes :: Maybe [SLT.RideType],
+    billingCategories :: Maybe [SLT.BillingCategory],
+    email :: Maybe Text,
+    bookingId :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-data RideType
-  = NORMAL
-  | RENTAL
-  | INTERCITY
-  | AMBULANCE
-  | DELIVERY
-  | METER_RIDE
-  deriving (Generic, Show, Read, FromJSON, ToJSON, ToSchema, Eq)
-
-data BillingCategory
-  = BUSINESS
-  | PERSONAL
-  deriving (Generic, Show, Read, FromJSON, ToJSON, ToSchema, Eq)
 
 -- | Response types
 data GenerateInvoiceRes = GenerateInvoiceRes
   { invoiceId :: Text,
     totalBookings :: Int,
     totalAmount :: Maybe HighPrecMoney,
+    bookingAPIEntities :: [DBAPI.BookingAPIEntity],
     status :: InvoiceStatus,
     message :: Text
   }
@@ -92,8 +80,13 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
   -- Step 2: Get person details
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
-  -- Step 3: Get bookings based on filters (only COMPLETED bookings)
-  allBookings <- QBE.findBookingsForInvoice personId startDate endDate
+  -- Step 3: Get bookings based on rideId or filters (only COMPLETED bookings)
+  allBookings <- case bookingId of
+    Just bookingId' -> do
+      booking <- QBE.findCompletedBookingById (Id bookingId')
+      return (maybeToList booking)
+    Nothing -> do
+      QBE.findBookingsForInvoice personId startDate endDate
 
   -- Step 4: Filter by ride type and billing category in Haskell
   let rideTypeFiltered = case rideTypes of
@@ -115,11 +108,15 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
   let totalAmount = calculateTotalAmountFromBookings bookings
       totalCount = length bookings
 
+  -- Convert bookings to BookingAPIEntity (includes ride data)
+  bookingAPIEntities <- mapM (`DBAPI.buildBookingAPIEntity` person.id) bookings
+
   -- Step 7: Fork async job to generate PDF and email (uses email from request)
-  fork "generate_and_email_invoice" $ do
-    generateAndEmailInvoice invoiceId person bookings merchantId email
-      `catch` \(e :: SomeException) ->
-        logError $ "Invoice generation failed for " <> invoiceId.getId <> ": " <> show e <> "personId: " <> personId.getId <> "merchantId: " <> merchantId.getId <> "email: " <> email
+  whenJust email $ \emaill -> do
+    fork "generate_and_email_invoice" $ do
+      generateAndEmailInvoice invoiceId person bookingAPIEntities merchantId emaill
+        `catch` \(e :: SomeException) ->
+          logError $ "Invoice generation failed for " <> invoiceId.getId <> ": " <> show e <> "personId: " <> personId.getId <> "merchantId: " <> merchantId.getId <> "email: " <> emaill
   -- Step 8: Return immediate response
   logInfo $ "Invoice generation initiated for person: " <> personId.getId <> ", invoiceId: " <> invoiceId.getId <> ", total bookings: " <> show totalCount
 
@@ -129,7 +126,8 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
         totalBookings = totalCount,
         totalAmount = totalAmount,
         status = PROCESSING,
-        message = "Invoice generation in progress. You will receive it via email at " <> email <> " shortly."
+        bookingAPIEntities = bookingAPIEntities,
+        message = "Invoice generation in progress. You will receive it via email at " <> show email <> " shortly."
       }
 
 -- | Validation logic
@@ -167,32 +165,16 @@ validateInvoiceRequest GenerateInvoiceReq {..} = do
   when (endDate > now) $
     throwError $ InvalidRequest "End date cannot be in the future"
 
--- | Convert RideType to BookingDetails pattern (for querying)
-rideTypeToBookingDetailsPattern :: RideType -> Text
-rideTypeToBookingDetailsPattern = \case
-  NORMAL -> "OneWayDetails"
-  RENTAL -> "RentalDetails"
-  INTERCITY -> "InterCityDetails"
-  AMBULANCE -> "AmbulanceDetails"
-  DELIVERY -> "DeliveryDetails"
-  METER_RIDE -> "MeterRideDetails"
-
--- | Map BillingCategory to domain type
-mapBillingCategory :: BillingCategory -> Text
-mapBillingCategory = \case
-  BUSINESS -> "BUSINESS"
-  PERSONAL -> "PERSONAL"
-
 -- | Check if booking matches any of the specified ride types
-matchesRideType :: [RideType] -> DRB.Booking -> Bool
+matchesRideType :: [SLT.RideType] -> DRB.Booking -> Bool
 matchesRideType types booking =
   let bookingRideType = getRideTypeFromBookingDetails booking.bookingDetails
    in bookingRideType `elem` types
 
 -- | Check if booking matches any of the specified billing categories
-matchesBillingCategory :: [BillingCategory] -> DRB.Booking -> Bool
+matchesBillingCategory :: [SLT.BillingCategory] -> DRB.Booking -> Bool
 matchesBillingCategory categories booking =
-  let bookingCategory = getBillingCategoryFromBooking booking.billingCategory
+  let bookingCategory = booking.billingCategory
    in bookingCategory `elem` categories
 
 -- | Calculate total amount from raw bookings
@@ -201,23 +183,17 @@ calculateTotalAmountFromBookings bookings =
   let amounts = map (getHighPrecMoney . (.estimatedTotalFare.amount)) bookings
    in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts)
 
--- | Convert SharedLogic.Type.BillingCategory to our BillingCategory type
-getBillingCategoryFromBooking :: SLT.BillingCategory -> BillingCategory
-getBillingCategoryFromBooking = \case
-  SLT.BUSINESS -> BUSINESS
-  SLT.PERSONAL -> PERSONAL
-
 -- | Extract ride type from booking details
-getRideTypeFromBookingDetails :: DRB.BookingDetails -> RideType
+getRideTypeFromBookingDetails :: DRB.BookingDetails -> SLT.RideType
 getRideTypeFromBookingDetails = \case
-  DRB.OneWayDetails _ -> NORMAL
-  DRB.RentalDetails _ -> RENTAL
-  DRB.InterCityDetails _ -> INTERCITY
-  DRB.AmbulanceDetails _ -> AMBULANCE
-  DRB.DeliveryDetails _ -> DELIVERY
-  DRB.MeterRideDetails _ -> METER_RIDE
-  DRB.DriverOfferDetails _ -> NORMAL
-  DRB.OneWaySpecialZoneDetails _ -> NORMAL
+  DRB.OneWayDetails _ -> SLT.NORMAL
+  DRB.RentalDetails _ -> SLT.RENTAL
+  DRB.InterCityDetails _ -> SLT.INTERCITY
+  DRB.AmbulanceDetails _ -> SLT.AMBULANCE
+  DRB.DeliveryDetails _ -> SLT.DELIVERY
+  DRB.MeterRideDetails _ -> SLT.METER_RIDE
+  DRB.DriverOfferDetails _ -> SLT.NORMAL
+  DRB.OneWaySpecialZoneDetails _ -> SLT.NORMAL
 
 -- | Generate PDF and email invoice (async job)
 generateAndEmailInvoice ::
@@ -230,16 +206,16 @@ generateAndEmailInvoice ::
   ) =>
   Id Text ->
   DP.Person ->
-  [DRB.Booking] ->
+  [DBAPI.BookingAPIEntity] ->
   Id DM.Merchant ->
   Text ->
   m ()
-generateAndEmailInvoice invoiceId person bookings merchantId email = do
+generateAndEmailInvoice invoiceId person bookingAPIEntities merchantId email = do
   -- Get merchant details
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
   -- Get rider config to fetch email configuration
-  merchantOperatingCityId <- case bookings of
+  merchantOperatingCityId <- case bookingAPIEntities of
     (firstBooking : _) -> return firstBooking.merchantOperatingCityId
     [] -> throwError $ InvalidRequest "No bookings provided for invoice generation" -- This should never happen as we validate bookings exist
   riderConfig <- CQRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
@@ -248,11 +224,8 @@ generateAndEmailInvoice invoiceId person bookings merchantId email = do
   let fromEmail = maybe "noreply@nammayatri.in" (.fromEmail) riderConfig.emailOtpConfig
 
   -- Get the date range from the first and last booking
-  let actualStartDate = minimum $ map (.createdAt) bookings
-      actualEndDate = maximum $ map (.createdAt) bookings
-
-  -- Convert bookings to BookingAPIEntity (includes ride data)
-  bookingAPIEntities <- mapM (`DBAPI.buildBookingAPIEntity` person.id) bookings
+  let actualStartDate = minimum $ map (.createdAt) bookingAPIEntities
+      actualEndDate = maximum $ map (.createdAt) bookingAPIEntities
 
   -- Generate PDF
   pdfPath <- PDF.generateInvoicePDF invoiceId.getId person bookingAPIEntities merchant actualStartDate actualEndDate

@@ -109,13 +109,13 @@ findLatestSelfAndPartyBookingByRiderId (Id riderId) =
     res <-
       findAllWithOptionsKV options sortBy' limit' Nothing
         <&> listToMaybe
-    if (isNothing res)
+    if isNothing res
       then do
         bookingParty <- QBPL.findOneActivePartyByRiderId (Id riderId)
         case bookingParty of
           Just bp -> findById bp.bookingId
           Nothing -> return Nothing
-      else (return res)
+      else return res
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
@@ -399,3 +399,7 @@ findBookingsForInvoice personId startDate endDate = do
           Se.Is BeamB.createdAt $ Se.LessThanOrEq endDate
         ]
     ]
+
+findCompletedBookingById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Booking)
+findCompletedBookingById (Id bookingId) = do
+  findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.status $ Se.Eq COMPLETED]]
