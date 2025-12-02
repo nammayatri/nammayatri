@@ -30,3 +30,23 @@ expireOlderActivePaymentsByPurchasedPassId purchasedPassId endDate = do
           Se.Is Beam.endDate $ Se.LessThanOrEq endDate
         ]
     ]
+
+updatePurchaseDataByPurchasedPassIdAndStartEndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DPurchasedPass.PurchasedPass ->
+  Day ->
+  Day ->
+  Day ->
+  Day ->
+  DPurchasedPass.StatusType ->
+  m ()
+updatePurchaseDataByPurchasedPassIdAndStartEndDate purchasedPassId oldStartDate oldEndDate newStartDate newEndDate status = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.startDate newStartDate, Se.Set Beam.endDate newEndDate, Se.Set Beam.status status, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.purchasedPassId $ Se.Eq purchasedPassId.getId,
+          Se.Is Beam.startDate $ Se.Eq oldStartDate,
+          Se.Is Beam.endDate $ Se.Eq oldEndDate
+        ]
+    ]
