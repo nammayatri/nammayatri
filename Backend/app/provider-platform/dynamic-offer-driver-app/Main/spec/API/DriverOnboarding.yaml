@@ -25,6 +25,8 @@ imports:
   PanType: Domain.Types.DriverPanCard
   LinkedRC: Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
   VehicleCategory: Domain.Types.VehicleCategory
+  FarePolicy: Domain.Types.FarePolicy
+  FareParameters: Domain.Types.FareParameters
 
 module: DriverOnboardingV2
 types:
@@ -94,6 +96,8 @@ types:
   FarePolicyHour:
     enum: "Peak,NonPeak,Night"
   RateCardResp:
+    farePolicyId: Id FarePolicy
+    fareParams: FareParameters
     serviceTierType: ServiceTierType
     perKmRate: PriceAPIEntity
     totalFare: PriceAPIEntity

@@ -335,7 +335,9 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   perMinuteRate,
                   tripCategory,
                   farePolicyHour = if isPeak then APITypes.Peak else if isNight then APITypes.Night else APITypes.NonPeak,
-                  rateCardItems
+                  rateCardItems,
+                  farePolicyId = fullFarePolicy.id,
+                  fareParams = fareParams
                 }
 
 postDriverUpdateAirCondition ::
