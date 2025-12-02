@@ -4,6 +4,7 @@
 
 module Storage.Queries.Sos where
 
+import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import qualified Domain.Types.Sos
 import qualified IssueManagement.Domain.Types.MediaFile
@@ -25,6 +26,9 @@ createMany = traverse_ create
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe Domain.Types.Sos.Sos))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.Sos.Sos]))
+findByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 findByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Sos.Sos))
 findByRideId rideId = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId rideId)]
@@ -66,7 +70,7 @@ instance FromTType' Beam.Sos Domain.Types.Sos.Sos where
         Domain.Types.Sos.Sos
           { flow = flow,
             id = Kernel.Types.Id.Id id,
-            mediaFiles = Kernel.Types.Id.Id <$> Kernel.Prelude.fromMaybe [] mediaFiles,
+            mediaFiles = Kernel.Types.Id.Id <$> (Kernel.Prelude.fromMaybe [] mediaFiles),
             personId = Kernel.Types.Id.Id personId,
             rideId = Kernel.Types.Id.Id rideId,
             status = status,
