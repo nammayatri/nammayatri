@@ -156,14 +156,6 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
         { bppItemId = CallAPI.getProviderName integratedBPPConfig,
           offeredPrice = offeredPrice,
           price = price,
-          categoryMeta =
-            Just $
-              DFRFSQuoteCategory.QuoteCategoryMetadata
-                { code = code,
-                  title = title,
-                  description = description,
-                  tnc = tnc
-                },
           ..
         }
 

@@ -445,6 +445,7 @@ data BusLegExtraInfo = BusLegExtraInfo
 data CategoryInfoResponse = CategoryInfoResponse
   { categoryId :: Id DFRFSQuoteCategory.FRFSQuoteCategory,
     categoryName :: FRFSQuoteCategoryType,
+    categoryMeta :: Maybe DFRFSQuoteCategory.QuoteCategoryMetadata,
     categoryPrice :: PriceAPIEntity,
     categoryOfferedPrice :: PriceAPIEntity,
     categoryFinalPrice :: Maybe PriceAPIEntity,
@@ -1634,4 +1635,4 @@ safeTail xs = Just (last xs)
 
 mkCategoryInfoResponse :: DFRFSQuoteCategory.FRFSQuoteCategory -> CategoryInfoResponse
 mkCategoryInfoResponse category =
-  CategoryInfoResponse {categoryId = category.id, categoryName = category.category, categoryPrice = mkPriceAPIEntity category.price, categoryOfferedPrice = mkPriceAPIEntity category.offeredPrice, categoryFinalPrice = mkPriceAPIEntity <$> category.finalPrice, categorySelectedQuantity = category.selectedQuantity}
+  CategoryInfoResponse {categoryId = category.id, categoryName = category.category, categoryMeta = category.categoryMeta, categoryPrice = mkPriceAPIEntity category.price, categoryOfferedPrice = mkPriceAPIEntity category.offeredPrice, categoryFinalPrice = mkPriceAPIEntity <$> category.finalPrice, categorySelectedQuantity = category.selectedQuantity}

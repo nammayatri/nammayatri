@@ -22,7 +22,6 @@ import Data.List (groupBy, sortBy)
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import qualified Domain.Types.Extra.IntegratedBPPConfig as DIBCExtra
 import qualified Domain.Types.FRFSQuote as DQuote
-import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.StationType
@@ -246,20 +245,12 @@ castQuoteType _ = throwError $ InvalidRequest "Invalid quote type"
 createCategory :: Price -> Maybe Price -> Text -> Text -> Domain.DCategory
 createCategory price offerPrice itemCode itemId = do
   let op = fromMaybe price offerPrice
-  let (category, code, title, description, tnc) = case itemCode of
-        "SJT" -> (ADULT, "ADULT", "Adult Discount", "Special discount for adult passengers", "Terms and conditions apply for adult discount")
-        "SFSJT" -> (FEMALE, "FEMALE", "Female Discount", "Special discount for female passengers", "Terms and conditions apply for female discount")
-        _ -> (ADULT, "ADULT", "Adult Discount", "Special discount for adult passengers", "Terms and conditions apply for adult discount")
+  let category = case itemCode of
+        "SJT" -> ADULT
+        "SFSJT" -> FEMALE
+        _ -> ADULT
    in Domain.DCategory
         { category = category,
-          categoryMeta =
-            Just $
-              QuoteCategoryMetadata
-                { code = code,
-                  title = title,
-                  description = description,
-                  tnc = tnc
-                },
           price = price,
           offeredPrice = op,
           bppItemId = itemId,

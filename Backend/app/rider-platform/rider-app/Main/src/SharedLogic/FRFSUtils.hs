@@ -299,10 +299,6 @@ getPossibleRoutesBetweenTwoParentStops startParentStopCode endParentStopCode int
 
 data FRFSTicketCategory = FRFSTicketCategory
   { category :: FRFSQuoteCategoryType,
-    code :: Text,
-    title :: Text,
-    description :: Text,
-    tnc :: Text,
     price :: Price,
     offeredPrice :: Price,
     eligibility :: Bool
@@ -375,10 +371,6 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
         categories =
           [ FRFSTicketCategory
               { category = ADULT,
-                code = "ADULT",
-                title = "Adult General Ticket",
-                description = "Adult General Ticket",
-                tnc = "Terms and conditions apply for adult general ticket",
                 price = price,
                 offeredPrice = price,
                 eligibility = True
@@ -442,10 +434,6 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
                       categories =
                         [ FRFSTicketCategory
                             { category = ADULT,
-                              code = "ADULT",
-                              title = "Adult General Ticket",
-                              description = "Adult General Ticket",
-                              tnc = "Terms and conditions apply for adult general ticket",
                               price = price,
                               offeredPrice = price,
                               eligibility = True

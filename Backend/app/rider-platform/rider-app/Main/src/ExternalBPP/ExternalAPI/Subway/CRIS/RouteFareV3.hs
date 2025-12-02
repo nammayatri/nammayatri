@@ -138,10 +138,6 @@ getRouteFare config merchantOperatingCityId request useCache getAllFares = do
                 { categories =
                     [ FRFSUtils.FRFSTicketCategory
                         { category = ADULT,
-                          code = "ADULT",
-                          title = "Adult General Ticket",
-                          description = "Adult General Ticket",
-                          tnc = "Terms and conditions apply for adult general ticket",
                           price =
                             Price
                               { amountInt = round fareAmount,
@@ -158,10 +154,6 @@ getRouteFare config merchantOperatingCityId request useCache getAllFares = do
                         },
                       FRFSUtils.FRFSTicketCategory
                         { category = CHILD,
-                          code = "CHILD",
-                          title = "Child General Ticket",
-                          description = "Child General Ticket",
-                          tnc = "Terms and conditions apply for child general ticket",
                           price =
                             Price
                               { amountInt = round childFareAmount,

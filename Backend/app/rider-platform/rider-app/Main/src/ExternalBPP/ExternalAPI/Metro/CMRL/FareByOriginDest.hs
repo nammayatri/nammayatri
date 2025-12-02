@@ -84,10 +84,6 @@ getFareByOriginDest integrationBPPConfig config fareReq = do
                   { categories =
                       [ FRFSUtils.FRFSTicketCategory
                           { category = ADULT,
-                            code = ticketCategoryMetadataConfig <&> (.code) & fromMaybe "ADULT",
-                            title = ticketCategoryMetadataConfig <&> (.title) & fromMaybe "Adult General Ticket",
-                            description = ticketCategoryMetadataConfig <&> (.description) & fromMaybe "Adult General Ticket",
-                            tnc = ticketCategoryMetadataConfig <&> (.tnc) & fromMaybe "Terms and conditions apply for adult general ticket",
                             price =
                               Price
                                 { amountInt = round originalPrice,
