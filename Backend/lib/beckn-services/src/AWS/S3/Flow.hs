@@ -94,7 +94,9 @@ s3Host bN = T.unpack bN <> ".s3.amazonaws.com"
 
 get' ::
   ( CoreMetrics m,
-    MonadFlow m
+    MonadFlow m,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Text ->
   String ->
@@ -110,7 +112,9 @@ get' bucketName path = do
 
 put' ::
   ( CoreMetrics m,
-    MonadFlow m
+    MonadFlow m,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Text ->
   String ->
@@ -127,7 +131,9 @@ put' bucketName path img = do
 
 delete' ::
   ( CoreMetrics m,
-    MonadFlow m
+    MonadFlow m,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Text ->
   String ->
@@ -141,7 +147,7 @@ delete' bucketName path = do
       "DeleteS3"
       s3DeleteAPI
 
-callS3API :: CallAPI env api a
+callS3API :: CallAPI m r api a
 callS3API =
   callApiUnwrappingApiError
     (identity @S3Error)

@@ -35,7 +35,7 @@ import qualified SharedLogic.External.LocationTrackingService.API.RideDetails as
 import qualified SharedLogic.External.LocationTrackingService.API.StartRide as StartRideAPI
 import SharedLogic.External.LocationTrackingService.Types
 
-rideStart :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c) => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> Maybe RideInfo -> m APISuccess
+rideStart :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> Maybe RideInfo -> m APISuccess
 rideStart rideId lat lon merchantId driverId rideInfo = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
@@ -54,7 +54,7 @@ rideStart rideId lat lon merchantId driverId rideInfo = do
   logDebug $ "lts rideStart: " <> show rideStartRes
   return rideStartRes
 
-rideEnd :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c) => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> Maybe (Id DR.Ride) -> Maybe RideInfo -> m EndRideRes
+rideEnd :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> Double -> Double -> Id DM.Merchant -> Id DP.Person -> Maybe (Id DR.Ride) -> Maybe RideInfo -> m EndRideRes
 rideEnd rideId lat lon merchantId driverId mbNextRideId rideInfo = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
@@ -74,7 +74,7 @@ rideEnd rideId lat lon merchantId driverId mbNextRideId rideInfo = do
   logDebug $ "lts rideEnd: " <> show rideEndRes
   return rideEndRes
 
-nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c) => Double -> Double -> Maybe Bool -> Maybe [VehicleVariant] -> Int -> Id DM.Merchant -> Maybe Text -> Maybe Text -> m [DriverLocation]
+nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Double -> Double -> Maybe Bool -> Maybe [VehicleVariant] -> Int -> Id DM.Merchant -> Maybe Text -> Maybe Text -> m [DriverLocation]
 nearBy lat lon onRide vt radius merchantId groupId groupId2 = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
@@ -96,7 +96,7 @@ nearBy lat lon onRide vt radius merchantId groupId groupId2 = do
   logDebug $ "lts nearBy: " <> show nearByRes
   return nearByRes
 
-rideDetails :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c) => Id DR.Ride -> DR.RideStatus -> Id DM.Merchant -> Id DP.Person -> Double -> Double -> Maybe Bool -> Maybe RideInfo -> m APISuccess
+rideDetails :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> DR.RideStatus -> Id DM.Merchant -> Id DP.Person -> Double -> Double -> Maybe Bool -> Maybe RideInfo -> m APISuccess
 rideDetails rideId rideStatus merchantId driverId lat lon isFutureRide rideInfo = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
@@ -118,7 +118,7 @@ rideDetails rideId rideStatus merchantId driverId lat lon isFutureRide rideInfo 
   logDebug $ "lts rideDetails: " <> show rideDetailsRes
   return rideDetailsRes
 
-driversLocation :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c) => [Id DP.Person] -> m [DriverLocation]
+driversLocation :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => [Id DP.Person] -> m [DriverLocation]
 driversLocation driverIds = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
@@ -133,7 +133,7 @@ driversLocation driverIds = do
   logDebug $ "lts driversLocation: " <> show driversLocationRes
   return driversLocationRes
 
-driverLocation :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c) => Id DR.Ride -> Id DM.Merchant -> Id DP.Person -> m DriverLocationResp
+driverLocation :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> Id DM.Merchant -> Id DP.Person -> m DriverLocationResp
 driverLocation rideId merchantId driverId = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
@@ -149,7 +149,7 @@ driverLocation rideId merchantId driverId = do
   logDebug $ "lts driverLocation: " <> show driverLocationRes
   return driverLocationRes
 
-blockDriverLocationsTill :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c) => Id DM.Merchant -> Id DP.Person -> UTCTime -> m APISuccess
+blockDriverLocationsTill :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DM.Merchant -> Id DP.Person -> UTCTime -> m APISuccess
 blockDriverLocationsTill merchantId driverId blockTill = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url

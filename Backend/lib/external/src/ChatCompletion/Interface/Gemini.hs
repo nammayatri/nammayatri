@@ -8,8 +8,9 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
+import Kernel.Utils.Servant.Client
 
-geminiChatCompletion :: (EncFlow m r, CoreMetrics m, Log m) => CGC.GeminiCfg -> CIT.GeneralChatCompletionReq -> m CIT.GeneralChatCompletionResp
+geminiChatCompletion :: (EncFlow m r, CoreMetrics m, Log m, HasRequestId r, MonadReader r m) => CGC.GeminiCfg -> CIT.GeneralChatCompletionReq -> m CIT.GeneralChatCompletionResp
 geminiChatCompletion cfg req = do
   let chatCompletionUrl = cfg.geminiChatCompletionUrl
   apiKey <- decrypt cfg.geminiApiKey

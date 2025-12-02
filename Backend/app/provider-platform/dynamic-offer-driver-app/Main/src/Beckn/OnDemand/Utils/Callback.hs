@@ -71,7 +71,7 @@ type WithBecknCallback api callback_result m =
   m AckResponse
 
 withBecknCallback ::
-  (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]) =>
+  (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig], HasRequestId r) =>
   (m () -> m ()) ->
   Maybe ET.ManagerSelector ->
   Text ->

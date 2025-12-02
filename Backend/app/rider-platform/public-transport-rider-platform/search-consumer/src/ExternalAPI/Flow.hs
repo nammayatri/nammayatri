@@ -34,7 +34,8 @@ search ::
     CoreMetrics m,
     HasField "bapId" r Text,
     HasField "gatewayUrl" r BaseUrl,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   BecknReq Search.SearchMessage ->
   m ()
@@ -49,7 +50,8 @@ callBecknAPIWithSignature ::
     IsBecknAPI api req res,
     SanitizedUrl api,
     HasField "bapId" r Text,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   Proxy api ->

@@ -35,7 +35,8 @@ confirm ::
     MonadReader r m,
     CoreMetrics m,
     HasField "selfId" r Text,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   BaseUrl ->
   BecknReq ConfirmMessage ->
@@ -48,7 +49,8 @@ status ::
     MonadReader r m,
     CoreMetrics m,
     HasField "selfId" r Text,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   BaseUrl ->
   BecknReq Status.StatusMessage ->
@@ -62,7 +64,8 @@ callBecknAPIWithSignature ::
     SanitizedUrl api,
     IsBecknAPI api req res,
     HasField "selfId" r Text,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   Proxy api ->

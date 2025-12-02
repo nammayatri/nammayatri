@@ -27,7 +27,9 @@ getDriverId ::
   ( CoreMetrics m,
     MonadFlow m,
     MonadReader r m,
-    HasField "driverAppConfig" r DriverAppConfig
+    HasField "driverAppConfig" r DriverAppConfig,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Text ->
   m (Either ClientError Text)

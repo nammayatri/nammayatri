@@ -62,7 +62,8 @@ feedbackApi = Proxy
 feedback ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -102,7 +103,8 @@ stopEventsApi = Proxy
 stopEvents ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -130,7 +132,8 @@ meterRideAddDestinationAPI = Proxy
 meterRideAddDestination ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -163,7 +166,8 @@ getCustomerReferralInfoAPI = Proxy
 getCustomerReferralInfo ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -192,7 +196,8 @@ data InsuranceAPIEntity = InsuranceAPIEntity
 getInsuranceInfo ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -228,7 +233,8 @@ rideSearchExpiredAPI = Proxy
 rideSearchExpired ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -255,7 +261,8 @@ getPickupInstructionsAPI = Proxy
 getPickupInstructions ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->

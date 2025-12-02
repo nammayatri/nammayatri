@@ -22,7 +22,7 @@ import qualified Registry.Beckn.Interface.Types as Types
 import qualified Registry.Beckn.Nammayatri.Flow as Flow
 import Registry.Beckn.Nammayatri.Types
 
-updateCities :: (MonadFlow m, CoreMetrics m) => Types.UpdateSubscriberReq -> UpdData -> m UpdateCitiesRes
+updateCities :: (MonadFlow m, CoreMetrics m, HasRequestId r, MonadReader r m) => Types.UpdateSubscriberReq -> UpdData -> m UpdateCitiesRes
 updateCities Types.RegistryReq {..} updData =
   Flow.updateCities updData.apiKey registryUrl buildUpdCitiesReq
   where

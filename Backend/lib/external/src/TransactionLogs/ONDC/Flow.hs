@@ -24,7 +24,8 @@ import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (InternalError))
-import Kernel.Utils.Common (callAPI, fromEitherM, logDebug)
+import Kernel.Utils.Common (fromEitherM, logDebug)
+import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.HTML
 import Servant hiding (throwError)
 import TransactionLogs.ONDC.Types
@@ -35,7 +36,7 @@ type ONDCPushLogAPI =
     :> Post '[HTML] NoContent
 
 pushTxnLogsAPI ::
-  (CoreMetrics m, MonadFlow m) =>
+  (CoreMetrics m, MonadFlow m, HasRequestId r, MonadReader r m) =>
   ONDCConfig ->
   ONDCRequest ->
   m ()

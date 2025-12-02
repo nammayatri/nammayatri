@@ -61,7 +61,8 @@ instance
     HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     ToJSON d,
-    FromJSON d
+    FromJSON d,
+    HasRequestId r
   ) =>
   CallServerAPI apis m r (Euler.EulerClient d) (m d)
   where

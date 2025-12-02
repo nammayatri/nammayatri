@@ -86,7 +86,7 @@ type GetWalletAPI =
     :> Header "Authorization" Text
     :> Get '[JSON] NoContent
 
-updateTicketStatusForGoogleWallet :: (Metrics.CoreMetrics m, MonadFlow m, HasFlowEnv m r '["googleSAPrivateKey" ::: String]) => TC.TransitObjectPatch -> TC.ServiceAccount -> Text -> m ()
+updateTicketStatusForGoogleWallet :: (Metrics.CoreMetrics m, MonadFlow m, HasFlowEnv m r '["googleSAPrivateKey" ::: String], HasRequestId r, MonadReader r m) => TC.TransitObjectPatch -> TC.ServiceAccount -> Text -> m ()
 updateTicketStatusForGoogleWallet obj sa resourceId = do
   privateKey <- asks (.googleSAPrivateKey)
   let additionalClaims = TC.createAdditionalClaims [("scope", String "https://www.googleapis.com/auth/wallet_object.issuer")]
@@ -117,7 +117,7 @@ updateTicketStatusForGoogleWallet obj sa resourceId = do
   url <- parseBaseUrl "https://walletobjects.googleapis.com"
   void $ callAPI url eulerClient "Calling Google Wallet API" (Proxy @PatchWalletAPI) >>= fromEitherM (FailedToCallWalletAPI . show)
 
-getObjectGoogleWallet :: (Metrics.CoreMetrics m, MonadFlow m, HasFlowEnv m r '["googleSAPrivateKey" ::: String]) => TC.ServiceAccount -> Text -> m (Maybe NoContent)
+getObjectGoogleWallet :: (Metrics.CoreMetrics m, MonadFlow m, HasFlowEnv m r '["googleSAPrivateKey" ::: String], HasRequestId r, MonadReader r m) => TC.ServiceAccount -> Text -> m (Maybe NoContent)
 getObjectGoogleWallet sa resourceId = do
   privateKey <- asks (.googleSAPrivateKey)
   let additionalClaims = TC.createAdditionalClaims [("scope", String "https://www.googleapis.com/auth/wallet_object.issuer")]

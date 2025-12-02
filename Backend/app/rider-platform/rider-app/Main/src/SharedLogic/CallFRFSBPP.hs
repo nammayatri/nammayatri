@@ -46,7 +46,7 @@ type BecknAPICallFlow m r =
   )
 
 callBPPStatus ::
-  BecknAPICallFlow m r =>
+  (BecknAPICallFlow m r, HasRequestId r) =>
   DFRFSTicketBooking.FRFSTicketBooking ->
   BecknConfig ->
   Context.City ->
@@ -62,7 +62,8 @@ callBPPStatus booking bapConfig city merchantId = do
 search ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    BecknAPICallFlow m r
+    BecknAPICallFlow m r,
+    HasRequestId r
   ) =>
   BaseUrl ->
   Spec.SearchReq ->
@@ -76,7 +77,8 @@ search gatewayUrl req merchantId = do
 select ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    BecknAPICallFlow m r
+    BecknAPICallFlow m r,
+    HasRequestId r
   ) =>
   BaseUrl ->
   Spec.SelectReq ->
@@ -90,7 +92,8 @@ select providerUrl req merchantId = do
 init ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    BecknAPICallFlow m r
+    BecknAPICallFlow m r,
+    HasRequestId r
   ) =>
   BaseUrl ->
   Spec.InitReq ->
@@ -104,7 +107,8 @@ init providerUrl req merchantId = do
 confirm ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    BecknAPICallFlow m r
+    BecknAPICallFlow m r,
+    HasRequestId r
   ) =>
   BaseUrl ->
   Spec.ConfirmReq ->
@@ -116,7 +120,7 @@ confirm providerUrl req merchantId = do
   callBecknAPIWithSignature' merchantId bapId "confirm" Spec.confirmAPI providerUrl internalEndPointHashMap req
 
 status ::
-  BecknAPICallFlow m r =>
+  (BecknAPICallFlow m r, HasRequestId r) =>
   BaseUrl ->
   Spec.StatusReq ->
   Id Merchant.Merchant ->
@@ -129,7 +133,8 @@ status providerUrl req merchantId = do
 cancel ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    BecknAPICallFlow m r
+    BecknAPICallFlow m r,
+    HasRequestId r
   ) =>
   BaseUrl ->
   Spec.CancelReq ->
@@ -147,7 +152,8 @@ callBecknAPIWithSignature' ::
     SanitizedUrl api,
     ToJSON req,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasRequestId r
   ) =>
   Id Merchant.Merchant ->
   Text ->

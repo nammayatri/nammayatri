@@ -39,7 +39,7 @@ sendDLVerification = sendVerification "DLVerificationResult"
 sendRCVerification :: VerificationResponse -> Flow AckResponse
 sendRCVerification = sendVerification "RCVerificationResult"
 
-callWebhookAPI :: CallAPI env api res
+callWebhookAPI :: CallAPI m r api res
 callWebhookAPI = callApiUnwrappingApiError (identity @Error) Nothing Nothing Nothing
 
 buildMeaninglessIdfyResponse :: (MonadTime m, MonadGuid m) => Maybe a -> m (IdfyResponse a)

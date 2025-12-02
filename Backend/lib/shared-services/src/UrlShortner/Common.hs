@@ -40,7 +40,9 @@ generateShortUrlClient = ET.client generateShortUrlAPI
 generateShortUrl ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortnerConfig]
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortnerConfig],
+    HasRequestId r,
+    MonadReader r m
   ) =>
   GenerateShortUrlReq ->
   m GenerateShortUrlRes

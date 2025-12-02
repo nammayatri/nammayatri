@@ -40,7 +40,7 @@ type StationListAPI =
 stationListAPI :: Proxy StationListAPI
 stationListAPI = Proxy
 
-getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> m [Station]
+getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> m [Station]
 getStationList config = do
   let eulerClient = \accessToken -> ET.client stationListAPI (Just $ "Bearer " <> accessToken) cmrlAppType
   response <- callCMRLAPI config eulerClient "getStationList" stationListAPI

@@ -25,7 +25,7 @@ import SharedLogic.External.LocationTrackingService.Types
 
 data VehicleTracking = ByRoute Text | ByTrips [Text]
 
-vehicleTrackingOnRoute :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c) => VehicleTracking -> m [VehicleTrackingOnRouteResp]
+vehicleTrackingOnRoute :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => VehicleTracking -> m [VehicleTrackingOnRouteResp]
 vehicleTrackingOnRoute vehicleTracking = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
@@ -40,7 +40,7 @@ vehicleTrackingOnRoute vehicleTracking = do
   logDebug $ "lts vehicle tracking on route: " <> show vehicleTrackingOnRouteResp
   return vehicleTrackingOnRouteResp
 
-nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c) => NearByDriverReq -> m [NearByDriverRes]
+nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => NearByDriverReq -> m [NearByDriverRes]
 nearBy req = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url

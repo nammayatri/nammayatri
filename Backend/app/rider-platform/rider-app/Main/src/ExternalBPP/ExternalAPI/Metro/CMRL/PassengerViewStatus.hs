@@ -55,7 +55,7 @@ type PassengerViewStatusAPI =
 passengerViewStatusAPI :: Proxy PassengerViewStatusAPI
 passengerViewStatusAPI = Proxy
 
-getPassengerViewStatus :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> PassengerViewStatusReq -> m [TicketDetails]
+getPassengerViewStatus :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> PassengerViewStatusReq -> m [TicketDetails]
 getPassengerViewStatus config req = do
   let eulerClient = \accessToken -> ET.client passengerViewStatusAPI (Just $ "Bearer " <> accessToken) req
   response <- callCMRLAPI config eulerClient "getPassengerViewStatus" passengerViewStatusAPI

@@ -72,7 +72,7 @@ type CheckMobTicketsAPI =
 checkMobTicketsAPI :: Proxy CheckMobTicketsAPI
 checkMobTicketsAPI = Proxy
 
-getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => EBIXConfig -> FRFSTicketBooking -> m [ProviderTicket]
+getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => EBIXConfig -> FRFSTicketBooking -> m [ProviderTicket]
 getTicketStatus config booking = do
   tickets <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
   updatedTickets <-

@@ -8,7 +8,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
 
-configValidate :: (CoreMetrics m, MonadFlow m) => BaseUrl -> Value -> m TSServiceValidateResp
+configValidate :: (CoreMetrics m, MonadFlow m, HasRequestId r, MonadReader r m) => BaseUrl -> Value -> m TSServiceValidateResp
 configValidate url req = do
   callAPI url (CPI.tsServiceValidate req) "tsServiceValidate" CPI.tsServiceValidateAPI
     >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_TS_SERVICE_VALIDATE_API") url)

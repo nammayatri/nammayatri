@@ -17,13 +17,15 @@ module TransactionLogs.Interface
   )
 where
 
+import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
+import Kernel.Utils.Servant.Client
 import qualified TransactionLogs.Interface.ONDC as ONDC
 import TransactionLogs.Interface.Types
 
 pushTxnLogs ::
-  (CoreMetrics m, MonadFlow m) =>
+  (CoreMetrics m, MonadFlow m, HasRequestId r, MonadReader r m) =>
   TransactionLogsConfigType ->
   TransactionLogReq ->
   m ()

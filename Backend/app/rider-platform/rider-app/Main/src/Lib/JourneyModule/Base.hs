@@ -396,7 +396,8 @@ getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId r
             minimumWalkDistance = riderConfig.minimumWalkDistance,
             permissibleModes = permissibleModesToUse,
             maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
-            sortingType = convertSortingType $ fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
+            sortingType = convertSortingType $ fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType,
+            walkSpeed = Nothing
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq merchantId merchantOperatingCityId
   otpResponse <- KMultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")

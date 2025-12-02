@@ -49,7 +49,7 @@ type AuthAPI =
 authAPI :: Proxy AuthAPI
 authAPI = Proxy
 
-getAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => EBIXConfig -> m Text
+getAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => EBIXConfig -> m Text
 getAuthToken config = do
   authToken :: (Maybe Text) <- Hedis.get authTokenKey
   case authToken of

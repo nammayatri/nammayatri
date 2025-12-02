@@ -42,7 +42,9 @@ callBAP ::
   ( MonadFlow m,
     HasFlowEnv m r '["selfId" ::: Text],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    CoreMetrics m
+    CoreMetrics m,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   BaseUrl ->
   BS.ByteString ->

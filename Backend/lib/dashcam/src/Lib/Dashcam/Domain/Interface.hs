@@ -5,6 +5,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude hiding (error)
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common (MonadFlow)
+import Kernel.Utils.Servant.Client
 import Lib.Dashcam.Domain.Cautio.Flow as Cautio
 import Lib.Dashcam.Domain.Cautio.Types as Cautio
 
@@ -14,7 +15,9 @@ data DashCamServiceConfig = CautioConfig Cautio.CautioConfig
 cautioInstallationStatus ::
   ( MonadFlow m,
     EncFlow m r,
-    Metrics.CoreMetrics m
+    Metrics.CoreMetrics m,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Cautio.CautioConfig ->
   Cautio.InstallationStatusReq ->

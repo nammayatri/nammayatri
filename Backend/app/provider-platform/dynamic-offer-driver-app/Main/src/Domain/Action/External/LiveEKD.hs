@@ -8,7 +8,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Tools.Metrics
 
-liveEKDProdLoop :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["vocalyticsCnfg" ::: VocalyticsCnfg]) => Text -> Text -> Text -> m APISuccess
+liveEKDProdLoop :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["vocalyticsCnfg" ::: VocalyticsCnfg], HasRequestId r, MonadReader r m) => Text -> Text -> Text -> m APISuccess
 liveEKDProdLoop file call_id user_type = do
   vocalyticsCnfg <- asks (.vocalyticsCnfg)
   let url = vocalyticsCnfg.url

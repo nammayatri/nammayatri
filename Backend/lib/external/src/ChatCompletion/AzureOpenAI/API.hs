@@ -22,7 +22,7 @@ type ChatCompletionAPI =
 chatCompletionClient :: Text -> Text -> CAT.ChatCompletionReq -> EulerClient CAT.ChatCompletionResponse
 chatCompletionClient = client (Proxy :: Proxy AzureOpenAIAPI)
 
-chatCompletion :: (CoreMetrics m, MonadFlow m) => BaseUrl -> Text -> Text -> CAT.ChatCompletionReq -> m CAT.ChatCompletionResponse
+chatCompletion :: (CoreMetrics m, MonadFlow m, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> CAT.ChatCompletionReq -> m CAT.ChatCompletionResponse
 chatCompletion url apiVersion apiKey req = do
   callAPI url (chatCompletionClient apiVersion apiKey req) "chatCompletion" (Proxy :: Proxy AzureOpenAIAPI)
     >>= fromEitherM (\err -> InternalError $ "Failed to call Azure OpenAI chatCompletion" <> " API: " <> show err)

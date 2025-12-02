@@ -121,7 +121,7 @@ getBppOrderId booking = do
 -- 15. UDF5
 -- 16. UDF6
 -- {tt: [{t: "37001,37017,1,0,5,10-10-2024 19:04:54,2185755416,13,5185,,,,,130,,,"}]}
-getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, HasKafkaProducer r) => EBIXConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> [FRFSQuoteCategory] -> FRFSRouteStationsAPI -> m ProviderTicket
+getTicketDetail :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, HasKafkaProducer r, HasRequestId r, MonadReader r m) => EBIXConfig -> IntegratedBPPConfig -> Seconds -> FRFSTicketBooking -> [FRFSQuoteCategory] -> FRFSRouteStationsAPI -> m ProviderTicket
 getTicketDetail config integratedBPPConfig qrTtl _ quoteCategories routeStation = do
   busTypeId <- routeStation.vehicleServiceTier <&> (.providerCode) & fromMaybeM (InternalError "Bus Provider Code Not Found.")
   when (null routeStation.stations) $ throwError (InternalError "Empty Stations")
@@ -238,7 +238,7 @@ type CreateQRAPI =
 createQRAPI :: Proxy CreateQRAPI
 createQRAPI = Proxy
 
-generateQR :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => EBIXConfig -> Text -> m Text
+generateQR :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => EBIXConfig -> Text -> m Text
 generateQR config qrData = do
   token <- getAuthToken config
   encryptedQR <-

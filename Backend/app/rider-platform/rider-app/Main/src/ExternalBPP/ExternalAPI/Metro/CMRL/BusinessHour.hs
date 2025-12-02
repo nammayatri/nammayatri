@@ -40,7 +40,7 @@ type BusinessHourAPI =
 businessHourAPI :: Proxy BusinessHourAPI
 businessHourAPI = Proxy
 
-getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> m BusinessHourResult
+getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> m BusinessHourResult
 getBusinessHour config = do
   let eulerClient = \accessToken -> ET.client businessHourAPI (Just $ "Bearer " <> accessToken) cmrlAppType
   response <- callCMRLAPI config eulerClient "getBusinessHour" businessHourAPI

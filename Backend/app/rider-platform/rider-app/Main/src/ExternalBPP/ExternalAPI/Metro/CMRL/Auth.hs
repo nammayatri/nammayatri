@@ -49,14 +49,14 @@ authTokenKey = "CMRLAuth:Token"
 cmrlAppType :: Text
 cmrlAppType = "CMRL_CUM_IQR"
 
-getAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> m Text
+getAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> m Text
 getAuthToken config = do
   authToken :: (Maybe Text) <- Hedis.get authTokenKey
   case authToken of
     Nothing -> resetAuthToken config
     Just token -> return token
 
-resetAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> m Text
+resetAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> m Text
 resetAuthToken config = do
   password <- decrypt config.password
   auth <-
@@ -72,7 +72,9 @@ callCMRLAPI ::
     MonadFlow m,
     ToJSON res,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   CMRLConfig ->
   (Text -> ET.EulerClient res) ->

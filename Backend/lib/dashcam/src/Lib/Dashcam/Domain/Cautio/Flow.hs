@@ -6,7 +6,8 @@ import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (InternalError))
-import Kernel.Utils.Common (callAPI, fromEitherM)
+import Kernel.Utils.Common (fromEitherM)
+import Kernel.Utils.Servant.Client
 import qualified Lib.Dashcam.Domain.Cautio.Types as Cautio
 import Servant hiding (throwError)
 
@@ -20,7 +21,9 @@ type CautioInstallationStatus =
 cautioInstallationStatus ::
   ( Metrics.CoreMetrics m,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   BaseUrl ->
   Cautio.InstallationStatusReq ->

@@ -22,9 +22,9 @@ import Registry.Beckn.Interface.Types
 import qualified Registry.Beckn.Nammayatri.Flow as Flow
 import Registry.Beckn.Nammayatri.Types as NyRegistry
 
-updateSubscriber :: (MonadFlow m, CoreMetrics m) => UpdateSubscriberReq -> m UpdateSubscriberResp
+updateSubscriber :: (MonadFlow m, CoreMetrics m, HasRequestId r, MonadReader r m) => UpdateSubscriberReq -> m UpdateSubscriberResp
 updateSubscriber updSubReq = case updSubReq._data of
   UpdSubNY _data -> UpdSubResNY <$> Ny.updateCities updSubReq _data
 
-createSubscriber :: (MonadFlow m, CoreMetrics m) => BaseUrl -> NyRegistry.Subscriber -> m AckResponse
+createSubscriber :: (MonadFlow m, CoreMetrics m, HasRequestId r, MonadReader r m) => BaseUrl -> NyRegistry.Subscriber -> m AckResponse
 createSubscriber = Flow.createSubscriber

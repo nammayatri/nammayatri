@@ -71,7 +71,8 @@ likeRefereeApi = Proxy
 linkReferee ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -114,7 +115,8 @@ callCustomerFCMApi = Proxy
 callCustomerFCM ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -159,7 +161,8 @@ feedbackFormApi = Proxy
 feedbackForm ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   BaseUrl ->
   FeedbackFormReq ->
@@ -192,7 +195,8 @@ disputeCancellationDuesApi = Proxy
 disputeCancellationDues ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -231,7 +235,8 @@ getCancellationDuesDetailsApi = Proxy
 getCancellationDuesDetails ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -267,7 +272,8 @@ getFavouriteDriversApi = Proxy
 getFavouriteDriverList ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -297,7 +303,8 @@ removeFavouriteDriverApi = Proxy
 removeFavouriteDriver ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -338,7 +345,8 @@ customerCancellationDuesSyncApi = Proxy
 customerCancellationDuesSync ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -372,7 +380,8 @@ reportACIssueApi = Proxy
 reportACIssue ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -399,7 +408,8 @@ reportIssueApi = Proxy
 reportIssue ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -464,7 +474,8 @@ getKnowYourDriverApi = Proxy
 getknowYourDriverDetails ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -492,7 +503,8 @@ getKnowYourFavDriverApi = Proxy
 getKnowYourFavDriverDetails ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -519,7 +531,8 @@ getDriverCoordinatesApi = Proxy
 getDriverCoordinatesDetails ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -546,7 +559,8 @@ populateTipAmountApi = Proxy
 populateTipAmount ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -574,7 +588,8 @@ getDeliveryImageClient = client getDeliveryImageApi
 getDeliveryImage ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -627,7 +642,8 @@ getFareApi = Proxy
 getFare ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Merchant ->
   Context.City ->
@@ -694,7 +710,8 @@ fleetVehicleListApi = Proxy
 getFleetVehicles ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Merchant ->
   Text ->
@@ -725,7 +742,8 @@ getIsInterCityApi = Proxy
 getIsInterCity ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Merchant ->
   IsIntercityReq ->
@@ -821,7 +839,8 @@ updateFleetBookingInformationApi = Proxy
 createFleetBookingInformation ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Merchant ->
   CreateFleetBookingInformationReq ->
@@ -835,7 +854,8 @@ createFleetBookingInformation merchant req = do
 updateFleetBookingInformation ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Merchant ->
   UpdateFleetBookingInformationReq ->
@@ -862,7 +882,8 @@ getEstimateDetailsApi = Proxy
 getEstimateDetails ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -944,7 +965,8 @@ sendPickupInstructionApi = Proxy
 sendPickupInstruction ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->
@@ -981,7 +1003,8 @@ customerCancellationDuesWaiveOffApi = Proxy
 customerCancellationDuesWaiveOff ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->

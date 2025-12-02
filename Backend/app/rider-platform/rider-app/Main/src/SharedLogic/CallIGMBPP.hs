@@ -30,7 +30,8 @@ import Tools.Metrics (CoreMetrics)
 issue ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   BaseUrl ->
   Spec.IssueReq ->
@@ -43,7 +44,8 @@ issue providerUrl req = do
 onIssue ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   BaseUrl ->
   Spec.OnIssueReq ->
@@ -56,7 +58,8 @@ onIssue providerUrl req = do
 issueStatus ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   BaseUrl ->
   Spec.IssueStatusReq ->
@@ -70,7 +73,9 @@ callBecknAPIWithSignature ::
   ( MonadFlow m,
     CoreMetrics m,
     IsBecknAPI api req res,
-    SanitizedUrl api
+    SanitizedUrl api,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Text ->
   Text ->

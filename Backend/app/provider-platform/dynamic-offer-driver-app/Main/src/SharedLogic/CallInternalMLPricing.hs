@@ -75,7 +75,8 @@ getCongestionChargeApi = Proxy
 getCongestionCharge ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Text ->
   BaseUrl ->

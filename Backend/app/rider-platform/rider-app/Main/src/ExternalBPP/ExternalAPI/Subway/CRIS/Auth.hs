@@ -45,7 +45,7 @@ getCRISTokenKey :: Text
 getCRISTokenKey = "cris-token"
 
 resetAuthToken ::
-  (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) =>
+  (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) =>
   CRISConfig ->
   m Text
 resetAuthToken config = do
@@ -82,7 +82,7 @@ resetAuthToken config = do
         Just token -> return token
 
 getAuthToken ::
-  (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) =>
+  (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r) =>
   CRISConfig ->
   m Text
 getAuthToken config = do
@@ -99,7 +99,9 @@ callCRISAPI ::
     ToJSON res,
     CacheFlow m r,
     EncFlow m r,
-    FromResponse CRISErrorUnhandled
+    FromResponse CRISErrorUnhandled,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   CRISConfig ->
   Proxy api ->

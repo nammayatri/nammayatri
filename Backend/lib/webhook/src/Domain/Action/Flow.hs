@@ -9,7 +9,8 @@ import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (InternalError))
-import Kernel.Utils.Common (callAPI, fromEitherM)
+import Kernel.Utils.Common (fromEitherM)
+import Kernel.Utils.Servant.Client
 import Servant hiding (throwError)
 
 mkBasicAuthData :: Text -> Text -> BasicAuthData
@@ -30,7 +31,9 @@ type NYWebhookAPI =
 nyWebhook ::
   ( Metrics.CoreMetrics m,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   BaseUrl ->
   EncryptedField 'AsEncrypted Text ->

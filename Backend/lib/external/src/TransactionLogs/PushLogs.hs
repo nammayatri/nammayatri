@@ -29,7 +29,9 @@ import TransactionLogs.Interface.Types
 pushLogs ::
   ( CoreMetrics m,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Text ->
   A.Value ->

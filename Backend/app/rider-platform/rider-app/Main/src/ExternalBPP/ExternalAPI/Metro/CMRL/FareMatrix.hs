@@ -42,7 +42,7 @@ type FareMatrixAPI =
 fareMatrixAPI :: Proxy FareMatrixAPI
 fareMatrixAPI = Proxy
 
-getFareMatrix :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> m [FareMatrixRes]
+getFareMatrix :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> m [FareMatrixRes]
 getFareMatrix config = do
   let eulerClient = \accessToken -> ET.client fareMatrixAPI (Just $ "Bearer " <> accessToken) cmrlAppType
   fareMatrixRes <- callCMRLAPI config eulerClient "getFareMatrix" fareMatrixAPI

@@ -51,7 +51,8 @@ getMultiModalModes req toLatLong merchantId person merchantOperatingCityId = do
             minimumWalkDistance = riderConfig.minimumWalkDistance,
             permissibleModes = fromMaybe [] riderConfig.permissibleModes,
             maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
-            sortingType = JMU.convertSortingType $ fromMaybe DMP.FASTEST userPref.journeyOptionsSortingType
+            sortingType = JMU.convertSortingType $ fromMaybe DMP.FASTEST userPref.journeyOptionsSortingType,
+            walkSpeed = Nothing
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq merchantId person.merchantOperatingCityId
   MultiModal.getTransitRoutes (Just person.id.getId) transitServiceReq transitRoutesReq

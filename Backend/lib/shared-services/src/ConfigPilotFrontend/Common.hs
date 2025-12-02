@@ -56,7 +56,9 @@ data ConfigPilotFrontendConfig = ConfigPilotFrontendConfig
 
 callConfigPilotFrontend ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   ConfigPilotFrontendReq ->
   ConfigPilotFrontendConfig ->

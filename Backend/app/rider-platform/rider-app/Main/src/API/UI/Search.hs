@@ -870,7 +870,8 @@ checkSearchRateLimit ::
   ( Redis.HedisFlow m r,
     HasFlowEnv m r '["slackCfg" ::: SlackConfig],
     HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
-    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text]
+    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text],
+    HasRequestId r
   ) =>
   Id Person.Person ->
   m ()

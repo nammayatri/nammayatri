@@ -1445,7 +1445,8 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
                 minimumWalkDistance = riderConfig.minimumWalkDistance,
                 permissibleModes = fromMaybe [] riderConfig.permissibleModes,
                 maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
-                sortingType = MultiModal.Fastest
+                sortingType = MultiModal.Fastest,
+                walkSpeed = if fromMaybe False journey.isSingleMode then riderConfig.singleModeWalkSpeed else Nothing
               }
 
       transitServiceReq <- TMultiModal.getTransitServiceReq journey.merchantId reqJourneyLeg.merchantOperatingCityId

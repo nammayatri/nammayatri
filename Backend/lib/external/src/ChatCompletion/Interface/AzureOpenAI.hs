@@ -8,8 +8,9 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
+import Kernel.Utils.Servant.Client
 
-azureOpenAIChatCompletion :: (EncFlow m r, CoreMetrics m, Log m) => CAC.AzureOpenAICfg -> CIT.GeneralChatCompletionReq -> m CIT.GeneralChatCompletionResp
+azureOpenAIChatCompletion :: (EncFlow m r, CoreMetrics m, Log m, HasRequestId r, MonadReader r m) => CAC.AzureOpenAICfg -> CIT.GeneralChatCompletionReq -> m CIT.GeneralChatCompletionResp
 azureOpenAIChatCompletion cfg req = do
   let chatCompletionUrl = cfg.azureOpenAIChatCompletionUrl
       apiVersion = cfg.azureApiVersion

@@ -21,7 +21,7 @@ type GeminiGenerateContentAPI =
 geminiChatCompletionClient :: Text -> CGT.ContentsReq -> EulerClient CGT.ContentsResp
 geminiChatCompletionClient = client (Proxy :: Proxy GeminiAPI)
 
-geminiChatCompletion :: (CoreMetrics m, MonadFlow m) => BaseUrl -> Text -> CGT.ContentsReq -> m CGT.ContentsResp
+geminiChatCompletion :: (CoreMetrics m, MonadFlow m, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> CGT.ContentsReq -> m CGT.ContentsResp
 geminiChatCompletion url apiKey req = do
   callAPI url (geminiChatCompletionClient apiKey req) "chatCompletion" (Proxy :: Proxy GeminiAPI)
     >>= fromEitherM (\err -> InternalError $ "Failed to call Gemini chatCompletion" <> " API: " <> show err)

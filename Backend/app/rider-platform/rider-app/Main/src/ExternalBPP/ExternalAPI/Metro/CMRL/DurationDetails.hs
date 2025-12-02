@@ -44,7 +44,7 @@ type DurationDetailsAPI =
 durationDetailsAPI :: Proxy DurationDetailsAPI
 durationDetailsAPI = Proxy
 
-getDurationDetails :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> DurationDetailsReq -> m [DurationDetailsResult]
+getDurationDetails :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> DurationDetailsReq -> m [DurationDetailsResult]
 getDurationDetails config req = do
   let eulerClient = \accessToken -> ET.client durationDetailsAPI (Just $ "Bearer " <> accessToken) req
   response <- callCMRLAPI config eulerClient "getDurationDetails" durationDetailsAPI

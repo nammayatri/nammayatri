@@ -32,7 +32,7 @@ import Lib.Scheduler.Types (ExecutionResult (..))
 import SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.DriverPool
 
-type HandleMonad m r = (MonadClock m, Log m, CoreMetrics m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl])
+type HandleMonad m r = (MonadClock m, Log m, CoreMetrics m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasRequestId r)
 
 data MetricsHandle m = MetricsHandle
   { incrementTaskCounter :: m (),

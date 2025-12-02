@@ -20,12 +20,13 @@ import qualified Data.Text.Lazy.Encoding as LTE
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
+import Kernel.Utils.Servant.Client
 import qualified TransactionLogs.Interface.Types as IT
 import qualified TransactionLogs.ONDC.Flow as OF
 import TransactionLogs.ONDC.Types as ONDC
 
 pushTxnLogs ::
-  (CoreMetrics m, MonadFlow m) =>
+  (CoreMetrics m, MonadFlow m, HasRequestId r, MonadReader r m) =>
   ONDCConfig ->
   IT.TransactionLogReq ->
   m ()

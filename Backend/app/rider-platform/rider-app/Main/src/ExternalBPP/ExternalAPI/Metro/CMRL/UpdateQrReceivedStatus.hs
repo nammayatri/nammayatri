@@ -46,7 +46,7 @@ updateQrReceivedStatusAPI :: Proxy UpdateQrReceivedStatusAPI
 updateQrReceivedStatusAPI = Proxy
 
 updateQrReceivedStatus ::
-  (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) =>
+  (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) =>
   CMRLConfig ->
   UpdateQrReceivedStatusReq ->
   m UpdateQrReceivedStatusResult

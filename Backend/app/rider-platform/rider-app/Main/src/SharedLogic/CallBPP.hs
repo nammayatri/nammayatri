@@ -70,7 +70,8 @@ searchV2 gatewayUrl req merchantId = do
 searchMetro ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   BaseUrl ->
   BecknReq MigAPI.SearchIntent ->
@@ -154,7 +155,8 @@ cancelV2 merchantId providerUrl req = do
 update ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   BaseUrl ->
   UpdateReq ->
@@ -166,7 +168,8 @@ update providerUrl req = do
 updateV2 ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   BaseUrl ->
   UpdateReqV2 ->
@@ -215,7 +218,8 @@ data GetLocationRes = GetLocationRes
 callGetDriverLocation ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   Maybe BaseUrl ->
   m GetLocationRes
@@ -232,7 +236,8 @@ feedbackV2 ::
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasRequestId r
   ) =>
   BaseUrl ->
   RatingReqV2 ->
@@ -250,7 +255,8 @@ callStatusV2 ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasRequestId r
   ) =>
   BaseUrl ->
   StatusReqV2 ->
@@ -265,7 +271,9 @@ callBecknAPIWithSignature ::
   ( MonadFlow m,
     CoreMetrics m,
     IsBecknAPI api req res,
-    SanitizedUrl api
+    SanitizedUrl api,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Text ->
   Text ->
@@ -285,7 +293,8 @@ callBecknAPIWithSignature' ::
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasRequestId r
   ) =>
   Id Merchant.Merchant ->
   Text ->
@@ -304,7 +313,9 @@ callBecknAPIWithSignatureMetro ::
   ( MonadFlow m,
     CoreMetrics m,
     IsBecknAPI api req res,
-    SanitizedUrl api
+    SanitizedUrl api,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Text ->
   Proxy api ->
