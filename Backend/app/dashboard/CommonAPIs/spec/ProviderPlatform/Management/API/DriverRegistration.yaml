@@ -218,6 +218,7 @@ types:
     - ventilator: Maybe Bool
     - createdAt: UTCTime
     - failedRules: [Text]
+    - verificationStatus: Maybe VerificationStatus
   DocumentsListResponse:
     - driverLicense: "[[Text]]"
     - vehicleRegistrationCertificate: [Text]

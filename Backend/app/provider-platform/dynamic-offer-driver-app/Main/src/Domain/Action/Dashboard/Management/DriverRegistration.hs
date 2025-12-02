@@ -209,7 +209,8 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
             createdAt = rc.createdAt,
             dateOfRegistration = rc.dateOfRegistration,
             vehicleModelYear = rc.vehicleModelYear,
-            failedRules = rc.failedRules
+            failedRules = rc.failedRules,
+            verificationStatus = Just $ DCommon.castVerificationStatus rc.verificationStatus
           }
 
     toCommonDocumentItem :: DCommonDoc.CommonDriverOnboardingDocuments -> Common.CommonDocumentItem

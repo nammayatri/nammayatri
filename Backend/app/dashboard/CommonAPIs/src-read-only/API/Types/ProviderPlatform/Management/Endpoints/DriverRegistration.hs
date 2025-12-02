@@ -291,7 +291,8 @@ data RCDetails = RCDetails
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
-    failedRules :: [Kernel.Prelude.Text]
+    failedRules :: [Kernel.Prelude.Text],
+    verificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

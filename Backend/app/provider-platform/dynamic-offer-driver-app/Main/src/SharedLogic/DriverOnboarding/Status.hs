@@ -154,7 +154,8 @@ data RCDetails = RCDetails
     oxygen :: Maybe Bool,
     ventilator :: Maybe Bool,
     createdAt :: UTCTime,
-    failedRules :: [Text]
+    failedRules :: [Text],
+    verificationStatus :: Maybe Documents.VerificationStatus
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -320,7 +321,8 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory prefillDat
             vehicleModelYear = rc.vehicleModelYear,
             oxygen = rc.oxygen,
             ventilator = rc.ventilator,
-            failedRules = rc.failedRules
+            failedRules = rc.failedRules,
+            verificationStatus = Just rc.verificationStatus
           }
 
 isFleetRole :: DP.Role -> Bool

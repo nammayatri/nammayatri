@@ -233,7 +233,8 @@ data RCDetails = RCDetails
     vehicleClass :: Kernel.Prelude.Text,
     fitnessExpiry :: Kernel.Prelude.UTCTime,
     insuranceExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    failedRules :: [Kernel.Prelude.Text]
+    failedRules :: [Kernel.Prelude.Text],
+    verificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
