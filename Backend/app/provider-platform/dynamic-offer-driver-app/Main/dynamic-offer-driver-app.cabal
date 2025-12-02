@@ -764,6 +764,7 @@ library
       Tools.Ticket
       Tools.Utils
       Tools.Verification
+      Tools.Wallet
       Tools.Whatsapp
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Driver

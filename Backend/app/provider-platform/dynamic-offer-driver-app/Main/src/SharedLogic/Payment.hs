@@ -43,6 +43,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import SharedLogic.DriverFee (roundToHalf)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
@@ -66,12 +67,10 @@ data MandateOrder = MandateOrder
   }
 
 createOrder ::
-  ( CacheFlow m r,
+  ( PaymentBeamFlow.BeamFlow m r,
     EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
     EncFlow m r,
     CoreMetrics m,
-    MonadFlow m,
     HasKafkaProducer r
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->

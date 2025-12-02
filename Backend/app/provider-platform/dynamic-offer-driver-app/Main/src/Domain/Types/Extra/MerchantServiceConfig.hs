@@ -23,6 +23,7 @@ import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.Types
+import Kernel.External.Wallet.Interface as Wallet
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import Lib.Dashcam.Domain.Interface as DashcamInter
@@ -52,6 +53,7 @@ data ServiceName
   | IncidentReportService IncidentReport.IncidentReportService
   | LLMChatCompletionService ChatCompletion.Types.LLMChatCompletionService
   | DashCamService Dashcam.DashcamService
+  | WalletService Wallet.WalletService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -77,6 +79,7 @@ instance Show ServiceName where
   show (IncidentReportService s) = "IncidentReport_" <> show s
   show (LLMChatCompletionService s) = "LLMChatCompletion_" <> show s
   show (DashCamService s) = "DashCamService_" <> show s
+  show (WalletService s) = "Wallet_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -159,6 +162,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "DashCamService_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (WalletService v1, r2)
+                 | r1 <- stripPrefix "Wallet_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -184,6 +191,7 @@ data ServiceConfigD (s :: UsageSafety)
   | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig
   | LLMChatCompletionServiceConfig !ChatCompletion.Interface.Types.LLMChatCompletionServiceConfig
   | DashCamServiceConfig !DashcamInter.DashCamServiceConfig
+  | WalletServiceConfig !Wallet.WalletServiceConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

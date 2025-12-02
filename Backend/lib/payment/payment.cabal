@@ -41,18 +41,24 @@ library
       Lib.Payment.Domain.Types.PaymentOrderSplit
       Lib.Payment.Domain.Types.PayoutOrder
       Lib.Payment.Domain.Types.PayoutTransaction
+      Lib.Payment.Domain.Types.PersonWallet
       Lib.Payment.Domain.Types.Refunds
+      Lib.Payment.Domain.Types.WalletRewardPosting
       Lib.Payment.Storage.Beam.PaymentOrderOffer
       Lib.Payment.Storage.Beam.PaymentOrderSplit
       Lib.Payment.Storage.Beam.PayoutOrder
       Lib.Payment.Storage.Beam.PayoutTransaction
+      Lib.Payment.Storage.Beam.PersonWallet
       Lib.Payment.Storage.Beam.Refunds
+      Lib.Payment.Storage.Beam.WalletRewardPosting
       Lib.Payment.Storage.Queries.OrphanInstances.PayoutOrder
       Lib.Payment.Storage.Queries.PaymentOrderOffer
       Lib.Payment.Storage.Queries.PaymentOrderSplit
       Lib.Payment.Storage.Queries.PayoutOrder
       Lib.Payment.Storage.Queries.PayoutTransaction
+      Lib.Payment.Storage.Queries.PersonWallet
       Lib.Payment.Storage.Queries.Refunds
+      Lib.Payment.Storage.Queries.WalletRewardPosting
   other-modules:
       Paths_payment
   hs-source-dirs:
