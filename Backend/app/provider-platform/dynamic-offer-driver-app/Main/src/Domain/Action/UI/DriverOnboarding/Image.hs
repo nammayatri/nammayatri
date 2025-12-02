@@ -182,7 +182,6 @@ validateImageHandler isDashboard (personId, _, merchantOpCityId) req@ImageValida
         isJust workflowTransactionId ->
         return $ ImageValidateResponse validatedImage.id
     _ -> do
-      when (imageType /= DVC.DriverLicense && isJust workflowTransactionId && any ((== Just Documents.MANUAL_VERIFICATION_REQUIRED) . (.verificationStatus)) images) $ throwError $ DocumentUnderManualReview (show imageType)
       when -- This Condition could be merged with the 1st condition above by replacing images with allImages for mValidatedImage.
         ( imageType == DVC.ProfilePhoto
             && any
