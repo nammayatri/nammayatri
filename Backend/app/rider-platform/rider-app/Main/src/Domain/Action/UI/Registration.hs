@@ -1118,7 +1118,7 @@ verifyBusinessEmail mbPersonId req = do
 
   -- Check expiry
   whenM (isExpired (realToFrac (regToken.authExpiry * 60)) regToken.updatedAt) $
-    throwError TokenExpired
+    throwError BusinessEmailTokenExpired
 
   -- Get person
   person <- Person.findById (Id regToken.entityId) >>= fromMaybeM (PersonNotFound regToken.entityId)

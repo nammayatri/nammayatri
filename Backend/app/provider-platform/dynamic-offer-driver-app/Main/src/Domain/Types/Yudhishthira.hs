@@ -6,10 +6,13 @@ import qualified Data.Aeson as A
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 -- import qualified Domain.Types.Estimate as DEst
+
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.VehicleVariant as DVV
 import Kernel.Prelude
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types.Application as YA
 import qualified Lib.Yudhishthira.Types.Common as YTC
@@ -22,6 +25,7 @@ data CancelRideTagData = CancelRideTagData
     callAtemptByDriver :: Bool,
     currentTime :: Int,
     rideCreatedTime :: Int,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     driverArrivalTime :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON)
