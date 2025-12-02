@@ -274,6 +274,7 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
           { ride = ride{status = DRide.CANCELLED},
             booking = booking{status = SRB.CANCELLED},
             cancellationReason = bookingCReason,
+            merchantOperatingCityId = booking.merchantOperatingCityId,
             ..
           }
   nammaTags <- withTryCatch "computeNammaTags:RideCancel" (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)
