@@ -7,9 +7,10 @@ import Domain.Types.RiderDetails ()
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (EsqDBFlow, EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, HighPrecMoney, fromMaybeM)
+import Kernel.Utils.Common (HighPrecMoney, fromMaybeM)
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
@@ -37,7 +38,7 @@ newtype PerformanceRes = PerformanceRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-getDriverPerformance :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m PerformanceRes
+getDriverPerformance :: (PaymentBeamFlow.BeamFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m PerformanceRes
 getDriverPerformance (driverId, _, merchantOpCityId) = do
   _ <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   allRefferedCustomers <- QRD.findAllReferredByDriverId (Just driverId)

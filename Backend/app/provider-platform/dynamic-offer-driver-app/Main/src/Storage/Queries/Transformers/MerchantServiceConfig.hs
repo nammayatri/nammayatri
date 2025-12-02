@@ -21,6 +21,7 @@ import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Verification.Interface as Verification
+import qualified Kernel.External.Wallet.Interface as Wallet
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude as P
 import Kernel.Types.Common
@@ -93,6 +94,8 @@ getConfigJSON = \case
     CIT.Gemini cfg -> toJSON cfg
   Domain.DashCamServiceConfig dashcamCfg -> case dashcamCfg of
     DashcamInter.CautioConfig cfg -> toJSON cfg
+  Domain.WalletServiceConfig walletCfg -> case walletCfg of
+    Wallet.JuspayWalletConfig cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -164,6 +167,8 @@ getServiceName = \case
     CIT.Gemini _ -> Domain.LLMChatCompletionService ChatCompletion.Types.Gemini
   Domain.DashCamServiceConfig dashcamCfg -> case dashcamCfg of
     DashcamInter.CautioConfig _ -> Domain.DashCamService Dashcam.Cautio
+  Domain.WalletServiceConfig walletCfg -> case walletCfg of
+    Wallet.JuspayWalletConfig _ -> Domain.WalletService Wallet.Juspay
 
 mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceName -> m Domain.ServiceConfig
 mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> show configJSON <> " Error:" <> err)) return $ case serviceName of
@@ -217,6 +222,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI -> Domain.LLMChatCompletionServiceConfig . CIT.AzureOpenAI <$> eitherValue configJSON
   Domain.LLMChatCompletionService ChatCompletion.Types.Gemini -> Domain.LLMChatCompletionServiceConfig . CIT.Gemini <$> eitherValue configJSON
   Domain.DashCamService Dashcam.Cautio -> Domain.DashCamServiceConfig . DashcamInter.CautioConfig <$> eitherValue configJSON
+  Domain.WalletService Wallet.Juspay -> Domain.WalletServiceConfig . Wallet.JuspayWalletConfig <$> eitherValue configJSON
   where
     eitherValue :: FromJSON a => A.Value -> Either Text a
     eitherValue value = case A.fromJSON value of
