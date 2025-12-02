@@ -42,6 +42,7 @@ data AppEnv = AppEnv
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
     version :: Metrics.DeploymentVersion,
+    requestId :: Maybe Text,
     url :: Maybe Text
   }
   deriving (Generic)
@@ -53,6 +54,7 @@ buildAppEnv AppCfg {..} = do
   notificationsMap <- newMVar Map.empty
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   isShuttingDown <- mkShutdown
+  let requestId = Nothing
   let url = Nothing
   return $ AppEnv {..}
 
