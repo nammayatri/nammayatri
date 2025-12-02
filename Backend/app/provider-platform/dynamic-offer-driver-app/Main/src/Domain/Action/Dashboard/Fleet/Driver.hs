@@ -3568,10 +3568,12 @@ convertToFleetVehicleStatsItem transporterConfig agg vehicleMap =
   where
     calculateEarningsPerKm :: Meters -> HighPrecMoney -> HighPrecMoney
     calculateEarningsPerKm distance earnings =
-      let distanceInKm = distance `div` 1000
-       in if distanceInKm.getMeters == 0
+      let meters = distance.getMeters
+          km = toRational meters / 1000
+       in if km == 0
             then HighPrecMoney 0.0
-            else toHighPrecMoney $ roundToIntegral earnings `div` distanceInKm.getMeters
+            else HighPrecMoney (earnings.getHighPrecMoney / km)
+
     mkItem :: FleetRcDailyStatsAggregated -> Common.FleetVehicleStatsItem
     mkItem stats =
       let rcIdKey = stats.rcId
