@@ -46,6 +46,7 @@ FleetOwnerInformation:
   types:
     FleetType:
       enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
+      derive: "HttpInstance"
   beamType:
     isEligibleForSubscription: Maybe Bool
     stripeAddress: Maybe Value
