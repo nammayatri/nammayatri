@@ -507,3 +507,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN subway_restriction_end_time time w
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN nearby_bus_radius_bucket_step integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN single_mode_walk_speed double precision ;
