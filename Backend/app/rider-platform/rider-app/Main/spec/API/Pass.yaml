@@ -180,3 +180,11 @@ apis:
         offset: Int
       response:
         type: "[PurchasedPassTransactionAPIEntity]"
+
+  - POST:
+      endpoint: /multimodal/pass/activateToday/{passNumber}
+      auth: TokenAuth
+      params:
+        passNumber: Int
+      response:
+        type: APISuccess
