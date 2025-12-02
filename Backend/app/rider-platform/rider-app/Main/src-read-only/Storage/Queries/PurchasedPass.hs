@@ -22,6 +22,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PurchasedPass.PurchasedPass] -> m ())
 createMany = traverse_ create
 
+findByPassNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> m (Maybe Domain.Types.PurchasedPass.PurchasedPass))
+findByPassNumber passNumber = do findOneWithKV [Se.Is Beam.passNumber $ Se.Eq passNumber]
+
 updateDeviceSwitchCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m ())
 updateDeviceSwitchCount deviceSwitchCount id = do
   _now <- getCurrentTime

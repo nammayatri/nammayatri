@@ -129,10 +129,20 @@ type API =
       :> Get
            ('[JSON])
            [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity]
+      :<|> TokenAuth
+      :> "multimodal"
+      :> "pass"
+      :> "activateToday"
+      :> Capture
+           "passNumber"
+           Kernel.Prelude.Int
+      :> Post
+           ('[JSON])
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions
+handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> postMultimodalPassActivateToday
 
 getMultimodalPassAvailablePasses ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -208,3 +218,12 @@ getMultimodalPassTransactions ::
     Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity]
   )
 getMultimodalPassTransactions a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.getMultimodalPassTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postMultimodalPassActivateToday ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Int ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postMultimodalPassActivateToday a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassActivateToday (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
