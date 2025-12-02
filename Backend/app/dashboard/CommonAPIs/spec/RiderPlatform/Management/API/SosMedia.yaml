@@ -1,0 +1,25 @@
+imports:
+  Customer: Dashboard.Common
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+  Ride: Dashboard.Common
+
+module: SosMedia
+apiPrefix: sos-media
+helperApiPrefix: ""
+
+apis:
+  - GET:
+      endpoint: /sos/media/{personId}
+      auth: ApiAuthV2
+      params:
+        personId: Id Customer
+      response:
+        type: "[GetSosMediaResponse]"
+types:
+  GetSosMediaResponse:
+    - content: Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - rideId: Id Ride
+    - ticketId: Maybe Text
