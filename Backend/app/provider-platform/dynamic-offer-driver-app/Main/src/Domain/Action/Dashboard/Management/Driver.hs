@@ -1311,21 +1311,22 @@ postDriverUpdateMerchant merchantShortId _opCity reqDriverId req = do
           -- Case 2: Both disabled -> do nothing, return error
           throwError $ InvalidRequest "Cannot migrate: Both old and new merchant entries are disabled. When driver logs in he will be using the Bharat Taxi merchant automatically."
         (True, False) -> do
-          -- Case 3: ny-bt enabled, bt-bt disabled -> migrate ny-bt to bt, delete bt-bt
-          logTagInfo "postDriverUpdateMerchant" $ "Case 3: Migrating driver " <> show personId <> " to new merchant and deleting duplicate " <> show duplicatePerson.id
-          updateMerchantInAllTables personId newMerchantId newMerchantOperatingCityId
+          -- Case 3: ny-bt enabled, bt-bt disabled -> delete bt-bt first, then migrate ny-bt to bt
+          -- IMPORTANT: Delete duplicate FIRST to avoid unique constraint violation on Person table
+          -- (unique constraint on role, mobile_number_hash, mobile_country_code, merchant_id)
+          logTagInfo "postDriverUpdateMerchant" $ "Case 3: Deleting duplicate " <> show duplicatePerson.id <> " and migrating driver " <> show personId <> " to new merchant"
           void $ DeleteDriver.deleteDriver merchantShortId duplicatePerson.id
+          updateMerchantInAllTables personId newMerchantId newMerchantOperatingCityId
           pure Success
         (False, True) ->
           -- Case 4: ny-bt disabled, bt-bt enabled -> do nothing, return error
           throwError $ InvalidRequest "Cannot migrate: Old merchant entry is disabled but new merchant entry is enabled. The new entry should be used."
 
 -- Helper function to update merchant in all affected tables
+-- NOTE: Person table is updated LAST to allow for retry on failure
+-- (if Person is updated first and child tables fail, retry would be blocked by the merchantId check)
 updateMerchantInAllTables :: Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 updateMerchantInAllTables personId merchantId merchantOperatingCityId = do
-  -- Update Person table
-  QPerson.updateMerchantIdAndCityId personId merchantId merchantOperatingCityId
-
   -- Update DriverInformation table
   QDriverInfo.updateMerchantIdAndCityIdByDriverId personId merchantId merchantOperatingCityId
 
@@ -1372,5 +1373,8 @@ updateMerchantInAllTables personId merchantId merchantOperatingCityId = do
   rcAssociations <- QDriverRCAssociation.findAllByDriverId personId
   forM_ rcAssociations $ \(assoc, _) ->
     RCQuery.updateMerchantIdAndCityIdById (Just merchantId) (Just merchantOperatingCityId) assoc.rcId
+
+  -- Update Person table LAST (allows retry if earlier updates fail)
+  QPerson.updateMerchantIdAndCityId personId merchantId merchantOperatingCityId
 
   logTagInfo "updateMerchantInAllTables" $ "Updated merchant for driver " <> show personId <> " in all tables"
