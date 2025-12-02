@@ -13,6 +13,7 @@ import qualified API.Types.ProviderPlatform.Management.DriverRegistration as Com
 import qualified API.Types.UI.DriverOnboardingV2 as Onboarding
 import qualified Dashboard.Common
 import qualified Data.Text as Text
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as DAV
 import qualified Domain.Action.UI.DriverOnboarding.GstVerification as DGV
 import qualified Domain.Action.UI.DriverOnboarding.PanVerification as DPV
@@ -187,7 +188,8 @@ castDLDetails SStatus.DLDetails {..} = CommonDriverRegistration.DLDetails {..}
 castRCDetails :: SStatus.RCDetails -> CommonDriverRegistration.RCDetails
 castRCDetails SStatus.RCDetails {..} =
   CommonDriverRegistration.RCDetails
-    { ..
+    { verificationStatus = DCommon.castVerificationStatus <$> verificationStatus,
+      ..
     }
 
 castVehicleDocumentItem :: SStatus.VehicleDocumentItem -> CommonOnboarding.VehicleDocumentItem

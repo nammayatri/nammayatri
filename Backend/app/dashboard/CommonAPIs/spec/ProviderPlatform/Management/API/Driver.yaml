@@ -589,6 +589,7 @@ types:
     - fitnessExpiry: UTCTime
     - insuranceExpiry: Maybe UTCTime
     - failedRules: [Text]
+    - verificationStatus: Maybe VerificationStatus
   DriverAadhaarInfoRes:
     - driverName: Text
     - driverGender: Text
