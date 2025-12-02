@@ -8,6 +8,8 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard
+import qualified Domain.Types.FareParameters
+import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Image
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleCategory
@@ -183,7 +185,9 @@ data RateCardItem = RateCardItem {price :: Kernel.Types.Common.Money, priceWithC
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RateCardResp = RateCardResp
-  { farePolicyHour :: FarePolicyHour,
+  { fareParams :: Domain.Types.FareParameters.FareParameters,
+    farePolicyHour :: FarePolicyHour,
+    farePolicyId :: Kernel.Types.Id.Id Domain.Types.FarePolicy.FarePolicy,
     perKmRate :: Kernel.Types.Common.PriceAPIEntity,
     perMinuteRate :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     rateCardItems :: [RateCardItem],
