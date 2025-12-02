@@ -28,7 +28,6 @@ data FRFSQuoteCategoryT f = FRFSQuoteCategoryT
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
     quoteId :: B.C f Kernel.Prelude.Text,
     selectedQuantity :: B.C f Kernel.Prelude.Int,
-    ticketCategoryMetadataConfigId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

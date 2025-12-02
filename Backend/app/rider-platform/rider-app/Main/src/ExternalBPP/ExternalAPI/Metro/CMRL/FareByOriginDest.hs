@@ -4,9 +4,11 @@
 module ExternalBPP.ExternalAPI.Metro.CMRL.FareByOriginDest where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import BecknV2.FRFS.Utils
 import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Text as T
+import Domain.Types.FRFSQuoteCategorySpec
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
@@ -18,6 +20,7 @@ import Kernel.Types.App
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.FRFSUtils as FRFSUtils
+import qualified Storage.Queries.FRFSTicketCategoryMetadataConfig as QFRFSTicketCategoryMetadataConfig
 
 data FareByOriginDestReq = FareByOriginDestReq
   { origin :: T.Text,
@@ -51,8 +54,8 @@ type FareByOriginDestAPI =
 fareByOriginDestAPI :: Proxy FareByOriginDestAPI
 fareByOriginDestAPI = Proxy
 
-getFareByOriginDest :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => CMRLConfig -> FareByOriginDestReq -> m [FRFSUtils.FRFSFare]
-getFareByOriginDest config fareReq = do
+getFareByOriginDest :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, EsqDBFlow m r) => IntegratedBPPConfig -> CMRLConfig -> FareByOriginDestReq -> m [FRFSUtils.FRFSFare]
+getFareByOriginDest integrationBPPConfig config fareReq = do
   let cacheKey = "cmrl-fare-" <> fareReq.origin <> "-" <> fareReq.destination <> "-" <> fareReq.ticketType
   mbCachedFares <- Hedis.get cacheKey
   case mbCachedFares of
@@ -64,20 +67,31 @@ getFareByOriginDest config fareReq = do
       let eulerClient = \accessToken -> ET.client fareByOriginDestAPI (Just $ "Bearer " <> accessToken) (getStationCode fareReq.origin) (getStationCode fareReq.destination) fareReq.ticketType cmrlAppType
       fareByODRes <- callCMRLAPI config eulerClient "getFareByOriginDest" fareByOriginDestAPI
       logDebug $ "CMRL Get Fares API Response : " <> show fareByODRes
-      let fares = case ((fareByODRes.result >>= (.ticketDiscountFare)) <|> (fareByODRes.result >>= (.ticketTotalFare))) of
-            Just amount ->
+      ticketCategoryMetadataConfig <- QFRFSTicketCategoryMetadataConfig.findByCategoryVehicleAndCity ADULT (becknVehicleCategoryToFrfsVehicleCategory integrationBPPConfig.vehicleCategory) integrationBPPConfig.merchantOperatingCityId
+      fares <-
+        case ((fareByODRes.result >>= (.ticketDiscountFare)) <|> (fareByODRes.result >>= (.ticketTotalFare))) of
+          Just amount -> do
+            let offeredPrice = amount
+                originalPrice =
+                  case (ticketCategoryMetadataConfig <&> (.domainCategoryValue)) of
+                    Just domainCategoryValue ->
+                      case domainCategoryValue of
+                        FixedAmount discountAmount -> offeredPrice + discountAmount
+                        Percentage discountPercentage -> HighPrecMoney $ offeredPrice.getHighPrecMoney + (offeredPrice.getHighPrecMoney * (toRational discountPercentage / 100))
+                    Nothing -> offeredPrice
+            return $
               [ FRFSUtils.FRFSFare
                   { categories =
                       [ FRFSUtils.FRFSTicketCategory
                           { category = ADULT,
-                            code = "ADULT",
-                            title = "Adult General Ticket",
-                            description = "Adult General Ticket",
-                            tnc = "Terms and conditions apply for adult general ticket",
+                            code = ticketCategoryMetadataConfig <&> (.code) & fromMaybe "ADULT",
+                            title = ticketCategoryMetadataConfig <&> (.title) & fromMaybe "Adult General Ticket",
+                            description = ticketCategoryMetadataConfig <&> (.description) & fromMaybe "Adult General Ticket",
+                            tnc = ticketCategoryMetadataConfig <&> (.tnc) & fromMaybe "Terms and conditions apply for adult general ticket",
                             price =
                               Price
-                                { amountInt = round amount,
-                                  amount = amount,
+                                { amountInt = round originalPrice,
+                                  amount = originalPrice,
                                   currency = INR
                                 },
                             offeredPrice =
@@ -102,7 +116,7 @@ getFareByOriginDest config fareReq = do
                         }
                   }
               ]
-            Nothing -> []
+          Nothing -> return []
       -- Cache the fares with 24-hour TTL (86400 seconds)
       Hedis.setExp cacheKey fares 86400
       return fares

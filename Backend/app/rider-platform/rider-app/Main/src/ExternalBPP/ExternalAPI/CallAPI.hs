@@ -75,7 +75,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
   case integrationBPPConfig.providerConfig of
     CMRL config' -> do
       fares <-
-        CMRLFareByOriginDest.getFareByOriginDest config' $
+        CMRLFareByOriginDest.getFareByOriginDest integrationBPPConfig config' $
           CMRLFareByOriginDest.FareByOriginDestReq
             { origin = startStopCode,
               destination = endStopCode,

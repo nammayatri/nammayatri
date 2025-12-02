@@ -58,12 +58,10 @@ import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRouteFareProduct as QFRFP
 import qualified Storage.Queries.FRFSSearch as QSearch
-import qualified Storage.Queries.FRFSTicketCategoryMetadataConfig as QFRFSTicketCategoryMetadataConfig
 import qualified Storage.Queries.FRFSVehicleServiceTier as QVSR
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.StopFare as QRSF
-import qualified Storage.Queries.Transformers.FRFSQuoteCategory as TFQC
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
@@ -391,7 +389,6 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   frfsQuoteCategories <-
     forM categories $ \category -> do
       quoteCategoryId <- generateGUID
-      ticketCategoryMetadataConfig' <- QFRFSTicketCategoryMetadataConfig.findByCategoryVehicleAndCity category.category vehicleType search.merchantOperatingCityId
       return
         FRFSQuoteCategory
           { id = quoteCategoryId,
@@ -401,10 +398,9 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             price = category.price, -- Single Ticket Price
             offeredPrice = category.offeredPrice, -- Single Ticket Offered Price (Should be less than or equal to price)
             finalPrice = Nothing,
-            categoryMeta = TFQC.mkQuoteCategoryMetadata (ticketCategoryMetadataConfig' <&> (.code)) (ticketCategoryMetadataConfig' <&> (.title)) (ticketCategoryMetadataConfig' <&> (.description)) (ticketCategoryMetadataConfig' <&> (.tnc)),
+            categoryMeta = category.categoryMeta,
             merchantId = search.merchantId,
             merchantOperatingCityId = search.merchantOperatingCityId,
-            ticketCategoryMetadataConfigId = ticketCategoryMetadataConfig' <&> (.id.getId),
             selectedQuantity = if category.category == ADULT then search.quantity else 0, -- To Handle Partner Org
             createdAt = now,
             updatedAt = now

@@ -366,7 +366,7 @@ data MetroLegExtraInfo = MetroLegExtraInfo
     childTicketQuantity :: Maybe Int,
     refund :: Maybe LegSplitInfo,
     categories :: [CategoryInfoResponse],
-    categoryBookingDetails :: Maybe [CategoryBookingDetails]
+    categoryBookingDetails :: Maybe [CategoryBookingDetails] -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -388,7 +388,7 @@ data SubwayLegExtraInfo = SubwayLegExtraInfo
     childTicketQuantity :: Maybe Int,
     refund :: Maybe LegSplitInfo,
     categories :: [CategoryInfoResponse],
-    categoryBookingDetails :: Maybe [CategoryBookingDetails]
+    categoryBookingDetails :: Maybe [CategoryBookingDetails] -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -437,7 +437,7 @@ data BusLegExtraInfo = BusLegExtraInfo
     legEndTime :: Maybe UTCTime,
     discounts :: Maybe [FRFSTicketServiceAPI.FRFSDiscountRes],
     categories :: [CategoryInfoResponse],
-    categoryBookingDetails :: Maybe [CategoryBookingDetails]
+    categoryBookingDetails :: Maybe [CategoryBookingDetails] -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

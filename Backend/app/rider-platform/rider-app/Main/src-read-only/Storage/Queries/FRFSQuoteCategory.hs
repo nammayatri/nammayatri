@@ -64,7 +64,6 @@ updateByPrimaryKey (Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory {..}) = do
       Se.Set Beam.price ((.amount) price),
       Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
       Se.Set Beam.selectedQuantity selectedQuantity,
-      Se.Set Beam.ticketCategoryMetadataConfigId ticketCategoryMetadataConfigId,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -85,7 +84,6 @@ instance FromTType' Beam.FRFSQuoteCategory Domain.Types.FRFSQuoteCategory.FRFSQu
             price = Kernel.Types.Common.mkPrice currency price,
             quoteId = Kernel.Types.Id.Id quoteId,
             selectedQuantity = selectedQuantity,
-            ticketCategoryMetadataConfigId = ticketCategoryMetadataConfigId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -108,7 +106,6 @@ instance ToTType' Beam.FRFSQuoteCategory Domain.Types.FRFSQuoteCategory.FRFSQuot
         Beam.price = (.amount) price,
         Beam.quoteId = Kernel.Types.Id.getId quoteId,
         Beam.selectedQuantity = selectedQuantity,
-        Beam.ticketCategoryMetadataConfigId = ticketCategoryMetadataConfigId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

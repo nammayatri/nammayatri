@@ -662,7 +662,6 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                   categoryMeta = TFQC.mkQuoteCategoryMetadata (ticketCategoryMetadataConfig' <&> (.code)) (ticketCategoryMetadataConfig' <&> (.title)) (ticketCategoryMetadataConfig' <&> (.description)) (ticketCategoryMetadataConfig' <&> (.tnc)),
                   merchantId = fromStation'.merchantId,
                   merchantOperatingCityId = fromStation.merchantOperatingCityId,
-                  ticketCategoryMetadataConfigId = ticketCategoryMetadataConfig' <&> (.id.getId),
                   selectedQuantity = 1,
                   createdAt = now,
                   updatedAt = now

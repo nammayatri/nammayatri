@@ -195,7 +195,6 @@ FRFSQuoteCategory:
     bppItemId: Text
     category: FRFSQuoteCategoryType|NoRelation
     categoryMeta: Maybe QuoteCategoryMetadata
-    ticketCategoryMetadataConfigId: Maybe Text # TODO :: To be deprecated with QuoteCategoryMetadata
     price: Price # Single Item Quantity Price without any passes or offers determined in OnSearch.
     offeredPrice: Price # Single Item Quantity Discounted Price determined in OnSearch that would be less than or equal to `price`.
     finalPrice: Maybe Price # Single Item Quantity Final Price determined in OnInit that the customer would actually pay.
@@ -221,7 +220,6 @@ FRFSQuoteCategory:
   beamType:
     category: Maybe FRFSQuoteCategoryType
   default:
-    ticketCategoryMetadataConfigId:  "'Unknown'"
     selectedQuantity: "0"
 
   fromTType:
