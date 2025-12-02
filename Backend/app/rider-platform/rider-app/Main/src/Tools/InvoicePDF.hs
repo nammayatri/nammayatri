@@ -22,9 +22,9 @@ import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.Booking.API as DBAPI
 import Domain.Types.Location (LocationAPIEntity)
--- import qualified Domain.Types.Extra.Ride as DRide
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RideStatus as DRide
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude hiding (try)
 import Kernel.Types.Common
@@ -173,10 +173,18 @@ generatePDFFromHTML htmlPath pdfPath = do
       return False
 
 -- | Calculate total amount from bookings
+-- | Calculate total amount from actual ride computed prices
 calculateTotalAmount :: [DBAPI.BookingAPIEntity] -> Maybe HighPrecMoney
 calculateTotalAmount bookings =
-  let amounts = map (\b -> fromIntegral b.estimatedTotalFare) bookings
+  let amounts = mapMaybe getRideComputedPrice bookings
    in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts)
+  where
+    getRideComputedPrice :: DBAPI.BookingAPIEntity -> Maybe Rational
+    getRideComputedPrice booking = do
+      let completedRide = filter (\ride -> ride.status == DRide.COMPLETED) booking.rideList
+      ride <- listToMaybe completedRide
+      computedPrice <- ride.computedPrice
+      return $ fromIntegral computedPrice
 
 -- | Generate HTML invoice
 generateInvoiceHTML :: InvoiceData -> Text
@@ -257,8 +265,10 @@ generateRideCard booking =
       fromAddress = buildFullAddress booking.fromLocation
       toAddress = maybe "Unknown" buildFullAddress $ getToLocationFromBooking booking
 
-      -- Ride details - format amount properly (estimatedTotalFare is Money type, already in rupees)
-      amount = T.pack $ printf "%.0f" (fromIntegral booking.estimatedTotalFare :: Double)
+      -- Ride details - use actual computedPrice from ride (not estimated fare)
+      amount = case mbRide >>= (.computedPrice) of
+        Just price -> T.pack $ printf "%.0f" (fromIntegral price :: Double)
+        Nothing -> T.pack $ printf "%.0f" (fromIntegral booking.estimatedTotalFare :: Double) -- Fallback
       driverName = maybe "N/A" (.driverName) mbRide
       vehicleNumber = maybe "N/A" (.vehicleNumber) mbRide
       rideId = maybe (T.take 10 $ getId booking.id) (.shortRideId.getShortId) mbRide
