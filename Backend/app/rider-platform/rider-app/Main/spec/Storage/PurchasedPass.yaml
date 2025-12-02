@@ -69,6 +69,7 @@ PurchasedPass:
 
   constraints:
     id: PrimaryKey
+    passNumber: SecondaryKey
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -78,6 +79,10 @@ PurchasedPass:
       kvFunction: updateWithKV
       params: [deviceSwitchCount]
       where: id
+
+    findByPassNumber:
+      kvFunction: findOneWithKV
+      where: passNumber
 
 PurchasedPassPayment:
   tableName: purchased_pass_payment

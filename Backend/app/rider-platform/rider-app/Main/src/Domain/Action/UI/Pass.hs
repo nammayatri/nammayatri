@@ -8,6 +8,7 @@ module Domain.Action.UI.Pass
     postMultimodalPassSwitchDeviceId,
     getMultimodalPassTransactions,
     createPassReconEntry,
+    postMultimodalPassActivateToday,
   )
 where
 
@@ -160,23 +161,7 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId mbPr
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   passNumber <- getNextPassNumber
   let startDate = fromMaybe (DT.utctDay istTime) mbStartDay
-      endDate =
-        case pass.maxValidDays of
-          Just 30 ->
-            -- Special handling for 30 days: next month, previous day
-            let (y, m, d) = DT.toGregorian startDate
-                -- Helper to handle wrap-around at December
-                nextMonthYear
-                  | d == 1 = (y, m)
-                  | m == 12 = (y + 1, 1)
-                  | otherwise = (y, m + 1)
-                (nextY, nextM) = nextMonthYear
-                daysInNextMonth = DT.gregorianMonthLength nextY nextM
-                endDay = if d > daysInNextMonth || d == 1 then daysInNextMonth else d - 1
-                candidateEndDate = DT.fromGregorian nextY nextM endDay
-             in candidateEndDate
-          Just days -> DT.addDays (fromIntegral days) startDate
-          Nothing -> startDate
+      endDate = calculatePassEndDate startDate pass.maxValidDays
 
   mbSamePass <- QPurchasedPass.findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId pass.passTypeId deviceId
 
@@ -184,10 +169,8 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId mbPr
   purchasedPassId <-
     case mbSamePass of
       Just samePass -> do
-        let overlaps (aStart, aEnd) (bStart, bEnd) = not (aEnd < bStart || bEnd < aStart)
-            hasDateOverlap activePass =
-              overlaps (activePass.startDate, activePass.endDate) (startDate, endDate)
-        when (samePass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && hasDateOverlap samePass) $
+        let passOverlaps = hasDateOverlap (samePass.startDate, samePass.endDate) (startDate, endDate)
+        when (samePass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && passOverlaps) $
           throwError (InvalidRequest "You already have an active pass of this type in the selected dates")
         return samePass.id
       Nothing -> do
@@ -349,6 +332,29 @@ hasDocument :: Maybe Text -> DP.Person -> DPass.PassDocumentType -> Bool
 hasDocument mbProfilePicture person docType = case docType of
   DPass.ProfilePicture -> isJust (mbProfilePicture <|> person.profilePicture)
   DPass.Aadhaar -> person.aadhaarVerified
+
+-- Check if two date ranges overlap
+hasDateOverlap :: (DT.Day, DT.Day) -> (DT.Day, DT.Day) -> Bool
+hasDateOverlap (aStart, aEnd) (bStart, bEnd) = not (aEnd < bStart || bEnd < aStart)
+
+-- Calculate end date for a pass based on start date and maxValidDays
+calculatePassEndDate :: DT.Day -> Maybe Int -> DT.Day
+calculatePassEndDate startDate mbMaxValidDays =
+  case mbMaxValidDays of
+    Just 30 ->
+      -- Special handling for 30 days: next month, previous day
+      let (y, m, d) = DT.toGregorian startDate
+          -- Helper to handle wrap-around at December
+          nextMonthYear
+            | d == 1 = (y, m)
+            | m == 12 = (y + 1, 1)
+            | otherwise = (y, m + 1)
+          (nextY, nextM) = nextMonthYear
+          daysInNextMonth = DT.gregorianMonthLength nextY nextM
+          endDay = if d > daysInNextMonth || d == 1 then daysInNextMonth else d - 1
+       in DT.fromGregorian nextY nextM endDay
+    Just days -> DT.addDays (fromIntegral days) startDate
+    Nothing -> startDate
 
 -- Construct message keys for Pass fields
 mkPassMessageKey :: Id.Id DPass.Pass -> Text -> Text
@@ -826,3 +832,32 @@ getDeviceId person mbDeviceId mbImei = do
         fallbackImeiNumber <- decrypt `mapM` person.imeiNumber
         return $ fromMaybe devId fallbackImeiNumber
       Nothing -> throwError (InvalidRequest "Device ID or IMEI is required")
+
+postMultimodalPassActivateToday ::
+  ( ( Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    Int ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postMultimodalPassActivateToday (_mbCallerPersonId, _merchantId) passNumber = do
+  purchasedPass <- QPurchasedPass.findByPassNumber passNumber >>= fromMaybeM (InvalidRequest "Pass not found")
+
+  today <- DT.utctDay <$> getCurrentTime
+  _ <- purchasedPass.maxValidDays & fromMaybeM (InvalidRequest "Pass does not have a valid duration")
+  let newStartDate = today
+      newEndDate = calculatePassEndDate today purchasedPass.maxValidDays
+
+  when (purchasedPass.status == DPurchasedPass.Active && purchasedPass.startDate == today) $
+    throwError (InvalidRequest "Pass is already active from today")
+
+  allPasses <- QPurchasedPass.findAllByPersonIdWithFilters purchasedPass.personId purchasedPass.merchantId (Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]) Nothing Nothing
+  let otherPasses = filter (\p -> p.id /= purchasedPass.id) allPasses
+      overlappingPasses = filter (\p -> hasDateOverlap (newStartDate, newEndDate) (p.startDate, p.endDate)) otherPasses
+
+  unless (null overlappingPasses) $
+    throwError (InvalidRequest "Cannot activate pass: date range overlaps with another active or prebooked pass")
+
+  QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate DPurchasedPass.Active
+  QPurchasedPassPayment.updatePurchaseDataByPurchasedPassIdAndStartEndDate purchasedPass.id purchasedPass.startDate purchasedPass.endDate newStartDate newEndDate DPurchasedPass.Active
+  return APISuccess.Success
