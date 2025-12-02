@@ -21,6 +21,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.API as DBAPI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RideStatus as DRide
 import qualified Email.AWS.Flow as Email
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -104,17 +105,25 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
   invoiceIdShort <- generateShortId
   let invoiceId = Id invoiceIdShort.getShortId
 
-  -- Step 6: Calculate total amount from raw bookings (before conversion)
-  let totalAmount = calculateTotalAmountFromBookings bookings
-      totalCount = length bookings
-
   -- Convert bookings to BookingAPIEntity (includes ride data)
-  bookingAPIEntities <- mapM (`DBAPI.buildBookingAPIEntity` person.id) bookings
+  allBookingAPIEntities <- mapM (`DBAPI.buildBookingAPIEntity` person.id) bookings
+
+  -- Filter: Keep only bookings with exactly 1 completed ride
+  let validBookingAPIEntities = filter hasExactlyOneRide allBookingAPIEntities
+
+  when (null validBookingAPIEntities) $
+    throwError $ InvalidRequest "No valid bookings with completed rides found"
+
+  -- Step 6: Calculate total amount from actual ride fares (computedPrice)
+  let totalAmount = calculateTotalFromRides validBookingAPIEntities
+      totalCount = length validBookingAPIEntities
+
+  logInfo $ "Filtered bookings: " <> show (length allBookingAPIEntities) <> " total, " <> show totalCount <> " valid (with exactly 1 ride)"
 
   -- Step 7: Fork async job to generate PDF and email (uses email from request)
   whenJust email $ \emaill -> do
     fork "generate_and_email_invoice" $ do
-      generateAndEmailInvoice invoiceId person bookingAPIEntities merchantId emaill
+      generateAndEmailInvoice invoiceId person validBookingAPIEntities merchantId emaill
         `catch` \(e :: SomeException) ->
           logError $ "Invoice generation failed for " <> invoiceId.getId <> ": " <> show e <> "personId: " <> personId.getId <> "merchantId: " <> merchantId.getId <> "email: " <> emaill
   -- Step 8: Return immediate response
@@ -126,7 +135,7 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
         totalBookings = totalCount,
         totalAmount = totalAmount,
         status = PROCESSING,
-        bookingAPIEntities = bookingAPIEntities,
+        bookingAPIEntities = validBookingAPIEntities,
         message = "Invoice generation in progress. You will receive it via email at " <> show email <> " shortly."
       }
 
@@ -177,7 +186,26 @@ matchesBillingCategory categories booking =
   let bookingCategory = booking.billingCategory
    in bookingCategory `elem` categories
 
--- | Calculate total amount from raw bookings
+-- | Check if booking has at least one completed ride
+hasExactlyOneRide :: DBAPI.BookingAPIEntity -> Bool
+hasExactlyOneRide booking =
+  let completedRides = filter (\ride -> ride.status == DRide.COMPLETED) booking.rideList
+   in length completedRides == 1
+
+-- | Calculate total amount from actual ride computed prices
+calculateTotalFromRides :: [DBAPI.BookingAPIEntity] -> Maybe HighPrecMoney
+calculateTotalFromRides bookings =
+  let amounts = mapMaybe getRideComputedPrice bookings
+   in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts)
+  where
+    getRideComputedPrice :: DBAPI.BookingAPIEntity -> Maybe Rational
+    getRideComputedPrice booking = do
+      let completedRide = filter (\ride -> ride.status == DRide.COMPLETED) booking.rideList
+      ride <- listToMaybe completedRide
+      computedPrice <- ride.computedPrice
+      return $ fromIntegral computedPrice
+
+-- | Calculate total amount from raw bookings (fallback, not used anymore)
 calculateTotalAmountFromBookings :: [DRB.Booking] -> Maybe HighPrecMoney
 calculateTotalAmountFromBookings bookings =
   let amounts = map (getHighPrecMoney . (.estimatedTotalFare.amount)) bookings
