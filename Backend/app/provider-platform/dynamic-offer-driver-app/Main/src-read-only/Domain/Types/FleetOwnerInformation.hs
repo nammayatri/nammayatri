@@ -12,6 +12,7 @@ import qualified Kernel.External.Payment.Stripe.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data FleetOwnerInformationE e = FleetOwnerInformation
@@ -146,6 +147,8 @@ instance EncryptedItem' FleetOwnerInformation where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
-data FleetType = RENTAL_FLEET | NORMAL_FLEET | BUSINESS_FLEET deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FleetType = RENTAL_FLEET | NORMAL_FLEET | BUSINESS_FLEET deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FleetType)
+
+$(mkHttpInstancesForEnum ''FleetType)

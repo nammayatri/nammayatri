@@ -26,6 +26,7 @@ import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
 import qualified API.Action.UI.DriverWallet as DriverWallet
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
+import qualified API.Action.UI.FleetOwnerList as FleetOwnerList
 import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.Invoice as Invoice
 import qualified API.Action.UI.LmsModule as LmsModule
@@ -137,6 +138,7 @@ type API =
            :<|> DriverWallet.API
            :<|> SubscriptionTransaction.API
            :<|> Penalty.API
+           :<|> FleetOwnerList.API
        )
 
 handler :: FlowServer API
@@ -197,3 +199,4 @@ handler =
     :<|> DriverWallet.handler
     :<|> SubscriptionTransaction.handler
     :<|> Penalty.handler
+    :<|> FleetOwnerList.handler
