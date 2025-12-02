@@ -56,6 +56,7 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import SharedLogic.FRFSUtils
@@ -1247,7 +1248,7 @@ createRecentLocationForMultimodal journey = do
           SQRL.create recentLocation
     _ -> return ()
 
-postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> m (Maybe DOrder.PaymentOrder)
+postMultimodalPaymentUpdateOrderUtil :: (PaymentBeamFlow.BeamFlow m r, ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> m (Maybe DOrder.PaymentOrder)
 postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer = do
   frfsConfig <-
     CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []

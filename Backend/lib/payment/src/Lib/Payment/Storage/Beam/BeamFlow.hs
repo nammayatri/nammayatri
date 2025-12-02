@@ -23,7 +23,9 @@ import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamPOS
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamPOO
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
+import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
+import qualified Lib.Payment.Storage.Beam.WalletRewardPosting as BeamWRP
 
 type BeamFlow m r =
   ( MonadFlow m,
@@ -35,5 +37,7 @@ type BeamFlow m r =
     HasSchemaName BeamPOO.PayoutOrderT,
     HasSchemaName BeamPOT.PayoutTransactionT,
     HasSchemaName BeamPOS.PaymentOrderSplitT,
-    HasSchemaName BeamOffer.PaymentOrderOfferT
+    HasSchemaName BeamOffer.PaymentOrderOfferT,
+    HasSchemaName BeamPW.PersonWalletT,
+    HasSchemaName BeamWRP.WalletRewardPostingT
   )

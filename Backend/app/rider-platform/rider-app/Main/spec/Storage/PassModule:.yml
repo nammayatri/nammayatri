@@ -1,0 +1,124 @@
+PassModule:
+  Note: |
+    Extension for the existing Passes module to support Stored Value Passes (SVP)
+    with rechargeable balance, amount ranges, and flow changes for metro travel.
+---
+## Data Model (All Exisiting Passes Tables)
+PassCategory:
+  id: "svp-pass-category" # Unique identifier for the category
+  code: "svp-pass-category-code" # Category code
+PassType:
+  id: "svp-pass-type"
+  code: "svp-pass-type-code"
+  type: UnlimitedPass | StoredValuePass # Discriminator: StoredValuePass for rechargeable wallet passes
+Pass:
+  id: "svp-pass"
+  code: "svp-pass-code"
+  name: "Digital SVP for metro"
+  passTypeCode: "svp-pass-type-code"
+  amount: # TODO :: Deprecate This (No fixed price for SVP)
+  minAmount: 1 # Minimum required balance or minimum top-up amount, Use ths amount as a fallback for backward compatibility
+  maxAmount: 2000 # Maximum balance allowed on the pass
+  maxValidDays: 730 # 2 Years - Maximum validity period of the PurchasedPass
+  verificationValidity: 10800 # 3 Hours in seconds - TTL for a single journey verification transaction
+PurchasedPass:
+  id: "purchased-pass-id"
+  passTypeCode: "svp-pass-type-code"
+  passCode: "svp-pass-code"
+  deviceId: "23142322432413"
+  personId: "random-person-1"
+  amount: 50 # Current balance amount (Rechargeable Wallet)
+  minAmount: 50
+  maxAmount: 2000
+  startDate: "2025-11-01" # Pass start date (determines max validity)
+  endDate: "2027-11-01" # Pass end date (determined by maxValidDays)
+  status: Pending,Active,PreBooked,Failed,Expired,RefundPending,RefundInitiated,Refunded,RefundFailed
+  activePurchasedPassPaymentId: "purchased-pass-payment-id" # Link to the most recent Active top-up transaction
+PurchasedPassPayment:
+  id: "purchased-pass-payment-id"
+  personId: "random-person-1"
+  amount: HighPrecMoney # Paid amount for the top-up transaction
+  balance: HighPrecMoney # Current Active SVP that is becoming Expired, it's `PurchasedPass.balance + Paid Amount` can be the new amount
+  startDate: "2027-11-01" # Payment/Top-up transaction start date
+  endDate: "2029-11-01" # Payment/Top-up transaction end date
+  status: Pending,Active,PreBooked,Failed,Expired,RefundPending,RefundInitiated,Refunded,RefundFailed
+PassVerifyTransaction:
+  # Entry Data
+  purchasePassId: "purchased-pass-id"
+  purchasePassPaymentId: "purchased-pass-payment-id" # Associated top-up transaction ID
+  validTill: "now + 3 hours"     # to see
+  verifiedAt: "now"
+  sourceStopCode: "TAMBARAM"
+  openingAmount: HighPrecMoney # Balance before entry deduction
+  entryGateId: Maybe Text
+  fleetId: Maybe Text # Bus ID or Metro ticketNumber (unique ID for the journey)
+
+  # Exit Data (Updated later)
+  destinationStopCode: Maybe Text
+  closingAmount: Maybe HighPrecMoney # Balance after fare deduction at exit
+  exitGateId: Maybe Text
+  queries:
+    updateOngoingPassVerifyTransaction:
+      kvFunction: updateOneWithKV
+      params: [destinationStopCode, closingAmount]
+      where:
+        and:
+          - purchasePassId
+          - fleetId
+          - gte: validTill # Ensure the transaction hasn't expired
+---
+## API & Flow Changes
+PassSelectionAPI:
+  Description: "/pass/:passId/select (Top-Up Initiation)"
+  QueryParam:
+    amount: HighPrecMoney # The amount the user wishes to top-up
+  Validation:
+    # New balance must be within min/max limits
+    PurchasedPass.amount + QueryParam.amount >= Pass.minAmount && PurchasedPass.amount + QueryParam.amount <= Pass.maxAmount
+  Flow:
+    - Allow Overlapping **Pending** PurchasedPassPayment creation.
+    - Create Payment Order with the requested Amount.
+
+# UPDATE PURCHASED PASS PAYMENT
+
+
+PassListAPI:
+  Description: "/pass/list (Payment Confirmation Hook)"
+  Flow:
+    - Upon **CHARGED** payment transaction for a PurchasedPassPayment:
+      - If any currently **Active** PurchasedPassPayment exists, mark it **Expired** with `endDate` as current day.
+      - Mark the PurchasedPass as **Active**.
+      - Mark the new PurchasedPassPayment status as **Active**.
+      - Use `QPurchasedPassPayment.updateStatusByActivePurchasedPassPaymentId` and deprecate `QPurchasedPassPayment.updateStatusByPurchasedPassIdAndStartEndDate` to allow non-overlapping start/end dates for payments in the domain.
+      - Upsert PurchasedPass with the updated balance `PurchasedPass.amount += QueryParam.amount`.
+
+# to see: what to do here
+
+
+PassHistoryAPI:
+  Description: "/multimodal/pass/transactions (History)"
+  Flow:
+    - Query **PassVerifyTransaction** for data related to **amount debited** (fare).
+    - Use `PassVerifyTransaction.purchasePassPaymentId` to fetch **PurchasedPassPayment.amount** for **top-up amount** (credit) details.
+
+# to see: what to do here
+
+PassVerifyAPI:
+  Description: "/multimodal/pass/:purchasedPassId/signatureVerify (Gate Scan)"
+  Request:
+    stationCode: Text
+    ticketNumber: Text # Journey ID (Maps to fleetId)
+    isEntry: Bool
+    amount: Maybe HighPrecMoney
+  Flow:
+    - During entry (isEntry == true):
+      - Validation**: Check if `PurchasedPass.amount > Pass.minAmount` to proceed with check-in.
+      - Insert PassVerifyTransaction with: "`sourceStopCode` (from stationCode), `openingAmount` (current balance), `fleetId` (from ticketNumber), and `validTill`"
+    - During exit (isEntry == false):
+      - Validation: Check that the resulting `closingAmount` (deducted balance) is **greater than zero** (or greater than minAmount if policy requires).
+      - Update PassVerifyTransaction (using `updateOngoingPassVerifyTransaction` query) with: "`destinationStopCode` (from stationCode) and `closingAmount`"
+---
+## 🚧 Pending Items
+- Wallet API Integrations (Top-up funding source).
+- Metro SVP Redemption (Fare calculation and deduction implementation).
+- /sync-svp for offline sync deduction (Required for robust offline operation).

@@ -38,6 +38,7 @@ import Kernel.External.Maps.Types
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Types as Lang
+import qualified Kernel.External.Wallet as Wallet
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
@@ -50,6 +51,10 @@ import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.PersonWallet as DPersonWallet
+import qualified Lib.Payment.Domain.Types.WalletRewardPosting as DWalletRewardPosting
+import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
+import qualified Lib.Payment.Storage.Queries.WalletRewardPosting as QWalletRewardPosting
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
@@ -67,6 +72,7 @@ import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import Tools.Error
 import qualified Tools.Payment as TPayment
+import qualified Tools.Wallet as TWallet
 
 getMultimodalPassAvailablePasses ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
@@ -881,3 +887,157 @@ buildPurchasedPassPaymentAPIEntity purchasedPassPayment =
       passCode = purchasedPassPayment.passCode,
       createdAt = purchasedPassPayment.createdAt
     }
+
+-------------------------------- Wallet handlers --------------------------------
+
+rechargeWallet :: (BeamFlow m r) => Id Person -> Int -> (Maybe DOrder.PaymentOrder)
+rechargeWallet personId pointsAmount = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbPersonWallet <- QPersonWallet.findByPersonId personId
+  personWallet <-
+    case mbPersonWallet of
+      Just personWallet -> do
+        pure personWallet
+      Nothing -> do
+        operationId <- generateShortId
+        let createWalletReq = Wallet.CreateWalletReq {customerId = personId.getId, createCashAccount = False, createPointsAccount = True, operationId}
+        createWalletCall <- TWallet.createWallet merchantId merchantOperatingCityId
+        void $ DPayment.createWalletService createWalletReq createWalletCall
+        personWalletId <- generateGUID
+        let personWallet =
+              PersonWallet
+                { id = personWalletId,
+                  cashAmount = HighPrecMoney {getHighPrecMoney = 0},
+                  cashFromPointsRedemption = HighPrecMoney {getHighPrecMoney = 0},
+                  expiredBalance = HighPrecMoney {getHighPrecMoney = 0},
+                  personId = personId,
+                  pointsAmount = pointsAmount,
+                  updatedAt = now,
+                  usableCashAmount = HighPrecMoney {getHighPrecMoney = 0},
+                  usablePointsAmount = HighPrecMoney {getHighPrecMoney = 0},
+                  merchantId = Just merchantId,
+                  createdAt = now
+                }
+        QPersonWallet.create personWallet
+        return personWallet
+
+  walletRewardPostingId <- generateGUID
+  operationId <- generateShortId
+  now <- getCurrentTime
+  personEmail <- mapM decrypt person.email
+  personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+
+  let createOrderReq =
+        Payment.CreateOrderReq
+          { orderId = walletRewardPostingId,
+            orderShortId = operationId,
+            amount = HighPrecMoney {getHighPrecMoney = pointsAmount},
+            customerId = person.id.getId,
+            customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
+            customerPhone = personPhone,
+            customerFirstName = person.firstName,
+            customerLastName = person.lastName,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateFrequency = Nothing,
+            mandateEndDate = Nothing,
+            mandateStartDate = Nothing,
+            optionsGetUpiDeepLinks = Nothing,
+            metadataExpiryInMins = Nothing,
+            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+            splitSettlementDetails = Nothing,
+            basket = Nothing
+          }
+
+  let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId
+      commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
+      commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity person.merchantOperatingCityId
+      createOrderCall = Payment.createOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase (Just personId.getId) person.clientSdkVersion
+  mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing TPayment.FRFSPassPurchase createOrderReq createOrderCall
+
+  let walletRewardPosting =
+        WalletRewardPosting
+          { id = walletRewardPostingId,
+            shortId = operationId,
+            walletId = personWallet.id,
+            pointsAmount = HighPrecMoney {getHighPrecMoney = pointsAmount},
+            cashAmount = HighPrecMoney {getHighPrecMoney = 0},
+            postingType = Wallet.Grant,
+            status = Wallet.New,
+            createdAt = now,
+            updatedAt = now
+          }
+  QWalletRewardPosting.create walletRewardPosting
+  mapM (DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq) orderResp
+
+getWalletStatus :: (BeamFlow m r) => Id Person -> DOrder.PaymentOrder -> Wallet.WalletPostingType -> m (Maybe Wallet.WalletPostingStatus)
+getWalletStatus personId paymentOrder postingType = do
+  personWallet <- QPersonWallet.findByPersonId personId >>= fromMaybeM (InternalError "Person wallet not found for personId: " <> show personId.getId)
+  walletRewardPosting <- QWalletRewardPosting.findByWalletIdAndStatus personWallet.id DWalletRewardPosting.NEW
+  case paymentOrder.status of
+    DPayment.CHARGED -> do
+      case walletRewardPosting of
+        Just walletRewardPosting -> do
+          let walletPostingReq = Wallet.WalletPostingReq {customerId = personId.getId, postingType = postingType, operationId = walletRewardPosting.shortId.getShortId, pointsAmount = walletRewardPosting.pointsAmount.getHighPrecMoney}
+          walletPostingCall <- TWallet.walletPosting merchantId merchantOperatingCityId
+          walletPostingResp <- DPayment.walletPostingService walletPostingReq walletPostingCall
+          case walletPostingResp.success of
+            True -> do
+              QWalletRewardPosting.updateByPrimaryKey walletRewardPosting {status = DWalletRewardPosting.SUCCESS}
+              return (Just DWalletRewardPosting.SUCCESS)
+            False -> do
+              QWalletRewardPosting.updateByPrimaryKey walletRewardPosting {status = DWalletRewardPosting.FAILED}
+              return (Just DWalletRewardPosting.FAILED)
+        Nothing -> do
+          logInfo $ "Wallet reward posting with status NEW not found for walletId: " <> show personWallet.id.getId
+          return Nothing
+    _ -> do
+      return (Just walletRewardPosting.status)
+
+getWalletBalance :: (BeamFlow m r) => Id DPersonWallet.PersonWallet -> m (Maybe Wallet.WalletBalanceData)
+getWalletBalance personWalletId = do
+  personWallet <- QPersonWallet.findById personWalletId >>= fromMaybeM (InternalError "Person wallet not found for personWalletId: " <> show personWalletId.getId)
+  let walletBalanceReq = Wallet.WalletBalanceReq {customerId = personWallet.personId, requireHistory = True}
+  walletBalanceCall <- TWallet.walletBalance merchantId merchantOperatingCityId
+  walletBalanceResp <- DPayment.walletBalanceService walletBalanceReq walletBalanceCall
+  case walletBalanceResp.success of
+    True -> do
+      now <- getCurrentTime
+      QPersonWallet.updateByPrimaryKey personWallet {pointsAmount = walletBalanceResp.walletData.pointsAmount, cashAmount = walletBalanceResp.walletData.cashAmount, expiredBalance = walletBalanceResp.walletData.expiredBalance, cashFromPointsRedemption = walletBalanceResp.walletData.cashFromPointsRedemption, usablePointsAmount = walletBalanceResp.walletData.usablePointsAmount, usableCashAmount = walletBalanceResp.walletData.usableCashAmount, updatedAt = now}
+      return (Just walletBalanceResp.walletData)
+    False -> do
+      return Nothing
+
+redeemWallet :: (BeamFlow m r) => Id Person -> HighPrecMoney -> (Maybe Wallet.WalletPostingStatus)
+redeemWallet personWalletId pointsAmount = do
+  personWallet <- QPersonWallet.findById personWalletId >>= fromMaybeM (InternalError "Person wallet not found for personWalletId: " <> show personWalletId.getId)
+  walletRewardPosting <- QWalletRewardPosting.findByWalletIdAndStatus personWallet.id DWalletRewardPosting.NEW
+
+  walletRewardPostingId <- generateGUID
+  operationId <- generateShortId
+  now <- getCurrentTime
+
+  ------------- call payout service here ---------------
+
+  -- payoutConfig <- CPC.findByPrimaryKey merchOpCity vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchOpCity.getId)
+  -- payoutServiceName <- Payout.decidePayoutService (DEMSC.PayoutService TPayout.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+  -- let entityName = DPayment.BACKLOG
+  --     createPayoutOrderCall = Payout.createPayoutOrder person.merchantId merchOpCity payoutServiceName (Just person.id.getId)
+  --     createPayoutOrderReq = DPayment.mkCreatePayoutOrderReq uid pendingAmount phoneNo person.email personId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
+  -- void $ DPayment.createPayoutService (cast person.merchantId) (Just $ cast merchOpCity) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+
+  let walletRewardPosting =
+        WalletRewardPosting
+          { id = walletRewardPostingId,
+            shortId = operationId,
+            walletId = personWallet.id,
+            pointsAmount = pointsAmount.getHighPrecMoney,
+            cashAmount = HighPrecMoney {getHighPrecMoney = 0},
+            postingType = Wallet.Redeem,
+            status = Wallet.NEW,
+            createdAt = now,
+            updatedAt = now
+          }
+  QWalletRewardPosting.create walletRewardPosting
+  return (Just DWalletRewardPosting.NEW)

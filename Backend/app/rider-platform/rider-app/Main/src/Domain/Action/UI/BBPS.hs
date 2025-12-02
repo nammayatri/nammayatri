@@ -41,6 +41,7 @@ import Kernel.Utils.Error
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Servant hiding (throwError)
@@ -217,7 +218,7 @@ getBbpsOrders (mbPersonId, merchantId) mbLimit mbOffset mbActive mbStatus = do
 mkBBPSInfoApiRes :: DBBPS.BBPS -> API.BBPSInfoAPIRes
 mkBBPSInfoApiRes DBBPS.BBPS {..} = API.BBPSInfoAPIRes {billDetails = API.BBPSBillDetails {txnAmount = highPrecMoneyToText amount, ..}, ..}
 
-bbpsOrderStatusHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EsqDBReplicaFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> DPayment.PaymentStatusResp -> m DPayment.PaymentFulfillmentStatus
+bbpsOrderStatusHandler :: (PaymentBeamFlow.BeamFlow m r, EsqDBReplicaFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> DPayment.PaymentStatusResp -> m DPayment.PaymentFulfillmentStatus
 bbpsOrderStatusHandler _merchantId paymentStatusResponse = do
   orderShortId <- DPayment.getOrderShortId paymentStatusResponse
   logDebug $ "bbps order bap webhookc call" <> orderShortId.getShortId
@@ -234,10 +235,10 @@ bbpsOrderStatusHandler _merchantId paymentStatusResponse = do
     DBBPS.REFUNDED -> return DPayment.FulfillmentRefunded
     _ -> return DPayment.FulfillmentPending
   where
-    withPaymentStatusResponseHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EsqDBReplicaFlow m r) => (DPayment.PaymentStatusResp -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
+    withPaymentStatusResponseHandler :: (PaymentBeamFlow.BeamFlow m r, EsqDBReplicaFlow m r) => (DPayment.PaymentStatusResp -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
     withPaymentStatusResponseHandler action = action paymentStatusResponse
 
-bbpsStatusHandler :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EsqDBReplicaFlow m r) => DBBPS.BBPS -> ((DPayment.PaymentStatusResp -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
+bbpsStatusHandler :: (PaymentBeamFlow.BeamFlow m r, EsqDBReplicaFlow m r) => DBBPS.BBPS -> ((DPayment.PaymentStatusResp -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes) -> m API.Types.UI.BBPS.BBPSPaymentStatusAPIRes
 bbpsStatusHandler bbpsInfo withPaymentStatusResponseHandler = do
   let oldResp =
         API.BBPSPaymentStatusAPIRes
