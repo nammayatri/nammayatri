@@ -380,7 +380,8 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                   minimumWalkDistance = riderConfig.minimumWalkDistance,
                   permissibleModes = fromMaybe [] riderConfig.permissibleModes,
                   maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
-                  sortingType = JMU.convertSortingType sortingType
+                  sortingType = JMU.convertSortingType sortingType,
+                  walkSpeed = if isSingleMode then riderConfig.singleModeWalkSpeed else Nothing
                 }
         transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
         otpResponse' <- JMU.measureLatency (MultiModal.getTransitRoutes (Just searchRequest.id.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")) "getTransitRoutes"

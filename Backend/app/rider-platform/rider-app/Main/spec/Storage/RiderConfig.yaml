@@ -183,6 +183,7 @@ RiderConfig:
     subwayRestrictionStartTime: Maybe TimeOfDay
     subwayRestrictionEndTime: Maybe TimeOfDay
     nearbyBusRadiusBucketStep: Maybe Meters
+    singleModeWalkSpeed: Maybe Double
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
