@@ -100,6 +100,7 @@ data AppEnv = AppEnv
     kafkaProducerTools :: KafkaProducerTools,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     inMemEnv :: CF.InMemEnv,
     url :: Maybe Text
@@ -118,6 +119,7 @@ buildAppEnv AppCfg {..} producerType = do
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let sessionId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-
     if cutOffHedisCluster

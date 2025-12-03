@@ -115,6 +115,7 @@ data SchedulerEnv = SchedulerEnv
     cacheConfig :: CacheConfig,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
     cacConfig :: CacConfig,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     inMemEnv :: InMemEnv,

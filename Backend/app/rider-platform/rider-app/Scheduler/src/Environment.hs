@@ -100,6 +100,7 @@ data HandlerEnv = HandlerEnv
     schedulerType :: SchedulerType,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     cacConfig :: CacConfig,
@@ -146,6 +147,7 @@ buildHandlerEnv HandlerCfg {..} = do
   passettoContext <- (uncurry mkDefPassettoContext) encTools.service
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let sessionId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
   hedisEnv <- connectHedis appCfg.hedisCfg ("rider-app-scheduler:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("ras:n_c:" <>)

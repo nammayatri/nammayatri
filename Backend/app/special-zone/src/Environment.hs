@@ -51,6 +51,7 @@ data AppEnv = AppEnv
     dashboardToken :: Text,
     loggerEnv :: LoggerEnv,
     shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
     requestId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     url :: Maybe Text
@@ -68,6 +69,7 @@ buildAppEnv AppCfg {..} = do
   let kafkaProducerForART = Nothing
   isShuttingDown <- mkShutdown
   let requestId = Nothing
+      sessionId = Nothing
       shouldLogRequestId = False
   let url = Nothing
   return $ AppEnv {..}

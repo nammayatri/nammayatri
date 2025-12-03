@@ -69,6 +69,7 @@ data AppEnv = AppEnv
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     url :: Maybe Text
   }
@@ -83,6 +84,7 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let sessionId = Nothing
   let kafkaProducerForART = Nothing
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   let url = Nothing

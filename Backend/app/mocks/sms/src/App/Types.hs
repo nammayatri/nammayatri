@@ -45,6 +45,7 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     version :: Metrics.DeploymentVersion,
     requestId :: Maybe Text,
+    sessionId :: Maybe Text,
     url :: Maybe Text
   }
   deriving (Generic)
@@ -57,6 +58,7 @@ buildAppEnv AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   isShuttingDown <- mkShutdown
   let requestId = Nothing
+  let sessionId = Nothing
   let url = Nothing
   return $ AppEnv {..}
 

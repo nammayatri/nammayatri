@@ -74,6 +74,7 @@ data AppEnv = AppEnv
     cacheConfig :: CacheConfig,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     url :: Maybe Text
   }
@@ -88,6 +89,7 @@ buildAppEnv AppCfg {..} = do
   version <- lookupDeploymentVersion
   isShuttingDown <- mkShutdown
   let requestId = Nothing
+  let sessionId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Just kafkaProducerTools
   let modifierFunc = ("sdk-event:" <>)

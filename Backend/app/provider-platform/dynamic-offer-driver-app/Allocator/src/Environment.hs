@@ -106,6 +106,7 @@ data HandlerEnv = HandlerEnv
     schedulerType :: SchedulerType,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     singleBatchProcessingTempDelay :: NominalDiffTime,
     enableAPILatencyLogging :: Bool,
@@ -145,6 +146,7 @@ buildHandlerEnv HandlerCfg {..} = do
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let sessionId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-
     if cutOffHedisCluster

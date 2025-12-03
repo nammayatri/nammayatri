@@ -145,6 +145,7 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     cacConfig :: CacConfig,
     healthCheckAppCfg :: Maybe HealthCheckAppCfg,
@@ -192,6 +193,7 @@ buildAppEnv AppCfg {..} consumerType = do
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let sessionId = Nothing
   let kafkaProducerForART = Nothing
   hedisClusterEnv <-
     if cutOffHedisCluster

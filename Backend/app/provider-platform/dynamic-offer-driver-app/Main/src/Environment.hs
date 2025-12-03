@@ -249,6 +249,7 @@ data AppEnv = AppEnv
     superPositionConfig :: KTC.SuperPositionConfig,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
     maxStraightLineRectificationThreshold :: HighPrecMeters,
     singleBatchProcessingTempDelay :: NominalDiffTime,
@@ -317,6 +318,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
       else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let sessionId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
