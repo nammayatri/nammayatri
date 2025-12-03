@@ -302,13 +302,13 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             mbRouteLiveInfo <-
               case mbVehicleOverrideInfo of
                 Just (updatedVehicleNumber, newDeviceWaybillNo) -> do
-                  mbUpdatedVehicleRouteInfo <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig] updatedVehicleNumber
+                  mbUpdatedVehicleRouteInfo <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig] updatedVehicleNumber Nothing
                   if Just newDeviceWaybillNo /= ((.waybillId) . snd =<< mbUpdatedVehicleRouteInfo)
                     then do
                       Dispatcher.delFleetOverrideInfo userPassedVehicleNumber
-                      JMU.getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber
+                      JMU.getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber Nothing
                     else pure mbUpdatedVehicleRouteInfo
-                Nothing -> JMU.getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber
+                Nothing -> JMU.getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber Nothing
             return $
               maybe
                 Nothing

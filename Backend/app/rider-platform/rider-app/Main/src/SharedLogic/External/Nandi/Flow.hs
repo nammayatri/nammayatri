@@ -75,10 +75,10 @@ caseTextToVehicleCategory "TRAIN" = BecknV2.FRFS.Enums.METRO
 caseTextToVehicleCategory "SUBWAY" = BecknV2.FRFS.Enums.SUBWAY
 caseTextToVehicleCategory _ = BecknV2.FRFS.Enums.BUS
 
-getVehicleServiceType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m (Maybe VehicleServiceTypeResponse)
-getVehicleServiceType baseUrl gtfsId vehicleNumber = do
+getVehicleServiceType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> Maybe Bool -> m (Maybe VehicleServiceTypeResponse)
+getVehicleServiceType baseUrl gtfsId vehicleNumber mbPassVerifyReq = do
   withShortRetry $
-    callAPI baseUrl (NandiAPI.getNandiVehicleServiceType gtfsId vehicleNumber) "getVehicleServiceType" NandiAPI.nandiVehicleServiceTypeAPI >>= \case
+    callAPI baseUrl (NandiAPI.getNandiVehicleServiceType gtfsId vehicleNumber mbPassVerifyReq) "getVehicleServiceType" NandiAPI.nandiVehicleServiceTypeAPI >>= \case
       Right response -> pure (Just response)
       Left err -> do
         logError $ "Error getting vehicle service type: " <> show err

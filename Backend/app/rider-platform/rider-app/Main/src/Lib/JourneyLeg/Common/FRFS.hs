@@ -129,7 +129,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     map fst . filter (\(_bs, mbVehicleServiceTier) -> maybe True (\vehicleServiceTier -> vehicleServiceTier `elem` allowedVariants) mbVehicleServiceTier)
                       <$> mapConcurrently
                         ( \busData -> do
-                            vd <- OTPRest.getVehicleServiceType integratedBppConfig busData.vehicleNumber
+                            vd <- OTPRest.getVehicleServiceType integratedBppConfig busData.vehicleNumber Nothing
                             return (busData, vd <&> (.service_type))
                         )
                         allBusDataForRoute
