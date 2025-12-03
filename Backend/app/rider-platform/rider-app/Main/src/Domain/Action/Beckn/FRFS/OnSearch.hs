@@ -588,6 +588,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote adultPrice in
                   integratedBppConfigId,
                   merchantId,
                   merchantOperatingCityId,
+                  trainType = Nothing,
                   createdAt = now,
                   updatedAt = now
                 }

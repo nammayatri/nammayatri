@@ -40,14 +40,14 @@ findByProviderCode providerCode merchantOperatingCityId = do
         ]
     ]
 
-findByProviderCodeAndisAirConditioned ::
+findByProviderCodeAndTrainType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
-findByProviderCodeAndisAirConditioned providerCode isAirConditioned merchantOperatingCityId = do
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
+findByProviderCodeAndTrainType providerCode trainType merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.providerCode $ Se.Eq providerCode,
-          Se.Is Beam.isAirConditioned $ Se.Eq isAirConditioned,
+          Se.Is Beam.trainType $ Se.Eq trainType,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
         ]
     ]
@@ -82,6 +82,7 @@ updateByPrimaryKey (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier {
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.providerCode providerCode,
       Se.Set Beam.shortName shortName,
+      Se.Set Beam.trainType trainType,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -101,6 +102,7 @@ instance FromTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceT
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             providerCode = providerCode,
             shortName = shortName,
+            trainType = trainType,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -118,6 +120,7 @@ instance ToTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceTie
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.providerCode = providerCode,
         Beam.shortName = shortName,
+        Beam.trainType = trainType,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

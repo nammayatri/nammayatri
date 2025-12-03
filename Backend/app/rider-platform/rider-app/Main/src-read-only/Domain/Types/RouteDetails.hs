@@ -59,7 +59,8 @@ data RouteDetails = RouteDetails
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data AvailableRoutesByTier = AvailableRoutesByTier
-  { availableRoutes :: [Kernel.Prelude.Text],
+  { alsoValidServiceTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
+    availableRoutes :: [Kernel.Prelude.Text],
     availableRoutesInfo :: [Domain.Types.RouteDetails.AvailableRoutesInfo],
     fare :: Kernel.Types.Common.PriceAPIEntity,
     nextAvailableBuses :: [Kernel.Types.Common.Seconds],
@@ -69,6 +70,7 @@ data AvailableRoutesByTier = AvailableRoutesByTier
     serviceTierDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     source :: Domain.Types.RouteStopTimeTable.SourceType,
+    ticketTypeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     trainTypeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     via :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }

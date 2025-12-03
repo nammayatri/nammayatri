@@ -929,6 +929,7 @@ FRFSVehicleServiceTier:
     merchantId: Id Merchant
     integratedBppConfigId: Id IntegratedBPPConfig
     merchantOperatingCityId: Id MerchantOperatingCity
+    trainType: Maybe Text
   constraints:
     id: PrimaryKey
   cachedQueries:
@@ -951,10 +952,10 @@ FRFSVehicleServiceTier:
       kvFunction: findAllWithKV
       where:
         and: [providerCode, merchantOperatingCityId]
-    findByProviderCodeAndisAirConditioned:
+    findByProviderCodeAndTrainType:
       kvFunction: findAllWithKV
       where:
-        and: [providerCode, isAirConditioned, merchantOperatingCityId]
+        and: [providerCode, trainType, merchantOperatingCityId]
     findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId:
       kvFunction: findOneWithKV
       where:

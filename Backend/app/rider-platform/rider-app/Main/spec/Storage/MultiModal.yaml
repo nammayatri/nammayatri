@@ -397,10 +397,12 @@ RouteDetails:
       source: "SourceType"
     AvailableRoutesByTier:
       serviceTier: "ServiceTierType"
+      alsoValidServiceTypes : "Maybe [ServiceTierType]"
       serviceTierName: "Maybe Text"
       serviceTierDescription: "Maybe Text"
       via: "Maybe Text"
       trainTypeCode: "Maybe Text"
+      ticketTypeCode: "Maybe Text"
       quoteId: "Maybe (Id FRFSQuote)"
       availableRoutes: "[Text]"
       availableRoutesInfo: "[AvailableRoutesInfo]"

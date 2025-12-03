@@ -22,6 +22,7 @@ data FRFSVehicleServiceTierT f = FRFSVehicleServiceTierT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     providerCode :: B.C f Kernel.Prelude.Text,
     shortName :: B.C f Kernel.Prelude.Text,
+    trainType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
