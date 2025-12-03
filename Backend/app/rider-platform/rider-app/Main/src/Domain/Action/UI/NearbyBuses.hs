@@ -96,7 +96,7 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
 
   busRouteMapping <- forM vehicleNumbers $ \vehicleNumber -> do
     mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
-      maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber
+      maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber Nothing
     pure $ Kernel.Prelude.listToMaybe mbResult
 
   let successfulMappings = catMaybes busRouteMapping

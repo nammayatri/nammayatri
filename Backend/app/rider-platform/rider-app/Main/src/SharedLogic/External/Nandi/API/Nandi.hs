@@ -24,7 +24,7 @@ type StopsByGtfsIdAndStopCodeAPI = "stop" :> Capture "gtfs_id" Text :> Capture "
 
 type StopsByGtfsIdFuzzySearchAPI = "stops" :> Capture "gtfs_id" Text :> "fuzzy" :> Capture "query" Text :> Get '[JSON] [RouteStopMappingInMemoryServer]
 
-type VehicleServiceTypeAPI = "vehicle" :> Capture "gtfs_id" Text :> "service-type" :> Capture "vehicle_number" Text :> Get '[JSON] VehicleServiceTypeResponse
+type VehicleServiceTypeAPI = "vehicle" :> Capture "gtfs_id" Text :> "service-type" :> Capture "vehicle_number" Text :> QueryParam "passVerifyReq" Bool :> Get '[JSON] VehicleServiceTypeResponse
 
 type StopChildrenAPI = "station-children" :> Capture "gtfs_id" Text :> Capture "stop_code" Text :> Get '[JSON] [Text]
 
@@ -153,7 +153,7 @@ getNandiStopsByGtfsIdAndStopCode = ET.client nandiStopsByGtfsIdAndStopCodeAPI
 getNandiStopsByGtfsIdFuzzySearch :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiStopsByGtfsIdFuzzySearch = ET.client nandiStopsByGtfsIdFuzzySearchAPI
 
-getNandiVehicleServiceType :: Text -> Text -> ET.EulerClient VehicleServiceTypeResponse
+getNandiVehicleServiceType :: Text -> Text -> Maybe Bool -> ET.EulerClient VehicleServiceTypeResponse
 getNandiVehicleServiceType = ET.client nandiVehicleServiceTypeAPI
 
 getNandiStopChildren :: Text -> Text -> ET.EulerClient [Text]

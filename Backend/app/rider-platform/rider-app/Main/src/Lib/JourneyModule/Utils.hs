@@ -254,7 +254,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
       logDebug $ "filteredBuses: " <> show (length filteredBuses) <> " busEtaData: " <> show (length busEtaData)
       vehicleRouteMappings <- forM filteredBuses $ \(vehicleNumber, etaData) -> do
         vrMapping <-
-          withTryCatch "getVehicleServiceType:processRoute" (OTPRest.getVehicleServiceType integratedBppConfig vehicleNumber) >>= \case
+          withTryCatch "getVehicleServiceType:processRoute" (OTPRest.getVehicleServiceType integratedBppConfig vehicleNumber Nothing) >>= \case
             Left _ -> return Nothing
             Right mapping -> return mapping
         case vrMapping >>= (.schedule_no) of
@@ -1399,9 +1399,10 @@ getVehicleLiveRouteInfo ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   [DIntegratedBPPConfig.IntegratedBPPConfig] ->
   Text ->
+  Maybe Bool ->
   m (Maybe (DIntegratedBPPConfig.IntegratedBPPConfig, VehicleLiveRouteInfo))
-getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber = do
-  eitherResult <- withTryCatch "getVehicleLiveRouteInfoUnsafe:getVehicleLiveRouteInfo" (getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber)
+getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber mbPassVerifyReq = do
+  eitherResult <- withTryCatch "getVehicleLiveRouteInfoUnsafe:getVehicleLiveRouteInfo" (getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq)
   case eitherResult of
     Left err -> do
       logError $ "Error getting vehicle live route info: " <> show err
@@ -1414,7 +1415,7 @@ getVehicleServiceTypeFromInMem ::
   Text ->
   m (Maybe Spec.ServiceTierType)
 getVehicleServiceTypeFromInMem integratedBPPConfigs vehicleNumber = IM.withInMemCache ["CACHED_VEHICLE_TYPE", vehicleNumber] 43200 $ do
-  res <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber
+  res <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing
   case res of
     Just (_, VehicleLiveRouteInfo {serviceType}) -> return $ Just serviceType
     Nothing -> return Nothing
@@ -1423,11 +1424,12 @@ getVehicleLiveRouteInfoUnsafe ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   [DIntegratedBPPConfig.IntegratedBPPConfig] ->
   Text ->
+  Maybe Bool ->
   m (Maybe (DIntegratedBPPConfig.IntegratedBPPConfig, VehicleLiveRouteInfo))
-getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber = do
+getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq = do
   mbMbResult <-
     SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
-      (config,) <$> OTPRest.getVehicleServiceType config vehicleNumber
+      (config,) <$> OTPRest.getVehicleServiceType config vehicleNumber mbPassVerifyReq
   return $
     mbMbResult
       >>= \(integratedBPPConfig, mbResult) ->
