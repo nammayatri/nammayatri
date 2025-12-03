@@ -72,6 +72,7 @@ data RideAPIEntity = RideAPIEntity
     destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     isSafetyPlus :: Kernel.Prelude.Bool,
     isInsured :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    insuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    insuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

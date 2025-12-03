@@ -120,7 +120,9 @@ filterRequiredBreakups fParamsType breakup = do
                  "PER_STOP_CHARGES",
                  "LUGGAGE_CHARGE",
                  "RETURN_FEE",
-                 "BOOTH_CHARGE"
+                 "BOOTH_CHARGE",
+                 "RIDE_VAT",
+                 "TOLL_VAT"
                ]
     DFParams.Slab ->
       title
@@ -139,7 +141,9 @@ filterRequiredBreakups fParamsType breakup = do
                  "PARKING_CHARGE",
                  "LUGGAGE_CHARGE",
                  "RETURN_FEE",
-                 "BOOTH_CHARGE"
+                 "BOOTH_CHARGE",
+                 "RIDE_VAT",
+                 "TOLL_VAT"
                ]
     DFParams.Rental ->
       title
@@ -158,7 +162,9 @@ filterRequiredBreakups fParamsType breakup = do
                  "PARKING_CHARGE",
                  "LUGGAGE_CHARGE",
                  "RETURN_FEE",
-                 "BOOTH_CHARGE"
+                 "BOOTH_CHARGE",
+                 "RIDE_VAT",
+                 "TOLL_VAT"
                ]
     DFParams.InterCity ->
       title
@@ -178,7 +184,9 @@ filterRequiredBreakups fParamsType breakup = do
                  "PARKING_CHARGE",
                  "LUGGAGE_CHARGE",
                  "RETURN_FEE",
-                 "BOOTH_CHARGE"
+                 "BOOTH_CHARGE",
+                 "RIDE_VAT",
+                 "TOLL_VAT"
                ]
     _ -> True
 

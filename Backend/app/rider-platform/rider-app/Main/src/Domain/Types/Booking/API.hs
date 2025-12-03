@@ -535,6 +535,7 @@ buildRideAPIEntity DRide.Ride {..} = do
         allowedEditPickupLocationAttempts = fromMaybe 0 allowedEditPickupLocationAttempts,
         talkedWithDriver = fromMaybe False talkedWithDriver,
         isInsured = Just isInsured,
+        tipAmount = mkPriceAPIEntity <$> tipAmount,
         ..
       }
 
