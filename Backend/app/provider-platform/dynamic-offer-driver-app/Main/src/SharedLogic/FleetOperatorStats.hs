@@ -480,7 +480,7 @@ updateOnlineDurationDaily fleetOperatorId driverId transporterConfig newOnlineDu
     transporterConfig
     nowUTCTime
     mbFleetStats
-    (\_fleetStats -> QFleetOpsDaily.updateOnlineDurationByFleetOperatorIdAndDate (Just newOnlineDurationFleet) fleetOperatorId driverId merchantLocalDate)
+    (\_fleetStats -> QFleetOpsDaily.updateOnlineDurationByFleetOperatorIdAndDate (Just newOnlineDurationFleet) fleetOperatorId fleetOperatorId merchantLocalDate)
     (\stats -> stats {DFODS.onlineDuration = Just newOnlineDurationFleet})
 
   -- Update or create driver-level stats
