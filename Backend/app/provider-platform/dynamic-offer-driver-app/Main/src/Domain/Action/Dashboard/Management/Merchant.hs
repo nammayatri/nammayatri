@@ -55,6 +55,7 @@ where
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import Control.Applicative
+import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as HM
 import qualified Data.Aeson.Types as DAT
 import qualified Data.ByteString as BS
@@ -64,6 +65,7 @@ import qualified Data.List as DL
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TEnc
 import Data.Time (DayOfWeek (..))
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
@@ -1218,7 +1220,10 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     driverCancellationPenaltyAmount :: Text,
     perLuggageCharge :: Text,
     returnFee :: Text,
-    boothCharges :: Text
+    boothCharges :: Text,
+    vatChargeConfig :: Text,
+    commissionChargeConfig :: Text,
+    tollTaxCharge :: Text
   }
   deriving (Show)
 
@@ -1315,6 +1320,9 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "per_luggage_charge"
       <*> r .: "return_fee"
       <*> r .: "booth_charges"
+      <*> r .: "vat_charge_config"
+      <*> r .: "commission_charge_config"
+      <*> r .: "toll_tax_charge_config"
 
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
@@ -1550,6 +1558,29 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
         case conditionalCharges' of
           DAT.Success (resp :: [DAC.ConditionalCharges]) -> return resp
           DAT.Error err -> throwError $ InvalidRequest ("Additional charges Parsing failed :: " <> show err)
+
+      -- Parse charge configs (vat, commission, toll tax) from JSON strings
+      let vatChargeConfigText = cleanMaybeCSVField idx row.vatChargeConfig "VAT Charge Config"
+      vatChargeConfig <- case vatChargeConfigText of
+        Nothing -> return Nothing
+        Just text -> case A.eitherDecode (LBS.fromStrict $ TEnc.encodeUtf8 text) of
+          Left err -> throwError $ InvalidRequest ("VAT Charge Config parsing failed :: " <> T.pack err)
+          Right config -> return (Just config)
+
+      let commissionChargeConfigText = cleanMaybeCSVField idx row.commissionChargeConfig "Commission Charge Config"
+      commissionChargeConfig <- case commissionChargeConfigText of
+        Nothing -> return Nothing
+        Just text -> case A.eitherDecode (LBS.fromStrict $ TEnc.encodeUtf8 text) of
+          Left err -> throwError $ InvalidRequest ("Commission Charge Config parsing failed :: " <> T.pack err)
+          Right config -> return (Just config)
+
+      let tollTaxChargeConfigText = cleanMaybeCSVField idx row.tollTaxCharge "Toll Tax Charge"
+      tollTaxChargeConfig <- case tollTaxChargeConfigText of
+        Nothing -> return Nothing
+        Just text -> case A.eitherDecode (LBS.fromStrict $ TEnc.encodeUtf8 text) of
+          Left err -> throwError $ InvalidRequest ("Toll Tax Charge Config parsing failed :: " <> T.pack err)
+          Right config -> return (Just config)
+
       currency :: Currency <- readCSVField idx row.currency "Currency"
 
       (freeWatingTime, waitingCharges, mbNightCharges) <- do
@@ -1731,7 +1762,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, perLuggageCharge = perLuggageCharge, returnFee = returnFee, boothCharges = boothCharges, vatChargeConfig = Nothing, commissionChargeConfig = Nothing, tollTaxChargeConfig = Nothing, ..})
+      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, perLuggageCharge = perLuggageCharge, returnFee = returnFee, boothCharges = boothCharges, vatChargeConfig = vatChargeConfig, commissionChargeConfig = commissionChargeConfig, tollTaxChargeConfig = tollTaxChargeConfig, ..})
 
     validateFarePolicyType farePolicyType = \case
       InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"
