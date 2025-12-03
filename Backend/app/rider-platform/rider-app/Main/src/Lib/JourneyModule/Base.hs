@@ -1543,5 +1543,6 @@ getLegTierOptions ::
     HasShortDurationRetryCfg r c
   ) =>
   DJourneyLeg.JourneyLeg ->
+  Bool ->
   m [DRouteDetails.AvailableRoutesByTier]
-getLegTierOptions journeyLeg = getLegTierOptionsUtil journeyLeg
+getLegTierOptions journeyLeg enableSuburbanRoundTrip = getLegTierOptionsUtil journeyLeg enableSuburbanRoundTrip

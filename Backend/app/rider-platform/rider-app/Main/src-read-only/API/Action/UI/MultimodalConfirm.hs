@@ -332,6 +332,9 @@ type API =
            "legOrder"
            Kernel.Prelude.Int
       :> "getLegTierOptions"
+      :> QueryParam
+           "enableSuburbanRoundTrip"
+           Kernel.Prelude.Bool
       :> Get
            '[JSON]
            API.Types.UI.MultimodalConfirm.LegServiceTierOptionsResp
@@ -753,9 +756,10 @@ getMultimodalOrderGetLegTierOptions ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.LegServiceTierOptionsResp
   )
-getMultimodalOrderGetLegTierOptions a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalOrderGetLegTierOptions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getMultimodalOrderGetLegTierOptions a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalOrderGetLegTierOptions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postMultimodalOrderSublegSetOnboardedVehicleDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

@@ -74,7 +74,7 @@ data VehicleCategory = METRO | SUBWAY | BUS
 
 $(mkHttpInstancesForEnum ''VehicleCategory)
 
-data ServiceTierType = ORDINARY | AC | NON_AC | EXPRESS | SPECIAL | EXECUTIVE | FIRST_CLASS | SECOND_CLASS | THIRD_CLASS | ASHOK_LEYLAND_AC | MIDI_AC | VOLVO_AC | ELECTRIC_V | ELECTRIC_V_PMI
+data ServiceTierType = ORDINARY | AC | NON_AC | EXPRESS | SPECIAL | EXECUTIVE | FIRST_CLASS | SECOND_CLASS | THIRD_CLASS | ASHOK_LEYLAND_AC | MIDI_AC | VOLVO_AC | ELECTRIC_V | ELECTRIC_V_PMI | AC_EMU_FIRST_CLASS
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, ToParamSchema)
 
 instance FromJSON ServiceTierType where
@@ -101,6 +101,7 @@ instance FromJSON ServiceTierType where
     (String "VOLVO_AC") -> pure VOLVO_AC
     (String "ELECTRIC_V") -> pure ELECTRIC_V
     (String "ELECTRIC_V_PMI") -> pure ELECTRIC_V_PMI
+    (String "AC_EMU_FIRST_CLASS") -> pure AC_EMU_FIRST_CLASS
     _ -> parseFail "Invalid Service Tier Type"
 
 instance ToSchema ServiceTierType where

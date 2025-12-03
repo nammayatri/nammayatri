@@ -160,6 +160,7 @@ data LegServiceTier = LegServiceTier
     serviceTierDescription :: Text,
     via :: Maybe Text,
     trainTypeCode :: Maybe Text,
+    ticketTypeCode :: Maybe Text,
     fare :: Maybe PriceAPIEntity,
     quoteId :: Id DFRFSQuote.FRFSQuote
   }
@@ -410,8 +411,9 @@ findPossibleRoutes ::
   Bool ->
   Bool ->
   Bool ->
+  Bool ->
   m (Maybe Text, [AvailableRoutesByTier], [RouteStopTimeTable])
-findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare useLiveBusData calledForSubwaySingleMode = do
+findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare useLiveBusData calledForSubwaySingleMode enableSuburbanRoundTrip = do
   -- Get route mappings that contain the origin stop
   validRoutes <- measureLatency (getRouteCodesFromTo fromStopCode toStopCode integratedBppConfig) "getRouteCodesFromTo"
   let (_, currentTimeIST) = getISTTimeInfo currentTime
@@ -486,49 +488,25 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           )
           groupedByTierReordered
   logDebug $ "findPossibleRoutes: groupedByTierReordered summary = " <> show tierSummary
-  let serviceTierAlternatesMap :: M.Map Spec.ServiceTierType [Text] =
-        M.fromList $
-          map
-            ( \timingsForTier -> do
-                let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
-                    routeCodesForTier = nub $ (map (.routeCode) timingsForTier)
-                (serviceTierType, routeCodesForTier)
-            )
-            groupedByTierReordered
 
-  let alternateRouteHashMap :: M.Map Spec.ServiceTierType [Text] =
+  let alternateRouteHashMap :: Maybe (M.Map Spec.ServiceTierType [Spec.ServiceTierType]) =
         case mbServiceTierRelationshipCfg of
-          Nothing -> serviceTierAlternatesMap
+          Nothing -> Nothing
           Just serviceTierRelationshipCfg ->
-            foldl'
-              ( \acc serviceTierRelationshipCfg' ->
-                  foldl'
-                    ( \accIn serviceTierType ->
-                        case M.lookup serviceTierType serviceTierAlternatesMap of
-                          Just alternateRouteIds ->
-                            case M.lookup serviceTierRelationshipCfg'.serviceTierType accIn of
-                              Just alternateRouteIds' ->
-                                M.insert serviceTierRelationshipCfg'.serviceTierType (nub $ alternateRouteIds ++ alternateRouteIds') accIn
-                              Nothing ->
-                                M.insert serviceTierRelationshipCfg'.serviceTierType alternateRouteIds accIn
-                          Nothing -> accIn
-                    )
-                    acc
-                    serviceTierRelationshipCfg'.canBoardIn
-              )
-              M.empty
-              serviceTierRelationshipCfg
-
-  let finalAlternateRouteHashMap =
-        M.union alternateRouteHashMap $
-          M.filterWithKey (\k _ -> not (M.member k alternateRouteHashMap)) serviceTierAlternatesMap
+            Just $
+              foldl'
+                ( \acc serviceTierRelationshipCfg' ->
+                    M.insert serviceTierRelationshipCfg'.serviceTierType serviceTierRelationshipCfg'.canBoardIn acc
+                )
+                M.empty
+                serviceTierRelationshipCfg
 
   -- For each service tier, collect route information
-  results <-
+  resultsNested <-
     measureLatency
       ( (flip mapConcurrently) groupedByTierReordered $ \timingsForTier -> do
           let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
-              routeCodesForTier = nub $ fromMaybe (map (.routeCode) timingsForTier) (M.lookup serviceTierType finalAlternateRouteHashMap)
+              routeCodesForTier = map (.routeCode) timingsForTier
           logDebug $ "routeCodesForTier: " <> show routeCodesForTier <> "serviceTierType: " <> show serviceTierType
           let tierSource = maybe GTFS (\a -> a.source) $ find (\a -> a.source == LIVE) timingsForTier
 
@@ -553,53 +531,75 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
           let nextAvailableTimings = timingsForTier <&> (\timing -> (timing.timeOfArrival, timing.timeOfDeparture))
 
-          (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode) <- do
-            case mbAvailableServiceTiers of
-              Just availableServiceTiers -> do
-                let availableServiceTier = find (\tier -> tier.serviceTierType == serviceTierType) availableServiceTiers
-                    quoteId = availableServiceTier <&> (.quoteId)
+          -- Helper to build AvailableRoutesByTier from an optional service tier
+          let buildFromTier availableServiceTier = do
+                let quoteId = availableServiceTier <&> (.quoteId)
                     serviceTierName = availableServiceTier <&> (.serviceTierName)
                     serviceTierDescription = availableServiceTier <&> (.serviceTierDescription)
                     via = availableServiceTier >>= (.via)
                     trainTypeCode = availableServiceTier >>= (.trainTypeCode)
+                    ticketTypeCode = availableServiceTier >>= (.ticketTypeCode)
                     mbFare = availableServiceTier >>= (.fare)
-                return (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode)
-              Nothing -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+                logDebug $ "mbFare: " <> show mbFare <> "serviceTierType: " <> show serviceTierType <> "routeShortNames: " <> show routeShortNames <> "quoteId: " <> show quoteId <> "via: " <> show via <> "trainTypeCode: " <> show trainTypeCode <> "ticketTypeCode: " <> show ticketTypeCode
+                let fare = fromMaybe (PriceAPIEntity 0.0 INR) mbFare -- fix it later
+                let availableRoutesInfo =
+                      map
+                        ( \routeDetail -> do
+                            let routeArrivalTimes = filter (\(rtCode, _, _) -> rtCode == routeDetail.code) arrivalTimes
+                                routeSource = maybe GTFS (\(_, sr, _) -> sr) $ find (\(_, sr, _) -> sr == LIVE) routeArrivalTimes
+                            AvailableRoutesInfo
+                              { shortName = routeDetail.shortName,
+                                longName = routeDetail.longName,
+                                routeCode = routeDetail.code,
+                                routeTimings = sort $ map (\(_, _, arrivalTime) -> arrivalTime) routeArrivalTimes,
+                                isLiveTrackingAvailable = routeSource == LIVE,
+                                source = routeSource
+                              }
+                        )
+                        validRouteDetails
+                return $
+                  AvailableRoutesByTier
+                    { serviceTier = serviceTierType,
+                      alsoValidServiceTypes = alternateRouteHashMap >>= M.lookup serviceTierType,
+                      availableRoutes = routeShortNames, -- TODO: deprecate this
+                      availableRoutesInfo = availableRoutesInfo,
+                      nextAvailableBuses = sort $ map (\(_, _, arrivalTime) -> arrivalTime) arrivalTimes,
+                      serviceTierName = serviceTierName,
+                      serviceTierDescription = serviceTierDescription,
+                      quoteId = quoteId,
+                      via = via,
+                      trainTypeCode = trainTypeCode,
+                      ticketTypeCode = ticketTypeCode,
+                      fare = fare,
+                      nextAvailableTimings = sortBy (\a b -> compare (fst a) (fst b)) nextAvailableTimings,
+                      source = tierSource
+                    }
 
-          logDebug $ "mbFare: " <> show mbFare <> "serviceTierType: " <> show serviceTierType <> "routeShortNames: " <> show routeShortNames <> "quoteId: " <> show quoteId <> "via: " <> show via <> "trainTypeCode: " <> show trainTypeCode
-          let fare = fromMaybe (PriceAPIEntity 0.0 INR) mbFare -- fix it later
-          let availableRoutesInfo =
-                map
-                  ( \routeDetail -> do
-                      let routeArrivalTimes = filter (\(rtCode, _, _) -> rtCode == routeDetail.code) arrivalTimes
-                          routeSource = maybe GTFS (\(_, sr, _) -> sr) $ find (\(_, sr, _) -> sr == LIVE) routeArrivalTimes
-                      AvailableRoutesInfo
-                        { shortName = routeDetail.shortName,
-                          longName = routeDetail.longName,
-                          routeCode = routeDetail.code,
-                          routeTimings = sort $ map (\(_, _, arrivalTime) -> arrivalTime) routeArrivalTimes,
-                          isLiveTrackingAvailable = routeSource == LIVE,
-                          source = routeSource
-                        }
-                  )
-                  validRouteDetails
-          return $
-            AvailableRoutesByTier
-              { serviceTier = serviceTierType,
-                availableRoutes = routeShortNames, -- TODO: deprecate this
-                availableRoutesInfo = availableRoutesInfo,
-                nextAvailableBuses = sort $ map (\(_, _, arrivalTime) -> arrivalTime) arrivalTimes,
-                serviceTierName = serviceTierName,
-                serviceTierDescription = serviceTierDescription,
-                quoteId = quoteId,
-                via = via,
-                trainTypeCode = trainTypeCode,
-                fare = fare,
-                nextAvailableTimings = sortBy (\a b -> compare (fst a) (fst b)) nextAvailableTimings,
-                source = tierSource
-              }
+          -- Build one or more AvailableRoutesByTier entries for this serviceTierType
+          case mbAvailableServiceTiers of
+            Just availableServiceTiers -> do
+              let matchingTiers = filter (\tier -> tier.serviceTierType == serviceTierType) availableServiceTiers
+              logDebug $ "allMatchingServiceTiersForType: " <> show serviceTierType <> " -> " <> show matchingTiers
+              if enableSuburbanRoundTrip && vc == Enums.SUBWAY
+                then do
+                  -- For SUBWAY with enableSuburbanRoundTrip, return one AvailableRoutesByTier per matching tier (or a default one if none match)
+                  let tiersToUse =
+                        if null matchingTiers
+                          then [Nothing]
+                          else map Just matchingTiers
+                  mapM buildFromTier tiersToUse
+                else do
+                  -- For other vehicle categories, preserve existing behaviour: pick at most one tier
+                  let availableServiceTier = listToMaybe matchingTiers
+                  oneResult <- buildFromTier availableServiceTier
+                  return [oneResult]
+            Nothing -> do
+              -- No available service tiers information; fall back to a default entry
+              buildFromTier Nothing >>= \r -> return [r]
       )
       "concurrentTierProcessing"
+
+  let results = concat resultsNested
 
   -- Only return service tiers that have available routes
   let filteredResults = filter (\r -> not (null $ r.availableRoutes) && (r.fare /= PriceAPIEntity 0.0 INR || sendWithoutFare)) results
@@ -919,12 +919,14 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
                               serviceTierName = Nothing,
                               source = GTFS,
                               trainTypeCode = Nothing,
-                              via = Nothing
+                              ticketTypeCode = Nothing,
+                              via = Nothing,
+                              alsoValidServiceTypes = Nothing
                             }
                         ]
                   return (listToMaybe validRoutes, availableRoutesByTier, [])
               )
-              (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True True calledForSubwaySingleMode)
+              (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True True calledForSubwaySingleMode False)
               fetchTimings
           )
           "findPossibleRoutesMaybeFetchTimings"
@@ -1496,7 +1498,8 @@ getServiceTierFromQuote quoteCategories quote = do
         serviceTierType = serviceTier._type,
         serviceTierDescription = serviceTier.description,
         via = quote.fareDetails <&> (.via),
-        trainTypeCode = quote.fareDetails <&> (.trainTypeCode)
+        trainTypeCode = quote.fareDetails <&> (.trainTypeCode),
+        ticketTypeCode = quote.fareDetails <&> (.ticketTypeCode)
       }
 
 switchFRFSQuoteTierUtil ::
@@ -1560,7 +1563,7 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
       ) =>
       m (Maybe ([Text], [Text]))
     getAlternateRouteInfo = do
-      options <- getLegTierOptionsUtil journeyLeg
+      options <- getLegTierOptionsUtil journeyLeg False
       let mbSelectedOption = find (\option -> option.quoteId == Just quoteId) options
       return $ mbSelectedOption <&> (\option -> unzip $ map (\a -> (a.shortName, a.routeCode)) option.availableRoutesInfo)
 
@@ -1593,8 +1596,9 @@ getLegTierOptionsUtil ::
     HasShortDurationRetryCfg r c
   ) =>
   DJourneyLeg.JourneyLeg ->
+  Bool ->
   m [DRouteDetails.AvailableRoutesByTier]
-getLegTierOptionsUtil journeyLeg = do
+getLegTierOptionsUtil journeyLeg enableSuburbanRoundTrip = do
   now <- getCurrentTime
   let mbAgencyId = journeyLeg.agency >>= (.gtfsId)
   let vehicleCategory = castTravelModeToVehicleCategory journeyLeg.mode
@@ -1615,7 +1619,7 @@ getLegTierOptionsUtil journeyLeg = do
 
   case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
-      (_, availableRoutesByTiers, _) <- findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig journeyLeg.merchantId journeyLeg.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY) False False
+      (_, availableRoutesByTiers, _) <- findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig journeyLeg.merchantId journeyLeg.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY) False False enableSuburbanRoundTrip
       return availableRoutesByTiers
     _ -> return []
 

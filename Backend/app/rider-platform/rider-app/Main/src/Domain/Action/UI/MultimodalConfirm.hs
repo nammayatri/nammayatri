@@ -959,11 +959,13 @@ getMultimodalOrderGetLegTierOptions ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Environment.Flow ApiTypes.LegServiceTierOptionsResp
-getMultimodalOrderGetLegTierOptions (_mbPersonId, _merchantId) journeyId legOrder = do
+getMultimodalOrderGetLegTierOptions (_mbPersonId, _merchantId) journeyId legOrder mbEnableSuburbanRoundTrip = do
   legs <- QJourneyLeg.getJourneyLegs journeyId
   journeyLegInfo <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
-  options <- getLegTierOptions journeyLegInfo
+  let enableSuburbanRoundTrip = fromMaybe False mbEnableSuburbanRoundTrip
+  options <- getLegTierOptions journeyLegInfo enableSuburbanRoundTrip
   return $ ApiTypes.LegServiceTierOptionsResp {options}
 
 -- TODO :: For Backward compatibility, remove this post `postMultimodalOrderSublegSetTrackingStatus` release
@@ -1180,7 +1182,7 @@ getMultimodalOrderSimilarJourneyLegs (mbPersonId, merchantId) journeyId legOrder
       mbAvailableTier <-
         case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
           (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
-            (_, tiers, _) <- JLU.findPossibleRoutes Nothing fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory True False False
+            (_, tiers, _) <- JLU.findPossibleRoutes Nothing fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory True False False False
             return $ listToMaybe tiers
           _ -> return Nothing
       return $
@@ -1274,7 +1276,7 @@ postMultimodalSetRouteName userInfo req =
       journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
       unless (journeyLeg.mode == DTrip.Bus) $ throwError $ InvalidRequest "Only Bus legs supported for route name update"
 
-      options <- getMultimodalOrderGetLegTierOptions userInfo' journeyId legOrder
+      options <- getMultimodalOrderGetLegTierOptions userInfo' journeyId legOrder Nothing
       let mbMatch =
             listToMaybe $ do
               option <- options.options
@@ -1627,6 +1629,7 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
           vehicleCategory
           True -- sendWithoutFare
           True
+          False
           False
 
       let (liveBuses, staticBuses) = partition (\route -> route.source == LIVE) availableRoutesByTier
