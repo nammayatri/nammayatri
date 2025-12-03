@@ -15,3 +15,9 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD COLUMN updated_at ti
 ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ADD PRIMARY KEY ( fleet_owner_id, merchant_local_date, rc_id);
 
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_rc_daily_stats ALTER COLUMN ride_distance TYPE double precision USING ride_distance::double precision;

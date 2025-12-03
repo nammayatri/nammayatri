@@ -33,6 +33,9 @@ FleetOperatorDailyStats:
     currency : Maybe Currency
     distanceUnit : Maybe DistanceUnit
 
+  sqlType:
+    totalDistance: double precision
+
   beamType:
     totalDistance: Maybe Double
 

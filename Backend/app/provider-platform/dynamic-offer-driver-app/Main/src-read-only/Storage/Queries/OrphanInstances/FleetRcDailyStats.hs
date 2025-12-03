@@ -4,13 +4,16 @@
 module Storage.Queries.OrphanInstances.FleetRcDailyStats where
 
 import qualified Domain.Types.FleetRcDailyStats
+import qualified GHC.Float
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.FleetRcDailyStats as Beam
+import Storage.Queries.Transformers.FleetRcDailyStats
 
 instance FromTType' Beam.FleetRcDailyStats Domain.Types.FleetRcDailyStats.FleetRcDailyStats where
   fromTType' (Beam.FleetRcDailyStatsT {..}) = do
@@ -21,7 +24,7 @@ instance FromTType' Beam.FleetRcDailyStats Domain.Types.FleetRcDailyStats.FleetR
             fleetOwnerId = fleetOwnerId,
             merchantLocalDate = merchantLocalDate,
             rcId = rcId,
-            rideDistance = rideDistance,
+            rideDistance = Kernel.Types.Common.Meters $ GHC.Float.double2Int rideDistance,
             rideDuration = rideDuration,
             totalCompletedRides = totalCompletedRides,
             totalEarnings = totalEarnings,
@@ -38,7 +41,7 @@ instance ToTType' Beam.FleetRcDailyStats Domain.Types.FleetRcDailyStats.FleetRcD
         Beam.fleetOwnerId = fleetOwnerId,
         Beam.merchantLocalDate = merchantLocalDate,
         Beam.rcId = rcId,
-        Beam.rideDistance = rideDistance,
+        Beam.rideDistance = getRideDistance rideDistance,
         Beam.rideDuration = rideDuration,
         Beam.totalCompletedRides = totalCompletedRides,
         Beam.totalEarnings = totalEarnings,

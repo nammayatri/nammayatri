@@ -1592,10 +1592,13 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
           totalRequests = accepted + rejected + passed
           acceptanceRate = if totalRequests > 0 then fromIntegral accepted / fromIntegral totalRequests else 0.0
           completionRate = if totalRequests > 0 then fromIntegral completed / fromIntegral totalRequests else 0.0
-          onlineHrs = fromIntegral (getSeconds onlineDuration) / 3600.0
-          rideTime = fromIntegral (getSeconds rideDuration) / 3600.0
-          -- Utilization: how many hours driver utilize from the onlineHours for ride (rideTime / onlineHrs)
-          utilization = if onlineHrs > 0 then rideTime / onlineHrs else 0.0
+          -- Utilization: percentage of online hours used for rides (rideTime / onlineHrs * 100)
+          onlineDurationInSeconds = fromIntegral (getSeconds onlineDuration)
+          rideDurationInSeconds = fromIntegral (getSeconds rideDuration)
+          utilization =
+            if onlineDurationInSeconds > 0
+              then rideDurationInSeconds / onlineDurationInSeconds
+              else 0.0
           distanceKm = fromIntegral (getMeters distance) / 1000.0
           earningPerKm = if distanceKm > 0 then totalEarning / HighPrecMoney distanceKm else HighPrecMoney 0.0
           -- Rating: totalRatingScore / completedRides
@@ -1607,14 +1610,14 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
                 acceptedRideRequests = accepted,
                 rejectedRideRequests = rejected,
                 passedRideRequests = passed,
-                acceptanceRate = acceptanceRate,
+                acceptanceRate = acceptanceRate * 100,
                 completedRides = completed,
                 driverCanceledRides = driverCanceled,
                 customerCanceledRides = customerCanceled,
-                completionRate = completionRate,
-                onlineHrs = onlineHrs,
-                rideTime = rideTime,
-                utilization = utilization,
+                completionRate = completionRate * 100,
+                onlineDuration = onlineDuration,
+                rideDuration = rideDuration,
+                utilization = utilization * 100,
                 distance = distance,
                 earnings = PriceAPIEntity totalEarning config.currency,
                 earningPerKm = PriceAPIEntity earningPerKm config.currency
@@ -3326,11 +3329,9 @@ getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId mbResponseT
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
-
+  let useDBForAnalytics = transporterConfig.analyticsConfig.useDbForEarningAndMetrics
   case mbResponseType of
     Just Common.EARNINGS -> do
-      -- Get earnings data from ClickHouse using aggregated daily stats
-      let useDBForAnalytics = transporterConfig.analyticsConfig.useDbForEarningAndMetrics
       earningsAgg <-
         if useDBForAnalytics
           then QFODSExtra.sumFleetEarningsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay
@@ -3354,8 +3355,10 @@ getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId mbResponseT
               netEarningsPerHour = PriceAPIEntity netEarningsPerHourAmount transporterConfig.currency
             }
     _ -> do
-      -- Default behavior - return FilteredFleetAnalyticsRes
-      agg <- CFODS.sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay
+      agg <-
+        if useDBForAnalytics
+          then QFODSExtra.sumFleetMetricsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay
+          else CFODS.sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay
       let totalEarnings = PriceAPIEntity (fromMaybe (HighPrecMoney 0.0) agg.totalEarningSum) transporterConfig.currency
           totalDistance = fromMaybe (Meters 0) agg.totalDistanceSum
           completedRides = fromMaybe 0 agg.totalCompletedRidesSum

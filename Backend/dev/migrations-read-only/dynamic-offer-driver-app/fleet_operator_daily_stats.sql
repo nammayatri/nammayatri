@@ -28,3 +28,9 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN merchan
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD PRIMARY KEY ( fleet_driver_id, fleet_operator_id, merchant_local_date);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ALTER COLUMN total_distance TYPE double precision USING total_distance::double precision;

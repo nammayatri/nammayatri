@@ -67,7 +67,7 @@ sumVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromD
                       B.group_ (Beam.rcId stats),
                       B.coalesce_ [B.sum_ (Beam.totalEarnings stats)] (B.val_ (HighPrecMoney 0)),
                       B.coalesce_ [B.sum_ (Beam.totalCompletedRides stats)] (B.val_ 0),
-                      B.coalesce_ [B.sum_ (Beam.rideDistance stats)] (B.val_ (Meters 0)),
+                      B.coalesce_ [B.sum_ (Beam.rideDistance stats)] (B.val_ 0.0),
                       B.coalesce_ [B.sum_ (Beam.rideDuration stats)] (B.val_ (Seconds 0))
                     )
                 )
@@ -81,7 +81,7 @@ sumVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromD
                   $ B.all_ (BeamCommon.fleetRcDailyStats BeamCommon.atlasDB)
 
   case res of
-    Right result -> pure $ map (\(fleetOwnerId', rcId, totalEarnings, totalCompletedRides, totalDistance, totalDuration) -> mkFleetRcDailyStatsAggregated fleetOwnerId' rcId totalEarnings totalCompletedRides totalDistance totalDuration) result
+    Right result -> pure $ map (\(fleetOwnerId', rcId, totalEarnings, totalCompletedRides, totalDistance, totalDuration) -> mkFleetRcDailyStatsAggregated fleetOwnerId' rcId totalEarnings totalCompletedRides (Meters $ round totalDistance) totalDuration) result
     Left err -> do
       logTagError "FleetOperatorDailyStats" ("DB failure. Error: " <> show err)
       pure []
