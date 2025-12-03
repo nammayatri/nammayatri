@@ -191,6 +191,7 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
     Terminate description -> do
       logError $ "job terminated on try " <> show (currErrors + 1) <> "; with jobId: " <> show job.id <> "; reason: " <> description
       markAsFailed jobType' job.id
+      fork "" $ incrementStreamFailedCounter ("Executor_" <> show jobType')
     ReSchedule reScheduledTime -> do
       logInfo $ "job rescheduled on time = " <> show reScheduledTime <> " jobType :" <> jobType'
       reSchedule jobType' j reScheduledTime
