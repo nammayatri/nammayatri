@@ -622,6 +622,9 @@ buildOrderOffer paymentOrderId mbOffers merchantId merchantOperatingCityId = do
   let poIdTxt = paymentOrderId.getId
   logDebug $ "buildOrderOffer called for paymentOrderId: " <> poIdTxt <> " with " <> show (length (fromMaybe [] mbOffers)) <> " offers"
   case mbOffers of
+    Nothing -> do
+      logInfo $ "No offers to create for paymentOrderId: " <> paymentOrderId.getId
+      pure ()
     Just [] -> do
       logInfo $ "No offers to create for paymentOrderId: " <> paymentOrderId.getId
       pure ()
