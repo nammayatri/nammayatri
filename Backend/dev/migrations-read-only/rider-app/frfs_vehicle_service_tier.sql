@@ -18,3 +18,8 @@ ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN is_air_conditioned boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN train_type text ;

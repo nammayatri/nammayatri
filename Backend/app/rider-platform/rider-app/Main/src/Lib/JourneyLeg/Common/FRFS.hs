@@ -347,7 +347,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
           -- Check for all possible buses available in next hour and just show fares for those buses to avoid confusion
           let startStationCode = (NE.head fareRouteDetails).startStopCode
           let endStationCode = (NE.last fareRouteDetails).endStopCode
-          (_, possibleRoutes, _) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfig merchant.id merchantOperatingCity.id Enums.BUS True False False
+          (_, possibleRoutes, _) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfig merchant.id merchantOperatingCity.id Enums.BUS True False False False
           let selectedFareRouteCodes = mapMaybe (.routeCode) routeDetails
           logDebug $ "filterAvailableBuses: selectedFareRouteCodes = " <> show selectedFareRouteCodes
           logDebug $ "filterAvailableBuses: possibleRoutes count = " <> show (length possibleRoutes) <> ", details = " <> show (map (\r -> (r.serviceTier, map (.routeCode) r.availableRoutesInfo)) possibleRoutes)

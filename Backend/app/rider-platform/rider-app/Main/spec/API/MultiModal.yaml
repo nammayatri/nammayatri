@@ -518,6 +518,8 @@ apis:
       params:
         journeyId: Id Journey
         legOrder: Int
+      query:
+        enableSuburbanRoundTrip: Bool
       response:
         type: LegServiceTierOptionsResp
 
