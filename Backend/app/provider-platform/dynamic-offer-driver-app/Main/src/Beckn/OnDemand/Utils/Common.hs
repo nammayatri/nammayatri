@@ -1267,6 +1267,8 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.LUGGAGE_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.RETURN_FEE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.BOOTH_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_VAT)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_VAT)
         DFParams.Slab ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -1285,6 +1287,8 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.LUGGAGE_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.RETURN_FEE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.BOOTH_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_VAT)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_VAT)
         DFParams.Rental ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -1302,6 +1306,8 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.LUGGAGE_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.RETURN_FEE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.BOOTH_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_VAT)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_VAT)
         _ -> True
 
 type MerchantShortId = Text

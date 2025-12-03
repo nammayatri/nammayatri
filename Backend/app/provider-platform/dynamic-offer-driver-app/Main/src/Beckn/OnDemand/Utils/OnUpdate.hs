@@ -115,7 +115,9 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.NIGHT_SHIFT_CHARGE),
                      Just (show Enums.LUGGAGE_CHARGE),
                      Just (show Enums.RETURN_FEE),
-                     Just (show Enums.BOOTH_CHARGE)
+                     Just (show Enums.BOOTH_CHARGE),
+                     Just (show Enums.RIDE_VAT),
+                     Just (show Enums.TOLL_VAT)
                    ]
         DFParams.Slab ->
           title
@@ -138,7 +140,9 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.PARKING_CHARGE),
                      Just (show Enums.LUGGAGE_CHARGE),
                      Just (show Enums.RETURN_FEE),
-                     Just (show Enums.BOOTH_CHARGE)
+                     Just (show Enums.BOOTH_CHARGE),
+                     Just (show Enums.RIDE_VAT),
+                     Just (show Enums.TOLL_VAT)
                    ]
         DFParams.Rental ->
           title
@@ -159,7 +163,9 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.PARKING_CHARGE),
                      Just (show Enums.LUGGAGE_CHARGE),
                      Just (show Enums.RETURN_FEE),
-                     Just (show Enums.BOOTH_CHARGE)
+                     Just (show Enums.BOOTH_CHARGE),
+                     Just (show Enums.RIDE_VAT),
+                     Just (show Enums.TOLL_VAT)
                    ]
         DFParams.InterCity ->
           title
@@ -181,7 +187,9 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.RETURN_FEE),
                      Just (show Enums.BOOTH_CHARGE),
                      Just (show Enums.BUSINESS_DISCOUNT),
-                     Just (show Enums.PARKING_CHARGE)
+                     Just (show Enums.PARKING_CHARGE),
+                     Just (show Enums.RIDE_VAT),
+                     Just (show Enums.TOLL_VAT)
                    ]
         _ -> True
 
