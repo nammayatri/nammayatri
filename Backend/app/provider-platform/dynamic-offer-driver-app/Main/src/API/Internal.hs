@@ -25,6 +25,7 @@ import qualified API.Internal.Multimodal as Multimodal
 import qualified API.Internal.PickupInstruction as PickupInstruction
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
 import qualified API.Internal.ProdLoopStatus as ProdLoopStatus
+import qualified API.Internal.QuoteRespond as QuoteRespond
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
 import qualified API.Internal.Ride as Ride
@@ -55,6 +56,7 @@ type API =
            :<|> StopDetection.API
            :<|> Multimodal.API
            :<|> DriverReachedDestination.API
+           :<|> QuoteRespond.API
            :<|> ProdLoopStatus.API
            :<|> DriverSourceDeparted.API
            :<|> ViolationDetection.API
@@ -85,6 +87,7 @@ handler =
     :<|> StopDetection.handler
     :<|> Multimodal.handler
     :<|> DriverReachedDestination.handler
+    :<|> QuoteRespond.handler
     :<|> ProdLoopStatus.handler
     :<|> DriverSourceDeparted.handler
     :<|> ViolationDetection.handler
