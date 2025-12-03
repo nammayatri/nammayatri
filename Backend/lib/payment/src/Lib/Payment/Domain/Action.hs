@@ -630,26 +630,23 @@ buildOrderOffer :: (EncFlow m r, BeamFlow m r) => Id DOrder.PaymentOrder -> Mayb
 buildOrderOffer paymentOrderId mbOffers merchantId merchantOperatingCityId = do
   let poIdTxt = paymentOrderId.getId
   logDebug $ "buildOrderOffer called for paymentOrderId: " <> poIdTxt <> " with " <> show (length (fromMaybe [] mbOffers)) <> " offers"
-  Redis.whenWithLockRedis (offerProccessingLockKey poIdTxt) 60 $ do
-    existingPaymentOffers <- QPaymentOrderOffer.findByPaymentOrder paymentOrderId
-    case existingPaymentOffers of
-      [] -> do
-        case mbOffers of
-          Just [] -> do
-            logInfo $ "No offers to create for paymentOrderId: " <> paymentOrderId.getId
-            pure ()
-          Just offers -> do
+  case mbOffers of
+    Just [] -> do
+      logInfo $ "No offers to create for paymentOrderId: " <> paymentOrderId.getId
+      pure ()
+    Just offers -> do
+      Redis.whenWithLockRedis (offerProccessingLockKey poIdTxt) 60 $ do
+        existingPaymentOffers <- QPaymentOrderOffer.findByPaymentOrder paymentOrderId
+        case existingPaymentOffers of
+          [] -> do
             now <- getCurrentTime
             paymentOrderOffers <- mapM (createPaymentOrderOffer now) offers
             logInfo $ "Creating " <> show (length paymentOrderOffers) <> " payment order offers for paymentOrderId: " <> paymentOrderId.getId
             QPaymentOrderOffer.createMany paymentOrderOffers
             logInfo $ "Successfully created payment order offers for paymentOrderId: " <> paymentOrderId.getId
-          Nothing -> do
-            logInfo $ "No offers to create for paymentOrderId: " <> paymentOrderId.getId
+          _ -> do
+            logInfo $ "Payment order offers already exist for paymentOrderId: " <> paymentOrderId.getId <> ", skipping creation"
             pure ()
-      _ -> do
-        logInfo $ "Payment order offers already exist for paymentOrderId: " <> paymentOrderId.getId <> ", skipping creation"
-        pure ()
   where
     createPaymentOrderOffer now offer = do
       offerId <- generateGUID
