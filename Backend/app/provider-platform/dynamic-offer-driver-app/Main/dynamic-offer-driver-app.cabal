@@ -67,6 +67,7 @@ library
       API.Internal.PickupInstruction
       API.Internal.PopulateTipAmount
       API.Internal.ProdLoopStatus
+      API.Internal.QuoteRespond
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
       API.Internal.Ride
@@ -210,6 +211,7 @@ library
       Domain.Action.Internal.PopulateTipAmount
       Domain.Action.Internal.ProcessingChangeOnline
       Domain.Action.Internal.ProdLoopStatus
+      Domain.Action.Internal.QuoteRespond
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
       Domain.Action.Internal.Ride
