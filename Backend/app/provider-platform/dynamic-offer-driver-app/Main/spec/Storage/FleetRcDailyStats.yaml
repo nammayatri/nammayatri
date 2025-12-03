@@ -19,6 +19,18 @@ FleetRcDailyStats:
     rideDuration :  Seconds
     currency : Maybe Currency
 
+  sqlType:
+    rideDistance: double precision
+
+  beamType:
+    rideDistance: Double
+
+  fromTType:
+    rideDistance: Kernel.Types.Common.Meters $ GHC.Float.double2Int rideDistance|E
+
+  toTType:
+    rideDistance: getRideDistance
+
   default:
     totalCompletedRides: "0"
     totalEarnings: "0"

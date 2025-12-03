@@ -17,7 +17,7 @@ data FleetRcDailyStatsT f = FleetRcDailyStatsT
     fleetOwnerId :: B.C f Kernel.Prelude.Text,
     merchantLocalDate :: B.C f Data.Time.Calendar.Day,
     rcId :: B.C f Kernel.Prelude.Text,
-    rideDistance :: B.C f Kernel.Types.Common.Meters,
+    rideDistance :: B.C f Kernel.Prelude.Double,
     rideDuration :: B.C f Kernel.Types.Common.Seconds,
     totalCompletedRides :: B.C f Kernel.Prelude.Int,
     totalEarnings :: B.C f Kernel.Types.Common.HighPrecMoney,

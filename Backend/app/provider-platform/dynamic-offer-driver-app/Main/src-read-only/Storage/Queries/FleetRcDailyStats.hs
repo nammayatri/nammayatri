@@ -16,6 +16,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FleetRcDailyStats as Beam
 import Storage.Queries.FleetRcDailyStatsExtra as ReExport
+import Storage.Queries.Transformers.FleetRcDailyStats
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetRcDailyStats.FleetRcDailyStats -> m ())
 create = createWithKV
@@ -38,7 +39,7 @@ updateByPrimaryKey (Domain.Types.FleetRcDailyStats.FleetRcDailyStats {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.currency currency,
-      Se.Set Beam.rideDistance rideDistance,
+      Se.Set Beam.rideDistance (getRideDistance rideDistance),
       Se.Set Beam.rideDuration rideDuration,
       Se.Set Beam.totalCompletedRides totalCompletedRides,
       Se.Set Beam.totalEarnings totalEarnings,

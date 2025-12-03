@@ -95,6 +95,45 @@ sumDriverEarningsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay
       pure []
 
 -- Aggregate metrics by driverId for a fleet owner
+data DailyFleetMetricsAggregated = DailyFleetMetricsAggregated
+  { totalEarningSum :: Maybe HighPrecMoney,
+    totalCompletedRidesSum :: Maybe Int,
+    totalDistanceSum :: Maybe Meters,
+    totalRequestCountSum :: Maybe Int,
+    rejectedRequestCountSum :: Maybe Int,
+    pulledRequestCountSum :: Maybe Int,
+    acceptationRequestCountSum :: Maybe Int,
+    driverCancellationCountSum :: Maybe Int,
+    customerCancellationCountSum :: Maybe Int
+  }
+  deriving (Show, Generic)
+
+mkDailyFleetMetricsAggregated ::
+  ( Maybe HighPrecMoney,
+    Maybe HighPrecMoney,
+    Maybe Int,
+    Maybe Meters,
+    Maybe Int,
+    Maybe Int,
+    Maybe Int,
+    Maybe Int,
+    Maybe Int,
+    Maybe Int
+  ) ->
+  DailyFleetMetricsAggregated
+mkDailyFleetMetricsAggregated (ote, cte, cr, td, tr, rr, pr, ar, dc, cc) =
+  DailyFleetMetricsAggregated
+    { totalEarningSum = getTotalEarningSum ote cte,
+      totalCompletedRidesSum = cr,
+      totalDistanceSum = td,
+      totalRequestCountSum = tr,
+      rejectedRequestCountSum = rr,
+      pulledRequestCountSum = pr,
+      acceptationRequestCountSum = ar,
+      driverCancellationCountSum = dc,
+      customerCancellationCountSum = cc
+    }
+
 data DriverMetricsAggregated = DriverMetricsAggregated
   { driverId :: Text,
     onlineTotalEarningSum :: Maybe HighPrecMoney,
@@ -333,6 +372,88 @@ sumDriverMetricsByFleetOwnerIdAndDriverIdsDB fleetOwnerId driverIds fromDay toDa
               -- Just Common.RIDE_DURATION -> rideDuration
               _ -> completed
        in if sortFlag then B.desc_ column else B.asc_ column
+
+sumFleetMetricsByFleetOwnerIdAndDateRangeDB ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Day ->
+  Day ->
+  m DailyFleetMetricsAggregated
+sumFleetMetricsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.aggregate_
+            ( \stats ->
+                ( B.as_ @(Maybe HighPrecMoney) $
+                    B.sum_ (B.coalesce_ [Beam.onlineTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
+                  B.as_ @(Maybe HighPrecMoney) $
+                    B.sum_ (B.coalesce_ [Beam.cashTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
+                  B.as_ @(Maybe Int) $
+                    B.sum_ (B.coalesce_ [Beam.totalCompletedRides stats] (B.val_ 0)),
+                  B.as_ @(Maybe Double) $
+                    B.sum_ (B.coalesce_ [Beam.totalDistance stats] (B.val_ (0.0))),
+                  B.as_ @(Maybe Int) $
+                    B.sum_ (B.coalesce_ [Beam.totalRequestCount stats] (B.val_ 0)),
+                  B.as_ @(Maybe Int) $
+                    B.sum_ (B.coalesce_ [Beam.rejectedRequestCount stats] (B.val_ 0)),
+                  B.as_ @(Maybe Int) $
+                    B.sum_ (B.coalesce_ [Beam.pulledRequestCount stats] (B.val_ 0)),
+                  ( B.as_ @(Maybe Int) $
+                      B.sum_ (B.coalesce_ [Beam.acceptationRequestCount stats] (B.val_ 0)),
+                    B.as_ @(Maybe Int) $
+                      B.sum_ (B.coalesce_ [Beam.driverCancellationCount stats] (B.val_ 0)),
+                    B.as_ @(Maybe Int) $
+                      B.sum_ (B.coalesce_ [Beam.customerCancellationCount stats] (B.val_ 0))
+                  )
+                )
+            )
+            $ B.filter_'
+              ( \stats ->
+                  B.sqlBool_ (Beam.fleetOperatorId stats B.==. B.val_ fleetOwnerId)
+                    B.&&?. B.sqlBool_ (Beam.fleetDriverId stats B.==. B.val_ fleetOwnerId)
+                    B.&&?. B.sqlBool_ (Beam.merchantLocalDate stats B.>=. B.val_ fromDay)
+                    B.&&?. B.sqlBool_ (Beam.merchantLocalDate stats B.<=. B.val_ toDay)
+              )
+              $ B.all_ (BeamCommon.fleetOperatorDailyStats BeamCommon.atlasDB)
+  case res of
+    Right rows ->
+      case listToMaybe rows of
+        Just (ote, cte, cr, td, tr, rr, pr, (ar, dc, cc)) ->
+          pure $ mkDailyFleetMetricsAggregated (ote, cte, cr, fmap (Meters . round) td, tr, rr, pr, ar, dc, cc)
+        Nothing ->
+          pure $
+            DailyFleetMetricsAggregated
+              { totalEarningSum = Nothing,
+                totalCompletedRidesSum = Nothing,
+                totalDistanceSum = Nothing,
+                totalRequestCountSum = Nothing,
+                rejectedRequestCountSum = Nothing,
+                pulledRequestCountSum = Nothing,
+                acceptationRequestCountSum = Nothing,
+                driverCancellationCountSum = Nothing,
+                customerCancellationCountSum = Nothing
+              }
+    Left err -> do
+      logTagError
+        "FleetOperatorDailyStats"
+        ( "DB failure in sumFleetMetricsByFleetOwnerIdAndDateRangeDB. Error: "
+            <> show err
+        )
+      pure $
+        DailyFleetMetricsAggregated
+          { totalEarningSum = Nothing,
+            totalCompletedRidesSum = Nothing,
+            totalDistanceSum = Nothing,
+            totalRequestCountSum = Nothing,
+            rejectedRequestCountSum = Nothing,
+            pulledRequestCountSum = Nothing,
+            acceptationRequestCountSum = Nothing,
+            driverCancellationCountSum = Nothing,
+            customerCancellationCountSum = Nothing
+          }
 
 -- | Aggregated earnings for a fleet owner over a date range (DB based).
 data DailyFleetEarningsAggregated = DailyFleetEarningsAggregated

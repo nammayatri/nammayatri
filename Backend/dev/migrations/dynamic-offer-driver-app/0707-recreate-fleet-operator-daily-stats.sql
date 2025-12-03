@@ -1,3 +1,4 @@
+--IMPORTANT: Before running this migration in production, please coordinate with Jitu.
 DROP TABLE IF EXISTS atlas_driver_offer_bpp.fleet_operator_daily_stats;
 
 CREATE TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ();

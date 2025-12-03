@@ -1564,8 +1564,8 @@ types:
     - driverCanceledRides: Int
     - customerCanceledRides: Int
     - completionRate: Double
-    - onlineHrs: Double
-    - rideTime: Double
+    - onlineDuration: Seconds
+    - rideDuration: Seconds
     - utilization: Double
     - distance: Meters
     - earnings: PriceAPIEntity

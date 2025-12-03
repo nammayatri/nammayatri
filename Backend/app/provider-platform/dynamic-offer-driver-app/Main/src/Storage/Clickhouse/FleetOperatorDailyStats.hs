@@ -66,51 +66,12 @@ instance CH.ClickhouseValue Seconds where
 
 $(TH.mkClickhouseInstances ''FleetOperatorDailyStatsT 'SELECT_FINAL_MODIFIER)
 
-data DailyFleetMetricsAggregated = DailyFleetMetricsAggregated
-  { totalEarningSum :: Maybe HighPrecMoney,
-    totalCompletedRidesSum :: Maybe Int,
-    totalDistanceSum :: Maybe Meters,
-    totalRequestCountSum :: Maybe Int,
-    rejectedRequestCountSum :: Maybe Int,
-    pulledRequestCountSum :: Maybe Int,
-    acceptationRequestCountSum :: Maybe Int,
-    driverCancellationCountSum :: Maybe Int,
-    customerCancellationCountSum :: Maybe Int
-  }
-  deriving (Show, Generic)
-
-mkDailyFleetMetricsAggregated ::
-  ( Maybe HighPrecMoney,
-    Maybe HighPrecMoney,
-    Maybe Int,
-    Maybe Meters,
-    Maybe Int,
-    Maybe Int,
-    Maybe Int,
-    Maybe Int,
-    Maybe Int,
-    Maybe Int
-  ) ->
-  DailyFleetMetricsAggregated
-mkDailyFleetMetricsAggregated (ote, cte, cr, td, tr, rr, pr, ar, dc, cc) =
-  DailyFleetMetricsAggregated
-    { totalEarningSum = FODSE.getTotalEarningSum ote cte,
-      totalCompletedRidesSum = cr,
-      totalDistanceSum = td,
-      totalRequestCountSum = tr,
-      rejectedRequestCountSum = rr,
-      pulledRequestCountSum = pr,
-      acceptationRequestCountSum = ar,
-      driverCancellationCountSum = dc,
-      customerCancellationCountSum = cc
-    }
-
 sumFleetMetricsByFleetOwnerIdAndDateRange ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Text ->
   Day ->
   Day ->
-  m DailyFleetMetricsAggregated
+  m FODSE.DailyFleetMetricsAggregated
 sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
   res <-
     CH.findAll $
@@ -137,7 +98,22 @@ sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
                 CH.&&. fos.merchantLocalDate CH.<=. toDay
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorDailyStatsTTable)
-  pure $ maybe (DailyFleetMetricsAggregated Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing) mkDailyFleetMetricsAggregated (listToMaybe res)
+  pure $
+    maybe
+      ( FODSE.DailyFleetMetricsAggregated
+          { totalEarningSum = Nothing,
+            totalCompletedRidesSum = Nothing,
+            totalDistanceSum = Nothing,
+            totalRequestCountSum = Nothing,
+            rejectedRequestCountSum = Nothing,
+            pulledRequestCountSum = Nothing,
+            acceptationRequestCountSum = Nothing,
+            driverCancellationCountSum = Nothing,
+            customerCancellationCountSum = Nothing
+          }
+      )
+      FODSE.mkDailyFleetMetricsAggregated
+      (listToMaybe res)
 
 sumFleetEarningsByFleetOwnerIdAndDateRange ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>

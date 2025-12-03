@@ -701,6 +701,7 @@ library
       Storage.Queries.Transformers.FleetOperatorDailyStats
       Storage.Queries.Transformers.FleetOperatorStats
       Storage.Queries.Transformers.FleetOwnerInformation
+      Storage.Queries.Transformers.FleetRcDailyStats
       Storage.Queries.Transformers.Invoice
       Storage.Queries.Transformers.Location
       Storage.Queries.Transformers.MerchantClientConfig
