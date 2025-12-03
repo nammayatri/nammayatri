@@ -18,8 +18,14 @@ import qualified Beckn.ACL.FRFS.OnSearch as ACL
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import Data.Aeson (eitherDecodeStrict')
+import qualified Data.ByteString as BS
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
+import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import Environment
+import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -28,32 +34,67 @@ import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import TransactionLogs.PushLogs
 
-type API = Spec.OnSearchAPI
+type API = Spec.OnSearchAPIBS
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onSearch
 
-onSearch ::
-  SignatureAuthResult ->
-  Spec.OnSearchReq ->
-  FlowHandler Spec.AckResponse
-onSearch _ req = withFlowHandlerAPI $ do
+onSearch :: SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
+onSearch _ reqBS = withFlowHandlerAPI $ do
+  req <- case decodeOnSearchReq reqBS of
+    Right r -> pure r
+    Left err -> throwError (InvalidRequest (toText err))
   transaction_id <- req.onSearchReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
-  logDebug $ "Received OnSearch request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
     message_id <- req.onSearchReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
-    onSearchReq <- ACL.buildOnSearchReq req
-    Redis.whenWithLockRedis (onSearchLockKey message_id) 60 $ do
-      validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
-      fork "FRFS on_search processing" $ do
-        Redis.whenWithLockRedis (onSearchProcessingLockKey message_id) 60 $
-          DOnSearch.onSearch onSearchReq validatedDOnSearch
-      fork "FRFS onSearch received pushing ondc logs" do
-        void $ pushLogs "on_search" (toJSON req) validatedDOnSearch.merchant.id.getId "PUBLIC_TRANSPORT"
-  pure Utils.ack
+    logDebug $ "Received OnSearch request" <> encodeToText req
+    mbDiscoveryCounter :: Maybe Domain.DiscoveryCounter <- Redis.safeGet (Utils.discoverySearchCounterKey (show transaction_id))
+    case mbDiscoveryCounter of
+      Just discoveryCounter -> do
+        logDebug $ "Using discovery on_search logic for txn: " <> show transaction_id
+        Redis.whenWithLockRedis (onSearchLockKey message_id) 60 $ do
+          onSearchReq <- ACL.buildDiscoveryOnSearchReq req discoveryCounter
+          fork "FRFS discovery on_search processing" $ do
+            Redis.whenWithLockRedis (onSearchProcessingLockKey message_id) 60 $
+              DOnSearch.discoveryOnSearch onSearchReq
+          fork "FRFS discovery onSearch logs" $ do
+            void $ pushLogs "discovery_on_search" (toJSON req) onSearchReq.merchantId "PUBLIC_TRANSPORT"
+        pure Utils.ack
+      Nothing -> do
+        logDebug $ "Using normal on_search logic for txn: " <> show transaction_id
+        Redis.whenWithLockRedis (onSearchLockKey message_id) 60 $ do
+          onSearchReq <- ACL.buildOnSearchReq req
+          validatedReq <- DOnSearch.validateRequest onSearchReq
+          fork "FRFS normal on_search processing" $ do
+            Redis.whenWithLockRedis (onSearchProcessingLockKey message_id) 60 $
+              DOnSearch.onSearch onSearchReq validatedReq
+          fork "FRFS discovery onSearch logs" $ do
+            void $ pushLogs "discovery_on_search" (toJSON req) validatedReq.merchant.id.getId "PUBLIC_TRANSPORT"
+        pure Utils.ack
 
 onSearchLockKey :: Text -> Text
 onSearchLockKey id = "FRFS:OnSearch:MessageId-" <> id
 
 onSearchProcessingLockKey :: Text -> Text
 onSearchProcessingLockKey id = "FRFS:OnSearch:Processing:MessageId-" <> id
+
+decodeOnSearchReq :: ByteString -> Either String Spec.OnSearchReq
+decodeOnSearchReq bs =
+  case eitherDecodeStrict' bs of
+    Right v -> Right v
+    Left _ ->
+      case unescapeQuotedJSON bs of
+        Just inner ->
+          eitherDecodeStrict' inner
+        Nothing ->
+          Left "Unable to decode OnSearchReq: invalid JSON format."
+
+unescapeQuotedJSON :: ByteString -> Maybe ByteString
+unescapeQuotedJSON bs =
+  if BS.length bs >= 2 && BS.head bs == 34 && BS.last bs == 34
+    then
+      let inner = BS.init (BS.tail bs)
+       in case eitherDecodeStrict' ("\"" <> inner <> "\"") :: Either String T.Text of
+            Right txt -> Just (TE.encodeUtf8 txt)
+            Left _ -> Nothing
+    else Nothing
