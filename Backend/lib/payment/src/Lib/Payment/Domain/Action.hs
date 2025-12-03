@@ -18,7 +18,6 @@ module Lib.Payment.Domain.Action
   ( PaymentStatusResp (..),
     createOrderService,
     orderStatusService,
-    orderStatusServiceImmutable,
     juspayWebhookService,
     stripeWebhookService,
     createNotificationService,
@@ -676,55 +675,6 @@ buildOrderOffer paymentOrderId mbOffers merchantId merchantOperatingCityId = do
           }
 
 -- order status -----------------------------------------------------
-orderStatusServiceImmutable ::
-  ( EncFlow m r,
-    BeamFlow m r
-  ) =>
-  Id Person ->
-  Id DOrder.PaymentOrder ->
-  (Payment.OrderStatusReq -> m Payment.OrderStatusResp) ->
-  m PaymentStatusResp
-orderStatusServiceImmutable personId orderId orderStatusCall = do
-  order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
-  unless (personId == order.personId) $ throwError NotAnExecutor
-  let orderStatusReq = Payment.OrderStatusReq {orderShortId = order.shortId.getShortId}
-  now <- getCurrentTime
-  orderStatusResp <- orderStatusCall orderStatusReq -- api call
-  case orderStatusResp of
-    Payment.MandateOrderStatusResp {..} -> do
-      return $
-        MandatePaymentStatus
-          { status = orderStatusResp.transactionStatus,
-            upi = orderStatusResp.upi,
-            mandateStartDate = fromMaybe now mandateStartDate,
-            mandateEndDate = fromMaybe now mandateEndDate,
-            ..
-          }
-    Payment.OrderStatusResp {..} -> do
-      return $
-        PaymentStatus
-          { orderId = orderId,
-            orderShortId = order.shortId,
-            status = transactionStatus,
-            bankErrorCode = bankErrorCode,
-            bankErrorMessage = bankErrorMessage,
-            isRetried = isRetriedOrder,
-            isRetargeted = isRetargetedOrder,
-            retargetLink = retargetPaymentLink,
-            refunds = refunds,
-            payerVpa = (payerVpa <|> ((.payerVpa) =<< upi)),
-            authIdCode = ((.authIdCode) =<< paymentGatewayResponse),
-            txnUUID = transactionUUID,
-            txnId = txnId,
-            effectAmount = effectiveAmount,
-            offers = offers,
-            paymentServiceType = order.paymentServiceType,
-            validTill = order.validTill,
-            paymentFulfillmentStatus = order.paymentFulfillmentStatus,
-            domainEntityId = order.domainEntityId, -- To be filled by Domain
-            ..
-          }
-    _ -> throwError $ InternalError "Unexpected Order Status Response."
 
 orderStatusService ::
   ( EncFlow m r,

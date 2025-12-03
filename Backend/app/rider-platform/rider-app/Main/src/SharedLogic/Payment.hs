@@ -83,28 +83,18 @@ orderStatusHandler ::
   DOrder.PaymentOrder ->
   (Payment.OrderStatusReq -> m Payment.OrderStatusResp) ->
   m DPayment.PaymentStatusResp
-orderStatusHandler paymentService paymentOrder orderStatusCall =
-  do
-    Redis.withCrossAppRedis $
-      Redis.whenWithLockRedisAndReturnValue
-        makePaymentOrderStatusHandlerLockKey
-        60
-        ( do
-            orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
-            mbUpdatedPaymentOrder <- QPaymentOrder.findById paymentOrder.id
-            let updatedPaymentOrder = fromMaybe paymentOrder mbUpdatedPaymentOrder
-            orderStatusHandlerWithRefunds paymentService paymentOrder updatedPaymentOrder orderStatusResponse
-        )
-    >>= \case
-      Right updatedPaymentStatusResponse -> return updatedPaymentStatusResponse
-      Left _ -> do
-        logError $ "Order status handler lock not acquired for payment order, falling back to status updated by the last thread that released the acquired lock for eventual consitency: " <> show paymentOrder.id.getId
-        orderStatusResponse <- DPayment.orderStatusServiceImmutable paymentOrder.personId paymentOrder.id orderStatusCall
-        mbPaymentOrder <- QPaymentOrder.findById paymentOrder.id
-        let updatedPaymentOrder = fromMaybe paymentOrder mbPaymentOrder
-        case orderStatusResponse of
-          DPayment.PaymentStatus {..} -> return $ DPayment.PaymentStatus {DPayment.paymentFulfillmentStatus = updatedPaymentOrder.paymentFulfillmentStatus, DPayment.domainEntityId = updatedPaymentOrder.domainEntityId, ..}
-          _ -> return orderStatusResponse
+orderStatusHandler paymentService paymentOrder orderStatusCall = do
+  Redis.withCrossAppRedis $
+    Redis.withWaitAndLockRedis
+      makePaymentOrderStatusHandlerLockKey
+      60
+      100
+      ( do
+          orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
+          mbUpdatedPaymentOrder <- QPaymentOrder.findById paymentOrder.id
+          let updatedPaymentOrder = fromMaybe paymentOrder mbUpdatedPaymentOrder
+          orderStatusHandlerWithRefunds paymentService paymentOrder updatedPaymentOrder orderStatusResponse
+      )
   where
     makePaymentOrderStatusHandlerLockKey :: Text
     makePaymentOrderStatusHandlerLockKey = "orderStatusHandler:paymentOrder:" <> paymentOrder.id.getId
