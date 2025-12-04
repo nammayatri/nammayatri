@@ -72,3 +72,33 @@ token: {{newFleetToken}}
 
 GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{fleetId}}/fleetOwnerInfo
 token: {{juspay_admin}}
+
+###
+
+# @name updateFleetOwnerInfo
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{fleetId}}/updateFleetOwnerInfo
+content-type: application/json
+token: {{fleet}}
+
+{ "fleetDob": "2000-01-01T00:00:00.0Z",
+  "stripeAddress": {
+    "line1": "Mannerheimintie 12 A",
+    "line2": "3rd floor",
+    "city": "Helsinki",
+    "state": "Uusimaa",
+    "postal_code": "00100",
+    "country": "FI"
+  },
+  "stripeIdNumber": "010190-123A"
+}
+
+
+
+###
+
+# @name registerBankAccountLink
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/fleet/register/bankAccount/link
+content-type: application/json
+token: {{fleet}}
