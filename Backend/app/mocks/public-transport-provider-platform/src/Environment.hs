@@ -92,7 +92,7 @@ buildAppEnv config@AppCfg {..} = do
       then pure hedisEnv
       else connectHedisCluster hedisClusterCfg ("mock_public_transport_provider_platform" <>)
   loggerEnv <- prepareLoggerEnv loggerConfig Nothing
-  let authManagerSettings = prepareAuthManager config ["Authorization"] selfId uniqueKeyId (logOutputIO loggerEnv)
+  let authManagerSettings = prepareAuthManager config ["Authorization"] selfId uniqueKeyId (\lvl msg -> logOutputIO loggerEnv lvl msg requestId sessionId)
   authManager <- newManager authManagerSettings
   let url = Nothing
   return $ AppEnv {..}
