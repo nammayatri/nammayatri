@@ -92,6 +92,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
+import Domain.Action.Dashboard.Fleet.RegistrationV2 (castFleetType)
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
@@ -1736,7 +1737,7 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
             DP.lastName = req.lastName
           }
   mbUpdFleetOwnerinfo <-
-    if (isJust req.stripeAddress || isJust req.stripeIdNumber || isJust req.fleetDob)
+    if isJust req.stripeAddress || isJust req.stripeIdNumber || isJust req.fleetDob || isJust req.fleetType
       then do
         fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
         reqStripeIdNumber <- forM req.stripeIdNumber encrypt
@@ -1744,13 +1745,14 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
               fleetOwnerInfo
                 { DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
                   DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
-                  DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob
+                  DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob,
+                  DFOI.fleetType = maybe fleetOwnerInfo.fleetType castFleetType req.fleetType
                 }
         pure $ Just updFleetOwnerInfo
       else pure Nothing
 
   QPerson.updateFleetOwnerDetails personId updDriver
-  whenJust mbUpdFleetOwnerinfo FOI.updateStripeIdNumberAddressAndDob
+  whenJust mbUpdFleetOwnerinfo FOI.updateStripeIdNumberAddressDobAndFleetType
   pure Success
 
 ---------------------------------------------------------------------

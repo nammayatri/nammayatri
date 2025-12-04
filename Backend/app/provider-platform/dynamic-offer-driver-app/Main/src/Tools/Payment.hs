@@ -90,13 +90,13 @@ runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mR
         DMSC.PaymentService Payment.AAJuspay -> mRoutingId
         _ -> Nothing
 
-createIndividualConnectAccount ::
+createConnectAccount ::
   ServiceFlow m r =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  Payment.IndividualConnectAccountReq ->
-  m Payment.IndividualConnectAccountResp
-createIndividualConnectAccount = runWithServiceConfig Payment.createIndividualConnectAccount (.createBankAccount)
+  Payment.CreateConnectAccountReq ->
+  m Payment.CreateConnectAccountResp
+createConnectAccount = runWithServiceConfig Payment.createConnectAccount (.createBankAccount)
 
 retryAccountLink ::
   ServiceFlow m r =>
