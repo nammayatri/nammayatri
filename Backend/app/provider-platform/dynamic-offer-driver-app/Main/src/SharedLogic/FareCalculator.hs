@@ -278,8 +278,8 @@ perRideKmFareParamsSum fareParams = do
   fareParams.baseFare
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
+    -- + fromMaybe 0.0 fareParams.congestionCharge -- removing congestion charge from rate card
     + fromMaybe 0.0 fareParams.nightShiftCharge
-    + fromMaybe 0.0 fareParams.congestionCharge
 
 getPerMinuteRate :: FareParameters -> Maybe PriceAPIEntity
 getPerMinuteRate fareParams = do
