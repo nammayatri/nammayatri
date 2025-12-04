@@ -6,7 +6,6 @@ import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.DriverBankAccount as DDBA
 import qualified Domain.Types.Person
-import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
@@ -25,7 +24,8 @@ import qualified Tools.Payment as TPayment
 data PersonStripeInfo = PersonStripeInfo
   { personDob :: Maybe UTCTime,
     address :: Maybe Payment.Address,
-    idNumber :: Maybe (EncryptedHashed Text)
+    idNumber :: Maybe (EncryptedHashed Text),
+    businessType :: Payment.BusinessType
   }
 
 newtype PersonRegisterBankAccountLinkHandle = PersonRegisterBankAccountLinkHandle
@@ -88,11 +88,6 @@ getPersonRegisterBankAccountLink h person = do
             ssnNumber <- decrypt driverSSN.ssn
             return $ Just $ T.takeEnd 4 ssnNumber
           else return Nothing
-      bussinessType <- case person.role of
-        DP.DRIVER -> pure Payment.Individual
-        DP.FLEET_OWNER -> pure Payment.Individual
-        DP.FLEET_BUSINESS -> pure Payment.Company
-        _ -> throwError $ InvalidRequest ("Person bank account not supported for role: " <> show person.role)
       let createAccountReq =
             Payment.CreateConnectAccountReq
               { country = merchantOpCity.country,
@@ -104,7 +99,7 @@ getPersonRegisterBankAccountLink h person = do
                 ssnLast4 = ssnLast4,
                 idNumber,
                 mobileNumber,
-                bussinessType
+                businessType = personStripeInfo.businessType
               }
       resp <- TPayment.createConnectAccount person.merchantId person.merchantOperatingCityId createAccountReq
       accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
