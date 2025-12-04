@@ -33,6 +33,8 @@ healthCheck ::
     HasField "isShuttingDown" r Shutdown,
     HasField "loggerEnv" r LoggerEnv,
     HasField "hedisEnv" r Redis.HedisEnv,
+    HasField "requestId" r (Maybe Text),
+    HasField "sessionId" r (Maybe Text),
     HasField "hedisMigrationStage" r Bool,
     HasField "enableRedisLatencyLogging" r Bool,
     HasField "enablePrometheusMetricLogging" r Bool,
