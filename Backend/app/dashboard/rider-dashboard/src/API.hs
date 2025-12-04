@@ -18,6 +18,7 @@ module API
   )
 where
 
+import qualified API.BharatTaxi.User as BharatTaxiUser
 import qualified "lib-dashboard" API.Dashboard as Dashboard
 import qualified API.RiderPlatform as BAP
 import qualified Data.ByteString as BS
@@ -39,6 +40,7 @@ type MainAPI =
   Dashboard.API
     :<|> BAP.API
     :<|> BAP.APIV2
+    :<|> BharatTaxiUser.API
 
 handler :: FlowServer API
 handler =
@@ -52,6 +54,7 @@ mainServer =
   Dashboard.handler
     :<|> BAP.handler
     :<|> BAP.handlerV2
+    :<|> BharatTaxiUser.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 
