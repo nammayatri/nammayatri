@@ -27,7 +27,6 @@ flag Local
 library
   exposed-modules:
       API
-      API.BharatTaxi.User
       API.Exotel
       API.Fleet.Registration
       API.ProviderPlatform
