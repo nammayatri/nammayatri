@@ -68,6 +68,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverDashboardFleetTripWaypoints,
     postDriverDashboardFleetEstimateRoute,
     postDriverFleetTripTransactionsV2,
+    getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles,
   )
 where
 
@@ -122,6 +123,7 @@ import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
+import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleRouteMapping as DVRM
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
@@ -176,6 +178,7 @@ import qualified Storage.Queries.FleetBookingInformation as QFBI
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAExtra
 import qualified Storage.Queries.FleetMemberAssociation as FMA
 import qualified Storage.Queries.FleetOperatorAssociation as FOV
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssociation
@@ -3218,3 +3221,44 @@ postDriverFleetTripTransactionsV2 merchantShortId opCity mbFrom mbTo mbVehicleNu
       Common.COMPLETED -> COMPLETED
       Common.CANCELLED -> CANCELLED
       Common.UPCOMING -> UPCOMING
+
+getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Flow Common.OnboardedDriversAndUnlinkedVehiclesRes
+getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles merchantShortId _ fleetOwnerId mbLimit mbOffset = do
+  merchant <- findMerchantByShortId merchantShortId
+  listOfAllVehicle <- RCQuery.findAllRCByStatusForFleetMF [fleetOwnerId] Nothing (fromIntegral $ fromMaybe 100000 mbLimit) (fromIntegral $ fromMaybe 0 mbOffset) merchant.id Nothing
+  activeDriverIds <- QFDAExtra.getActiveDriverIdsByFleetOwnerId fleetOwnerId
+  (unLinkedVehicles, linkedDriverIds) <- getDriverVehicleCombination listOfAllVehicle
+  let unlinkedDriverIds = filter (\driverId -> driverId `notElem` linkedDriverIds) activeDriverIds
+  unlinkedDrivers <- catMaybes <$> mapM QPerson.findById unlinkedDriverIds
+
+  finalUnlinkedDrivers <- forM unlinkedDrivers $ \driver -> do
+    mobileNumber <- mapM decrypt driver.mobileNumber
+    pure $
+      Common.OnboardedDriver
+        { driverId = cast @DP.Person @Common.Driver driver.id,
+          mobileNumber = mobileNumber
+        }
+  let finalUnlinkedVehicles =
+        map
+          ( \vrc ->
+              Common.UnlinkedVehicle
+                { vehicleNo = Just vrc,
+                  rcId = Nothing
+                }
+          )
+          unLinkedVehicles
+  pure $
+    Common.OnboardedDriversAndUnlinkedVehiclesRes
+      { onboardedDrivers = finalUnlinkedDrivers,
+        unlinkedVehicles = finalUnlinkedVehicles
+      }
+  where
+    getDriverVehicleCombination :: [DVRC.VehicleRegistrationCertificate] -> Flow ([Text], [Id DP.Person])
+    getDriverVehicleCombination vrcList = do
+      vehicleDriverCombination <- forM vrcList $ \vrc -> do
+        decryptedVehicleRC <- decrypt vrc.certificateNumber
+        rcActiveAssociation <- QRCAssociation.findActiveAssociationByRC vrc.id True
+        pure (decryptedVehicleRC, rcActiveAssociation >>= (\assoc -> Just assoc.driverId))
+      let unLinkedVehicles = map fst $ filter (\(_, driverId) -> isNothing driverId) vehicleDriverCombination
+      let linkedDriverIds = snd $ second (catMaybes) (unzip vehicleDriverCombination)
+      pure $ (unLinkedVehicles, linkedDriverIds)
