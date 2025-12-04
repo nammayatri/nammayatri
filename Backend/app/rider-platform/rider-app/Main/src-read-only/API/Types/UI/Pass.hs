@@ -52,6 +52,10 @@ data PassInfoAPIEntity = PassInfoAPIEntity {passCategory :: PassCategoryAPIEntit
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PassRechargeReq = PassRechargeReq {pointsAmount :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PassSelectReq = PassSelectReq {imeiNumber :: Data.Text.Text, profilePicture :: Data.Text.Text, startDate :: Data.Time.Day}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

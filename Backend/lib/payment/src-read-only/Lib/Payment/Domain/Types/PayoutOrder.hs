@@ -26,6 +26,7 @@ data PayoutOrderE e = PayoutOrder
     merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNo :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     orderId :: Kernel.Prelude.Text,
+    payoutServiceType :: Lib.Payment.Domain.Types.PayoutOrder.PayoutServiceType,
     responseCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     responseMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     retriedOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -61,6 +62,7 @@ instance EncryptedItem PayoutOrder where
           merchantOperatingCityId = merchantOperatingCityId entity,
           mobileNo = mobileNo_,
           orderId = orderId entity,
+          payoutServiceType = payoutServiceType entity,
           responseCode = responseCode entity,
           responseMessage = responseMessage entity,
           retriedOrderId = retriedOrderId entity,
@@ -88,6 +90,7 @@ instance EncryptedItem PayoutOrder where
             merchantOperatingCityId = merchantOperatingCityId entity,
             mobileNo = mobileNo_,
             orderId = orderId entity,
+            payoutServiceType = payoutServiceType entity,
             responseCode = responseCode entity,
             responseMessage = responseMessage entity,
             retriedOrderId = retriedOrderId entity,
@@ -103,3 +106,5 @@ instance EncryptedItem' PayoutOrder where
   type UnencryptedItem PayoutOrder = DecryptedPayoutOrder
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
+
+data PayoutServiceType = Normal | Wallet deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

@@ -72,6 +72,7 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.mobileNoEncrypted (mobileNo & unEncrypted . encrypted),
       Se.Set Beam.mobileNoHash (mobileNo & hash),
+      Se.Set Beam.payoutServiceType (Just isBookingUpdated),
       Se.Set Beam.responseCode responseCode,
       Se.Set Beam.responseMessage responseMessage,
       Se.Set Beam.retriedOrderId retriedOrderId,

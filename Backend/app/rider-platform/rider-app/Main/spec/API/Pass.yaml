@@ -109,6 +109,9 @@ types:
     status: StatusType
     derive: "Show"
 
+  PassRechargeReq:
+    pointsAmount: Int
+
 apis:
   - GET:
       endpoint: /multimodal/pass/availablePasses
@@ -180,3 +183,11 @@ apis:
         offset: Int
       response:
         type: "[PurchasedPassTransactionAPIEntity]"
+
+  - POST:
+      endpoint: /multimodal/pass/recharge
+      auth: TokenAuth
+      request:
+        type: PassRechargeReq
+      response:
+        type: APISuccess

@@ -26,6 +26,8 @@ import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
+import qualified Kernel.External.Wallet.Interface as Wallet
+import qualified Kernel.External.Wallet.Types as WalletTypes
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -113,6 +115,8 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
   WalletServiceConfig walletCfg -> case walletCfg of
     GW.GoogleWalletConfig _ -> WalletService GW.GoogleWallet
+  JuspayWalletServiceConfig walletCfg -> case walletCfg of
+    Wallet.JuspayWalletConfig _ -> JuspayWalletService WalletTypes.Juspay
   MultiModalStaticDataServiceConfig multiModalStaticDataCfg -> case multiModalStaticDataCfg of
     MultiModal.GoogleTransitConfig _ -> MultiModalStaticDataService MultiModal.GoogleTransit
     MultiModal.OTPTransitConfig _ -> MultiModalStaticDataService MultiModal.OTPTransit

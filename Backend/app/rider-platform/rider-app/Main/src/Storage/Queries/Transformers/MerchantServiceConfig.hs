@@ -19,6 +19,8 @@ import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
+import qualified Kernel.External.Wallet.Interface as Wallet
+import qualified Kernel.External.Wallet.Types as WalletTypes
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -82,6 +84,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.MultiModalService MultiModal.GoogleTransit -> Domain.MultiModalServiceConfig . MultiModal.GoogleTransitConfig <$> valueToMaybe configJSON
     Domain.MultiModalService MultiModal.OTPTransit -> Domain.MultiModalServiceConfig . MultiModal.OTPTransitConfig <$> valueToMaybe configJSON
     Domain.WalletService GW.GoogleWallet -> Domain.WalletServiceConfig . GW.GoogleWalletConfig <$> valueToMaybe configJSON
+    Domain.JuspayWalletService WalletTypes.Juspay -> Domain.JuspayWalletServiceConfig . Wallet.JuspayWalletConfig <$> valueToMaybe configJSON
     Domain.MultiModalStaticDataService MultiModal.GoogleTransit -> Domain.MultiModalStaticDataServiceConfig . MultiModal.GoogleTransitConfig <$> valueToMaybe configJSON
     Domain.MultiModalStaticDataService MultiModal.OTPTransit -> Domain.MultiModalStaticDataServiceConfig . MultiModal.OTPTransitConfig <$> valueToMaybe configJSON
     Domain.InsuranceService Insurance.Acko -> Domain.InsuranceServiceConfig . Insurance.AckoInsuranceConfig <$> valueToMaybe configJSON
@@ -162,6 +165,8 @@ getServiceNameConfigJson = \case
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalService MultiModal.OTPTransit, toJSON cfg)
   Domain.WalletServiceConfig walletCfg -> case walletCfg of
     GW.GoogleWalletConfig cfg -> (Domain.WalletService GW.GoogleWallet, toJSON cfg)
+  Domain.JuspayWalletServiceConfig walletCfg -> case walletCfg of
+    Wallet.JuspayWalletConfig cfg -> (Domain.JuspayWalletService WalletTypes.Juspay, toJSON cfg)
   Domain.MultiModalStaticDataServiceConfig multiModalStaticDataCfg -> case multiModalStaticDataCfg of
     MultiModal.GoogleTransitConfig cfg -> (Domain.MultiModalStaticDataService MultiModal.GoogleTransit, toJSON cfg)
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalStaticDataService MultiModal.OTPTransit, toJSON cfg)

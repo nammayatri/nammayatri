@@ -637,6 +637,7 @@ library
       Tools.SMS
       Tools.Streaming.Kafka
       Tools.Ticket
+      Tools.Wallet
       Tools.Whatsapp
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Customer

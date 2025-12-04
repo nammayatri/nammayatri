@@ -13,6 +13,11 @@ imports:
 PayoutOrder:
   tableName: payout_order
   derives: "Generic"
+
+  types:
+    PayoutServiceType:
+      enum: "Normal, Wallet"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
   fields:
     id : Id PayoutOrder
     shortId : Maybe (ShortId PayoutOrder)
@@ -35,15 +40,20 @@ PayoutOrder:
     responseCode : Maybe Text
     responseMessage : Maybe Text
     retriedOrderId : Maybe Text
+    payoutServiceType: PayoutServiceType
   beamFields:
     amount:
       currency: Maybe Currency
       price: HighPrecMoney
+  beamType:
+    payoutServiceType: Maybe PayoutServiceType
   fromTType:
     amount: Kernel.Types.Common.mkPrice currency price|E
+    payoutServiceType: Kernel.Prelude.fromMaybe Normal payoutServiceType|E
   toTType:
     price: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
+    payoutServiceType: (Just isBookingUpdated)|E
   sqlType:
     id: character varying(36)
     mobileNoEncrypted: character varying(255)

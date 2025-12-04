@@ -12,6 +12,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Payment.Domain.Types.Common
+import qualified Lib.Payment.Domain.Types.PayoutOrder
 
 data PayoutOrderT f = PayoutOrderT
   { accountDetailsType :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Juspay.Types.Payout.AccountDetailsType),
@@ -31,6 +32,7 @@ data PayoutOrderT f = PayoutOrderT
     mobileNoEncrypted :: B.C f Kernel.Prelude.Text,
     mobileNoHash :: B.C f Kernel.External.Encryption.DbHash,
     orderId :: B.C f Kernel.Prelude.Text,
+    payoutServiceType :: B.C f (Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutServiceType),
     responseCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     responseMessage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     retriedOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

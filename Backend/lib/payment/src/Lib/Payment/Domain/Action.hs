@@ -39,6 +39,11 @@ module Lib.Payment.Domain.Action
     buildOrderOffer,
     getOrderShortId,
     getTransactionStatus,
+    createWalletService,
+    walletPostingService,
+    walletBalanceService,
+    walletReversalService,
+    walletVerifyTxnService,
   )
 where
 
@@ -58,6 +63,7 @@ import qualified Kernel.External.Payout.Interface as PT
 import qualified Kernel.External.Payout.Interface.Types as Payout
 import qualified Kernel.External.Payout.Juspay.Types as Juspay
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
+import Kernel.External.Wallet as Wallet
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value, isNothing)
 import qualified Kernel.Storage.Hedis as Redis
@@ -1425,3 +1431,60 @@ getTransactionStatus :: MonadFlow m => PaymentStatusResp -> m Payment.Transactio
 getTransactionStatus paymentStatusResp = case paymentStatusResp of
   PaymentStatus {..} -> pure status
   _ -> throwError $ InternalError "Transaction Status not found in response."
+
+---------------------  Wallet APIs ---------------------
+
+createWalletService :: (BeamFlow m r) => Wallet.CreateWalletReq -> (Wallet.CreateWalletReq -> m Wallet.CreateWalletResp) -> m Wallet.CreateWalletResp
+createWalletService createWalletReq createWalletCall = do
+  mbCreateWalletResp <- withTryCatch "createWalletService" (createWalletCall createWalletReq)
+  case mbCreateWalletResp of
+    Right createWalletResp -> do
+      case createWalletResp.success of
+        True -> do
+          return createWalletResp
+        False -> throwError $ InternalError $ "createWalletService failed with error: " <> show createWalletResp
+    Left err -> throwError $ InternalError $ "createWalletService failed with error: " <> show err
+
+walletPostingService :: (BeamFlow m r) => Wallet.WalletPostingReq -> (Wallet.WalletPostingReq -> m Wallet.WalletPostingResp) -> m Wallet.WalletPostingResp
+walletPostingService walletPostingReq walletPostingCall = do
+  mbWalletPostingResp <- withTryCatch "walletPostingService" (walletPostingCall walletPostingReq)
+  case mbWalletPostingResp of
+    Right walletPostingResp -> do
+      case walletPostingResp.success of
+        True -> do
+          return walletPostingResp
+        False -> throwError $ InternalError $ "walletPostingService failed with error: " <> show walletPostingResp
+    Left err -> throwError $ InternalError $ "walletPostingService failed with error: " <> show err
+
+walletBalanceService :: (BeamFlow m r) => Wallet.WalletBalanceReq -> (Wallet.WalletBalanceReq -> m Wallet.WalletBalanceResp) -> m Wallet.WalletBalanceResp
+walletBalanceService walletBalanceReq walletBalanceCall = do
+  mbWalletBalanceResp <- withTryCatch "walletBalanceService" (walletBalanceCall walletBalanceReq)
+  case mbWalletBalanceResp of
+    Right walletBalanceResp -> do
+      case walletBalanceResp.success of
+        True -> do
+          return walletBalanceResp
+        False -> throwError $ InternalError $ "walletBalanceService failed with error: " <> show walletBalanceResp
+    Left err -> throwError $ InternalError $ "walletBalanceService failed with error: " <> show err
+
+walletReversalService :: (BeamFlow m r) => Wallet.WalletReversalReq -> (Wallet.WalletReversalReq -> m Wallet.WalletReversalResp) -> m Wallet.WalletReversalResp
+walletReversalService walletReversalReq walletReversalCall = do
+  mbWalletReversalResp <- withTryCatch "walletReversalService" (walletReversalCall walletReversalReq)
+  case mbWalletReversalResp of
+    Right walletReversalResp -> do
+      case walletReversalResp.success of
+        True -> do
+          return walletReversalResp
+        False -> throwError $ InternalError $ "walletReversalService failed with error: " <> show walletReversalResp
+    Left err -> throwError $ InternalError $ "walletReversalService failed with error: " <> show err
+
+walletVerifyTxnService :: (BeamFlow m r) => Wallet.WalletVerifyTxnReq -> (Wallet.WalletVerifyTxnReq -> m Wallet.WalletVerifyTxnResp) -> m Wallet.WalletVerifyTxnResp
+walletVerifyTxnService walletVerifyTxnReq walletVerifyTxnCall = do
+  mbWalletVerifyTxnResp <- withTryCatch "walletVerifyTxnService" (walletVerifyTxnCall walletVerifyTxnReq)
+  case mbWalletVerifyTxnResp of
+    Right walletVerifyTxnResp -> do
+      case walletVerifyTxnResp.success of
+        True -> do
+          return walletVerifyTxnResp
+        False -> throwError $ InternalError $ "walletVerifyTxnService failed with error: " <> show walletVerifyTxnResp
+    Left err -> throwError $ InternalError $ "walletVerifyTxnService failed with error: " <> show err

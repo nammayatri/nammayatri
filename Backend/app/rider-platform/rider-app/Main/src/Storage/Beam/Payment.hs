@@ -22,7 +22,9 @@ import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamSplit
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamP
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamT
+import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
+import qualified Lib.Payment.Storage.Beam.WalletRewardPosting as BeamWRP
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
 instance HasSchemaName BeamPO.PaymentOrderT where
@@ -44,4 +46,10 @@ instance HasSchemaName BeamSplit.PaymentOrderSplitT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamOffer.PaymentOrderOfferT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamWRP.WalletRewardPostingT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamPW.PersonWalletT where
   schemaName _ = T.pack currentSchemaName

@@ -47,3 +47,13 @@ ALTER TABLE atlas_app.payout_order ADD COLUMN retried_order_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.payout_order ADD COLUMN merchant_operating_city_id text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_order ADD COLUMN payout_service_type text ;
+
+
+------- SQL updates -------
+
