@@ -72,6 +72,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetApproveDriver,
     postDriverFleetDriverUpdate,
     getDriverFleetVehicleListStats,
+    getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles,
   )
 where
 
@@ -3598,3 +3599,44 @@ convertToFleetVehicleStatsItem transporterConfig agg vehicleMap =
               rideDuration = stats.totalDuration,
               earningPerKm = earningsPerKm
             }
+
+getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Flow Common.OnboardedDriversAndUnlinkedVehiclesRes
+getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles merchantShortId _ fleetOwnerId mbLimit mbOffset = do
+  merchant <- findMerchantByShortId merchantShortId
+  listOfAllVehicle <- RCQuery.findAllRCByStatusForFleetMF [fleetOwnerId] Nothing (fromIntegral $ fromMaybe 100000 mbLimit) (fromIntegral $ fromMaybe 0 mbOffset) merchant.id Nothing
+  activeDriverIds <- QFDAExtra.getActiveDriverIdsByFleetOwnerId fleetOwnerId
+  (unLinkedVehicles, linkedDriverIds) <- getDriverVehicleCombination listOfAllVehicle
+  let unlinkedDriverIds = filter (\driverId -> driverId `notElem` linkedDriverIds) activeDriverIds
+  unlinkedDrivers <- catMaybes <$> mapM QPerson.findById unlinkedDriverIds
+
+  finalUnlinkedDrivers <- forM unlinkedDrivers $ \driver -> do
+    mobileNumber <- mapM decrypt driver.mobileNumber
+    pure $
+      Common.OnboardedDriver
+        { driverId = cast @DP.Person @Common.Driver driver.id,
+          mobileNumber = mobileNumber
+        }
+  let finalUnlinkedVehicles =
+        map
+          ( \vrc ->
+              Common.UnlinkedVehicle
+                { vehicleNo = Just vrc,
+                  rcId = Nothing
+                }
+          )
+          unLinkedVehicles
+  pure $
+    Common.OnboardedDriversAndUnlinkedVehiclesRes
+      { onboardedDrivers = finalUnlinkedDrivers,
+        unlinkedVehicles = finalUnlinkedVehicles
+      }
+  where
+    getDriverVehicleCombination :: [DVRC.VehicleRegistrationCertificate] -> Flow ([Text], [Id DP.Person])
+    getDriverVehicleCombination vrcList = do
+      vehicleDriverCombination <- forM vrcList $ \vrc -> do
+        decryptedVehicleRC <- decrypt vrc.certificateNumber
+        rcActiveAssociation <- QRCAssociation.findActiveAssociationByRC vrc.id True
+        pure (decryptedVehicleRC, rcActiveAssociation >>= (\assoc -> Just assoc.driverId))
+      let unLinkedVehicles = map fst $ filter (\(_, driverId) -> isNothing driverId) vehicleDriverCombination
+      let linkedDriverIds = snd $ second (catMaybes) (unzip vehicleDriverCombination)
+      pure $ (unLinkedVehicles, linkedDriverIds)
