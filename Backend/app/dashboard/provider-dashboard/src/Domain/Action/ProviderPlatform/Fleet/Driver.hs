@@ -72,6 +72,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetApproveDriver,
     getDriverFleetDriverListStats,
     getDriverFleetVehicleListStats,
+    getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles,
   )
 where
 
@@ -627,3 +628,9 @@ getDriverFleetVehicleListStats merchantShortId opCity apiTokenInfo vehicleNo lim
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let fleetOwnerId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetVehicleListStats) fleetOwnerId vehicleNo limit offset from to
+
+getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.Flow Common.OnboardedDriversAndUnlinkedVehiclesRes)
+getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles merchantShortId opCity apiTokenInfo fleetOwnerId limit offset = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  fleetOwnerId' <- getFleetOwnerId apiTokenInfo.personId.getId (Just fleetOwnerId)
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles) fleetOwnerId' limit offset

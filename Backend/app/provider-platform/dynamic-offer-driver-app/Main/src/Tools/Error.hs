@@ -1630,6 +1630,8 @@ data WMBErrors
   | DriverAlreadyLinkedToAnotherVehicle
   | VehicleNotVerified Text
   | FleetOwnerOrOperatorIdRequired
+  | NoUnlinkedDriverExists
+  | NoSufficientVehiclesExistToBeLinked
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''WMBErrors
@@ -1685,6 +1687,8 @@ instance IsBaseError WMBErrors where
     DriverAlreadyLinkedToAnotherVehicle -> Just "Driver is already linked to another vehicle"
     VehicleNotVerified vehicleNo -> Just $ "Vehicle: " <> vehicleNo <> " is not verified"
     FleetOwnerOrOperatorIdRequired -> Just "Fleet Owner or Operator Id is required"
+    NoUnlinkedDriverExists -> Just "No unlinked driver exists"
+    NoSufficientVehiclesExistToBeLinked -> Just "No sufficient vehicles exist to be linked"
 
 instance IsHTTPError WMBErrors where
   toErrorCode = \case
@@ -1735,6 +1739,8 @@ instance IsHTTPError WMBErrors where
     DriverAlreadyLinkedToAnotherVehicle -> "DRIVER_ALREADY_LINKED_TO_ANOTHER_VEHICLE"
     VehicleNotVerified _ -> "VEHICLE_NOT_VERIFIED"
     FleetOwnerOrOperatorIdRequired -> "FLEET_OWNER_OR_OPERATOR_ID_REQUIRED"
+    NoUnlinkedDriverExists -> "NO_UNLINKED_DRIVER_EXISTS"
+    NoSufficientVehiclesExistToBeLinked -> "NO_SUFFICIENT_VEHICLES_EXIST_TO_BE_LINKED"
   toHttpCode = \case
     AlreadyOnActiveTripWithAnotherVehicle _ -> E400
     DriverNotInFleet _ _ -> E400
@@ -1783,6 +1789,8 @@ instance IsHTTPError WMBErrors where
     DriverAlreadyLinkedToAnotherVehicle -> E400
     VehicleNotVerified _ -> E400
     FleetOwnerOrOperatorIdRequired -> E400
+    NoUnlinkedDriverExists -> E400
+    NoSufficientVehiclesExistToBeLinked -> E400
 
 instance IsAPIError WMBErrors
 

@@ -1309,7 +1309,27 @@ apis:
               - offset: Int
             response:
               type: FleetVehicleStatsRes
-
+  - GET:
+      endpoint: /fleet/driver/OnboardedDriversAndUnlinkedVehicles/{fleetOwnerId}
+      auth: ApiAuthV2
+      params:
+        fleetOwnerId: Text
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: OnboardedDriversAndUnlinkedVehiclesRes
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/driver/OnboardedDriversAndUnlinkedVehicles
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - limit: Int
+              - offset: Int
+            response:
+              type: OnboardedDriversAndUnlinkedVehiclesRes
 types:
   EstimatedRouteDetails:
     - polyline: Maybe Text
@@ -1965,6 +1985,15 @@ types:
     - rideDistance: Meters
     - rideDuration: Seconds
     - earningPerKm: HighPrecMoney
+  OnboardedDriversAndUnlinkedVehiclesRes:
+    - onboardedDrivers: [OnboardedDriver]
+    - unlinkedVehicles: [UnlinkedVehicle]
+  OnboardedDriver:
+    - driverId: Id Driver
+    - mobileNumber: Maybe Text
+  UnlinkedVehicle:
+    - vehicleNo: Maybe Text
+    - rcId: Maybe Text
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
