@@ -566,7 +566,8 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       istTime <- getLocalCurrentTime (19800 :: Seconds)
       let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (purchasedPassPayment.startDate > DT.utctDay istTime) status
       whenJust mbPassStatus $ \passStatus -> do
-        QPurchasedPassPayment.updateStatusByOrderId passStatus paymentOrderId
+        when (purchasedPassPayment.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
+          QPurchasedPassPayment.updateStatusByOrderId passStatus paymentOrderId
         when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
           QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus
         -- If payment results in an active/prebooked pass, update purchased_pass.profilePicture from payment
@@ -590,9 +591,10 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
   where
     convertPaymentStatusToPurchasedPassStatus futureDatePass = \case
       Payment.CHARGED -> if futureDatePass then Just DPurchasedPass.PreBooked else Just DPurchasedPass.Active
-      Payment.AUTHENTICATION_FAILED -> Just DPurchasedPass.Failed
-      Payment.AUTHORIZATION_FAILED -> Just DPurchasedPass.Failed
-      Payment.JUSPAY_DECLINED -> Just DPurchasedPass.Failed
+      -- There can be a CHARGED transaction for Same Order even on Failure, so we should not mark the Pass as FAILED.
+      -- Payment.AUTHENTICATION_FAILED -> Just DPurchasedPass.Failed
+      -- Payment.AUTHORIZATION_FAILED -> Just DPurchasedPass.Failed
+      -- Payment.JUSPAY_DECLINED -> Just DPurchasedPass.Failed
       Payment.CANCELLED -> Just DPurchasedPass.Failed
       Payment.AUTO_REFUNDED -> Just DPurchasedPass.Refunded
       _ -> Nothing
