@@ -27,18 +27,23 @@ import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
+import Domain.Types.VehicleCategory
 import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding (convertUTCTimetoDate, removeSpaceAndDash)
+import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Verification as Verification
 
 data ValidateDocumentImageRequest = ValidateDocumentImageRequest
   { image :: Text,
-    imageType :: DVC.DocumentType
+    imageType :: DVC.DocumentType,
+    vehicleCategory :: Maybe VehicleCategory
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -62,28 +67,41 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
   let imageId :: Id Domain.Image = imageResponse.imageId
   let imageData = image
   logDebug $ "DocumentRegistration.validateDocument: Image validated successfully, imageId=" <> show imageId
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   operatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  (documentNumber, dateOfBirth, nameOnCard) <- case imageType of
-    DVC.DriverLicense -> do
-      resp <- Verification.extractDLImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
-      logDebug $ "DocumentRegistration.validateDocument: Extracted DL Image successfully, resp=" <> show resp
-      case resp.extractedDL of
-        Just extractedDL -> do
-          let documentNumber = removeSpaceAndDash <$> extractedDL.dlNumber
-          let dateOfBirth = fmap convertUTCTimetoDate (VC.parseDateTime =<< extractedDL.dateOfBirth)
-          let nameOnCard = extractedDL.nameOnCard
-          DL.cacheExtractedDl personId documentNumber (show operatingCity.city)
-          return (documentNumber, dateOfBirth, nameOnCard)
-        Nothing -> do
-          return (Nothing, Nothing, Nothing)
-    DVC.VehicleRegistrationCertificate -> do
-      resp <- Verification.extractRCImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
-      case resp.extractedRC of
-        Just extractedRC -> do
-          let documentNumber = removeSpaceAndDash <$> extractedRC.rcNumber
-          return (documentNumber, Nothing, Nothing)
-        Nothing -> do
-          return (Nothing, Nothing, Nothing)
-    _ -> return (Nothing, Nothing, Nothing)
-  logDebug $ "DocumentRegistration.validateDocument: Validation completed, returning response with documentNumber=" <> show documentNumber <> ", dateOfBirth=" <> show dateOfBirth
-  pure $ ValidateDocumentImageResponse imageId documentNumber dateOfBirth nameOnCard True
+  isImageValidationRequired <- case person.role of
+    Person.FLEET_OWNER -> do
+      docConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
+      return $ maybe True (.isImageValidationRequired) docConfigs
+    _ -> do
+      docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe CAR vehicleCategory) Nothing
+      return $ maybe True (.isImageValidationRequired) docConfigs
+  logDebug $ "DocumentRegistration.validateDocument: isImageValidationRequired=" <> show isImageValidationRequired
+  if not isImageValidationRequired
+    then do
+      return $ ValidateDocumentImageResponse imageId Nothing Nothing Nothing True
+    else do
+      (documentNumber, dateOfBirth, nameOnCard) <- case imageType of
+        DVC.DriverLicense -> do
+          resp <- Verification.extractDLImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
+          logDebug $ "DocumentRegistration.validateDocument: Extracted DL Image successfully, resp=" <> show resp
+          case resp.extractedDL of
+            Just extractedDL -> do
+              let documentNumber = removeSpaceAndDash <$> extractedDL.dlNumber
+              let dateOfBirth = fmap convertUTCTimetoDate (VC.parseDateTime =<< extractedDL.dateOfBirth)
+              let nameOnCard = extractedDL.nameOnCard
+              DL.cacheExtractedDl personId documentNumber (show operatingCity.city)
+              return (documentNumber, dateOfBirth, nameOnCard)
+            Nothing -> do
+              return (Nothing, Nothing, Nothing)
+        DVC.VehicleRegistrationCertificate -> do
+          resp <- Verification.extractRCImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
+          case resp.extractedRC of
+            Just extractedRC -> do
+              let documentNumber = removeSpaceAndDash <$> extractedRC.rcNumber
+              return (documentNumber, Nothing, Nothing)
+            Nothing -> do
+              return (Nothing, Nothing, Nothing)
+        _ -> return (Nothing, Nothing, Nothing)
+      logDebug $ "DocumentRegistration.validateDocument: Validation completed, returning response with documentNumber=" <> show documentNumber <> ", dateOfBirth=" <> show dateOfBirth
+      pure $ ValidateDocumentImageResponse imageId documentNumber dateOfBirth nameOnCard True
