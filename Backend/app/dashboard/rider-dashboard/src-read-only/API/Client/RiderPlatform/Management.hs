@@ -12,6 +12,7 @@ import qualified API.Types.RiderPlatform.Management.Media
 import qualified API.Types.RiderPlatform.Management.Merchant
 import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified API.Types.RiderPlatform.Management.Ride
+import qualified API.Types.RiderPlatform.Management.SosMedia
 import qualified API.Types.RiderPlatform.Management.System
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.ServerName
@@ -30,6 +31,7 @@ data ManagementAPIs = ManagementAPIs
     merchantDSL :: API.Types.RiderPlatform.Management.Merchant.MerchantAPIs,
     nammaTagDSL :: API.Types.RiderPlatform.Management.NammaTag.NammaTagAPIs,
     rideDSL :: API.Types.RiderPlatform.Management.Ride.RideAPIs,
+    sosMediaDSL :: API.Types.RiderPlatform.Management.SosMedia.SosMediaAPIs,
     systemDSL :: API.Types.RiderPlatform.Management.System.SystemAPIs
   }
 
@@ -43,10 +45,11 @@ mkManagementAPIs merchantId city token = do
   let merchantDSL = API.Types.RiderPlatform.Management.Merchant.mkMerchantAPIs merchantClientDSL
   let nammaTagDSL = API.Types.RiderPlatform.Management.NammaTag.mkNammaTagAPIs nammaTagClientDSL
   let rideDSL = API.Types.RiderPlatform.Management.Ride.mkRideAPIs rideClientDSL
+  let sosMediaDSL = API.Types.RiderPlatform.Management.SosMedia.mkSosMediaAPIs sosMediaClientDSL
   let systemDSL = API.Types.RiderPlatform.Management.System.mkSystemAPIs systemClientDSL
   (ManagementAPIs {..})
   where
-    bookingClientDSL :<|> customerClientDSL :<|> fRFSTicketClientDSL :<|> invoiceClientDSL :<|> mediaClientDSL :<|> merchantClientDSL :<|> nammaTagClientDSL :<|> rideClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    bookingClientDSL :<|> customerClientDSL :<|> fRFSTicketClientDSL :<|> invoiceClientDSL :<|> mediaClientDSL :<|> merchantClientDSL :<|> nammaTagClientDSL :<|> rideClientDSL :<|> sosMediaClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.
