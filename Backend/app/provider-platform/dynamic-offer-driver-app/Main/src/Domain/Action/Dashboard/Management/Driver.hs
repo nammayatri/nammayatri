@@ -1360,19 +1360,21 @@ updateMerchantInAllTables personId merchantId merchantOperatingCityId = do
   -- Update DriverProfileQuestions table (only has merchantOperatingCityId in Beam type)
   QDriverProfileQuestions.updateMerchantOperatingCityIdByDriverId merchantOperatingCityId personId
 
-  -- Update DriverRCAssociation table
-  QDriverRCAssociation.updateMerchantIdAndCityIdByDriverId (Just merchantId) (Just merchantOperatingCityId) personId
-
   -- Update HyperVergeSdkLogs table
   QHyperVergeSdkLogs.updateMerchantIdAndCityIdByDriverId merchantId merchantOperatingCityId personId
 
   -- Update HyperVergeVerification table
   QHyperVergeVerification.updateMerchantIdAndCityIdByDriverId (Just merchantId) (Just merchantOperatingCityId) personId
 
-  -- Update VehicleRegistrationCertificate table (needs RC IDs from associations)
+  -- Update VehicleRegistrationCertificate table (child table, update before association)
   rcAssociations <- QDriverRCAssociation.findAllByDriverId personId
-  forM_ rcAssociations $ \(assoc, _) ->
+  logTagInfo "updateMerchantInAllTables" $ "VRC update: driverId=" <> getId personId <> ", rcCount=" <> show (length rcAssociations) <> ", rcIds=" <> show (map (getId . (.rcId) . fst) rcAssociations)
+  forM_ rcAssociations $ \(assoc, _) -> do
+    logTagInfo "updateMerchantInAllTables" $ "Updating VRC: driverId=" <> getId personId <> ", rcId=" <> getId assoc.rcId
     RCQuery.updateMerchantIdAndCityIdById (Just merchantId) (Just merchantOperatingCityId) assoc.rcId
+
+  -- Update DriverRCAssociation table (after VRC since VRC is child table)
+  QDriverRCAssociation.updateMerchantIdAndCityIdByDriverId (Just merchantId) (Just merchantOperatingCityId) personId
 
   -- Update Person table LAST (allows retry if earlier updates fail)
   QPerson.updateMerchantIdAndCityId personId merchantId merchantOperatingCityId
