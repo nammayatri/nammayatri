@@ -17,7 +17,8 @@ import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import Tools.Auth
 
 data NearbyBus = NearbyBus
-  { currentLocation :: Kernel.External.Maps.Types.LatLong,
+  { bearing :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    currentLocation :: Kernel.External.Maps.Types.LatLong,
     distance :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     routeCode :: Data.Text.Text,
     routeState :: Kernel.Prelude.Maybe Storage.CachedQueries.Merchant.MultiModalBus.RouteState,

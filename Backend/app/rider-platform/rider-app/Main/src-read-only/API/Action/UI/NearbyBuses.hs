@@ -25,9 +25,9 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "nearbyBusBooking" :> ReqBody '[JSON] API.Types.UI.NearbyBuses.NearbyBusesRequest
+  ( TokenAuth :> "nearbyBusBooking" :> ReqBody ('[JSON]) API.Types.UI.NearbyBuses.NearbyBusesRequest
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.NearbyBuses.NearbyBusesResponse
       :<|> TokenAuth
       :> "nextVehicleDetails"
@@ -39,7 +39,7 @@ type API =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            Lib.JourneyModule.Utils.UpcomingTripInfo
       :<|> TokenAuth
       :> "timetable"
@@ -57,7 +57,7 @@ type API =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.NearbyBuses.TimetableResponse
   )
 
@@ -79,7 +79,7 @@ getNextVehicleDetails ::
     ) ->
     Data.Text.Text ->
     Data.Text.Text ->
-    Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
+    Kernel.Prelude.Maybe (BecknV2.FRFS.Enums.VehicleCategory) ->
     Environment.FlowHandler Lib.JourneyModule.Utils.UpcomingTripInfo
   )
 getNextVehicleDetails a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getNextVehicleDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
@@ -90,8 +90,8 @@ getTimetableStop ::
     ) ->
     Data.Text.Text ->
     Data.Text.Text ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
-    Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
+    Kernel.Prelude.Maybe (Data.Text.Text) ->
+    Kernel.Prelude.Maybe (BecknV2.FRFS.Enums.VehicleCategory) ->
     Environment.FlowHandler API.Types.UI.NearbyBuses.TimetableResponse
   )
 getTimetableStop a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getTimetableStop (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1

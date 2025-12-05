@@ -86,7 +86,8 @@ data BusDataWithRoutesInfo = BusDataWithRoutesInfo
     longitude :: Double,
     timestamp :: Int,
     vehicle_number :: Maybe Text,
-    routes_info :: Maybe (M.Map BusRouteId BusRouteInfo)
+    routes_info :: Maybe (M.Map BusRouteId BusRouteInfo),
+    bearing :: Maybe Double
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
