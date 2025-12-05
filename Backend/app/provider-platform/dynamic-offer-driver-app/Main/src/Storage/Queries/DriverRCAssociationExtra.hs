@@ -30,7 +30,9 @@ findAllByDriverId ::
   m [(DriverRCAssociation, VehicleRegistrationCertificate)]
 findAllByDriverId driverId = do
   rcAssocs <- getRcAssocs driverId Nothing
+  logDebug $ "findAllByDriverId: rcAssocs count for driverId " <> show driverId <> " = " <> show (length rcAssocs) <> ", rcIds = " <> show (map (.rcId.getId) rcAssocs)
   regCerts <- getRegCerts rcAssocs
+  logDebug $ "findAllByDriverId: regCerts count for driverId " <> show driverId <> " = " <> show (length regCerts) <> ", certIds = " <> show (map (.id.getId) regCerts)
   return $ linkDriversRC rcAssocs regCerts
 
 findAllActiveAndInactiveAssociationsByDriverId ::
