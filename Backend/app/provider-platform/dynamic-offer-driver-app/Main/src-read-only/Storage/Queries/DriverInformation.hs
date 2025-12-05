@@ -100,6 +100,13 @@ updateDailyAndWeeklyCancellationRateBlockingCooldown dailyCancellationRateBlocki
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateDailyAndWeeklyExtraKms ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDailyAndWeeklyExtraKms dailyExtraKms weeklyExtraKms driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.dailyExtraKms dailyExtraKms, Se.Set Beam.weeklyExtraKms weeklyExtraKms, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateDailyCancellationRateBlockingCooldown :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDailyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown driverId = do
   _now <- getCurrentTime
@@ -282,7 +289,7 @@ updateSoftBlock softBlockStiers softBlockExpiryTime softBlockReasonFlag driverId
 
 updateSpecialLocWarriorInfo ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation] -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> [(Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)] -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocId preferredSecondarySpecialLocIds specialLocWarriorEnabledAt driverId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -359,6 +366,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.canSwitchToRental (Kernel.Prelude.Just canSwitchToRental),
       Se.Set Beam.compAadhaarImagePath compAadhaarImagePath,
       Se.Set Beam.dailyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown,
+      Se.Set Beam.dailyExtraKms dailyExtraKms,
       Se.Set Beam.dlNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted dlNumber),
       Se.Set Beam.dlNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash dlNumber),
       Se.Set Beam.driverDob driverDob,
@@ -426,6 +434,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.verified verified,
       Se.Set Beam.walletBalance walletBalance,
       Se.Set Beam.weeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown,
+      Se.Set Beam.weeklyExtraKms weeklyExtraKms,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now

@@ -98,6 +98,7 @@ import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.DriverGoHomeRequest as QDGR
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -730,6 +731,7 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
           weeklyExtraKms = (prevWeeklyExtraKms :: HighPrecMeters) + distanceDiff
       Redis.setExp dailyExtraKmsKey dailyExtraKms expirationPeriodForDay
       SWC.incrementByValue (round distanceDiff) weeklyExtraKmsKey SlidingWindowOptions {period = 7, periodType = Days}
+      QDI.updateDailyAndWeeklyExtraKms (Just dailyExtraKms) (Just weeklyExtraKms) ride.driverId
       pure (Just dailyExtraKms, Just weeklyExtraKms)
 
     notifyDriverOnExtraKmsLimitExceed = do

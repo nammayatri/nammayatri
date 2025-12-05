@@ -47,6 +47,7 @@ data DriverInformationE e = DriverInformation
     canSwitchToRental :: Kernel.Prelude.Bool,
     compAadhaarImagePath :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dailyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    dailyExtraKms :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     dlNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverFlowStatus :: Kernel.Prelude.Maybe Domain.Types.DriverFlowStatus.DriverFlowStatus,
@@ -89,7 +90,7 @@ data DriverInformationE e = DriverInformation
     payoutVpaStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus,
     planExpiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     preferredPrimarySpecialLocId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation),
-    preferredSecondarySpecialLocIds :: [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation],
+    preferredSecondarySpecialLocIds :: [(Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)],
     prepaidSubscriptionBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -111,6 +112,7 @@ data DriverInformationE e = DriverInformation
     verified :: Kernel.Prelude.Bool,
     walletBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     weeklyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    weeklyExtraKms :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -118,9 +120,9 @@ data DriverInformationE e = DriverInformation
   }
   deriving (Generic)
 
-type DriverInformation = DriverInformationE 'AsEncrypted
+type DriverInformation = DriverInformationE ('AsEncrypted)
 
-type DecryptedDriverInformation = DriverInformationE 'AsUnencrypted
+type DecryptedDriverInformation = DriverInformationE ('AsUnencrypted)
 
 instance EncryptedItem DriverInformation where
   type Unencrypted DriverInformation = (DecryptedDriverInformation, HashSalt)
@@ -152,6 +154,7 @@ instance EncryptedItem DriverInformation where
           canSwitchToRental = canSwitchToRental entity,
           compAadhaarImagePath = compAadhaarImagePath entity,
           dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
+          dailyExtraKms = dailyExtraKms entity,
           dlNumber = dlNumber_,
           driverDob = driverDob entity,
           driverFlowStatus = driverFlowStatus entity,
@@ -216,6 +219,7 @@ instance EncryptedItem DriverInformation where
           verified = verified entity,
           walletBalance = walletBalance entity,
           weeklyCancellationRateBlockingCooldown = weeklyCancellationRateBlockingCooldown entity,
+          weeklyExtraKms = weeklyExtraKms entity,
           merchantId = merchantId entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
           createdAt = createdAt entity,
@@ -249,6 +253,7 @@ instance EncryptedItem DriverInformation where
             canSwitchToRental = canSwitchToRental entity,
             compAadhaarImagePath = compAadhaarImagePath entity,
             dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
+            dailyExtraKms = dailyExtraKms entity,
             dlNumber = dlNumber_,
             driverDob = driverDob entity,
             driverFlowStatus = driverFlowStatus entity,
@@ -313,6 +318,7 @@ instance EncryptedItem DriverInformation where
             verified = verified entity,
             walletBalance = walletBalance entity,
             weeklyCancellationRateBlockingCooldown = weeklyCancellationRateBlockingCooldown entity,
+            weeklyExtraKms = weeklyExtraKms entity,
             merchantId = merchantId entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
             createdAt = createdAt entity,
@@ -364,10 +370,10 @@ data DriverSummary = DriverSummary
 
 data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AirConditionedRestrictionType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverAutoPayStatus))
 
-$(mkHttpInstancesForEnum ''DriverAutoPayStatus)
+$(mkHttpInstancesForEnum (''DriverAutoPayStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutVpaStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutVpaStatus))
