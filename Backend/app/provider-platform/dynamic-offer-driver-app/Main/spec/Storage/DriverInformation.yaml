@@ -138,6 +138,8 @@ DriverInformation:
     isHighAccuracyLocationEnabled: Maybe Bool
     rideRequestVolumeEnabled: Maybe Bool
     ruleBasedUpgradeTiers: Maybe [UpgradedTier]
+    dailyExtraKms: Maybe HighPrecMeters
+    weeklyExtraKms: Maybe HighPrecMeters
 
   default:
     active: "false"
@@ -436,4 +438,8 @@ DriverInformation:
     updateUpgradedTiers:
       kvFunction: updateOneWithKV
       params: [ruleBasedUpgradeTiers]
+      where: driverId
+    updateDailyAndWeeklyExtraKms:
+      kvFunction: updateOneWithKV
+      params: [dailyExtraKms, weeklyExtraKms]
       where: driverId
