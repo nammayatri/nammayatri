@@ -76,7 +76,12 @@ getPersonRegisterBankAccountLink h person = do
 
       mbMobileNumber <- mapM decrypt person.mobileNumber
       mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "Mobile number is required for opening a bank account")
-
+      defaultCountryCode <- case merchantOpCity.country of
+        Context.Finland -> pure "+358"
+        Context.Netherlands -> pure "+31"
+        Context.USA -> pure "+1"
+        _ -> throwError $ InvalidRequest "Bank account creation is only supported for USA, Netherlands and Finland"
+      let mobileCountryCode = fromMaybe defaultCountryCode $ person.mobileCountryCode
       personStripeInfo <- h.fetchPersonStripeInfo
       personDob <- personStripeInfo.personDob & fromMaybeM (InvalidRequest "Driver DOB is required for opening a bank account")
       idNumber <- forM personStripeInfo.idNumber decrypt
@@ -98,7 +103,7 @@ getPersonRegisterBankAccountLink h person = do
                 address = personStripeInfo.address,
                 ssnLast4 = ssnLast4,
                 idNumber,
-                mobileNumber
+                mobileNumber = mobileCountryCode <> mobileNumber
               }
       resp <- TPayment.createIndividualConnectAccount person.merchantId person.merchantOperatingCityId createAccountReq
       accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
