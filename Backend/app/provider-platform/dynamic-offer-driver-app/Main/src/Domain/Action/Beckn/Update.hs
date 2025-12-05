@@ -207,16 +207,17 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                   logTagError "DebugErrorLog: EditDestSoftUpdate" $ "edit destination waypoints count: " <> show (length editDestinationWaypoints)
                   (snapToRoadFailed, editDestinationPoints) <- getLatlongsViaSnapToRoad (editDestinationWaypoints <> currentLocationPointsBatch.loc) merchantOperatingCity.merchantId merchantOperatingCity.id
                   logTagError "DebugErrorLog: EditDestSoftUpdate" $ "snapped edit destination points count: " <> show (length editDestinationPoints)
+                  alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
                   let (currentLocPoint :: Maps.LatLong) =
-                        fromMaybe (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon) $
+                        fromMaybe (fst $ last alreadySnappedPoints) $
                           (if not $ null currentLocationPointsBatch.loc then Just (last currentLocationPointsBatch.loc) else Nothing)
                             <|> (if not $ null editDestinationWaypoints then Just (last editDestinationWaypoints) else Nothing)
-                  alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
                   logTagError "DebugErrorLog: EditDestSoftUpdate" $ "Already snapped points count: " <> show (length alreadySnappedPoints)
                   let currentPoint = if snapToRoadFailed || null editDestinationPoints then currentLocPoint else fst $ last editDestinationPoints
                       alreadySnappedPointsWithCurrentPoint = alreadySnappedPoints <> editDestinationPoints <> [(currentPoint, True)]
+
                   whenJust (nonEmpty alreadySnappedPointsWithCurrentPoint) $ \alreadySnappedPointsWithCurrentPoint' -> do
-                    addEditDestinationSnappedWayPoints ride.driverId alreadySnappedPointsWithCurrentPoint'
+                    deleteAndPushEditDestinationSnappedWayPoints ride.driverId alreadySnappedPointsWithCurrentPoint' -- deletes the existing snapped points and pushes the new snapped points for future update requests
                   deleteEditDestinationWaypoints ride.driverId
                   reachedStopLocations <- Redis.withMasterRedis $ Redis.get (VID.mkReachedStopKey ride.id)
                   let filteredStops = case reachedStopLocations of
