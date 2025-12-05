@@ -38,6 +38,7 @@ module Lib.LocationUpdates.Internal
     getEditDestinationWaypoints,
     deleteEditDestinationWaypoints,
     addEditDestinationSnappedWayPoints,
+    deleteAndPushEditDestinationSnappedWayPoints,
     getEditDestinationSnappedWaypoints,
     deleteEditDestinationSnappedWaypoints,
     getTravelledDistance,
@@ -368,6 +369,13 @@ makeEditDestinationSnappedWaypointsRedisKey driverId = mconcat ["editDestination
 addEditDestinationSnappedWayPoints :: (HedisFlow m env) => Id person -> NonEmpty (LatLong, Bool) -> m ()
 addEditDestinationSnappedWayPoints driverId waypoints = do
   let key = makeEditDestinationSnappedWaypointsRedisKey driverId
+  rPush key waypoints
+  Hedis.expire key 86400 -- 24 hours
+
+deleteAndPushEditDestinationSnappedWayPoints :: (HedisFlow m env) => Id person -> NonEmpty (LatLong, Bool) -> m ()
+deleteAndPushEditDestinationSnappedWayPoints driverId waypoints = do
+  let key = makeEditDestinationSnappedWaypointsRedisKey driverId
+  Hedis.del key
   rPush key waypoints
   Hedis.expire key 86400 -- 24 hours
 
