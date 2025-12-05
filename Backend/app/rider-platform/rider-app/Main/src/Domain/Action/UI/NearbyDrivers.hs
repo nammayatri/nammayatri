@@ -260,7 +260,7 @@ getNearbyBusesAsBuckets merchantOperatingCityId riderConfig location = do
                         distance = Just dist,
                         shortName = bus.shortName,
                         routeState = bus.routeState,
-                        bearing = Nothing
+                        bearing = bus.bearing
                       },
                     dist
                   )

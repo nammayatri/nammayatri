@@ -27,6 +27,7 @@ types:
       serviceTierName: Maybe Text
       routeState: Maybe RouteState
       shortName: Maybe Text
+      bearing: Maybe Int
 
   RecentRide:
       fromStopCode: Text

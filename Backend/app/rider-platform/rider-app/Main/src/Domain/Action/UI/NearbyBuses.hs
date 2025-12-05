@@ -123,7 +123,8 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
                   serviceType = fst <$> maybeServiceType,
                   serviceTierName = snd =<< maybeServiceType,
                   shortName = routeInfo.route_number,
-                  vehicleNumber = bus.vehicle_number
+                  vehicleNumber = bus.vehicle_number,
+                  bearing = round <$> bus.bearing
                 }
       )
       busesWithMostMatchingRouteStates
