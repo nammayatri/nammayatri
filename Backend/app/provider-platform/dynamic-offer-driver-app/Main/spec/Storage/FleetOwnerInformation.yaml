@@ -41,6 +41,7 @@ FleetOwnerInformation:
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     fleetDob: Maybe UTCTime
     stripeAddress: Maybe Address
+    fleetName: Maybe Text
 
   excludedFields: [merchantOperatingCityId]
   types:
@@ -157,6 +158,7 @@ FleetOwnerInformation:
     businessLicenseNumberEncrypted: character varying (255)
     businessLicenseNumberHash: bytea
     stripeAddress: json
+    fleetName: character varying (255)
 
   extraOperations:
     - EXTRA_QUERY_FILE

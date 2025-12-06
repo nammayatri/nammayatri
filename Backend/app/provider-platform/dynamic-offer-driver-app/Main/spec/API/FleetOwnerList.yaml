@@ -3,6 +3,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   FleetType: Domain.Types.FleetOwnerInformation
+  Address: Kernel.External.Payment.Stripe.Types
 
 module: FleetOwnerList
 
@@ -17,6 +18,9 @@ types:
     - verified: Bool
     - blocked: Bool
     - isEligibleForSubscription: Bool
+    - address: Maybe Address
+    - fleetName: Maybe Text
+    - mobileNumber: Maybe Text
 
 apis:
   - GET:
@@ -30,4 +34,3 @@ apis:
         offset: Int
       response:
         type: "[FleetOwnerListItem]"
-

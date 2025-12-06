@@ -20,6 +20,8 @@ makeFleetDriverAssociation driverId fleetOwnerId onboardedOperatorId end = do
         associatedTill = end,
         onboardingVehicleCategory = Nothing,
         onboardedOperatorId,
+        requestReason = Nothing,
+        responseReason = Nothing,
         createdAt = now,
         updatedAt = now
       }

@@ -153,6 +153,7 @@ import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
+import qualified Domain.Types.FleetDriverAssociation as FDA
 import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Location as DLoc
@@ -284,6 +285,7 @@ import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.MetaData as QMeta
@@ -305,6 +307,18 @@ import qualified Tools.Payout as Payout
 import Tools.SMS as Sms hiding (Success)
 import Tools.Verification hiding (ImageType, length)
 import Utils.Common.Cac.KeyNameConstants
+
+data FleetInfo = FleetInfo
+  { id :: Text,
+    ownerName :: Text,
+    fleetName :: Maybe Text,
+    phoneNumber :: Maybe Text,
+    address :: Maybe Address,
+    requestReason :: Maybe Text,
+    responseReason :: Maybe Text,
+    createdAt :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,
@@ -399,8 +413,9 @@ data DriverInformationRes = DriverInformationRes
     nyClubConsent :: Maybe Bool,
     cancellationRateSlabConfig :: Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,
     enabledAt :: Maybe UTCTime,
-    fleetOwnerId :: Maybe Text,
+    fleetOwnerId :: Maybe Text, -- deprecate later
     operatorId :: Maybe Text,
+    fleetRequest :: Maybe FleetInfo,
     tripDistanceMaxThreshold :: Maybe Meters,
     tripDistanceMinThreshold :: Maybe Meters,
     maxPickupRadius :: Maybe Meters,
@@ -410,7 +425,8 @@ data DriverInformationRes = DriverInformationRes
     isTTSEnabled :: Maybe Bool,
     isHighAccuracyLocationEnabled :: Maybe Bool,
     rideRequestVolumeEnabled :: Maybe Bool,
-    profilePhotoUploadedAt :: Maybe UTCTime
+    profilePhotoUploadedAt :: Maybe UTCTime,
+    activeFleet :: Maybe FleetInfo
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -768,9 +784,10 @@ getInformationV2 ::
   Maybe Text ->
   Maybe Text ->
   Maybe Plan.ServiceNames ->
+  Maybe Bool ->
   UpdateProfileInfoPoints ->
   m DriverInformationRes
-getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName req = do
+getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName mbFleetInfo req = do
   driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
   whenJust req.isAdvancedBookingEnabled $ \isAdvancedBookingEnabled ->
     unless (driverInfo.forwardBatchingEnabled == isAdvancedBookingEnabled) $
@@ -780,7 +797,7 @@ getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant
       QDriverInformation.updateIsInteroperable isInteroperable personId
   whenJust req.isCategoryLevelSubscriptionEnabled $ \isCategoryLevelSubscriptionEnabled ->
     QDriverPlan.updateIsSubscriptionEnabledAtCategoryLevel personId YATRI_SUBSCRIPTION isCategoryLevelSubscriptionEnabled
-  getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName (Just driverInfo)
+  getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName (Just driverInfo) mbFleetInfo
 
 getInformation ::
   ( CacheFlow m r,
@@ -797,8 +814,9 @@ getInformation ::
   Maybe Text ->
   Maybe Plan.ServiceNames ->
   Maybe DriverInformation ->
+  Maybe Bool ->
   m DriverInformationRes
-getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' context mbServiceName mbDriverInfo = do
+getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' context mbServiceName mbDriverInfo mbFleetInfo = do
   let driverId = cast personId
       serviceName = fromMaybe Plan.YATRI_SUBSCRIPTION mbServiceName
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -816,7 +834,9 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
-  fda <- QFDA.findByDriverId driverId True
+  allFdas <- QFDA.findAllByDriverIdWithStatus driverId
+  let activeFda = find (.isActive) allFdas
+      inactiveFda = find (not . (.isActive)) allFdas
   doa <- QDOA.findByDriverId driverId True
   let context' = fromMaybe DAKM.empty (DA.decode $ BSL.pack $ T.unpack $ fromMaybe "{}" context)
   frntndfgs <- if useCACConfig then getFrontendConfigs merchantOpCityId toss tnant' context' else return Nothing
@@ -825,7 +845,7 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId Nothing
-  makeDriverInformationRes merchantOpCityId driverEntity merchant driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues) mbMd5Digest operatorReferral ((.fleetOwnerId) <$> fda) ((.operatorId) <$> doa)
+  makeDriverInformationRes merchantOpCityId driverEntity merchant driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues) mbMd5Digest operatorReferral ((.operatorId) <$> doa) inactiveFda activeFda mbFleetInfo
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
@@ -1317,7 +1337,9 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (updPerson, updatedDriverInfo, driverStats, merchantOpCityId) Plan.YATRI_SUBSCRIPTION
   driverReferralCode <- QDR.findById personId
-  fda <- QFDA.findByDriverId personId True
+  allFdas <- QFDA.findAllByDriverIdWithStatus personId
+  let activeFda = find (.isActive) allFdas
+      inactiveFda = find (not . (.isActive)) allFdas
   doa <- QDOA.findByDriverId personId True
   operatorReferral <- case updatedDriverInfo.referredByOperatorId of
     Just opId -> QDR.findById (cast (Id opId))
@@ -1327,7 +1349,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo personId merchantOpCityId Nothing
-  makeDriverInformationRes merchantOpCityId driverEntity org driverReferralCode driverStats driverGoHomeInfo Nothing Nothing Nothing operatorReferral ((.fleetOwnerId) <$> fda) ((.operatorId) <$> doa)
+  makeDriverInformationRes merchantOpCityId driverEntity org driverReferralCode driverStats driverGoHomeInfo Nothing Nothing Nothing operatorReferral ((.operatorId) <$> doa) inactiveFda activeFda Nothing
   where
     -- logic is deprecated, should be handle from driver service tier options now, kept it for backward compatibility
     checkIfCanDowngrade vehicle = do
@@ -1362,8 +1384,46 @@ updateMetaData (personId, _, _) req = do
   QMeta.updateMetaData req.device req.deviceOS req.deviceDateTime req.appPermissions personId
   return Success
 
-makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe Text -> m DriverInformationRes
-makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash operatorReferral fleetOwnerId operatorId = do
+buildFleetInfo :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => SP.Person -> FDA.FleetDriverAssociation -> m FleetInfo
+buildFleetInfo person fda = do
+  fleetPhoneNumber <- decrypt `mapM` person.mobileNumber
+  fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
+  return $
+    FleetInfo
+      { id = fda.fleetOwnerId,
+        ownerName = person.firstName <> maybe "" (" " <>) person.lastName,
+        fleetName = fleetOwnerInfo >>= (.fleetName),
+        phoneNumber = fleetPhoneNumber,
+        address = fleetOwnerInfo >>= (.stripeAddress),
+        requestReason = fda.requestReason,
+        responseReason = fda.responseReason,
+        createdAt = fda.createdAt
+      }
+
+makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe FDA.FleetDriverAssociation -> Maybe FDA.FleetDriverAssociation -> Maybe Bool -> m DriverInformationRes
+makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash operatorReferral operatorId mbInactiveFda mbActiveFda mbFleetInfo = do
+  (activeFleet, fleetRequest) <-
+    if mbFleetInfo == Just True
+      then do
+        let fleetOwnerIds = catMaybes [(.fleetOwnerId) <$> mbActiveFda, (.fleetOwnerId) <$> mbInactiveFda]
+        fleetOwners <- QPerson.findAllByPersonIds fleetOwnerIds
+
+        activeFleetInfo <- case mbActiveFda of
+          Just activeFda ->
+            case find (\p -> p.id.getId == activeFda.fleetOwnerId) fleetOwners of
+              Just person -> Just <$> buildFleetInfo person activeFda
+              Nothing -> return Nothing
+          Nothing -> return Nothing
+
+        fleetRequestInfo <- case mbInactiveFda of
+          Just inactiveFda ->
+            case find (\p -> p.id.getId == inactiveFda.fleetOwnerId) fleetOwners of
+              Just person -> Just <$> buildFleetInfo person inactiveFda
+              Nothing -> return Nothing
+          Nothing -> return Nothing
+
+        return (activeFleetInfo, fleetRequestInfo)
+      else return (Nothing, Nothing)
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   mbVehicle <- QVehicle.findById id
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
@@ -1416,6 +1476,9 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
           cancellationRateSlabConfig = merchantConfig.cancellationRateSlabConfig,
           favCount = Just driverStats.favRiderCount,
           operatorReferralCode = (.referralCode.getId) <$> operatorReferral,
+          activeFleet = activeFleet,
+          fleetRequest = fleetRequest,
+          fleetOwnerId = (.fleetOwnerId) <$> mbActiveFda,
           ..
         }
 

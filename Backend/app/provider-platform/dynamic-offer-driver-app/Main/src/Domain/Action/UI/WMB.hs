@@ -198,7 +198,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
         WMB.linkFleetBadge driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId conductorBadge DFBT.CONDUCTOR
         return $ Just conductorBadge
       Nothing -> pure Nothing
-  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId Nothing DVehCategory.BUS True
+  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId Nothing DVehCategory.BUS True Nothing
   tripTransaction <-
     if fleetConfig.directlyStartFirstTripAssignment
       then WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location DriverDirect (mbDriverBadge <&> (.id)) (mbDriverBadge <&> (.badgeName)) (mbConductorBadge <&> (.id)) (mbConductorBadge <&> (.badgeName))

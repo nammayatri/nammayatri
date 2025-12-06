@@ -11,6 +11,7 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
     castRoleToFleetType,
     postRegistrationV2RegisterBankAccountLink,
     getRegistrationV2RegisterBankAccountStatus,
+    castFleetType,
   )
 where
 
@@ -265,6 +266,7 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId = do
           { fleetOwnerPersonId = personId,
             merchantId = merchantId,
             fleetType = NORMAL_FLEET, -- overwrite in register
+            fleetName = Nothing,
             enabled = fromMaybe True enabled,
             blocked = False,
             verified = False,

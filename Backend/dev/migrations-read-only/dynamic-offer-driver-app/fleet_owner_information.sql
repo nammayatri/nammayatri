@@ -97,3 +97,10 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN stripe_id_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN merchant_operating_city_id character varying(36) ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ALTER COLUMN referred_by_operator_id TYPE character varying (36);
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN fleet_name character varying (255) ;

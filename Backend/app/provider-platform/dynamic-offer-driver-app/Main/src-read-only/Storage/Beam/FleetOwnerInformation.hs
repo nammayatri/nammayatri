@@ -27,6 +27,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     businessLicenseNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     enabled :: B.C f Kernel.Prelude.Bool,
     fleetDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    fleetName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fleetOwnerPersonId :: B.C f Kernel.Prelude.Text,
     fleetType :: B.C f Domain.Types.FleetOwnerInformation.FleetType,
     gstImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

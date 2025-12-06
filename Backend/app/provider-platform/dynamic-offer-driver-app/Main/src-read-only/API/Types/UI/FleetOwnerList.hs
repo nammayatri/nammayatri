@@ -8,6 +8,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Payment.Stripe.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Servant
@@ -22,7 +23,10 @@ data FleetOwnerListItem = FleetOwnerListItem
     enabled :: Kernel.Prelude.Bool,
     verified :: Kernel.Prelude.Bool,
     blocked :: Kernel.Prelude.Bool,
-    isEligibleForSubscription :: Kernel.Prelude.Bool
+    isEligibleForSubscription :: Kernel.Prelude.Bool,
+    address :: Kernel.Prelude.Maybe Kernel.External.Payment.Stripe.Types.Address,
+    fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

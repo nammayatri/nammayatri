@@ -19,3 +19,9 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN onboardin
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN onboarded_operator_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN response_reason text ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN request_reason text ;

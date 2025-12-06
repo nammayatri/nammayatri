@@ -93,6 +93,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegV2
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
@@ -1736,22 +1737,21 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
             DP.firstName = fromMaybe driver.firstName req.firstName,
             DP.lastName = req.lastName
           }
-  mbUpdFleetOwnerinfo <-
-    if (isJust req.stripeAddress || isJust req.stripeIdNumber || isJust req.fleetDob)
-      then do
-        fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
-        reqStripeIdNumber <- forM req.stripeIdNumber encrypt
-        let updFleetOwnerInfo =
-              fleetOwnerInfo
-                { DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
-                  DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
-                  DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob
-                }
-        pure $ Just updFleetOwnerInfo
-      else pure Nothing
+  mbUpdFleetOwnerinfo <- do
+    fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
+    reqStripeIdNumber <- forM req.stripeIdNumber encrypt
+    let updFleetOwnerInfo =
+          fleetOwnerInfo
+            { DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
+              DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
+              DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob,
+              DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
+              DFOI.fleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
+            }
+    pure $ Just updFleetOwnerInfo
 
   QPerson.updateFleetOwnerDetails personId updDriver
-  whenJust mbUpdFleetOwnerinfo FOI.updateStripeIdNumberAddressAndDob
+  whenJust mbUpdFleetOwnerinfo FOI.updateFleetOwnerInfo
   pure Success
 
 ---------------------------------------------------------------------
@@ -2743,7 +2743,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           fork "Sending Fleet Consent SMS to Driver" $ do
             let driverMobile = req_.driverPhoneNumber
             let onboardedOperatorId = if isNew then mbOperatorId else Nothing
-            FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False
+            FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False Nothing
             whenJust req_.badgeType $ createOrUpdateFleetBadge merchant moc person req_ fleetOwner
             sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
 
@@ -3491,30 +3491,45 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId = cast req.driverId
-  QFDV.approveFleetDriverAssociation driverId (Id fleetOwnerId)
-  when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  Analytics.handleDriverAnalyticsAndFlowStatus
-    transporterConfig
-    driverId
-    Nothing
-    ( \driverInfo -> do
-        Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetOwnerId) driverId
-        mbOperator <- FOV.findByFleetOwnerId fleetOwnerId True
-        when (isNothing mbOperator) $ logTagError "AnalyticsApproveDriver" "Operator not found for fleet owner"
-        whenJust mbOperator $ \operator -> do
-          when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
-          Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
-    )
-    ( \driverInfo -> do
-        DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
-    )
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "FLEET_REQUEST_APPROVED" Nothing Nothing driver.language Nothing
+
+  (pnType, messageBuilder) <- case req.approve of
+    Just True -> do
+      QFDV.approveFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
+      when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $
+        QDBA.deleteById driverId
+
+      Analytics.handleDriverAnalyticsAndFlowStatus
+        transporterConfig
+        driverId
+        Nothing
+        ( \driverInfo -> do
+            Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetOwnerId) driverId
+            mbOperator <- FOV.findByFleetOwnerId fleetOwnerId True
+            when (isNothing mbOperator) $
+              logTagError "AnalyticsApproveDriver" "Operator not found for fleet owner"
+            whenJust mbOperator $ \operator -> do
+              when driverInfo.enabled $
+                Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
+              Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
+        )
+        ( \driverInfo ->
+            DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
+        )
+      pure ("FLEET_REQUEST_APPROVED", \pn -> pn.body)
+    _ -> do
+      QFDV.rejectFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
+      pure
+        ( "FLEET_REQUEST_REJECTED",
+          \pn -> pn.body <> maybe "" (" " <>) req.reason
+        )
+
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId pnType Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let notification =
           Notification.NotifReq
-            { title = "Fleet Request Approved",
-              message = "Congratulations, your request to join the fleet has been approved.",
+            { title = merchantPN.title,
+              message = messageBuilder merchantPN,
               entityId = driverId.getId
             }
     Notification.notifyDriverOnEvents merchantOpCityId driverId driver.deviceToken notification merchantPN.fcmNotificationType
