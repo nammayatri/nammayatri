@@ -844,14 +844,12 @@ postMultimodalPassActivateToday ::
   )
 postMultimodalPassActivateToday (_mbCallerPersonId, _merchantId) passNumber = do
   purchasedPass <- QPurchasedPass.findByPassNumber passNumber >>= fromMaybeM (InvalidRequest "Pass not found")
-
+  when (purchasedPass.status /= DPurchasedPass.PreBooked) $
+    throwError (InvalidRequest "Only pre-booked passes can be activated for today")
   today <- DT.utctDay <$> getCurrentTime
   _ <- purchasedPass.maxValidDays & fromMaybeM (InvalidRequest "Pass does not have a valid duration")
   let newStartDate = today
       newEndDate = calculatePassEndDate today purchasedPass.maxValidDays
-
-  when (purchasedPass.status == DPurchasedPass.Active && purchasedPass.startDate == today) $
-    throwError (InvalidRequest "Pass is already active from today")
 
   allPasses <- QPurchasedPass.findAllByPersonIdWithFilters purchasedPass.personId purchasedPass.merchantId (Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]) Nothing Nothing
   let otherPasses = filter (\p -> p.id /= purchasedPass.id) allPasses
