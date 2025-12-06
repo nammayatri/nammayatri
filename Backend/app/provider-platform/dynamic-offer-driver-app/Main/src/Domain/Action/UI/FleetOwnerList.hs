@@ -3,6 +3,7 @@
 module Domain.Action.UI.FleetOwnerList (getFleetOwnerList) where
 
 import qualified API.Types.UI.FleetOwnerList as API
+import Control.Monad.Extra (mapMaybeM)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Types.FleetOwnerInformation as FOI
@@ -11,6 +12,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as Person
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id as Id
 import Servant
@@ -37,25 +39,32 @@ getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbBlocked mbFleetType mbLimi
   fleetOwners <- QFleetOwnerInfo.findFleetOwners targetOpCity mbFleetType mbOnlyEnabled mbBlocked normalizedLimit normalizedOffset
   persons <- QPerson.findAllByPersonIds (Id.getId . (.fleetOwnerPersonId) <$> fleetOwners)
   let personMap = HM.fromList $ (\p -> (p.id, p)) <$> persons
-  pure $ mapMaybe (toApiItem personMap targetOpCity) fleetOwners
+  mapMaybeM (toApiItem personMap targetOpCity) fleetOwners
   where
     clampLimit :: Int -> Int
     clampLimit = max 1 . min 10
     toApiItem personMap fallbackOpCityId fleetOwnerInfo = do
-      person <- HM.lookup fleetOwnerInfo.fleetOwnerPersonId personMap
-      let merchantOpCityId = fromMaybe fallbackOpCityId fleetOwnerInfo.merchantOperatingCityId
-      pure $
-        API.FleetOwnerListItem
-          { fleetOwnerId = fleetOwnerInfo.fleetOwnerPersonId,
-            fleetOwnerName = personName person,
-            merchantId = fleetOwnerInfo.merchantId,
-            merchantOperatingCityId = merchantOpCityId,
-            fleetType = fleetOwnerInfo.fleetType,
-            enabled = fleetOwnerInfo.enabled,
-            verified = fleetOwnerInfo.verified,
-            blocked = fleetOwnerInfo.blocked,
-            isEligibleForSubscription = fleetOwnerInfo.isEligibleForSubscription
-          }
+      case HM.lookup fleetOwnerInfo.fleetOwnerPersonId personMap of
+        Nothing -> pure Nothing
+        Just person -> do
+          mobileNumber <- mapM decrypt person.mobileNumber
+          let merchantOpCityId = fromMaybe fallbackOpCityId fleetOwnerInfo.merchantOperatingCityId
+          pure $
+            Just $
+              API.FleetOwnerListItem
+                { fleetOwnerId = fleetOwnerInfo.fleetOwnerPersonId,
+                  fleetOwnerName = personName person,
+                  merchantId = fleetOwnerInfo.merchantId,
+                  merchantOperatingCityId = merchantOpCityId,
+                  fleetType = fleetOwnerInfo.fleetType,
+                  enabled = fleetOwnerInfo.enabled,
+                  verified = fleetOwnerInfo.verified,
+                  blocked = fleetOwnerInfo.blocked,
+                  isEligibleForSubscription = fleetOwnerInfo.isEligibleForSubscription,
+                  address = fleetOwnerInfo.stripeAddress,
+                  fleetName = fleetOwnerInfo.fleetName,
+                  mobileNumber = mobileNumber
+                }
 
     personName person@Person.Person {..} =
       let parts = filter (not . T.null) $ catMaybes [Just firstName, middleName, lastName]
