@@ -16,6 +16,8 @@ FleetDriverAssociation:
     associatedTill: Maybe UTCTime
     onboardingVehicleCategory: Maybe VehicleCategory
     onboardedOperatorId: Maybe (Id Person)
+    requestReason: Maybe Text
+    responseReason: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
 

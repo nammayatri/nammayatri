@@ -85,6 +85,7 @@ data FleetOwnerRegisterReq = FleetOwnerRegisterReq
     email :: Maybe Text,
     city :: City.City,
     fleetType :: Maybe FOI.FleetType,
+    fleetName :: Maybe Text,
     panNumber :: Maybe Text,
     gstNumber :: Maybe Text,
     businessLicenseNumber :: Maybe Text,
@@ -123,7 +124,7 @@ fleetOwnerRegister req mbEnabled = do
     Just pData -> throwError $ UserAlreadyExists pData.id.getId
     Nothing -> do
       maybeOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
-      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType mbEnabled req.gstNumber maybeOperatorId req.ticketPlaceId
+      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion req.fleetType req.fleetName mbEnabled req.gstNumber maybeOperatorId req.ticketPlaceId
       fork "Creating Pan Info for Fleet Owner" $ do
         createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber
       fork "Uploading GST Image" $ do
@@ -142,14 +143,14 @@ getOperatorIdFromReferralCode (Just refCode) = do
   case result of
     SuccessCode val -> return $ Just val
 
-createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Flow DP.Person
-createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbEnabled mbgstNumber mbReferredOperatorId mbTicketPlaceId = do
+createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Flow DP.Person
+createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbFleetName mbEnabled mbgstNumber mbReferredOperatorId mbTicketPlaceId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
   void $ QP.create person
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
-  createFleetOwnerInfo person.id merchantId mbfleetType mbEnabled mbgstNumber mbReferredOperatorId mbTicketPlaceId (Just $ merchantOperatingCity.id)
+  createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled mbgstNumber mbReferredOperatorId mbTicketPlaceId (Just $ merchantOperatingCity.id)
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
     fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFOA.create fleetOperatorAssData
@@ -169,8 +170,8 @@ createPanInfo personId merchantId merchantOperatingCityId (Just img1) _ (Just pa
   void $ Registration.postDriverRegisterPancardHelper (Just personId, merchantId, merchantOperatingCityId) True panReq
 createPanInfo _ _ _ _ _ _ = pure () --------- currently we can have it like this as Pan info is optional
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow ()
-createFleetOwnerInfo personId merchantId mbFleetType mbEnabled mbGstNumber mbReferredByOperatorId mbTicketPlaceId mbMerchantOperatingCityId = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow ()
+createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGstNumber mbReferredByOperatorId mbTicketPlaceId mbMerchantOperatingCityId = do
   now <- getCurrentTime
   mbGstNumberEnc <- forM mbGstNumber encrypt
   let fleetType = fromMaybe NORMAL_FLEET mbFleetType
@@ -180,6 +181,7 @@ createFleetOwnerInfo personId merchantId mbFleetType mbEnabled mbGstNumber mbRef
           { fleetOwnerPersonId = personId,
             merchantId = merchantId,
             fleetType = fleetType,
+            fleetName = mbFleetName,
             enabled = enabled, ------ currently we are not validating any fleet owner Document there fore marking it as true
             blocked = False,
             verified = False,

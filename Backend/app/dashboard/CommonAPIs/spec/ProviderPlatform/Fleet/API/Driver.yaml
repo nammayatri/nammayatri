@@ -22,6 +22,7 @@ imports:
   Role: Dashboard.Common
   GetRoutesResp: Kernel.External.Maps
   StripeAddress: Dashboard.Common.Driver
+  FleetType: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
 module: Driver
 
 apis:
@@ -1340,6 +1341,8 @@ types:
     - end: LatLong
   ApproveDriverReq:
     - driverId: Id Driver
+    - approve: Maybe Bool
+    - reason: Maybe Text
     - derive: "'HideSecrets"
   UpdateDriverReq:
     - firstName: Maybe Text
@@ -1728,6 +1731,8 @@ types:
     - fleetDob: Maybe UTCTime
     - stripeAddress: Maybe StripeAddress
     - stripeIdNumber: Maybe Text
+    - fleetName: Maybe Text
+    - fleetType: Maybe FleetType
     - derive: "'HideSecrets"
   CreateDriversReq:
     - file: FilePath

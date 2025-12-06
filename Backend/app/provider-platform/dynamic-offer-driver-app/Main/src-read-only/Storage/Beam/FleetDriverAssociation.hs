@@ -21,6 +21,8 @@ data FleetDriverAssociationT f = FleetDriverAssociationT
     isActive :: B.C f Kernel.Prelude.Bool,
     onboardedOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     onboardingVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
+    requestReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    responseReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)

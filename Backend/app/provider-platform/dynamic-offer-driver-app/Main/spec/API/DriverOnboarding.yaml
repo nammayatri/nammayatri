@@ -172,6 +172,8 @@ types:
   LinkToFleetReq:
     fleetOwnerId: Id Person
     onboardingVehicleCategory: Maybe VehicleCategory
+    isRevoke: Maybe Bool
+    requestReason: Maybe Text
 
 apis:
   - GET:

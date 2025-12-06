@@ -45,6 +45,8 @@ updateByPrimaryKey (Domain.Types.FleetDriverAssociation.FleetDriverAssociation {
       Se.Set Beam.isActive isActive,
       Se.Set Beam.onboardedOperatorId (Kernel.Types.Id.getId <$> onboardedOperatorId),
       Se.Set Beam.onboardingVehicleCategory onboardingVehicleCategory,
+      Se.Set Beam.requestReason requestReason,
+      Se.Set Beam.responseReason responseReason,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

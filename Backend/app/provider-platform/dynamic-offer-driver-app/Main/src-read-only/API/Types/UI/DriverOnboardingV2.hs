@@ -176,7 +176,12 @@ data HVSdkCallLogReq = HVSdkCallLogReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LinkToFleetReq = LinkToFleetReq {fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person, onboardingVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory}
+data LinkToFleetReq = LinkToFleetReq
+  { fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    isRevoke :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    onboardingVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    requestReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

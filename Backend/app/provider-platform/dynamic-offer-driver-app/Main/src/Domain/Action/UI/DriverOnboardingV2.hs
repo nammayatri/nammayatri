@@ -1023,5 +1023,10 @@ postDriverLinkToFleet ::
   Flow APISuccess
 postDriverLinkToFleet (mbDriverId, _, _) req = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
-  FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False
-  pure Success
+  allFdas <- FDA.findAllByDriverIdWithStatus driverId
+  let activeFda = find (.isActive) allFdas
+      inactiveFda = find (not . (.isActive)) allFdas
+  whenJust inactiveFda $ \_ -> throwError $ InvalidRequest "Driver already has a pending fleet association request"
+  whenJust activeFda $ \_ -> throwError $ InvalidRequest "Driver is already linked to a fleet"
+  FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False req.requestReason
+  return Success
