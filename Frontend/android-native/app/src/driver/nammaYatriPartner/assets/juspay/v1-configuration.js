@@ -3070,8 +3070,8 @@ function getNammaYatriConfig() {
               "whatsappSupport" : true
           },
           "variantSubscriptionConfig" : {
-            "enableVariantBasedSubscription" : false,
-            "variantList" : [],
+            "enableVariantBasedSubscription" : true,
+            "variantList" : ["AutoCategory", "CarCategory"],
             "enableCabsSubscriptionView" : false,
             "staticViewPlans" : staticSubscriptionConfig
           },
@@ -3145,8 +3145,8 @@ function getNammaYatriConfig() {
               "whatsappSupport" : true
           },
           "variantSubscriptionConfig" : {
-            "enableVariantBasedSubscription" : false,
-            "variantList" : [],
+            "enableVariantBasedSubscription" : true,
+            "variantList" : ["AutoCategory", "CarCategory"],
             "enableCabsSubscriptionView" : false,
             "staticViewPlans" : staticSubscriptionConfig
           },
