@@ -21,6 +21,7 @@ data IntegratedBPPConfig = IntegratedBPPConfig
     domain :: Kernel.Prelude.Text,
     feedKey :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
+    isTicketValidOnMultipleRoutes :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,

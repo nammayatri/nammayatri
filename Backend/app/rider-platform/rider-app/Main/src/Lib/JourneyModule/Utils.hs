@@ -158,6 +158,7 @@ data LegServiceTier = LegServiceTier
   { serviceTierName :: Text,
     serviceTierType :: Spec.ServiceTierType,
     serviceTierDescription :: Text,
+    routeCode :: Maybe Text,
     via :: Maybe Text,
     trainTypeCode :: Maybe Text,
     ticketTypeCode :: Maybe Text,
@@ -1491,11 +1492,13 @@ getServiceTierFromQuote :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> DFRFSQuote.
 getServiceTierFromQuote quoteCategories quote = do
   let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
       mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
+      mbRouteCode = listToMaybe $ (.code) <$> (fromMaybe [] routeStations)
       fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
   mbServiceTier <&> \serviceTier -> do
     LegServiceTier
       { fare = mkPriceAPIEntity <$> (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)),
         quoteId = quote.id,
+        routeCode = mbRouteCode,
         serviceTierName = serviceTier.shortName,
         serviceTierType = serviceTier._type,
         serviceTierDescription = serviceTier.description,

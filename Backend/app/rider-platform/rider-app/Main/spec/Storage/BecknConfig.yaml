@@ -101,10 +101,14 @@ IntegratedBPPConfig:
     vehicleCategory: VehicleCategory|NoRelation
     platformType: PlatformType
     providerName: Maybe Text
+    isTicketValidOnMultipleRoutes: Maybe Bool
 
   beamFields:
     providerConfig:
       configJSON: Data.Aeson.Value
+
+  default:
+    isTicketValidOnMultipleRoutes: "true"
 
   types:
     PlatformType:
@@ -120,6 +124,7 @@ IntegratedBPPConfig:
 
   fromTType:
     providerConfig: Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfig configJSON|EM
+
 
   toTType:
     configJSON: Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig|E

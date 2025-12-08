@@ -41,6 +41,7 @@ updateByPrimaryKey (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig {..}) =
     [ Se.Set Beam.agencyKey agencyKey,
       Se.Set Beam.domain domain,
       Se.Set Beam.feedKey feedKey,
+      Se.Set Beam.isTicketValidOnMultipleRoutes isTicketValidOnMultipleRoutes,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.platformType platformType,
