@@ -300,31 +300,34 @@ filterQuotes integratedBPPConfig quotesWithCategories (Just journeyLeg) = do
                   && isRouteBasedQuote quote
             )
     _ -> return $ filter (isRouteBasedQuote . fst) quotesWithCategories
-  let finalQuotesWithCategories = if null filteredQuotesWithCategories then quotesWithCategories else filteredQuotesWithCategories
-  case journeyLeg.mode of
-    DTripTypes.Bus -> do
-      mbRiderConfig <- QRC.findByMerchantOperatingCityId journeyLeg.merchantOperatingCityId Nothing
-      let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
-      let serviceTierTypeFromQuote quote quoteCategories = JourneyUtils.getServiceTierFromQuote quoteCategories quote <&> (.serviceTierType)
-      return $
-        Just $
-          minimumBy
-            ( \(quote1, quoteCategories1) (quote2, quoteCategories2) ->
-                compare
-                  (maybe maxBound (JourneyUtils.tierRank cfgMap) (serviceTierTypeFromQuote quote1 quoteCategories1))
-                  (maybe maxBound (JourneyUtils.tierRank cfgMap) (serviceTierTypeFromQuote quote2 quoteCategories2))
-            )
-            finalQuotesWithCategories
-    _ ->
-      return $
-        Just $
-          minimumBy
-            ( \(_, quoteCategories1) (_, quoteCategories2) ->
-                let mbAdultPrice1 = find (\category -> category.category == ADULT) quoteCategories1 <&> (.price)
-                    mbAdultPrice2 = find (\category -> category.category == ADULT) quoteCategories2 <&> (.price)
-                 in compare (maybe 0 (.amount) mbAdultPrice1) (maybe 0 (.amount) mbAdultPrice2)
-            )
-            finalQuotesWithCategories
+  let finalQuotesWithCategories = if null filteredQuotesWithCategories && integratedBPPConfig.isTicketValidOnMultipleRoutes == Just True then quotesWithCategories else filteredQuotesWithCategories
+  case finalQuotesWithCategories of
+    [] -> return Nothing
+    _ -> do
+      case journeyLeg.mode of
+        DTripTypes.Bus -> do
+          mbRiderConfig <- QRC.findByMerchantOperatingCityId journeyLeg.merchantOperatingCityId Nothing
+          let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
+          let serviceTierTypeFromQuote quote quoteCategories = JourneyUtils.getServiceTierFromQuote quoteCategories quote <&> (.serviceTierType)
+          return $
+            Just $
+              minimumBy
+                ( \(quote1, quoteCategories1) (quote2, quoteCategories2) ->
+                    compare
+                      (maybe maxBound (JourneyUtils.tierRank cfgMap) (serviceTierTypeFromQuote quote1 quoteCategories1))
+                      (maybe maxBound (JourneyUtils.tierRank cfgMap) (serviceTierTypeFromQuote quote2 quoteCategories2))
+                )
+                finalQuotesWithCategories
+        _ ->
+          return $
+            Just $
+              minimumBy
+                ( \(_, quoteCategories1) (_, quoteCategories2) ->
+                    let mbAdultPrice1 = find (\category -> category.category == ADULT) quoteCategories1 <&> (.price)
+                        mbAdultPrice2 = find (\category -> category.category == ADULT) quoteCategories2 <&> (.price)
+                     in compare (maybe 0 (.amount) mbAdultPrice1) (maybe 0 (.amount) mbAdultPrice2)
+                )
+                finalQuotesWithCategories
   where
     isRouteBasedQuote quote =
       -- TODO :: Can be used across all, but as we don't want to break others we are doing this only for ONDC
