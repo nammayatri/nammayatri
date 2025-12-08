@@ -140,7 +140,8 @@ testPostDriverRegistrationRegisterDlWithRealExecution =
                   Common.imageId1 = Kernel.Types.Id.Id "image-1",
                   Common.imageId2 = Just (Kernel.Types.Id.Id "image-2"),
                   Common.dateOfIssue = Just (UTCTime (fromGregorian 2020 1 1) 0),
-                  Common.accessType = Nothing
+                  Common.accessType = Nothing,
+                  Common.vehicleCategory = Nothing
                 }
 
         -- Actually execute the Flow action and handle any exceptions
@@ -149,18 +150,18 @@ testPostDriverRegistrationRegisterDlWithRealExecution =
           (evaluate $ DDriverReg.postDriverRegistrationRegisterDl merchantShortId opCity driverId req)
 
         -- Validate the request structure
-        let Common.RegisterDLReq {Common.driverLicenseNumber = dlNumber, Common.operatingCity = operatingCity, Common.imageId1 = imageId1, Common.imageId2 = imageId2} = req
+        let Common.RegisterDLReq {Common.driverLicenseNumber = dlNumber, Common.operatingCity = operatingCity, Common.imageId1 = imageId1, Common.imageId2 = imageId2, Common.vehicleCategory = vehicleCategory} = req
 
         dlNumber @?= "DL123456789"
         operatingCity @?= "Delhi"
         imageId1 @?= Kernel.Types.Id.Id "image-1"
         imageId2 @?= Just (Kernel.Types.Id.Id "image-2")
-
+        vehicleCategory @?= Nothing
         -- Test business logic validation
         (T.length dlNumber >= 9) @? "Driver license number should be at least 9 characters"
         (T.length operatingCity > 0) @? "Operating city should not be empty"
         isJust imageId2 @? "Second image ID should be present"
-
+        isNothing vehicleCategory @? "Vehicle category should be nothing"
         -- Test that the function signature expects APISuccess response
         let expectedResponseType =
               DDriverReg.postDriverRegistrationRegisterDl ::
@@ -171,8 +172,8 @@ testPostDriverRegistrationRegisterDlWithRealExecution =
                 Environment.Flow Kernel.Types.APISuccess.APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different DL numbers and validates request handling" $ do
-        let req1 = Common.RegisterDLReq "DL123456789" "Delhi" (UTCTime (fromGregorian 1990 1 1) 0) (Kernel.Types.Id.Id "image-1") (Just (Kernel.Types.Id.Id "image-2")) (Just (UTCTime (fromGregorian 2020 1 1) 0)) Nothing
-            req2 = Common.RegisterDLReq "DL987654321" "Mumbai" (UTCTime (fromGregorian 1990 1 1) 0) (Kernel.Types.Id.Id "image-3") Nothing (Just (UTCTime (fromGregorian 2020 1 1) 0)) Nothing
+        let req1 = Common.RegisterDLReq "DL123456789" "Delhi" (UTCTime (fromGregorian 1990 1 1) 0) Nothing (Kernel.Types.Id.Id "image-1") (Just (Kernel.Types.Id.Id "image-2")) (Just (UTCTime (fromGregorian 2020 1 1) 0)) Nothing
+            req2 = Common.RegisterDLReq "DL987654321" "Mumbai" (UTCTime (fromGregorian 1990 1 1) 0) Nothing (Kernel.Types.Id.Id "image-3") Nothing (Just (UTCTime (fromGregorian 2020 1 1) 0)) Nothing
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
             opCity = Context.Delhi
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver
@@ -186,17 +187,20 @@ testPostDriverRegistrationRegisterDlWithRealExecution =
           (evaluate $ DDriverReg.postDriverRegistrationRegisterDl merchantShortId opCity driverId req2)
 
         -- Validate that different DL requests are handled correctly
-        let Common.RegisterDLReq {Common.driverLicenseNumber = dlNumber1, Common.operatingCity = operatingCity1, Common.imageId2 = imageId2_1} = req1
-            Common.RegisterDLReq {Common.driverLicenseNumber = dlNumber2, Common.operatingCity = operatingCity2, Common.imageId2 = imageId2_2} = req2
+        let Common.RegisterDLReq {Common.driverLicenseNumber = dlNumber1, Common.operatingCity = operatingCity1, Common.imageId2 = imageId2_1, Common.vehicleCategory = vehicleCategory1} = req1
+            Common.RegisterDLReq {Common.driverLicenseNumber = dlNumber2, Common.operatingCity = operatingCity2, Common.imageId2 = imageId2_2, Common.vehicleCategory = vehicleCategory2} = req2
 
         dlNumber1 @?= "DL123456789"
         dlNumber2 @?= "DL987654321"
         operatingCity1 @?= "Delhi"
         operatingCity2 @?= "Mumbai"
+        vehicleCategory1 @?= Nothing
+        vehicleCategory2 @?= Nothing
         isJust imageId2_1 @? "First request should have second image ID"
         isNothing imageId2_2 @? "Second request should not have second image ID"
         dlNumber1 /= dlNumber2 @? "Different DL numbers should be distinct"
         operatingCity1 /= operatingCity2 @? "Different operating cities should be distinct"
+        vehicleCategory1 /= vehicleCategory2 @? "Different vehicle categories should be distinct"
     ]
 
 testPostDriverRegistrationRegisterAadhaarWithRealExecution :: TestTree

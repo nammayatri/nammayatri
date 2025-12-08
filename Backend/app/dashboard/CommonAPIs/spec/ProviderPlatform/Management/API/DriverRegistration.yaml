@@ -267,6 +267,7 @@ types:
     - driverLicenseNumber: Text
     - operatingCity: Text
     - driverDateOfBirth: UTCTime
+    - vehicleCategory: Maybe VehicleCategory
     - imageId1: Id Image
     - imageId2: Maybe (Id Image)
     - dateOfIssue: Maybe UTCTime

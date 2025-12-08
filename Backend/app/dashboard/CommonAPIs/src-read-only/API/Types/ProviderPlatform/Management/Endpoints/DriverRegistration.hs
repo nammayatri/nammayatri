@@ -301,6 +301,7 @@ data RegisterDLReq = RegisterDLReq
   { driverLicenseNumber :: Kernel.Prelude.Text,
     operatingCity :: Kernel.Prelude.Text,
     driverDateOfBirth :: Kernel.Prelude.UTCTime,
+    vehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory,
     imageId1 :: Kernel.Types.Id.Id Dashboard.Common.Image,
     imageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
     dateOfIssue :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
