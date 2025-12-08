@@ -1316,12 +1316,11 @@ window.getMerchantConfig = function () {
         "cityName" : "Kochi",
         "mapImage" : "ny_ic_kochi_map",
         "cityCode" : "std:0484",
-        "showSubscriptions" : false,
+        "showSubscriptions" : true,
         "enableAdvancedBooking" : false,
         "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "",
         "callDriverInfoPost": false,
-        "showSubscriptions" : false,
         "cityLat" : 9.931233,
         "cityLong" : 76.267303,
         "supportNumber" : "08069724930",
@@ -1338,8 +1337,8 @@ window.getMerchantConfig = function () {
             "whatsappSupport" : false
         },
         "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : [],
+          "enableVariantBasedSubscription" : true,
+          "variantList" : ["AutoCategory", "CarCategory"],
           "enableCabsSubscriptionView" : false,
           "staticViewPlans" : staticSubscriptionConfig
         },
@@ -1635,7 +1634,7 @@ window.getMerchantConfig = function () {
         "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "",
         "callDriverInfoPost": false,
-        "showSubscriptions": false,
+        "showSubscriptions": true,
         "cityLat": 9.931233,
         "cityLong": 76.267303,
         "supportNumber": "08069724930",
@@ -1652,8 +1651,8 @@ window.getMerchantConfig = function () {
           "whatsappSupport": false
         },
         "variantSubscriptionConfig": {
-          "enableVariantBasedSubscription": false,
-          "variantList": [],
+          "enableVariantBasedSubscription": true,
+          "variantList": ["AutoCategory", "CarCategory"],
           "enableCabsSubscriptionView": false,
           "staticViewPlans": staticSubscriptionConfig
         },

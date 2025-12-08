@@ -1171,7 +1171,7 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
-          "variantList" : ["AutoCategory"],
+          "variantList" : ["AutoCategory", "CarCategory"],
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
