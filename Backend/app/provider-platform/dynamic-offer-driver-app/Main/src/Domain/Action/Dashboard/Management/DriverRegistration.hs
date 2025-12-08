@@ -422,7 +422,7 @@ postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.Registe
     DriverDLReq
       { imageId1 = cast imageId1,
         imageId2 = fmap cast imageId2,
-        vehicleCategory = Nothing,
+        vehicleCategory = vehicleCategory,
         nameOnCardFromSdk = Nothing,
         requestId = Nothing,
         sdkTransactionId = Nothing,
