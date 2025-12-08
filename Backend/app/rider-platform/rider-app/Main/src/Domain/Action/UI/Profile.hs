@@ -717,6 +717,8 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
 
   identifierType <- req.identifier & fromMaybeM (InvalidRequest "Identifier type is required")
+
+  when (identifierType == SP.DEVICE) $ throwError $ InvalidRequest "DEVICE identifier is not supported"
   let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
 
   generatedOtpCode <- maybe generateOTPCode return useFakeOtpM
@@ -724,7 +726,7 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
         SP.MOBILENUMBER -> SOTP.SMS
         SP.EMAIL -> SOTP.EMAIL
         SP.AADHAAR -> SOTP.SMS
-
+        SP.DEVICE -> SOTP.SMS -- Just to fill in the cases, not reachable
   case identifierType of
     SP.MOBILENUMBER -> do
       countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for MOBILENUMBER identifier")
@@ -743,7 +745,7 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
       storeAndSendOTP generatedOtpCode identifierType personId person smsCfg useFakeOtpM otpChannel riderConfig req Nothing Nothing (Just receiverEmail)
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
-
+    SP.DEVICE -> throwError $ InvalidRequest "DEVICE identifier is not supported" -- Just to fill in the cases, not reachable
   pure APISuccess.Success
   where
     storeAndSendOTP ::
@@ -817,7 +819,7 @@ verifyUpdateAuthDataOtp (personId, _merchantId) req = do
   reqOtpHash <- getDbHash req.otp
   when ((storedAuthData.otp) /= reqOtpHash) $ throwError $ InvalidRequest "INVALID_OTP: Invalid OTP"
 
-  void $ case identifierType of
+  void $ case identifierType of -- TODO: Add support for DEVICE identifier type
     SP.MOBILENUMBER -> do
       storedMobileNumber <- case storedAuthData.mobileNumber of
         Just num -> pure num
@@ -836,7 +838,7 @@ verifyUpdateAuthDataOtp (personId, _merchantId) req = do
       encryptedValue <- encrypt storedEmail
       QPersonExtra.updateEmailByPersonId personId encryptedValue
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
-
+    SP.DEVICE -> throwError $ InvalidRequest "DEVICE identifier is not supported" -- Just to fill in the cases, not reachable
   void $ Redis.del redisKey
 
   pure APISuccess.Success

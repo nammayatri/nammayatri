@@ -35,6 +35,14 @@ findPersonIdsByPhoneNumber phoneNumbers = do
   let mbhashes = Just <$> phoneNumbersHashes
   findAllWithDb [Se.Is BeamP.mobileNumberHash $ Se.In mbhashes]
 
+findByImeiNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> m (Maybe Person)
+findByImeiNumber imeiNumber = do
+  imeiNumberHash <- getDbHash imeiNumber -- Deterministic way to get hash instead of encrypt and then extract
+  findOneWithKV [Se.Is BeamP.imeiNumberHash $ Se.Eq (Just imeiNumberHash)]
+
+findByImeiNumberHash :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m (Maybe Person)
+findByImeiNumberHash imeiNumberHash = findOneWithKV [Se.Is BeamP.imeiNumberHash $ Se.Eq (Just imeiNumberHash)]
+
 findByEmailAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Merchant -> Text -> m (Maybe Person)
 findByEmailAndMerchantId (Id merchantId) email_ = do
   emailDbHash <- getDbHash email_
@@ -73,6 +81,16 @@ updateImeiNumber imeiNumber id = do
       Se.Set BeamP.updatedAt _now
     ]
     [Se.Is BeamP.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateIsNew :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()
+updateIsNew isNew id = do
+  -- Currently used only to track for if someone is logged in (Chennai One)
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.isNew isNew,
+      Se.Set BeamP.updatedAt _now
+    ]
+    [Se.Is BeamP.id (Se.Eq (Kernel.Types.Id.getId id))]
 
 updateMobileNumberByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Kernel.External.Encryption.EncryptedHashedField 'AsEncrypted Text -> DbHash -> Text -> m ()
 updateMobileNumberByPersonId (Id personId) encMobile mobileNumberHash mobileCountryCode = do

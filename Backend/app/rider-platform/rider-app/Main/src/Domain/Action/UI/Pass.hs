@@ -131,6 +131,7 @@ postMultimodalPassSelectUtil ::
 postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture mbStartDay = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  when person.isNew $ throwError (GuestUserAccessDenied "Guest users cannot purchase passes") -- Blocks guest user from purchasing passes
   pass <- B.runInReplica $ QPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
 
   unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")

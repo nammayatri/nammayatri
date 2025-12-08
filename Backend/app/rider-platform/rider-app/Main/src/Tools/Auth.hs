@@ -114,6 +114,9 @@ validateToken sr@SR.RegistrationToken {..} = do
   when expired $ Utils.throwError TokenExpired
   return sr
 
+checkMobileVerification :: Applicative m => Person.Person -> m Bool
+checkMobileVerification person = pure $ person.isNew || isNothing person.mobileNumber
+
 -- TODO Next logic is the same for rider-app, beckn-transport and driver-offer-bpp. Move it to Lib
 
 type DashboardTokenAuth = HeaderAuth "token" DashboardVerifyToken

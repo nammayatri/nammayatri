@@ -18,6 +18,7 @@ module API.UI.Registration
     DRegistration.ResendAuthRes,
     DRegistration.AuthVerifyReq (..),
     DRegistration.AuthVerifyRes (..),
+    DRegistration.AuthLinkAndMergeReq (..),
     DRegistration.PasswordAuthReq (..),
     DRegistration.GetTokenReq (..),
     DRegistration.TempCodeRes (..),
@@ -125,6 +126,9 @@ type API =
            :<|> "makeSignature"
              :> TokenAuth
              :> Post '[JSON] (SignedResponse DRegistration.CustomerSignatureRes)
+           :<|> "link-and-merge"
+             :> ReqBody '[JSON] DRegistration.AuthLinkAndMergeReq
+             :> Post '[JSON] APISuccess
            :<|> "logout"
              :> TokenAuth
              :> Post '[JSON] APISuccess
@@ -141,6 +145,7 @@ handler =
     :<|> resend
     :<|> generateTempAppCode
     :<|> makeSignature
+    :<|> linkAndMerge
     :<|> logout
 
 auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
@@ -164,10 +169,13 @@ resend :: Id SR.RegistrationToken -> Maybe Text -> FlowHandler DRegistration.Res
 resend tokenId mbSenderHash = withFlowHandlerAPI $ DRegistration.resend tokenId mbSenderHash
 
 generateTempAppCode :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DRegistration.TempCodeRes
-generateTempAppCode (perosnId, _) = withFlowHandlerAPI $ DRegistration.generateTempAppCode perosnId
+generateTempAppCode (personId, _) = withFlowHandlerAPI $ DRegistration.generateTempAppCode personId
 
 makeSignature :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler (SignedResponse DRegistration.CustomerSignatureRes)
 makeSignature (personId, merchantId) = withFlowHandlerAPI $ DRegistration.makeSignature personId merchantId
+
+linkAndMerge :: DRegistration.AuthLinkAndMergeReq -> FlowHandler APISuccess
+linkAndMerge req = withFlowHandlerAPI $ DRegistration.linkAndMerge req
 
 logout :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
 logout (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRegistration.logout personId
