@@ -148,6 +148,7 @@ data DriverMetricsAggregated = DriverMetricsAggregated
     customerCancellationCountSum :: Maybe Int,
     onlineDurationSum :: Maybe Seconds,
     totalRatingScoreSum :: Maybe Int,
+    totalRatingCountSum :: Maybe Int,
     rideDurationSum :: Maybe Seconds
   }
   deriving (Show, Generic)
@@ -157,11 +158,11 @@ mkDriverMetricsAggregated ::
     Text,
     (Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe Int, Maybe Double),
     (Maybe Int, Maybe Int, Maybe Int, Maybe Int),
-    (Maybe Int, Maybe Int, Maybe Seconds, Maybe Int),
+    (Maybe Int, Maybe Int, Maybe Seconds, Maybe Int, Maybe Int),
     Maybe Seconds
   ) ->
   DriverMetricsAggregated
-mkDriverMetricsAggregated (_, driverId, (te, ct, cr, td), (tr, rr, pr, ar), (dc, cc, od, trs), rd) =
+mkDriverMetricsAggregated (_, driverId, (te, ct, cr, td), (tr, rr, pr, ar), (dc, cc, od, trs, trc), rd) =
   DriverMetricsAggregated
     { driverId = driverId,
       onlineTotalEarningSum = te,
@@ -176,61 +177,9 @@ mkDriverMetricsAggregated (_, driverId, (te, ct, cr, td), (tr, rr, pr, ar), (dc,
       customerCancellationCountSum = cc,
       onlineDurationSum = od,
       totalRatingScoreSum = trs,
+      totalRatingCountSum = trc,
       rideDurationSum = rd
     }
-
-sumDriverMetricsByFleetOwnerIdAndDriverIds :: -- Should we use clickhouse?
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Text ->
-  [Text] ->
-  Day ->
-  Day ->
-  m [DriverMetricsAggregated]
-sumDriverMetricsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay = do
-  dbConf <- getReplicaBeamConfig
-  res <-
-    L.runDB dbConf $
-      L.findRows $
-        B.select $
-          B.aggregate_
-            ( \stats ->
-                ( B.group_ (Beam.fleetOperatorId stats),
-                  B.group_ (Beam.fleetDriverId stats),
-                  ( B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.onlineTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
-                    B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.coalesce_ [Beam.cashTotalEarning stats] (B.val_ (HighPrecMoney 0.0))),
-                    B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.totalCompletedRides stats] (B.val_ 0)),
-                    B.as_ @(Maybe Double) $ B.sum_ (B.coalesce_ [Beam.totalDistance stats] (B.val_ 0.0))
-                  ),
-                  ( B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.totalRequestCount stats] (B.val_ 0)),
-                    B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.rejectedRequestCount stats] (B.val_ 0)),
-                    B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.pulledRequestCount stats] (B.val_ 0)),
-                    B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.acceptationRequestCount stats] (B.val_ 0))
-                  ),
-                  ( B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.driverCancellationCount stats] (B.val_ 0)),
-                    B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.customerCancellationCount stats] (B.val_ 0)),
-                    B.as_ @(Maybe Seconds) $ B.sum_ (B.coalesce_ [Beam.onlineDuration stats] (B.val_ (Seconds 0))),
-                    B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.totalRatingScore stats] (B.val_ 0))
-                  ),
-                  B.as_ @(Maybe Seconds) $ B.sum_ (B.coalesce_ [Beam.rideDuration stats] (B.val_ (Seconds 0)))
-                )
-            )
-            $ B.filter_'
-              ( \stats ->
-                  B.sqlBool_ (Beam.fleetOperatorId stats B.==. B.val_ fleetOwnerId)
-                    B.&&?. B.sqlBool_ (Beam.fleetDriverId stats `B.in_` (B.val_ <$> driverIds))
-                    B.&&?. B.sqlBool_ (Beam.merchantLocalDate stats B.>=. B.val_ fromDay)
-                    B.&&?. B.sqlBool_ (Beam.merchantLocalDate stats B.<=. B.val_ toDay)
-              )
-              $ B.all_ (BeamCommon.fleetOperatorDailyStats BeamCommon.atlasDB)
-  case res of
-    Right results -> pure $ map mkDriverMetricsAggregated results
-    Left err -> do
-      logTagError
-        "FleetOperatorDailyStats"
-        ( "DB failure. Error: "
-            <> show err
-        )
-      pure []
 
 sumDriverEarningsByFleetOwnerIdAndDriverIdsDB ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -332,7 +281,8 @@ sumDriverMetricsByFleetOwnerIdAndDriverIdsDB fleetOwnerId driverIds fromDay toDa
                         ( B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.driverCancellationCount stats] (B.val_ 0)),
                           B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.customerCancellationCount stats] (B.val_ 0)),
                           B.as_ @(Maybe Seconds) $ B.sum_ (B.coalesce_ [Beam.onlineDuration stats] (B.val_ (Seconds 0))),
-                          B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.totalRatingScore stats] (B.val_ 0))
+                          B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.totalRatingScore stats] (B.val_ 0)),
+                          B.as_ @(Maybe Int) $ B.sum_ (B.coalesce_ [Beam.totalRatingCount stats] (B.val_ 0))
                         ),
                         B.as_ @(Maybe Seconds) $ B.sum_ (B.coalesce_ [Beam.rideDuration stats] (B.val_ (Seconds 0)))
                       )
@@ -357,7 +307,7 @@ sumDriverMetricsByFleetOwnerIdAndDriverIdsDB fleetOwnerId driverIds fromDay toDa
   where
     sortDescFlag = fromMaybe False mbSortDesc
 
-    orderClauseMetrics sortFlag sortOnField (_, _, (_, _, completed, _), (totalReq, rejected, pulled, accepted), (driverCancelled, customerCancelled, _onlineDuration, totalRatingScore), _rideDuration) =
+    orderClauseMetrics sortFlag sortOnField (_, _, (_, _, completed, _), (totalReq, rejected, pulled, accepted), (driverCancelled, customerCancelled, _onlineDuration, totalRatingScore, totalRatingCount), _rideDuration) =
       let column =
             case sortOnField of
               Just Common.TOTAL_COMPLETED_RIDES -> completed
@@ -369,6 +319,7 @@ sumDriverMetricsByFleetOwnerIdAndDriverIdsDB fleetOwnerId driverIds fromDay toDa
               Just Common.CUSTOMER_CANCELLATION_COUNT -> customerCancelled
               -- Just Common.ONLINE_DURATION -> onlineDuration
               Just Common.TOTAL_RATING_SCORE -> totalRatingScore
+              Just Common.TOTAL_RATING_COUNT -> totalRatingCount
               -- Just Common.RIDE_DURATION -> rideDuration
               _ -> completed
        in if sortFlag then B.desc_ column else B.asc_ column

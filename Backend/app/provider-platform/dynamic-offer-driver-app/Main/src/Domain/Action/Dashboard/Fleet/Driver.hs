@@ -3328,7 +3328,8 @@ getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId = do
   mfos <- QFleetOperatorStats.findByPrimaryKey fleetOwnerId
   let completedRides = fromMaybe 0 (mfos >>= (.totalCompletedRides))
       ratingSum = fromMaybe 0 (mfos >>= (.totalRatingScore))
-      averageDriverRatings = if completedRides > 0 then realToFrac ratingSum / realToFrac completedRides else 0.0
+      ratingCount = fromMaybe 0 (mfos >>= (.totalRatingCount))
+      averageDriverRatings = if ratingCount > 0 then realToFrac ratingSum / realToFrac ratingCount else 0.0
   pure $ Common.AllTimeFleetAnalyticsRes {activeVehicle = activeVehicleCount, completedRides = completedRides, totalActiveDrivers = activeDriverCount, currentOnlineDrivers = currentOnlineDriverCount, averageDriverRatings = averageDriverRatings}
 
 getDriverFleetDashboardAnalytics :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Common.FleetAnalyticsResponseType -> Data.Time.Day -> Data.Time.Day -> Flow Common.FleetAnalyticsRes
