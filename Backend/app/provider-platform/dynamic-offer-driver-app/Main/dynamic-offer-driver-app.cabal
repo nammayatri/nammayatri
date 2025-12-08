@@ -243,6 +243,7 @@ library
       Domain.Action.UI.DriverOnboarding.Status
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
       Domain.Action.UI.DriverOnboardingV2
+      Domain.Action.UI.DriverProfile
       Domain.Action.UI.DriverProfileQuestions
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
@@ -443,6 +444,7 @@ library
       SharedLogic.Merchant
       SharedLogic.MerchantPaymentMethod
       SharedLogic.MessageBuilder
+      SharedLogic.OTP
       SharedLogic.Payment
       SharedLogic.Person
       SharedLogic.PersonBankAccount
@@ -818,6 +820,7 @@ library
       API.Action.UI.CallFeedback
       API.Action.UI.DemandHotspots
       API.Action.UI.DriverOnboardingV2
+      API.Action.UI.DriverProfile
       API.Action.UI.DriverProfileQuestions
       API.Action.UI.DriverWallet
       API.Action.UI.EditBooking
@@ -874,6 +877,7 @@ library
       API.Types.UI.CallFeedback
       API.Types.UI.DemandHotspots
       API.Types.UI.DriverOnboardingV2
+      API.Types.UI.DriverProfile
       API.Types.UI.DriverProfileQuestions
       API.Types.UI.DriverWallet
       API.Types.UI.EditBooking

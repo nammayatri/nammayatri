@@ -1,0 +1,33 @@
+imports:
+  Person: Domain.Types.Person
+  IdentifierType: Domain.Types.Person
+
+module: DriverProfile
+
+types:
+  TriggerUpdateAuthOTPReq:
+    identifier: IdentifierType
+    value: Text
+    mobileCountryCode: Maybe Text
+
+  VerifyUpdateAuthOTPReq:
+    identifier: Maybe IdentifierType
+    otp: Text
+
+apis:
+  - POST:
+      endpoint: /driver/profile/updateAuthData/triggerOTP
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.DriverProfile.TriggerUpdateAuthOTPReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /driver/profile/updateAuthData/verifyOTP
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.DriverProfile.VerifyUpdateAuthOTPReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+

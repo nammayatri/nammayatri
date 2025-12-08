@@ -48,9 +48,8 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.TransporterConfig as TC
-import qualified Email.AWS.Flow as Email
 import Environment (Flow)
-import qualified EulerHS.Language as L
+-- import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
@@ -79,6 +78,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.OTP as SOTP
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
@@ -235,30 +235,17 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
   token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId
   _ <- QR.create token
   QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId
-  let otpHash = smsCfg.credConfig.otpHash
-      otpCode = SR.authValueHash token
+  let otpCode = SR.authValueHash token
   whenNothing_ useFakeOtpM $ do
-    case otpChannel of
-      SP.MOBILENUMBER -> do
-        countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
-        mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
-        let phoneNumber = countryCode <> mobileNumber
-        withLogTag ("personId_" <> getId person.id) $ do
-          (mbSender, message, templateId) <-
-            MessageBuilder.buildSendOTPMessage merchantOpCityId $
-              MessageBuilder.BuildSendOTPMessageReq
-                { otp = otpCode,
-                  hash = otpHash
-                }
-          let sender = fromMaybe smsCfg.sender mbSender
-          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
-            >>= Sms.checkSmsResult
-      SP.EMAIL -> do
-        receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
-        transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-        emailOTPConfig <- transporterConfig.emailOtpConfig & fromMaybeM (TransporterConfigNotFound $ "merchantOperatingCityId:- " <> merchantOpCityId.getId)
-        L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
-      SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+    SOTP.sendOTPByIdentifierType
+      otpChannel
+      otpCode
+      person.id
+      person.merchantId
+      merchantOpCityId
+      req.mobileCountryCode
+      req.mobileNumber
+      req.email
 
   let attempts = SR.attempts token
       authId = SR.id token
