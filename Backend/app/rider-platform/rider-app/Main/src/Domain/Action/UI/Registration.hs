@@ -703,6 +703,12 @@ makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp verifie
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
+businessEmailSendHitsCountKey :: Id SP.Person -> Text
+businessEmailSendHitsCountKey personId = "BAP:Registration:businessEmail:send:" <> getId personId <> ":hitsCount"
+
+businessEmailVerifyHitsCountKey :: Id SP.Person -> Text
+businessEmailVerifyHitsCountKey personId = "BAP:Registration:businessEmail:verify:" <> getId personId <> ":hitsCount"
+
 verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, HasKafkaProducer r) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
@@ -1022,7 +1028,7 @@ data VerifyBusinessEmailRes = VerifyBusinessEmailRes
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 sendBusinessEmailVerification ::
-  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "apiRateLimitOptions" ::: APIRateLimitOptions],
     CacheFlow m r,
     EsqDBFlow m r,
     DB.EsqDBReplicaFlow m r,
@@ -1033,6 +1039,8 @@ sendBusinessEmailVerification ::
   Id DMOC.MerchantOperatingCity ->
   m APISuccess
 sendBusinessEmailVerification personId merchantId merchantOperatingCityId = do
+  -- Rate limit check
+  checkSlidingWindowLimit (businessEmailSendHitsCountKey personId)
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   businessEmail <- person.businessEmail & fromMaybeM (PersonFieldNotPresent "businessEmail")
   decryptedBusinessEmail <- decrypt businessEmail
@@ -1077,7 +1085,8 @@ sendBusinessEmailVerification personId merchantId merchantOperatingCityId = do
   return AP.Success
 
 verifyBusinessEmail ::
-  ( CacheFlow m r,
+  ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
+    CacheFlow m r,
     EsqDBFlow m r,
     DB.EsqDBReplicaFlow m r,
     EncFlow m r
@@ -1087,6 +1096,12 @@ verifyBusinessEmail ::
   m VerifyBusinessEmailRes
 verifyBusinessEmail mbPersonId req = do
   runRequestValidation validateVerifyBusinessEmailReq req
+
+  -- Rate limit check (use personId if available, otherwise use token for rate limiting)
+  let rateLimitKey = case mbPersonId of
+        Just personId -> businessEmailVerifyHitsCountKey personId
+        Nothing -> maybe "BAP:Registration:businessEmail:verify:unknown:hitsCount" (\t -> "BAP:Registration:businessEmail:verify:token:" <> t <> ":hitsCount") req.token
+  checkSlidingWindowLimit rateLimitKey
 
   -- Determine verification method and get registration token
   regToken <- case (req.token, req.otp, mbPersonId) of
