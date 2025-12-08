@@ -560,7 +560,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
             )
             vehicleTrackingInfo
         _ -> do
-          nearbyBuses <- CQMMB.getRoutesBuses routeCode -- Add a new logic to get the bus location and ETA, unify it with the existing logic @khuzema
+          nearbyBuses <- CQMMB.getRoutesBuses routeCode integratedBPPConfig -- Add a new logic to get the bus location and ETA, unify it with the existing logic @khuzema
           routeStopMapping <- HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
           nearbyBuses.buses `forM` \bus -> do
             let busData = bus.busData

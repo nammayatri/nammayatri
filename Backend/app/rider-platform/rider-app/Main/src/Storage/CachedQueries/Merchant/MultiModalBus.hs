@@ -19,6 +19,7 @@ import Data.Aeson
 import Data.Aeson.Types
 import qualified Data.Map as M
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Utils (mapConcurrently)
 import EulerHS.Prelude hiding (encodeUtf8, fromStrict, id, map)
 import Kernel.Prelude hiding (encodeUtf8)
@@ -105,16 +106,21 @@ data RouteWithBuses = RouteWithBuses
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 -- Create Redis key for a route
-mkRouteKey :: Text -> Text
-mkRouteKey routeId = "route:" <> routeId
+mkRouteKey :: Maybe Text -> Text -> Text
+mkRouteKey mbRedisPrefix routeId = case mbRedisPrefix of
+  Just prefix -> prefix <> ":route:" <> routeId
+  Nothing -> "route:" <> routeId
 
 -- Get all buses for a single route
-getRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> m RouteWithBuses
-getRoutesBuses routeId = do
-  let key = mkRouteKey routeId
+getRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> DIBC.IntegratedBPPConfig -> m RouteWithBuses
+getRoutesBuses routeId integratedBppConfig = do
+  let redisPrefix = case integratedBppConfig.providerConfig of
+        DIBC.ONDC config -> config.redisPrefix
+        _ -> Nothing
+  let key = mkRouteKey redisPrefix routeId
   busDataPairs <- withCrossAppRedisNew $ Hedis.hGetAll key
   let buses = map (uncurry FullBusData) busDataPairs
   return $ RouteWithBuses routeId buses
 
-getBusesForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [Text] -> m [RouteWithBuses]
-getBusesForRoutes = mapConcurrently getRoutesBuses
+getBusesForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [Text] -> DIBC.IntegratedBPPConfig -> m [RouteWithBuses]
+getBusesForRoutes routeCodes integratedBppConfig = mapConcurrently (\routeCode -> getRoutesBuses routeCode integratedBppConfig) routeCodes

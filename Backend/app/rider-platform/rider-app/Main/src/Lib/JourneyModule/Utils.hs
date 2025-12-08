@@ -235,7 +235,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
   (flattenedLiveRouteStopTimes, routesWithoutBuses) <-
     if useLiveBusData
       then do
-        allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
+        allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes integratedBppConfig
         liveRouteStopTimes <- mapConcurrently processRoute allRouteWithBuses
         let flattenedLiveRouteStopTimes = concat liveRouteStopTimes
         let liveRouteCodes = nub $ map (.routeCode) flattenedLiveRouteStopTimes

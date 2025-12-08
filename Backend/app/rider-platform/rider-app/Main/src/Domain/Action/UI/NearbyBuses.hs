@@ -81,13 +81,14 @@ castToOnDemandVehicleCategory Spe.SUBWAY = BecknV2.OnDemand.Enums.SUBWAY
 
 getSimpleNearbyBuses :: Id MerchantOperatingCity -> DomainRiderConfig.RiderConfig -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [API.Types.UI.NearbyBuses.NearbyBus]
 getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
-  buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig
+  let vehicleCategory = castToOnDemandVehicleCategory req.vehicleType
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory req.platformType
+  buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig integratedBPPConfig
   logDebug $ "Nearby buses: " <> show buses
   let busesWithMostMatchingRouteStates = mapMaybe (\bus -> (bus,) <$> sortOnRouteMatchConfidence bus.routes_info) buses
   logDebug $ "Buses with most matching route states: " <> show busesWithMostMatchingRouteStates
   logDebug $ "Number of nearby buses: " <> show (length buses)
 
-  let vehicleCategory = castToOnDemandVehicleCategory req.vehicleType
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory req.platformType
 
   let vehicleNumbers = Set.toList $ Set.fromList $ mapMaybe (.vehicle_number) buses
