@@ -30,6 +30,7 @@ data FleetOperatorDailyStatsT f = FleetOperatorDailyStatsT
     onlinePlatformFees :: C f (Maybe HighPrecMoney),
     onlineDuration :: C f (Maybe Seconds),
     totalRatingScore :: C f (Maybe Int),
+    totalRatingCount :: C f (Maybe Int),
     rideDuration :: C f (Maybe Seconds)
   }
   deriving (Generic)
@@ -56,6 +57,7 @@ fleetOperatorDailyStatsTTable =
       onlinePlatformFees = "online_platform_fees",
       onlineDuration = "online_duration",
       totalRatingScore = "total_rating_score",
+      totalRatingCount = "total_rating_count",
       rideDuration = "ride_duration"
     }
 
@@ -199,11 +201,11 @@ mkDriverMetricsAggregated ::
     Text,
     (Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe Int, Maybe Meters),
     (Maybe Int, Maybe Int, Maybe Int, Maybe Int),
-    (Maybe Int, Maybe Int, Maybe Seconds, Maybe Int),
+    (Maybe Int, Maybe Int, Maybe Seconds, Maybe Int, Maybe Int),
     Maybe Seconds
   ) ->
   FODSE.DriverMetricsAggregated
-mkDriverMetricsAggregated (_, driverId, (te, ct, cr, td), (tr, rr, pr, ar), (dc, cc, od, trs), rd) =
+mkDriverMetricsAggregated (_, driverId, (te, ct, cr, td), (tr, rr, pr, ar), (dc, cc, od, trs, trc), rd) =
   FODSE.DriverMetricsAggregated
     { driverId = driverId,
       onlineTotalEarningSum = te,
@@ -218,6 +220,7 @@ mkDriverMetricsAggregated (_, driverId, (te, ct, cr, td), (tr, rr, pr, ar), (dc,
       customerCancellationCountSum = cc,
       onlineDurationSum = od,
       totalRatingScoreSum = trs,
+      totalRatingCountSum = trc,
       rideDurationSum = rd
     }
 
@@ -233,7 +236,7 @@ sumDriverMetricsByFleetOwnerIdAndDriverIds ::
   Maybe Common.FleetDriverListStatsSortOn ->
   m [FODSE.DriverMetricsAggregated]
 sumDriverMetricsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay limit offset mbSortDesc mbSortOn = do
-  let sortOn _fos (_, _, onlineTotalEarning, cashTotalEarning, completedRides, totalDistance, totalRequestCount, rejectedRequestCount, pulledRequestCount, acceptationRequestCount, driverCancellationCount, customerCancellationCount, onlineDuration, totalRatingScore, rideDuration) = case mbSortOn of
+  let sortOn _fos (_, _, onlineTotalEarning, cashTotalEarning, completedRides, totalDistance, totalRequestCount, rejectedRequestCount, pulledRequestCount, acceptationRequestCount, driverCancellationCount, customerCancellationCount, onlineDuration, totalRatingScore, totalRatingCount, rideDuration) = case mbSortOn of
         Just Common.ONLINE_TOTAL_EARNING -> castSortBy mbSortDesc onlineTotalEarning
         Just Common.CASH_TOTAL_EARNING -> castSortBy mbSortDesc cashTotalEarning
         Just Common.TOTAL_COMPLETED_RIDES -> castSortBy mbSortDesc completedRides
@@ -247,6 +250,7 @@ sumDriverMetricsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay 
         Just Common.ONLINE_DURATION -> castSortBy mbSortDesc onlineDuration
         Just Common.TOTAL_RATING_SCORE -> castSortBy mbSortDesc totalRatingScore
         Just Common.RIDE_DURATION -> castSortBy mbSortDesc rideDuration
+        Just Common.TOTAL_RATING_COUNT -> castSortBy mbSortDesc totalRatingCount
         _ -> castSortBy mbSortDesc completedRides
 
   res <-
@@ -265,9 +269,10 @@ sumDriverMetricsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay 
                 customerCancellationCount = CH.sum_ fos.customerCancellationCount
                 onlineDuration = CH.sum_ fos.onlineDuration
                 totalRatingScore = CH.sum_ fos.totalRatingScore
+                totalRatingCount = CH.sum_ fos.totalRatingCount
                 rideDuration = CH.sum_ fos.rideDuration
             CH.groupBy (fos.fleetOperatorId, fos.fleetDriverId) $ \(fleetOperatorId, fleetDriverId) -> do
-              (fleetOperatorId, fleetDriverId, onlineTotalEarning, cashTotalEarning, completedRides, totalDistance, totalRequestCount, rejectedRequestCount, pulledRequestCount, acceptationRequestCount, driverCancellationCount, customerCancellationCount, onlineDuration, totalRatingScore, rideDuration)
+              (fleetOperatorId, fleetDriverId, onlineTotalEarning, cashTotalEarning, completedRides, totalDistance, totalRequestCount, rejectedRequestCount, pulledRequestCount, acceptationRequestCount, driverCancellationCount, customerCancellationCount, onlineDuration, totalRatingScore, totalRatingCount, rideDuration)
         )
         $ CH.orderBy_ sortOn $
           CH.limit_ limit $
@@ -280,4 +285,4 @@ sumDriverMetricsByFleetOwnerIdAndDriverIds fleetOwnerId driverIds fromDay toDay 
                       CH.&&. fos.merchantLocalDate CH.<=. toDay
                 )
                 (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorDailyStatsTTable)
-  pure $ map (\(_fleetOperatorId, driverId, te, ct, cr, td, tr, rr, pr, ar, dc, cc, od, trs, rd) -> mkDriverMetricsAggregated (_fleetOperatorId, driverId, (te, ct, cr, td), (tr, rr, pr, ar), (dc, cc, od, trs), rd)) res
+  pure $ map (\(_fleetOperatorId, driverId, te, ct, cr, td, tr, rr, pr, ar, dc, cc, od, trs, trc, rd) -> mkDriverMetricsAggregated (_fleetOperatorId, driverId, (te, ct, cr, td), (tr, rr, pr, ar), (dc, cc, od, trs, trc), rd)) res
