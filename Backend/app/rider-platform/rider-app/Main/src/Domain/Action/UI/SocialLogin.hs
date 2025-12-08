@@ -84,6 +84,7 @@ postSocialLogin req = do
           merchantId = req.merchantShortId,
           deviceToken = Nothing,
           notificationToken = Nothing,
+          deviceUUID = Nothing,
           whatsappNotificationEnroll = Nothing,
           firstName = req.name,
           middleName = Nothing,

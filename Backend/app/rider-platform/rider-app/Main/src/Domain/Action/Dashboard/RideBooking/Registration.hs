@@ -61,6 +61,7 @@ buildAuthReq merchantShortId req =
       merchantId = merchantShortId,
       deviceToken = Nothing,
       notificationToken = Nothing,
+      deviceUUID = Nothing,
       whatsappNotificationEnroll = Nothing,
       firstName = Nothing,
       middleName = Nothing,
