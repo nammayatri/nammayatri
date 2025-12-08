@@ -291,7 +291,7 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbAssign
       issueHandle.findByMobileNumberAndMerchantId mobileCountryCode numHash merchantOperatingCity.merchantId
         >>= fromMaybeM (PersonWithPhoneNotFound phoneNumber)
   mbRide <- maybe (pure Nothing) (issueHandle.findRideByRideShortId merchantOperatingCity.merchantId) mbRideShortId
-  issueReports <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide)
+  issueReports <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide) (cast merchantOperatingCity.id)
   let filteredIssueReports = filter (isJust . (.categoryId)) issueReports
   let count = length filteredIssueReports
   let summary = Common.Summary {totalCount = count, count}

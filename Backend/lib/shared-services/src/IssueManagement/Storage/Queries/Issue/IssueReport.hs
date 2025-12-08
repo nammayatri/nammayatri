@@ -15,8 +15,8 @@ import Kernel.Types.Id
 create :: BeamFlow m r => IssueReport.IssueReport -> m ()
 create = createWithKV
 
-findAllWithOptions :: BeamFlow m r => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Maybe (Id Person) -> Maybe (Id Ride) -> m [IssueReport]
-findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId mbRideId = do
+findAllWithOptions :: BeamFlow m r => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Maybe (Id Person) -> Maybe (Id Ride) -> Id MerchantOperatingCity -> m [IssueReport]
+findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId mbRideId merchantOperatingCityId = do
   findAllWithOptionsKV conditions (Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
   where
     limitVal = min (fromMaybe 10 mbLimit) 10
@@ -30,6 +30,7 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId 
               fmap (Is BeamIR.personId . Eq . getId) mbPersonId,
               fmap (Is BeamIR.rideId . Eq . Just . getId) mbRideId
             ]
+            <> [Is BeamIR.merchantOperatingCityId $ Eq (Just merchantOperatingCityId.getId)]
       ]
 
 findById :: BeamFlow m r => Id IssueReport -> m (Maybe IssueReport)
