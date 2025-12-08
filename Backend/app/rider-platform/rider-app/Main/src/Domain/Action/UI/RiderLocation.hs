@@ -3,9 +3,12 @@
 module Domain.Action.UI.RiderLocation (postIdentifyNearByBus) where
 
 import qualified API.Types.UI.RiderLocation
+import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Monad.Extra (mapMaybeM)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.RiderConfig as DomainRiderConfig
 import qualified Environment
@@ -14,9 +17,11 @@ import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common
+import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
@@ -29,16 +34,20 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId req.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show req.city)
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
   let riderLocation = Kernel.External.Maps.Types.LatLong req.riderLat req.riderLon
-  nearbyBuses <- getNearbyBuses riderLocation riderConfig
+  nearbyBuses <- getNearbyBuses riderLocation riderConfig merchantOperatingCity.id
   busLocations <- mapMaybeM (convertToBusLocation riderLocation riderConfig) nearbyBuses
 
   return $ API.Types.UI.RiderLocation.RiderLocationResponse {buses = busLocations}
   where
-    getNearbyBuses :: Kernel.External.Maps.Types.LatLong -> DomainRiderConfig.RiderConfig -> Environment.Flow [CQMMB.BusDataWithRoutesInfo]
-    getNearbyBuses userPos riderConfig = do
+    getNearbyBuses :: Kernel.External.Maps.Types.LatLong -> DomainRiderConfig.RiderConfig -> Id MerchantOperatingCity -> Environment.Flow [CQMMB.BusDataWithRoutesInfo]
+    getNearbyBuses userPos riderConfig merchantOperatingCityId = do
+      integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+      let redisPrefix = case integratedBPPConfig.providerConfig of
+            DIBC.ONDC config -> config.redisPrefix
+            _ -> Nothing
       let nearbyBusSearchRadius :: Double = fromMaybe 0.1 riderConfig.nearbyBusSearchRadius
           maxNearbyBuses :: Int = fromMaybe 5 riderConfig.maxNearbyBuses
-      busesBS <- mapM (pure . decodeUtf8) =<< (CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
+      busesBS <- mapM (pure . decodeUtf8) =<< (CQMMB.withCrossAppRedisNew $ Hedis.geoSearch (nearbyBusKey redisPrefix) (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
       logDebug $ "getNearbyBuses: busesBS: " <> show busesBS
       if null busesBS
         then do
@@ -46,7 +55,7 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
           pure []
         else do
           logDebug $ "getNearbyBuses: Fetching bus metadata for " <> show (length busesBS) <> " buses"
-          buses <- CQMMB.withCrossAppRedisNew $ Hedis.hmGet vehicleMetaKey busesBS
+          buses <- CQMMB.withCrossAppRedisNew $ Hedis.hmGet (vehicleMetaKey redisPrefix) busesBS
           let validBuses = catMaybes buses
               sortedLimitedBuses = take maxNearbyBuses $ EulerHS.Prelude.sortOn (distanceToUser userPos) validBuses
           pure sortedLimitedBuses
@@ -81,8 +90,12 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
                   locationAccuracy = req.locationAccuracy
                 }
 
-    nearbyBusKey :: Text
-    nearbyBusKey = "bus_locations"
+    nearbyBusKey :: Maybe Text -> Text
+    nearbyBusKey mbRedisPrefix = case mbRedisPrefix of
+      Just prefix -> prefix <> ":bus_locations"
+      _ -> "bus_locations"
 
-    vehicleMetaKey :: Text
-    vehicleMetaKey = "bus_metadata_v2"
+    vehicleMetaKey :: Maybe Text -> Text
+    vehicleMetaKey mbRedisPrefix = case mbRedisPrefix of
+      Just prefix -> prefix <> ":bus_metadata_v2"
+      _ -> "bus_metadata_v2"

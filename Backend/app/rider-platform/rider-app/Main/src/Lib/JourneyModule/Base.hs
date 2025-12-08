@@ -4,6 +4,7 @@ import qualified API.Types.UI.FRFSTicketService as APITypes
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
+import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Monad.Extra (mapMaybeM)
 import Domain.Action.UI.EditLocation as DEditLocation
 import qualified Domain.Action.UI.Location as DLoc
@@ -22,6 +23,7 @@ import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.JourneyLegMapping as DJLM
@@ -75,6 +77,7 @@ import Lib.JourneyModule.Utils
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfo as GD
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Offer as SOffer
 import SharedLogic.Search
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
@@ -113,7 +116,8 @@ filterTransitRoutes riderConfig routes = do
               (Just departureTime, Just stopCode, Just routeId) -> do
                 let buffer = 300 -- TODO: MOVE TO CONFIG.
                 let departureTimeWithBuffer = buffer `addUTCTime` departureTime
-                routeWithBuses <- CQMMB.getRoutesBuses routeId
+                integratedBppConfig <- SIBC.findIntegratedBPPConfig Nothing riderConfig.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+                routeWithBuses <- CQMMB.getRoutesBuses routeId integratedBppConfig
 
                 -- Check if the bus has an ETA for this stop
                 return $

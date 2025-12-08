@@ -59,7 +59,8 @@ data ONDCBecknConfig = ONDCBecknConfig
     routeBasedQuoteSelection :: Maybe Bool,
     providerInfo :: Maybe ProviderLevelInfo,
     routeBasedVehicleTracking :: Maybe Bool,
-    overrideCity :: Maybe Context.City
+    overrideCity :: Maybe Context.City,
+    redisPrefix :: Maybe Text
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

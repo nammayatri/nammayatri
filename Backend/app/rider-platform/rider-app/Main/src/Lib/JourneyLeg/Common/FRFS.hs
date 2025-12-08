@@ -91,7 +91,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
 
           -- Fetch all bus data for the route using getRoutesBuses
           (allBusDataForRoute, routeStopMappings) <- do
-            buses <- concat <$> mapConcurrently (\rc -> (.buses) <$> CQMMB.getRoutesBuses rc) routesToUseForTrackVehicles
+            buses <- concat <$> mapConcurrently (\rc -> (.buses) <$> CQMMB.getRoutesBuses rc integratedBppConfig) routesToUseForTrackVehicles
             routeStopMappings <- HM.fromList <$> mapM (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
             return (buses, routeStopMappings)
 
@@ -148,6 +148,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               routeStopMappings
               trackingStatus
               movementDetected
+              integratedBppConfig
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
           -- Commented out: Automatic fleet number finalization based on rider location
@@ -185,7 +186,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
 
           -- Fetch all bus data for the route using getRoutesBuses
           (allBusDataForRoute, routeStopMappings) <- do
-            buses <- concat <$> mapConcurrently (\rc -> (.buses) <$> CQMMB.getRoutesBuses rc) routesToUseForTrackVehicles
+            buses <- concat <$> mapConcurrently (\rc -> (.buses) <$> CQMMB.getRoutesBuses rc integratedBppConfig) routesToUseForTrackVehicles
             routeStopMappings <- HM.fromList <$> mapM (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
             return (buses, routeStopMappings)
 
@@ -223,6 +224,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               routeStopMappings
               trackingStatus
               movementDetected
+              integratedBppConfig
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
           logDebug $ "CFRFS getState: Detailed state data for without booking: " <> show vehiclePositionsToReturn
@@ -477,11 +479,15 @@ defaultBusTrackingConfigFRFS =
       movementThresholdInMeters = 25.0
     }
 
-nearbyBusKeyFRFS :: Text
-nearbyBusKeyFRFS = "bus_locations"
+nearbyBusKeyFRFS :: Maybe Text -> Text
+nearbyBusKeyFRFS mbRedisPrefix = case mbRedisPrefix of
+  Just prefix -> prefix <> ":bus_locations"
+  Nothing -> "bus_locations"
 
-vehicleMetaKey :: Text
-vehicleMetaKey = "bus_metadata_v2"
+vehicleMetaKey :: Maybe Text -> Text
+vehicleMetaKey mbRedisPrefix = case mbRedisPrefix of
+  Just prefix -> prefix <> ":bus_metadata_v2"
+  Nothing -> "bus_metadata_v2"
 
 topVehicleCandidatesKeyFRFS :: Text -> Text
 topVehicleCandidatesKeyFRFS journeyLegId = "journeyLegTopVehicleCandidates:" <> journeyLegId
@@ -511,6 +517,7 @@ processBusLegState ::
   HM.HashMap Text (HM.HashMap Text RouteStopMapping) ->
   JMStateTypes.TrackingStatus ->
   Bool ->
+  DIBC.IntegratedBPPConfig ->
   m [JT.VehiclePosition]
 processBusLegState
   now
@@ -523,7 +530,8 @@ processBusLegState
   allBusDataForRoute
   routeStopMappings
   journeyLegTrackingStatus
-  movementDetected = do
+  movementDetected
+  integratedBppConfig = do
     logDebug $ "movementDetected: " <> show movementDetected <> " journeyLegTrackingStatus: " <> show journeyLegTrackingStatus
     if (isOngoingJourneyLeg journeyLegTrackingStatus) && movementDetected
       then do
@@ -534,7 +542,7 @@ processBusLegState
           (Just legDetails, Just rc, Just userPos) -> do
             riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
             let busTrackingConfig = fromMaybe defaultBusTrackingConfigFRFS riderConfig.busTrackingConfig
-            nearbyBusesETA <- getNearbyBusesFRFS userPos.latLong riderConfig
+            nearbyBusesETA <- getNearbyBusesFRFS userPos.latLong riderConfig integratedBppConfig
             logDebug $ "nearbyBusesETA: " <> show nearbyBusesETA <> "for route_id: " <> show rc
             let scoresForBuses = scoreBusesByDistanceFRFS userPos busTrackingConfig nearbyBusesETA
             logDebug $ "scoresForBuses: " <> show scoresForBuses
@@ -681,10 +689,13 @@ getUpcomingStopsForBus mbRouteStopMapping now mbTargetStation busData filterFrom
        in map toNextStopDetails filteredStops
     _ -> []
 
-getNearbyBusesFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => LatLong -> DomainRiderConfig.RiderConfig -> m [BusDataWithRoutesInfo]
-getNearbyBusesFRFS userPos' riderConfig = do
+getNearbyBusesFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => LatLong -> DomainRiderConfig.RiderConfig -> DIBC.IntegratedBPPConfig -> m [BusDataWithRoutesInfo]
+getNearbyBusesFRFS userPos' riderConfig integratedBppConfig = do
   let nearbyBusSearchRadius :: Double = fromMaybe 0.5 riderConfig.nearbyBusSearchRadius
-  busesBS <- mapM (pure . decodeUtf8) =<< (CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKeyFRFS (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
+  let redisPrefix = case integratedBppConfig.providerConfig of
+        DIBC.ONDC config -> config.redisPrefix
+        _ -> Nothing
+  busesBS <- mapM (pure . decodeUtf8) =<< (CQMMB.withCrossAppRedisNew $ Hedis.geoSearch (nearbyBusKeyFRFS redisPrefix) (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
   logDebug $ "getNearbyBusesFRFS: busesBS: " <> show busesBS
   buses <-
     if null busesBS
@@ -693,7 +704,7 @@ getNearbyBusesFRFS userPos' riderConfig = do
         pure []
       else do
         logDebug $ "getNearbyBusesFRFS: Fetching bus metadata for " <> show (length busesBS) <> " buses"
-        CQMMB.withCrossAppRedisNew $ Hedis.hmGet vehicleMetaKey busesBS
+        CQMMB.withCrossAppRedisNew $ Hedis.hmGet (vehicleMetaKey redisPrefix) busesBS
   logDebug $ "getNearbyBusesFRFS: buses: " <> show buses
   pure $ catMaybes buses
 
