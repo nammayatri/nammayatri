@@ -716,6 +716,8 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
 
   identifierType <- req.identifier & fromMaybeM (InvalidRequest "Identifier type is required")
+
+  when (identifierType == SP.DEVICE) $ throwError $ InvalidRequest "DEVICE identifier is not supported" -- TODO: Make sure this is correct. DEVICE
   let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
 
   generatedOtpCode <- maybe generateOTPCode return useFakeOtpM
@@ -723,8 +725,21 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
         SP.MOBILENUMBER -> SOTP.SMS
         SP.EMAIL -> SOTP.EMAIL
         SP.AADHAAR -> SOTP.SMS
+        SP.DEVICE -> SOTP.SMS
+  when (isNothing useFakeOtpM) $ do
+    SOTP.sendOTP
+      otpChannel
+      otpCode
+      personId
+      person.merchantId
+      person.merchantOperatingCityId
+      req.mobileCountryCode
+      req.mobileNumber
+      req.email
+      riderConfig.emailOtpConfig
+      Nothing
 
-  case identifierType of
+  case identifierType of -- TODO: Add support for DEVICE identifier type
     SP.MOBILENUMBER -> do
       countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for MOBILENUMBER identifier")
       mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for MOBILENUMBER identifier")
@@ -816,7 +831,7 @@ verifyUpdateAuthDataOtp (personId, _merchantId) req = do
   reqOtpHash <- getDbHash req.otp
   when ((storedAuthData.otp) /= reqOtpHash) $ throwError $ InvalidRequest "INVALID_OTP: Invalid OTP"
 
-  void $ case identifierType of
+  void $ case identifierType of -- TODO: Add support for DEVICE identifier type
     SP.MOBILENUMBER -> do
       storedMobileNumber <- case storedAuthData.mobileNumber of
         Just num -> pure num
@@ -835,7 +850,7 @@ verifyUpdateAuthDataOtp (personId, _merchantId) req = do
       encryptedValue <- encrypt storedEmail
       QPersonExtra.updateEmailByPersonId personId encryptedValue
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
-
+    SP.DEVICE -> throwError $ InvalidRequest "Can't update auth data for DEVICE identifier" -- TODO: Make sure this is correct. DEVICE
   void $ Redis.del redisKey
 
   pure APISuccess.Success
