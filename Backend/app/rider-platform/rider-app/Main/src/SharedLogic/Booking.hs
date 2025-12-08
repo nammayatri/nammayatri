@@ -10,6 +10,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Type as SLT
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.JourneyLeg as QJL
 
@@ -41,3 +42,27 @@ getfareBreakups booking mRide = do
     Nothing -> do
       estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING
       pure ([], estimatedFareBreakups)
+
+-- | Extract ride type from booking details
+getRideTypeFromBookingDetails :: DBooking.BookingDetails -> SLT.RideType
+getRideTypeFromBookingDetails = \case
+  DBooking.OneWayDetails _ -> SLT.NORMAL
+  DBooking.RentalDetails _ -> SLT.RENTAL
+  DBooking.InterCityDetails _ -> SLT.INTERCITY
+  DBooking.AmbulanceDetails _ -> SLT.AMBULANCE
+  DBooking.DeliveryDetails _ -> SLT.DELIVERY
+  DBooking.MeterRideDetails _ -> SLT.METER_RIDE
+  DBooking.DriverOfferDetails _ -> SLT.NORMAL
+  DBooking.OneWaySpecialZoneDetails _ -> SLT.NORMAL
+
+-- | Check if booking matches any of the specified ride types
+matchesRideType :: [SLT.RideType] -> DBooking.Booking -> Bool
+matchesRideType types booking =
+  let bookingRideType = getRideTypeFromBookingDetails booking.bookingDetails
+   in bookingRideType `elem` types
+
+-- | Check if booking matches any of the specified billing categories
+matchesBillingCategory :: [SLT.BillingCategory] -> DBooking.Booking -> Bool
+matchesBillingCategory categories booking =
+  let bookingCategory = booking.billingCategory
+   in bookingCategory `elem` categories
