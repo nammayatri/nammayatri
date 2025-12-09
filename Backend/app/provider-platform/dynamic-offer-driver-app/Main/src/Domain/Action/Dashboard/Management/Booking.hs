@@ -39,6 +39,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Tools.Event as Event
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDrInfo
@@ -74,6 +75,24 @@ postBookingCancelAllStuck merchantShortId opCity req = do
   QBooking.cancelBookings allStuckBookingIds now
   for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
   QDrInfo.updateNotOnRideMultiple stuckDriverIds
+  
+  -- Trigger Kafka events for cancelled rides
+  -- Fetch full ride objects to trigger events properly (following pattern from CancelRide/Internal.hs)
+  stuckRides <- catMaybes <$> mapM (B.runInReplica . QRide.findById) (stuckRideItems <&> (.rideId))
+  for_ stuckRides $ \ride -> do
+    Event.triggerRideCancelledEvent Event.RideEventData 
+      { ride = ride{status = DRide.CANCELLED}, 
+        personId = ride.driverId, 
+        merchantId = merchant.id
+      }
+  
+  -- Trigger Kafka events for cancelled bookings  
+  stuckBookings <- catMaybes <$> mapM (B.runInReplica . QBooking.findById) allStuckBookingIds
+  for_ stuckBookings $ \booking -> do
+    Event.triggerBookingCancelledEvent Event.BookingEventData 
+      { booking = booking{status = DBooking.CANCELLED}
+      }
+  
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds
   pure $ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems
 
