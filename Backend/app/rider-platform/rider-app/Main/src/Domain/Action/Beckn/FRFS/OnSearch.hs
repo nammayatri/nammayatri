@@ -300,7 +300,7 @@ filterQuotes integratedBPPConfig quotesWithCategories (Just journeyLeg) = do
                   && isRouteBasedQuote quote
             )
     _ -> return $ filter (isRouteBasedQuote . fst) quotesWithCategories
-  let finalQuotesWithCategories = if null filteredQuotesWithCategories && integratedBPPConfig.isTicketValidOnMultipleRoutes == Just True then quotesWithCategories else filteredQuotesWithCategories
+  let finalQuotesWithCategories = if null filteredQuotesWithCategories && (integratedBPPConfig.isTicketValidOnMultipleRoutes == Just True || isNothing journeyLeg.finalBoardedBusNumber) then quotesWithCategories else filteredQuotesWithCategories
   case finalQuotesWithCategories of
     [] -> return Nothing
     _ -> do
