@@ -125,6 +125,15 @@ findByDriverIdAndFleetOwnerId driverId fleetOwnerId isActive = do
   now <- getCurrentTime
   findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
 
+findByDriverIdAndFleetOwnerIdWithStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id Person ->
+  Text ->
+  m (Maybe FleetDriverAssociation)
+findByDriverIdAndFleetOwnerIdWithStatus driverId fleetOwnerId = do
+  now <- getCurrentTime
+  findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
+
 findAllActiveDriverByFleetOwnerIdWithDriverInfo :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => Text -> Int -> Int -> Maybe DbHash -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe DI.DriverMode -> m [(FleetDriverAssociation, Person, DriverInformation)]
 findAllActiveDriverByFleetOwnerIdWithDriverInfo fleetOwnerId limit offset mbMobileNumberSearchStringHash mbName mbSearchString mbIsActive mbMode = do
   now <- getCurrentTime

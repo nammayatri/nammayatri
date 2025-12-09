@@ -1023,10 +1023,16 @@ postDriverLinkToFleet ::
   Flow APISuccess
 postDriverLinkToFleet (mbDriverId, _, _) req = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
-  allFdas <- FDA.findAllByDriverIdWithStatus driverId
-  let activeFda = find (.isActive) allFdas
-      inactiveFda = find (not . (.isActive)) allFdas
-  whenJust inactiveFda $ \_ -> throwError $ InvalidRequest "Driver already has a pending fleet association request"
-  whenJust activeFda $ \_ -> throwError $ InvalidRequest "Driver is already linked to a fleet"
-  FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False req.requestReason
+  fdaForFleetOwner <- FDA.findByDriverIdAndFleetOwnerIdWithStatus driverId req.fleetOwnerId.getId
+  case req.isRevoke of
+    Just True -> do
+      case fdaForFleetOwner of
+        Just fda | not fda.isActive -> FDA.revokeFleetDriverAssociation driverId req.fleetOwnerId
+        Just _ -> throwError $ InvalidRequest "Direct revoke is not allowed for active fleet associations"
+        Nothing -> throwError $ InvalidRequest "No fleet association found to revoke"
+    _ -> do
+      case fdaForFleetOwner of
+        Just fda | fda.isActive -> throwError $ InvalidRequest "Driver is already linked to this fleet"
+        Just _ -> throwError $ InvalidRequest "Driver already has a pending fleet association request with this fleet"
+        Nothing -> FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False req.requestReason
   return Success
