@@ -1616,6 +1616,8 @@ types:
     - fleetOwnerId: Text
     - fleetOwnerName: Text
     - paymentMethod: Maybe Text
+    - customerMobileNumber: Maybe Text
+    - customerName: Maybe Text
   FleetBookingAssignmentsResponse:
     - bookings: [FleetBookingAssignmentItem]
     - summary: Summary

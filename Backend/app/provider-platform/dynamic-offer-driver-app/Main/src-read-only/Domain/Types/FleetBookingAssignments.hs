@@ -15,6 +15,8 @@ import qualified Tools.Beam.UtilsTH
 
 data FleetBookingAssignments = FleetBookingAssignments
   { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    assignmentEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    assignmentStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     bookingId :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     fleetOwnerId :: Kernel.Prelude.Text,
@@ -26,6 +28,7 @@ data FleetBookingAssignments = FleetBookingAssignments
     placeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    skuDurationMins :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleNo :: Kernel.Prelude.Text,
     visitDate :: Kernel.Prelude.Maybe Data.Time.Day

@@ -20,6 +20,14 @@ import Storage.Queries.OrphanInstances.FleetBookingAssignments
 
 -- Extra code goes here --
 
+-- Get all assignments for the given vehicle numbers
+findAllByVehicleNos ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Text] -> -- vehicleNos
+  m [DBFBA.FleetBookingAssignments]
+findAllByVehicleNos vehicleNos = do
+  findAllWithKV [Se.Is Beam.vehicleNo $ Se.In vehicleNos]
+
 findAllByFleetOwnerIdsAndFilters ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [Text] -> -- fleetOwnerIds
