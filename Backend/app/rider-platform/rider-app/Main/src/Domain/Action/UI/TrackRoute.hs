@@ -86,7 +86,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
         Nothing -> vehicleTracking
 
     mkVehicleTrackingResponse serviceTierType (actualRouteCode, VehicleTracking {..}) =
-      TrackRoute.VehicleInfo
+      TrackRoute.VehicleTrackingInfo
         { vehicleId = vehicleId,
           nextStop = nextStop,
           nextStopTravelTime = nextStopTravelTime,
