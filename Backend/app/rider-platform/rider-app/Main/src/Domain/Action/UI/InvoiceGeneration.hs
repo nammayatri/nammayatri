@@ -28,7 +28,6 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.Booking as SB
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
@@ -92,11 +91,11 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
 
   -- Step 4: Filter by ride type and billing category in Haskell
   let rideTypeFiltered = case rideTypes of
-        Just types -> filter (SB.matchesRideType types) allBookings
+        Just types -> filter (matchesRideType types) allBookings
         Nothing -> allBookings
 
       bookings = case billingCategories of
-        Just categories -> filter (SB.matchesBillingCategory categories) rideTypeFiltered
+        Just categories -> filter (matchesBillingCategory categories) rideTypeFiltered
         Nothing -> rideTypeFiltered
 
   when (null bookings) $
@@ -156,8 +155,8 @@ validateInvoiceRequest GenerateInvoiceReq {..} = do
       daysCount = daysDiff / DT.nominalDay
 
   -- Validate: Date range can't be more than 30 days
-  when (daysCount > 31) $
-    throwError $ InvalidRequest "Date range cannot exceed 31 days"
+  when (daysCount > 30) $
+    throwError $ InvalidRequest "Date range cannot exceed 30 days"
 
   -- Validate: Start date must be from current year
   when (startYear /= currentYear) $
@@ -171,11 +170,21 @@ validateInvoiceRequest GenerateInvoiceReq {..} = do
   when (startDate >= endDate) $
     throwError $ InvalidRequest "Start date must be before end date"
 
-  -- Validate: End date shouldn't be in future (compare by date only, not time)
-  let todayDate = DT.utctDay now
-      endDateDay = DT.utctDay endDate
-  when (endDateDay > todayDate) $
+  -- Validate: Dates shouldn't be in future
+  when (endDate > now) $
     throwError $ InvalidRequest "End date cannot be in the future"
+
+-- | Check if booking matches any of the specified ride types
+matchesRideType :: [SLT.RideType] -> DRB.Booking -> Bool
+matchesRideType types booking =
+  let bookingRideType = getRideTypeFromBookingDetails booking.bookingDetails
+   in bookingRideType `elem` types
+
+-- | Check if booking matches any of the specified billing categories
+matchesBillingCategory :: [SLT.BillingCategory] -> DRB.Booking -> Bool
+matchesBillingCategory categories booking =
+  let bookingCategory = booking.billingCategory
+   in bookingCategory `elem` categories
 
 -- | Check if booking has at least one completed ride
 hasExactlyOneRide :: DBAPI.BookingAPIEntity -> Bool
@@ -201,6 +210,18 @@ calculateTotalAmountFromBookings :: [DRB.Booking] -> Maybe HighPrecMoney
 calculateTotalAmountFromBookings bookings =
   let amounts = map (getHighPrecMoney . (.estimatedTotalFare.amount)) bookings
    in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts)
+
+-- | Extract ride type from booking details
+getRideTypeFromBookingDetails :: DRB.BookingDetails -> SLT.RideType
+getRideTypeFromBookingDetails = \case
+  DRB.OneWayDetails _ -> SLT.NORMAL
+  DRB.RentalDetails _ -> SLT.RENTAL
+  DRB.InterCityDetails _ -> SLT.INTERCITY
+  DRB.AmbulanceDetails _ -> SLT.AMBULANCE
+  DRB.DeliveryDetails _ -> SLT.DELIVERY
+  DRB.MeterRideDetails _ -> SLT.METER_RIDE
+  DRB.DriverOfferDetails _ -> SLT.NORMAL
+  DRB.OneWaySpecialZoneDetails _ -> SLT.NORMAL
 
 -- | Generate PDF and email invoice (async job)
 generateAndEmailInvoice ::
