@@ -42,6 +42,7 @@ data RiderConfigT f = RiderConfigT
     csAlertTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     cxAgentDetails :: B.C f (Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails]),
     dashboardMediaFileUrlPattern :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    defaultServiceTierOrderConfig :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),
     distanceToNearestStopThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     distanceWeightage :: B.C f Kernel.Prelude.Int,
     domainPublicTransportDataVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

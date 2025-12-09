@@ -43,6 +43,7 @@ data RiderConfig = RiderConfig
     csAlertTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     cxAgentDetails :: Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails],
     dashboardMediaFileUrlPattern :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    defaultServiceTierOrderConfig :: [Domain.Types.ServiceTierType.ServiceTierType],
     distanceToNearestStopThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     distanceWeightage :: Kernel.Prelude.Int,
     domainPublicTransportDataVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

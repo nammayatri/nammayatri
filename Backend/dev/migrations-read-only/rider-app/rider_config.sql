@@ -512,3 +512,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN nearby_bus_radius_bucket_step inte
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN single_mode_walk_speed double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN default_service_tier_order_config text [] ;
