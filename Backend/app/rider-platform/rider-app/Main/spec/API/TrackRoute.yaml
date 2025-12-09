@@ -14,7 +14,7 @@ module: TrackRoute
 
 types:
   TrackingResp:
-    vehicleTrackingInfo: "[VehicleInfo]"
+    vehicleTrackingInfo: "[VehicleTrackingInfo]"
 
   VehicleInfoForRoute:
     startTime: Maybe UTCTime
@@ -29,7 +29,7 @@ types:
     upcomingStops: Maybe [SharedLogic.External.LocationTrackingService.Types.UpcomingStop]
     derive: "Show"
 
-  VehicleInfo:
+  VehicleTrackingInfo:
     nextStop: Maybe RouteStopMapping
     nextStopTravelTime: Maybe Seconds
     nextStopTravelDistance: Maybe Meters

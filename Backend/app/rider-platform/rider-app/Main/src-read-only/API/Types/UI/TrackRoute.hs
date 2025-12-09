@@ -14,22 +14,7 @@ import qualified SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import Tools.Auth
 
-data TrackingResp = TrackingResp {vehicleTrackingInfo :: [VehicleInfo]}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data VehicleInfo = VehicleInfo
-  { delay :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    nextStop :: Kernel.Prelude.Maybe Domain.Types.RouteStopMapping.RouteStopMapping,
-    nextStopTravelDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
-    nextStopTravelTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    routeCode :: Kernel.Prelude.Text,
-    routeShortName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
-    upcomingStops :: [SharedLogic.FRFSUtils.UpcomingStop],
-    vehicleId :: Kernel.Prelude.Text,
-    vehicleInfo :: VehicleInfoForRoute
-  }
+data TrackingResp = TrackingResp {vehicleTrackingInfo :: [VehicleTrackingInfo]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -46,4 +31,19 @@ data VehicleInfoForRoute = VehicleInfoForRoute
     upcomingStops :: Kernel.Prelude.Maybe [SharedLogic.External.LocationTrackingService.Types.UpcomingStop]
   }
   deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleTrackingInfo = VehicleTrackingInfo
+  { delay :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    nextStop :: Kernel.Prelude.Maybe Domain.Types.RouteStopMapping.RouteStopMapping,
+    nextStopTravelDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    nextStopTravelTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    routeCode :: Kernel.Prelude.Text,
+    routeShortName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    upcomingStops :: [SharedLogic.FRFSUtils.UpcomingStop],
+    vehicleId :: Kernel.Prelude.Text,
+    vehicleInfo :: VehicleInfoForRoute
+  }
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
