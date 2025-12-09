@@ -124,6 +124,7 @@ addPaymentoffersTags ::
   DP.Person ->
   m ()
 addPaymentoffersTags totalPrice person = do
+  logInfo $ "Add payment offer tag, personId: " <> person.id.getId <> ", totalPrice: " <> show totalPrice
   withTryCatch "addPaymentoffersTags:offerListCache" (SOffer.offerListCache person.merchantId person.id person.merchantOperatingCityId DPaymentOrder.Normal totalPrice)
     >>= \case
       Left err -> do
@@ -1045,6 +1046,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         else do
           buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentSuccess
     DFRFSTicketBooking.CONFIRMED -> do
+      void $ addPaymentoffersTags booking'.totalPrice person
       fork "FRFS Booking Status" $ CallExternalBPP.status merchant.id merchantOperatingCity bapConfig booking
       buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentSuccess
     DFRFSTicketBooking.APPROVED -> do
