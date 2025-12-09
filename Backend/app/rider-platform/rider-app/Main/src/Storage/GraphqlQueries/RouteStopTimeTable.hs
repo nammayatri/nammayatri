@@ -90,47 +90,71 @@ parseToRouteStopTimeTable integratedBPPConfigId mid mocid vehicleCategory entry 
   case vehicleCategory of
     SUBWAY ->
       pure $
-        [ RouteStopTimeTable
-            { integratedBppConfigId = integratedBPPConfigId,
-              routeCode = entry.routeCode,
-              serviceTierType = SECOND_CLASS,
-              serviceTierName = Just "SECOND_CLASS",
-              stopCode = entry.stopCode,
-              timeOfArrival = entry.timeOfArrival,
-              timeOfDeparture = entry.timeOfDeparture,
-              tripId = Id entry.tripId,
-              merchantId = Just mid,
-              merchantOperatingCityId = Just mocid,
-              createdAt = entry.createdAt,
-              updatedAt = entry.updatedAt,
-              delay = Just entry.arrivalDelay,
-              source = GTFS,
-              stage = entry.stage,
-              providerStopCode = entry.providerStopCode,
-              platformCode = entry.platformCode,
-              isStageStop = entry.isStageStop
-            },
-          RouteStopTimeTable
-            { integratedBppConfigId = integratedBPPConfigId,
-              routeCode = entry.routeCode,
-              serviceTierType = FIRST_CLASS,
-              serviceTierName = Just "FIRST_CLASS",
-              stopCode = entry.stopCode,
-              timeOfArrival = entry.timeOfArrival,
-              timeOfDeparture = entry.timeOfDeparture,
-              tripId = Id entry.tripId,
-              merchantId = Just mid,
-              merchantOperatingCityId = Just mocid,
-              createdAt = entry.createdAt,
-              updatedAt = entry.updatedAt,
-              delay = Just entry.arrivalDelay,
-              source = GTFS,
-              stage = entry.stage,
-              providerStopCode = entry.providerStopCode,
-              platformCode = entry.platformCode,
-              isStageStop = entry.isStageStop
-            }
-        ]
+        if entry.serviceTierType == AC_EMU_FIRST_CLASS
+          then
+            [ RouteStopTimeTable
+                { integratedBppConfigId = integratedBPPConfigId,
+                  routeCode = entry.routeCode,
+                  serviceTierType = AC_EMU_FIRST_CLASS,
+                  serviceTierName = Just "AC_EMU_FIRST_CLASS",
+                  stopCode = entry.stopCode,
+                  timeOfArrival = entry.timeOfArrival,
+                  timeOfDeparture = entry.timeOfDeparture,
+                  tripId = Id entry.tripId,
+                  merchantId = Just mid,
+                  merchantOperatingCityId = Just mocid,
+                  createdAt = entry.createdAt,
+                  updatedAt = entry.updatedAt,
+                  delay = Just entry.arrivalDelay,
+                  source = GTFS,
+                  stage = entry.stage,
+                  providerStopCode = entry.providerStopCode,
+                  platformCode = entry.platformCode,
+                  isStageStop = entry.isStageStop
+                }
+            ]
+          else
+            [ RouteStopTimeTable
+                { integratedBppConfigId = integratedBPPConfigId,
+                  routeCode = entry.routeCode,
+                  serviceTierType = SECOND_CLASS,
+                  serviceTierName = Just "SECOND_CLASS",
+                  stopCode = entry.stopCode,
+                  timeOfArrival = entry.timeOfArrival,
+                  timeOfDeparture = entry.timeOfDeparture,
+                  tripId = Id entry.tripId,
+                  merchantId = Just mid,
+                  merchantOperatingCityId = Just mocid,
+                  createdAt = entry.createdAt,
+                  updatedAt = entry.updatedAt,
+                  delay = Just entry.arrivalDelay,
+                  source = GTFS,
+                  stage = entry.stage,
+                  providerStopCode = entry.providerStopCode,
+                  platformCode = entry.platformCode,
+                  isStageStop = entry.isStageStop
+                },
+              RouteStopTimeTable
+                { integratedBppConfigId = integratedBPPConfigId,
+                  routeCode = entry.routeCode,
+                  serviceTierType = FIRST_CLASS,
+                  serviceTierName = Just "FIRST_CLASS",
+                  stopCode = entry.stopCode,
+                  timeOfArrival = entry.timeOfArrival,
+                  timeOfDeparture = entry.timeOfDeparture,
+                  tripId = Id entry.tripId,
+                  merchantId = Just mid,
+                  merchantOperatingCityId = Just mocid,
+                  createdAt = entry.createdAt,
+                  updatedAt = entry.updatedAt,
+                  delay = Just entry.arrivalDelay,
+                  source = GTFS,
+                  stage = entry.stage,
+                  providerStopCode = entry.providerStopCode,
+                  platformCode = entry.platformCode,
+                  isStageStop = entry.isStageStop
+                }
+            ]
     _ -> do
       frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId entry.serviceTierType mocid integratedBPPConfigId
       pure $
