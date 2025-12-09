@@ -172,6 +172,10 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId mbPr
         let passOverlaps = hasDateOverlap (samePass.startDate, samePass.endDate) (startDate, endDate)
         when (samePass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && passOverlaps) $
           throwError (InvalidRequest "You already have an active pass of this type in the selected dates")
+        futureRenewals <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus Nothing Nothing samePass.id DPurchasedPass.PreBooked startDate
+        let futureRenewalsOverlap = any (\futurePass -> hasDateOverlap (futurePass.startDate, futurePass.endDate) (startDate, endDate)) futureRenewals
+        when futureRenewalsOverlap $
+          throwError (InvalidRequest "You already have a future renewal of this pass in the selected dates")
         return samePass.id
       Nothing -> do
         newPurchasedPassId <- generateGUID
