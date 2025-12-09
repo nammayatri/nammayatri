@@ -142,7 +142,7 @@ data TicketBookingCategoryDetails = TicketBookingCategoryDetails
     id :: Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory,
     name :: Data.Text.Text,
     peopleCategories :: [TicketBookingPeopleCategoryDetails],
-    serviceCategoryId :: Kernel.Prelude.Maybe Data.Text.Text
+    serviceCategoryId :: Kernel.Prelude.Maybe (Data.Text.Text)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -154,6 +154,8 @@ data TicketBookingCategoryReq = TicketBookingCategoryReq {categoryId :: Kernel.T
 data TicketBookingDetails = TicketBookingDetails
   { amount :: Kernel.Types.Common.HighPrecMoney,
     amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+    customerName :: Kernel.Prelude.Maybe Data.Text.Text,
+    customerPhoneNumber :: Kernel.Prelude.Maybe Data.Text.Text,
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
     personId :: Data.Text.Text,
@@ -303,6 +305,7 @@ data TicketServiceVerificationReq = TicketServiceVerificationReq {assignments ::
 data TicketServiceVerificationResp = TicketServiceVerificationResp
   { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     amountWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    bookingShortId :: Kernel.Prelude.Maybe Data.Text.Text,
     categories :: [TicketBookingCategoryDetails],
     endTime :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     message :: Data.Text.Text,

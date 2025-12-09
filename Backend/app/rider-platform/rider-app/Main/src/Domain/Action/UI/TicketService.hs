@@ -74,6 +74,7 @@ import qualified Storage.Queries.ServiceCategory as QSC
 import qualified Storage.Queries.ServicePeopleCategory as QPC
 import qualified Storage.Queries.SpecialOccasion as QSO
 import qualified Storage.Queries.TicketBooking as QTB
+import qualified Storage.Queries.TicketBookingExtra as QTBExtra
 import qualified Storage.Queries.TicketBookingPeopleCategory as QTBPC
 import qualified Storage.Queries.TicketBookingService as QTicketBookingService
 import qualified Storage.Queries.TicketBookingServiceCategory as QTBSC
@@ -667,12 +668,20 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
           else pure refunds
 
       ticketPlace <- QTicketPlace.findById ticketPlaceId >>= fromMaybeM (TicketPlaceNotFound ticketPlaceId.getId)
+
+      -- Get customer name and phone number from person
+      decryptedMobileNumber <- mapM decrypt person.mobileNumber
+      let customerPhoneNumber = decryptedMobileNumber
+          customerName = person.firstName
+
       return $
         TicketBookingDetails
           { ticketShortId = shortId.getShortId,
             ticketPlaceId = ticketPlaceId.getId,
             ticketSubPlaceId = (.getId) <$> ticketSubPlaceId,
             personId = personId.getId,
+            customerName,
+            customerPhoneNumber,
             ticketPlaceName = ticketPlace.name,
             lat = fromMaybe 0.0 ticketPlace.lat,
             lon = fromMaybe 0.0 ticketPlace.lon,
@@ -748,6 +757,102 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
             ..
           }
 
+getTicketPlaceBookings ::
+  (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+  Maybe Int ->
+  Maybe Int ->
+  Domain.Types.TicketBooking.BookingStatus ->
+  Environment.Flow [API.Types.UI.TicketService.TicketBookingDetails]
+getTicketPlaceBookings (_mbPersonId, _merchantId') placeId mbLimit mbOffset bookingStatus = do
+  ticketBookings <- QTBExtra.findAllByTicketPlaceIdAndStatus mbLimit mbOffset placeId bookingStatus
+  mapM getBookingDetailsById ticketBookings
+  where
+    getBookingDetailsById :: DTTB.TicketBooking -> Environment.Flow API.Types.UI.TicketService.TicketBookingDetails
+    getBookingDetailsById booking = do
+      ticketBookingServices <- QTicketBookingService.findAllByBookingId booking.id
+      services <- mapM mkTicketBookingServiceDetails ticketBookingServices
+      mkTicketBookingDetails booking services
+      where
+        mkTicketBookingDetails :: DTTB.TicketBooking -> [API.Types.UI.TicketService.TicketBookingServiceDetails] -> Environment.Flow API.Types.UI.TicketService.TicketBookingDetails
+        mkTicketBookingDetails DTTB.TicketBooking {..} servicesData = do
+          person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
+
+          -- Get customer name and phone number from person
+          decryptedMobileNumber <- mapM decrypt person.mobileNumber
+          let customerPhoneNumber = decryptedMobileNumber
+              customerName = person.firstName
+
+          return $
+            TicketBookingDetails
+              { ticketShortId = shortId.getShortId,
+                ticketPlaceId = ticketPlaceId.getId,
+                ticketSubPlaceId = (.getId) <$> ticketSubPlaceId,
+                personId = personId.getId,
+                customerName,
+                customerPhoneNumber,
+                ticketPlaceName = "",
+                lat = 0.0,
+                lon = 0.0,
+                amount = amount.amount,
+                amountWithCurrency = mkPriceAPIEntity amount,
+                services = servicesData,
+                refundDetails = [],
+                status,
+                visitDate
+              }
+
+        mkTicketBookingServiceDetails :: DTB.TicketBookingService -> Environment.Flow API.Types.UI.TicketService.TicketBookingServiceDetails
+        mkTicketBookingServiceDetails DTB.TicketBookingService {..} = do
+          ticketService <- QTicketService.findById ticketServiceId >>= fromMaybeM (TicketServiceNotFound ticketServiceId.getId)
+          serviceCategories <- QTBSC.findAllByTicketBookingServiceId id
+          categoryDetails <- mapM mkTicketBookingCategoryDetails serviceCategories
+          let convertedBH = convertBusinessHT btype
+          return $
+            TicketBookingServiceDetails
+              { categories = categoryDetails,
+                ticketServiceShortId = shortId.getShortId,
+                slot = convertedBH.slot,
+                ticketServiceName = ticketService.service,
+                businessHourId = bHourId,
+                expiryDate = expiryDate,
+                verificationCount = verificationCount,
+                status = status,
+                amount = amount.amount,
+                amountWithCurrency = mkPriceAPIEntity amount,
+                allowCancellation = ticketService.allowCancellation,
+                noteInfo = ticketService.note
+              }
+
+        mkTicketBookingCategoryDetails :: DTB.TicketBookingServiceCategory -> Environment.Flow API.Types.UI.TicketService.TicketBookingCategoryDetails
+        mkTicketBookingCategoryDetails DTB.TicketBookingServiceCategory {..} = do
+          localTime <- getLocalCurrentTime 19800
+          let visitDate_ = fromMaybe (utctDay localTime) visitDate
+          peopleCategories <- QTBPC.findAllByServiceCategoryId id
+          peopleCategoryDetails <- mapM (mkTicketBookingPeopleCategoryDetails visitDate_) peopleCategories
+          return $
+            TicketBookingCategoryDetails
+              { peopleCategories = peopleCategoryDetails,
+                amount = amount.amount,
+                amountWithCurrency = mkPriceAPIEntity amount,
+                ..
+              }
+
+        mkTicketBookingPeopleCategoryDetails :: Data.Time.Calendar.Day -> DTB.TicketBookingPeopleCategory -> Environment.Flow API.Types.UI.TicketService.TicketBookingPeopleCategoryDetails
+        mkTicketBookingPeopleCategoryDetails visitDate DTB.TicketBookingPeopleCategory {..} = do
+          cancellationCharges <- case peopleCategoryId of
+            Nothing -> pure Nothing
+            Just peopleCategoryId' -> do
+              peopleCategory' <- QPC.findServicePeopleCategoryById peopleCategoryId' visitDate
+              pure $ (.cancellationCharges) =<< peopleCategory'
+          return $
+            TicketBookingPeopleCategoryDetails
+              { pricePerUnit = pricePerUnit.amount,
+                pricePerUnitWithCurrency = mkPriceAPIEntity pricePerUnit,
+                cancelCharges = cancellationCharges,
+                ..
+              }
+
 postTicketBookingsVerify :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Maybe Text -> Maybe Text -> Environment.Flow API.Types.UI.TicketService.TicketServiceVerificationResp
 postTicketBookingsVerify _ = processBookingService
   where
@@ -802,7 +907,10 @@ postTicketBookingsVerify _ = processBookingService
               case (mbFleetOwnerId, mbVehicleNo) of
                 (Just fleetOwnerId, Just vehicleNo) -> do
                   merchant <- CQM.findById (merchanOperatingCity.merchantId) >>= fromMaybeM (MerchantNotFound merchanOperatingCity.merchantId.getId)
-                  let updateReq =
+                  person <- QP.findById booking.personId >>= fromMaybeM (PersonNotFound booking.personId.getId)
+                  mobileNumber <- mapM decrypt person.mobileNumber
+                  let customerName = person.firstName <> ((" " <>) <$> person.lastName)
+                      updateReq =
                         CallBPPInternal.UpdateFleetBookingInformationReq
                           { id = bookingService.assignmentId,
                             bookingId = booking.id.getId,
@@ -818,7 +926,9 @@ postTicketBookingsVerify _ = processBookingService
                             amount = Just bookingService.amount.amount,
                             assignments = Nothing,
                             ticketPlaceId = Just ticketPlace.id.getId,
-                            paymentMethod = show <$> booking.paymentMethod
+                            paymentMethod = show <$> booking.paymentMethod,
+                            customerMobileNumber = mobileNumber,
+                            customerName = customerName
                           }
                   response <- CallBPPInternal.updateFleetBookingInformation merchant updateReq
                   QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id
@@ -847,7 +957,8 @@ postTicketBookingsVerify _ = processBookingService
             verificationCount = mbBookingService <&> (.verificationCount),
             startTime = findStartTime mbConvertedT,
             endTime = (.endTime) =<< mbConvertedT,
-            categories = serviceCatDetails
+            categories = serviceCatDetails,
+            bookingShortId = mbBooking <&> (.shortId) <&> (.getShortId)
           }
 
     mkTicketBookingCategoryDetails :: Maybe [DTB.TicketBookingServiceCategory] -> Environment.Flow [TicketBookingCategoryDetails]
@@ -961,7 +1072,10 @@ postTicketBookingsVerifyV2 _ = processBookingService
               merchanOperatingCity <- QMO.findById ticketPlace.merchantOperatingCityId >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
               when (bookingService.bookedSeats /= maybe 0 length req.assignments) $ throwError (InvalidRequest $ "Assignment mismatch, Required assignment = " <> show bookingService.bookedSeats <> " but got = " <> show (maybe 0 length req.assignments))
               merchant <- CQM.findById (merchanOperatingCity.merchantId) >>= fromMaybeM (MerchantNotFound merchanOperatingCity.merchantId.getId)
-              let allFleetOwnerIds = nub $ map (\assignment -> assignment.fleetOwnerId) (fromMaybe [] req.assignments)
+              person <- QP.findById booking.personId >>= fromMaybeM (PersonNotFound booking.personId.getId)
+              mobileNumber <- mapM decrypt person.mobileNumber
+              let customerName = person.firstName <> ((" " <>) <$> person.lastName)
+                  allFleetOwnerIds = nub $ map (\assignment -> assignment.fleetOwnerId) (fromMaybe [] req.assignments)
                   allVehicleNos = nub $ map (\assignment -> assignment.vehicleNo) (fromMaybe [] req.assignments)
                   fleetOwnerId' = case allFleetOwnerIds of
                     [fleetOwnerId] -> fleetOwnerId
@@ -969,7 +1083,7 @@ postTicketBookingsVerifyV2 _ = processBookingService
                   vehicleNo' = case allVehicleNos of
                     [vehicleNo] -> vehicleNo
                     _ -> "MULTIPLE_VEHICLES_ASSIGNED"
-              let updateReq =
+                  updateReq =
                     CallBPPInternal.UpdateFleetBookingInformationReq
                       { id = bookingService.assignmentId,
                         bookingId = booking.id.getId,
@@ -985,7 +1099,9 @@ postTicketBookingsVerifyV2 _ = processBookingService
                         amount = Just bookingService.amount.amount,
                         assignments = req.assignments,
                         ticketPlaceId = Just ticketPlace.id.getId,
-                        paymentMethod = show <$> booking.paymentMethod
+                        paymentMethod = show <$> booking.paymentMethod,
+                        customerMobileNumber = mobileNumber,
+                        customerName = customerName
                       }
               response <- CallBPPInternal.updateFleetBookingInformation merchant updateReq
               QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id
@@ -1013,7 +1129,8 @@ postTicketBookingsVerifyV2 _ = processBookingService
             verificationCount = mbBookingService <&> (.verificationCount),
             startTime = findStartTime mbConvertedT,
             endTime = (.endTime) =<< mbConvertedT,
-            categories = serviceCatDetails
+            categories = serviceCatDetails,
+            bookingShortId = mbBooking <&> (.shortId) <&> (.getShortId)
           }
 
     mkTicketBookingCategoryDetails :: Maybe [DTB.TicketBookingServiceCategory] -> Environment.Flow [TicketBookingCategoryDetails]
@@ -1100,6 +1217,8 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
               -- Update vehicle assignment with assigned status and fleet owner
               when (ticketPlace.assignTicketToBpp) $ do
                 merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+                mobileNumber <- mapM decrypt person.mobileNumber
+                let customerName = person.firstName <> ((" " <>) <$> person.lastName)
                 mapM_
                   ( \ticketBookingService -> do
                       let createReq =
@@ -1116,7 +1235,9 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
                                 ticketBookingServiceShortId = ticketBookingService.shortId.getShortId,
                                 status = Just "NEW",
                                 ticketPlaceId = Just ticketPlace.id.getId,
-                                paymentMethod = Just "ONLINE"
+                                paymentMethod = Just "ONLINE",
+                                customerMobileNumber = mobileNumber,
+                                customerName = customerName
                               }
                       response <- CallBPPInternal.createFleetBookingInformation merchant createReq
                       QTicketBookingService.updateAssignmentById (Just response.assignmentId) ticketBookingService.id
@@ -1324,9 +1445,12 @@ createDirectBookingForCash (personId, merchantId) mbRequestorId placeId req = do
       ticketPlace <- QTicketPlace.findById placeId' >>= fromMaybeM (TicketPlaceNotFound placeId'.getId)
       when (ticketPlace.assignTicketToBpp) $ do
         merchant <- CQM.findById merchantId' >>= fromMaybeM (MerchantNotFound merchantId'.getId)
-        mapM_ (createFleetAssignment merchant ticketPlace booking personId' bookingReq) services
+        person <- QP.findById personId' >>= fromMaybeM (PersonNotFound personId'.getId)
+        mobileNumber <- mapM decrypt person.mobileNumber
+        let customerName = person.firstName <> ((" " <>) <$> person.lastName)
+        mapM_ (createFleetAssignment merchant ticketPlace booking personId' bookingReq mobileNumber customerName) services
       where
-        createFleetAssignment merchant ticketPlace booking' personId'' bookingReq' service = do
+        createFleetAssignment merchant ticketPlace booking' personId'' bookingReq' mobileNumber customerName service = do
           let createReq =
                 CallBPPInternal.CreateFleetBookingInformationReq
                   { bookingId = booking'.id.getId,
@@ -1341,7 +1465,9 @@ createDirectBookingForCash (personId, merchantId) mbRequestorId placeId req = do
                     ticketBookingServiceShortId = service.shortId.getShortId,
                     status = Just "NEW",
                     ticketPlaceId = Just ticketPlace.id.getId,
-                    paymentMethod = Just "CASH"
+                    paymentMethod = Just "CASH",
+                    customerMobileNumber = mobileNumber,
+                    customerName = customerName
                   }
           response <- CallBPPInternal.createFleetBookingInformation merchant createReq
           QTicketBookingService.updateAssignmentById (Just response.assignmentId) service.id
@@ -1388,7 +1514,7 @@ createDirectBookingForCash (personId, merchantId) mbRequestorId placeId req = do
 postTicketBookingsCashCollect :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postTicketBookingsCashCollect (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.ShortId shortId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  _person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   ticketBooking' <- QTB.findByShortId (Kernel.Types.Id.ShortId shortId) >>= fromMaybeM (TicketBookingNotFound shortId)
 
   -- Check if booking is in pending state
@@ -1407,6 +1533,8 @@ postTicketBookingsCashCollect (mbPersonId, merchantId) _shortId@(Kernel.Types.Id
   -- Update vehicle assignment with assigned status and fleet owner (same as payment success flow)
   when (ticketPlace.assignTicketToBpp) $ do
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    mobileNumber <- mapM decrypt person.mobileNumber
+    let customerName = person.firstName <> ((" " <>) <$> person.lastName)
     mapM_
       ( \ticketBookingService -> do
           let createReq =
@@ -1423,7 +1551,9 @@ postTicketBookingsCashCollect (mbPersonId, merchantId) _shortId@(Kernel.Types.Id
                     ticketBookingServiceShortId = ticketBookingService.shortId.getShortId,
                     status = Just "NEW",
                     ticketPlaceId = Just ticketPlace.id.getId,
-                    paymentMethod = Just "CASH"
+                    paymentMethod = Just "CASH",
+                    customerMobileNumber = mobileNumber,
+                    customerName = customerName
                   }
           response <- CallBPPInternal.createFleetBookingInformation merchant createReq
           QTicketBookingService.updateAssignmentById (Just response.assignmentId) ticketBookingService.id
@@ -2376,6 +2506,32 @@ getTicketFleetVehicles (_, merchantId) placeId mbLimit mbOffset mbSearchString =
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
   fleetVehicleListResp <- CallBPPInternal.getFleetVehicles merchant placeId.getId mbLimit mbOffset mbSearchString
+
+  return $ map convertToFleetVehicleResp fleetVehicleListResp.vehicles
+  where
+    convertToFleetVehicleResp fleetVehicleInfo =
+      API.Types.UI.TicketService.TicketFleetVehicleResp
+        { fleetOwnerId = fleetVehicleInfo.fleetOwnerId,
+          fleetOwnerName = fleetVehicleInfo.fleetOwnerName,
+          rcId = fleetVehicleInfo.rcId,
+          vehicleNo = fleetVehicleInfo.vehicleNo,
+          vehicleType = fleetVehicleInfo.vehicleType,
+          driverId = fleetVehicleInfo.driverId,
+          driverName = fleetVehicleInfo.driverName,
+          isActive = fleetVehicleInfo.isActive
+        }
+
+getTicketFleetVehiclesV2 ::
+  (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Environment.Flow [API.Types.UI.TicketService.TicketFleetVehicleResp]
+getTicketFleetVehiclesV2 (_, merchantId) placeId mbLimit mbOffset mbSearchString = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+
+  fleetVehicleListResp <- CallBPPInternal.getFleetVehiclesV2 merchant placeId.getId mbLimit mbOffset mbSearchString
 
   return $ map convertToFleetVehicleResp fleetVehicleListResp.vehicles
   where

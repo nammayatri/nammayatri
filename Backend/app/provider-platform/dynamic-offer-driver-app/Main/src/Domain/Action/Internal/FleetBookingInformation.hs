@@ -20,6 +20,7 @@ import qualified Domain.Types.FleetBookingAssignments as DFBA
 import qualified Domain.Types.FleetBookingInformation as DFBI
 import qualified Domain.Types.Person as DP
 import Environment
+import Kernel.External.Encryption (encrypt)
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
@@ -40,7 +41,9 @@ data CreateFleetBookingInformationReq = CreateFleetBookingInformationReq
     bookedSeats :: Maybe Int,
     status :: Maybe Text,
     ticketPlaceId :: Maybe Text,
-    paymentMethod :: Maybe Text
+    paymentMethod :: Maybe Text,
+    customerMobileNumber :: Maybe Text,
+    customerName :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -64,13 +67,18 @@ data UpdateFleetBookingInformationReq = UpdateFleetBookingInformationReq
     amount :: Maybe HighPrecMoney,
     ticketPlaceId :: Maybe Text,
     assignments :: Maybe [BookingAssignment],
-    paymentMethod :: Maybe Text
+    paymentMethod :: Maybe Text,
+    customerMobileNumber :: Maybe Text,
+    customerName :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 data BookingAssignment = BookingAssignment
   { fleetOwnerId :: Text,
-    vehicleNo :: Text
+    vehicleNo :: Text,
+    skuDurationMins :: Maybe Int,
+    assignmentStartTime :: Maybe UTCTime,
+    assignmentEndTime :: Maybe UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -83,6 +91,7 @@ createBookingInformation :: CreateFleetBookingInformationReq -> Flow (DFBI.Fleet
 createBookingInformation req = do
   infoId <- generateGUID
   now <- getCurrentTime
+  encryptedMobileNumber <- mapM encrypt req.customerMobileNumber
   let record =
         DFBI.FleetBookingInformation
           { id = infoId,
@@ -103,6 +112,8 @@ createBookingInformation req = do
             ticketBookingShortId = req.ticketBookingShortId,
             ticketBookingServiceShortId = req.ticketBookingServiceShortId,
             paymentMethod = req.paymentMethod,
+            customerMobileNumber = encryptedMobileNumber,
+            customerName = req.customerName,
             createdAt = now,
             updatedAt = now
           }
@@ -115,6 +126,7 @@ updateBookingInformation req = do
     Just id -> QFBI.findById id
     Nothing -> QFBI.findByServiceId (Just req.serviceId)
   now <- getCurrentTime
+  encryptedMobileNumber <- mapM encrypt req.customerMobileNumber
   case mExisting of
     Just existing -> do
       let updated =
@@ -128,6 +140,8 @@ updateBookingInformation req = do
                 DFBI.ticketBookingShortId = req.ticketBookingShortId <|> existing.ticketBookingShortId,
                 DFBI.ticketBookingServiceShortId = req.ticketBookingServiceShortId <|> existing.ticketBookingServiceShortId,
                 DFBI.paymentMethod = req.paymentMethod <|> existing.paymentMethod,
+                DFBI.customerMobileNumber = encryptedMobileNumber <|> existing.customerMobileNumber,
+                DFBI.customerName = req.customerName <|> existing.customerName,
                 DFBI.updatedAt = now
               }
       QFBI.updateByPrimaryKey updated
@@ -149,7 +163,9 @@ updateBookingInformation req = do
                 ticketPlaceId = req.ticketPlaceId,
                 ticketBookingShortId = req.ticketBookingShortId,
                 ticketBookingServiceShortId = req.ticketBookingServiceShortId,
-                paymentMethod = req.paymentMethod
+                paymentMethod = req.paymentMethod,
+                customerMobileNumber = req.customerMobileNumber,
+                customerName = req.customerName
               }
       (newAssignment, CreateFleetBookingInformationResp newId) <- createBookingInformation createReq
       createAssignments newAssignment req.assignments
@@ -177,6 +193,9 @@ updateBookingInformation req = do
                   merchantId = mainAssignment.merchantId,
                   paymentMethod = mainAssignment.paymentMethod,
                   merchantOperatingCityId = mainAssignment.merchantOperatingCityId,
+                  assignmentStartTime = assignment.assignmentStartTime,
+                  assignmentEndTime = assignment.assignmentEndTime,
+                  skuDurationMins = assignment.skuDurationMins,
                   createdAt = now,
                   updatedAt = now
                 }

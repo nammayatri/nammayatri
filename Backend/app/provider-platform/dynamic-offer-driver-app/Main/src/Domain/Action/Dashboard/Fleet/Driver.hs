@@ -2840,7 +2840,7 @@ getDriverFleetBookings _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbStatus 
   ticketBookingsList <- forM ticketBookings $ \booking -> do
     let fleetOwnerId = fromMaybe "" (fmap (.getId) booking.fleetOwnerId)
         fleetOwnerName = fromMaybe "" (Map.lookup fleetOwnerId fleetNameMap)
-
+    decryptMobileNumber <- mapM decrypt booking.customerMobileNumber
     pure $
       Common.FleetBookingItem
         { bookingId = booking.bookingId,
@@ -2858,7 +2858,9 @@ getDriverFleetBookings _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbStatus 
           createdAt = booking.createdAt,
           updatedAt = booking.updatedAt,
           fleetOwnerId = fleetOwnerId,
-          fleetOwnerName = fleetOwnerName
+          fleetOwnerName = fleetOwnerName,
+          customerMobileNumber = decryptMobileNumber,
+          customerName = booking.customerName
         }
 
   let summary = Common.Summary {totalCount = 10000, count = length ticketBookingsList}

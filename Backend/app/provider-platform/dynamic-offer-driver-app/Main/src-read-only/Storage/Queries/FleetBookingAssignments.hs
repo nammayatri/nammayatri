@@ -9,6 +9,7 @@ import qualified Domain.Types.FleetBookingInformation
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -24,8 +25,21 @@ createMany = traverse_ create
 
 findAllByMainAssignmentId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FleetBookingInformation.FleetBookingInformation -> m [Domain.Types.FleetBookingAssignments.FleetBookingAssignments])
+  (Kernel.Types.Id.Id Domain.Types.FleetBookingInformation.FleetBookingInformation -> m ([Domain.Types.FleetBookingAssignments.FleetBookingAssignments]))
 findAllByMainAssignmentId mainAssignmentId = do findAllWithKV [Se.Is Beam.mainAssignmentId $ Se.Eq (Kernel.Types.Id.getId mainAssignmentId)]
+
+updateAssignmentTiming ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.FleetBookingAssignments.FleetBookingAssignments -> m ())
+updateAssignmentTiming assignmentStartTime assignmentEndTime skuDurationMins id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.assignmentStartTime assignmentStartTime,
+      Se.Set Beam.assignmentEndTime assignmentEndTime,
+      Se.Set Beam.skuDurationMins skuDurationMins,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -37,6 +51,8 @@ updateByPrimaryKey (Domain.Types.FleetBookingAssignments.FleetBookingAssignments
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.amount amount,
+      Se.Set Beam.assignmentEndTime assignmentEndTime,
+      Se.Set Beam.assignmentStartTime assignmentStartTime,
       Se.Set Beam.bookingId bookingId,
       Se.Set Beam.fleetOwnerId fleetOwnerId,
       Se.Set Beam.mainAssignmentId (Kernel.Types.Id.getId mainAssignmentId),
@@ -46,6 +62,7 @@ updateByPrimaryKey (Domain.Types.FleetBookingAssignments.FleetBookingAssignments
       Se.Set Beam.placeName placeName,
       Se.Set Beam.serviceId serviceId,
       Se.Set Beam.serviceName serviceName,
+      Se.Set Beam.skuDurationMins skuDurationMins,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vehicleNo vehicleNo,
       Se.Set Beam.visitDate visitDate

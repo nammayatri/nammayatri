@@ -22,18 +22,35 @@ import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 
-type API =
-  "fleet" :> "VehicleAssociation" :> "list"
-    :> Header "token" Text
-    :> MandatoryQueryParam "ticketPlaceId" Text
-    :> QueryParam "limit" Int
-    :> QueryParam "offset" Int
-    :> QueryParam "searchString" Text
-    :> Get '[JSON] Domain.BoatFleetVehicleListRes
+type API = GetFleetVehicleAssociationList :<|> GetFleetVehicleAssociationListV2
+
+type GetFleetVehicleAssociationList =
+  ( "fleet" :> "VehicleAssociation" :> "list"
+      :> Header "token" Text
+      :> MandatoryQueryParam "ticketPlaceId" Text
+      :> QueryParam "limit" Int
+      :> QueryParam "offset" Int
+      :> QueryParam "searchString" Text
+      :> Get '[JSON] Domain.BoatFleetVehicleListRes
+  )
+
+type GetFleetVehicleAssociationListV2 =
+  ( "fleet" :> "VehicleAssociation" :> "list" :> "v2"
+      :> Header "token" Text
+      :> MandatoryQueryParam "ticketPlaceId" Text
+      :> QueryParam "limit" Int
+      :> QueryParam "offset" Int
+      :> QueryParam "searchString" Text
+      :> Get '[JSON] Domain.BoatFleetVehicleListRes
+  )
 
 handler :: FlowServer API
-handler = getFleetVehicleAssociation
+handler = getFleetVehicleAssociation :<|> getFleetVehicleAssociationV2
 
 getFleetVehicleAssociation :: Maybe Text -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> FlowHandler Domain.BoatFleetVehicleListRes
 getFleetVehicleAssociation apiKey placeId mbLimit mbOffset mbSearchString = withFlowHandlerAPI $ do
   Domain.getFleetVehicleAssociation apiKey placeId mbLimit mbOffset mbSearchString
+
+getFleetVehicleAssociationV2 :: Maybe Text -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> FlowHandler Domain.BoatFleetVehicleListRes
+getFleetVehicleAssociationV2 apiKey placeId mbLimit mbOffset mbSearchString = withFlowHandlerAPI $ do
+  Domain.getFleetVehicleAssociationV2 apiKey placeId mbLimit mbOffset mbSearchString

@@ -143,6 +143,8 @@ types:
     ticketPlaceName: Text
     ticketSubPlaceId: Maybe Text
     personId: Text
+    customerName: Maybe Text
+    customerPhoneNumber: Maybe Text
     amount: HighPrecMoney
     amountWithCurrency: PriceAPIEntity
     visitDate: Day
@@ -230,6 +232,7 @@ types:
     message: Text
     status: TicketVerificationStatus
     amount: Maybe HighPrecMoney
+    bookingShortId: Maybe Text
     amountWithCurrency: Maybe PriceAPIEntity
     verificationCount: Maybe Int
     startTime: Maybe TimeOfDay
@@ -435,3 +438,30 @@ apis:
         - searchString: Text
       response:
         type: "[TicketFleetVehicleResp]"
+  - GET:
+      endpoint: /ticket/places/{placeId}/fleet/VehicleAssociation/list/v2
+      name: getTicketFleetVehiclesV2
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      query:
+        - limit: Int
+        - offset: Int
+        - searchString: Text
+      response:
+        type: "[TicketFleetVehicleResp]"
+
+  # GET /ticket/places/{placeId}/bookings/list
+  - GET:
+      endpoint: /ticket/places/{placeId}/bookings/list
+      name: getTicketPlaceBookings
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      query:
+        limit: Int
+        offset: Int
+      mandatoryQuery:
+        status: BookingStatus
+      response:
+        type: "[API.Types.UI.TicketService.TicketBookingDetails]"
