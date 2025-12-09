@@ -259,9 +259,9 @@ createOrder config integratedBPPConfig booking quoteCategories = do
 
   mbImeiNumber <- decrypt `mapM` person.imeiNumber
   let deviceId = fromMaybe "ed409d8d764c04f7" mbImeiNumber
-  (trainTypeCode, distance, crisRouteId, appSession) <-
-    case (quote.fareDetails <&> (.trainTypeCode), quote.fareDetails <&> (.distance), quote.fareDetails <&> (.providerRouteId), quote.fareDetails <&> (.appSession)) of
-      (Just trainTypeCode, Just distance, Just crisRouteId, Just appSession) -> return (trainTypeCode, distance, crisRouteId, appSession)
+  (trainTypeCode, distance, crisRouteId, appSession, ticketTypeCode) <-
+    case (quote.fareDetails <&> (.trainTypeCode), quote.fareDetails <&> (.distance), quote.fareDetails <&> (.providerRouteId), quote.fareDetails <&> (.appSession), quote.fareDetails <&> (.ticketTypeCode)) of
+      (Just trainTypeCode, Just distance, Just crisRouteId, Just appSession, Just ticketTypeCode) -> return (trainTypeCode, distance, crisRouteId, appSession, ticketTypeCode)
       _ -> throwError $ CRISError ("Invalid quote data: " <> show quote.fareDetails)
 
   orderId <- case booking.bppOrderId of
@@ -287,7 +287,7 @@ createOrder config integratedBPPConfig booking quoteCategories = do
             routeId = crisRouteId,
             classCode = classCode,
             trainType = trainTypeCode,
-            tktType = config.ticketType,
+            tktType = ticketTypeCode,
             journeyDate = T.pack $ formatTime defaultTimeLocale "%m-%d-%Y" (utcToIST currentTime),
             adult = fromMaybe 0 adultQuantity,
             child = fromMaybe 0 childQuantity,
