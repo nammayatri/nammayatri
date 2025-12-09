@@ -37,3 +37,8 @@ ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN ticket_category_metadata_
 
 ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN selected_quantity SET DEFAULT 0;
 ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN selected_quantity SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN selected_quantity DROP NOT NULL;

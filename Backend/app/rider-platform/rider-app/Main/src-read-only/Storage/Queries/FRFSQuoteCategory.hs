@@ -41,7 +41,7 @@ updateFinalPriceByQuoteCategoryId finalPrice id = do
 updateQuantityByQuoteCategoryId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m ())
 updateQuantityByQuoteCategoryId selectedQuantity id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.selectedQuantity selectedQuantity, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateWithKV [Se.Set Beam.selectedQuantity (Kernel.Prelude.Just selectedQuantity), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m (Maybe Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -63,7 +63,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory {..}) = do
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
       Se.Set Beam.price ((.amount) price),
       Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
-      Se.Set Beam.selectedQuantity selectedQuantity,
+      Se.Set Beam.selectedQuantity (Kernel.Prelude.Just selectedQuantity),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -83,7 +83,7 @@ instance FromTType' Beam.FRFSQuoteCategory Domain.Types.FRFSQuoteCategory.FRFSQu
             offeredPrice = Kernel.Types.Common.mkPrice currency offeredPrice,
             price = Kernel.Types.Common.mkPrice currency price,
             quoteId = Kernel.Types.Id.Id quoteId,
-            selectedQuantity = selectedQuantity,
+            selectedQuantity = Kernel.Prelude.fromMaybe 0 selectedQuantity selectedQuantity,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -105,7 +105,7 @@ instance ToTType' Beam.FRFSQuoteCategory Domain.Types.FRFSQuoteCategory.FRFSQuot
         Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
         Beam.price = (.amount) price,
         Beam.quoteId = Kernel.Types.Id.getId quoteId,
-        Beam.selectedQuantity = selectedQuantity,
+        Beam.selectedQuantity = Kernel.Prelude.Just selectedQuantity,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
