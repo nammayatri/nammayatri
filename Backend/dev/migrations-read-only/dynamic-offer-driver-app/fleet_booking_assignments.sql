@@ -25,3 +25,10 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_booking_assignments ADD COLUMN visit_da
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_booking_assignments ADD COLUMN payment_method text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_booking_assignments ADD COLUMN sku_duration_mins integer ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_booking_assignments ADD COLUMN assignment_start_time timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_booking_assignments ADD COLUMN assignment_end_time timestamp with time zone ;

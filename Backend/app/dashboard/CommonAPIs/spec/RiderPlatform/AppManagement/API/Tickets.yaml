@@ -223,6 +223,18 @@ apis:
         - searchString: Text
       response:
         type: "[TicketFleetVehicleResp]"
+  - GET:
+      endpoint: /ticket/places/{placeId}/fleet/VehicleAssociation/list/v2
+      name: getTicketFleetVehiclesV2
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      query:
+        - limit: Int
+        - offset: Int
+        - searchString: Text
+      response:
+        type: "[TicketFleetVehicleResp]"
   - POST: # VerifyBookingDetailsAPI
       endpoint: /tickets/{personServiceId}/{ticketServiceShortId}/verify/v2
       name: PostTicketBookingsVerifyV2
@@ -315,6 +327,20 @@ apis:
         type: DirectTicketBookingReq
       response:
         type: DirectTicketBookingResp
+
+  - GET: # GetTicketPlaceBookingsAPI
+      endpoint: /ticket/places/{placeId}/bookings/list
+      name: GetTicketPlaceBookings
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      query:
+        - limit: Int
+        - offset: Int
+      mandatoryQuery:
+        status: BookingStatus
+      response:
+        type: "[TicketBookingDetails]"
 
 types:
   SendVerifyOtpReq:
