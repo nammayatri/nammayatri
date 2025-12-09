@@ -11,6 +11,7 @@ import qualified Data.HashMap.Strict as HashMap
 import Data.List (groupBy, nub, nubBy)
 import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy)
 import Data.List.Split (chunksOf)
+import qualified Data.Text as Text
 import qualified Data.Time as Time
 import qualified Domain.Action.Beckn.FRFS.Common as FRFSCommon
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DACFOC
@@ -38,6 +39,7 @@ import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
+-- import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import Domain.Types.Station
@@ -58,6 +60,7 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
@@ -72,6 +75,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.External.Nandi.Types (StopInfo (..), StopSchedule (..))
 import SharedLogic.FRFSUtils
@@ -79,6 +83,7 @@ import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.JobScheduler as JobScheduler
+import SharedLogic.Offer as SOffer
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -105,6 +110,64 @@ import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 import qualified Tools.Payment as Payment
 import qualified UrlShortner.Common as UrlShortner
+
+addPaymentoffersTags ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    HasKafkaProducer r,
+    ServiceFlow m r
+  ) =>
+  Price ->
+  DP.Person ->
+  m ()
+addPaymentoffersTags totalPrice person = do
+  withTryCatch "addPaymentoffersTags:offerListCache" (SOffer.offerListCache person.merchantId person.id person.merchantOperatingCityId DPaymentOrder.Normal totalPrice)
+    >>= \case
+      Left err -> do
+        logError $ "Error fetching offers for payment tags: " <> show err
+        pure ()
+      Right offerListResp -> do
+        let offerTags = createPaymentOfferTags offerListResp.offerResp
+        unless (null offerTags) $ do
+          let currentTags = fromMaybe [] person.customerNammaTags
+              -- Extract offer codes from new tags (format: "offerCode#STATUS") before wrapping
+              newOfferCodes = mapMaybe extractOfferCode offerTags
+              -- Remove existing tags that match any of the new offer codes
+              filteredCurrentTags = filter (not . hasMatchingOfferCode newOfferCodes) currentTags
+              -- Create new tags and add them after removing old ones
+              newTags = map LYT.TagNameValueExpiry offerTags
+              updatedTags = filteredCurrentTags <> newTags
+          QP.updateCustomerTags (Just updatedTags) person.id
+          logInfo $ "Added payment offer tags for person: " <> person.id.getId <> ", tags: " <> show offerTags
+  where
+    createPaymentOfferTags :: [Payment.OfferResp] -> [Text]
+    createPaymentOfferTags offers = do
+      let tags = mapMaybe createTagFromOffer offers
+      tags
+      where
+        createTagFromOffer :: Payment.OfferResp -> Maybe Text
+        createTagFromOffer offer = do
+          let offerCode = offer.offerCode
+              statusStr = case offer.status of
+                Payment.ELIGIBLE -> "ELIGIBLE"
+                Payment.INELIGIBLE -> "INELIGIBLE"
+          pure $ offerCode <> "#" <> statusStr
+
+    -- Extract offer code from tag string (format: "offerCode#STATUS")
+    extractOfferCode :: Text -> Maybe Text
+    extractOfferCode tagStr = case Text.splitOn "#" tagStr of
+      (offerCode : _) -> Just offerCode
+      _ -> Nothing
+
+    -- Check if a tag has a matching offer code
+    hasMatchingOfferCode :: [Text] -> LYT.TagNameValueExpiry -> Bool
+    hasMatchingOfferCode offerCodes (LYT.TagNameValueExpiry tagStr) =
+      case extractOfferCode tagStr of
+        Just offerCode -> offerCode `elem` offerCodes
+        Nothing -> False
 
 getFrfsRoutes ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
@@ -1064,6 +1127,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                                 Nothing -> pure Nothing
                               let mbIsSingleMode = mbJourney >>= (.isSingleMode)
                               void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking quoteCategories mbIsSingleMode
+                              void $ addPaymentoffersTags quoteUpdatedBooking.totalPrice person
                               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
                               buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentSuccess
                             else do
