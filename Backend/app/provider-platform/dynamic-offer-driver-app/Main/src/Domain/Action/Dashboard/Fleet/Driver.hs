@@ -74,6 +74,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetDriverUpdate,
     getDriverFleetVehicleListStats,
     getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles,
+    postDriverFleetDashboardAnalyticsCache,
   )
 where
 
@@ -3380,6 +3381,40 @@ getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId mbResponseT
       pure $
         Common.Filtered $
           Common.FilteredFleetAnalyticsRes {..}
+
+postDriverFleetDashboardAnalyticsCache ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Int ->
+  Text ->
+  Flow APISuccess
+postDriverFleetDashboardAnalyticsCache merchantShortId opCity mbActiveDriverCount mbActiveVehicleCount mbCurrentOnlineDriver fleetOwnerId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
+  -- validate fleet owner exists
+  _ <- QPerson.findById (Id fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetOwnerId)
+
+  let setOrDel key = \case
+        Just v -> Redis.set key v
+        Nothing -> Redis.del key >> pure ()
+
+  -- active driver count
+  let adcKey = Analytics.makeFleetAnalyticsKey fleetOwnerId Analytics.ACTIVE_DRIVER_COUNT
+  setOrDel adcKey mbActiveDriverCount
+
+  -- active vehicle count
+  let avcKey = Analytics.makeFleetAnalyticsKey fleetOwnerId Analytics.ACTIVE_VEHICLE_COUNT
+  setOrDel avcKey mbActiveVehicleCount
+
+  -- current online driver count uses ONLINE status key
+  let codKey = DDF.getStatusKey fleetOwnerId DDF.ONLINE
+  setOrDel codKey mbCurrentOnlineDriver
+
+  pure Success
 
 getDriverDashboardFleetTripWaypoints ::
   ShortId DM.Merchant ->

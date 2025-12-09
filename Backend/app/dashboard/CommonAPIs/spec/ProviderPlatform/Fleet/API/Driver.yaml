@@ -1210,6 +1210,17 @@ apis:
             response:
               type: FleetAnalyticsRes
   - POST:
+      endpoint: /fleet/dashboard/analytics/cache
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - fleetOwnerId: Text
+      query:
+        - activeDriverCount: Int
+        - activeVehicleCount: Int
+        - currentOnlineDriver: Int
+      response:
+        type: APISuccess
+  - POST:
       endpoint: /dashboard/fleet/estimateRoute
       auth: ApiAuthV2
       query:

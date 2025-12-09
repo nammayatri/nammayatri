@@ -73,6 +73,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetDriverListStats,
     getDriverFleetVehicleListStats,
     getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles,
+    postDriverFleetDashboardAnalyticsCache,
     getDriverFleetDriverDetails,
   )
 where
@@ -635,6 +636,13 @@ getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles merchantShortId opCity a
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId' <- getFleetOwnerId apiTokenInfo.personId.getId (Just fleetOwnerId)
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles) fleetOwnerId' limit offset
+
+postDriverFleetDashboardAnalyticsCache :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverFleetDashboardAnalyticsCache merchantShortId opCity apiTokenInfo mbActiveDriverCount mbActiveVehicleCount mbCurrentOnlineDriver fleetOwnerId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  unless (DP.isAdmin apiTokenInfo.person) $ throwError AccessDenied
+  transaction <- buildTransaction apiTokenInfo Nothing (Nothing :: Maybe Common.AddVehicleReq)
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetDashboardAnalyticsCache) mbActiveDriverCount mbActiveVehicleCount mbCurrentOnlineDriver fleetOwnerId
 
 getDriverFleetDriverDetails :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.Driver -> Environment.Flow Common.DriverDetailsRes)
 getDriverFleetDriverDetails merchantShortId opCity apiTokenInfo driverId = do
