@@ -115,7 +115,8 @@ mapToServiceTierType routeCode =
           ("OS", BecknV2.FRFS.Enums.NON_AC),
           ("S", BecknV2.FRFS.Enums.EXECUTIVE),
           ("X", BecknV2.FRFS.Enums.EXPRESS),
-          ("O", BecknV2.FRFS.Enums.ORDINARY)
+          ("O", BecknV2.FRFS.Enums.ORDINARY),
+          ("AC_EMU_SUBURBAN", BecknV2.FRFS.Enums.AC_EMU_FIRST_CLASS)
         ]
    in fromMaybe BecknV2.FRFS.Enums.NON_AC $ lookup serviceCode serviceTierMapping
 
@@ -146,7 +147,8 @@ extractServiceCode routeCode = maybe (fromMaybe "O" infixMatch) (\x -> x) startM
         ("OS", "OS"),
         ("S", "S"),
         ("X", "X"),
-        ("O", "O")
+        ("O", "O"),
+        ("AC_EMU_SUBURBAN", "AC_EMU_SUBURBAN")
       ]
 
     infixMatch =
