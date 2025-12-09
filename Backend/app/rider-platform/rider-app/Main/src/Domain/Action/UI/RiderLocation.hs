@@ -77,7 +77,7 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
                   distanceToBus = distanceToBus,
                   timestamp = Just busTimestamp,
                   customerLocation = riderLocation,
-                  customerLocationTimestamp = now,
+                  customerLocationTimestamp = Just now,
                   locationAccuracy = req.locationAccuracy
                 }
 
