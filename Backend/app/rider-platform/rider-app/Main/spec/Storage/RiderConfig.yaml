@@ -143,6 +143,7 @@ RiderConfig:
     qrTicketRestrictionEndTime: Maybe TimeOfDay
     ticketingPermissionConfig: Maybe Value
     userServiceTierOrderConfig: "[VehicleServiceTierOrderConfig]"
+    defaultServiceTierOrderConfig: "[ServiceTierType]"
     boostSearchPreSelectionServiceTierConfig: "[VehicleServiceTierOrderConfig]"
     noOfRideRequestsConfig: Int
     busTrackingConfig: "Maybe BusTrackingConfig"
@@ -216,6 +217,7 @@ RiderConfig:
     fareCacheRentalsConfig : Maybe Value
     fareCacheInterCitySearchLocations : Maybe Value
     userServiceTierOrderConfig: Maybe Value
+    defaultServiceTierOrderConfig: Maybe [ServiceTierType]
     boostSearchPreSelectionServiceTierConfig: Maybe Value
     noOfRideRequestsConfig: Maybe Int
     busTrackingConfig: Maybe Value
@@ -273,6 +275,7 @@ RiderConfig:
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
     userServiceTierOrderConfig: fromMaybe [] (userServiceTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
+    defaultServiceTierOrderConfig: fromMaybe Domain.Types.ServiceTierType.allServiceTiersTypes defaultServiceTierOrderConfig|E
     boostSearchPreSelectionServiceTierConfig: fromMaybe [] (boostSearchPreSelectionServiceTierConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     busTierSortingConfig: (busTierSortingConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Kernel.Utils.JSON.valueToMaybe)|E
@@ -322,6 +325,7 @@ RiderConfig:
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
     userServiceTierOrderConfig: (Just . Data.Aeson.toJSON)|I
+    defaultServiceTierOrderConfig: Just defaultServiceTierOrderConfig|E
     boostSearchPreSelectionServiceTierConfig: (Just . Data.Aeson.toJSON)|I
     busTierSortingConfig: (busTierSortingConfig >>= Just . Data.Aeson.toJSON)|E
     serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Just . Data.Aeson.toJSON)|E
@@ -423,6 +427,7 @@ RiderConfig:
     fareCacheRentalsConfig : "json"
     fareCacheInterCitySearchLocations : "json"
     userServiceTierOrderConfig : "json"
+    defaultServiceTierOrderConfig: text []
     boostSearchPreSelectionServiceTierConfig: "json"
     blockedUntilInMins: int
     ticketingPermissionConfig: "json"

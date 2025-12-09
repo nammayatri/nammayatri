@@ -192,7 +192,8 @@ getQuotes searchRequestId mbAllowMultiple = do
     riderConfig <- QRC.findByMerchantOperatingCityId (cast searchRequest.merchantOperatingCityId) Nothing
 
     let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) riderConfig
-        estimates = estimatesSorting estimates' (mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig)
+        defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) riderConfig
+        estimates = estimatesSorting estimates' (mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig) defaultServiceTierOrderConfig
     return $
       GetQuotesRes
         { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
@@ -374,9 +375,9 @@ mostFrequentVehicleCategoryConfig (Just vehicleServiceTier) orderArray =
   find (\v -> v.vehicle == vehicleServiceTier) orderArray
 
 -- Sorting function
-estimatesSorting :: [UEstimate.EstimateAPIEntity] -> Maybe VehicleServiceTierOrderConfig -> [UEstimate.EstimateAPIEntity]
-estimatesSorting list Nothing = list
-estimatesSorting list (Just config) =
+estimatesSorting :: [UEstimate.EstimateAPIEntity] -> Maybe VehicleServiceTierOrderConfig -> [DVST.ServiceTierType] -> [UEstimate.EstimateAPIEntity]
+estimatesSorting list Nothing order = sortBy (comparing (\estimate -> vehicleOrderIndex order estimate.serviceTierType)) list
+estimatesSorting list (Just config) _ =
   sortBy (comparing (\estimate -> vehicleOrderIndex config.orderArray estimate.serviceTierType)) list
 
 vehicleOrderIndex :: [DVST.ServiceTierType] -> DVST.ServiceTierType -> Int

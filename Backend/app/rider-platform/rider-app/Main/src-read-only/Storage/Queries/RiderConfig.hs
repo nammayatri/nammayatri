@@ -8,6 +8,7 @@ import qualified Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RiderConfig
+import qualified Domain.Types.ServiceTierType
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -65,6 +66,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.csAlertTriggerDelay ((Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) csAlertTriggerDelay),
       Se.Set Beam.cxAgentDetails cxAgentDetails,
       Se.Set Beam.dashboardMediaFileUrlPattern dashboardMediaFileUrlPattern,
+      Se.Set Beam.defaultServiceTierOrderConfig (Just defaultServiceTierOrderConfig),
       Se.Set Beam.distanceToNearestStopThreshold distanceToNearestStopThreshold,
       Se.Set Beam.distanceWeightage distanceWeightage,
       Se.Set Beam.domainPublicTransportDataVersion domainPublicTransportDataVersion,
@@ -200,6 +202,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             csAlertTriggerDelay = fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> csAlertTriggerDelay),
             cxAgentDetails = cxAgentDetails,
             dashboardMediaFileUrlPattern = dashboardMediaFileUrlPattern,
+            defaultServiceTierOrderConfig = fromMaybe Domain.Types.ServiceTierType.allServiceTiersTypes defaultServiceTierOrderConfig,
             distanceToNearestStopThreshold = distanceToNearestStopThreshold,
             distanceWeightage = distanceWeightage,
             domainPublicTransportDataVersion = domainPublicTransportDataVersion,
@@ -332,6 +335,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.csAlertTriggerDelay = (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) csAlertTriggerDelay,
         Beam.cxAgentDetails = cxAgentDetails,
         Beam.dashboardMediaFileUrlPattern = dashboardMediaFileUrlPattern,
+        Beam.defaultServiceTierOrderConfig = Just defaultServiceTierOrderConfig,
         Beam.distanceToNearestStopThreshold = distanceToNearestStopThreshold,
         Beam.distanceWeightage = distanceWeightage,
         Beam.domainPublicTransportDataVersion = domainPublicTransportDataVersion,
