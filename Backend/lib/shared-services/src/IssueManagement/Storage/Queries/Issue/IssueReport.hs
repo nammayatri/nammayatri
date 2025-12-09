@@ -69,7 +69,7 @@ updateStatusAssignee :: BeamFlow m r => Id IssueReport -> Maybe IssueStatus -> M
 updateStatusAssignee issueReportId status assignee = do
   now <- getCurrentTime
   updateOneWithKV
-    ([Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now] <> if isJust status then [Set BeamIR.status (fromJust status)] else [] <> ([Set BeamIR.assignee assignee | isJust assignee]))
+    ([Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now] <> [Set BeamIR.status (fromJust status) | isJust status] <> [Set BeamIR.assignee assignee | isJust assignee])
     [Is BeamIR.id (Eq $ getId issueReportId)]
 
 updateOption :: BeamFlow m r => Id IssueReport -> Id IssueOption -> m ()
