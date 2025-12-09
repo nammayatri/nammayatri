@@ -83,7 +83,7 @@ instance FromTType' Beam.FRFSQuoteCategory Domain.Types.FRFSQuoteCategory.FRFSQu
             offeredPrice = Kernel.Types.Common.mkPrice currency offeredPrice,
             price = Kernel.Types.Common.mkPrice currency price,
             quoteId = Kernel.Types.Id.Id quoteId,
-            selectedQuantity = Kernel.Prelude.fromMaybe 0 selectedQuantity selectedQuantity,
+            selectedQuantity = Kernel.Prelude.fromMaybe 0 selectedQuantity,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
