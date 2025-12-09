@@ -1266,6 +1266,24 @@ apis:
               type: UpdateDriverReq
             response:
               type: APISuccess
+
+  - GET: # GetDriverDetailsAPI
+      endpoint: /fleet/driver/details
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - driverId: Id Driver
+      response:
+        type: DriverDetailsRes
+      helperApi:
+        - GET:
+            endpoint: /fleet/driver/details/{fleetOwnerId}
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - driverId: Id Driver
+            params:
+              fleetOwnerId: Text
+            response:
+              type: DriverDetailsRes
   - POST:
       endpoint: /fleet/trip/transactions/v2
       auth: ApiAuthV2
@@ -1346,6 +1364,13 @@ types:
     - derive: "'HideSecrets"
   UpdateDriverReq:
     - firstName: Maybe Text
+    - lastName: Maybe Text
+    - dob: Maybe Day
+    - email: Maybe Text
+    - derive: "'HideSecrets"
+  DriverDetailsRes:
+    - driverId: Id Driver
+    - firstName: Text
     - lastName: Maybe Text
     - dob: Maybe Day
     - email: Maybe Text
@@ -1705,6 +1730,8 @@ types:
     - upcomingRouteCode: Maybe Text
     - fleetOwnerId: Text
     - fleetOwnerName: Text
+    - requestReason: Maybe Text
+    - responseReason: Maybe Text
   VerificationDocsStatus:
     - vehicleRegistrationCertificate: Maybe VerificationStatus
     - vehiclePermit: Maybe VerificationStatus
