@@ -1,12 +1,14 @@
 module Domain.Action.RiderPlatform.IssueManagement.IssueList
   ( getIssueListV1,
     postIssueListTicketStatusCallBack,
+    getIssueListChats,
   )
 where
 
 import qualified API.Client.RiderPlatform.IssueManagement
 import qualified API.Types.RiderPlatform.IssueManagement.IssueList
 import qualified Data.Aeson
+import qualified Data.Time.Calendar
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
@@ -55,3 +57,8 @@ postIssueListTicketStatusCallBack merchantShortId opCity apiTokenInfo req = do
     opCity
     (.issueListDSL.postIssueListTicketStatusCallBack)
     req
+
+getIssueListChats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Environment.Flow [API.Types.RiderPlatform.IssueManagement.IssueList.DashboardIssueChat])
+getIssueListChats merchantShortId opCity apiTokenInfo limit offset date = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueListDSL.getIssueListChats) limit offset date
