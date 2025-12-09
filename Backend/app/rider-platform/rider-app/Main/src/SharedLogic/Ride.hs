@@ -142,9 +142,9 @@ calculatePickupETA ride booking driverLocation = do
           booking.merchantOperatingCityId
 
       case mbEtaResp of
-        Just (etaInMinutes, mbVersionReturned) -> do
-          when (isNothing ride.pickupEtaLogicVersion && isJust mbVersionReturned) $ do
-            QRide.updatePickupEtaLogicVersion mbVersionReturned ride.id
+        Just (etaInMinutes, versionReturned) -> do
+          when (isNothing ride.pickupEtaLogicVersion) $ do
+            QRide.updatePickupEtaLogicVersion (Just versionReturned) ride.id
           return $ Just etaInMinutes
         Nothing -> return Nothing
 

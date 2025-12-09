@@ -42,11 +42,11 @@ instance Default PickupETAInput where
   def = PickupETAInput {estimatedSpeedInMps = 0.0, distanceToPickupInMeters = 0.0}
 
 data PickupETAResult = PickupETAResult
-  {etaInMinutes :: Int}
+  {etaInMinutes :: Maybe Int}
   deriving (Generic, Show, ToJSON, FromJSON)
 
 instance Default PickupETAResult where
-  def = PickupETAResult {etaInMinutes = 0}
+  def = PickupETAResult {etaInMinutes = Nothing}
 
 getPickupETAFromModel ::
   ( MonadFlow m,
@@ -59,7 +59,7 @@ getPickupETAFromModel ::
   Double ->
   Maybe Int ->
   Id DMOC.MerchantOperatingCity ->
-  m (Maybe (Int, Maybe Int))
+  m (Maybe (Int, Int))
 getPickupETAFromModel timeDiffFromUtc speedInMps distanceInMeters mbVersion merchantOperatingCityId = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   (allLogics, mbVersionReturned) <-
@@ -91,7 +91,7 @@ getPickupETAFromModel timeDiffFromUtc speedInMps distanceInMeters mbVersion merc
         Right resp ->
           case (A.fromJSON resp.result :: A.Result PickupETAResult) of
             A.Success result -> do
-              return $ Just (result.etaInMinutes, mbVersionReturned)
+              return $ (,) <$> result.etaInMinutes <*> mbVersionReturned
             A.Error err -> do
               logWarning $ "Error parsing PickupETAResult - " <> show err <> " - " <> show resp <> " - " <> show inputData <> " - " <> show allLogics
               return Nothing
