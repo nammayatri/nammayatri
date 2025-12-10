@@ -633,7 +633,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
   isMultiInitAllowed <-
     case mbBooking of
       Just booking -> do
-        isLockAcquired <- Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkPaymentSuccessLockKey booking.id) 60
+        isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey booking.id) 60
         if isLockAcquired
           then do
             case integratedBppConfig.providerConfig of
@@ -1044,7 +1044,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                       let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
                       transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
                       txnId <- getSuccessTransactionId transactions
-                      isLockAcquired <- Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
+                      isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
                       if isLockAcquired
                         then do
                           latestBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
