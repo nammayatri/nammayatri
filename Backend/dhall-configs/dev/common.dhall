@@ -36,6 +36,7 @@ let internalEndPointMap =
       [ { mapKey = "http://localhost:8015/v1"
         , mapValue = "http://localhost:8015/v1"
         }
+      , { mapKey = "http://localhost:3000", mapValue = "http://localhost:3000" }
       ]
 
 let sosAlertsTopicARN =

@@ -51,6 +51,12 @@ let appBackendManagement =
       , token = sec.appBackendToken
       }
 
+let bharatTaxi =
+      { name = common.ServerName.BHARAT_TAXI
+      , url = "http://localhost:3000/"
+      , token = sec.bharatTaxiToken
+      }
+
 let rccfg =
       { connectHost = "localhost"
       , connectPort = 30001
@@ -114,7 +120,7 @@ in  { esqDBCfg
     , sendEmailRateLimitOptions
     , encTools
     , exotelToken = ""
-    , dataServers = [ appBackend, appBackendManagement ]
+    , dataServers = [ appBackend, appBackendManagement, bharatTaxi ]
     , merchantUserAccountNumber = +100
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True

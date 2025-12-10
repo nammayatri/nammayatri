@@ -74,6 +74,7 @@ let ServerName =
       | DRIVER_OFFER_BPP
       | DRIVER_OFFER_BPP_MANAGEMENT
       | SPECIAL_ZONE
+      | BHARAT_TAXI
       >
 
 let SchedulerType = < RedisBased | DbBased >
