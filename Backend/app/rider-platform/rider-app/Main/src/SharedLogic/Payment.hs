@@ -83,17 +83,16 @@ orderStatusHandler ::
   DOrder.PaymentOrder ->
   (Payment.OrderStatusReq -> m Payment.OrderStatusResp) ->
   m DPayment.PaymentStatusResp
-orderStatusHandler paymentService paymentOrder orderStatusCall = do
-  Redis.withCrossAppRedis $
-    Redis.withWaitAndLockRedis
-      makePaymentOrderStatusHandlerLockKey
-      60
-      100
-      ( do
-          orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
-          mbUpdatedPaymentOrder <- QPaymentOrder.findById paymentOrder.id
-          let updatedPaymentOrder = fromMaybe paymentOrder mbUpdatedPaymentOrder
-          orderStatusHandlerWithRefunds paymentService paymentOrder updatedPaymentOrder orderStatusResponse
+orderStatusHandler paymentService paymentOrder orderStatusCall = do  
+  Redis.withWaitAndLockCrossAppRedis
+    makePaymentOrderStatusHandlerLockKey
+    60
+    100
+    ( do
+        orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
+        mbUpdatedPaymentOrder <- QPaymentOrder.findById paymentOrder.id
+        let updatedPaymentOrder = fromMaybe paymentOrder mbUpdatedPaymentOrder
+        orderStatusHandlerWithRefunds paymentService paymentOrder updatedPaymentOrder orderStatusResponse
       )
   where
     makePaymentOrderStatusHandlerLockKey :: Text
