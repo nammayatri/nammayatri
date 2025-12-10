@@ -186,5 +186,7 @@ apis:
       auth: TokenAuth
       params:
         passNumber: Int
+      query:
+        date: Day
       response:
         type: APISuccess
