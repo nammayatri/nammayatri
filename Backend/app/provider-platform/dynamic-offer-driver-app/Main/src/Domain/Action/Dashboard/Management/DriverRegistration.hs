@@ -102,6 +102,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
 import Tools.Notifications as Notify
+import qualified Tools.SMS as Sms
 
 getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Flow Common.DocumentsListResponse
 getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
@@ -947,18 +948,52 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
           QPan.updateVerificationStatusByImageId INVALID imageId
         _ -> throwError (InternalError "Unknown Config in reject update document")
       driver <- QDriver.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
-      Notify.notifyDriver merchantOperatingCityId notificationType (notificationTitle (show image.imageType)) (message (show image.imageType)) driver driver.deviceToken
-    Common.CommonDocumentReject commonRejectReq -> rejectAndUpdateCommonDocument commonRejectReq merchantOperatingCityId
+      let obj = show image.imageType
+          (title :: Text) = notificationTitle obj
+          (body :: Text) = message obj <> "-" <> imageRejectReq.reason <> ". Please reupload the correct document."
+      Notify.notifyDriver merchantOperatingCityId notificationType title body driver driver.deviceToken
+      transporterConfig <- CCT.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+      when transporterConfig.enableDashboardSms $ do
+        sendRejectDocumentSms merchantOperatingCityId title body driver
+    Common.CommonDocumentReject commonRejectReq -> do
+      let documentId = Id commonRejectReq.documentId.getId
+      document <- QCommonDriverOnboardingDocuments.findById documentId >>= fromMaybeM (DocumentNotFound documentId.getId)
+      whenJust document.driverId $ \driverId -> do
+        driver <- QDriver.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+        let merchantOpCityId = document.merchantOperatingCityId
+            obj = show document.documentType
+            (title :: Text) = notificationTitle obj
+            (body :: Text) = message obj <> "-" <> commonRejectReq.reason <> ". Please reupload the correct document."
+        Notify.notifyDriver merchantOpCityId notificationType title body driver driver.deviceToken
+        smsEnabled <- isDashboardSmsEnabled merchantOpCityId
+        when smsEnabled $
+          sendRejectDocumentSms merchantOpCityId title body driver
+      rejectAndUpdateCommonDocument commonRejectReq merchantOperatingCityId
   where
     notificationType = FCM.DOCUMENT_INVALID
     notificationTitle obj = "Attention: Your " <> obj <> " is invalid."
-    message obj = "Kindly reapply or reupload your " <> obj
-    rejectSSNAndSendNotification req merchantOpCityId = do
+    message obj = obj <> " rejected"
+    rejectSSNAndSendNotification req _merchantOpCityId = do
       ssnEnc <- encrypt req.ssn
       QSSN.updateVerificationStatusAndReasonBySSN INVALID (Just req.reason) (ssnEnc & hash)
       ssnEntry <- QSSN.findBySSN (ssnEnc & hash) >>= fromMaybeM (InternalError "SSN not found by ssn no")
       driver <- QDriver.findById ssnEntry.driverId >>= fromMaybeM (PersonNotFound ssnEntry.driverId.getId)
-      Notify.notifyDriver merchantOpCityId notificationType (notificationTitle "SSN") (message "SSN") driver driver.deviceToken
+      let obj = "SSN"
+          (title :: Text) = notificationTitle obj
+          (body :: Text) = message obj <> "-" <> req.reason
+      Notify.notifyDriver _merchantOpCityId notificationType title body driver driver.deviceToken
+    sendRejectDocumentSms merchantOpCityId _title body driver = do
+      smsCfg <- asks (.smsCfg)
+      mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      let sender = smsCfg.sender
+      let countryCode = fromMaybe "+91" driver.mobileCountryCode
+      let phoneNumber = countryCode <> mobileNumber
+      let templateId = "" -- no dedicated template; send plain text
+      Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq body phoneNumber sender templateId) >>= Sms.checkSmsResult
+    isDashboardSmsEnabled merchantOpCityId =
+      CCT.findByMerchantOpCityId merchantOpCityId Nothing
+        >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        <&> (.enableDashboardSms)
 
 postDriverRegistrationDocumentsUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateDocumentRequest -> Flow APISuccess
 postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
