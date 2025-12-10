@@ -222,7 +222,17 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
   logDebug $ "order short Id from Response bap webhook: " <> show orderShortId
   whenJust mbServiceType $ \paymentServiceType -> do
     Redis.whenWithLockRedis (mkOrderStatusCheckKey orderShortId status) 60 $ do
-      void $ callWebhookHandlerWithOrderStatus paymentServiceType (ShortId orderShortId) (\_ -> pure osr)
+      paymentOrder <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
+      mocId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
+      person <- QP.findById (cast paymentOrder.personId) >>= fromMaybeM (InvalidRequest "Person not found")
+      ticketPlaceId <-
+        case paymentServiceType of
+          Payment.Normal -> do
+            ticketBooking <- QTB.findById (cast paymentOrder.id)
+            return $ ticketBooking <&> (.ticketPlaceId)
+          _ -> return Nothing
+      let orderStatusCall = Payment.orderStatus (cast paymentOrder.merchantId) (cast mocId) ticketPlaceId paymentServiceType (Just paymentOrder.personId.getId) person.clientSdkVersion
+      void $ callWebhookHandlerWithOrderStatus paymentServiceType (ShortId orderShortId) orderStatusCall
   pure Ack
   where
     getOrderData osr = case osr of
