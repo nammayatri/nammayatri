@@ -658,6 +658,7 @@ data FleetTotalEarningResponse = FleetTotalEarningResponse
 data FleetVehicleStatsItem = FleetVehicleStatsItem
   { vehicleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleManufacturer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rcId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     totalEarnings :: Kernel.Types.Common.HighPrecMoney,
     currency :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency,
