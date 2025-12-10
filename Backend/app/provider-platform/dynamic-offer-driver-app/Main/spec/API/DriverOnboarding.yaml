@@ -173,7 +173,7 @@ types:
     fleetOwnerId: Id Person
     onboardingVehicleCategory: Maybe VehicleCategory
     isRevoke: Maybe Bool
-    requestReason: Maybe Text
+    requestReason: Text
 
 apis:
   - GET:

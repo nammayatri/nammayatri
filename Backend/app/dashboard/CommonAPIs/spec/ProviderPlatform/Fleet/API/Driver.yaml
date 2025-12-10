@@ -607,6 +607,7 @@ apis:
         - mbRequestorId: Text
         - hasFleetMemberHierarchy: Bool
         - isRequestorFleerOwner: Bool
+        - hasRequestReason: Bool
       response:
         type: DrivertoVehicleAssociationResT
       migrate:

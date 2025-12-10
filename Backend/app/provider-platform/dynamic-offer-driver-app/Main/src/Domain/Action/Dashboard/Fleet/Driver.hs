@@ -1252,8 +1252,8 @@ castDashboardDriverStatus = \case
 
 ---------------------------------------------------------------------
 
-getDriverFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Flow Common.DrivertoVehicleAssociationResT
-getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner = do
+getDriverFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow Common.DrivertoVehicleAssociationResT
+getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOffset mbCountryCode mbDriverPhNo mbStats mbFrom mbTo mbMode mbName mbSearchString mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner mbHasRequestReason = do
   requestorId <- mbRequestorId & fromMaybeM (InvalidRequest "Requestor ID is required")
   fleetOwnersInfo <- getFleetOwnersInfoMerchantBased mbFleetOwnerId mbRequestorId hasFleetMemberHierarchy isRequestorFleerOwner
   when (hasFleetMemberHierarchy == Just False) $ mapM_ (checkRequestorAccessToFleet mbRequestorId . (.fleetOwnerId)) fleetOwnersInfo
@@ -1261,7 +1261,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOff
   when (fromMaybe False merchant.fleetOwnerEnabledCheck) $ mapM_ (\info -> DCommon.checkFleetOwnerVerification info.fleetOwnerId merchant.fleetOwnerEnabledCheck) fleetOwnersInfo
   let fleetOwnerIds = map (.fleetOwnerId) fleetOwnersInfo
       fleetOwnerNameMap = Map.fromList $ map (\info -> (info.fleetOwnerId, info.fleetOwnerName)) fleetOwnersInfo
-  listOfAllDrivers <- getListOfDriversMultiFleet mbCountryCode mbDriverPhNo fleetOwnerIds merchant.id mbIsActive mbLimit mbOffset mbMode mbName mbSearchString
+  listOfAllDrivers <- getListOfDriversMultiFleet mbCountryCode mbDriverPhNo fleetOwnerIds merchant.id mbIsActive mbLimit mbOffset mbMode mbName mbSearchString mbHasRequestReason
   listItems <- createFleetDriverAssociationListItem fleetOwnerNameMap listOfAllDrivers
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
   pure $
@@ -3028,8 +3028,8 @@ getListOfVehiclesMultiFleet mbVehicleNo fleetOwnerIds mbLimit mbOffset mbStatus 
         Just Common.Pending -> RCQuery.findAllRCByStatusForFleetMF fleetOwnerIds (Just $ castFleetVehicleStatus mbStatus) limit offset merchantId statusAwareVehicleNo
         Nothing -> RCQuery.findAllRCByStatusForFleetMF fleetOwnerIds Nothing limit offset merchantId statusAwareVehicleNo
 
-getListOfDriversMultiFleet :: Maybe Text -> Maybe Text -> [Text] -> Id DM.Merchant -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Flow ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation])
-getListOfDriversMultiFleet _ mbDriverPhNo fleetOwnerIds _ mbIsActive mbLimit mbOffset mbMode mbName mbSearchString = do
+getListOfDriversMultiFleet :: Maybe Text -> Maybe Text -> [Text] -> Id DM.Merchant -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Common.DriverMode -> Maybe Text -> Maybe Text -> Maybe Bool -> Flow ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation])
+getListOfDriversMultiFleet _ mbDriverPhNo fleetOwnerIds _ mbIsActive mbLimit mbOffset mbMode mbName mbSearchString mbHasRequestReason = do
   let limit = min 10 $ fromMaybe 5 mbLimit
       offset = fromMaybe 0 mbOffset
 
@@ -3040,7 +3040,7 @@ getListOfDriversMultiFleet _ mbDriverPhNo fleetOwnerIds _ mbIsActive mbLimit mbO
       Nothing -> pure Nothing
 
   let mode = castDashboardDriverStatus <$> mbMode
-  driverAssociationAndInfo <- FDV.findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds limit offset mobileNumberHash mbName mbSearchString mbIsActive mode
+  driverAssociationAndInfo <- FDV.findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds limit offset mobileNumberHash mbName mbSearchString mbIsActive mode mbHasRequestReason
   let (fleetDriverAssociation, person, driverInformation) = unzip3 driverAssociationAndInfo
   return (fleetDriverAssociation, person, driverInformation)
 
@@ -3500,6 +3500,9 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId = cast req.driverId
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+
+  fleetDriverAssociation <- QFDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId False >>= fromMaybeM (InvalidRequest "No pending fleet association found")
+  when (isNothing fleetDriverAssociation.requestReason) $ throwError $ InvalidRequest "Cannot approve or reject fleet-initiated request. Driver must consent first."
 
   (pnType, messageBuilder) <- case req.approve of
     Just True -> do

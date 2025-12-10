@@ -180,7 +180,7 @@ data LinkToFleetReq = LinkToFleetReq
   { fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     isRevoke :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     onboardingVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
-    requestReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    requestReason :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

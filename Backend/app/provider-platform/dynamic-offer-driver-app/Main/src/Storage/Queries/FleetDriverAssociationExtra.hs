@@ -513,8 +513,8 @@ findAllDriverByFleetOwnerIds fleetOwnerIds mbLimit mbOffset mbMobileNumberSearch
 
 --------------------------------- multi fleet owner queries ----------------------------------
 
-findAllActiveDriverByFleetOwnerIdWithDriverInfoMF :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => [Text] -> Int -> Int -> Maybe DbHash -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe DI.DriverMode -> m [(FleetDriverAssociation, Person, DriverInformation)]
-findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds limit offset mbMobileNumberSearchStringHash mbName mbSearchString mbIsActive mbMode = do
+findAllActiveDriverByFleetOwnerIdWithDriverInfoMF :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => [Text] -> Int -> Int -> Maybe DbHash -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe DI.DriverMode -> Maybe Bool -> m [(FleetDriverAssociation, Person, DriverInformation)]
+findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds limit offset mbMobileNumberSearchStringHash mbName mbSearchString mbIsActive mbMode mbHasRequestReason = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
   encryptedMobileNumberHash <- mapM getDbHash mbSearchString
@@ -538,6 +538,7 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds limit offset mbM
                                    B.||?. maybe (B.sqlBool_ $ B.val_ True) (\lastDigits -> B.sqlBool_ (B.like_ (B.coalesce_ [driver.maskedMobileDigits] (B.val_ "")) (B.val_ ("%" <> takeEnd 4 lastDigits <> "%")))) mbSearchString
                                    B.||?. maybe (B.sqlBool_ $ B.val_ True) (\mobileNumberSearchStringDB -> driver.mobileNumberHash B.==?. B.val_ (Just mobileNumberSearchStringDB)) encryptedMobileNumberHash
                                )
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hasRequestReason -> if hasRequestReason then fleetDriverAssociation.requestReason B./=?. B.val_ Nothing else B.sqlBool_ $ B.val_ True) mbHasRequestReason
                   )
                   do
                     fleetDriverAssociation <- B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
