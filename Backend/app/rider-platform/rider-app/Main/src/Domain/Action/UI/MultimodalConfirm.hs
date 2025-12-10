@@ -35,6 +35,7 @@ module Domain.Action.UI.MultimodalConfirm
     getMultimodalOrderSimilarJourneyLegs,
     postMultimodalOrderSwitchJourneyLeg,
     postMultimodalOrderChangeStops,
+    postMultimodalServiceability,
     postMultimodalRouteAvailability,
     postMultimodalSwitchRoute,
     postMultimodalOrderSublegSetOnboardedVehicleDetails,
@@ -118,6 +119,7 @@ import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Booking as QBooking
@@ -1575,6 +1577,78 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
                   mbNewDuration
                 )
             _ -> (leg.mode, leg.distance, leg.duration)
+
+postMultimodalServiceability ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.MultimodalConfirm.RouteServiceabilityReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+  )
+postMultimodalServiceability (mbPersonId, _merchantId) req = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  routeStopMapping <- map (\x -> API.Types.UI.MultimodalConfirm.RouteStopMapping {code = x.stopCode, lat = x.stopPoint.lat, lon = x.stopPoint.lon, name = x.stopName, seq = x.sequenceNum}) <$> OTPRest.getRouteStopMappingByRouteCode req.routeCode integratedBPPConfig
+  let getLiveVehicles busesData =
+        mapM
+          ( \bus -> do
+              vehicleInfo <- OTPRest.getVehicleServiceType integratedBPPConfig bus.busData.route_id Nothing >>= fromMaybeM (InvalidRequest $ "Vehicle info not found for bus: " <> bus.vehicleNumber)
+              return $
+                API.Types.UI.MultimodalConfirm.LiveVehicleInfo
+                  { eta = bus.busData.eta_data,
+                    number = bus.vehicleNumber,
+                    position = LatLong bus.busData.latitude bus.busData.longitude,
+                    serviceTierType = vehicleInfo.service_type
+                  }
+          )
+          busesData
+  routeBusData <- CQMMB.getRoutesBuses req.routeCode integratedBPPConfig
+  case routeBusData.buses of
+    [] -> do
+      (srcCode, destCode) <- fromMaybeM (InvalidRequest "Source or destination stop code not found") $
+        case (req.sourceStopCode, req.destinationStopCode) of
+          (Just sourceStopCode, Just destinationStopCode) -> do
+            Just (sourceStopCode, destinationStopCode)
+          (Just sourceStopCode, Nothing) -> do
+            let destinationStopCode = fmap (.code) . listToMaybe $ reverse routeStopMapping
+            (sourceStopCode,) <$> destinationStopCode
+          (Nothing, Just destinationStopCode) -> do
+            let sourceStopCode = fmap (.code) $ listToMaybe routeStopMapping
+            (,destinationStopCode) <$> sourceStopCode
+          (Nothing, Nothing) -> do
+            let sourceStopCode = fmap (.code) $ listToMaybe routeStopMapping
+            let destinationStopCode = fmap (.code) . listToMaybe $ reverse routeStopMapping
+            (,) <$> sourceStopCode <*> destinationStopCode
+
+      alternateRoutes <- JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
+      busesForRoutes <- CQMMB.getBusesForRoutes alternateRoutes integratedBPPConfig
+      alterateLiveVehicleData <-
+        mapM
+          ( \routeInfo -> do
+              rsm <- OTPRest.getRouteStopMappingByRouteCode routeInfo.routeId integratedBPPConfig
+              route <- OTPRest.getRouteByRouteId integratedBPPConfig routeInfo.routeId >>= fromMaybeM (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId)
+              liveVehicles <- getLiveVehicles routeInfo.buses
+              return $
+                API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+                  { liveVehicles,
+                    routeCode = routeInfo.routeId,
+                    routeShortName = route.shortName,
+                    routeStopMapping = map (\x -> API.Types.UI.MultimodalConfirm.RouteStopMapping {code = x.stopCode, lat = x.stopPoint.lat, lon = x.stopPoint.lon, name = x.stopName, seq = x.sequenceNum}) rsm
+                  }
+          )
+          busesForRoutes
+      return $ ApiTypes.AlternateLiveRoutesInfo alterateLiveVehicleData
+    busesData -> do
+      route <- OTPRest.getRouteByRouteId integratedBPPConfig req.routeCode >>= fromMaybeM (InvalidRequest $ "Req Route not found with id: " <> req.routeCode)
+      liveVehicles <- getLiveVehicles busesData
+      return . ApiTypes.LiveRouteInfo $
+        API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+          { liveVehicles,
+            routeCode = req.routeCode,
+            routeShortName = route.shortName,
+            routeStopMapping = routeStopMapping
+          }
 
 postMultimodalRouteAvailability ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

@@ -33,7 +33,6 @@ imports:
   ServiceTierType: BecknV2.FRFS.Enums
   City: Kernel.Types.Beckn.Context
   SuggestedStations: Domain.Types.StationType
-  BusData: Storage.CachedQueries.Merchant.MultiModalBus
   PlatformType: Domain.Types.IntegratedBPPConfig
   VehicleCategory: BecknV2.FRFS.Enums
   Provider: Lib.JourneyModule.Types
@@ -45,6 +44,7 @@ imports:
   FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
   PaymentStatusResp: Lib.Payment.Domain.Action
   CumulativeOfferResp: SharedLogic.Offer
+  BusStopETA: Storage.CachedQueries.Merchant.MultiModalBus
 
 module: MultimodalConfirm
 
@@ -290,6 +290,34 @@ types:
   RouteAvailabilityResp:
     availableRoutes: "[AvailableRoute]"
 
+  RouteStopMapping:
+    code: Text
+    name: Text
+    seq: Int
+    lat: Double
+    lon: Double
+
+  LiveVehicleInfo:
+    number: Text
+    serviceTierType: ServiceTierType
+    eta: "Maybe [BusStopETA]"
+    position: LatLong
+
+  RouteWithLiveVehicle:
+    routeCode: Text
+    routeShortName: Text
+    routeStopMapping: [RouteStopMapping]
+    liveVehicles: [LiveVehicleInfo]
+
+  RouteServiceabilityResp:
+    enum: "LiveRouteInfo RouteWithLiveVehicle, AlternateLiveRoutesInfo [RouteWithLiveVehicle]"
+
+  RouteServiceabilityReq:
+    routeCode: Text
+    sourceStopCode: Maybe Text
+    destinationStopCode: Maybe Text
+    serviceTierType: Maybe ServiceTierType
+
   AvailableRoute:
     source: SourceType
     quoteId: Maybe (Id FRFSQuote)
@@ -317,6 +345,12 @@ types:
     vehicleNumber: Text
 
 apis:
+  - POST:
+      endpoint: /multimodal/serviceability
+      request:
+        type: RouteServiceabilityReq
+      response:
+        type: RouteServiceabilityResp
   - POST:
       endpoint: /multimodal/{journeyId}/initiate
       params:

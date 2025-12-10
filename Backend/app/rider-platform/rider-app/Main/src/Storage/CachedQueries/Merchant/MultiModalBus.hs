@@ -41,7 +41,7 @@ data BusStopETA = BusStopETA
   { stopCode :: Text,
     arrivalTime :: UTCTime
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToSchema)
 
 withCrossAppRedisNew ::
   (Hedis.HedisFlow m env, Kernel.Prelude.HasField "ltsHedisEnv" env Hedis.HedisEnv) => m f -> m f
