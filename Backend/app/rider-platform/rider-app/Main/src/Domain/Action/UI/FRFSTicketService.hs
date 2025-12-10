@@ -632,22 +632,17 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
   mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
   isMultiInitAllowed <-
     case mbBooking of
-      Just booking ->
-        Hedis.withCrossAppRedis $
-          Hedis.whenWithLockRedisAndReturnValue
-            (mkPaymentSuccessLockKey booking.id)
-            60
-            ( do
-                case integratedBppConfig.providerConfig of
-                  DIBC.ONDC DIBC.ONDCBecknConfig {multiInitAllowed} ->
-                    return $
-                      multiInitAllowed == Just True
-                        && booking.status `elem` [DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
-                  _ -> return $ booking.status `elem` [DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
-            )
-            >>= \case
-              Right res -> return res
-              Left _ -> return False
+      Just booking -> do
+        isLockAcquired <- Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkPaymentSuccessLockKey booking.id) 60
+        if isLockAcquired
+          then do
+            case integratedBppConfig.providerConfig of
+              DIBC.ONDC DIBC.ONDCBecknConfig {multiInitAllowed} ->
+                return $
+                  multiInitAllowed == Just True
+                    && booking.status `elem` [DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
+              _ -> return $ booking.status `elem` [DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
+          else return False
       Nothing -> return True
   updatedQuoteCategories <-
     if isMultiInitAllowed
@@ -1044,46 +1039,40 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                   buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
                 else
                   if paymentBookingStatus == FRFSTicketService.SUCCESS
-                    then
-                      do
-                        -- Add default TTL of 1 min or the value provided in the config
-                        let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
-                        transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
-                        txnId <- getSuccessTransactionId transactions
-                        Hedis.withCrossAppRedis $
-                          Hedis.whenWithLockRedisAndReturnValue
-                            (mkPaymentSuccessLockKey bookingId)
-                            60
-                            ( do
-                                latestBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
-                                let isPaymentBookingLatest = maybe True (\lpb -> lpb.id == paymentBooking.id) latestBookingPayment
-                                if isPaymentBookingLatest
-                                  then do
-                                    void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.SUCCESS paymentBooking.id
-                                    void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
-                                    mbJourneyLeg <- markJourneyPaymentSuccess booking paymentOrder paymentBooking
-                                    quoteUpdatedBooking <- maybeM (pure booking) pure (QFRFSTicketBooking.findById bookingId)
-                                    let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
-                                    mRiderNumber <- mapM decrypt person.mobileNumber
-                                    void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
-                                    mbJourney <- case mbJourneyLeg of
-                                      Just journeyLeg -> do
-                                        QJourney.findByPrimaryKey journeyLeg.journeyId
-                                      Nothing -> pure Nothing
-                                    let mbIsSingleMode = mbJourney >>= (.isSingleMode)
-                                    void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking quoteCategories mbIsSingleMode
-                                    let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
-                                    buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentSuccess
-                                  else do
-                                    logError $ "booking payment for which order was charged is older: " <> show booking
-                                    void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
-                                    let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-                                    void $ markJourneyPaymentSuccess updatedBooking paymentOrder paymentBooking
-                                    buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
-                            )
-                        >>= \case
-                          Right resp -> return resp
-                          Left _ -> buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentSuccess
+                    then do
+                      -- Add default TTL of 1 min or the value provided in the config
+                      let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
+                      transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
+                      txnId <- getSuccessTransactionId transactions
+                      isLockAcquired <- Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
+                      if isLockAcquired
+                        then do
+                          latestBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
+                          let isPaymentBookingLatest = maybe True (\lpb -> lpb.id == paymentBooking.id) latestBookingPayment
+                          if isPaymentBookingLatest
+                            then do
+                              void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.SUCCESS paymentBooking.id
+                              void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
+                              mbJourneyLeg <- markJourneyPaymentSuccess booking paymentOrder paymentBooking
+                              quoteUpdatedBooking <- maybeM (pure booking) pure (QFRFSTicketBooking.findById bookingId)
+                              let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
+                              mRiderNumber <- mapM decrypt person.mobileNumber
+                              void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
+                              mbJourney <- case mbJourneyLeg of
+                                Just journeyLeg -> do
+                                  QJourney.findByPrimaryKey journeyLeg.journeyId
+                                Nothing -> pure Nothing
+                              let mbIsSingleMode = mbJourney >>= (.isSingleMode)
+                              void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking quoteCategories mbIsSingleMode
+                              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
+                              buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentSuccess
+                            else do
+                              logError $ "booking payment for which order was charged is older: " <> show booking
+                              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
+                              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
+                              void $ markJourneyPaymentSuccess updatedBooking paymentOrder paymentBooking
+                              buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories paymentFailed
+                        else buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentSuccess
                     else do
                       if paymentBookingStatus == FRFSTicketService.REFUNDED
                         then do
