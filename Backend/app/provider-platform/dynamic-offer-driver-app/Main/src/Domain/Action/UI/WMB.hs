@@ -479,6 +479,8 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   fleetDriverAssociation <- FDV.findByDriverId driverId False >>= fromMaybeM (InactiveFleetDriverAssociationNotFound driverId.getId)
+
+  when (isJust fleetDriverAssociation.requestReason) $ throwError $ InvalidRequest "Cannot consent to driver-initiated request. Fleet owner must approve first"
   onboardingVehicleCategory <- fleetDriverAssociation.onboardingVehicleCategory & fromMaybeM DriverOnboardingVehicleCategoryNotFound
   fleetOwner <- QPerson.findById (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound fleetDriverAssociation.fleetOwnerId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
