@@ -63,6 +63,7 @@ library
       API.Internal.ViolationDetection
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
+      API.Types.UI.PartnerBookingStatementExtra
       API.UI
       API.UI.AadhaarVerification
       API.UI.AppInstalls
@@ -253,6 +254,7 @@ library
       Domain.Action.UI.NearbyDrivers
       Domain.Action.UI.NyRegularSubscription
       Domain.Action.UI.ParkingBooking
+      Domain.Action.UI.PartnerBookingStatement
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Pass
       Domain.Action.UI.Payment
@@ -695,6 +697,7 @@ library
       API.Action.UI.NearbyDrivers
       API.Action.UI.NyRegularSubscription
       API.Action.UI.ParkingBooking
+      API.Action.UI.PartnerBookingStatement
       API.Action.UI.Pass
       API.Action.UI.PickupInstructions
       API.Action.UI.Places
@@ -764,6 +767,7 @@ library
       API.Types.UI.NearbyDrivers
       API.Types.UI.NyRegularSubscription
       API.Types.UI.ParkingBooking
+      API.Types.UI.PartnerBookingStatement
       API.Types.UI.Pass
       API.Types.UI.PickupInstructions
       API.Types.UI.Places
