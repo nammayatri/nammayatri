@@ -844,16 +844,30 @@ postMultimodalPassActivateToday ::
       Id.Id DM.Merchant
     ) ->
     Int ->
+    Maybe DT.Day ->
     Environment.Flow APISuccess.APISuccess
   )
-postMultimodalPassActivateToday (_mbCallerPersonId, _merchantId) passNumber = do
+postMultimodalPassActivateToday (_mbCallerPersonId, _merchantId) passNumber mbStartDate = do
   purchasedPass <- QPurchasedPass.findByPassNumber passNumber >>= fromMaybeM (InvalidRequest "Pass not found")
-  when (purchasedPass.status /= DPurchasedPass.PreBooked) $
-    throwError (InvalidRequest "Only pre-booked passes can be activated for today")
-  today <- DT.utctDay <$> getCurrentTime
+  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  let today = DT.utctDay istTime
+  normalizedMbStartDate <- case mbStartDate of
+    Just d | d == today -> return Nothing
+    Just d | d < today -> throwError (InvalidRequest "Cannot schedule pass for a past date")
+    _ -> return mbStartDate
+
+  case normalizedMbStartDate of
+    Nothing ->
+      when (purchasedPass.status /= DPurchasedPass.PreBooked) $
+        throwError (InvalidRequest "Only pre-booked passes can be activated for today")
+    Just _ ->
+      unless (purchasedPass.status `elem` [DPurchasedPass.PreBooked, DPurchasedPass.Active]) $
+        throwError (InvalidRequest "Only active or pre-booked passes can be rescheduled")
   _ <- purchasedPass.maxValidDays & fromMaybeM (InvalidRequest "Pass does not have a valid duration")
-  let newStartDate = today
-      newEndDate = calculatePassEndDate today purchasedPass.maxValidDays
+  let (newStartDate, newStatus) = case normalizedMbStartDate of
+        Nothing -> (today, DPurchasedPass.Active)
+        Just date -> (date, DPurchasedPass.PreBooked)
+      newEndDate = calculatePassEndDate newStartDate purchasedPass.maxValidDays
 
   allPasses <- QPurchasedPass.findAllByPersonIdWithFilters purchasedPass.personId purchasedPass.merchantId (Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]) Nothing Nothing
   let otherPasses = filter (\p -> p.id /= purchasedPass.id) allPasses
@@ -862,6 +876,6 @@ postMultimodalPassActivateToday (_mbCallerPersonId, _merchantId) passNumber = do
   unless (null overlappingPasses) $
     throwError (InvalidRequest "Cannot activate pass: date range overlaps with another active or prebooked pass")
 
-  QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate DPurchasedPass.Active
-  QPurchasedPassPayment.updatePurchaseDataByPurchasedPassIdAndStartEndDate purchasedPass.id purchasedPass.startDate purchasedPass.endDate newStartDate newEndDate DPurchasedPass.Active
+  QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus
+  QPurchasedPassPayment.updatePurchaseDataByPurchasedPassIdAndStartEndDate purchasedPass.id purchasedPass.startDate purchasedPass.endDate newStartDate newEndDate newStatus
   return APISuccess.Success

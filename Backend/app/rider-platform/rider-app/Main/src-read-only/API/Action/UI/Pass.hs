@@ -136,6 +136,9 @@ type API =
       :> Capture
            "passNumber"
            Kernel.Prelude.Int
+      :> QueryParam
+           "date"
+           Data.Time.Day
       :> Post
            ('[JSON])
            Kernel.Types.APISuccess.APISuccess
@@ -224,6 +227,7 @@ postMultimodalPassActivateToday ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe (Data.Time.Day) ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalPassActivateToday a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassActivateToday (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalPassActivateToday a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassActivateToday (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
