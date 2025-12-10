@@ -239,9 +239,9 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
       (rbList, allbookings) <- getBookingList (personId, merchantId) integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
 
       -- Filter by ride type and billing category
-      let (rbRideTypeFilteredList, allBookingsRideTypeFilteredList) = if length rideTypeList > 0 then ((filter (SB.matchesRideType rideTypeList) rbList), (filter (SB.matchesRideType rideTypeList) allbookings)) else (rbList, allbookings)
+      let (rbRideTypeFilteredList, allBookingsRideTypeFilteredList) = if not (null rideTypeList) then ((filter (SB.matchesRideType rideTypeList) rbList), (filter (SB.matchesRideType rideTypeList) allbookings)) else (rbList, allbookings)
 
-          (rbFilteredList, filteredAllBookingsList) = if length billingCategoryList > 0 then ((filter (SB.matchesBillingCategory billingCategoryList) rbRideTypeFilteredList), (filter (SB.matchesBillingCategory billingCategoryList) allBookingsRideTypeFilteredList)) else (rbRideTypeFilteredList, allBookingsRideTypeFilteredList)
+          (rbFilteredList, filteredAllBookingsList) = if not (null billingCategoryList) then ((filter (SB.matchesBillingCategory billingCategoryList) rbRideTypeFilteredList), (filter (SB.matchesBillingCategory billingCategoryList) allBookingsRideTypeFilteredList)) else (rbRideTypeFilteredList, allBookingsRideTypeFilteredList)
 
       clearStuckRides (Just filteredAllBookingsList) rbFilteredList
 
@@ -273,9 +273,9 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
           Right result -> pure result
 
       -- Filter by ride type and billing category
-      let (rbRideTypeFilteredList, allBookingsRideTypeFilteredList) = if length rideTypeList > 0 then ((filter (SB.matchesRideType rideTypeList) rbList), (filter (SB.matchesRideType rideTypeList) allbookings)) else (rbList, allbookings)
+      let (rbRideTypeFilteredList, allBookingsRideTypeFilteredList) = if not (null rideTypeList) then ((filter (SB.matchesRideType rideTypeList) rbList), (filter (SB.matchesRideType rideTypeList) allbookings)) else (rbList, allbookings)
 
-          (rbFilteredList, filteredAllBookingsList) = if length billingCategoryList > 0 then ((filter (SB.matchesBillingCategory billingCategoryList) rbRideTypeFilteredList), (filter (SB.matchesBillingCategory billingCategoryList) allBookingsRideTypeFilteredList)) else (rbRideTypeFilteredList, allBookingsRideTypeFilteredList)
+          (rbFilteredList, filteredAllBookingsList) = if not (null billingCategoryList) then ((filter (SB.matchesBillingCategory billingCategoryList) rbRideTypeFilteredList), (filter (SB.matchesBillingCategory billingCategoryList) allBookingsRideTypeFilteredList)) else (rbRideTypeFilteredList, allBookingsRideTypeFilteredList)
 
       logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialBookingOffset <> " BookingRequest rbList (id, startTime): " <> show (map (\b -> (b.id, b.startTime)) rbList)
 
