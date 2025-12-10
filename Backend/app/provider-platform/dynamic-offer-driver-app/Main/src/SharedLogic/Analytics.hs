@@ -120,6 +120,31 @@ updateCancellationAnalyticsAndDriverStats transporterConfig ride bookingCReason 
       QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId
     _ -> pure ()
 
+-- | Update fleet owner analytics counters in Redis. Passing Nothing deletes the key.
+updateFleetOwnerAnalyticsKeys ::
+  (Redis.HedisFlow m r, MonadFlow m) =>
+  Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Int ->
+  m ()
+updateFleetOwnerAnalyticsKeys fleetOwnerId mbActiveDrivers mbActiveVehicles mbCurrentOnline = do
+  let setOrDel key = \case
+        Just v -> Redis.set key v
+        Nothing -> Redis.del key >> pure ()
+
+  -- active driver count
+  let adcKey = makeFleetAnalyticsKey fleetOwnerId ACTIVE_DRIVER_COUNT
+  setOrDel adcKey mbActiveDrivers
+
+  -- active vehicle count
+  let avcKey = makeFleetAnalyticsKey fleetOwnerId ACTIVE_VEHICLE_COUNT
+  setOrDel avcKey mbActiveVehicles
+
+  -- current online driver count uses ONLINE status key
+  let codKey = DDF.getStatusKey fleetOwnerId DDF.ONLINE
+  setOrDel codKey mbCurrentOnline
+
 convertToFleetAllTimeFallbackRes :: [(FleetAllTimeMetric, Int)] -> Int -> CommonAllTimeFallbackRes
 convertToFleetAllTimeFallbackRes metricsList currentOnlineDriverCount =
   let metricsMap = Map.fromList metricsList

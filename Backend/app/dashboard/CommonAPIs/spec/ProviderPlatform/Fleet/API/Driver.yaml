@@ -1213,6 +1213,13 @@ apis:
             response:
               type: FleetAnalyticsRes
   - POST:
+      endpoint: /fleet/dashboard/analytics/cache
+      auth: ApiAuthV2
+      request:
+        type: FleetDashboardAnalyticsCacheReq
+      response:
+        type: APISuccess
+  - POST:
       endpoint: /dashboard/fleet/estimateRoute
       auth: ApiAuthV2
       query:
@@ -1799,6 +1806,11 @@ types:
     - driverLicense: Maybe VerificationStatus
     - panCard: Maybe VerificationStatus
     - aadhaarCard: Maybe VerificationStatus
+  FleetDashboardAnalyticsCacheReq:
+    - fleetOwnerId: Text
+    - activeDriverCount: Maybe Int
+    - activeVehicleCount: Maybe Int
+    - currentOnlineDriver: Maybe Int
   DriverMode:
     - enum: "ONLINE, OFFLINE, SILENT"
     - derive: "HttpInstance"
