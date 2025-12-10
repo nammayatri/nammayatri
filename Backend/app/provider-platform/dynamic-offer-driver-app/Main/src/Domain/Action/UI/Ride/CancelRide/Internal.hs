@@ -407,6 +407,8 @@ customerCancellationChargesCalculation booking ride riderDetails = do
     then do
       localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
       (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES localTime Nothing Nothing
+      logDebug $ "allLogics: for cancellation charges calculation" <> show allLogics
+      logDebug $ "logicInput: for cancellation charges calculation" <> show logicInput
       response <- withTryCatch "runLogics:UserCancellationDues" $ LYTU.runLogics allLogics logicInput
       case response of
         Left e -> do
