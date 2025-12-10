@@ -51,14 +51,14 @@ authAPI = Proxy
 
 getAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => EBIXConfig -> m Text
 getAuthToken config = do
-  authToken :: (Maybe Text) <- Hedis.get authTokenKey
+  authToken :: (Maybe Text) <- Hedis.withCrossAppRedis $ Hedis.get authTokenKey
   case authToken of
     Nothing -> do
       password <- decrypt config.password
       auth <-
         callAPI config.networkHostUrl (ET.client authAPI $ AuthReq config.username password) "authEBIX" authAPI
           >>= fromEitherM (ExternalAPICallError (Just "EBIX_AUTH_API") config.networkHostUrl)
-      Hedis.setExp authTokenKey auth.accessToken auth.expiresIn.getSeconds
+      Hedis.withCrossAppRedis $ Hedis.setExp authTokenKey auth.accessToken auth.expiresIn.getSeconds
       return auth.accessToken
     Just token -> return token
   where

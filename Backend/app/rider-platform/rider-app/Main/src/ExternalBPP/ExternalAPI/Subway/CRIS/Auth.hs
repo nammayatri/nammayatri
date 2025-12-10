@@ -49,14 +49,14 @@ resetAuthToken ::
   CRISConfig ->
   m Text
 resetAuthToken config = do
-  lockAcquired <- Hedis.tryLockRedis getCRISTokenRefreshLockKey 30
+  lockAcquired <- Hedis.withCrossAppRedis $ Hedis.tryLockRedis getCRISTokenRefreshLockKey 30
   if lockAcquired
     then do
       logInfo "Acquired Redis lock for token refresh"
 
       let unlockLock = do
             logInfo "Released Redis lock after token refresh"
-            Hedis.unlockRedis getCRISTokenRefreshLockKey
+            Hedis.withCrossAppRedis $ Hedis.unlockRedis getCRISTokenRefreshLockKey
 
       tokenRes <-
         ( do
@@ -68,14 +68,14 @@ resetAuthToken config = do
           )
           `finally` unlockLock
 
-      Hedis.setExp getCRISTokenKey (tokenRes.access_token) (tokenRes.expires_in * 90 `div` 100)
+      Hedis.withCrossAppRedis $ Hedis.setExp getCRISTokenKey (tokenRes.access_token) (tokenRes.expires_in * 90 `div` 100)
       return $ tokenRes.access_token
     else do
       logInfo "Redis lock already held by another pod, waiting 3 seconds for token refresh"
 
       threadDelay 3000000
 
-      mbToken <- Hedis.get getCRISTokenKey
+      mbToken <- Hedis.withCrossAppRedis $ Hedis.get getCRISTokenKey
       case mbToken of
         Nothing ->
           throwError $ CRISErrorUnhandled "Token refresh failed - no token available after waiting"
@@ -86,7 +86,7 @@ getAuthToken ::
   CRISConfig ->
   m Text
 getAuthToken config = do
-  mbToken <- Hedis.get getCRISTokenKey
+  mbToken <- Hedis.withCrossAppRedis $ Hedis.get getCRISTokenKey
   case mbToken of
     Nothing -> resetAuthToken config
     Just token -> return token

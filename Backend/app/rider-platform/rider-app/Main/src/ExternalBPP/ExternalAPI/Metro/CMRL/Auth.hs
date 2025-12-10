@@ -51,7 +51,7 @@ cmrlAppType = "CMRL_CUM_IQR"
 
 getAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> m Text
 getAuthToken config = do
-  authToken :: (Maybe Text) <- Hedis.get authTokenKey
+  authToken :: (Maybe Text) <- Hedis.withCrossAppRedis $ Hedis.get authTokenKey
   case authToken of
     Nothing -> resetAuthToken config
     Just token -> return token
@@ -62,7 +62,7 @@ resetAuthToken config = do
   auth <-
     callAPI config.networkHostUrl (ET.client authAPI $ AuthReq config.username password cmrlAppType) "authCMRL" authAPI
       >>= fromEitherM (ExternalAPICallError (Just "CMRL_AUTH_API") config.networkHostUrl)
-  Hedis.setExp authTokenKey auth.result.access_token (2 * 3600)
+  Hedis.withCrossAppRedis $ Hedis.setExp authTokenKey auth.result.access_token (2 * 3600)
   return auth.result.access_token
 
 callCMRLAPI ::
