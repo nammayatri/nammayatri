@@ -2013,6 +2013,7 @@ types:
   FleetVehicleStatsItem:
     - vehicleNo: Maybe Text
     - vehicleModel: Maybe Text
+    - vehicleManufacturer: Maybe Text
     - rcId: Maybe Text
     - totalEarnings: HighPrecMoney
     - currency: Maybe Currency

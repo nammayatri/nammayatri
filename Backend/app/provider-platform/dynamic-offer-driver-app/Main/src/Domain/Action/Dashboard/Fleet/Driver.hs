@@ -3617,6 +3617,7 @@ convertToFleetVehicleStatsItem transporterConfig agg vehicleMap =
        in Common.FleetVehicleStatsItem
             { Common.vehicleNo = mRc >>= DVRC.unencryptedCertificateNumber,
               Common.vehicleModel = mRc >>= DVRC.vehicleModel,
+              Common.vehicleManufacturer = mRc >>= DVRC.vehicleManufacturer,
               rcId = Just rcIdKey,
               totalEarnings = stats.totalEarnings,
               currency = Just transporterConfig.currency,
