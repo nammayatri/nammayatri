@@ -1034,5 +1034,7 @@ postDriverLinkToFleet (mbDriverId, _, _) req = do
       case fdaForFleetOwner of
         Just fda | fda.isActive -> throwError $ InvalidRequest "Driver is already linked to this fleet"
         Just _ -> throwError $ InvalidRequest "Driver already has a pending fleet association request with this fleet"
-        Nothing -> FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just req.requestReason)
+        Nothing -> do
+          let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
+          FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason)
   return Success
