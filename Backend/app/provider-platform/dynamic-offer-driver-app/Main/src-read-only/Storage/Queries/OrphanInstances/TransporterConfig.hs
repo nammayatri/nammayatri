@@ -153,7 +153,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             fakeOtpMobileNumbers = fakeOtpMobileNumbers,
             fareRecomputeDailyExtraKmsThreshold = fareRecomputeDailyExtraKmsThreshold,
             fareRecomputeWeeklyExtraKmsThreshold = fareRecomputeWeeklyExtraKmsThreshold,
-            fcmConfig = Kernel.External.Notification.FCM.Types.FCMConfig {fcmUrl = fcmUrl', fcmServiceAccount = fcmServiceAccount, fcmTokenKeyPrefix = fcmTokenKeyPrefix},
+            fcmConfig = Kernel.External.Notification.FCM.Types.FCMConfig {fcmUrl = fcmUrl', fcmServiceAccount = fcmServiceAccount, fcmTokenKeyPrefix = fcmTokenKeyPrefix, fcmNotificationObj = Nothing},
             feedbackNotificationConfig = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< feedbackNotificationConfig,
             fleetAlertThreshold = fleetAlertThreshold,
             freeTrialDays = freeTrialDays,
