@@ -293,21 +293,27 @@ types:
   RouteStopMapping:
     code: Text
     name: Text
-    seq: Int
+    seqNo: Int
     lat: Double
     lon: Double
 
   LiveVehicleInfo:
     number: Text
     serviceTierType: ServiceTierType
+    serviceTierName: Maybe Text
     eta: "Maybe [BusStopETA]"
     position: LatLong
+
+  AlternateRouteDetails:
+    routeCode: Text
+    routeShortName: Text
+    isLive: Bool
 
   RouteWithLiveVehicle:
     routeCode: Text
     routeShortName: Text
-    routeStopMapping: [RouteStopMapping]
     liveVehicles: [LiveVehicleInfo]
+    alternateRouteInfo: Maybe [AlternateRouteDetails]
 
   RouteServiceabilityResp:
     enum: "LiveRouteInfo RouteWithLiveVehicle, AlternateLiveRoutesInfo [RouteWithLiveVehicle]"
@@ -346,7 +352,7 @@ types:
 
 apis:
   - POST:
-      endpoint: /multimodal/serviceability
+      endpoint: /multimodal/routeServiceability
       request:
         type: RouteServiceabilityReq
       response:
