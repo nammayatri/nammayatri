@@ -77,7 +77,7 @@ getFareByOriginDest integrationBPPConfig config fareReq = do
                     Just domainCategoryValue ->
                       case domainCategoryValue of
                         FixedAmount discountAmount -> offeredPrice + discountAmount
-                        Percentage discountPercentage -> HighPrecMoney $ offeredPrice.getHighPrecMoney + (offeredPrice.getHighPrecMoney * (1 - (toRational discountPercentage / 100)))
+                        Percentage discountPercentage -> HighPrecMoney $ offeredPrice.getHighPrecMoney / (1 - (toRational discountPercentage / 100))
                     Nothing -> offeredPrice
             return $
               [ FRFSUtils.FRFSFare
