@@ -8,7 +8,9 @@ import qualified Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Types
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -38,6 +40,18 @@ findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey = 
         ]
     ]
 
+findByMerchantOperatingCityIdAndMessageKeyAndLanguage ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.MerchantMessage.MessageKey -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
+findByMerchantOperatingCityIdAndMessageKeyAndLanguage merchantOperatingCityId messageKey language = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.messageKey $ Se.Eq messageKey,
+          Se.Is Beam.language $ Se.Eq language
+        ]
+    ]
+
 instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage where
   fromTType' (Beam.MerchantMessageT {..}) = do
     pure $
@@ -46,6 +60,7 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
           { containsUrlButton = containsUrlButton,
             createdAt = createdAt,
             jsonData = valueToJsonData jsonData,
+            language = language,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             message = message,
@@ -61,6 +76,7 @@ instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMess
       { Beam.containsUrlButton = containsUrlButton,
         Beam.createdAt = createdAt,
         Beam.jsonData = Just $ toJSON jsonData,
+        Beam.language = language,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.message = message,

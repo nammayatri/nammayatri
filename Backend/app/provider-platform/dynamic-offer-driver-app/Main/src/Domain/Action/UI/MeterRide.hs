@@ -101,7 +101,7 @@ postMeterRideShareReceipt (Just driverId, merchantId, merchantOpCityId) rideId A
   let phoneNumber = customerMobileCountryCode <> customerMobileNumber
   withLogTag ("sending_communication_to_download_app" <> phoneNumber) $ do
     (mbSender, message, templateId) <-
-      MessageBuilder.buildSendReceiptMessage merchantOpCityId $
+      MessageBuilder.buildSendReceiptMessage merchantOpCityId Nothing $
         MessageBuilder.BuildSendReceiptMessageReq
           { totalFare = show ride.currency <> " " <> show (fromMaybe 0 ride.fare),
             totalDistance = show ride.chargeableDistance,

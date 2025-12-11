@@ -25,6 +25,7 @@ import EulerHS.Prelude hiding (any, forM_, id, length, null, whenJust)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.SMS as Sms
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import Kernel.Sms.Config (useFakeSms)
 import qualified Kernel.Storage.Hedis as Redis
@@ -165,9 +166,10 @@ postFleetManagementFleetUnlink merchantShortId opCity fleetOwnerId requestorId =
     mapM decrypt fleetOwner.mobileNumber
       >>= fromMaybeM (InvalidRequest $ "Person does not have a mobile number " <> getId fleetOwner.id)
   let phoneNumber = fromMaybe "+91" fleetOwner.mobileCountryCode <> decryptedMobileNumber
+      fleetOwnerLanguage = fromMaybe ENGLISH fleetOwner.language
   smsCfg <- asks (.smsCfg)
   (mbSender, message, templateId) <-
-    buildFleetUnlinkSuccessMessage merchantOpCityId $
+    buildFleetUnlinkSuccessMessage merchantOpCityId (Just fleetOwnerLanguage) $
       BuildFleetLinkUnlinkSuccessMessageReq
         { operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
         }
@@ -225,8 +227,9 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = do
   otpCode <- maybe generateOTPCode return mbUseFakeOtp
   whenNothing_ mbUseFakeOtp $ do
     let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
+        fleetOwnerLanguage = fromMaybe ENGLISH fleetOwner.language
     (mbSenderHeader, message, templateId) <-
-      buildOperatorJoiningMessage merchantOpCityId $
+      buildOperatorJoiningMessage merchantOpCityId (Just fleetOwnerLanguage) $
         BuildOperatorJoiningMessageReq
           { operatorName = operatorName,
             otp = otpCode
@@ -274,9 +277,10 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
 
   let phoneNumber = fromMaybe "+91" fleetOwner.mobileCountryCode <> decryptedMobileNumber
   smsCfg <- asks (.smsCfg)
+  let fleetOwnerLanguage = fromMaybe ENGLISH fleetOwner.language
   res <- withTryCatch "sendSMS:postFleetManagementFleetLinkVerifyOtp" $ do
     (mbSender, message, templateId) <-
-      buildFleetLinkSuccessMessage merchantOpCityId $
+      buildFleetLinkSuccessMessage merchantOpCityId (Just fleetOwnerLanguage) $
         BuildFleetLinkUnlinkSuccessMessageReq
           { operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
           }

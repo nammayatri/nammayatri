@@ -51,7 +51,7 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
-import Kernel.External.Types (Language, VerificationFlow)
+import Kernel.External.Types (Language (ENGLISH), VerificationFlow)
 import Kernel.Prelude
 import Kernel.Types.Documents
 import qualified Kernel.Types.Documents as Documents
@@ -146,8 +146,9 @@ triggerOnboardingAlertsAndMessages driver merchant merchantOperatingCity = do
     mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
     countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
     let phoneNumber = countryCode <> mobileNumber
+        driverLanguage = fromMaybe ENGLISH driver.language
     merchantMessage <-
-      QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCity.id DMM.WELCOME_TO_PLATFORM Nothing Nothing
+      QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategoryAndLanguage merchantOperatingCity.id DMM.WELCOME_TO_PLATFORM Nothing (Just driverLanguage) Nothing
         >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCity.id.getId (show DMM.WELCOME_TO_PLATFORM))
     let jsonData = merchantMessage.jsonData
     result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOperatingCity.id (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [jsonData.var1, jsonData.var2, jsonData.var3] Nothing (Just merchantMessage.containsUrlButton)) -- Accepts at most 7 variables using GupShup

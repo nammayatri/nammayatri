@@ -55,6 +55,7 @@ import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -585,9 +586,10 @@ resend tokenId = do
   let otpCode = authValueHash
   let otpHash = smsCfg.credConfig.otpHash
       phoneNumber = countryCode <> mobileNumber
+      personLanguage = fromMaybe ENGLISH person.language
   withLogTag ("personId_" <> entityId) $ do
     (mbSender, message, templateId) <-
-      MessageBuilder.buildSendOTPMessage (Id merchantOperatingCityId) $
+      MessageBuilder.buildSendOTPMessage (Id merchantOperatingCityId) (Just personLanguage) $
         MessageBuilder.BuildSendOTPMessageReq
           { otp = otpCode,
             hash = otpHash

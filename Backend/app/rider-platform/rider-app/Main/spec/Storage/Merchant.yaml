@@ -463,6 +463,7 @@ MerchantMessage:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     messageKey: MessageKey
+    language: Maybe Language
     message: Text
     templateId: Text
     jsonData: MerchantMessageDefaultDataJSON
@@ -500,6 +501,10 @@ MerchantMessage:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, messageKey]
+    findByMerchantOperatingCityIdAndMessageKeyAndLanguage:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, messageKey, language]
   excludedDefaultQueries:
    - findByPrimaryKey
    - updateByPrimaryKey

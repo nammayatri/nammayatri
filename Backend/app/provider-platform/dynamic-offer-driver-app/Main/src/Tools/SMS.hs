@@ -32,7 +32,7 @@ import Kernel.External.SMS as Reexport hiding
   ( sendSMS,
   )
 import qualified Kernel.External.SMS as Sms
-import Kernel.External.Types (ServiceFlow)
+import Kernel.External.Types (Language (ENGLISH), ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
@@ -92,11 +92,12 @@ sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooki
       let phoneNumber = countryCode <> mobileNumber
           sender = smsCfg.sender
 
+      let driverLanguage = fromMaybe ENGLISH driver.language
       case messageType of
         BOOKING -> whenJust mbRide \ride ->
           whenJust mbBooking \booking -> do
             (mbSender, message, templateId) <-
-              MessageBuilder.buildBookingMessage merchantOpCityId $
+              MessageBuilder.buildBookingMessage merchantOpCityId (Just driverLanguage) $
                 MessageBuilder.BuildBookingMessageReq
                   { otp = ride.otp,
                     amount = show booking.estimatedFare
@@ -104,7 +105,7 @@ sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooki
             sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId) >>= Sms.checkSmsResult
         ENDRIDE -> whenJust mbRide \ride -> do
           (mbSender, message, templateId) <-
-            MessageBuilder.buildEndRideMessage merchantOpCityId $
+            MessageBuilder.buildEndRideMessage merchantOpCityId (Just driverLanguage) $
               MessageBuilder.BuildEndRideMessageReq
                 { rideAmount = show amount,
                   rideShortId = ride.shortId.getShortId
@@ -112,14 +113,14 @@ sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooki
           sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId) >>= Sms.checkSmsResult
         ONBOARDING -> do
           (mbSender, message, templateId) <-
-            MessageBuilder.buildOnboardingMessage merchantOpCityId $
+            MessageBuilder.buildOnboardingMessage merchantOpCityId (Just driverLanguage) $
               MessageBuilder.BuildOnboardingMessageReq
                 {
                 }
           sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId) >>= Sms.checkSmsResult
         CASH_COLLECTED -> do
           (mbSender, message, templateId) <-
-            MessageBuilder.buildCollectCashMessage merchantOpCityId $
+            MessageBuilder.buildCollectCashMessage merchantOpCityId (Just driverLanguage) $
               MessageBuilder.BuildCollectCashMessageReq
                 { amount = show amount
                 }
