@@ -1,0 +1,156 @@
+imports:
+  Day: Data.Time.Calendar
+  HighPrecMoney: Kernel.Types.Common
+  VehicleCategory: BecknV2.OnDemand.Enums
+  Booking: Domain.Types.Booking
+  UTCTime: Kernel.Prelude
+  Id: Kernel.Types.Id
+  BookingStatus: Domain.Types.BookingStatus
+  ServiceTierType: Domain.Types.ServiceTierType
+
+module: PartnerBookingStatement
+
+types:
+  BookingStatementReq:
+    mobileNumber: Text
+    emailId: Maybe Text
+    partnerCustomerId: Maybe Text
+    fromDate: Day
+    toDate: Day
+    count: Maybe Int
+    page: Maybe Int
+    derive': Generic,Show,ToSchema
+
+  BookingStatementRes:
+    responseCode: Text
+    outcomeCode: Text
+    responseMessage: Text
+    mobileNumber: Text
+    emailId: Maybe Text
+    partnerCustomerId: Maybe Text
+    item: "[BookingStatementItem]"
+    derive': Generic,Show,ToSchema
+
+  BookingStatementItem:
+    bookingId: Id Booking
+    bookingDatetime: UTCTime
+    bookingType: Maybe VehicleCategory
+    provider: Text
+    providerCode: Text
+    paymentAmount: Maybe Money
+    paymentAmountCurrencyCode: Text
+    serviceStartAddress: Text
+    serviceStartPincode: Maybe Text
+    serviceStartDatetime: UTCTime
+    serviceEndAddress: Maybe Text
+    serviceEndPincode: Maybe Text
+    serviceEndDatetime: UTCTime
+    derive': Generic,Show,ToSchema
+
+  InvoiceDataReq:
+    partnerCustomerId: Maybe Text
+    emailId: Maybe Text
+    mobileNumber: Maybe Text
+    bookingId: Id Booking
+    derive': Generic,Show,ToSchema
+
+  InvoiceDataRes:
+    responseCode: Text
+    outcomeCode: Text
+    responseMessage: Text
+    partnerCustomerId: Text
+    emailId: Maybe Text
+    mobileNumber: Text
+    bookingId: Id Booking
+    bookingDatetime: UTCTime
+    bookingStatus: BookingStatus
+    item: "[InvoiceItem]"
+    person: "[InvoicePerson]"
+    unitPricing: "[InvoiceUnitPricing]"
+    gst: "[InvoiceGST]"
+    paymentMode: "[InvoicePaymentMode]"
+    billing: InvoiceBilling
+    invoice: InvoiceInvoice
+    derive': Generic,Show,ToSchema
+
+  InvoiceItem:
+    itemId: Maybe Text # Ride short ID
+    itemName: Maybe Text # Vehicle Model Name
+    bookingType: Maybe VehicleCategory
+    bookingClass: Maybe ServiceTierType
+    provider: Maybe Text # NammaYatri
+    providerCode: Maybe Text # Vehicle number
+    providerPriceCategory: Maybe Text # Vehicle Varaint if available
+    serviceStartAddress: Maybe Text
+    serviceStartPincode: Maybe Text
+    serviceStartDatetime: Maybe UTCTime
+    serviceEndAddress: Maybe Text
+    serviceEndPincode: Maybe Text
+    serviceEndDatetime: Maybe UTCTime
+    derive': Generic,Show,ToSchema
+
+  InvoicePerson:
+    personId: Text
+    gender: Maybe Text
+    firstName: Maybe Text
+    middleName: Maybe Text
+    lastName: Maybe Text
+    derive': Generic,Show,ToSchema
+
+  InvoiceUnitPricing:
+    itemId: Maybe Text # Ride short ID
+    personId: Text
+    itemAmount: Maybe Money
+    platformFee: Maybe HighPrecMoney
+    discountAmount: Maybe HighPrecMoney
+    priceMultipler: Maybe Double
+    derive': Generic,Show,ToSchema
+
+  InvoiceGST:
+    merchantGst: Maybe Text
+    sac: Maybe Text
+    sgst: Maybe HighPrecMoney
+    cgst: Maybe HighPrecMoney
+    igst: Maybe HighPrecMoney
+    derive': Generic,Show,ToSchema
+
+  InvoicePaymentMode:
+    paymentMode: Maybe Text
+    amount: Maybe Money
+    derive': Generic,Show,ToSchema
+
+  InvoiceBilling:
+    itemAmount: Maybe Money
+    addonAmount: Maybe Money
+    discountAmount: Maybe Money
+    paymentAmount: Maybe Money
+    paymentAmountCurrencyName: Maybe Text
+    derive': Generic,Show,ToSchema
+
+  InvoiceInvoice:
+    invoiceDatetime: Maybe UTCTime
+    invoiceAmount: Maybe Money
+    invoiceAmountCurrencyName: Maybe Text
+    derive': Generic,Show,ToSchema
+
+apis:
+  - POST:
+      endpoint: /corporate/bookingStatement
+      auth: NoAuth
+      headers:
+        - X-Partner-API-Key: Text
+      request:
+        type: BookingStatementReq
+      response:
+        type: BookingStatementRes
+
+  - POST:
+      endpoint: /corporate/invoiceData
+      auth: NoAuth
+      headers:
+        - X-Partner-API-Key: Text
+      request:
+        type: InvoiceDataReq
+      response:
+        type: InvoiceDataRes
+

@@ -391,3 +391,58 @@ ALTER TABLE atlas_app.booking ADD COLUMN billing_category text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN commission double precision ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN vehicle_category text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
