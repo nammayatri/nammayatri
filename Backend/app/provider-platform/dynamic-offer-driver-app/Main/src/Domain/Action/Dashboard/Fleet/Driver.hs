@@ -84,7 +84,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Endpoints.Driver as Common
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
-import Control.Applicative (optional)
+import Control.Applicative (liftA2, optional)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import Data.Char (isDigit)
 import Data.Csv
@@ -1579,16 +1579,16 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
 
     buildEarningsResponse :: DTCConfig.TransporterConfig -> QFODSExtra.DriverEarningsAggregated -> (Text, Common.FleetDriverEarningsStatsRes)
     buildEarningsResponse config agg =
-      let onlineEarningGross = fromMaybe (HighPrecMoney 0.0) agg.onlineTotalEarningSum
-          cashEarningGross = fromMaybe (HighPrecMoney 0.0) agg.cashTotalEarningSum
-          totalEarningGross = onlineEarningGross + cashEarningGross
-          cashPlatformFees = fromMaybe (HighPrecMoney 0.0) agg.cashPlatformFeesSum
-          onlinePlatformFees = fromMaybe (HighPrecMoney 0.0) agg.onlinePlatformFeesSum
-          platformFeeTotal = cashPlatformFees + onlinePlatformFees
-          totalEarningNet = totalEarningGross - platformFeeTotal
+      let onlineEarningGross = agg.onlineTotalEarningSum
+          cashEarningGross = agg.cashTotalEarningSum
+          totalEarningGross = liftA2 (+) onlineEarningGross cashEarningGross
+          cashPlatformFees = agg.cashPlatformFeesSum
+          onlinePlatformFees = agg.onlinePlatformFeesSum
+          platformFeeTotal = liftA2 (+) cashPlatformFees onlinePlatformFees
+          totalEarningNet = liftA2 (-) totalEarningGross platformFeeTotal
           inAppEarningGross = onlineEarningGross
-          inAppEarningNet = inAppEarningGross - onlinePlatformFees
-          cashEarningNet = cashEarningGross - cashPlatformFees
+          inAppEarningNet = liftA2 (-) inAppEarningGross onlinePlatformFees
+          cashEarningNet = liftA2 (-) cashEarningGross cashPlatformFees
        in ( agg.driverId,
             Common.FleetDriverEarningsStatsRes
               { driverName = "", -- Will be set later
@@ -1606,33 +1606,58 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
     buildMetricsResponse :: DTCConfig.TransporterConfig -> Day -> Day -> QFODSExtra.DriverMetricsAggregated -> (Text, Common.FleetDriverMetricsStatsRes)
     buildMetricsResponse config _ _ agg =
       -- commenting for compilation
-      let onlineEarning = fromMaybe (HighPrecMoney 0.0) agg.onlineTotalEarningSum
-          cashEarning = fromMaybe (HighPrecMoney 0.0) agg.cashTotalEarningSum
-          totalEarning = onlineEarning + cashEarning
-          completed = fromMaybe 0 agg.totalCompletedRidesSum
-          accepted = fromMaybe 0 agg.acceptationRequestCountSum
-          rejected = fromMaybe 0 agg.rejectedRequestCountSum
-          passed = fromMaybe 0 agg.pulledRequestCountSum
-          driverCanceled = fromMaybe 0 agg.driverCancellationCountSum
-          customerCanceled = fromMaybe 0 agg.customerCancellationCountSum
-          distance = fromMaybe (Meters 0) agg.totalDistanceSum
-          onlineDuration = fromMaybe (Seconds 0) agg.onlineDurationSum
-          rideDuration = fromMaybe (Seconds 0) agg.rideDurationSum
-          totalRatingScore = fromMaybe 0 agg.totalRatingScoreSum
-          totalRequests = accepted + rejected + passed
-          acceptanceRate = if totalRequests > 0 then fromIntegral accepted / fromIntegral totalRequests else 0.0
-          completionRate = if totalRequests > 0 then fromIntegral completed / fromIntegral totalRequests else 0.0
-          -- Utilization: percentage of online hours used for rides (rideTime / onlineHrs * 100)
-          onlineDurationInSeconds = fromIntegral (getSeconds onlineDuration)
-          rideDurationInSeconds = fromIntegral (getSeconds rideDuration)
+      let onlineEarning = agg.onlineTotalEarningSum
+          cashEarning = agg.cashTotalEarningSum
+          totalEarning = liftA2 (+) onlineEarning cashEarning
+          completed = agg.totalCompletedRidesSum
+          accepted = agg.acceptationRequestCountSum
+          rejected = agg.rejectedRequestCountSum
+          passed = agg.pulledRequestCountSum
+          driverCanceled = agg.driverCancellationCountSum
+          customerCanceled = agg.customerCancellationCountSum
+          distance = agg.totalDistanceSum
+          onlineDuration = agg.onlineDurationSum
+          rideDuration = agg.rideDurationSum
+          totalRatingScore = agg.totalRatingScoreSum
+          totalRatingCount = agg.totalRatingCountSum
+          totalRequests =
+            case (accepted, rejected, passed) of
+              (Nothing, Nothing, Nothing) -> Nothing
+              _ ->
+                Just $
+                  fromMaybe 0 accepted
+                    + fromMaybe 0 rejected
+                    + fromMaybe 0 passed
+          acceptanceRate =
+            totalRequests >>= \tr ->
+              if tr > 0
+                then accepted >>= \a -> Just (fromIntegral a / fromIntegral tr * 100)
+                else Nothing
+          completionRate =
+            totalRequests >>= \tr ->
+              if tr > 0
+                then completed >>= \c -> Just (fromIntegral c / fromIntegral tr * 100)
+                else Nothing
+          onlineDurationInSeconds = onlineDuration <&> getSeconds
+          rideDurationInSeconds = rideDuration <&> getSeconds
           utilization =
-            if onlineDurationInSeconds > 0
-              then rideDurationInSeconds / onlineDurationInSeconds
-              else 0.0
-          distanceKm = fromIntegral (getMeters distance) / 1000.0
-          earningPerKm = if distanceKm > 0 then totalEarning / HighPrecMoney distanceKm else HighPrecMoney 0.0
+            rideDurationInSeconds >>= \rd ->
+              onlineDurationInSeconds >>= \od ->
+                if od > 0 then Just (fromIntegral rd / fromIntegral od * 100) else Nothing
+          distanceKm =
+            distance <&> \d -> fromIntegral (getMeters d) / 1000.0
+          earningPerKm =
+            distanceKm >>= \dkm ->
+              if dkm > 0
+                then totalEarning >>= \te -> Just (te / HighPrecMoney dkm)
+                else Nothing
           -- Rating: totalRatingScore / completedRides
-          rating = if completed > 0 && totalRatingScore > 0 then Just (fromIntegral totalRatingScore / fromIntegral completed) else Nothing
+          rating =
+            totalRatingCount >>= \trc ->
+              totalRatingScore >>= \trs ->
+                if trc > 0 && trs > 0
+                  then Just (fromIntegral trs / fromIntegral trc)
+                  else Nothing
        in ( agg.driverId,
             Common.FleetDriverMetricsStatsRes
               { driverName = "", -- Will be set later
@@ -1640,17 +1665,17 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
                 acceptedRideRequests = accepted,
                 rejectedRideRequests = rejected,
                 passedRideRequests = passed,
-                acceptanceRate = acceptanceRate * 100,
+                acceptanceRate = acceptanceRate,
                 completedRides = completed,
                 driverCanceledRides = driverCanceled,
                 customerCanceledRides = customerCanceled,
-                completionRate = completionRate * 100,
+                completionRate = completionRate,
                 onlineDuration = onlineDuration,
                 rideDuration = rideDuration,
-                utilization = utilization * 100,
+                utilization = utilization,
                 distance = distance,
-                earnings = PriceAPIEntity totalEarning config.currency,
-                earningPerKm = PriceAPIEntity earningPerKm config.currency
+                earnings = fmap (`PriceAPIEntity` config.currency) totalEarning,
+                earningPerKm = fmap (`PriceAPIEntity` config.currency) earningPerKm
               }
           )
 
@@ -3340,7 +3365,7 @@ getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId = do
   (activeDriverCount, activeVehicleCount, currentOnlineDriverCount) <- do
     if all isJust mbAllTimeKeysRes && isJust onlineDriverCount
       then do
-        let res = Analytics.convertToFleetAllTimeFallbackRes (zip Analytics.fleetAllTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes)) (fromMaybe 0 onlineDriverCount)
+        let res = Analytics.convertToFleetAllTimeFallbackRes (Analytics.zipJusts Analytics.fleetAllTimeMetrics mbAllTimeKeysRes) onlineDriverCount
         logTagInfo "FleetAllTimeFallbackRes" (show res)
         Analytics.extractFleetAnalyticsData res
       else do
@@ -3349,11 +3374,21 @@ getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId = do
         Analytics.extractFleetAnalyticsData res
   -- compute remaining metrics from DB
   mfos <- QFleetOperatorStats.findByPrimaryKey fleetOwnerId
-  let completedRides = fromMaybe 0 (mfos >>= (.totalCompletedRides))
-      ratingSum = fromMaybe 0 (mfos >>= (.totalRatingScore))
-      ratingCount = fromMaybe 0 (mfos >>= (.totalRatingCount))
-      averageDriverRatings = if ratingCount > 0 then realToFrac ratingSum / realToFrac ratingCount else 0.0
-  pure $ Common.AllTimeFleetAnalyticsRes {activeVehicle = activeVehicleCount, completedRides = completedRides, totalActiveDrivers = activeDriverCount, currentOnlineDrivers = currentOnlineDriverCount, averageDriverRatings = averageDriverRatings}
+  let completedRides = mfos >>= (.totalCompletedRides)
+      ratingSum = mfos >>= (.totalRatingScore)
+      ratingCount = mfos >>= (.totalRatingCount)
+      averageDriverRatings =
+        ratingSum >>= \rs ->
+          ratingCount >>= \rc ->
+            if rc > 0 then Just (realToFrac rs / realToFrac rc) else Nothing
+  pure $
+    Common.AllTimeFleetAnalyticsRes
+      { activeVehicle = activeVehicleCount,
+        completedRides = completedRides,
+        totalActiveDrivers = activeDriverCount,
+        currentOnlineDrivers = currentOnlineDriverCount,
+        averageDriverRatings = averageDriverRatings
+      }
 
 getDriverFleetDashboardAnalytics :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Common.FleetAnalyticsResponseType -> Data.Time.Day -> Data.Time.Day -> Flow Common.FleetAnalyticsRes
 getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId mbResponseType fromDay toDay = do
@@ -3368,38 +3403,46 @@ getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId mbResponseT
         if useDBForAnalytics
           then QFODSExtra.sumFleetEarningsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay
           else CFODS.sumFleetEarningsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay
-      let grossEarningsAmount = fromMaybe (HighPrecMoney 0.0) earningsAgg.totalEarningSum
-          cashPlatformFeesAmount = fromMaybe (HighPrecMoney 0.0) earningsAgg.cashPlatformFeesSum
-          onlinePlatformFeesAmount = fromMaybe (HighPrecMoney 0.0) earningsAgg.onlinePlatformFeesSum
-          totalPlatformFeesAmount = cashPlatformFeesAmount + onlinePlatformFeesAmount
-          onlineDurationInHours :: Rational = maybe 0 (\(Seconds sec) -> fromIntegral sec / 3600) earningsAgg.onlineDurationSum
-          netEarningsAmount = grossEarningsAmount - totalPlatformFeesAmount
-          grossEarningsPerHourAmount = if onlineDurationInHours > 0 then grossEarningsAmount / HighPrecMoney onlineDurationInHours else HighPrecMoney 0.0
-          netEarningsPerHourAmount = if onlineDurationInHours > 0 then netEarningsAmount / HighPrecMoney onlineDurationInHours else HighPrecMoney 0.0
+      let grossEarningsAmount = earningsAgg.totalEarningSum
+          cashPlatformFeesAmount = earningsAgg.cashPlatformFeesSum
+          onlinePlatformFeesAmount = earningsAgg.onlinePlatformFeesSum
+          totalPlatformFeesAmount = liftA2 (+) cashPlatformFeesAmount onlinePlatformFeesAmount
+          onlineDurationInHours :: Maybe Rational
+          onlineDurationInHours =
+            earningsAgg.onlineDurationSum >>= \(Seconds sec) ->
+              let hours = fromIntegral sec / 3600
+               in if hours > 0 then Just hours else Nothing
+          netEarningsAmount = liftA2 (-) grossEarningsAmount totalPlatformFeesAmount
+          grossEarningsPerHourAmount =
+            grossEarningsAmount >>= \gross ->
+              onlineDurationInHours <&> \hours -> gross / HighPrecMoney hours
+          netEarningsPerHourAmount =
+            netEarningsAmount >>= \net ->
+              onlineDurationInHours <&> \hours -> net / HighPrecMoney hours
 
       pure $
         Common.Earnings $
           Common.EarningFleetAnalyticsRes
-            { grossEarnings = PriceAPIEntity grossEarningsAmount transporterConfig.currency,
-              platformFees = PriceAPIEntity totalPlatformFeesAmount transporterConfig.currency,
-              netEarnings = PriceAPIEntity netEarningsAmount transporterConfig.currency,
-              grossEarningsPerHour = PriceAPIEntity grossEarningsPerHourAmount transporterConfig.currency,
-              netEarningsPerHour = PriceAPIEntity netEarningsPerHourAmount transporterConfig.currency
+            { grossEarnings = fmap (`PriceAPIEntity` transporterConfig.currency) grossEarningsAmount,
+              platformFees = fmap (`PriceAPIEntity` transporterConfig.currency) totalPlatformFeesAmount,
+              netEarnings = fmap (`PriceAPIEntity` transporterConfig.currency) netEarningsAmount,
+              grossEarningsPerHour = fmap (`PriceAPIEntity` transporterConfig.currency) grossEarningsPerHourAmount,
+              netEarningsPerHour = fmap (`PriceAPIEntity` transporterConfig.currency) netEarningsPerHourAmount
             }
     _ -> do
       agg <-
         if useDBForAnalytics
           then QFODSExtra.sumFleetMetricsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay
           else CFODS.sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay
-      let totalEarnings = PriceAPIEntity (fromMaybe (HighPrecMoney 0.0) agg.totalEarningSum) transporterConfig.currency
-          totalDistance = fromMaybe (Meters 0) agg.totalDistanceSum
-          completedRides = fromMaybe 0 agg.totalCompletedRidesSum
-          totalRideRequest = fromMaybe 0 agg.totalRequestCountSum
-          acceptedRequest = fromMaybe 0 agg.acceptationRequestCountSum
-          rejectedRequest = fromMaybe 0 agg.rejectedRequestCountSum
-          pulledRequest = fromMaybe 0 agg.pulledRequestCountSum
-          driverCancelled = fromMaybe 0 agg.driverCancellationCountSum
-          customerCancelled = fromMaybe 0 agg.customerCancellationCountSum
+      let totalEarnings = fmap (`PriceAPIEntity` transporterConfig.currency) agg.totalEarningSum
+          totalDistance = agg.totalDistanceSum
+          completedRides = agg.totalCompletedRidesSum
+          totalRideRequest = agg.totalRequestCountSum
+          acceptedRequest = agg.acceptationRequestCountSum
+          rejectedRequest = agg.rejectedRequestCountSum
+          pulledRequest = agg.pulledRequestCountSum
+          driverCancelled = agg.driverCancellationCountSum
+          customerCancelled = agg.customerCancellationCountSum
       pure $
         Common.Filtered $
           Common.FilteredFleetAnalyticsRes {..}
@@ -3640,19 +3683,19 @@ convertToFleetVehicleStatsItem :: DTCConfig.TransporterConfig -> [FleetRcDailySt
 convertToFleetVehicleStatsItem transporterConfig agg vehicleMap =
   map mkItem agg
   where
-    calculateEarningsPerKm :: Meters -> HighPrecMoney -> HighPrecMoney
+    calculateEarningsPerKm :: Meters -> HighPrecMoney -> Maybe HighPrecMoney
     calculateEarningsPerKm distance earnings =
       let meters = distance.getMeters
           km = toRational meters / 1000
        in if km == 0
-            then HighPrecMoney 0.0
-            else HighPrecMoney (earnings.getHighPrecMoney / km)
+            then Nothing
+            else Just (HighPrecMoney (earnings.getHighPrecMoney / km))
 
     mkItem :: FleetRcDailyStatsAggregated -> Common.FleetVehicleStatsItem
     mkItem stats =
       let rcIdKey = stats.rcId
           mRc = Map.lookup rcIdKey vehicleMap
-          earningsPerKm = calculateEarningsPerKm stats.totalDistance stats.totalEarnings
+          mbEarningsPerKm = calculateEarningsPerKm stats.totalDistance stats.totalEarnings
        in Common.FleetVehicleStatsItem
             { Common.vehicleNo = mRc >>= DVRC.unencryptedCertificateNumber,
               Common.vehicleModel = mRc >>= DVRC.vehicleModel,
@@ -3663,7 +3706,7 @@ convertToFleetVehicleStatsItem transporterConfig agg vehicleMap =
               completedRides = stats.totalCompletedRides,
               rideDistance = stats.totalDistance,
               rideDuration = stats.totalDuration,
-              earningPerKm = earningsPerKm
+              earningPerKm = mbEarningsPerKm
             }
 
 getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Flow Common.OnboardedDriversAndUnlinkedVehiclesRes

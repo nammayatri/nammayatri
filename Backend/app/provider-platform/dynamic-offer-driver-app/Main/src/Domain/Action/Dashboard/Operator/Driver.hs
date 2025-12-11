@@ -460,7 +460,7 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = 
   logTagInfo "mbAllTimeKeysRes" (show mbAllTimeKeysRes)
 
   -- fallback to ClickHouse and populate cache when missing
-  (totalRides, ratingSum, cancelCount, acceptationCount, totalRequestCount) <- do
+  (totalRides, ratingSum, ratingCount, cancelCount, acceptationCount, totalRequestCount) <- do
     if all isJust mbAllTimeKeysRes
       then do
         let res = Analytics.convertToAllTimeFallbackRes (zip Analytics.allTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes))
@@ -473,11 +473,22 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = 
 
   logTagInfo "Total rides" (show totalRides)
   logTagInfo "Rating sum" (show ratingSum)
+  logTagInfo "Rating count" (show ratingCount)
   logTagInfo "Cancel count" (show cancelCount)
   logTagInfo "Acceptation count" (show acceptationCount)
   logTagInfo "Total request count" (show totalRequestCount)
-  let (rating, cancellationRate) = if totalRides > 0 then (fromIntegral ratingSum / fromIntegral totalRides, (fromIntegral cancelCount / fromIntegral totalRides) * 100) else (0, 0)
-  let acceptanceRate = if totalRequestCount > 0 then (fromIntegral acceptationCount / fromIntegral totalRequestCount) * 100 else 0
+  let rating =
+        ratingSum >>= \rs ->
+          ratingCount >>= \rc ->
+            if rc > 0 then Just (fromIntegral rs / fromIntegral rc) else Nothing
+      cancellationRate =
+        cancelCount >>= \cc ->
+          totalRides >>= \tr ->
+            if tr > 0 then Just (fromIntegral cc / fromIntegral tr * 100) else Nothing
+      acceptanceRate =
+        acceptationCount >>= \ac ->
+          totalRequestCount >>= \trc ->
+            if trc > 0 then Just (fromIntegral ac / fromIntegral trc * 100) else Nothing
   pure $ API.Types.ProviderPlatform.Operator.Driver.AllTimeOperatorAnalyticsRes {rating, cancellationRate, acceptanceRate}
 
 ---------------------------------------------------------------------

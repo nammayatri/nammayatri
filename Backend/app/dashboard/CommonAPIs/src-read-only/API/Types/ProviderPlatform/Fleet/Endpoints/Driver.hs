@@ -73,11 +73,11 @@ data Address = Address {point :: Kernel.External.Maps.Types.LatLong, address :: 
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data AllTimeFleetAnalyticsRes = AllTimeFleetAnalyticsRes
-  { activeVehicle :: Kernel.Prelude.Int,
-    completedRides :: Kernel.Prelude.Int,
-    totalActiveDrivers :: Kernel.Prelude.Int,
-    currentOnlineDrivers :: Kernel.Prelude.Int,
-    averageDriverRatings :: Kernel.Prelude.Double
+  { activeVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    completedRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    totalActiveDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    currentOnlineDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    averageDriverRatings :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -343,11 +343,11 @@ data DrivertoVehicleAssociationResT = DrivertoVehicleAssociationResT {fleetOwner
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data EarningFleetAnalyticsRes = EarningFleetAnalyticsRes
-  { grossEarnings :: Kernel.Types.Common.PriceAPIEntity,
-    platformFees :: Kernel.Types.Common.PriceAPIEntity,
-    netEarnings :: Kernel.Types.Common.PriceAPIEntity,
-    grossEarningsPerHour :: Kernel.Types.Common.PriceAPIEntity,
-    netEarningsPerHour :: Kernel.Types.Common.PriceAPIEntity
+  { grossEarnings :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    platformFees :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    netEarnings :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    grossEarningsPerHour :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    netEarningsPerHour :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -365,15 +365,15 @@ data EstimatedRouteDetails = EstimatedRouteDetails
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FilteredFleetAnalyticsRes = FilteredFleetAnalyticsRes
-  { totalEarnings :: Kernel.Types.Common.PriceAPIEntity,
-    completedRides :: Kernel.Prelude.Int,
-    totalDistance :: Kernel.Types.Common.Meters,
-    totalRideRequest :: Kernel.Prelude.Int,
-    acceptedRequest :: Kernel.Prelude.Int,
-    pulledRequest :: Kernel.Prelude.Int,
-    rejectedRequest :: Kernel.Prelude.Int,
-    driverCancelled :: Kernel.Prelude.Int,
-    customerCancelled :: Kernel.Prelude.Int
+  { totalEarnings :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    completedRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    totalDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    totalRideRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    acceptedRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    pulledRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    rejectedRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    driverCancelled :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    customerCancelled :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -501,13 +501,13 @@ data FleetDashboardAnalyticsCacheReq = FleetDashboardAnalyticsCacheReq
 
 data FleetDriverEarningsStatsRes = FleetDriverEarningsStatsRes
   { driverName :: Kernel.Prelude.Text,
-    totalEarningGross :: Kernel.Types.Common.HighPrecMoney,
-    inAppEarningGross :: Kernel.Types.Common.HighPrecMoney,
-    cashEarningGross :: Kernel.Types.Common.HighPrecMoney,
-    platformFeeTotal :: Kernel.Types.Common.HighPrecMoney,
-    totalEarningNet :: Kernel.Types.Common.HighPrecMoney,
-    inAppEarningNet :: Kernel.Types.Common.HighPrecMoney,
-    cashEarningNet :: Kernel.Types.Common.HighPrecMoney,
+    totalEarningGross :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    inAppEarningGross :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cashEarningGross :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    platformFeeTotal :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    totalEarningNet :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    inAppEarningNet :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cashEarningNet :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     currency :: Kernel.Types.Common.Currency
   }
   deriving stock (Generic)
@@ -538,20 +538,20 @@ data FleetDriverListStatsSortOn
 data FleetDriverMetricsStatsRes = FleetDriverMetricsStatsRes
   { driverName :: Kernel.Prelude.Text,
     rating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    acceptedRideRequests :: Kernel.Prelude.Int,
-    rejectedRideRequests :: Kernel.Prelude.Int,
-    passedRideRequests :: Kernel.Prelude.Int,
-    acceptanceRate :: Kernel.Prelude.Double,
-    completedRides :: Kernel.Prelude.Int,
-    driverCanceledRides :: Kernel.Prelude.Int,
-    customerCanceledRides :: Kernel.Prelude.Int,
-    completionRate :: Kernel.Prelude.Double,
-    onlineDuration :: Kernel.Types.Common.Seconds,
-    rideDuration :: Kernel.Types.Common.Seconds,
-    utilization :: Kernel.Prelude.Double,
-    distance :: Kernel.Types.Common.Meters,
-    earnings :: Kernel.Types.Common.PriceAPIEntity,
-    earningPerKm :: Kernel.Types.Common.PriceAPIEntity
+    acceptedRideRequests :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    rejectedRideRequests :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    passedRideRequests :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    acceptanceRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    completedRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    driverCanceledRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    customerCanceledRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    completionRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    onlineDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    rideDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    utilization :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    earnings :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    earningPerKm :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -708,7 +708,7 @@ data FleetVehicleStatsItem = FleetVehicleStatsItem
     completedRides :: Kernel.Prelude.Int,
     rideDistance :: Kernel.Types.Common.Meters,
     rideDuration :: Kernel.Types.Common.Seconds,
-    earningPerKm :: Kernel.Types.Common.HighPrecMoney
+    earningPerKm :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

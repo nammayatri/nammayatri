@@ -1650,31 +1650,31 @@ types:
     - enum: "EarningsList FleetDriverEarningsStatsRes | MetricsList FleetDriverMetricsStatsRes"
   FleetDriverEarningsStatsRes:
     - driverName: Text
-    - totalEarningGross: HighPrecMoney
-    - inAppEarningGross: HighPrecMoney
-    - cashEarningGross: HighPrecMoney
-    - platformFeeTotal: HighPrecMoney
-    - totalEarningNet: HighPrecMoney
-    - inAppEarningNet: HighPrecMoney
-    - cashEarningNet: HighPrecMoney
+    - totalEarningGross: Maybe HighPrecMoney
+    - inAppEarningGross: Maybe HighPrecMoney
+    - cashEarningGross: Maybe HighPrecMoney
+    - platformFeeTotal: Maybe HighPrecMoney
+    - totalEarningNet: Maybe HighPrecMoney
+    - inAppEarningNet: Maybe HighPrecMoney
+    - cashEarningNet: Maybe HighPrecMoney
     - currency: Currency
   FleetDriverMetricsStatsRes:
     - driverName: Text
     - rating: Maybe Double
-    - acceptedRideRequests: Int
-    - rejectedRideRequests: Int
-    - passedRideRequests: Int
-    - acceptanceRate: Double
-    - completedRides: Int
-    - driverCanceledRides: Int
-    - customerCanceledRides: Int
-    - completionRate: Double
-    - onlineDuration: Seconds
-    - rideDuration: Seconds
-    - utilization: Double
-    - distance: Meters
-    - earnings: PriceAPIEntity
-    - earningPerKm: PriceAPIEntity
+    - acceptedRideRequests: Maybe Int
+    - rejectedRideRequests: Maybe Int
+    - passedRideRequests: Maybe Int
+    - acceptanceRate: Maybe Double
+    - completedRides: Maybe Int
+    - driverCanceledRides: Maybe Int
+    - customerCanceledRides: Maybe Int
+    - completionRate: Maybe Double
+    - onlineDuration: Maybe Seconds
+    - rideDuration: Maybe Seconds
+    - utilization: Maybe Double
+    - distance: Maybe Meters
+    - earnings: Maybe PriceAPIEntity
+    - earningPerKm: Maybe PriceAPIEntity
   FleetDriverStatsResponseType:
     enum: EARNINGS_LIST | METRICS_LIST
     derive: "HttpInstance"
@@ -2042,27 +2042,27 @@ types:
     rideStops: Maybe [LatLong]
     derive: "'HideSecrets"
   AllTimeFleetAnalyticsRes:
-    - activeVehicle: Int
-    - completedRides: Int
-    - totalActiveDrivers: Int
-    - currentOnlineDrivers: Int
-    - averageDriverRatings: Double
+    - activeVehicle: Maybe Int
+    - completedRides: Maybe Int
+    - totalActiveDrivers: Maybe Int
+    - currentOnlineDrivers: Maybe Int
+    - averageDriverRatings: Maybe Double
   FilteredFleetAnalyticsRes:
-    - totalEarnings: PriceAPIEntity
-    - completedRides: Int
-    - totalDistance: Meters
-    - totalRideRequest: Int
-    - acceptedRequest: Int
-    - pulledRequest: Int
-    - rejectedRequest: Int
-    - driverCancelled: Int
-    - customerCancelled: Int
+    - totalEarnings: Maybe PriceAPIEntity
+    - completedRides: Maybe Int
+    - totalDistance: Maybe Meters
+    - totalRideRequest: Maybe Int
+    - acceptedRequest: Maybe Int
+    - pulledRequest: Maybe Int
+    - rejectedRequest: Maybe Int
+    - driverCancelled: Maybe Int
+    - customerCancelled: Maybe Int
   EarningFleetAnalyticsRes:
-    - grossEarnings: PriceAPIEntity
-    - platformFees: PriceAPIEntity
-    - netEarnings: PriceAPIEntity
-    - grossEarningsPerHour: PriceAPIEntity
-    - netEarningsPerHour: PriceAPIEntity
+    - grossEarnings: Maybe PriceAPIEntity
+    - platformFees: Maybe PriceAPIEntity
+    - netEarnings: Maybe PriceAPIEntity
+    - grossEarningsPerHour: Maybe PriceAPIEntity
+    - netEarningsPerHour: Maybe PriceAPIEntity
   FleetAnalyticsResponseType:
     enum: FILTERED | EARNINGS
     derive: "HttpInstance"
@@ -2082,7 +2082,7 @@ types:
     - completedRides: Int
     - rideDistance: Meters
     - rideDuration: Seconds
-    - earningPerKm: HighPrecMoney
+    - earningPerKm: Maybe HighPrecMoney
   OnboardedDriversAndUnlinkedVehiclesRes:
     - onboardedDrivers: [OnboardedDriver]
     - unlinkedVehicles: [UnlinkedVehicle]
