@@ -21,6 +21,7 @@ module API.UI.Call
   )
 where
 
+import Data.ByteString.Lazy (fromStrict)
 import qualified Domain.Action.UI.Call as DCall
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as SCS
@@ -34,11 +35,17 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Version (DeviceType)
 import Kernel.Utils.Common
-import Kernel.Utils.XML (XmlText)
 import Servant
-import Servant.XML
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
+
+data XML
+
+instance Accept XML where
+  contentType _ = "application/xml"
+
+instance MimeRender XML Text where
+  mimeRender _ = fromStrict . encodeUtf8
 
 type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI :<|> BackendBasedDriverCallApi :<|> SDKBasedCallAPI
 
@@ -114,7 +121,7 @@ type SDKBasedCallAPI =
            :<|> "connectedEntityTwiml"
            :> MandatoryQueryParam "bppRideId" (Id SRide.Ride)
            :> MandatoryQueryParam "user" DCall.EntityType
-           :> Get '[XML] XmlText
+           :> Get '[XML] Text
        )
 
 frontendBasedCallHandler :: FlowServer FrontendBasedCallAPI
@@ -151,5 +158,5 @@ getDriverMobileNumber (driverId, merchantId, merchantOpCityId) = withFlowHandler
 getCallTwillioAccessToken :: Id SRide.Ride -> DCall.EntityType -> DeviceType -> FlowHandler Text
 getCallTwillioAccessToken rideId entity deviceType = withFlowHandlerAPI $ DCall.getCallTwillioAccessToken rideId entity deviceType
 
-getCallTwillioConnectedEntityTwiml :: Id SRide.Ride -> DCall.EntityType -> FlowHandler XmlText
+getCallTwillioConnectedEntityTwiml :: Id SRide.Ride -> DCall.EntityType -> FlowHandler Text
 getCallTwillioConnectedEntityTwiml rideId entity = withFlowHandlerAPI $ DCall.getCallTwillioConnectedEntityTwiml rideId entity
