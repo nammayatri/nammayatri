@@ -37,6 +37,7 @@ import Environment
 import EulerHS.Prelude (whenNothing_, (<|>))
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
@@ -337,8 +338,9 @@ postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
         otpCode <- maybe generateOTPCode return useFakeOtpM
         whenNothing_ useFakeOtpM $ do
           let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
+              personLanguage = fromMaybe ENGLISH person.language
           (mbSender, message, templateId) <-
-            MessageBuilder.buildOperatorJoiningMessage merchantOpCityId $
+            MessageBuilder.buildOperatorJoiningMessage merchantOpCityId (Just personLanguage) $
               MessageBuilder.BuildOperatorJoiningMessageReq
                 { otp = otpCode,
                   operatorName = operatorName
@@ -391,7 +393,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
       withLogTag ("personId_" <> getId person.id) $ do
         (mbSender, message, templateId) <-
-          MessageBuilder.buildOperatorJoinAndDownloadAppMessage merchantOpCityId $
+          MessageBuilder.buildOperatorJoinAndDownloadAppMessage merchantOpCityId person.language $
             MessageBuilder.BuildOperatorJoinAndDownloadAppMessageReq
               { operatorName = operator.firstName
               }

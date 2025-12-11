@@ -19,6 +19,7 @@ module Storage.CachedQueries.Merchant.MerchantMessage
     findAllByMerchantOpCityIdInRideFlow,
     findByMerchantOpCityIdAndMessageKeyVehicleCategory,
     findByMerchantOpCityIdAndMessageKeyVehicleCategoryInRideFlow,
+    findByMerchantOpCityIdAndMessageKeyVehicleCategoryAndLanguage,
     clearCache,
     clearCacheById,
   )
@@ -27,6 +28,7 @@ where
 import Domain.Types.MerchantMessage
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory as DVC
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -76,6 +78,56 @@ findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory
 findByMerchantOpCityIdAndMessageKeyVehicleCategoryInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
 findByMerchantOpCityIdAndMessageKeyVehicleCategoryInRideFlow id messageKey vehicleCategory configVersionMap =
   findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory (Just configVersionMap)
+
+makeMerchantOpCityIdAndMessageKeyAndLanguage :: Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> Maybe Language -> Text
+makeMerchantOpCityIdAndMessageKeyAndLanguage id messageKey mbVehicleCategory mbLanguage = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey <> maybe "" ((":VehCat-" <>) . show) mbVehicleCategory <> maybe "" ((":Lang-" <>) . show) mbLanguage
+
+findByMerchantOpCityIdAndMessageKeyVehicleCategoryAndLanguage :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> Maybe Language -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
+findByMerchantOpCityIdAndMessageKeyVehicleCategoryAndLanguage id messageKey vehicleCategory language mbConfigVersionMap = do
+  -- First try with the specified language
+  res <-
+    DynamicLogic.findOneConfigWithCacheKey
+      (cast id)
+      (LYT.DRIVER_CONFIG LYT.MerchantMessage)
+      mbConfigVersionMap
+      Nothing
+      (Queries.findByMerchantOpCityIdAndMessageKeyAndLanguage id messageKey language)
+      (makeMerchantOpCityIdAndMessageKeyAndLanguage id messageKey vehicleCategory language)
+  case res of
+    Just a -> return $ Just a
+    Nothing -> do
+      -- Fallback: if requested language wasn't ENGLISH, try with ENGLISH
+      if language == Just ENGLISH
+        then do
+          -- Already tried ENGLISH, now try without language filter (older method)
+          DynamicLogic.findOneConfigWithCacheKey
+            (cast id)
+            (LYT.DRIVER_CONFIG LYT.MerchantMessage)
+            mbConfigVersionMap
+            Nothing
+            (Queries.findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory)
+            (makeMerchantOpCityIdAndMessageKey id messageKey vehicleCategory)
+        else do
+          -- Try with ENGLISH as fallback
+          resEnglish <-
+            DynamicLogic.findOneConfigWithCacheKey
+              (cast id)
+              (LYT.DRIVER_CONFIG LYT.MerchantMessage)
+              mbConfigVersionMap
+              Nothing
+              (Queries.findByMerchantOpCityIdAndMessageKeyAndLanguage id messageKey (Just ENGLISH))
+              (makeMerchantOpCityIdAndMessageKeyAndLanguage id messageKey vehicleCategory (Just ENGLISH))
+          case resEnglish of
+            Just a -> return $ Just a
+            Nothing ->
+              -- Final fallback: try without language filter (older method)
+              DynamicLogic.findOneConfigWithCacheKey
+                (cast id)
+                (LYT.DRIVER_CONFIG LYT.MerchantMessage)
+                mbConfigVersionMap
+                Nothing
+                (Queries.findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory)
+                (makeMerchantOpCityIdAndMessageKey id messageKey vehicleCategory)
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> m ()
 clearCache merchantOpCityId messageKey mbVehicleCategory =
