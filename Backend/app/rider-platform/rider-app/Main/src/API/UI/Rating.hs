@@ -86,7 +86,7 @@ processRating (personId, merchantId) request = do
     mkFeedbackFormReq :: DFeedback.FeedbackReq -> Maybe [CallBPPInternal.BadgeMetadata] -> DFeedback.FeedbackRes -> CallBPPInternal.FeedbackFormReq
     mkFeedbackFormReq req badgeMetadataList feedbackRes =
       CallBPPInternal.FeedbackFormReq
-        { rideId = feedbackRes.bppBookingId.getId,
+        { rideId = feedbackRes.bppRideId.getId,
           rating = Just req.rating,
           feedbackDetails = req.feedbackDetails,
           badges = badgeMetadataList,
