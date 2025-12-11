@@ -239,7 +239,7 @@ upsertPersonAndGetToken pOrgId regPOCfg fromStationMOCId mId mbRegCoordinates re
   merchant <- B.runInReplica $ CQM.findById mId >>= fromMaybeM (MerchantNotFound mId.getId)
 
   (person, isCreatedNow) <-
-    case identifierType of
+    case identifierType of -- TODO: Add support for DEVICE identifier type
       SP.MOBILENUMBER -> do
         mobileNumberHash <- getDbHash mobileNumber
         Person.findByRoleAndMobileNumberAndMerchantId SP.USER mobileCountryCode mobileNumberHash mId
@@ -299,6 +299,7 @@ createPersonViaPartner req merchant mbRegCoordinates partnerOrgId = do
           merchantId = merchant.shortId,
           deviceToken = Nothing,
           notificationToken,
+          deviceUUID = Nothing,
           whatsappNotificationEnroll = Nothing,
           firstName = Nothing,
           middleName = Nothing,

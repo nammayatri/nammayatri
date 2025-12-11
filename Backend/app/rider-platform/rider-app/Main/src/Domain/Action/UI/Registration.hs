@@ -127,6 +127,7 @@ data AuthReq = AuthReq
     merchantId :: ShortId Merchant,
     deviceToken :: Maybe Text,
     notificationToken :: Maybe Text,
+    deviceUUID :: Maybe Text, -- frontend ID to be stored in keychain. UUID for iOS and androidID plus DRM ID for android
     whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods,
     firstName :: Maybe Text,
     middleName :: Maybe Text,
@@ -153,6 +154,7 @@ instance A.FromJSON AuthReq where
         <*> obj .: "merchantId"
         <*> obj .:? "deviceToken"
         <*> obj .:? "userId" -- TODO :: This needs to be changed to notificationToken
+        <*> obj .:? "deviceUUID"
         <*> obj .:? "whatsappNotificationEnroll"
         <*> obj .:? "firstName"
         <*> obj .:? "middleName"
@@ -295,7 +297,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
           >>= fromMaybeM (MerchantNotFound $ getShortId merchantTemp.fallbackShortId)
 
   (person, otpChannel) <-
-    case identifierType of
+    case identifierType of -- TODO: Add support for DEVICE identifier type
       SP.MOBILENUMBER -> do
         countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
         mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
@@ -313,6 +315,15 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
             >>= maybe (createPerson req SP.EMAIL Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing) return
         return (person, SOTP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar auth is not supported"
+      SP.DEVICE -> case req.deviceUUID of
+        Nothing -> throwError $ InvalidRequest "Anonymous request missing deviceUUID"
+        Just uuid -> do
+          let notificationToken = req.notificationToken
+          person <-
+            Person.findAllByDeviceId (Just uuid)
+              <&> listToMaybe
+              >>= maybe (createPerson req SP.DEVICE notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing) pure
+          return (person, SOTP.SMS)
 
   when (fromMaybe False person.authBlocked && maybe False (now <) person.blockedUntil) $ throwError IpHitsLimitExceeded
   void $ cachePersonOTPChannel person.id otpChannel
@@ -335,32 +346,33 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
   regToken <- makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM False
-  if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
-    then do
-      deploymentVersion <- asks (.version)
-      void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion
-      RegistrationToken.create regToken
-      when (isNothing useFakeOtpM) $ do
-        let otpCode = SR.authValueHash regToken
-        SOTP.sendOTP
-          otpChannel
-          otpCode
-          person.id
-          person.merchantId
-          merchantOperatingCityId
-          req.mobileCountryCode
-          req.mobileNumber
-          req.email
-          riderConfig.emailOtpConfig
-          mbSenderHash
-    else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
+
+  authResBase <- do
+    if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
+      then
+        if identifierType == SP.DEVICE
+          then do
+            _ <- RegistrationToken.create regToken
+            pure $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) Nothing person.blocked Nothing Nothing
+          else do
+            deploymentVersion <- asks (.version)
+            void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion
+            RegistrationToken.create regToken
+            when (isNothing useFakeOtpM) $ do
+              let otpCode = SR.authValueHash regToken
+              SOTP.sendOTP otpChannel otpCode person.id person.merchantId merchantOperatingCityId req.mobileCountryCode req.mobileNumber req.email riderConfig.emailOtpConfig mbSenderHash
+            pure $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing Nothing
+      else do
+        logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
+        pure $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing Nothing
+
   (mbDepotCode, mbIsDepotAdmin) <-
     if req.isOperatorReq == Just True
       then do
         mbDepotManager <- QDepotManager.findByPersonId person.id
         return (mbDepotManager <&> (.depotCode), mbDepotManager <&> (.isAdmin))
       else return (Nothing, Nothing)
-  return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked mbDepotCode mbIsDepotAdmin
+  return $ authResBase {depotCode = mbDepotCode, isDepotAdmin = mbIsDepotAdmin}
   where
     castChannelToMedium :: SOTP.OTPChannel -> SR.Medium
     castChannelToMedium SOTP.SMS = SR.SMS
@@ -649,7 +661,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         referredByCustomer = Nothing,
         customerReferralCode = Nothing,
         blockedCount = Just 0,
-        deviceId = Nothing,
+        deviceId = req.deviceUUID,
         androidId = Nothing,
         registeredViaPartnerOrgId = mbPartnerOrgId,
         customerPaymentId = Nothing,
@@ -991,6 +1003,7 @@ createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
                 merchantId = merchant.shortId,
                 deviceToken = Nothing,
                 notificationToken = Nothing,
+                deviceUUID = Nothing,
                 whatsappNotificationEnroll = Nothing,
                 firstName = Nothing,
                 middleName = Nothing,
