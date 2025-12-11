@@ -22,7 +22,7 @@ import qualified Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Station
 import qualified Domain.Types.StationType
 import qualified Domain.Types.Trip
-import EulerHS.Prelude hiding (id, seq)
+import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Payment.Juspay.Types
@@ -38,6 +38,10 @@ import Servant
 import qualified SharedLogic.Offer
 import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import Tools.Auth
+
+data AlternateRouteDetails = AlternateRouteDetails {isLive :: Kernel.Prelude.Bool, routeCode :: Kernel.Prelude.Text, routeShortName :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data AvailableRoute = AvailableRoute
   { quoteId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote),
@@ -186,6 +190,7 @@ data LiveVehicleInfo = LiveVehicleInfo
   { eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
     number :: Kernel.Prelude.Text,
     position :: Kernel.External.Maps.Types.LatLong,
+    serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType
   }
   deriving stock (Generic)
@@ -294,11 +299,11 @@ data RouteServiceabilityResp
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RouteStopMapping = RouteStopMapping {code :: Kernel.Prelude.Text, lat :: Kernel.Prelude.Double, lon :: Kernel.Prelude.Double, name :: Kernel.Prelude.Text, seq :: Kernel.Prelude.Int}
+data RouteStopMapping = RouteStopMapping {code :: Kernel.Prelude.Text, lat :: Kernel.Prelude.Double, lon :: Kernel.Prelude.Double, name :: Kernel.Prelude.Text, seqNo :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RouteWithLiveVehicle = RouteWithLiveVehicle {liveVehicles :: [LiveVehicleInfo], routeCode :: Kernel.Prelude.Text, routeShortName :: Kernel.Prelude.Text, routeStopMapping :: [RouteStopMapping]}
+data RouteWithLiveVehicle = RouteWithLiveVehicle {alternateRouteInfo :: Kernel.Prelude.Maybe [AlternateRouteDetails], liveVehicles :: [LiveVehicleInfo], routeCode :: Kernel.Prelude.Text, routeShortName :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
