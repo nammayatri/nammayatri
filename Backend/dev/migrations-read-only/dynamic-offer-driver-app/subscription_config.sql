@@ -119,3 +119,9 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN show_manual_pl
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN disabled_variants_for_subscription text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN enable_vendor_percentage_split boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN default_service_tier_for_category json ;

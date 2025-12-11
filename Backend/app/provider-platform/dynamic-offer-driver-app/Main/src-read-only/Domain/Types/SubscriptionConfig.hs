@@ -5,6 +5,7 @@ module Domain.Types.SubscriptionConfig where
 
 import Data.Aeson
 import qualified Data.Time
+import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity
@@ -28,9 +29,11 @@ data SubscriptionConfig = SubscriptionConfig
     dataEntityToSend :: [Domain.Types.SubscriptionConfig.CurrentPlanEntites],
     deepLinkExpiryTimeInMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     defaultCityVehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
+    defaultServiceTierForCategory :: Kernel.Prelude.Maybe [(Domain.Types.VehicleCategory.VehicleCategory, Domain.Types.Common.ServiceTierType)],
     disabledVariantsForSubscription :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant],
     enableCityBasedFeeSwitch :: Kernel.Prelude.Bool,
     enableServiceUsageChargeDefault :: Kernel.Prelude.Bool,
+    enableVendorPercentageSplit :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     eventsEnabledForWebhook :: [Domain.Types.WebhookExtra.WebhookEvent],
     executionEnabledForVehicleCategories :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
     extWebhookConfigs :: Kernel.Prelude.Maybe Domain.Types.WebhookExtra.ExternalWebhookConfigs,
