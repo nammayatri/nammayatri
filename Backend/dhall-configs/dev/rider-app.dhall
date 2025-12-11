@@ -437,4 +437,5 @@ in  { esqDBCfg
     , parkingApiKey = sec.parkingApiKey
     , frfsMetricsRateLimitHits = +100
     , frfsMetricsRateLimitWindowSec = +60
+    , corporatePartnerApiToken = sec.corporatePartnerApiToken
     }

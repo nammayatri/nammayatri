@@ -507,7 +507,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
     measureLatency
       ( (flip mapConcurrently) groupedByTierReordered $ \timingsForTier -> do
           let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
-              routeCodesForTier = map (.routeCode) timingsForTier
+              routeCodesForTier = nub $ map (.routeCode) timingsForTier
           logDebug $ "routeCodesForTier: " <> show routeCodesForTier <> "serviceTierType: " <> show serviceTierType
           let tierSource = maybe GTFS (\a -> a.source) $ find (\a -> a.source == LIVE) timingsForTier
 

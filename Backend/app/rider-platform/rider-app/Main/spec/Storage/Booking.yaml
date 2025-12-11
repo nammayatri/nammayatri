@@ -38,6 +38,7 @@ imports:
   JourneyLeg: Domain.Types.JourneyLeg
   RecentLocation: Domain.Types.RecentLocation
   BillingCategory: SharedLogic.Type
+  VehicleCategory : BecknV2.OnDemand.Enums
 
 BookingLocation:
   tableName: booking_location
@@ -214,6 +215,7 @@ Booking:
     vehicleServiceTierType: ServiceTierType|NoRelation
     vehicleServiceTierSeatingCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
+    vehicleCategory: Maybe VehicleCategory
     vehicleIconUrl: Maybe BaseUrl
     isAirConditioned: Maybe Bool
     isDashboardRequest: Maybe Bool

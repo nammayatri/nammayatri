@@ -529,7 +529,7 @@ buildPaymentOrder ::
 buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType req resp = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
-  let paymentOrderValidTill = mbPaymentOrderValidity <&> (\validity -> addUTCTime (fromIntegral validity) now)
+  let paymentOrderValidTill = mbPaymentOrderValidity <&> (\validity -> addUTCTime (intToNominalDiffTime validity.getSeconds) now)
       mkPaymentOrder =
         DOrder.PaymentOrder
           { id = Id req.orderId,
@@ -711,9 +711,7 @@ orderStatusService personId orderId orderStatusCall = do
       maybe
         (updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
-            Redis.withCrossAppRedis $
-              Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $
-                updateOrderTransaction order orderTxn Nothing
+            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn Nothing
         )
         transactionUUID -- should we put it in fork ?
       return $
@@ -742,9 +740,7 @@ orderStatusService personId orderId orderStatusCall = do
       maybe
         (updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
-            Redis.withCrossAppRedis $
-              Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $
-                updateOrderTransaction order orderTxn Nothing
+            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn Nothing
         )
         transactionUUID
       mapM_ (void . upsertRefundStatus order) refunds
@@ -910,9 +906,7 @@ juspayWebhookService resp respDump = do
       maybe
         (updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
-            Redis.withCrossAppRedis $
-              Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $
-                updateOrderTransaction order orderTxn $ Just respDump
+            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
         )
         transactionUUID
     Payment.OrderStatusResp {..} -> do
@@ -934,9 +928,7 @@ juspayWebhookService resp respDump = do
       maybe
         (updateOrderTransaction order orderTxn Nothing)
         ( \transactionUUID' ->
-            Redis.withCrossAppRedis $
-              Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $
-                updateOrderTransaction order orderTxn $ Just respDump
+            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
         )
         transactionUUID
       mapM_ (void . upsertRefundStatus order) refunds
@@ -975,9 +967,7 @@ stripeWebhookService resp respDump = do
         maybe
           (updateOrderTransaction order orderTxn Nothing)
           ( \transactionUUID' ->
-              Redis.withCrossAppRedis $
-                Redis.whenWithLockRedis (txnStripeProccessingKey transactionUUID') 60 $
-                  updateOrderTransaction order orderTxn $ Just respDump
+              Redis.whenWithLockRedis (txnStripeProccessingKey transactionUUID') 60 $ updateOrderTransaction order orderTxn $ Just respDump
           )
           orderTxn.transactionUUID
       Nothing -> throwError (InvalidRequest $ "orderShortId not found for eventId: " <> resp.id.getId)
@@ -1133,9 +1123,8 @@ createRefundService ::
 createRefundService orderShortId refundsCall =
   do
     order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderDoesNotExist orderShortId.getShortId)
-    Redis.withCrossAppRedis $
-      Redis.whenWithLockRedisAndReturnValue (refundProccessingKey orderShortId.getShortId) 60 $ do
-        processRefund order
+    Redis.whenWithLockRedisAndReturnValue (refundProccessingKey orderShortId.getShortId) 60 $ do
+      processRefund order
     >>= \case
       Left _ -> return Nothing
       Right response -> return response
@@ -1218,19 +1207,18 @@ mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
 upsertRefundStatus :: (BeamFlow m r) => DOrder.PaymentOrder -> Payment.RefundsData -> m (Maybe Refunds)
 upsertRefundStatus order Payment.RefundsData {..} =
   do
-    Redis.withCrossAppRedis $
-      Redis.whenWithLockRedisAndReturnValue upsertRefundProcessingKey 60 $
-        ( do
-            QRefunds.findById (Id requestId)
-              >>= \case
-                Just refundEntry -> do
-                  QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status (Id requestId)
-                  return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode}
-                Nothing -> do
-                  refundEntry <- mkRefundsEntry order.merchantId requestId order.shortId order.amount status
-                  QRefunds.create refundEntry
-                  return refundEntry
-        )
+    Redis.whenWithLockRedisAndReturnValue upsertRefundProcessingKey 60 $
+      ( do
+          QRefunds.findById (Id requestId)
+            >>= \case
+              Just refundEntry -> do
+                QRefunds.updateRefundsEntryByResponse initiatedBy idAssignedByServiceProvider errorMessage errorCode status (Id requestId)
+                return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode}
+              Nothing -> do
+                refundEntry <- mkRefundsEntry order.merchantId requestId order.shortId order.amount status
+                QRefunds.create refundEntry
+                return refundEntry
+      )
     >>= \case
       Left _ -> return Nothing
       Right refundEntry -> return $ Just refundEntry

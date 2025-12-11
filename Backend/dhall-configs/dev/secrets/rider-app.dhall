@@ -36,4 +36,5 @@ in  { dbUserId = "atlas_app_user"
     , ondcTokenMap
     , googleSAPrivateKey
     , parkingApiKey = "test-parking-api-key"
+    , corporatePartnerApiToken = "test-partner-api-token"
     }

@@ -134,9 +134,13 @@ extractServiceCode routeCode = maybe (fromMaybe "O" infixMatch) (\x -> x) startM
 
     startMatch =
       snd <$> find (\(p, _) -> p `Text.isPrefixOf` routeCode) startPatterns
-
+    -- Match service tier codes from GTFS tripIds using prioritized infix patterns.
+    -- The patterns below are ordered by priority: the first matching entry determines the service tier.
+    -- If you introduce a new service tier type, ensure its pattern is added at the top of the list
+    -- so it takes precedence over more generic matches.
     infixPatterns =
-      [ ("-Z-", "Z"),
+      [ ("AC_EMU_SUBURBAN", "AC_EMU_SUBURBAN"),
+        ("-Z-", "Z"),
         ("-XS-", "XS"),
         ("-OS-", "OS"),
         ("-S-", "S"),
@@ -147,8 +151,7 @@ extractServiceCode routeCode = maybe (fromMaybe "O" infixMatch) (\x -> x) startM
         ("OS", "OS"),
         ("S", "S"),
         ("X", "X"),
-        ("O", "O"),
-        ("AC_EMU_SUBURBAN", "AC_EMU_SUBURBAN")
+        ("O", "O")
       ]
 
     infixMatch =

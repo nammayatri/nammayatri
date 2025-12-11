@@ -42,6 +42,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.Ride as QRide
 import Tools.Constants
 import Tools.Metrics as Metrics
 import TransactionLogs.Types
@@ -163,13 +164,14 @@ accumulateCancellationPenalty booking ride rideTags transporterConfig = do
             booking.providerId
             booking.merchantOperatingCityId
             now
-        case existingCancellationFee of
+        (feeId, penAmt) <- case existingCancellationFee of
           Just existingFee -> do
             Redis.whenWithLockRedis (cancellationPenaltyLockKey existingFee.id.getId) 10 $ do
               let currentAmount = fromMaybe 0 existingFee.cancellationPenaltyAmount
                   newAmount = currentAmount + penaltyAmount
                   newNumRides = existingFee.numRides + 1
               QDF.updateCancellationPenaltyAmountAndNumRides existingFee.id newAmount newNumRides now
+            return (existingFee.id, penaltyAmount)
           Nothing -> do
             (_, newFee) <-
               mkCancellationPenaltyFee
@@ -185,6 +187,8 @@ accumulateCancellationPenalty booking ride rideTags transporterConfig = do
               "Created new CANCELLATION_PENALTY DriverFee " <> newFee.id.getId
                 <> " for ₹"
                 <> show penaltyAmount
+            return (newFee.id, penaltyAmount)
+        QRide.updateDriverCancellationPenalty (Just feeId.getId) (Just penAmt) ride.id
       Nothing ->
         logError $
           "Penalty tag present but driverCancellationPenaltyAmount is Nothing for ride "
