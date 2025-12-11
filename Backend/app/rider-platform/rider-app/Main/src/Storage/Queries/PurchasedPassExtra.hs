@@ -74,6 +74,20 @@ findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId passTypeId device
       (Just 0)
     <&> listToMaybe
 
+findPendingPassByPersonIdAndPassTypeId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DPassType.PassType ->
+  m (Maybe DPurchasedPass.PurchasedPass)
+findPendingPassByPersonIdAndPassTypeId personId merchantId passTypeId =
+  findOneWithKV
+    [ Se.Is Beam.personId $ Se.Eq (getId personId),
+      Se.Is Beam.merchantId $ Se.Eq (getId merchantId),
+      Se.Is Beam.passTypeId $ Se.Eq (getId passTypeId),
+      Se.Is Beam.status $ Se.Not $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked]
+    ]
+
 updatePurchaseData ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DPurchasedPass.PurchasedPass ->
