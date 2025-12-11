@@ -4,6 +4,7 @@ import qualified API.Types.Dashboard.AppManagement.Tickets
 import qualified API.Types.Dashboard.AppManagement.Tickets as Tickets
 import API.Types.UI.TicketService
 import qualified Crypto.Hash as Hash
+import qualified Dashboard.Common as Common
 import Data.Aeson (encode)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
@@ -766,10 +767,12 @@ getTicketPlaceBookings ::
   Maybe Int ->
   Maybe Int ->
   Domain.Types.TicketBooking.BookingStatus ->
-  Environment.Flow [API.Types.UI.TicketService.TicketBookingDetails]
+  Environment.Flow API.Types.UI.TicketService.TicketPlaceBookingList
 getTicketPlaceBookings (_mbPersonId, _merchantId') placeId mbLimit mbOffset bookingStatus = do
   ticketBookings <- QTBExtra.findAllByTicketPlaceIdAndStatus mbLimit mbOffset placeId bookingStatus
-  mapM getBookingDetailsById ticketBookings
+  ticketBookingDetailList <- mapM getBookingDetailsById ticketBookings
+  let summary = Common.Summary {totalCount = 10000, count = length ticketBookingDetailList}
+  pure API.Types.UI.TicketService.TicketPlaceBookingList {summary, bookings = ticketBookingDetailList}
   where
     getBookingDetailsById :: DTTB.TicketBooking -> Environment.Flow API.Types.UI.TicketService.TicketBookingDetails
     getBookingDetailsById booking = do
