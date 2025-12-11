@@ -106,7 +106,8 @@ data FeedbackRes = FeedbackRes
     isValueAddNP :: Bool,
     filePath :: Maybe Text,
     riderName :: Text,
-    badgeMetadata :: Maybe [CallBPPInternal.BadgeMetadata]
+    badgeMetadata :: Maybe [CallBPPInternal.BadgeMetadata],
+    bppRideId :: Id DRide.BPPRide
   }
 
 data DriverProfileResponse = DriverProfileResponse
@@ -126,6 +127,7 @@ feedback request personId = do
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+  let bppRideId = ride.bppRideId
   badgeMetadata <- case request.feedbackAnswers of
     Just feedbackAnswers
       | not (null feedbackAnswers) ->
