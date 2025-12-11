@@ -26,12 +26,12 @@ createMany = traverse_ create
 
 findAllByVehicleServiceTierId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m [Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare])
+  (Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m ([Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare]))
 findAllByVehicleServiceTierId vehicleServiceTierId = do findAllWithKV [Se.Is Beam.vehicleServiceTierId $ Se.Eq (Kernel.Types.Id.getId vehicleServiceTierId)]
 
 findAllByVehicleTypeAndStageAndMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare])
+  (BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare]))
 findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType stage merchantOperatingCityId = do
   findAllWithKV
     [ Se.And

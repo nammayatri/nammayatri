@@ -4,6 +4,7 @@
 module Storage.Beam.FRFSTicketBooking where
 
 import qualified BecknV2.FRFS.Enums
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.FRFSQuote
@@ -25,6 +26,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     bppOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppSubscriberId :: B.C f Kernel.Prelude.Text,
     bppSubscriberUrl :: B.C f Kernel.Prelude.Text,
+    busLocationData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     cancellationCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cashbackPayoutOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cashbackStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.CashbackStatus),
@@ -32,7 +34,11 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     discountedTickets :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     eventDiscountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     failureReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fromStationAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromStationId :: B.C f Kernel.Prelude.Text,
+    fromStationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fromStationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    fromStationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     googleWalletJWTUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     integratedBppConfigId :: B.C f Kernel.Prelude.Text,
@@ -61,10 +67,15 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     stationsJson :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus,
+    toStationAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toStationId :: B.C f Kernel.Prelude.Text,
+    toStationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    toStationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    toStationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
     validTill :: B.C f Kernel.Prelude.UTCTime,
+    vehicleNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

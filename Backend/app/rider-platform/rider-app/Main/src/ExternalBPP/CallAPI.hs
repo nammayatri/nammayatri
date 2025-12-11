@@ -31,6 +31,7 @@ import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..))
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -44,6 +45,7 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error
 import qualified Tools.Metrics as Metrics
+import qualified UrlShortner.Common as UrlShortner
 
 type FRFSSearchFlow m r =
   ( CacheFlow m r,
@@ -54,7 +56,7 @@ type FRFSSearchFlow m r =
     EncFlow m r
   )
 
-type FRFSConfirmFlow m r =
+type FRFSConfirmFlow m r c =
   ( MonadFlow m,
     BeamFlow m r,
     EsqDBReplicaFlow m r,
@@ -62,7 +64,13 @@ type FRFSConfirmFlow m r =
     CallFRFSBPP.BecknAPICallFlow m r,
     EncFlow m r,
     ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasShortDurationRetryCfg r c,
+    HasLongDurationRetryCfg r c,
+    SchedulerFlow r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String]
   )
 
 type FRFSSelectFlow m r c =
@@ -165,7 +173,7 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote quo
       onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote quoteCategories
       processOnSelectHandler onSelectReq isSingleMode mbEnableOffer
 
-init :: (FRFSConfirmFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> Maybe Bool -> m ()
+init :: (FRFSConfirmFlow m r c) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> Maybe Bool -> m ()
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbEnableOffer = do
   Metrics.startMetrics Metrics.INIT_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
@@ -188,7 +196,7 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       onInitReq <- Flow.init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories
       processOnInit onInitReq
   where
-    processOnInit :: (FRFSConfirmFlow m r) => DOnInit.DOnInit -> m ()
+    processOnInit :: (FRFSConfirmFlow m r c) => DOnInit.DOnInit -> m ()
     processOnInit onInitReq = do
       (merchant', booking', quoteCategories') <- DOnInit.validateRequest onInitReq
       DOnInit.onInit onInitReq merchant' booking' quoteCategories' mbEnableOffer

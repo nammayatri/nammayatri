@@ -102,3 +102,21 @@ ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN estimated_price DROP NOT 
 
 ------- SQL updates -------
 
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN to_station_point text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN to_station_name text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN to_station_address text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN from_station_point text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN from_station_name text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN from_station_address text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bus_location_data json ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN to_station_lon double precision ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN to_station_lat double precision ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN from_station_lon double precision ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN from_station_lat double precision ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN vehicle_number text ;
+
+
+
+------- SQL updates -------
+

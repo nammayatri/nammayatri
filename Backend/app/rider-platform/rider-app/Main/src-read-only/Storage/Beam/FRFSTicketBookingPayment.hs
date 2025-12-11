@@ -12,15 +12,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FRFSTicketBookingPaymentT f = FRFSTicketBookingPaymentT
-  { frfsQuoteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    frfsTicketBookingId :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    paymentOrderId :: B.C f Kernel.Prelude.Text,
-    status :: B.C f Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { frfsQuoteId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    frfsTicketBookingId :: (B.C f Kernel.Prelude.Text),
+    id :: (B.C f Kernel.Prelude.Text),
+    paymentOrderId :: (B.C f Kernel.Prelude.Text),
+    status :: (B.C f Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +30,6 @@ instance B.Table FRFSTicketBookingPaymentT where
 
 type FRFSTicketBookingPayment = FRFSTicketBookingPaymentT Identity
 
-$(enableKVPG ''FRFSTicketBookingPaymentT ['id] [['frfsTicketBookingId], ['paymentOrderId]])
+$(enableKVPG (''FRFSTicketBookingPaymentT) [('id)] [[('frfsTicketBookingId)], [('paymentOrderId)]])
 
-$(mkTableInstances ''FRFSTicketBookingPaymentT "frfs_ticket_booking_payment")
+$(mkTableInstances (''FRFSTicketBookingPaymentT) "frfs_ticket_booking_payment")

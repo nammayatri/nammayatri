@@ -537,6 +537,15 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             validTill = Just validTill,
             multimodalSearchRequestId = Nothing,
             searchAsParentStops = Nothing,
+            busLocationData = [],
+            fromStationPoint = Maps.LatLong <$> fromStation'.lat <*> fromStation'.lon,
+            toStationPoint = Maps.LatLong <$> toStation'.lat <*> toStation'.lon,
+            fromStationName = Just fromStation'.name,
+            toStationName = Just toStation'.name,
+            fromStationAddress = fromStation'.address,
+            toStationAddress = toStation'.address,
+            minimalData = Nothing,
+            vehicleNumber = Nothing,
             ..
           }
 
@@ -549,7 +558,8 @@ mkQuoteRes :: (MonadFlow m) => (DFRFSQuote.FRFSQuote, [FRFSQuoteCategory.FRFSQuo
 mkQuoteRes (quote, quoteCategories) = do
   (stations :: [FRFSTypes.FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InvalidStationJson $ show quote.stationsJson)
   let routeStations :: Maybe [FRFSTypes.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-  let fareParameters = Utils.mkFareParameters (Utils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
+      fareParameters = Utils.mkFareParameters (Utils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
+      categories = map Utils.mkCategoryInfoResponse quoteCategories
   singleAdultTicketPrice <- find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice) & fromMaybeM (InternalError "Single Adult Ticket Price not found.")
   return $
     FRFSTypes.FRFSQuoteAPIRes
@@ -646,7 +656,15 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.integratedBppConfigId = fromStation'.integratedBppConfigId,
                 DFRFSQuote.fareDetails = Nothing,
                 DFRFSQuote.oldCacheDump = Nothing,
-                DFRFSQuote.multimodalSearchRequestId = Nothing
+                DFRFSQuote.multimodalSearchRequestId = Nothing,
+                DFRFSQuote.busLocationData = [],
+                DFRFSQuote.fromStationAddress = fromStation'.address,
+                DFRFSQuote.fromStationName = Just fromStation'.name,
+                DFRFSQuote.fromStationPoint = Maps.LatLong <$> fromStation'.lat <*> fromStation'.lon,
+                DFRFSQuote.toStationAddress = toStation'.address,
+                DFRFSQuote.toStationName = Just toStation'.name,
+                DFRFSQuote.toStationPoint = Maps.LatLong <$> toStation'.lat <*> toStation'.lon,
+                DFRFSQuote.vehicleNumber = Nothing
               }
       quoteCategoryId <- generateGUID
       ticketCategoryMetadataConfig' <- QFRFSTicketCategoryMetadataConfig.findByCategoryVehicleAndCity ADULT fromStation'.vehicleType fromStation.merchantOperatingCityId
