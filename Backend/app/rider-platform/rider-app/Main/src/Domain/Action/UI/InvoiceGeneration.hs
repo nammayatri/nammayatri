@@ -88,7 +88,7 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
       booking <- QBE.findCompletedBookingById (Id bookingId')
       return (maybeToList booking)
     Nothing -> do
-      QBE.findBookingsForInvoice personId startDate endDate
+      QBE.findBookingsForInvoice personId startDate endDate Nothing Nothing
 
   -- Step 4: Filter by ride type and billing category in Haskell
   let rideTypeFiltered = case rideTypes of

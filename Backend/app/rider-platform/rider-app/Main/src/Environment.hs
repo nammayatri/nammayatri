@@ -173,7 +173,8 @@ data AppCfg = AppCfg
     tsServiceConfig :: CPT.TSServiceConfig,
     inMemConfig :: CF.InMemConfig,
     disableViaPointTimetableCheck :: Bool,
-    parkingApiKey :: Text
+    parkingApiKey :: Text,
+    corporatePartnerApiToken :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -281,7 +282,8 @@ data AppEnv = AppEnv
     inMemEnv :: CF.InMemEnv,
     disableViaPointTimetableCheck :: Bool,
     url :: Maybe Text,
-    parkingApiKey :: Text
+    parkingApiKey :: Text,
+    corporatePartnerApiToken :: Text
   }
   deriving (Generic)
 

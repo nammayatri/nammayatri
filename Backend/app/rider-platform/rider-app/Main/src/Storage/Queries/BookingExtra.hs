@@ -389,9 +389,11 @@ findBookingsForInvoice ::
   Id Person ->
   UTCTime ->
   UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
   m [Booking]
-findBookingsForInvoice personId startDate endDate = do
-  findAllWithKV
+findBookingsForInvoice personId startDate endDate mlimit moffset = do
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamB.riderId $ Se.Eq (getId personId),
           Se.Is BeamB.status $ Se.Eq COMPLETED,
@@ -399,7 +401,35 @@ findBookingsForInvoice personId startDate endDate = do
           Se.Is BeamB.createdAt $ Se.LessThanOrEq endDate
         ]
     ]
+    (Se.Desc BeamB.createdAt)
+    mlimit
+    moffset
 
 findCompletedBookingById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Booking)
 findCompletedBookingById (Id bookingId) = do
   findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.status $ Se.Eq COMPLETED]]
+
+-- | Find completed bookings for partner booking statement with pagination
+-- Returns bookings sorted by createdAt descending (most recent first)
+findBookingsForPartnerStatement ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  UTCTime ->
+  UTCTime ->
+  Int ->
+  Int ->
+  m [Booking]
+findBookingsForPartnerStatement personId startDate endDate pageSize page = do
+  let limit' = pageSize
+      offset' = (page - 1) * pageSize
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamB.riderId $ Se.Eq (getId personId),
+          Se.Is BeamB.status $ Se.Eq COMPLETED,
+          Se.Is BeamB.createdAt $ Se.GreaterThanOrEq startDate,
+          Se.Is BeamB.createdAt $ Se.LessThanOrEq endDate
+        ]
+    ]
+    (Se.Desc BeamB.createdAt)
+    (Just limit')
+    (Just offset')
