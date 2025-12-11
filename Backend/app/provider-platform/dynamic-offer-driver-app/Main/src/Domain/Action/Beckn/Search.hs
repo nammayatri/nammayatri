@@ -152,7 +152,8 @@ data DSearchReq = DSearchReq
     isReserveRide :: Maybe Bool,
     mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
     reserveRideEstimate :: Maybe DBppEstimate.BppEstimate,
-    numberOfLuggages :: Maybe Int
+    numberOfLuggages :: Maybe Int,
+    paymentMode :: Maybe DMPM.PaymentMode
   }
 
 -- data EstimateExtraInfo = EstimateExtraInfo
@@ -324,7 +325,7 @@ handler ValidatedDSearchReq {..} sReq = do
   (driverPool, selectedFarePolicies) <-
     if transporterConfig.considerDriversForSearch
       then do
-        (pool, policies) <- selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies now isValueAddNP searchReq
+        (pool, policies) <- selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies now isValueAddNP searchReq sReq.paymentMode
         pure (nonEmpty pool, policies)
       else return (Nothing, farePolicies)
   -- This is to filter the fare policies based on the driverId, if passed during search
@@ -482,8 +483,8 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes configInExp
               nearestDriverInfo = NearestDriverInfo {..}
           return (input, vehicleServiceTierItem, Just nearestDriverInfo, vehicleServiceTierItem.vehicleIconUrl)
 
-selectDriversAndMatchFarePolicies :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> UTCTime -> Bool -> DSR.SearchRequest -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
-selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies now isValueAddNP sreq = do
+selectDriversAndMatchFarePolicies :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> UTCTime -> Bool -> DSR.SearchRequest -> Maybe DMPM.PaymentMode -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
+selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies now isValueAddNP sreq paymentMode = do
   driverPoolCfg <- CDP.getSearchDriverPoolConfig merchantOpCityId mbDistance area sreq
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow merchantOpCityId sreq.configInExperimentVersions
   let calculateDriverPoolReq =

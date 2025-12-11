@@ -56,6 +56,7 @@ import Control.Applicative ((<|>))
 import Data.Aeson
 import Data.List (groupBy, sortBy, sortOn)
 import qualified Data.Text as T
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -116,41 +117,41 @@ verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity 
 verifyVpa = runWithServiceConfigAndServiceName Payment.verifyVPA
 
 ---- Ride Payment Related Functions (mostly stripe) ---
-createCustomer :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateCustomerReq -> m CreateCustomerResp
+createCustomer :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> CreateCustomerReq -> m CreateCustomerResp
 createCustomer = runWithServiceConfig1 Payment.createCustomer (.createPaymentCustomer)
 
-getCustomer :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CustomerId -> m CreateCustomerResp
+getCustomer :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> CustomerId -> m CreateCustomerResp
 getCustomer = runWithServiceConfig1 Payment.getCustomer (.createPaymentCustomer)
 
-createEphemeralKeys :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CustomerId -> m Text
+createEphemeralKeys :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> CustomerId -> m Text
 createEphemeralKeys = runWithServiceConfig1 Payment.createEphemeralKeys (.createEphemeralKeys)
 
-getCardList :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CustomerId -> m CustomerCardListResp
+getCardList :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> CustomerId -> m CustomerCardListResp
 getCardList = runWithServiceConfig1 Payment.getCardList (.getCardList)
 
-createPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreatePaymentIntentReq -> m CreatePaymentIntentResp
+createPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> CreatePaymentIntentReq -> m CreatePaymentIntentResp
 createPaymentIntent = runWithServiceConfig1 Payment.createPaymentIntent (.createPaymentIntent)
 
-cancelPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> m CreatePaymentIntentResp
+cancelPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentIntentId -> m CreatePaymentIntentResp
 cancelPaymentIntent = runWithServiceConfig1 Payment.cancelPaymentIntent (.cancelPaymentIntent)
 
-getPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> m CreatePaymentIntentResp
+getPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentIntentId -> m CreatePaymentIntentResp
 getPaymentIntent = runWithServiceConfig1 Payment.getPaymentIntent (.createPaymentIntent)
 
-updatePaymentMethodInIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> PaymentMethodId -> m ()
+updatePaymentMethodInIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentIntentId -> PaymentMethodId -> m ()
 updatePaymentMethodInIntent = runWithServiceConfig2 Payment.updatePaymentMethodInIntent (.updatePaymentMethodInIntent)
 
-capturePaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()
+capturePaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()
 capturePaymentIntent = runWithServiceConfig3 Payment.capturePaymentIntent (.capturePaymentIntent)
 
 -- currently we don't support incremental authorization, so this is not used
--- updateAmountInPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()
+-- updateAmountInPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()
 -- updateAmountInPaymentIntent = runWithServiceConfig3 Payment.updateAmountInPaymentIntent (.updateAmountInPaymentIntent)
 
-createSetupIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CustomerId -> m CreateSetupIntentResp
+createSetupIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> CustomerId -> m CreateSetupIntentResp
 createSetupIntent = runWithServiceConfig1 Payment.createSetupIntent (.createSetupIntent)
 
-deleteCard :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentMethodId -> m ()
+deleteCard :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentMethodId -> m ()
 deleteCard = runWithServiceConfig1 Payment.deleteCard (.deleteCard)
 
 runWithServiceConfigAndServiceName ::
@@ -201,19 +202,28 @@ decidePaymentService paymentServiceName clientSdkVersion = do
       | v >= textToVersionDefault aaClientSdkVersion -> DMSC.PaymentService Payment.AAJuspay
     _ -> paymentServiceName
 
+modifyPaymentServiceByMode :: PaymentService -> DMPM.PaymentMode -> PaymentService
+modifyPaymentServiceByMode Payment.Stripe DMPM.LIVE = Payment.Stripe
+modifyPaymentServiceByMode Payment.Stripe DMPM.TEST = Payment.StripeTest
+modifyPaymentServiceByMode Payment.StripeTest _ = Payment.StripeTest
+modifyPaymentServiceByMode Payment.Juspay _ = Payment.Juspay
+modifyPaymentServiceByMode Payment.AAJuspay _ = Payment.AAJuspay
+
 runWithServiceConfig1 ::
   ServiceFlow m r =>
   (Payment.PaymentServiceConfig -> req -> m resp) ->
   (DMSUC.MerchantServiceUsageConfig -> PaymentService) ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
   req ->
   m resp
-runWithServiceConfig1 func getCfg merchantId merchantOperatingCityId req = do
+runWithServiceConfig1 func getCfg merchantId merchantOperatingCityId paymentMode req = do
   merchantConfig <- CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  let paymentService = modifyPaymentServiceByMode (getCfg merchantConfig) (fromMaybe DMPM.LIVE paymentMode)
   merchantPaymentServiceConfig <-
-    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.PaymentService $ getCfg merchantConfig)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show $ getCfg merchantConfig))
+    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.PaymentService paymentService)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show paymentService))
   case merchantPaymentServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig msc -> func msc req
     _ -> throwError $ InternalError "Unknown Service Config"
@@ -224,14 +234,16 @@ runWithServiceConfig2 ::
   (DMSUC.MerchantServiceUsageConfig -> PaymentService) ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
   req1 ->
   req2 ->
   m resp
-runWithServiceConfig2 func getCfg merchantId merchantOperatingCityId req1 req2 = do
+runWithServiceConfig2 func getCfg merchantId merchantOperatingCityId paymentMode req1 req2 = do
   merchantConfig <- CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  let paymentService = modifyPaymentServiceByMode (getCfg merchantConfig) (fromMaybe DMPM.LIVE paymentMode)
   merchantPaymentServiceConfig <-
-    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.PaymentService $ getCfg merchantConfig)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show $ getCfg merchantConfig))
+    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.PaymentService paymentService)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show paymentService))
   case merchantPaymentServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig msc -> func msc req1 req2
     _ -> throwError $ InternalError "Unknown Service Config"
@@ -242,15 +254,17 @@ runWithServiceConfig3 ::
   (DMSUC.MerchantServiceUsageConfig -> PaymentService) ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
   req1 ->
   req2 ->
   req3 ->
   m resp
-runWithServiceConfig3 func getCfg merchantId merchantOperatingCityId req1 req2 req3 = do
+runWithServiceConfig3 func getCfg merchantId merchantOperatingCityId paymentMode req1 req2 req3 = do
   merchantConfig <- CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  let paymentService = modifyPaymentServiceByMode (getCfg merchantConfig) (fromMaybe DMPM.LIVE paymentMode)
   merchantPaymentServiceConfig <-
-    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.PaymentService $ getCfg merchantConfig)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show $ getCfg merchantConfig))
+    CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.PaymentService paymentService)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show paymentService))
   case merchantPaymentServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig msc -> func msc req1 req2 req3
     _ -> throwError $ InternalError "Unknown Service Config"

@@ -23,6 +23,7 @@ import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import Data.Aeson as A
 import Domain.Types
+import qualified Domain.Types.PaymentMode as DPM
 import Kernel.Prelude
 import Kernel.Types.Common (Price)
 
@@ -50,8 +51,9 @@ mkPayment ::
   Maybe BaseUrl ->
   Maybe BuyerFinderFee ->
   Bool ->
+  Maybe DPM.PaymentMode ->
   Spec.Payment
-mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettlementType mSettlementWindow mSettlementTermsUrl mbff isStripe = do
+mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettlementType mSettlementWindow mSettlementTermsUrl mbff isStripe mPaymentMode = do
   let mAmount = show . (.amount) <$> mPrice
   let mCurrency = show . (.currency) <$> mPrice
   Spec.Payment
@@ -62,7 +64,7 @@ mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettle
           then Just $ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency
           else Nothing,
       paymentStatus = encodeToText' paymentStatus,
-      paymentTags = Just $ mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff,
+      paymentTags = Just $ mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff mPaymentMode,
       paymentTlMethod = mkTlMethod isStripe >>= encodeToText',
       paymentType = encodeToText' Spec.ON_FULFILLMENT
     }
@@ -109,11 +111,11 @@ mkPaymentParams mPaymentParams _mTxnId mAmount mCurrency = do
       paymentParamsVirtualPaymentAddress = mPaymentParams >>= (.vpa)
     }
 
-mkPaymentTags :: City -> Maybe SettlementType -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe BuyerFinderFee -> [Spec.TagGroup]
-mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff =
+mkPaymentTags :: City -> Maybe SettlementType -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe BuyerFinderFee -> Maybe DPM.PaymentMode -> [Spec.TagGroup]
+mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff mPaymentMode =
   catMaybes
     [ Just $ mkBuyerFinderFeeTagGroup mbff,
-      Just $ mkSettlementTagGroup txnCity mAmount mSettlementWindow mSettlementTermsUrl,
+      Just $ mkSettlementTagGroup txnCity mAmount mSettlementWindow mSettlementTermsUrl mPaymentMode,
       mkSettlementDetailsTagGroup mSettlementType
     ]
 
@@ -144,8 +146,8 @@ mkBuyerFinderFeeTagGroup mbff =
           tagDisplay = Just False
         }
 
-mkSettlementTagGroup :: City -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Spec.TagGroup
-mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTermsUrl =
+mkSettlementTagGroup :: City -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe DPM.PaymentMode -> Spec.TagGroup
+mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTermsUrl mPaymentMode =
   Spec.TagGroup
     { tagGroupDescriptor =
         Just $
@@ -155,7 +157,7 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
               descriptorShortDesc = Nothing
             },
       tagGroupDisplay = Just False,
-      tagGroupList = Just settlementTags
+      tagGroupList = Just $ maybe settlementTags (: settlementTags) mStripeTestTag
     }
   where
     settlementTags =
@@ -245,6 +247,22 @@ mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTerm
                 tagDisplay = Just False
               }
         ]
+    mStripeTestTag =
+      if mPaymentMode == Just DPM.TEST
+        then
+          Just
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tag.STRIPE_TEST,
+                        descriptorName = Nothing,
+                        descriptorShortDesc = Nothing
+                      },
+                tagValue = Just $ show True,
+                tagDisplay = Just False
+              }
+        else Nothing
 
 mkSettlementDetailsTagGroup :: Maybe SettlementType -> Maybe Spec.TagGroup
 mkSettlementDetailsTagGroup mSettlementType = do

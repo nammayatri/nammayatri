@@ -70,7 +70,8 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     currentSearchInfo :: DTS.CurrentSearchInfo,
     transporterConfig :: DTC.TransporterConfig,
     configsInExperimentVersions :: [LYT.ConfigVersionMap],
-    prepaidSubscriptionAndWalletEnabled :: Bool
+    prepaidSubscriptionAndWalletEnabled :: Bool,
+    paymentMode :: Maybe DMPM.PaymentMode
   }
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig

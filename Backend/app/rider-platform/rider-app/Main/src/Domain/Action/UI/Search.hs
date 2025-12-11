@@ -30,6 +30,7 @@ import Domain.Action.UI.Maps (makeAutoCompleteKey)
 import qualified Domain.Action.UI.Maps as DMaps
 import Domain.Types (GatewayAndRegistryService (..))
 import qualified Domain.Types.Client as DC
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.HotSpot hiding (address, updatedAt)
 import Domain.Types.HotSpotConfig
 import qualified Domain.Types.Location as Location
@@ -448,12 +449,13 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                      (Beckn.IS_MULTIMODAL_SEARCH, Just $ show justMultimodalSearch)
                    ],
             Beckn.paymentTags =
-              [ (Beckn.SETTLEMENT_AMOUNT, Nothing),
-                (Beckn.DELAY_INTEREST, Just "0"),
-                (Beckn.SETTLEMENT_BASIS, Just "INVOICE_RECIEPT"),
-                (Beckn.MANDATORY_ARBITRATION, Just "TRUE"),
-                (Beckn.COURT_JURISDICTION, Just txnCity)
-              ],
+              [(Beckn.STRIPE_TEST, Just $ show True) | person.paymentMode == Just DMPM.TEST]
+                ++ [ (Beckn.SETTLEMENT_AMOUNT, Nothing),
+                     (Beckn.DELAY_INTEREST, Just "0"),
+                     (Beckn.SETTLEMENT_BASIS, Just "INVOICE_RECIEPT"),
+                     (Beckn.MANDATORY_ARBITRATION, Just "TRUE"),
+                     (Beckn.COURT_JURISDICTION, Just txnCity)
+                   ],
             Beckn.personTags =
               [ (Beckn.CUSTOMER_LANGUAGE, (Just . show) searchRequest.language),
                 (Beckn.CUSTOMER_VEHICLE_CATEGORY, maybe Nothing (Just . show) (personVehicleCategory person)),

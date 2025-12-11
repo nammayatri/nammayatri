@@ -213,6 +213,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                               rideFare = Just searchTry.baseFare, -- TODO: add walletBalance check
                               paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                               prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
+                              paymentMode = searchReq.paymentMode,
                               ..
                             }
                     filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False True) driversInQueue) goHomeReq merchantOpCityId_
@@ -453,6 +454,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         rideFare = Just searchTry.baseFare,
                         paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                         prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
+                        paymentMode = searchReq.paymentMode,
                         ..
                       }
                   )
@@ -485,6 +487,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     rideFare = Just searchTry.baseFare,
                     paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                     prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
+                    paymentMode = searchReq.paymentMode,
                     ..
                   }
           calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum
@@ -511,6 +514,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         rideFare = Just searchTry.baseFare,
                         paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                         prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
+                        paymentMode = searchReq.paymentMode,
                         ..
                       }
               calculateDriverCurrentlyOnRideWithActualDist driverPoolReq poolType (toInteger batchNum') currentSearchInfo

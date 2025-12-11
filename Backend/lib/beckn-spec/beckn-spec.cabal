@@ -230,6 +230,7 @@ library
       Domain.Types.FRFSTicketBookingStatus
       Domain.Types.FRFSTicketStatus
       Domain.Types.ParcelType
+      Domain.Types.PaymentMode
       Domain.Types.RefereeLink
       Domain.Types.RideStatus
       Domain.Types.ServiceTierType

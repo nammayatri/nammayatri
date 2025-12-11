@@ -2,6 +2,7 @@ imports:
   Person: Dashboard.Common
   City: Kernel.Types.Beckn.Context
   BaseUrl: Kernel.Prelude
+  PaymentMode: Domain.Types.PaymentMode
 
 module: RegistrationV2
 apiPrefix: fleet
@@ -67,6 +68,7 @@ apis:
       auth: ApiAuthV2
       query:
         - fleetOwnerId: Text
+        - paymentMode: PaymentMode
       response:
         type: FleetBankAccountLinkResp
       helperApi:
@@ -75,6 +77,7 @@ apis:
             auth: ApiAuthV2
             query:
               - fleetOwnerId: Text
+              - paymentMode: PaymentMode
             mandatoryQuery:
               - requestorId: Text
             response:
@@ -142,9 +145,11 @@ types:
     - detailsSubmitted: Bool
     - accountLink: BaseUrl
     - accountUrlExpiry: UTCTime
+    - paymentMode: PaymentMode
   FleetBankAccountResp:
     - chargesEnabled: Bool
     - detailsSubmitted: Bool
+    - paymentMode: PaymentMode
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

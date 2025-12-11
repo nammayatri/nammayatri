@@ -21,6 +21,7 @@ imports:
   AccountId: Kernel.External.Payment.Stripe.Types
   ImageExtractionValidation: Domain.Types.IdfyVerification
   MediaFileDocumentType: Domain.Types.Common
+  PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
 
 IdfyVerification:
   tableName: idfy_verification
@@ -875,6 +876,7 @@ DriverBankAccount:
     detailsSubmitted: Bool
     currentAccountLink: Maybe BaseUrl
     currentAccountLinkExpiry: Maybe UTCTime
+    paymentMode: Maybe PaymentMode
   constraints:
     driverId: PrimaryKey
     accountId: "!SecondaryKey" # forcing to be a secondary key

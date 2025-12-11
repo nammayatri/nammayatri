@@ -166,8 +166,7 @@ validateRequest (RideAssigned RideAssignedInfo {..}) transactionId isValueAddNP 
     if onlinePayment
       then do
         person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-        customerPaymentId <- person.customerPaymentId & fromMaybeM (CustomerPaymentIdNotFound booking.riderId.getId)
-        paymentMethodId <- booking.paymentMethodId & fromMaybeM (PaymentMethodIdNotFound booking.id.getId)
+        (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
         driverAccountId_ <- driverAccountId & fromMaybeM (DriverAccountIdNotFound booking.id.getId)
         let merchantOperatingCityId = person.merchantOperatingCityId
         email <- mapM decrypt person.email

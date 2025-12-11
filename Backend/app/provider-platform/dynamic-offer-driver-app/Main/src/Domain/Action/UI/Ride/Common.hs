@@ -161,7 +161,8 @@ data DriverRideRes = DriverRideRes
     insuredAmount :: Maybe Text,
     isPetRide :: Bool,
     riderMobileNumber :: Maybe Text,
-    paymentInstrument :: Maybe DMPM.PaymentInstrument
+    paymentInstrument :: Maybe DMPM.PaymentInstrument,
+    paymentMode :: Maybe DMPM.PaymentMode
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -280,7 +281,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         isPetRide = booking.isPetRide,
         riderMobileNumber = mbRiderMobileNumber,
         billingCategory = booking.billingCategory,
-        paymentInstrument = booking.paymentInstrument
+        paymentInstrument = booking.paymentInstrument,
+        paymentMode = booking.paymentMode
       }
 
 -- calculateLocations moved from UI.Ride

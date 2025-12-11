@@ -81,6 +81,7 @@ data BookingT f = BookingT
     multimodalSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentInstrument :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument),
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
+    paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),
     paymentStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.Booking.PaymentStatus),
     paymentUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     preferSafetyPlus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

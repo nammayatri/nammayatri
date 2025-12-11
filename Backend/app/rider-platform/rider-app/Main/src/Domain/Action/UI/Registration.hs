@@ -653,8 +653,10 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         androidId = Nothing,
         registeredViaPartnerOrgId = mbPartnerOrgId,
         customerPaymentId = Nothing,
+        customerTestPaymentId = Nothing,
         juspayCustomerPaymentID = Nothing,
         defaultPaymentMethodId = Nothing,
+        defaultTestPaymentMethodId = Nothing,
         enableOtpLessRide = req.enableOtpLessRide,
         totalRidesCount = Just 0,
         customerNammaTags = Nothing,
@@ -672,7 +674,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         imeiNumber = Nothing, -- TODO: take it from the request
         comments = Nothing,
         businessProfileVerified = Nothing,
-        businessEmail = encBusinessEmail
+        businessEmail = encBusinessEmail,
+        paymentMode = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
