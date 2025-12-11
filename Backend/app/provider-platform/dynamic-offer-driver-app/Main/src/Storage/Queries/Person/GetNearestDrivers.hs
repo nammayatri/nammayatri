@@ -91,7 +91,8 @@ data NearestDriversReq = NearestDriversReq
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     now :: UTCTime,
-    prepaidSubscriptionAndWalletEnabled :: Bool
+    prepaidSubscriptionAndWalletEnabled :: Bool,
+    paymentMode :: Maybe MP.PaymentMode
   }
 
 getNearestDrivers ::
@@ -110,7 +111,7 @@ getNearestDrivers NearestDriversReq {..} = do
   logDebug $ "MetroWarriorDebugging Result:- getNearestDrivers --------person tags driverInfos----" <> show (DIAPI.convertToDriverInfoAPIEntity <$> driverInfos)
   driverBankAccounts <-
     if onlinePayment
-      then QDBA.getDriverOrFleetBankAccounts (driverLocs <&> (.driverId))
+      then QDBA.getDriverOrFleetBankAccounts paymentMode (driverLocs <&> (.driverId))
       else return []
 
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos_) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)

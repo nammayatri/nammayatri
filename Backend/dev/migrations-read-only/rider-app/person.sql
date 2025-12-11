@@ -255,41 +255,6 @@ ALTER TABLE atlas_app.person ADD COLUMN business_email_encrypted character varyi
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-------- SQL updates -------
+ALTER TABLE atlas_app.person ADD COLUMN payment_mode text ;
+ALTER TABLE atlas_app.person ADD COLUMN default_test_payment_method_id text ;
+ALTER TABLE atlas_app.person ADD COLUMN customer_test_payment_id text ;

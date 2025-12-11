@@ -458,7 +458,7 @@ rideAssignedReqHandler req = do
                   receiptEmail = email,
                   driverAccountId
                 }
-        handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.riderId ride createPaymentIntentReq)
+        handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId ride createPaymentIntentReq)
       triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
       let category = case booking.specialLocationTag of
             Just _ -> "specialLocation"
@@ -712,8 +712,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     let scheduleAfter = riderConfig.executePaymentDelay
         executePaymentIntentJobData = ExecutePaymentIntentJobData {personId = person.id, rideId = ride.id, fare = totalFare, applicationFeeAmount = applicationFeeAmount}
     logDebug $ "Update payment intent for order: " <> ride.id.getId
-    customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
-    paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
+    (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
     email <- mapM decrypt person.email
     let createPaymentIntentReq =
@@ -727,7 +726,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               receiptEmail = email,
               driverAccountId
             }
-    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq)
+    handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id ride createPaymentIntentReq)
     logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
     createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 
@@ -973,13 +972,13 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
         (_, Just ride) -> do
           when ride.onlinePayment $ do
             logInfo $ "Cancel payment intent due to rider configs: rideId: " <> ride.id.getId
-            void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
+            void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
         _ -> pure ()
     when (isNothing cancellationFee) $
       whenJust mbRide $ \ride -> do
         when ride.onlinePayment $ do
           logInfo $ "Cancel payment intent as no cancellation fees found: rideId: " <> ride.id.getId
-          void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
+          void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
 
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
@@ -1068,8 +1067,7 @@ validateRideAssignedReq RideAssignedReq {..} = do
     if onlinePayment
       then do
         person <- runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-        customerPaymentId <- person.customerPaymentId & fromMaybeM (CustomerPaymentIdNotFound booking.riderId.getId)
-        paymentMethodId <- booking.paymentMethodId & fromMaybeM (PaymentMethodIdNotFound booking.id.getId)
+        (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
         driverAccountId_ <- driverAccountId & fromMaybeM (DriverAccountIdNotFound booking.id.getId)
         let merchantOperatingCityId = person.merchantOperatingCityId
         email <- mapM decrypt person.email

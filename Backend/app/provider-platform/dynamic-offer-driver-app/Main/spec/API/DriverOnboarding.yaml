@@ -27,6 +27,7 @@ imports:
   VehicleCategory: Domain.Types.VehicleCategory
   FarePolicy: Domain.Types.FarePolicy
   FareParameters: Domain.Types.FareParameters
+  PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
 
 module: DriverOnboardingV2
 types:
@@ -137,9 +138,11 @@ types:
     detailsSubmitted: Bool
     accountLink: BaseUrl
     accountUrlExpiry: UTCTime
+    paymentMode: PaymentMode
   BankAccountResp:
     chargesEnabled: Bool
     detailsSubmitted: Bool
+    paymentMode: PaymentMode
   HVSdkCallLogReq:
     txnId: Text
     hvFlowId: Maybe Text
@@ -257,6 +260,8 @@ apis:
         type: APISuccess
   - GET:
       endpoint: /driver/register/bankAccount/link
+      query:
+        paymentMode: PaymentMode
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: BankAccountLinkResp

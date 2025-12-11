@@ -392,16 +392,17 @@ makePaymentIntent ::
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
   Id Person.Person ->
   Ride.Ride ->
   Payment.CreatePaymentIntentReq ->
   m Payment.CreatePaymentIntentResp
-makePaymentIntent merchantId merchantOpCityId personId ride createPaymentIntentReq = do
+makePaymentIntent merchantId merchantOpCityId paymentMode personId ride createPaymentIntentReq = do
   let commonMerchantId = cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @Person.Person @DPayment.Person personId
       commonRideId = cast @Ride.Ride @DPayment.Ride ride.id
-      createPaymentIntentCall = TPayment.createPaymentIntent merchantId merchantOpCityId
-      cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId
+      createPaymentIntentCall = TPayment.createPaymentIntent merchantId merchantOpCityId paymentMode
+      cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId paymentMode
   DPayment.createPaymentIntentService commonMerchantId (Just $ cast merchantOpCityId) commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall cancelPaymentIntentCall
 
 cancelPaymentIntent ::
@@ -414,10 +415,11 @@ cancelPaymentIntent ::
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
   Id Ride.Ride ->
   m ()
-cancelPaymentIntent merchantId merchantOpCityId rideId = do
-  let cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId
+cancelPaymentIntent merchantId merchantOpCityId paymentMode rideId = do
+  let cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId paymentMode
   DPayment.cancelPaymentIntentService (cast @Ride.Ride @DPayment.Ride rideId) cancelPaymentIntentCall
 
 chargePaymentIntent ::
@@ -430,11 +432,12 @@ chargePaymentIntent ::
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
   Payment.PaymentIntentId ->
   m Bool
-chargePaymentIntent merchantId merchantOpCityId paymentIntentId = do
-  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
-      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
+chargePaymentIntent merchantId merchantOpCityId paymentMode paymentIntentId = do
+  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
+      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
   DPayment.chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall
 
 paymentErrorHandler ::
@@ -478,12 +481,13 @@ makeCxCancellationPayment ::
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
   Payment.PaymentIntentId ->
   HighPrecMoney ->
   m Bool
-makeCxCancellationPayment merchantId merchantOpCityId paymentIntentId cancellationAmount = do
-  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
-      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
+makeCxCancellationPayment merchantId merchantOpCityId paymentMode paymentIntentId cancellationAmount = do
+  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
+      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
   DPayment.updateForCXCancelPaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount
 
 validatePaymentInstrument :: (MonadThrow m, Log m) => Merchant.Merchant -> Maybe DMPM.PaymentInstrument -> Maybe Payment.PaymentMethodId -> m ()
@@ -503,3 +507,28 @@ validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do
 
 isOnlinePayment :: Maybe Merchant.Merchant -> Booking.Booking -> Bool
 isOnlinePayment mbMerchant booking = maybe False (.onlinePayment) mbMerchant && booking.paymentInstrument /= Just DMPM.Cash
+
+-- in case if person.paymentMode was already changed, we use booking.paymentMode for old completed rides
+getCustomerAndPaymentMethod :: (MonadThrow m, Log m) => Booking.Booking -> Person.Person -> m (Payment.CustomerId, Payment.PaymentMethodId)
+getCustomerAndPaymentMethod booking person = do
+  let paymentMode = fromMaybe DMPM.LIVE booking.paymentMode
+  case paymentMode of
+    DMPM.LIVE -> do
+      customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
+      paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
+      pure (customerPaymentId, paymentMethodId)
+    DMPM.TEST -> do
+      customerPaymentId <- person.customerTestPaymentId & fromMaybeM (PersonFieldNotPresent "customerTestPaymentId")
+      paymentMethodId <- person.defaultTestPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultTestPaymentMethodId")
+      pure (customerPaymentId, paymentMethodId)
+
+updateDefaultPersonPaymentMethodId ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Person.Person ->
+  Maybe Payment.PaymentMethodId ->
+  m ()
+updateDefaultPersonPaymentMethodId person paymentMethodId = do
+  let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
+  case paymentMode of
+    DMPM.LIVE -> QPerson.updateDefaultPaymentMethodId paymentMethodId person.id
+    DMPM.TEST -> QPerson.updateDefaultTestPaymentMethodId paymentMethodId person.id

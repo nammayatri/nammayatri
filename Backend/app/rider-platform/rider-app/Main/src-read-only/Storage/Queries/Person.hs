@@ -87,6 +87,13 @@ updateDefaultPaymentMethodId defaultPaymentMethodId id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.defaultPaymentMethodId defaultPaymentMethodId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateDefaultTestPaymentMethodId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDefaultTestPaymentMethodId defaultTestPaymentMethodId id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.defaultTestPaymentMethodId defaultTestPaymentMethodId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateDeviceToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDeviceToken deviceToken id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.deviceToken deviceToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -160,6 +167,13 @@ updateSafetyDrillStatus hasCompletedMockSafetyDrill id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateTestCustomerPaymentId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateTestCustomerPaymentId customerTestPaymentId id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.customerTestPaymentId customerTestPaymentId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateWhatsappNotificationEnrollStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.External.Whatsapp.Interface.Types.OptApiMethods -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
@@ -199,8 +213,10 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.customerNammaTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType customerNammaTags),
       Se.Set Beam.customerPaymentId customerPaymentId,
       Se.Set Beam.customerReferralCode customerReferralCode,
+      Se.Set Beam.customerTestPaymentId customerTestPaymentId,
       Se.Set Beam.dateOfBirth dateOfBirth,
       Se.Set Beam.defaultPaymentMethodId defaultPaymentMethodId,
+      Se.Set Beam.defaultTestPaymentMethodId defaultTestPaymentMethodId,
       Se.Set Beam.description description,
       Se.Set Beam.deviceId deviceId,
       Se.Set Beam.deviceToken deviceToken,
@@ -241,6 +257,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.nightSafetyChecks nightSafetyChecks,
       Se.Set Beam.notificationToken notificationToken,
       Se.Set Beam.passwordHash passwordHash,
+      Se.Set Beam.paymentMode paymentMode,
       Se.Set Beam.payoutVpa payoutVpa,
       Se.Set Beam.profilePicture profilePicture,
       Se.Set Beam.referralCode referralCode,

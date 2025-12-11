@@ -63,7 +63,6 @@ import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
 import Environment
-import Environment ()
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Types as DLanguage
@@ -432,7 +431,7 @@ onUpdate = \case
     void $ QRB.updateStatus booking.id DRB.AWAITING_REASSIGNMENT
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     QBCR.upsert bookingCancellationReason
-    void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
+    void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
     Notify.notifyOnBookingReallocated booking
   OUValidatedDriverArrivedReq req -> Common.driverArrivedReqHandler req
   OUValidatedNewMessageReq ValidatedNewMessageReq {..} -> Notify.notifyOnNewMessage booking message
@@ -447,7 +446,7 @@ onUpdate = \case
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
-    void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
+    void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
     -- make all the booking parties inactive during rellocation
     QBPL.makeAllInactiveByBookingId booking.id
     -- notify customer
@@ -490,7 +489,7 @@ onUpdate = \case
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus booking.riderId flowStatus
-    void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
+    void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
     -- notify customer
     Notify.notifyOnEstOrQuoteReallocated cancellationSource booking quote.id.getId
     SharedCancel.releaseCancellationLock booking.transactionId

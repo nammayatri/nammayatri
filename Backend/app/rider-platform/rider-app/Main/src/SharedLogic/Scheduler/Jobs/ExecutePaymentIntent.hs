@@ -63,8 +63,8 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
     fareWithTip <- case ride.tipAmount of
       Nothing -> return fare
       Just tipAmount -> fare `addPrice` tipAmount
-    customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
-    paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
+    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+    (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
     email <- mapM decrypt person.email
     let createPaymentIntentReq =
@@ -78,10 +78,8 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
               receiptEmail = email,
               driverAccountId
             }
-
-    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-    paymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
-    paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId paymentIntentResp.paymentIntentId
+    paymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id ride createPaymentIntentReq
+    paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode paymentIntentResp.paymentIntentId
     when paymentCharged $ QRide.markPaymentStatus DRide.Completed ride.id
   return Complete
 
@@ -114,7 +112,7 @@ cancelExecutePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   when (isNothing ride.cancellationFeeIfCancelled) $ do
     QRide.updateCancellationFeeIfCancelledField (Just cancellationAmount.amount) rideId
-  paymentCharged <- SPayment.makeCxCancellationPayment booking.merchantId booking.merchantOperatingCityId order.paymentServiceOrderId cancellationAmount.amount
+  paymentCharged <- SPayment.makeCxCancellationPayment booking.merchantId booking.merchantOperatingCityId booking.paymentMode order.paymentServiceOrderId cancellationAmount.amount
   when paymentCharged $ QRide.markPaymentStatus DRide.Completed rideId
   void $
     CallBPPInternal.customerCancellationDuesSync
