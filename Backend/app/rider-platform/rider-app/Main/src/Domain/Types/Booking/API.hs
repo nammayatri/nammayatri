@@ -16,6 +16,7 @@ module Domain.Types.Booking.API where
 
 -- TODO:Move api entity of booking to UI
 
+import qualified BecknV2.OnDemand.Enums as VehicleCategory
 import Data.Aeson (eitherDecode, encode)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
@@ -95,6 +96,7 @@ data BookingAPIEntity = BookingAPIEntity
     fareBreakup :: [FareBreakupAPIEntity],
     bookingDetails :: BookingAPIDetails,
     tripCategory :: Maybe TripCategory,
+    vehicleCategory :: Maybe VehicleCategory.VehicleCategory,
     rideScheduledTime :: UTCTime,
     returnTime :: Maybe UTCTime,
     rideStartTime :: Maybe UTCTime,
@@ -344,6 +346,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         isInsured = Just booking.isInsured,
         insuredAmount = booking.insuredAmount,
         billingCategory = booking.billingCategory,
+        vehicleCategory = booking.vehicleCategory,
         mbJourneyId = mbJourneyLeg <&> (.journeyId)
       }
   where

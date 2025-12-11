@@ -373,6 +373,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           recentLocationId = searchRequest.recentLocationId,
           isMultimodalSearch = searchRequest.isMultimodalSearch,
           multimodalSearchRequestId = searchRequest.multimodalSearchRequestId,
+          vehicleCategory = searchRequest.vehicleCategory,
           ..
         },
       bookingParties

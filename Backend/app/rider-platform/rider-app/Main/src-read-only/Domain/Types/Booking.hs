@@ -4,6 +4,7 @@
 
 module Domain.Types.Booking (module Domain.Types.Booking, module ReExport) where
 
+import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.BookingStatus
 import qualified Domain.Types.Client
@@ -94,6 +95,7 @@ data Booking = Booking
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
     tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,
     updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleCategory :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory,
     vehicleIconUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
     vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
