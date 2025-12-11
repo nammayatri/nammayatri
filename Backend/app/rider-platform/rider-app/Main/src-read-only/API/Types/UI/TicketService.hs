@@ -2,6 +2,7 @@
 
 module API.Types.UI.TicketService where
 
+import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Data.Time.Calendar
@@ -266,6 +267,10 @@ data TicketFleetVehicleResp = TicketFleetVehicleResp
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketPlaceAvailability = TicketPlaceAvailability {closedDays :: [Kernel.Prelude.Int], month :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TicketPlaceBookingList = TicketPlaceBookingList {bookings :: [API.Types.UI.TicketService.TicketBookingDetails], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
