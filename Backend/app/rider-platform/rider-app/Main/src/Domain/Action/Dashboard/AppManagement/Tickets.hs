@@ -368,7 +368,7 @@ getTicketPlaceBookings ::
   Maybe Int ->
   Maybe Int ->
   Domain.Types.TicketBooking.BookingStatus ->
-  Environment.Flow [API.Types.UI.TicketService.TicketBookingDetails]
+  Environment.Flow API.Types.UI.TicketService.TicketPlaceBookingList
 getTicketPlaceBookings merchantShortId _opCity placeId mbLimit mbOffset status = do
   m <- findMerchantByShortId merchantShortId
   Domain.Action.UI.TicketService.getTicketPlaceBookings (Nothing, m.id) placeId mbLimit mbOffset status

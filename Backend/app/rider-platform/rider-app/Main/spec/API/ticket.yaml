@@ -30,6 +30,7 @@ imports:
   Refunds: Lib.Payment.Domain.Types.Refunds
   Person: Domain.Types.Person
   CreateOrderResp: Kernel.External.Payment.Interface.Types
+  Summary: Dashboard.Common
 
 module: TicketService
 types:
@@ -267,6 +268,10 @@ types:
     ticketPlace: TicketPlace
     subPlaces: "[TicketSubPlace]"
 
+  TicketPlaceBookingList:
+    - bookings: [API.Types.UI.TicketService.TicketBookingDetails]
+    - summary: Summary
+
 apis:
   # GET /ticket/places
   - GET:
@@ -464,4 +469,4 @@ apis:
       mandatoryQuery:
         status: BookingStatus
       response:
-        type: "[API.Types.UI.TicketService.TicketBookingDetails]"
+        type: TicketPlaceBookingList

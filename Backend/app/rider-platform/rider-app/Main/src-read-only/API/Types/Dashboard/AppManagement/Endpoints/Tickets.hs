@@ -335,7 +335,7 @@ type GetTicketPlaceBookings =
            Domain.Types.TicketBooking.BookingStatus
       :> Get
            ('[JSON])
-           [API.Types.UI.TicketService.TicketBookingDetails]
+           API.Types.UI.TicketService.TicketPlaceBookingList
   )
 
 data TicketsAPIs = TicketsAPIs
@@ -369,7 +369,7 @@ data TicketsAPIs = TicketsAPIs
     getAllTicketBookings :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.TicketBooking.BookingStatus) -> EulerHS.Types.EulerClient [API.Types.UI.TicketService.TicketBookingAPIEntityV2]),
     postTicketBookingCashCollect :: (Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postTicketPlacesDirectBook :: (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.TicketService.DirectTicketBookingReq -> EulerHS.Types.EulerClient API.Types.UI.TicketService.DirectTicketBookingResp),
-    getTicketPlaceBookings :: (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Domain.Types.TicketBooking.BookingStatus -> EulerHS.Types.EulerClient [API.Types.UI.TicketService.TicketBookingDetails])
+    getTicketPlaceBookings :: (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Domain.Types.TicketBooking.BookingStatus -> EulerHS.Types.EulerClient API.Types.UI.TicketService.TicketPlaceBookingList)
   }
 
 mkTicketsAPIs :: (Client EulerHS.Types.EulerClient API -> TicketsAPIs)
