@@ -24,10 +24,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
-import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
@@ -62,24 +60,10 @@ paymentOrderStatusCheckJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   let jobData = jobInfo.jobData
       merchantId' = jobData.merchantId
       merchantOperatingCityId' = jobData.merchantOperatingCityId
+  now <- getCurrentTime
+  allRecentNonTerminalOrders <- QPaymentOrder.findAllNonTerminalOrders (addUTCTime (intToNominalDiffTime (-3600)) now)
 
-  let notFailedPaymentStatuses = [Payment.NEW, Payment.PENDING_VBV, Payment.CHARGED, Payment.AUTHORIZING, Payment.COD_INITIATED, Payment.STARTED, Payment.AUTO_REFUNDED]
-      notSuccessfulPaymentFulfillmentStatuses = [Just DPayment.FulfillmentPending, Just DPayment.FulfillmentFailed, Just DPayment.FulfillmentRefundPending, Just DPayment.FulfillmentRefundInitiated, Nothing]
-
-  allRecentOrders <- QPaymentOrder.findAllValidOrders notFailedPaymentStatuses notSuccessfulPaymentFulfillmentStatuses
-  recentNotFailedOrNotChargedOrders <-
-    filterM
-      ( \order ->
-          case order.status of
-            Payment.CHARGED -> do
-              refunds <- QRefunds.findAllByOrderId order.shortId
-              let hasPendingRefund = any (\refund -> refund.status == Payment.REFUND_PENDING || refund.status == Payment.MANUAL_REVIEW) refunds
-              return hasPendingRefund
-            _ -> return True
-      )
-      allRecentOrders
-
-  logInfo $ "Found " <> show (length recentNotFailedOrNotChargedOrders) <> " payment orders with status not CHARGED (or CHARGED with pending refunds) created within the last hour"
+  logInfo $ "Found " <> show (length allRecentNonTerminalOrders) <> " payment orders with status not CHARGED (or CHARGED with pending refunds) created within the last hour"
 
   mapM_
     ( \paymentOrder -> do
@@ -92,9 +76,9 @@ paymentOrderStatusCheckJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
           Right _ -> do
             logInfo $ "Payment order status check succeeded for order " <> paymentOrder.id.getId
     )
-    recentNotFailedOrNotChargedOrders
+    allRecentNonTerminalOrders
 
-  logInfo $ "Completed payment order status check for " <> show (length recentNotFailedOrNotChargedOrders) <> " orders"
+  logInfo $ "Completed payment order status check for " <> show (length allRecentNonTerminalOrders) <> " orders"
 
   -- Schedule the next run in 1 hour
   let newJobData =

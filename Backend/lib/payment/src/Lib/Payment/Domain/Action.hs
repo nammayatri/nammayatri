@@ -529,7 +529,7 @@ buildPaymentOrder ::
 buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity mbEntityName paymentServiceType req resp = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
-  let paymentOrderValidTill = mbPaymentOrderValidity <&> (\validity -> addUTCTime (fromIntegral validity) now)
+  let paymentOrderValidTill = mbPaymentOrderValidity <&> (\validity -> addUTCTime (intToNominalDiffTime validity.getSeconds) now)
       mkPaymentOrder =
         DOrder.PaymentOrder
           { id = Id req.orderId,

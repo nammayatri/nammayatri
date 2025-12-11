@@ -121,11 +121,14 @@ findAllByStatusAndCreatedAtAfter statuses createdAtAfter =
     Nothing
     Nothing
 
-findAllValidOrders :: BeamFlow m r => [Payment.TransactionStatus] -> [Maybe DPayment.PaymentFulfillmentStatus] -> m [DOrder.PaymentOrder]
-findAllValidOrders statuses paymentFulfillmentStatuses = do
-  now <- getCurrentTime
+findAllNonTerminalOrders :: BeamFlow m r => UTCTime -> m [DOrder.PaymentOrder]
+findAllNonTerminalOrders duration = do
   findAllWithKV
-    [Se.Is BeamPO.validTill $ Se.GreaterThanOrEq (Just now), Se.Is BeamPO.validTill $ Se.Not $ Se.Eq Nothing, Se.Is BeamPO.status $ Se.In statuses, Se.Is BeamPO.paymentFulfillmentStatus $ Se.In paymentFulfillmentStatuses]
+    [ Se.Is BeamPO.validTill $ Se.GreaterThanOrEq (Just duration),
+      Se.Is BeamPO.validTill $ Se.Not $ Se.Eq Nothing,
+      Se.Is BeamPO.status $ Se.In [Payment.NEW, Payment.PENDING_VBV, Payment.CHARGED, Payment.AUTHORIZING, Payment.COD_INITIATED, Payment.STARTED, Payment.AUTO_REFUNDED],
+      Se.Is BeamPO.paymentFulfillmentStatus $ Se.In [Just DPayment.FulfillmentPending, Just DPayment.FulfillmentFailed, Just DPayment.FulfillmentRefundPending, Just DPayment.FulfillmentRefundInitiated, Nothing]
+    ]
 
 instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
   fromTType' orderT@BeamPO.PaymentOrderT {..} = do
