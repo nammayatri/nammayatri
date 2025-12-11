@@ -38,6 +38,7 @@ import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
 import qualified API.Action.UI.NearbyBuses as NearbyBuses
 import qualified API.Action.UI.NearbyDrivers as NearbyDrivers
 import qualified API.Action.UI.NyRegularSubscription as NYRegular
+import qualified API.Action.UI.PartnerBookingStatement as PartnerBookingStatement
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.Places as Places
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
@@ -158,6 +159,7 @@ type API =
            :<|> Pass.API
            :<|> ParkingBooking.API
            :<|> Dispatcher.API
+           :<|> PartnerBookingStatement.API
        )
 
 handler :: FlowServer API
@@ -230,3 +232,4 @@ handler =
     :<|> Pass.handler
     :<|> ParkingBooking.handler
     :<|> Dispatcher.handler
+    :<|> PartnerBookingStatement.handler

@@ -253,7 +253,7 @@ generateRideCardWithDate booking =
 generateRideCard :: DBAPI.BookingAPIEntity -> Text
 generateRideCard booking =
   let -- Get first ride from rideList (most recent completed ride)
-      mbRide = listToMaybe booking.rideList
+      mbRide = find (\ride -> ride.status == DRide.COMPLETED) booking.rideList
 
       -- Time formatting - use ride times if available, fallback to booking times
       pickupTime = fromMaybe booking.rideScheduledTime (mbRide >>= (.rideStartTime))
