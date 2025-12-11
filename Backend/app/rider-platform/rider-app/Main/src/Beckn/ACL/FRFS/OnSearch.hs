@@ -337,4 +337,5 @@ castVehicleVariantToServiceTierType = \case
   "FIRST_CLASS" -> Spec.FIRST_CLASS
   "SECOND_CLASS" -> Spec.SECOND_CLASS
   "THIRD_CLASS" -> Spec.THIRD_CLASS
+  "AC_EMU_FIRST_CLASS" -> Spec.AC_EMU_FIRST_CLASS
   _ -> Spec.ORDINARY -- Default fallback
