@@ -1684,18 +1684,24 @@ postMultimodalServiceability (mbPersonId, _merchantId) req = do
   integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   routeStopMapping <- map (\x -> API.Types.UI.MultimodalConfirm.RouteStopMapping {code = x.stopCode, lat = x.stopPoint.lat, lon = x.stopPoint.lon, name = x.stopName, seq = x.sequenceNum}) <$> OTPRest.getRouteStopMappingByRouteCode req.routeCode integratedBPPConfig
   let getLiveVehicles busesData =
-        mapM
-          ( \bus -> do
-              vehicleInfo <- OTPRest.getVehicleServiceType integratedBPPConfig bus.busData.route_id Nothing >>= fromMaybeM (InvalidRequest $ "Vehicle info not found for bus: " <> bus.vehicleNumber)
-              return $
-                API.Types.UI.MultimodalConfirm.LiveVehicleInfo
-                  { eta = bus.busData.eta_data,
-                    number = bus.vehicleNumber,
-                    position = LatLong bus.busData.latitude bus.busData.longitude,
-                    serviceTierType = vehicleInfo.service_type
-                  }
-          )
-          busesData
+        catMaybes
+          <$> mapM
+            ( \bus -> do
+                mbServiceTier <- JLU.getVehicleServiceTypeFromInMem [integratedBPPConfig] bus.vehicleNumber
+                case mbServiceTier of
+                  Just serviceTier ->
+                    return . Just $
+                      API.Types.UI.MultimodalConfirm.LiveVehicleInfo
+                        { eta = bus.busData.eta_data,
+                          number = bus.vehicleNumber,
+                          position = LatLong bus.busData.latitude bus.busData.longitude,
+                          serviceTierType = serviceTier
+                        }
+                  Nothing -> do
+                    logError $ "Vehicle info not found for bus: " <> bus.vehicleNumber
+                    return Nothing
+            )
+            busesData
   routeBusData <- CQMMB.getRoutesBuses req.routeCode integratedBPPConfig
   case routeBusData.buses of
     [] -> do
