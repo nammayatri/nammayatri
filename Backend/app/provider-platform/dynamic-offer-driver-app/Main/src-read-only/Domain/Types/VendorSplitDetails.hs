@@ -24,6 +24,6 @@ data VendorSplitDetails = VendorSplitDetails
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SplitType = FIXED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SplitType = FIXED | PERCENTAGE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SplitType)

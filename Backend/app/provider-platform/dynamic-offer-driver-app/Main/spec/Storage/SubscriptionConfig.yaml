@@ -5,6 +5,7 @@ imports:
   Merchant: Domain.Types.Merchant
   Id: Kernel.Types.Id
   VehicleCategory: Domain.Types.VehicleCategory
+  ServiceTierType: Domain.Types.Common
   ExternalWebhookConfigs: Domain.Types.WebhookExtra
   WebhookDeliveryType : Domain.Types.WebhookExtra
   WebhookEvent : Domain.Types.WebhookExtra
@@ -70,6 +71,8 @@ SubscriptionConfig:
     disabledVariantsForSubscription: "Maybe [Domain.Types.VehicleVariant.VehicleVariant]"
     sendManualPaymentLinkJobMaxDelay: Maybe Data.Time.NominalDiffTime
     manualPaymentLinkRateLimitExpirySeconds: Maybe Data.Time.NominalDiffTime
+    enableVendorPercentageSplit: Maybe Bool
+    defaultServiceTierForCategory: Maybe [(Domain.Types.VehicleCategory.VehicleCategory, ServiceTierType)]
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 
@@ -95,6 +98,9 @@ SubscriptionConfig:
     waiveOffOfferDescription :  Kernel.Prelude.fromMaybe "NAN" |I
     sendManualPaymentLinkJobMaxDelay: Kernel.Prelude.Just . Kernel.Utils.Common.secondsToNominalDiffTime . Kernel.Prelude.fromMaybe 43200|I
     manualPaymentLinkRateLimitExpirySeconds: Kernel.Prelude.Just . Kernel.Utils.Common.secondsToNominalDiffTime . Kernel.Prelude.fromMaybe 21600|I
+    enableVendorPercentageSplit: Kernel.Prelude.Just . Kernel.Prelude.fromMaybe False|I
+    defaultServiceTierForCategory: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< defaultServiceTierForCategory | E
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
@@ -115,6 +121,7 @@ SubscriptionConfig:
     waiveOffOfferDescription : Kernel.Prelude.Just|I
     sendManualPaymentLinkJobMaxDelay: Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 43200)|I
     manualPaymentLinkRateLimitExpirySeconds: Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 21600)|I
+    defaultServiceTierForCategory: Kernel.Prelude.toJSON <$> defaultServiceTierForCategory | E
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
@@ -135,6 +142,8 @@ SubscriptionConfig:
     waiveOffOfferDescription : Maybe Text
     sendManualPaymentLinkJobMaxDelay: Maybe Seconds
     manualPaymentLinkRateLimitExpirySeconds: Maybe Seconds
+    enableVendorPercentageSplit: Maybe Bool
+    defaultServiceTierForCategory: Maybe Value
   constraints:
     serviceName: PrimaryKey
     merchantOperatingCityId: PrimaryKey
@@ -164,6 +173,7 @@ SubscriptionConfig:
     showManualPlansInUI: "false"
     sendManualPaymentLinkJobMaxDelay: "43200"
     manualPaymentLinkRateLimitExpirySeconds: "21600"
+    enableVendorPercentageSplit: "false"
 
   sqlType:
    executionEnabledForVehicleCategories: text[]
@@ -173,3 +183,4 @@ SubscriptionConfig:
    webhookConfig:  "json"
    dataEntityToSend: text[]
    disabledVariantsForSubscription: "text[]"
+   defaultServiceTierForCategory: "json"

@@ -270,3 +270,8 @@ SELECT
 'Pickup_019b2a0a-54c0-4503-8057-8442dca1c2e9', id, 'FIXED', 2.0, 'TAXI', 'testing 5', now(), now() from atlas_driver_offer_bpp.merchant_operating_city where city = 'Siliguri';
 
 ALTER TABLE atlas_driver_offer_bpp.payment_transaction ADD COLUMN split_settlement_response json;
+
+-- Add constraint to validate percentage split values are between 0 and 100
+ALTER TABLE atlas_driver_offer_bpp.vendor_split_details
+ADD CONSTRAINT check_percentage_split_value
+CHECK (split_type != 'PERCENTAGE' OR (split_value >= 0 AND split_value <= 100));
