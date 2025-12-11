@@ -66,7 +66,6 @@ import Kernel.Types.Common
 import Kernel.Types.Id as ID
 import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.Common
-import Kernel.Utils.XML
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
@@ -457,7 +456,7 @@ getCallTwillioAccessToken rideId entity deviceType = do
 getCallTwillioConnectedEntityTwiml ::
   ( Id SRide.Ride ->
     EntityType ->
-    Flow XmlText
+    Flow Text
   )
 getCallTwillioConnectedEntityTwiml rideId entity = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
@@ -472,7 +471,7 @@ getCallTwillioConnectedEntityTwiml rideId entity = do
       return $ Just dial
   let twimlResp = responseToXML (Response say dial)
   logDebug $ DTL.toStrict $ renderText def twimlResp
-  return $ XmlText $ DTL.toStrict $ renderText def twimlResp
+  return $ DTL.toStrict $ renderText def twimlResp
 
 createJWT :: Text -> TwillioCallCfg -> DeviceType -> Flow Text
 createJWT id cfg deviceType = do
