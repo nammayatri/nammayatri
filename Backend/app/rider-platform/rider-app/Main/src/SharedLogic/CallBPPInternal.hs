@@ -730,8 +730,7 @@ getFleetVehicles merchant placeId mbLimit mbOffset mbSearchString = do
 getFleetVehiclesV2 ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasRequestId r
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Merchant ->
   Text ->
