@@ -343,6 +343,8 @@ data BecknTag
   | DELAY_INTEREST
   | STATIC_TERMS
   | SETTLEMENT_AMOUNT
+  | -- Stripe tags --
+    STRIPE_TEST
   | -- ## Fulfillment tags ##
     -- ROUTE_INFO
     ENCODED_POLYLINE
@@ -507,6 +509,7 @@ instance CompleteTag BecknTag where
     BUYER_FINDER_FEES_PERCENTAGE -> (Just "Buyer Finder Fees", Nothing)
     SETTLEMENT_AMOUNT -> (Just "Settlement amount", Nothing)
     SETTLEMENT_WINDOW -> (Just "Settlement window", Nothing)
+    STRIPE_TEST -> (Just "Stripe test", Nothing)
     DELAY_INTEREST -> (Just "Delay Interest", Nothing)
     SETTLEMENT_BASIS -> (Just "Settlement Basic", Nothing)
     MANDATORY_ARBITRATION -> (Just "Mandatory Arbitration", Nothing)
@@ -555,6 +558,7 @@ instance CompleteTag BecknTag where
     BUYER_FINDER_FEES_PERCENTAGE -> BUYER_FINDER_FEES
     SETTLEMENT_AMOUNT -> SETTLEMENT_TERMS
     SETTLEMENT_WINDOW -> SETTLEMENT_TERMS
+    STRIPE_TEST -> SETTLEMENT_TERMS
     DELAY_INTEREST -> SETTLEMENT_TERMS
     SETTLEMENT_BASIS -> SETTLEMENT_TERMS
     MANDATORY_ARBITRATION -> SETTLEMENT_TERMS

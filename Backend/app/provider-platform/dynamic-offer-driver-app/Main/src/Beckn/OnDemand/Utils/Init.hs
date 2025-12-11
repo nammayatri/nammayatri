@@ -80,3 +80,8 @@ mkPaymentMethodInfo Spec.Payment {..} = do
   pType <- fmap (fromMaybe DMPM.ON_FULFILLMENT . decodeFromText) (paymentType & fromMaybeM (InvalidRequest "Payment Params not found"))
   paymentInstrument <- castPaymentInstrument _params
   return $ Just $ DMPM.PaymentMethodInfo {paymentType = pType, ..}
+
+mkPaymentMode :: Spec.Payment -> Maybe DMPM.PaymentMode
+mkPaymentMode Spec.Payment {paymentTags} = do
+  isTestMode <- readMaybe . T.unpack =<< Utils.getTagV2 Tag.SETTLEMENT_TERMS Tag.STRIPE_TEST paymentTags
+  pure $ if isTestMode then DMPM.TEST else DMPM.LIVE

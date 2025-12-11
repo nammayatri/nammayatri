@@ -569,7 +569,8 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
             onlinePayment,
             now,
             isValueAddNP,
-            prepaidSubscriptionAndWalletEnabled
+            prepaidSubscriptionAndWalletEnabled,
+            paymentMode
           }
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection ->
@@ -763,7 +764,8 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     now :: UTCTime,
-    prepaidSubscriptionAndWalletEnabled :: Bool
+    prepaidSubscriptionAndWalletEnabled :: Bool,
+    paymentMode :: Maybe MP.PaymentMode
   }
 
 calculateDriverPool ::

@@ -39,6 +39,7 @@ imports:
   RecentLocation: Domain.Types.RecentLocation
   BillingCategory: SharedLogic.Type
   VehicleCategory : BecknV2.OnDemand.Enums
+  PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
 
 BookingLocation:
   tableName: booking_location
@@ -249,6 +250,7 @@ Booking:
     isMultimodalSearch: Maybe Bool
     multimodalSearchRequestId: Maybe Text
     commission: Maybe HighPrecMoney
+    paymentMode: Maybe PaymentMode
 
   beamFields:
     estimatedDistance:

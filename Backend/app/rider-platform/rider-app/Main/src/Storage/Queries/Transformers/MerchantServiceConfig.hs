@@ -15,6 +15,7 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
+import qualified Kernel.External.Payment.Stripe.Config as Stripe
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -52,27 +53,13 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> valueToMaybe configJSON
     Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> valueToMaybe configJSON
     Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> valueToMaybe configJSON
-    Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.PaymentService Payment.AAJuspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.PaymentService Payment.Stripe -> Domain.PaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
-    Domain.MetroPaymentService Payment.Juspay -> Domain.MetroPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.MetroPaymentService Payment.AAJuspay -> Domain.MetroPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.MetroPaymentService Payment.Stripe -> Domain.MetroPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
-    Domain.BusPaymentService Payment.Juspay -> Domain.BusPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.BusPaymentService Payment.AAJuspay -> Domain.BusPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.BusPaymentService Payment.Stripe -> Domain.BusPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
-    Domain.BbpsPaymentService Payment.Juspay -> Domain.BbpsPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.BbpsPaymentService Payment.AAJuspay -> Domain.BbpsPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.BbpsPaymentService Payment.Stripe -> Domain.BbpsPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
-    Domain.MultiModalPaymentService Payment.Juspay -> Domain.MultiModalPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.MultiModalPaymentService Payment.AAJuspay -> Domain.MultiModalPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.MultiModalPaymentService Payment.Stripe -> Domain.MultiModalPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
-    Domain.PassPaymentService Payment.Juspay -> Domain.PassPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.PassPaymentService Payment.AAJuspay -> Domain.PassPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.PassPaymentService Payment.Stripe -> Domain.PassPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
-    Domain.ParkingPaymentService Payment.Juspay -> Domain.ParkingPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.ParkingPaymentService Payment.AAJuspay -> Domain.ParkingPaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
-    Domain.ParkingPaymentService Payment.Stripe -> Domain.ParkingPaymentServiceConfig . Payment.StripeConfig <$> valueToMaybe configJSON
+    Domain.PaymentService paymentServiceName -> Domain.PaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+    Domain.MetroPaymentService paymentServiceName -> Domain.MetroPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+    Domain.BusPaymentService paymentServiceName -> Domain.BusPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+    Domain.BbpsPaymentService paymentServiceName -> Domain.BbpsPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+    Domain.MultiModalPaymentService paymentServiceName -> Domain.MultiModalPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+    Domain.PassPaymentService paymentServiceName -> Domain.PassPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+    Domain.ParkingPaymentService paymentServiceName -> Domain.ParkingPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
     Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.JourneyMonitoring -> Domain.TokenizationServiceConfig . Tokenize.JourneyMonitoringTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.HyperVerge -> Domain.TokenizationServiceConfig . Tokenize.HyperVergeTokenizationServiceConfig <$> valueToMaybe configJSON
@@ -86,6 +73,13 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.MultiModalStaticDataService MultiModal.GoogleTransit -> Domain.MultiModalStaticDataServiceConfig . MultiModal.GoogleTransitConfig <$> valueToMaybe configJSON
     Domain.MultiModalStaticDataService MultiModal.OTPTransit -> Domain.MultiModalStaticDataServiceConfig . MultiModal.OTPTransitConfig <$> valueToMaybe configJSON
     Domain.InsuranceService Insurance.Acko -> Domain.InsuranceServiceConfig . Insurance.AckoInsuranceConfig <$> valueToMaybe configJSON
+
+mkPaymentServiceConfig :: A.Value -> Payment.PaymentService -> Maybe Payment.PaymentServiceConfig
+mkPaymentServiceConfig configJSON = \case
+  Payment.Juspay -> Payment.JuspayConfig <$> valueToMaybe configJSON
+  Payment.AAJuspay -> Payment.JuspayConfig <$> valueToMaybe configJSON
+  Payment.Stripe -> Payment.StripeConfig <$> valueToMaybe configJSON
+  Payment.StripeTest -> Payment.StripeConfig <$> valueToMaybe configJSON
 
 getServiceNameConfigJson :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJson = \case
@@ -116,39 +110,18 @@ getServiceNameConfigJson = \case
     Notification.GRPCConfig cfg -> (Domain.NotificationService Notification.GRPC, toJSON cfg)
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
     AadhaarVerification.GridlineConfig cfg -> (Domain.AadhaarVerificationService AadhaarVerification.Gridline, toJSON cfg)
-  Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig cfg -> case cfg.serviceMode of
-      Just Juspay.AA -> (Domain.PaymentService Payment.AAJuspay, toJSON cfg)
-      _ -> (Domain.PaymentService Payment.Juspay, toJSON cfg)
-    Payment.StripeConfig cfg -> (Domain.PaymentService Payment.Juspay, toJSON cfg)
-  Domain.MetroPaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig cfg -> case cfg.serviceMode of
-      Just Juspay.AA -> (Domain.MetroPaymentService Payment.AAJuspay, toJSON cfg)
-      _ -> (Domain.MetroPaymentService Payment.Juspay, toJSON cfg)
-    Payment.StripeConfig cfg -> (Domain.MetroPaymentService Payment.Juspay, toJSON cfg)
-  Domain.BusPaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig cfg -> case cfg.serviceMode of
-      Just Juspay.AA -> (Domain.BusPaymentService Payment.AAJuspay, toJSON cfg)
-      _ -> (Domain.BusPaymentService Payment.Juspay, toJSON cfg)
-    Payment.StripeConfig cfg -> (Domain.BusPaymentService Payment.Juspay, toJSON cfg)
-  Domain.BbpsPaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig cfg -> case cfg.serviceMode of
-      Just Juspay.AA -> (Domain.BbpsPaymentService Payment.AAJuspay, toJSON cfg)
-      _ -> (Domain.BbpsPaymentService Payment.Juspay, toJSON cfg)
-    Payment.StripeConfig cfg -> (Domain.BbpsPaymentService Payment.Juspay, toJSON cfg)
-  Domain.MultiModalPaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig cfg -> case cfg.serviceMode of
-      Just Juspay.AA -> (Domain.MultiModalPaymentService Payment.AAJuspay, toJSON cfg)
-      _ -> (Domain.MultiModalPaymentService Payment.Juspay, toJSON cfg)
-    Payment.StripeConfig cfg -> (Domain.MultiModalPaymentService Payment.Juspay, toJSON cfg)
-  Domain.PassPaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig cfg -> case cfg.serviceMode of
-      Just Juspay.AA -> (Domain.PassPaymentService Payment.AAJuspay, toJSON cfg)
-      _ -> (Domain.PassPaymentService Payment.Juspay, toJSON cfg)
-    Payment.StripeConfig cfg -> (Domain.PassPaymentService Payment.Juspay, toJSON cfg)
+  Domain.PaymentServiceConfig paymentCfg -> first Domain.PaymentService $ getPaymentServiceConfigJson paymentCfg
+  Domain.MetroPaymentServiceConfig paymentCfg -> first Domain.MetroPaymentService $ getPaymentServiceConfigJson paymentCfg
+  Domain.BusPaymentServiceConfig paymentCfg -> first Domain.BusPaymentService $ getPaymentServiceConfigJson paymentCfg
+  Domain.BbpsPaymentServiceConfig paymentCfg -> first Domain.BbpsPaymentService $ getPaymentServiceConfigJson paymentCfg
+  Domain.MultiModalPaymentServiceConfig paymentCfg -> first Domain.MultiModalPaymentService $ getPaymentServiceConfigJson paymentCfg
+  Domain.PassPaymentServiceConfig paymentCfg -> first Domain.PassPaymentService $ getPaymentServiceConfigJson paymentCfg
   Domain.ParkingPaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig cfg -> (Domain.ParkingPaymentService Payment.Juspay, toJSON cfg)
-    Payment.StripeConfig cfg -> (Domain.ParkingPaymentService Payment.Stripe, toJSON cfg)
+    Payment.JuspayConfig cfg -> (Domain.ParkingPaymentService Payment.Juspay, toJSON cfg) -- why Juspay.AA not used?
+    Payment.StripeConfig cfg -> case cfg.serviceMode of
+      Just Stripe.Live -> (Domain.ParkingPaymentService Payment.Stripe, toJSON cfg)
+      Just Stripe.Test -> (Domain.ParkingPaymentService Payment.StripeTest, toJSON cfg)
+      Nothing -> (Domain.ParkingPaymentService Payment.Stripe, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
   Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
@@ -169,3 +142,13 @@ getServiceNameConfigJson = \case
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalStaticDataService MultiModal.OTPTransit, toJSON cfg)
   Domain.InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
     Insurance.AckoInsuranceConfig cfg -> (Domain.InsuranceService Insurance.Acko, toJSON cfg)
+
+getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> (Payment.PaymentService, A.Value)
+getPaymentServiceConfigJson = \case
+  Payment.JuspayConfig cfg -> case cfg.serviceMode of
+    Just Juspay.AA -> (Payment.AAJuspay, toJSON cfg)
+    _ -> (Payment.Juspay, toJSON cfg)
+  Payment.StripeConfig cfg -> case cfg.serviceMode of
+    Just Stripe.Live -> (Payment.Stripe, toJSON cfg)
+    Just Stripe.Test -> (Payment.StripeTest, toJSON cfg)
+    Nothing -> (Payment.Stripe, toJSON cfg)

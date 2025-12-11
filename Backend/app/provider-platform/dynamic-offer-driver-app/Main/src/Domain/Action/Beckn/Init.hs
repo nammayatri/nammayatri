@@ -84,7 +84,8 @@ data InitReq = InitReq
     initReqDetails :: Maybe InitReqDetails,
     isAdvanceBookingEnabled :: Maybe Bool,
     isInsured :: Maybe Bool,
-    insuredAmount :: Maybe Text
+    insuredAmount :: Maybe Text,
+    paymentMode :: Maybe DMPM.PaymentMode
   }
 
 data InitReqDetails = InitReqDeliveryDetails DTDD.DeliveryDetails
@@ -256,6 +257,7 @@ handler merchantId req validatedReq = do
             insuredAmount = req.insuredAmount,
             exotelDeclinedCallStatusReceivingTime = Nothing,
             numberOfLuggages = searchRequest.numberOfLuggages,
+            paymentMode = searchRequest.paymentMode,
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)
@@ -326,6 +328,7 @@ validateRequest merchantId req = do
     DriverQuoteId driverQuoteId -> do
       driverQuote <- QDQuote.findById driverQuoteId >>= fromMaybeM (DriverQuoteNotFound driverQuoteId.getId)
       searchRequest <- QSR.findById driverQuote.requestId >>= fromMaybeM (SearchRequestNotFound driverQuote.requestId.getId)
+      validatePaymentMode searchRequest
       callWithErrorHandling searchRequest.transactionId $ do
         -- Lock Description: This is a Lock held between Init and Cancel Search, if Cancel Search is OnGoing then the Driver Quote would be Marked Inactive post the lock release and Init will fail with `QuoteExpired`.
         -- Lock Release: If any errors or Post Init Beckn Action Handler is executed.
@@ -340,6 +343,7 @@ validateRequest merchantId req = do
       when (quote.validTill < now) $
         throwError $ QuoteExpired quote.id.getId
       searchRequest <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
+      validatePaymentMode searchRequest
       return $ ValidatedInitReq {searchRequest, quote = ValidatedQuote quote}
   where
     callWithErrorHandling transactionId action = do
@@ -354,6 +358,10 @@ validateRequest merchantId req = do
       | Just (BaseException err) <- fromException exc =
         throwError . InternalError . fromMaybe (show err) $ toMessage err
       | otherwise = throwError . InternalError $ show exc
+    validatePaymentMode searchRequest = do
+      let paymentMode = fromMaybe DMPM.LIVE req.paymentMode
+          paymentMode' = fromMaybe DMPM.LIVE searchRequest.paymentMode
+      unless (paymentMode == paymentMode') $ throwError (InvalidRequest "Wrong payment mode")
 
 compareMerchantPaymentMethod :: DMPM.PaymentMethodInfo -> DMPM.MerchantPaymentMethod -> Bool
 compareMerchantPaymentMethod providerPaymentMethod DMPM.MerchantPaymentMethod {..} =

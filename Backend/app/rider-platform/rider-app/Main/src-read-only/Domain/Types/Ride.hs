@@ -106,9 +106,9 @@ data RideE e = Ride
   }
   deriving (Generic)
 
-type Ride = RideE ('AsEncrypted)
+type Ride = RideE 'AsEncrypted
 
-type DecryptedRide = RideE ('AsUnencrypted)
+type DecryptedRide = RideE 'AsUnencrypted
 
 instance EncryptedItem Ride where
   type Unencrypted Ride = (DecryptedRide, HashSalt)
@@ -302,10 +302,10 @@ data SosJourneyStatus
 
 data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SosJourneyStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''UnexpectedConditionStage))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''PaymentStatus))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PaymentStatus)

@@ -15,6 +15,7 @@ import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2 as Common
 import Control.Applicative ((<|>))
 import "lib-dashboard" Domain.Action.Dashboard.Registration as DDR
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "dynamic-offer-driver-app" Domain.Types.MerchantPaymentMethod as DMPM
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.Transaction as DT
@@ -159,12 +160,13 @@ postRegistrationV2RegisterBankAccountLink ::
   City.City ->
   ApiTokenInfo ->
   Maybe Text ->
+  Maybe DMPM.PaymentMode ->
   Flow Common.FleetBankAccountLinkResp
-postRegistrationV2RegisterBankAccountLink merchantShortId opCity apiTokenInfo fleetOwnerId = do
+postRegistrationV2RegisterBankAccountLink merchantShortId opCity apiTokenInfo fleetOwnerId paymentMode = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2RegisterBankAccountLink) fleetOwnerId apiTokenInfo.personId.getId
+    Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2RegisterBankAccountLink) fleetOwnerId paymentMode apiTokenInfo.personId.getId
 
 getRegistrationV2RegisterBankAccountStatus ::
   ShortId DM.Merchant ->

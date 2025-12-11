@@ -11,6 +11,7 @@ import qualified API.Types.UI.DriverOnboardingV2
 import qualified Control.Lens
 import qualified Domain.Action.UI.DriverOnboardingV2
 import qualified Domain.Types.Common
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -146,6 +147,9 @@ type API =
       :> "register"
       :> "bankAccount"
       :> "link"
+      :> QueryParam
+           "paymentMode"
+           Domain.Types.Extra.MerchantPaymentMethod.PaymentMode
       :> Get
            '[JSON]
            API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
@@ -339,9 +343,10 @@ getDriverRegisterBankAccountLink ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
+    Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
   )
-getDriverRegisterBankAccountLink a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterBankAccountLink (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getDriverRegisterBankAccountLink a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterBankAccountLink (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverRegisterBankAccountStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

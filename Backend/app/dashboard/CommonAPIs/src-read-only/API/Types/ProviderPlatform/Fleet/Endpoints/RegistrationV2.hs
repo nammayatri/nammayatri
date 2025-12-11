@@ -6,6 +6,7 @@ module API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 where
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
+import qualified Domain.Types.PaymentMode
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -16,11 +17,17 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-data FleetBankAccountLinkResp = FleetBankAccountLinkResp {chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool, accountLink :: Kernel.Prelude.BaseUrl, accountUrlExpiry :: Kernel.Prelude.UTCTime}
+data FleetBankAccountLinkResp = FleetBankAccountLinkResp
+  { chargesEnabled :: Kernel.Prelude.Bool,
+    detailsSubmitted :: Kernel.Prelude.Bool,
+    accountLink :: Kernel.Prelude.BaseUrl,
+    accountUrlExpiry :: Kernel.Prelude.UTCTime,
+    paymentMode :: Domain.Types.PaymentMode.PaymentMode
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FleetBankAccountResp = FleetBankAccountResp {chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool}
+data FleetBankAccountResp = FleetBankAccountResp {chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool, paymentMode :: Domain.Types.PaymentMode.PaymentMode}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -105,13 +112,20 @@ type PostRegistrationV2V2RegisterHelper =
            FleetOwnerRegisterResV2
   )
 
-type PostRegistrationV2RegisterBankAccountLink = ("register" :> "bankAccount" :> "link" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text :> Post '[JSON] FleetBankAccountLinkResp)
+type PostRegistrationV2RegisterBankAccountLink =
+  ( "register" :> "bankAccount" :> "link" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
+      :> QueryParam
+           "paymentMode"
+           Domain.Types.PaymentMode.PaymentMode
+      :> Post '[JSON] FleetBankAccountLinkResp
+  )
 
 type PostRegistrationV2RegisterBankAccountLinkHelper =
   ( "register" :> "bankAccount" :> "link" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
-      :> MandatoryQueryParam
-           "requestorId"
-           Kernel.Prelude.Text
+      :> QueryParam
+           "paymentMode"
+           Domain.Types.PaymentMode.PaymentMode
+      :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
       :> Post '[JSON] FleetBankAccountLinkResp
   )
 
@@ -129,7 +143,7 @@ data RegistrationV2APIs = RegistrationV2APIs
   { postRegistrationV2LoginOtp :: Kernel.Prelude.Bool -> FleetOwnerLoginReqV2 -> EulerHS.Types.EulerClient FleetOwnerLoginResV2,
     postRegistrationV2VerifyOtp :: FleetOwnerVerifyReqV2 -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postRegistrationV2Register :: Kernel.Prelude.Text -> FleetOwnerRegisterReqV2 -> EulerHS.Types.EulerClient FleetOwnerRegisterResV2,
-    postRegistrationV2RegisterBankAccountLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountLinkResp,
+    postRegistrationV2RegisterBankAccountLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountLinkResp,
     getRegistrationV2RegisterBankAccountStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountResp
   }
 
