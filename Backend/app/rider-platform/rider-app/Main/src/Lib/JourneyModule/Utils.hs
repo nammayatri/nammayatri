@@ -1149,7 +1149,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
     getAllSubwayRoutes = do
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
-          routeFareReq <- getRouteFareRequest originStopCode destinationStopCode " " " " personId (crisConfig.useRouteFareV4 /= Just True)
+          routeFareReq <- getRouteFareRequest originStopCode destinationStopCode " " " " " " personId (crisConfig.useRouteFareV4 /= Just True)
           (fares, _) <- if crisConfig.useRouteFareV4 == Just True then CRISRouteFare.getRouteFare crisConfig mocid routeFareReq True else CRISRouteFareV3.getRouteFare crisConfig mocid routeFareReq True True
           let redisKey = CRISRouteFare.mkRouteFareKey originStopCode destinationStopCode searchReqId
           unless (null fares) $ Hedis.setExp redisKey fares 1800
@@ -1365,10 +1365,10 @@ getDistanceAndDuration merchantId merchantOpCityId startLocation endLocation = d
       -- Return Nothing instead of throwing error to allow graceful fallback
       return (Nothing, Nothing)
 
-getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Id Person -> Bool -> m CRISTypes.CRISFareRequest
-getRouteFareRequest sourceCode destCode changeOver viaPoints personId useDummy = do
+getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Text -> Id Person -> Bool -> m CRISTypes.CRISFareRequest
+getRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints personId useDummy = do
   if useDummy
-    then getDummyRouteFareRequest sourceCode destCode changeOver viaPoints
+    then getDummyRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints
     else do
       person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       mbMobileNumber <- mapM decrypt person.mobileNumber
@@ -1382,6 +1382,7 @@ getRouteFareRequest sourceCode destCode changeOver viaPoints personId useDummy =
             sourceCode = sourceCode,
             destCode = destCode,
             changeOver = changeOver,
+            rawChangeOver = rawChangeOver,
             via = viaPoints
           }
 
@@ -1628,8 +1629,8 @@ getLegTierOptionsUtil journeyLeg enableSuburbanRoundTrip = do
       return availableRoutesByTiers
     _ -> return []
 
-getDummyRouteFareRequest :: MonadFlow m => Text -> Text -> Text -> Text -> m CRISTypes.CRISFareRequest
-getDummyRouteFareRequest sourceCode destCode changeOver viaPoints = do
+getDummyRouteFareRequest :: MonadFlow m => Text -> Text -> Text -> Text -> Text -> m CRISTypes.CRISFareRequest
+getDummyRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints = do
   sessionId <- getRandomInRange (1, 1000000 :: Int)
   return $
     CRISTypes.CRISFareRequest
@@ -1639,5 +1640,6 @@ getDummyRouteFareRequest sourceCode destCode changeOver viaPoints = do
         sourceCode = sourceCode,
         destCode = destCode,
         changeOver = changeOver,
+        rawChangeOver = rawChangeOver,
         via = viaPoints
       }
