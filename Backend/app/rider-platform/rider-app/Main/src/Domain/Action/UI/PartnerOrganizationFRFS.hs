@@ -288,7 +288,7 @@ createPersonViaPartner req merchant mbRegCoordinates partnerOrgId = do
       mbClientConfigVersion = Nothing
       mbDevice = Nothing
       authReq = buildPartnerAuthReq identifierType notificationToken
-  person <- DReg.createPerson authReq identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice merchant (Just partnerOrgId)
+  person <- DReg.createPerson authReq identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice merchant (Just partnerOrgId) Nothing
   return (person, True)
   where
     buildPartnerAuthReq identifierType notificationToken =
@@ -299,7 +299,7 @@ createPersonViaPartner req merchant mbRegCoordinates partnerOrgId = do
           merchantId = merchant.shortId,
           deviceToken = Nothing,
           notificationToken,
-          deviceUUID = Nothing,
+          imeiNumber = Nothing,
           whatsappNotificationEnroll = Nothing,
           firstName = Nothing,
           middleName = Nothing,

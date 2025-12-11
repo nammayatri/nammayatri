@@ -35,6 +35,14 @@ findPersonIdsByPhoneNumber phoneNumbers = do
   let mbhashes = Just <$> phoneNumbersHashes
   findAllWithDb [Se.Is BeamP.mobileNumberHash $ Se.In mbhashes]
 
+findByImeiNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> m (Maybe Person)
+findByImeiNumber imeiNumber = do
+  imeiNumberHash <- getDbHash imeiNumber -- Deterministic way to get hash instead of encrypt and then extract
+  findOneWithKV [Se.Is BeamP.imeiNumberHash $ Se.Eq (Just imeiNumberHash)]
+
+findByImeiNumberHash :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m (Maybe Person)
+findByImeiNumberHash imeiNumberHash = findOneWithKV [Se.Is BeamP.imeiNumberHash $ Se.Eq (Just imeiNumberHash)]
+
 findByEmailAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Merchant -> Text -> m (Maybe Person)
 findByEmailAndMerchantId (Id merchantId) email_ = do
   emailDbHash <- getDbHash email_

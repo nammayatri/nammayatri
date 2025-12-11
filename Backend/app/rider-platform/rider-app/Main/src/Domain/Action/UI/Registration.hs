@@ -127,7 +127,7 @@ data AuthReq = AuthReq
     merchantId :: ShortId Merchant,
     deviceToken :: Maybe Text,
     notificationToken :: Maybe Text,
-    deviceUUID :: Maybe Text, -- frontend ID to be stored in keychain. UUID for iOS and androidID plus DRM ID for android
+    imeiNumber :: Maybe Text, -- frontend ID to be stored in keychain. imei number from frontend
     whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods,
     firstName :: Maybe Text,
     middleName :: Maybe Text,
@@ -155,7 +155,7 @@ instance A.FromJSON AuthReq where
         <*> obj .: "merchantId"
         <*> obj .:? "deviceToken"
         <*> obj .:? "userId" -- TODO :: This needs to be changed to notificationToken
-        <*> obj .:? "deviceUUID"
+        <*> obj .:? "imeiNumber"
         <*> obj .:? "whatsappNotificationEnroll"
         <*> obj .:? "firstName"
         <*> obj .:? "middleName"
@@ -312,7 +312,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
           >>= fromMaybeM (MerchantNotFound $ getShortId merchantTemp.fallbackShortId)
 
   (person, otpChannel) <-
-    case identifierType of -- TODO: Add support for DEVICE identifier type
+    case identifierType of
       SP.MOBILENUMBER -> do
         countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
         mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
@@ -321,23 +321,23 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         mobileNumberHash <- getDbHash mobileNumber
         person <-
           Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
-            >>= maybe (createPerson req SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing) return
+            >>= maybe (createPerson req SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing Nothing) return
         return (person, otpChannel)
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
           Person.findByEmailAndMerchantId merchant.id email
-            >>= maybe (createPerson req SP.EMAIL Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing) return
+            >>= maybe (createPerson req SP.EMAIL Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing Nothing) return
         return (person, SOTP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar auth is not supported"
-      SP.DEVICE -> case req.deviceUUID of
-        Nothing -> throwError $ InvalidRequest "Anonymous request missing deviceUUID"
-        Just uuid -> do
+      SP.DEVICE -> case req.imeiNumber of
+        Nothing -> throwError $ InvalidRequest "Anonymous request missing imeiNumber"
+        Just imei -> do
           let notificationToken = req.notificationToken
           person <-
-            Person.findAllByDeviceId (Just uuid)
-              <&> listToMaybe
-              >>= maybe (createPerson req SP.DEVICE notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing) pure
+            Person.findByImeiNumber imei
+              >>= do
+                maybe (createPerson req SP.DEVICE notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing (Just imei)) pure
           return (person, SOTP.SMS)
 
   when (fromMaybe False person.authBlocked && maybe False (now <) person.blockedUntil) $ throwError IpHitsLimitExceeded
@@ -465,7 +465,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
   mobileNumberHash <- getDbHash mobileNumberDecrypted
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
-      >>= maybe (createPerson reqWithMobileNumebr SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing) return
+      >>= maybe (createPerson reqWithMobileNumebr SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing Nothing) return
   let entityId = getId $ person.id
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
@@ -637,8 +637,9 @@ buildPerson ::
   Context.City ->
   Id DMOC.MerchantOperatingCity ->
   Maybe (Id DPO.PartnerOrganization) ->
+  Maybe Text ->
   m SP.Person
-buildPerson req identifierType notificationToken clientBundleVersion clientSdkVersion clientConfigVersion mbRnVersion clientDevice merchant currentCity merchantOperatingCityId mbPartnerOrgId = do
+buildPerson req identifierType notificationToken clientBundleVersion clientSdkVersion clientConfigVersion mbRnVersion clientDevice merchant currentCity merchantOperatingCityId mbPartnerOrgId mbImeiNumber = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   let useFakeOtp =
@@ -656,6 +657,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
   encEmail <- mapM encrypt req.email
   encBusinessEmail <- mapM encrypt req.businessEmail
   deploymentVersion <- asks (.version)
+  encImeiNumber <- mapM encrypt mbImeiNumber
   return $
     SP.Person
       { id = pid,
@@ -716,7 +718,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         referredByCustomer = Nothing,
         customerReferralCode = Nothing,
         blockedCount = Just 0,
-        deviceId = req.deviceUUID,
+        deviceId = Nothing,
         androidId = Nothing,
         registeredViaPartnerOrgId = mbPartnerOrgId,
         customerPaymentId = Nothing,
@@ -738,7 +740,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         authBlocked = Nothing,
         lastUsedVehicleServiceTiers = [],
         lastUsedVehicleCategories = [],
-        imeiNumber = Nothing, -- TODO: take it from the request
+        imeiNumber = encImeiNumber,
         comments = Nothing,
         businessProfileVerified = Nothing,
         businessEmail = encBusinessEmail,
@@ -894,8 +896,9 @@ createPerson ::
   Maybe Device ->
   DMerchant.Merchant ->
   Maybe (Id DPO.PartnerOrganization) ->
+  Maybe Text ->
   m SP.Person
-createPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice merchant mbPartnerOrgId = do
+createPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice merchant mbPartnerOrgId mbImeiNumber = do
   let currentCity = merchant.defaultCity
   merchantOperatingCityId <-
     CQMOC.findByMerchantIdAndCity merchant.id currentCity
@@ -904,7 +907,7 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
           ( MerchantOperatingCityNotFound $
               "merchantId: " <> merchant.id.getId <> " ,city: " <> show currentCity
           )
-  person <- buildPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice merchant currentCity merchantOperatingCityId mbPartnerOrgId
+  person <- buildPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice merchant currentCity merchantOperatingCityId mbPartnerOrgId mbImeiNumber
   createPersonStats <- makePersonStats person
   Person.create person
   QPS.create createPersonStats
@@ -1061,7 +1064,7 @@ createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
                 merchantId = merchant.shortId,
                 deviceToken = Nothing,
                 notificationToken = Nothing,
-                deviceUUID = Nothing,
+                imeiNumber = Nothing,
                 whatsappNotificationEnroll = Nothing,
                 firstName = Nothing,
                 middleName = Nothing,
@@ -1079,7 +1082,7 @@ createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
                 reuseToken = Nothing
               }
       createdPerson <-
-        createPerson authReq SP.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing
+        createPerson authReq SP.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing Nothing
       pure $ createdPerson.id
 
 ---------- Business Email Verification --------
