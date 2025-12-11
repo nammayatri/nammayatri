@@ -163,7 +163,19 @@ purchasePassWithPayment person pass merchantId personId mbStartDay deviceId mbPr
   let startDate = fromMaybe (DT.utctDay istTime) mbStartDay
       endDate = calculatePassEndDate startDate pass.maxValidDays
 
-  mbSamePass <- QPurchasedPass.findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId pass.passTypeId deviceId
+  mbSamePassDevice <- QPurchasedPass.findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId pass.passTypeId deviceId
+  -- If there is no pass for the same device, try to find an existing Pending pass to reuse across devices and set it as mbSamePass
+  mbSamePass <-
+    case mbSamePassDevice of
+      Just s -> return $ Just s
+      Nothing -> do
+        mbPending <- QPurchasedPass.findPendingPassByPersonIdAndPassTypeId personId merchantId pass.passTypeId
+        case mbPending of
+          Just pendingPass -> do
+            QPurchasedPass.updateDeviceIdById deviceId pendingPass.deviceSwitchCount pendingPass.id
+            logInfo $ "Reusing existing purchased pass " <> pendingPass.id.getId <> " and updated deviceId to " <> deviceId
+            return $ Just pendingPass
+          Nothing -> return Nothing
 
   let initialStatus = if pass.amount == 0 then DPurchasedPass.Active else DPurchasedPass.Pending
   purchasedPassId <-
