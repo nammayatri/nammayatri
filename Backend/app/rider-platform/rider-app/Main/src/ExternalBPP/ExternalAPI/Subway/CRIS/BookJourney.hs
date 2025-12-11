@@ -398,6 +398,7 @@ getFRFSVehicleServiceTier quote = do
   case serviceTier._type of
     Enums.FIRST_CLASS -> pure "FC"
     Enums.SECOND_CLASS -> pure "II"
+    Enums.AC_EMU_FIRST_CLASS -> pure "FC"
     _ -> throwError $ CRISError "Invalid vehicle service tier"
 
 alphabet :: String
