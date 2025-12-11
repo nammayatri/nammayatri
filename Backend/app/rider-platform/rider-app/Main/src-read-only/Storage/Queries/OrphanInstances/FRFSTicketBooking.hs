@@ -6,12 +6,14 @@ module Storage.Queries.OrphanInstances.FRFSTicketBooking where
 import qualified Domain.Types.FRFSTicketBooking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.FRFSTicketBooking as Beam
 
 instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTicketBooking where
@@ -28,6 +30,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             bppOrderId = bppOrderId,
             bppSubscriberId = bppSubscriberId,
             bppSubscriberUrl = bppSubscriberUrl,
+            busLocationData = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData),
             cancellationCharges = cancellationCharges,
             cashbackPayoutOrderId = cashbackPayoutOrderId,
             cashbackStatus = cashbackStatus,
@@ -35,7 +38,10 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             discountedTickets = discountedTickets,
             eventDiscountAmount = eventDiscountAmount,
             failureReason = failureReason,
+            fromStationAddress = fromStationAddress,
             fromStationCode = fromStationId,
+            fromStationName = fromStationName,
+            fromStationPoint = Kernel.External.Maps.Types.LatLong <$> fromStationLat <*> fromStationLon,
             googleWalletJWTUrl = googleWalletJWTUrl,
             id = Kernel.Types.Id.Id id,
             integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
@@ -64,9 +70,13 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             startTime = startTime,
             stationsJson = stationsJson,
             status = status,
+            toStationAddress = toStationAddress,
             toStationCode = toStationId,
+            toStationName = toStationName,
+            toStationPoint = Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon,
             totalPrice = Kernel.Types.Common.mkPrice currency price,
             validTill = validTill,
+            vehicleNumber = vehicleNumber,
             vehicleType = vehicleType,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -84,6 +94,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.bppOrderId = bppOrderId,
         Beam.bppSubscriberId = bppSubscriberId,
         Beam.bppSubscriberUrl = bppSubscriberUrl,
+        Beam.busLocationData = Just $ toJSON busLocationData,
         Beam.cancellationCharges = cancellationCharges,
         Beam.cashbackPayoutOrderId = cashbackPayoutOrderId,
         Beam.cashbackStatus = cashbackStatus,
@@ -91,7 +102,11 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.discountedTickets = discountedTickets,
         Beam.eventDiscountAmount = eventDiscountAmount,
         Beam.failureReason = failureReason,
+        Beam.fromStationAddress = fromStationAddress,
         Beam.fromStationId = fromStationCode,
+        Beam.fromStationName = fromStationName,
+        Beam.fromStationLat = (.lat) <$> fromStationPoint,
+        Beam.fromStationLon = (.lon) <$> fromStationPoint,
         Beam.googleWalletJWTUrl = googleWalletJWTUrl,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
@@ -120,10 +135,15 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.startTime = startTime,
         Beam.stationsJson = stationsJson,
         Beam.status = status,
+        Beam.toStationAddress = toStationAddress,
         Beam.toStationId = toStationCode,
+        Beam.toStationName = toStationName,
+        Beam.toStationLat = (.lat) <$> toStationPoint,
+        Beam.toStationLon = (.lon) <$> toStationPoint,
         Beam.currency = (Kernel.Prelude.Just . (.currency)) totalPrice,
         Beam.price = (.amount) totalPrice,
         Beam.validTill = validTill,
+        Beam.vehicleNumber = vehicleNumber,
         Beam.vehicleType = vehicleType,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

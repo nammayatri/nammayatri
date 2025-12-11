@@ -16,6 +16,7 @@ import Data.Ord (Down (..), comparing)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Data.Time.LocalTime as LocalTime
+import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
@@ -82,6 +83,7 @@ import System.Environment (lookupEnv)
 import Tools.Error
 import Tools.Maps (LatLong (..))
 import qualified Tools.Maps as Maps
+import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.Payment as TPayment
 
 mapWithIndex :: (MonadFlow m) => (Int -> a -> m b) -> [a] -> m [b]
@@ -1641,3 +1643,38 @@ getDummyRouteFareRequest sourceCode destCode changeOver viaPoints = do
         changeOver = changeOver,
         via = viaPoints
       }
+
+getLiveRouteInfo ::
+  ( Metrics.HasBAPMetrics m r,
+    MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Text ->
+  Text ->
+  m (Maybe VehicleLiveRouteInfo)
+getLiveRouteInfo integratedBPPConfig userPassedVehicleNumber userPassedRouteCode = do
+  fork "getVehicleLiveRouteInfo" $ Metrics.incrementBusScanSearchRequestCount "ANNA_APP" integratedBPPConfig.merchantOperatingCityId.getId
+  mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo userPassedVehicleNumber
+  mbRouteLiveInfo <-
+    case mbVehicleOverrideInfo of
+      Just (updatedVehicleNumber, newDeviceWaybillNo) -> do
+        mbUpdatedVehicleRouteInfo <- getVehicleLiveRouteInfo [integratedBPPConfig] updatedVehicleNumber Nothing
+        if Just newDeviceWaybillNo /= ((.waybillId) . snd =<< mbUpdatedVehicleRouteInfo)
+          then do
+            Dispatcher.delFleetOverrideInfo userPassedVehicleNumber
+            getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber Nothing
+          else pure mbUpdatedVehicleRouteInfo
+      Nothing -> getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber Nothing
+  return $
+    maybe
+      Nothing
+      ( \routeLiveInfo@(VehicleLiveRouteInfo {..}) ->
+          if routeCode == Just userPassedRouteCode
+            then Just routeLiveInfo
+            else Just (VehicleLiveRouteInfo {routeCode = Just userPassedRouteCode, ..})
+      )
+      (snd <$> mbRouteLiveInfo)

@@ -6,10 +6,12 @@ module Storage.Queries.OrphanInstances.FRFSSearch where
 import qualified Domain.Types.FRFSSearch
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.FRFSSearch as Beam
 
 instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
@@ -17,12 +19,17 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
     pure $
       Just
         Domain.Types.FRFSSearch.FRFSSearch
-          { fromStationCode = fromStationId,
+          { busLocationData = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData),
+            fromStationAddress = fromStationAddress,
+            fromStationCode = fromStationId,
+            fromStationName = fromStationName,
+            fromStationPoint = Kernel.External.Maps.Types.LatLong <$> fromStationLat <*> fromStationLon,
             id = Kernel.Types.Id.Id id,
             integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             isOnSearchReceived = isOnSearchReceived,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            minimalData = minimalData,
             multimodalSearchRequestId = multimodalSearchRequestId,
             onSearchFailed = onSearchFailed,
             partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
@@ -32,8 +39,12 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
             riderId = Kernel.Types.Id.Id riderId,
             routeCode = routeId,
             searchAsParentStops = searchAsParentStops,
+            toStationAddress = toStationAddress,
             toStationCode = toStationId,
+            toStationName = toStationName,
+            toStationPoint = Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon,
             validTill = validTill,
+            vehicleNumber = vehicleNumber,
             vehicleType = vehicleType,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -42,12 +53,18 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
 instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   toTType' (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
     Beam.FRFSSearchT
-      { Beam.fromStationId = fromStationCode,
+      { Beam.busLocationData = Just $ toJSON busLocationData,
+        Beam.fromStationAddress = fromStationAddress,
+        Beam.fromStationId = fromStationCode,
+        Beam.fromStationName = fromStationName,
+        Beam.fromStationLat = (.lat) <$> fromStationPoint,
+        Beam.fromStationLon = (.lon) <$> fromStationPoint,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.isOnSearchReceived = isOnSearchReceived,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.minimalData = minimalData,
         Beam.multimodalSearchRequestId = multimodalSearchRequestId,
         Beam.onSearchFailed = onSearchFailed,
         Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
@@ -57,8 +74,13 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.routeId = routeCode,
         Beam.searchAsParentStops = searchAsParentStops,
+        Beam.toStationAddress = toStationAddress,
         Beam.toStationId = toStationCode,
+        Beam.toStationName = toStationName,
+        Beam.toStationLat = (.lat) <$> toStationPoint,
+        Beam.toStationLon = (.lon) <$> toStationPoint,
         Beam.validTill = validTill,
+        Beam.vehicleNumber = vehicleNumber,
         Beam.vehicleType = vehicleType,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

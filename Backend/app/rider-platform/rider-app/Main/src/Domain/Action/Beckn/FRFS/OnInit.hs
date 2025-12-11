@@ -75,7 +75,8 @@ onInit ::
     EncFlow m r,
     ServiceFlow m r,
     HasField "isMetroTestTransaction" r Bool,
-    Metrics.HasBAPMetrics m r
+    Metrics.HasBAPMetrics m r,
+    HasShortDurationRetryCfg r c
   ) =>
   DOnInit ->
   Merchant.Merchant ->

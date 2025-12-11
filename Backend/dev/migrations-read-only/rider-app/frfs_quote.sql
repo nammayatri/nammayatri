@@ -69,6 +69,16 @@ ALTER TABLE atlas_app.frfs_quote ALTER COLUMN child_price SET DEFAULT 0;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN to_station_name text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN to_station_lon double precision ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN to_station_lat double precision ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN to_station_address text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN from_station_name text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN from_station_lon double precision ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN from_station_lat double precision ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN from_station_address text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN bus_location_data json ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN vehicle_number text ;
 
 
 

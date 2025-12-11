@@ -55,14 +55,14 @@ data FRFSRecon = FRFSRecon
   }
   deriving (Generic, Show)
 
-data EntityType = BUS_PASS | FRFS_TICKET_BOOKING deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+data EntityType = BUS_PASS | FRFS_TICKET_BOOKING deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
 
-data ReconStatus = PENDING | SETTLED | PARTIALLY_SETTLED | REFUNDED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+data ReconStatus = PENDING | SETTLED | PARTIALLY_SETTLED | REFUNDED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''EntityType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''EntityType))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''EntityType)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''EntityType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''ReconStatus)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''ReconStatus))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''ReconStatus)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''ReconStatus))

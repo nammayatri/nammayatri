@@ -13,7 +13,6 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
-import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
@@ -365,7 +364,7 @@ data MetroLegExtraInfo = MetroLegExtraInfo
     adultTicketQuantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
     refund :: Maybe LegSplitInfo,
-    categories :: [CategoryInfoResponse],
+    categories :: [FRFSTicketServiceAPI.CategoryInfoResponse],
     categoryBookingDetails :: Maybe [CategoryBookingDetails] -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
   }
   deriving stock (Show, Generic)
@@ -387,7 +386,7 @@ data SubwayLegExtraInfo = SubwayLegExtraInfo
     adultTicketQuantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
     refund :: Maybe LegSplitInfo,
-    categories :: [CategoryInfoResponse],
+    categories :: [FRFSTicketServiceAPI.CategoryInfoResponse],
     categoryBookingDetails :: Maybe [CategoryBookingDetails] -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
   }
   deriving stock (Show, Generic)
@@ -436,20 +435,8 @@ data BusLegExtraInfo = BusLegExtraInfo
     legStartTime :: Maybe UTCTime,
     legEndTime :: Maybe UTCTime,
     discounts :: Maybe [FRFSTicketServiceAPI.FRFSDiscountRes],
-    categories :: [CategoryInfoResponse],
+    categories :: [FRFSTicketServiceAPI.CategoryInfoResponse],
     categoryBookingDetails :: Maybe [CategoryBookingDetails] -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data CategoryInfoResponse = CategoryInfoResponse
-  { categoryId :: Id DFRFSQuoteCategory.FRFSQuoteCategory,
-    categoryName :: FRFSQuoteCategoryType,
-    categoryMeta :: Maybe DFRFSQuoteCategory.QuoteCategoryMetadata,
-    categoryPrice :: PriceAPIEntity,
-    categoryOfferedPrice :: PriceAPIEntity,
-    categoryFinalPrice :: Maybe PriceAPIEntity,
-    categorySelectedQuantity :: Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1632,7 +1619,3 @@ safeTail :: [a] -> Maybe a
 safeTail [] = Nothing
 safeTail [_] = Nothing
 safeTail xs = Just (last xs)
-
-mkCategoryInfoResponse :: DFRFSQuoteCategory.FRFSQuoteCategory -> CategoryInfoResponse
-mkCategoryInfoResponse category =
-  CategoryInfoResponse {categoryId = category.id, categoryName = category.category, categoryMeta = category.categoryMeta, categoryPrice = mkPriceAPIEntity category.price, categoryOfferedPrice = mkPriceAPIEntity category.offeredPrice, categoryFinalPrice = mkPriceAPIEntity <$> category.finalPrice, categorySelectedQuantity = category.selectedQuantity}

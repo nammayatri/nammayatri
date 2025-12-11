@@ -1214,3 +1214,7 @@ vendorSplitDetailSplitTypeToPaymentSplitType :: VendorSplitDetails.SplitType -> 
 vendorSplitDetailSplitTypeToPaymentSplitType = \case
   VendorSplitDetails.FIXED -> Payment.FIXED
   VendorSplitDetails.FLEXIBLE -> Payment.FLEXIBLE
+
+mkCategoryInfoResponse :: DFRFSQuoteCategory.FRFSQuoteCategory -> APITypes.CategoryInfoResponse
+mkCategoryInfoResponse category =
+  APITypes.CategoryInfoResponse {categoryId = category.id, categoryName = category.category, categoryMeta = category.categoryMeta, categoryPrice = mkPriceAPIEntity category.price, categoryOfferedPrice = mkPriceAPIEntity category.offeredPrice, categoryFinalPrice = mkPriceAPIEntity <$> category.finalPrice, categorySelectedQuantity = category.selectedQuantity}

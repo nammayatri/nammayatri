@@ -11,14 +11,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FRFSRouteStopStageFareT f = FRFSRouteStopStageFareT
-  { farePolicyId :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    routeCode :: B.C f Kernel.Prelude.Text,
-    stage :: B.C f Kernel.Prelude.Int,
-    stopCode :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { farePolicyId :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    routeCode :: (B.C f Kernel.Prelude.Text),
+    stage :: (B.C f Kernel.Prelude.Int),
+    stopCode :: (B.C f Kernel.Prelude.Text),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +28,6 @@ instance B.Table FRFSRouteStopStageFareT where
 
 type FRFSRouteStopStageFare = FRFSRouteStopStageFareT Identity
 
-$(enableKVPG ''FRFSRouteStopStageFareT ['farePolicyId, 'routeCode, 'stopCode] [])
+$(enableKVPG (''FRFSRouteStopStageFareT) [('farePolicyId), ('routeCode), ('stopCode)] [])
 
-$(mkTableInstances ''FRFSRouteStopStageFareT "frfs_route_stop_stage_fare")
+$(mkTableInstances (''FRFSRouteStopStageFareT) "frfs_route_stop_stage_fare")
