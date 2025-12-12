@@ -17,6 +17,7 @@ module Domain.Action.Beckn.FRFS.OnStatus where
 
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative (liftA2, (<|>))
 import qualified Data.HashMap.Strict as HashMap
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
@@ -62,8 +63,8 @@ validateRequest ::
   DOnStatus ->
   m (Merchant, Booking.FRFSTicketBooking)
 validateRequest (Booking DOrder {..}) = do
-  _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QTBooking.findByBppOrderId (Just bppOrderId) >>= fromMaybeM (BookingDoesNotExist messageId)
+  _ <- fromMaybeM (SearchRequestDoesNotExist transactionId) =<< liftA2 (<|>) (runInReplica $ QSearch.findById (Id transactionId)) (runInReplica $ QSearch.findById booking.searchId)
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, booking)
@@ -97,7 +98,7 @@ onStatus _merchant booking (Booking dOrder) = do
         tickets <- QTicket.findAllByTicketBookingId booking.id
         pure $ map mapTicketToDTicket tickets
       else return dOrder.tickets
-  statuses <- traverse (Utils.getTicketStatus booking checkInprogress) tickets
+  statuses <- traverse (Utils.getTicketStatus booking (checkInprogress && dOrder.orderStatus == Just Spec.COMPLETE)) tickets
   statuses' <-
     case dOrder.orderStatus of
       Just Spec.COMPLETE
