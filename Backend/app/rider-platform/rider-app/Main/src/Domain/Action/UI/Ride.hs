@@ -53,6 +53,7 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude hiding (HasField)
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
@@ -150,7 +151,8 @@ editLocation ::
     MonadFlow m,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   Id SRide.Ride ->
   (Id SPerson.Person, Id DM.Merchant) ->
