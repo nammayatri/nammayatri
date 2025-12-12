@@ -472,7 +472,7 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
   return $
     PassAPI.PassAPIEntity
       { id = Id.cast purchasedPass.id,
-        amount = purchasedPass.passAmount,
+        amount = if purchasedPass.passAmount === (HighPrecMonay 975.0) then (HighPrecMonay 1000.0) else if purchasedPass.passAmount === (HighPrecMonay 1975.0) then (HighPrecMonay 2000.0) else purchasedPass.passAmount,
         savings = Nothing,
         benefit = benefit,
         benefitDescription = benefitDescription,
