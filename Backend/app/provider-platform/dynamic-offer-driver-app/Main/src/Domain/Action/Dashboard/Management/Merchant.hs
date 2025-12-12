@@ -49,6 +49,9 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigUpsertPlanAndConfigSubscription,
     postMerchantConfigOperatingCityWhiteList,
     postMerchantConfigMerchantCreate,
+    postMerchantConfigMerchantPushNotificationUpsert,
+    postMerchantConfigMerchantOverlayUpsert,
+    postMerchantConfigMerchantMessageUpsert,
   )
 where
 
@@ -1323,6 +1326,154 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "vat_charge_config"
       <*> r .: "commission_charge_config"
       <*> r .: "toll_tax_charge_config"
+
+data MerchantPushNotificationCSVRow = MerchantPushNotificationCSVRow
+  { mpnMerchantId :: Text,
+    mpnMerchantOperatingCityId :: Text,
+    mpnKey :: Text,
+    mpnTitle :: Text,
+    mpnBody :: Text,
+    mpnLanguage :: Text,
+    mpnFcmNotificationType :: Text,
+    mpnFcmSubCategory :: Maybe Text,
+    mpnTripCategory :: Maybe Text
+  }
+  deriving (Generic, Show)
+
+instance FromNamedRecord MerchantPushNotificationCSVRow where
+  parseNamedRecord r =
+    MerchantPushNotificationCSVRow
+      <$> r .: "merchant_id"
+      <*> r .: "merchant_operating_city_id"
+      <*> r .: "key"
+      <*> r .: "title"
+      <*> r .: "body"
+      <*> r .: "language"
+      <*> r .: "fcm_notification_type"
+      <*> r .: "fcm_sub_category"
+      <*> r .: "trip_category"
+
+data MerchantOverlayCSVRow = MerchantOverlayCSVRow
+  { moMerchantId :: Text,
+    moMerchantOperatingCityId :: Text,
+    moOverlayKey :: Text,
+    moLanguage :: Text,
+    moUdf1 :: Maybe Text,
+    moTitle :: Maybe Text,
+    moDescription :: Maybe Text,
+    moImageUrl :: Maybe Text,
+    moOkButtonText :: Maybe Text,
+    moCancelButtonText :: Maybe Text,
+    moActions :: Text,
+    moActions2 :: Text,
+    moLink :: Maybe Text,
+    moMethod :: Maybe Text,
+    moReqBody :: Text,
+    moEndPoint :: Maybe Text,
+    moDelay :: Maybe Int,
+    moContactSupportNumber :: Maybe Text,
+    moToastMessage :: Maybe Text,
+    moSecondaryActions :: Maybe Text,
+    moSocialMediaLinks :: Maybe Text,
+    moVehicleCategory :: Maybe Text,
+    moShowPushNotification :: Maybe Bool
+  }
+  deriving (Generic, Show)
+
+instance FromNamedRecord MerchantOverlayCSVRow where
+  parseNamedRecord r =
+    MerchantOverlayCSVRow
+      <$> r .: "merchant_id"
+      <*> r .: "merchant_operating_city_id"
+      <*> r .: "overlay_key"
+      <*> r .: "language"
+      <*> r .: "udf1"
+      <*> r .: "title"
+      <*> r .: "description"
+      <*> r .: "image_url"
+      <*> r .: "ok_button_text"
+      <*> r .: "cancel_button_text"
+      <*> r .: "actions"
+      <*> r .: "actions2"
+      <*> r .: "link"
+      <*> r .: "method"
+      <*> r .: "req_body"
+      <*> r .: "end_point"
+      <*> r .: "delay"
+      <*> r .: "contact_support_number"
+      <*> r .: "toast_message"
+      <*> r .: "secondary_actions"
+      <*> r .: "social_media_links"
+      <*> r .: "vehicle_category"
+      <*> r .: "show_push_notification"
+
+data MerchantMessageCSVRow = MerchantMessageCSVRow
+  { mmMerchantId :: Text,
+    mmMerchantOperatingCityId :: Text,
+    mmMessageKey :: Text,
+    mmLanguage :: Text,
+    mmMessage :: Text,
+    mmTemplateId :: Text,
+    mmJsonData :: Text,
+    mmContainsUrlButton :: Bool,
+    mmSenderHeader :: Maybe Text,
+    mmVehicleCategory :: Maybe Text
+  }
+  deriving (Generic, Show)
+
+instance FromNamedRecord MerchantMessageCSVRow where
+  parseNamedRecord r =
+    MerchantMessageCSVRow
+      <$> r .: "merchant_id"
+      <*> r .: "merchant_operating_city_id"
+      <*> r .: "message_key"
+      <*> r .: "language"
+      <*> r .: "message"
+      <*> r .: "template_id"
+      <*> r .: "json_data"
+      <*> r .: "contains_url_button"
+      <*> r .: "sender_header"
+      <*> r .: "vehicle_category"
+
+instance CSV.FromNamedRecord MerchantOverlayCSVRow where
+  parseNamedRecord r =
+    MerchantOverlayCSVRow
+      <$> r CSV..: "merchant_id"
+      <*> r CSV..: "merchant_operating_city_id"
+      <*> r CSV..: "overlay_key"
+      <*> r CSV..: "language"
+      <*> r CSV CSV..:? "udf1"
+      <*> r CSV CSV..:? "title"
+      <*> r CSV CSV..:? "description"
+      <*> r CSV CSV..:? "image_url"
+      <*> r CSV CSV..:? "ok_button_text"
+      <*> r CSV CSV..:? "cancel_button_text"
+      <*> r CSV..: "actions"
+      <*> r CSV..: "actions2"
+      <*> r CSV CSV..:? "link"
+      <*> r CSV CSV..:? "method"
+      <*> r CSV..: "req_body"
+      <*> r CSV CSV..:? "end_point"
+      <*> r CSV CSV..:? "delay"
+      <*> r CSV CSV..:? "contact_support_number"
+      <*> r CSV CSV..:? "toast_message"
+      <*> r CSV CSV..:? "secondary_actions"
+      <*> r CSV CSV..:? "social_media_links"
+      <*> r CSV CSV..:? "vehicle_category"
+      <*> r CSV CSV..:? "show_push_notification"
+
+instance CSV.FromNamedRecord MerchantPushNotificationCSVRow where
+  parseNamedRecord r =
+    MerchantPushNotificationCSVRow
+      <$> r CSV..: "merchant_id"
+      <*> r CSV..: "merchant_operating_city_id"
+      <*> r CSV..: "key"
+      <*> r CSV..: "title"
+      <*> r CSV..: "body"
+      <*> r CSV..: "language"
+      <*> r CSV..: "fcm_notification_type"
+      <*> r CSV CSV..:? "fcm_sub_category"
+      <*> r CSV CSV..:? "trip_category"
 
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
@@ -2961,3 +3112,228 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
 
 postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
 postMerchantConfigMerchantCreate = postMerchantConfigOperatingCityCreate
+
+postMerchantPushNotificationCsvUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertMerchantPushNotificationCsvReq -> Flow Common.UpsertMerchantPushNotificationCsvResp
+postMerchantPushNotificationCsvUpsert merchantShortId opCity apiTokenInfo req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  result <-
+    Hedis.whenWithLockRedisAndReturnValue (merchantCityLockKey merchantOpCity.id.getId) 60 $ do
+      logTagInfo "Upserting Merchant Push Notifications for merchant: " (show merchant.id <> " and city: " <> show opCity)
+      csvRows <- readCsv req.file
+      (errors, _) <- foldlM (processPushNotification merchantOpCity) ([], Map.empty) csvRows
+      return $
+        Common.UpsertMerchantPushNotificationCsvResp
+          { unprocessedEntities = errors,
+            success = "Merchant Push Notifications updated successfully"
+          }
+  case result of
+    Right res -> return res
+    Left _ -> throwError $ InvalidRequest "Someone already triggered this api"
+  where
+    readCsv csvFile = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (CSV.decodeByName $ LBS.fromStrict csvData :: Either String (CSV.Header, V.Vector MerchantPushNotificationCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> pure $ V.toList v
+
+    processPushNotification :: DMOC.MerchantOperatingCity -> ([Text], Map.Map Text Bool) -> MerchantPushNotificationCSVRow -> Flow ([Text], Map.Map Text Bool)
+    processPushNotification merchantOpCity (errors, _) row = do
+      if row.mpnMerchantOperatingCityId /= merchantOpCity.id.getId
+        then return (errors <> ["Can't process push notification for different city: " <> row.mpnMerchantOperatingCityId], Map.empty)
+        else do
+          let pnKey = row.mpnKey
+              pnTitle = row.mpnTitle
+              pnBody = row.mpnBody
+              pnLanguage = readMaybe (T.unpack row.mpnLanguage) :: Maybe External.Language
+              pnFcmNotificationType = readMaybe (T.unpack row.mpnFcmNotificationType) :: Maybe External.Category
+              pnFcmSubCategory = readMaybe . T.unpack <$> row.mpnFcmSubCategory
+              pnTripCategory = readMaybe . T.unpack <$> row.mpnTripCategory
+
+          case (pnLanguage, pnFcmNotificationType) of
+            (Just language, Just fcmNotificationType) -> do
+              existingPN <- CQMPN.findByMerchantOpCityIdPNKeyLangaugeTripCategory merchantOpCity.id pnKey (Just language) pnTripCategory
+              let newPN =
+                    DMPN.MerchantPushNotification
+                      { DMPN.id = Id (L.uuidToText L.newUUID),
+                        DMPN.key = pnKey,
+                        DMPN.title = pnTitle,
+                        DMPN.body = pnBody,
+                        DMPN.language = language,
+                        DMPN.fcmNotificationType = fcmNotificationType,
+                        DMPN.fcmSubCategory = pnFcmSubCategory,
+                        DMPN.merchantId = merchantOpCity.merchantId,
+                        DMPN.merchantOperatingCityId = merchantOpCity.id,
+                        DMPN.tripCategory = pnTripCategory,
+                        DMPN.shouldTrigger = True
+                      }
+              case existingPN of
+                Just oldPN -> do
+                  L.logInfo "Updating existing Merchant Push Notification" (show pnKey)
+                  CQMPN.update newPN {DMPN.id = oldPN.id}
+                  return (errors, Map.empty)
+                Nothing -> do
+                  L.logInfo "Creating new Merchant Push Notification" (show pnKey)
+                  CQMPN.create newPN
+                  return (errors, Map.empty)
+            _ -> return (errors <> ["Invalid language or FCM notification type for key: " <> pnKey], Map.empty)
+
+postMerchantConfigMerchantOverlayUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertMerchantOverlayCsvReq -> Flow Common.UpsertMerchantOverlayCsvResp
+postMerchantConfigMerchantOverlayUpsert merchantShortId opCity apiTokenInfo req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+
+  result <-
+    Hedis.whenWithLockRedisAndReturnValue (merchantCityLockKey merchantOpCity.id.getId) 60 $ do
+      logTagInfo "Upserting Merchant Overlays for merchant: " (show merchant.id <> " and city: " <> show opCity)
+      csvRows <- readCsvOverlay req.file
+      (errors, _) <- foldlM (processOverlay merchantOpCity) ([], Map.empty) csvRows
+      return $
+        Common.UpsertMerchantOverlayCsvResp
+          { unprocessedEntities = errors,
+            success = "Merchant Overlays updated successfully"
+          }
+  case result of
+    Right res -> return res
+    Left _ -> throwError $ InvalidRequest "Someone already triggered this api"
+  where
+    readCsvOverlay csvFile = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (CSV.decodeByName $ LBS.fromStrict csvData :: Either String (CSV.Header, V.Vector MerchantOverlayCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> pure $ V.toList v
+
+    processOverlay :: DMOC.MerchantOperatingCity -> ([Text], Map.Map Text Bool) -> MerchantOverlayCSVRow -> Flow ([Text], Map.Map Text Bool)
+    processOverlay merchantOpCity (errors, _) row = do
+      if row.moMerchantOperatingCityId /= merchantOpCity.id.getId
+        then return (errors <> ["Can't process overlay for different city: " <> row.moMerchantOperatingCityId], Map.empty)
+        else do
+          let overlayKey = row.moOverlayKey
+              language = readMaybe (T.unpack row.moLanguage) :: Maybe External.Language
+              udf1 = row.moUdf1
+              title = row.moTitle
+              description = row.moDescription
+              imageUrl = row.moImageUrl
+              okButtonText = row.moOkButtonText
+              cancelButtonText = row.moCancelButtonText
+              actions = readMaybe (T.unpack row.moActions) :: Maybe [Text]
+              actions2 = readMaybe (T.unpack row.moActions2) :: Maybe [External.FCMActions]
+              link = row.moLink
+              method = row.moMethod
+              reqBody = readMaybe (T.unpack row.moReqBody) :: Maybe Aeson.Value
+              endPoint = row.moEndPoint
+              delay = row.moDelay
+              contactSupportNumber = row.moContactSupportNumber
+              toastMessage = row.moToastMessage
+              secondaryActions = readMaybe (T.unpack row.moSecondaryActions) :: Maybe [Text]
+              socialMediaLinks = readMaybe (T.unpack row.moSocialMediaLinks) :: Maybe [External.FCMMediaLink]
+              vehicleCategory = readMaybe . T.unpack <$> row.moVehicleCategory
+              showPushNotification = row.moShowPushNotification
+
+          case (language, actions, actions2, reqBody) of
+            (Just lang, Just acts, Just acts2, Just rb) -> do
+              existingOverlay <- CQOverlay.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCity.id overlayKey lang udf1 vehicleCategory
+              let newOverlay =
+                    DMOverlay.Overlay
+                      { DMOverlay.id = Id (L.uuidToText L.newUUID),
+                        DMOverlay.merchantId = merchantOpCity.merchantId,
+                        DMOverlay.merchantOperatingCityId = merchantOpCity.id,
+                        DMOverlay.overlayKey = overlayKey,
+                        DMOverlay.language = lang,
+                        DMOverlay.udf1 = udf1,
+                        DMOverlay.title = title,
+                        DMOverlay.description = description,
+                        DMOverlay.imageUrl = imageUrl,
+                        DMOverlay.okButtonText = okButtonText,
+                        DMOverlay.cancelButtonText = cancelButtonText,
+                        DMOverlay.actions = acts,
+                        DMOverlay.actions2 = acts2,
+                        DMOverlay.link = link,
+                        DMOverlay.method = method,
+                        DMOverlay.reqBody = rb,
+                        DMOverlay.endPoint = endPoint,
+                        DMOverlay.delay = delay,
+                        DMOverlay.contactSupportNumber = contactSupportNumber,
+                        DMOverlay.toastMessage = toastMessage,
+                        DMOverlay.secondaryActions = secondaryActions,
+                        DMOverlay.socialMediaLinks = socialMediaLinks,
+                        DMOverlay.vehicleCategory = vehicleCategory,
+                        DMOverlay.showPushNotification = showPushNotification
+                      }
+              case existingOverlay of
+                Just oldOverlay -> do
+                  L.logInfo "Updating existing Merchant Overlay" (show overlayKey)
+                  CQOverlay.update newOverlay {DMOverlay.id = oldOverlay.id}
+                  return (errors, Map.empty)
+                Nothing -> do
+                  L.logInfo "Creating new Merchant Overlay" (show overlayKey)
+                  CQOverlay.create newOverlay
+                  return (errors, Map.empty)
+            _ -> return (errors <> ["Invalid language, actions, actions2 or reqBody for key: " <> overlayKey], Map.empty)
+
+postMerchantConfigMerchantMessageUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertMerchantMessageCsvReq -> Flow Common.UpsertMerchantMessageCsvResp
+postMerchantConfigMerchantMessageUpsert merchantShortId opCity apiTokenInfo req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+
+  result <-
+    Hedis.whenWithLockRedisAndReturnValue (merchantCityLockKey merchantOpCity.id.getId) 60 $ do
+      logTagInfo "Upserting Merchant Messages for merchant: " (show merchant.id <> " and city: " <> show opCity)
+      csvRows <- readCsvMessage req.file
+      (errors, _) <- foldlM (processMessage merchantOpCity) ([], Map.empty) csvRows
+      return $
+        Common.UpsertMerchantMessageCsvResp
+          { unprocessedEntities = errors,
+            success = "Merchant Messages updated successfully"
+          }
+  case result of
+    Right res -> return res
+    Left _ -> throwError $ InvalidRequest "Someone already triggered this api"
+  where
+    readCsvMessage csvFile = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (CSV.decodeByName $ LBS.fromStrict csvData :: Either String (CSV.Header, V.Vector MerchantMessageCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> pure $ V.toList v
+
+    processMessage :: DMOC.MerchantOperatingCity -> ([Text], Map.Map Text Bool) -> MerchantMessageCSVRow -> Flow ([Text], Map.Map Text Bool)
+    processMessage merchantOpCity (errors, _) row = do
+      if row.mmMerchantOperatingCityId /= merchantOpCity.id.getId
+        then return (errors <> ["Can't process message for different city: " <> row.mmMerchantOperatingCityId], Map.empty)
+        else do
+          let messageKey = row.mmMessageKey
+              language = readMaybe (T.unpack row.mmLanguage) :: Maybe External.Language
+              message = row.mmMessage
+              templateId = row.mmTemplateId
+              jsonData = readMaybe (T.unpack row.mmJsonData) :: Maybe Aeson.Value
+              containsUrlButton = row.mmContainsUrlButton
+              senderHeader = row.mmSenderHeader
+              vehicleCategory = readMaybe . T.unpack <$> row.mmVehicleCategory
+
+          case (language, jsonData) of
+            (Just lang, Just jd) -> do
+              existingMM <- CQMPN.findByMerchantOpCityIdAndMessageKeyAndLanguage merchantOpCity.id messageKey (Just lang) -- This query needs to be adjusted for MerchantMessage
+              let newMM =
+                    DMPN.MerchantMessage -- This needs to be changed to MerchantMessage
+                      { DMPN.id = Id (L.uuidToText L.newUUID),
+                        DMPN.merchantId = merchantOpCity.merchantId,
+                        DMPN.merchantOperatingCityId = merchantOpCity.id,
+                        DMPN.messageKey = messageKey,
+                        DMPN.language = lang,
+                        DMPN.message = message,
+                        DMPN.templateId = templateId,
+                        DMPN.jsonData = jd,
+                        DMPN.containsUrlButton = containsUrlButton,
+                        DMPN.senderHeader = senderHeader,
+                        DMPN.vehicleCategory = vehicleCategory
+                      }
+              case existingMM of
+                Just oldMM -> do
+                  L.logInfo "Updating existing Merchant Message" (show messageKey)
+                  CQMPN.update newMM {DMPN.id = oldMM.id}
+                  return (errors, Map.empty)
+                Nothing -> do
+                  L.logInfo "Creating new Merchant Message" (show messageKey)
+                  CQMPN.create newMM
+                  return (errors, Map.empty)
+            _ -> return (errors <> ["Invalid language or jsonData for key: " <> messageKey], Map.empty)

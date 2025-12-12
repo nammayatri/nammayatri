@@ -2058,7 +2058,7 @@ validate (personId, _, merchantOpCityId) phoneNumber = do
     let altPhoneNumber = phoneNumber.mobileCountryCode <> phoneNumber.alternateNumber
     withLogTag ("personId_" <> getId person.id) $ do
       (mbSender, message, templateId) <-
-        MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId $
+        MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId person.language $
           MessageBuilder.BuildSendOTPMessageReq
             { otp = otpCode,
               hash = otpHash
@@ -2133,6 +2133,7 @@ resendOtp (personId, merchantId, merchantOpCityId) req = do
   smsCfg <- asks (.smsCfg)
   let altNumber = req.alternateNumber
       counCode = req.mobileCountryCode
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   otpCode <-
     Redis.get (makeAlternateNumberOtpKey personId) >>= \case
       Nothing -> do
@@ -2146,7 +2147,7 @@ resendOtp (personId, merchantId, merchantOpCityId) req = do
       altphoneNumber = counCode <> altNumber
   withLogTag ("personId_" <> getId personId) $ do
     (mbSender, message, templateId) <-
-      MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId $
+      MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId person.language $
         MessageBuilder.BuildSendOTPMessageReq
           { otp = otpCode,
             hash = otpHash
