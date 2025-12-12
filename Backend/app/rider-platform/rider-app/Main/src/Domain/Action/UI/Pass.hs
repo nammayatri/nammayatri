@@ -11,6 +11,7 @@ module Domain.Action.UI.Pass
     createPassReconEntry,
     postMultimodalPassActivateToday,
     postMultimodalPassSelectUtil,
+    postMultimodalPassUploadProfilePicture,
   )
 where
 
@@ -727,7 +728,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   mbDeviceId <- if isDashboard then return Nothing else Just <$> getDeviceId person mbDeviceIdParam mbImeiParam
 
   let mbStatus = case mbStatusParam of
-        Just DPurchasedPass.Active -> Just [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired]
+        Just DPurchasedPass.Active -> Just [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired, DPurchasedPass.PhotoPending]
         Just s -> Just [s]
         Nothing -> Nothing
 
@@ -922,4 +923,34 @@ postMultimodalPassActivateToday (_mbCallerPersonId, _merchantId) passNumber mbSt
 
   QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus
   QPurchasedPassPayment.updatePurchaseDataByPurchasedPassIdAndStartEndDate purchasedPass.id purchasedPass.startDate purchasedPass.endDate newStartDate newEndDate newStatus
+  return APISuccess.Success
+
+postMultimodalPassUploadProfilePicture ::
+  ( ( Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    PassAPI.PassUploadProfilePictureReq ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postMultimodalPassUploadProfilePicture (mbCallerPersonId, _merchantId) req = do
+  personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+  purchasedPass <- QPurchasedPass.findById req.purchasedPassId >>= fromMaybeM (PurchasedPassNotFound req.purchasedPassId.getId)
+
+  unless (purchasedPass.personId == personId) $ throwError AccessDenied
+
+  unless (purchasedPass.status == DPurchasedPass.PhotoPending) $
+    throwError (InvalidRequest "Pass is not in PhotoPending status")
+
+  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  let today = DT.utctDay istTime
+  let newStatus = if purchasedPass.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
+  QPurchasedPass.updateStatusById newStatus purchasedPass.id
+  QPurchasedPass.updateProfilePictureById (Just req.profilePicture) purchasedPass.id
+  QPurchasedPass.updateDeviceIdById req.imeiNumber purchasedPass.deviceSwitchCount purchasedPass.id
+
+  -- Update purchasedPassPayment table as well
+  purchasedPassPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan Nothing Nothing purchasedPass.id DPurchasedPass.PhotoPending purchasedPass.startDate
+  forM_ purchasedPassPayments $ \payment -> do
+    QPurchasedPassPayment.updateStatusAndProfilePictureByOrderId newStatus (Just req.profilePicture) payment.orderId
+
   return APISuccess.Success
