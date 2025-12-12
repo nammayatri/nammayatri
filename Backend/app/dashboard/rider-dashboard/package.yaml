@@ -118,6 +118,7 @@ library:
     - rider-app
     - shared-services
     - special-zone-a
+    - payment
 
 executables:
   rider-dashboard-exe:
