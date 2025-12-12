@@ -74,3 +74,13 @@ ALTER TABLE atlas_app.frfs_quote ALTER COLUMN child_price SET DEFAULT 0;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

@@ -42,3 +42,12 @@ ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN selected_quantity SET NOT
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_quote_category ALTER COLUMN selected_quantity DROP NOT NULL;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

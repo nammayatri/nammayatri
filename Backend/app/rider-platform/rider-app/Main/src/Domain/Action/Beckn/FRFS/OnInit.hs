@@ -104,6 +104,7 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
     throwError $ CategoriesAndTotalPriceMismatch (show fareParameters.totalPrice) (show totalPrice)
 
   -- TODO :: Remove Quantity update Booking Table post release of FRFSQuoteCategory
+  void $ QFRFSTicketBooking.updateTotalPriceById totalPrice oldBooking.id
   void $ QFRFSTicketBooking.updateIsFareChangedById (Just isFareChanged) oldBooking.id -- Full Ticket Price (Multiplied By Quantity)
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) oldBooking.id
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId oldBooking.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)

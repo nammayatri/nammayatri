@@ -102,3 +102,13 @@ ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN estimated_price DROP NOT 
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
