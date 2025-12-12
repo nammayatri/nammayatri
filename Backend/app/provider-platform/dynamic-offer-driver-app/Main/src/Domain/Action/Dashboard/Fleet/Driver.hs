@@ -919,35 +919,43 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
       forM_ associationList $ \assoc -> do
         rc <- RCQuery.findByRCIdAndFleetOwnerId assoc.rcId $ Just entityId
         when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle, first unlink then try")
+      -- Check if there's an active association before ending it
+      mbActiveAssociation <- FDV.findByDriverIdAndFleetOwnerId personId entityId True
       FDV.endFleetDriverAssociation entityId personId
-      Analytics.handleDriverAnalyticsAndFlowStatus
-        transporterConfig
-        personId
-        Nothing
-        ( \driverInfo -> do
-            Analytics.decrementFleetOwnerAnalyticsActiveDriverCount (Just entityId) personId
-            mbOperator <- FOV.findByFleetOwnerId entityId True
-            when (isNothing mbOperator) $ logTagError "AnalyticsRemoveDriver" "Operator not found for fleet owner"
-            whenJust mbOperator $ \operator -> do
-              when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
-              Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
-        )
-        ( \driverInfo -> do
-            DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
-        )
+      -- Only decrement analytics if there was an active association
+      when (isJust mbActiveAssociation) $ do
+        Analytics.handleDriverAnalyticsAndFlowStatus
+          transporterConfig
+          personId
+          Nothing
+          ( \driverInfo -> do
+              Analytics.decrementFleetOwnerAnalyticsActiveDriverCount (Just entityId) personId
+              mbOperator <- FOV.findByFleetOwnerId entityId True
+              when (isNothing mbOperator) $ logTagError "AnalyticsRemoveDriver" "Operator not found for fleet owner"
+              whenJust mbOperator $ \operator -> do
+                when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
+                Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
+          )
+          ( \driverInfo -> do
+              DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
+          )
     DP.OPERATOR -> do
+      -- Check if there's an active association before ending it
+      mbActiveAssociation <- DOV.findByDriverIdAndOperatorId personId (Id entityId) True
       DOV.endOperatorDriverAssociation entityId personId
-      Analytics.handleDriverAnalyticsAndFlowStatus
-        transporterConfig
-        personId
-        Nothing
-        ( \driverInfo -> do
-            when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig entityId
-            Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig entityId
-        )
-        ( \driverInfo -> do
-            DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR entityId driverInfo.driverFlowStatus
-        )
+      -- Only decrement analytics if there was an active association
+      when (isJust mbActiveAssociation) $ do
+        Analytics.handleDriverAnalyticsAndFlowStatus
+          transporterConfig
+          personId
+          Nothing
+          ( \driverInfo -> do
+              when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig entityId
+              Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig entityId
+          )
+          ( \driverInfo -> do
+              DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR entityId driverInfo.driverFlowStatus
+          )
     _ -> throwError (InvalidRequest "Invalid Data")
   pure Success
 
