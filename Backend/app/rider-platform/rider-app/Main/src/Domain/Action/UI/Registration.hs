@@ -140,7 +140,8 @@ data AuthReq = AuthReq
     registrationLon :: Maybe Double,
     enableOtpLessRide :: Maybe Bool,
     allowBlockedUserLogin :: Maybe Bool,
-    isOperatorReq :: Maybe Bool
+    isOperatorReq :: Maybe Bool,
+    reuseToken :: Maybe Bool
   }
   deriving (Generic, ToJSON, Show, ToSchema)
 
@@ -167,6 +168,7 @@ instance A.FromJSON AuthReq where
         <*> obj .:? "enableOtpLessRide"
         <*> obj .:? "allowBlockedUserLogin"
         <*> obj .:? "isOperatorReq"
+        <*> obj .:? "reuseToken"
     A.String s ->
       case A.eitherDecodeStrict (TE.encodeUtf8 s) of
         Left err -> fail err
@@ -334,12 +336,45 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
-  regToken <- makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM False
+
+  -- Check if we should reuse an existing token
+  (regToken, shouldCreateToken) <-
+    if fromMaybe False req.reuseToken
+      then do
+        existingTokens <- RegistrationToken.findAllByPersonId person.id
+        let reusable =
+              existingTokens
+                & filter
+                  ( \t ->
+                      not t.verified
+                        && t.info == Nothing
+                        && t.createdViaPartnerOrgId == Nothing
+                        && t.merchantId == mkId
+                  )
+                & sortOn (Down . (.updatedAt))
+        case reusable of
+          (existingToken : _) -> do
+            -- Generate new OTP for the existing token and reset attempts
+            newOtp <- maybe generateOTPCode return useFakeOtpM
+            now' <- getCurrentTime
+            let newAttempts = scfg.attempts
+            RegistrationToken.updateOtpAndToken existingToken.id newOtp existingToken.token newAttempts now'
+            pure
+              ( existingToken
+                  { SR.authValueHash = newOtp,
+                    SR.attempts = newAttempts,
+                    SR.updatedAt = now'
+                  },
+                False
+              )
+          [] -> (,True) <$> makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM False
+      else (,True) <$> makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM False
+
   if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
     then do
       deploymentVersion <- asks (.version)
       void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion
-      RegistrationToken.create regToken
+      when shouldCreateToken $ RegistrationToken.create regToken
       when (isNothing useFakeOtpM) $ do
         let otpCode = SR.authValueHash regToken
         SOTP.sendOTP
@@ -1004,7 +1039,8 @@ createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
                 registrationLon = Nothing,
                 enableOtpLessRide = Nothing,
                 allowBlockedUserLogin = Nothing,
-                isOperatorReq = Nothing
+                isOperatorReq = Nothing,
+                reuseToken = Nothing
               }
       createdPerson <-
         createPerson authReq SP.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing
