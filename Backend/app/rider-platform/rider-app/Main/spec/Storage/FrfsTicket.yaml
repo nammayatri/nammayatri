@@ -538,6 +538,10 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [failureReason]
       where: id
+    updateTotalPriceById:
+      kvFunction: updateOneWithKV
+      params: [totalPrice]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -723,16 +723,12 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
   isMultiInitAllowed <-
     case mbBooking of
       Just booking -> do
-        isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey booking.id) 60
-        if isLockAcquired
-          then do
-            case integratedBppConfig.providerConfig of
-              DIBC.ONDC DIBC.ONDCBecknConfig {multiInitAllowed} ->
-                return $
-                  multiInitAllowed == Just True
-                    && booking.status `elem` [DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
-              _ -> return $ booking.status `elem` [DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
-          else return False
+        case integratedBppConfig.providerConfig of
+          DIBC.ONDC DIBC.ONDCBecknConfig {multiInitAllowed} ->
+            return $
+              multiInitAllowed == Just True
+                && booking.status `elem` [DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
+          _ -> return $ booking.status `elem` [DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
       Nothing -> return True
   updatedQuoteCategories <-
     if isMultiInitAllowed
