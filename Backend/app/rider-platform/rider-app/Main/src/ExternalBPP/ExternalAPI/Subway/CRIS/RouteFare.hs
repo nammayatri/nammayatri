@@ -2,13 +2,14 @@ module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
+import Data.List (nub)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
 import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.MerchantOperatingCity
-import EulerHS.Prelude hiding (concatMap, find, length, null, readMaybe, whenJust)
+import EulerHS.Prelude hiding (concatMap, find, length, map, null, readMaybe, whenJust)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
@@ -120,10 +121,11 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
           let validStations = T.splitOn "-" request.via
           let fares' = if getAllFares then allFares else filter (\fare -> fare.via `Kernel.Prelude.elem` validStations) allFares
               fares'' = filter (\fare -> fare.via == " ") allFares
-          let fares =
+          let uniqueViaPoints = nub $ map (\fare -> fare.via) allFares
+              fares =
                 if request.changeOver == " "
                   then if null fares'' || getAllFares then fares' else fares''
-                  else if (length allFares) == 1 then allFares else filter (\fare -> fare.via == request.rawChangeOver) allFares
+                  else if (length uniqueViaPoints) == 1 then allFares else filter (\fare -> fare.via == request.rawChangeOver) allFares
           fares `forM` \fare -> do
             let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
                 mbChildFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.childFare
