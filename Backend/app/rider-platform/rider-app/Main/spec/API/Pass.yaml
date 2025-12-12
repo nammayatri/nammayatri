@@ -76,6 +76,11 @@ types:
     deviceId: Maybe Text
     imeiNumber: Maybe Text
 
+  PassUploadProfilePictureReq:
+    purchasedPassId: Id PurchasedPass
+    profilePicture: Text
+    imeiNumber: Text
+
   PurchasedPassAPIEntity:
     id: Id PurchasedPass
     passNumber: Text
@@ -188,5 +193,13 @@ apis:
         passNumber: Int
       query:
         date: Day
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /multimodal/pass/uploadProfilePicture
+      auth: TokenAuth
+      request:
+        type: PassUploadProfilePictureReq
       response:
         type: APISuccess
