@@ -215,9 +215,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
     case listToMaybe driverFees of
       Nothing -> do
         Hedis.del (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
-        duplicationKey <- Hedis.setNxExpire (jobDuplicationPreventionKey hashedJobData "DriverFeeCalc") (3600 * 12) True -- 12 hours
-        when duplicationKey do
-          scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName subscriptionConfigs jobData
+        scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName subscriptionConfigs jobData hashedJobData
         return Complete
       _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
 
@@ -647,8 +645,9 @@ scheduleJobs ::
   ServiceNames ->
   SubscriptionConfig ->
   CalculateDriverFeesJobData ->
+  Text ->
   m ()
-scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName subscriptionConfigs jobData = do
+scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName subscriptionConfigs jobData hashedJobData = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
   let timeDiffNormalFlow = addUTCTime dfNotificationTime endTime
@@ -661,62 +660,89 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
       scheduleManualPaymentLink = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleManualPaymentLink
       scheduleDriverFeeCalc = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleDriverFeeCalc
   when scheduleNotification $ do
-    createJobIn @_ @'SendPDNNotificationToDriver (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
-      SendPDNNotificationToDriverJobData
-        { merchantId = merchantId,
-          merchantOperatingCityId = Just merchantOpCityId,
-          startTime = startTime,
-          endTime = endTime,
-          retryCount = Just 0,
-          serviceName = Just serviceName
-        }
+    let pdnJobKey = jobDuplicationPreventionKey hashedJobData "SendPDNNotificationToDriver"
+    shouldSchedulePDN <- Hedis.setNxExpire pdnJobKey (3600 * 12) True
+    when shouldSchedulePDN $ do
+      result <-
+        withTryCatch "createJobIn:SendPDNNotificationToDriver" $
+          createJobIn @_ @'SendPDNNotificationToDriver (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs $
+            SendPDNNotificationToDriverJobData
+              { merchantId = merchantId,
+                merchantOperatingCityId = Just merchantOpCityId,
+                startTime = startTime,
+                endTime = endTime,
+                retryCount = Just 0,
+                serviceName = Just serviceName
+              }
+      jobScheduleErrorHandler "SendPDNNotificationToDriver" pdnJobKey result
   when (subscriptionConfigs.useOverlayService && scheduleOverlay) $ do
-    createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
-      SendOverlayJobData
-        { merchantId = merchantId,
-          rescheduleInterval = Nothing,
-          overlayKey = manualInvoiceGeneratedNudgeKey,
-          udf1 = Just $ show MANUAL,
-          condition = InvoiceGenerated MANUAL,
-          scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
-          freeTrialDays = transporterConfig.freeTrialDays,
-          timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
-          driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
-          driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
-          driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
-          merchantOperatingCityId = Just merchantOpCityId,
-          overlayBatchSize = transporterConfig.overlayBatchSize,
-          serviceName = Just serviceName,
-          vehicleCategory = Nothing
-        }
-    createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
-      SendOverlayJobData
-        { merchantId = merchantId,
-          rescheduleInterval = Nothing,
-          overlayKey = autopayInvoiceGeneratedNudgeKey,
-          udf1 = Just $ show AUTOPAY,
-          condition = InvoiceGenerated AUTOPAY,
-          scheduledTime = TimeOfDay 0 0 0, -- won't be used as rescheduleInterval is Nothing
-          freeTrialDays = transporterConfig.freeTrialDays,
-          timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
-          driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
-          driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
-          merchantOperatingCityId = Just merchantOpCityId,
-          driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
-          overlayBatchSize = transporterConfig.overlayBatchSize,
-          serviceName = Just serviceName,
-          vehicleCategory = Nothing
-        }
+    -- Manual Invoice Overlay
+    let overlayManualJobKey = jobDuplicationPreventionKey hashedJobData "SendOverlay:Manual"
+    shouldScheduleManualOverlay <- Hedis.setNxExpire overlayManualJobKey (3600 * 12) True
+    when shouldScheduleManualOverlay $ do
+      result <-
+        withTryCatch "createJobIn:SendOverlay:Manual" $
+          createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
+            SendOverlayJobData
+              { merchantId = merchantId,
+                rescheduleInterval = Nothing,
+                overlayKey = manualInvoiceGeneratedNudgeKey,
+                udf1 = Just $ show MANUAL,
+                condition = InvoiceGenerated MANUAL,
+                scheduledTime = TimeOfDay 0 0 0,
+                freeTrialDays = transporterConfig.freeTrialDays,
+                timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
+                driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
+                driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
+                driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
+                merchantOperatingCityId = Just merchantOpCityId,
+                overlayBatchSize = transporterConfig.overlayBatchSize,
+                serviceName = Just serviceName,
+                vehicleCategory = Nothing
+              }
+      jobScheduleErrorHandler "SendOverlay-Manual" overlayManualJobKey result
+
+    -- Autopay Invoice Overlay
+    let overlayAutopayJobKey = jobDuplicationPreventionKey hashedJobData "SendOverlay:Autopay"
+    shouldScheduleAutopayOverlay <- Hedis.setNxExpire overlayAutopayJobKey (3600 * 12) True
+    when shouldScheduleAutopayOverlay $ do
+      result <-
+        withTryCatch "createJobIn:SendOverlay:Autopay" $
+          createJobIn @_ @'SendOverlay (Just merchantId) (Just merchantOpCityId) (dfCalculationJobTs + 5400) $
+            SendOverlayJobData
+              { merchantId = merchantId,
+                rescheduleInterval = Nothing,
+                overlayKey = autopayInvoiceGeneratedNudgeKey,
+                udf1 = Just $ show AUTOPAY,
+                condition = InvoiceGenerated AUTOPAY,
+                scheduledTime = TimeOfDay 0 0 0,
+                freeTrialDays = transporterConfig.freeTrialDays,
+                timeDiffFromUtc = transporterConfig.timeDiffFromUtc,
+                driverPaymentCycleDuration = transporterConfig.driverPaymentCycleDuration,
+                driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
+                merchantOperatingCityId = Just merchantOpCityId,
+                driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
+                overlayBatchSize = transporterConfig.overlayBatchSize,
+                serviceName = Just serviceName,
+                vehicleCategory = Nothing
+              }
+      jobScheduleErrorHandler "SendOverlay-Autopay" overlayAutopayJobKey result
   when (subscriptionConfigs.allowManualPaymentLinks && scheduleManualPaymentLink) $ do
-    createJobIn @_ @'SendManualPaymentLink (Just merchantId) (Just merchantOpCityId) paymentLinkSendJobTs $
-      SendManualPaymentLinkJobData
-        { merchantId = merchantId,
-          merchantOperatingCityId = merchantOpCityId,
-          serviceName = serviceName,
-          startTime = startTime,
-          endTime = endTime,
-          channel = subscriptionConfigs.paymentLinkChannel
-        }
+    let paymentLinkJobKey = jobDuplicationPreventionKey hashedJobData "SendManualPaymentLink"
+    shouldSchedulePaymentLink <- Hedis.setNxExpire paymentLinkJobKey (3600 * 12) True
+    when shouldSchedulePaymentLink $ do
+      result <-
+        withTryCatch "createJobIn:SendManualPaymentLink" $
+          createJobIn @_ @'SendManualPaymentLink (Just merchantId) (Just merchantOpCityId) paymentLinkSendJobTs $
+            SendManualPaymentLinkJobData
+              { merchantId = merchantId,
+                merchantOperatingCityId = merchantOpCityId,
+                serviceName = serviceName,
+                startTime = startTime,
+                endTime = endTime,
+                channel = subscriptionConfigs.paymentLinkChannel
+              }
+      jobScheduleErrorHandler "SendManualPaymentLink" paymentLinkJobKey result
   when (subscriptionConfigs.allowDriverFeeCalcSchedule && scheduleDriverFeeCalc) $ do
     let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay endTime) (secondsToDiffTime 0))
         startTime' = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
@@ -729,23 +755,29 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId ser
         case isDfCaclculationJobScheduled of
           ----- marker ---
           Nothing -> do
-            createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs' $
-              CalculateDriverFeesJobData
-                { merchantId = merchantId,
-                  merchantOperatingCityId = Just merchantOpCityId,
-                  startTime = startTime',
-                  serviceName = Just serviceName,
-                  endTime = endTime',
-                  scheduleNotification = Just True,
-                  scheduleOverlay = Just True,
-                  scheduleManualPaymentLink = Just True,
-                  scheduleDriverFeeCalc = Just True,
-                  recalculateManualReview = Nothing,
-                  createChildJobs = Just True
-                }
-            setDriverFeeCalcJobCache startTime endTime' merchantOpCityId serviceName dfCalculationJobTs
-            setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
-            setDriverFeeBillNumberKey merchantOpCityId 1 36000 serviceName
+            let driverFeeCalcJobKey = jobDuplicationPreventionKey hashedJobData "CalculateDriverFees"
+            shouldScheduleDriverFeeCalc <- Hedis.setNxExpire driverFeeCalcJobKey (3600 * 12) True
+            when shouldScheduleDriverFeeCalc $ do
+              result <-
+                withTryCatch "createJobIn:CalculateDriverFees" $
+                  createJobIn @_ @'CalculateDriverFees (Just merchantId) (Just merchantOpCityId) dfCalculationJobTs' $
+                    CalculateDriverFeesJobData
+                      { merchantId = merchantId,
+                        merchantOperatingCityId = Just merchantOpCityId,
+                        startTime = startTime',
+                        serviceName = Just serviceName,
+                        endTime = endTime',
+                        scheduleNotification = Just True,
+                        scheduleOverlay = Just True,
+                        scheduleManualPaymentLink = Just True,
+                        scheduleDriverFeeCalc = Just True,
+                        recalculateManualReview = Nothing,
+                        createChildJobs = Just True
+                      }
+              jobScheduleErrorHandler "CalculateDriverFees" driverFeeCalcJobKey result
+              setDriverFeeCalcJobCache startTime endTime' merchantOpCityId serviceName dfCalculationJobTs
+              setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
+              setDriverFeeBillNumberKey merchantOpCityId 1 36000 serviceName
           _ -> pure ()
 
 calcFinalOrderAmounts ::
@@ -871,6 +903,21 @@ processAndSendManualPaymentLink driverPlansToProccess subscriptionConfigs mercha
             )
         else do
           QDPlan.updateLastPaymentLinkSentAtDateByDriverIdAndServiceName (Just endTime) driverId serviceName
+
+-- Error handler for job scheduling with Redis key cleanup
+jobScheduleErrorHandler ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  Text ->
+  Either SomeException a ->
+  m ()
+jobScheduleErrorHandler jobName redisKey result = do
+  case result of
+    Left e -> do
+      logError $ "Failed to create " <> jobName <> " job: " <> show e
+      Hedis.del redisKey -- Delete key so retry can attempt again
+      throwError $ InternalError $ "Failed to create " <> jobName <> " job: " <> show e
+    Right _ -> pure ()
 
 errorCatchAndHandle ::
   (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
