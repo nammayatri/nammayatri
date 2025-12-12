@@ -4,7 +4,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import Data.Text hiding (map)
 import Data.Time (UTCTime (..), defaultTimeLocale, formatTime, utctDay)
-import Data.Time.Calendar (toGregorian)
+import Data.Time.Calendar (addDays, toGregorian)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.SharedLogic.Cancel as SharedCancel
 import Domain.Types.Booking as DRB
@@ -107,18 +107,29 @@ cancelBooking booking mbDriver transporter = do
             merchantOperatingCityId = Just booking.merchantOperatingCityId
           }
 
-removeBookingFromRedis :: (MonadFlow m, CacheFlow m r) => DRB.Booking -> m ()
+-- Removes a scheduled booking from Redis when it's cancelled or assigned.
+-- Uses local timezone to construct keys matching those used during insertion.
+-- Removes from both sorted set and hash set to keep Redis state consistent.
+removeBookingFromRedis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DRB.Booking -> m ()
 removeBookingFromRedis booking = do
-  let vehicleVariant = castServiceTierToVariant booking.vehicleServiceTier
-  let redisKey = createRedisKey booking.startTime booking.merchantOperatingCityId booking.tripCategory vehicleVariant
-      redisKeyForHset = createRedisKeyForHset booking.startTime booking.merchantOperatingCityId
+  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  let localStartTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) booking.startTime
+      vehicleVariant = castServiceTierToVariant booking.vehicleServiceTier
+      redisKey = createRedisKey localStartTime booking.merchantOperatingCityId booking.tripCategory vehicleVariant
+      redisKeyForHset = createRedisKeyForHset localStartTime booking.merchantOperatingCityId
       member = createMember booking
   void $ Redis.zRem redisKey [member]
   void $ Redis.hDel redisKeyForHset [booking.id.getId]
 
+-- Creates a Redis sorted set member string containing booking metadata.
+-- Format: "bookingId|lat|lon|startTime|serviceTier"
+-- startTime is stored in UTC for accurate time comparisons during filtering.
 createMember :: DRB.Booking -> Text
 createMember booking = booking.id.getId <> "|" <> (pack . show $ booking.fromLocation.lat) <> "|" <> (pack . show $ booking.fromLocation.lon) <> "|" <> pack (formatTime defaultTimeLocale "%FT%T%z" booking.startTime) <> "|" <> (pack . show $ booking.vehicleServiceTier)
 
+-- Generates Redis key for sorted set storage of scheduled bookings.
+-- Format: "ScheduledBookings:cityId:YYYY-MM-DD:vehicleVariant:tripType"
+-- Time parameter should be in local timezone to group bookings by local date.
 createRedisKey :: UTCTime -> Id MerchantOperatingCity -> TripCategory -> VehicleVariant -> Text
 createRedisKey time mocId tripCategory vehicleVariant =
   let (year, month, day) = toGregorian $ utctDay time
@@ -136,6 +147,9 @@ createTripType (CrossCity _ _) = "CrossCity"
 createTripType (Ambulance _) = "Ambulance"
 createTripType (Delivery _) = "Delivery"
 
+-- Generates Redis key for hash set storage of scheduled bookings.
+-- Format: "ScheduledBookings:cityId:YYYY-MM-DD"
+-- Time parameter should be in local timezone to group bookings by local date.
 createRedisKeyForHset :: UTCTime -> Id MerchantOperatingCity -> Text
 createRedisKeyForHset time mocId =
   let (year, month, day) = toGregorian $ utctDay time
@@ -143,9 +157,13 @@ createRedisKeyForHset time mocId =
       cityId = unpack mocId.getId
    in (pack $ "ScheduledBookings:" <> cityId <> ":" <> date)
 
+-- Converts UTCTime to POSIX timestamp for use as Redis sorted set score.
+-- Allows efficient time-based range queries using ZRANGEBYSCORE.
 calculateSortedSetScore :: UTCTime -> Double
 calculateSortedSetScore time = realToFrac (utcTimeToPOSIXSeconds time)
 
+-- Generates all Redis key combinations for given trip categories and vehicle variants.
+-- Used to query multiple sorted sets in parallel for different booking types.
 createRedisKeysForCombinations :: UTCTime -> Id MerchantOperatingCity -> [TripCategory] -> [VehicleVariant] -> [Text]
 createRedisKeysForCombinations time mocId tripCategories vehicleVariants =
   [ createRedisKey time mocId tripCategory vehicleVariant
@@ -153,13 +171,22 @@ createRedisKeysForCombinations time mocId tripCategories vehicleVariants =
       vehicleVariant <- vehicleVariants
   ]
 
+-- Stores a scheduled booking in Redis for efficient querying by drivers.
+-- Uses local timezone for keys and scores to ensure bookings are grouped by local date.
+-- Keys expire at midnight of the booking's local day, not current day.
+-- Stores in both a sorted set (for time-range queries) and hash set (for ID lookup).
 addScheduledBookingInRedis :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DRB.Booking -> m ()
 addScheduledBookingInRedis booking = do
-  let score = ceiling $ calculateSortedSetScore booking.startTime
-      expirationSeconds = ceiling $ 86400 - utctDayTime booking.startTime
+  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let localStartTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) booking.startTime
+      bookingLocalDay = utctDay localStartTime
+      endOfBookingDay = UTCTime (addDays 1 bookingLocalDay) 0
+      expirationSeconds = max 0 $ ceiling $ diffUTCTime endOfBookingDay localNow
       vehicleVariant = castServiceTierToVariant booking.vehicleServiceTier
-      redisKey = createRedisKey booking.startTime booking.merchantOperatingCityId booking.tripCategory vehicleVariant
-      redisKeyForHset = createRedisKeyForHset booking.startTime booking.merchantOperatingCityId
+      redisKey = createRedisKey localStartTime booking.merchantOperatingCityId booking.tripCategory vehicleVariant
+      redisKeyForHset = createRedisKeyForHset localStartTime booking.merchantOperatingCityId
       member = createMember booking
+      score = ceiling $ calculateSortedSetScore localStartTime
   void $ Redis.zAddExp redisKey member score expirationSeconds
   void $ Redis.hSetExp redisKeyForHset booking.id.getId booking expirationSeconds
