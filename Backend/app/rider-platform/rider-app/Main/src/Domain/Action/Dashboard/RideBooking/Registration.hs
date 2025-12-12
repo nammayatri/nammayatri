@@ -74,5 +74,6 @@ buildAuthReq merchantShortId req =
       registrationLon = Nothing,
       enableOtpLessRide = Nothing,
       allowBlockedUserLogin = Nothing,
-      isOperatorReq = Nothing
+      isOperatorReq = Nothing,
+      reuseToken = Nothing
     }
