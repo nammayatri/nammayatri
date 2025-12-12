@@ -567,3 +567,12 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_db_for_anal
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN delete_driver_bank_account_when_link_to_fleet boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
