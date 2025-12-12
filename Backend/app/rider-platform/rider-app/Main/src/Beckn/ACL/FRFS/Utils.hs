@@ -381,20 +381,21 @@ getTicketStatus :: (MonadFlow m) => Booking.FRFSTicketBooking -> Bool -> DTicket
 getTicketStatus booking checkInprogress dTicket = do
   let validTill = dTicket.validTill
   now <- getCurrentTime
-  ticketStatus <- castTicketStatus dTicket.status booking checkInprogress
+  ticketStatus <- castTicketStatus dTicket.status booking checkInprogress booking.vehicleType
   if now > validTill && (ticketStatus `notElem` [Ticket.CANCELLED, Ticket.COUNTER_CANCELLED, Ticket.USED])
     then return TicketStatus {ticketNumber = dTicket.ticketNumber, status = Ticket.EXPIRED, vehicleNumber = dTicket.vehicleNumber}
     else return TicketStatus {ticketNumber = dTicket.ticketNumber, status = ticketStatus, vehicleNumber = dTicket.vehicleNumber}
 
-castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> Bool -> m Ticket.FRFSTicketStatus
-castTicketStatus "UNCLAIMED" _ False = return Ticket.ACTIVE -- False means solicited on_status or on_confirm call
-castTicketStatus "UNCLAIMED" _ True = return Ticket.INPROGRESS -- True means unsolicited on_status received
-castTicketStatus "CLAIMED" _ _ = return Ticket.USED
-castTicketStatus "CANCELLED" booking _
+castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> Bool -> Spec.VehicleCategory -> m Ticket.FRFSTicketStatus
+castTicketStatus "UNCLAIMED" _ False _ = return Ticket.ACTIVE -- False means solicited on_status or on_confirm call
+castTicketStatus "UNCLAIMED" _ True Spec.BUS = return Ticket.USED -- In case of bus, ticket is scanned only once to validate the booking
+castTicketStatus "UNCLAIMED" _ True _ = return Ticket.INPROGRESS -- True means unsolicited on_status received
+castTicketStatus "CLAIMED" _ _ Spec.METRO = return Ticket.USED
+castTicketStatus "CANCELLED" booking _ _
   | booking.customerCancelled = return Ticket.CANCELLED
   | otherwise = return Ticket.COUNTER_CANCELLED
-castTicketStatus "EXPIRED" _ _ = return Ticket.EXPIRED
-castTicketStatus _ _ _ = throwError $ InternalError "Invalid ticket status"
+castTicketStatus "EXPIRED" _ _ _ = return Ticket.EXPIRED
+castTicketStatus _ _ _ _ = throwError $ InternalError "Invalid ticket status"
 
 data BppData = BppData
   { bppId :: Text,
