@@ -110,8 +110,8 @@ select2 (personId, merchantId) estimateId = withFlowHandlerAPI . select2' (perso
 select2' :: (DSelect.SelectFlow m r c, DSearch.SearchRequestFlow m r, HasFlowEnv m r '["slackCfg" ::: SlackConfig], HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions], HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text]) => (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> m DSelect.MultimodalSelectRes
 select2' (personId, merchantId) estimateId req = withPersonIdLogTag personId $ do
   -- Note: This `cancelSearch` only handles cancelling the currently selected estimate's previous searches. If any another estimate was selected previously that UI has to ensure to call cancelSearch for that and then call select upon it's success.
-  void $ cancelSearchUtil (personId, merchantId) estimateId
   journeyID <- Redis.whenWithLockRedisAndReturnValue (selectEstimateLockKey personId) 60 $ do
+    void $ cancelSearchUtil (personId, merchantId) estimateId
     dSelectReq <- DSelect.select2 personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
     void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
