@@ -4,6 +4,7 @@
 module Domain.Types.DriverBankAccount where
 
 import Data.Aeson
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -20,6 +21,7 @@ data DriverBankAccount = DriverBankAccount
     currentAccountLinkExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     detailsSubmitted :: Kernel.Prelude.Bool,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

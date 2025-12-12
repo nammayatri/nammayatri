@@ -1,7 +1,11 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
-module Domain.Types.Extra.MerchantPaymentMethod where
+module Domain.Types.Extra.MerchantPaymentMethod
+  ( module Domain.Types.Extra.MerchantPaymentMethod,
+    module Reexport,
+  )
+where
 
 import Control.Lens.Operators ((?~))
 import Data.Aeson.Types
@@ -9,6 +13,7 @@ import qualified Data.List as List
 import Data.OpenApi
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
+import "beckn-spec" Domain.Types.PaymentMode as Reexport (PaymentMode (..))
 import Kernel.Prelude
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 import qualified Text.Show

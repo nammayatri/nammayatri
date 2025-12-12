@@ -5,6 +5,7 @@ module Domain.Types.Person where
 
 import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig
 import qualified Domain.Types.MerchantOperatingCity
@@ -47,8 +48,10 @@ data PersonE e = Person
     customerNammaTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValueExpiry],
     customerPaymentId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId,
     customerReferralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    customerTestPaymentId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId,
     dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     defaultPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
+    defaultTestPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     deviceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     deviceToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -87,6 +90,7 @@ data PersonE e = Person
     nightSafetyChecks :: Kernel.Prelude.Bool,
     notificationToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passwordHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
+    paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
     payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
@@ -145,8 +149,10 @@ instance EncryptedItem Person where
           customerNammaTags = customerNammaTags entity,
           customerPaymentId = customerPaymentId entity,
           customerReferralCode = customerReferralCode entity,
+          customerTestPaymentId = customerTestPaymentId entity,
           dateOfBirth = dateOfBirth entity,
           defaultPaymentMethodId = defaultPaymentMethodId entity,
+          defaultTestPaymentMethodId = defaultTestPaymentMethodId entity,
           description = description entity,
           deviceId = deviceId entity,
           deviceToken = deviceToken entity,
@@ -185,6 +191,7 @@ instance EncryptedItem Person where
           nightSafetyChecks = nightSafetyChecks entity,
           notificationToken = notificationToken entity,
           passwordHash = passwordHash entity,
+          paymentMode = paymentMode entity,
           payoutVpa = payoutVpa entity,
           profilePicture = profilePicture entity,
           rating = rating entity,
@@ -235,8 +242,10 @@ instance EncryptedItem Person where
             customerNammaTags = customerNammaTags entity,
             customerPaymentId = customerPaymentId entity,
             customerReferralCode = customerReferralCode entity,
+            customerTestPaymentId = customerTestPaymentId entity,
             dateOfBirth = dateOfBirth entity,
             defaultPaymentMethodId = defaultPaymentMethodId entity,
+            defaultTestPaymentMethodId = defaultTestPaymentMethodId entity,
             description = description entity,
             deviceId = deviceId entity,
             deviceToken = deviceToken entity,
@@ -275,6 +284,7 @@ instance EncryptedItem Person where
             nightSafetyChecks = nightSafetyChecks entity,
             notificationToken = notificationToken entity,
             passwordHash = passwordHash entity,
+            paymentMode = paymentMode entity,
             payoutVpa = payoutVpa entity,
             profilePicture = profilePicture entity,
             rating = rating entity,

@@ -8,6 +8,7 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Image
@@ -44,11 +45,17 @@ data AirConditionedTier = AirConditionedTier
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data BankAccountLinkResp = BankAccountLinkResp {accountLink :: Servant.Client.Core.BaseUrl, accountUrlExpiry :: Kernel.Prelude.UTCTime, chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool}
+data BankAccountLinkResp = BankAccountLinkResp
+  { accountLink :: Servant.Client.Core.BaseUrl,
+    accountUrlExpiry :: Kernel.Prelude.UTCTime,
+    chargesEnabled :: Kernel.Prelude.Bool,
+    detailsSubmitted :: Kernel.Prelude.Bool,
+    paymentMode :: Domain.Types.Extra.MerchantPaymentMethod.PaymentMode
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data BankAccountResp = BankAccountResp {chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool}
+data BankAccountResp = BankAccountResp {chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool, paymentMode :: Domain.Types.Extra.MerchantPaymentMethod.PaymentMode}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

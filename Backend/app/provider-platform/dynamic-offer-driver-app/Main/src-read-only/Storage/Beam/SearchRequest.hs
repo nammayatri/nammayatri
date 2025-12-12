@@ -6,6 +6,7 @@ module Storage.Beam.SearchRequest where
 import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.ParcelType
 import qualified Domain.Types.Trip
 import Kernel.External.Encryption
@@ -55,6 +56,7 @@ data SearchRequestT f = SearchRequestT
     numberOfLuggages :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType),
+    paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),
     pickupZoneGateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     poolingConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     poolingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

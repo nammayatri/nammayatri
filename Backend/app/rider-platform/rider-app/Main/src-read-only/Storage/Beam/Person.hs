@@ -7,6 +7,7 @@ import qualified BecknV2.OnDemand.Enums
 import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
 import Kernel.External.Encryption
@@ -47,8 +48,10 @@ data PersonT f = PersonT
     customerNammaTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     customerPaymentId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId),
     customerReferralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    customerTestPaymentId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId),
     dateOfBirth :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     defaultPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
+    defaultTestPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     deviceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     deviceToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -90,6 +93,7 @@ data PersonT f = PersonT
     nightSafetyChecks :: B.C f Kernel.Prelude.Bool,
     notificationToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     passwordHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),
     payoutVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     profilePicture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

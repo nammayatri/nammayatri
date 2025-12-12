@@ -28,6 +28,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -410,9 +411,10 @@ postRegistrationV2RegisterBankAccountLink ::
   ShortId DMerchant.Merchant ->
   City.City ->
   Maybe Text ->
+  Maybe DMPM.PaymentMode ->
   Text ->
   Flow Common.FleetBankAccountLinkResp
-postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerId requestorId = do
+postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerId paymentMode requestorId = do
   fleetOwner <- checkRequestorAcccessToFleet mbFleetOwnerId requestorId
   let fetchPersonStripeInfo = do
         fleetOwnerInfo <- runInReplica (QFOI.findByPrimaryKey fleetOwner.id) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
@@ -425,7 +427,7 @@ postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerI
               idNumber = Just stripeIdNumber
             }
   let fleetRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
-  castFleetBankAccountLinkResp <$> SPBA.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle fleetOwner
+  castFleetBankAccountLinkResp <$> SPBA.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle paymentMode fleetOwner
 
 castFleetBankAccountLinkResp :: Onboarding.BankAccountLinkResp -> Common.FleetBankAccountLinkResp
 castFleetBankAccountLinkResp Onboarding.BankAccountLinkResp {..} = Common.FleetBankAccountLinkResp {..}

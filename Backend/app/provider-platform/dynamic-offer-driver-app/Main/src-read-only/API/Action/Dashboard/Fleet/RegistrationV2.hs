@@ -10,6 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.PaymentMode
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -32,8 +33,8 @@ postRegistrationV2VerifyOtp a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Acti
 postRegistrationV2Register :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerRegisterReqV2 -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerRegisterResV2)
 postRegistrationV2Register a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.RegistrationV2.postRegistrationV2Register a4 a3 a2 a1
 
-postRegistrationV2RegisterBankAccountLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetBankAccountLinkResp)
-postRegistrationV2RegisterBankAccountLink a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.RegistrationV2.postRegistrationV2RegisterBankAccountLink a4 a3 a2 a1
+postRegistrationV2RegisterBankAccountLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetBankAccountLinkResp)
+postRegistrationV2RegisterBankAccountLink a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.RegistrationV2.postRegistrationV2RegisterBankAccountLink a5 a4 a3 a2 a1
 
 getRegistrationV2RegisterBankAccountStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetBankAccountResp)
 getRegistrationV2RegisterBankAccountStatus a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.RegistrationV2.getRegistrationV2RegisterBankAccountStatus a4 a3 a2 a1

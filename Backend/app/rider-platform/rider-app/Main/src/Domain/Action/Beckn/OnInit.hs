@@ -18,6 +18,7 @@ import qualified Domain.Action.Beckn.Common as DCommon
 import Domain.Types
 import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
@@ -78,7 +79,8 @@ data OnInitRes = OnInitRes
     enableFrequentLocationUpdates :: Bool,
     paymentId :: Maybe Text,
     enableOtpLessRide :: Bool,
-    tripCategory :: Maybe TripCategory
+    tripCategory :: Maybe TripCategory,
+    paymentMode :: Maybe DMPM.PaymentMode
   }
   deriving (Generic, Show)
 
@@ -137,6 +139,7 @@ onInit req = do
             paymentId = req.paymentId,
             enableOtpLessRide = isBookingMeterRide booking.bookingDetails || fromMaybe False safetySettings.enableOtpLessRide,
             tripCategory = booking.tripCategory,
+            paymentMode = booking.paymentMode,
             ..
           }
   Metrics.finishMetricsBap Metrics.INIT merchant.name booking.transactionId booking.merchantOperatingCityId.getId
