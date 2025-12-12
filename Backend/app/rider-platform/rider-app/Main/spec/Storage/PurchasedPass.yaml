@@ -13,7 +13,7 @@ PurchasedPass:
 
   types:
     StatusType:
-      enum: "Pending,Active,PreBooked,Failed,Expired,RefundPending,RefundInitiated,Refunded,RefundFailed"
+      enum: "Pending,Active,PreBooked,Failed,Expired,RefundPending,RefundInitiated,Refunded,RefundFailed,PhotoPending"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
 
     BenefitType:
@@ -23,6 +23,7 @@ PurchasedPass:
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <StatusType>
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <StatusType>
+    - Custom Kernel.Utils.TH.mkToHttpInstanceForEnum <StatusType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <BenefitType>
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <BenefitType>
 

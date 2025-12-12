@@ -1,0 +1,93 @@
+imports:
+  Person: Domain.Types.Person
+  PassInfoAPIEntity: API.Types.UI.Pass
+  PurchasedPassAPIEntity: API.Types.UI.Pass
+  PurchasedPassTransactionAPIEntity: API.Types.UI.Pass
+  Language: Kernel.External.Types
+  StatusType: Domain.Types.PurchasedPass
+  PassSelectionAPIEntity: API.Types.UI.Pass
+  PaymentStatusResp: Lib.Payment.Domain.Action
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  APISuccess: Kernel.Types.APISuccess
+  Pass: Domain.Types.Pass
+  Day: Data.Time
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Types.PurchasedPass: "rider-app"
+  Lib.Payment.Domain.Action: "payment"
+  Lib.Payment.Domain.Types.PaymentOrder: "payment"
+  Domain.Types.Pass: "rider-app"
+  API.Types.UI.Pass: "rider-app"
+
+module: Pass
+
+types:
+  PurchasedPassSelectReq:
+    - startDay: Maybe Day
+    - profilePicture: Maybe Text
+    - derive: "'HideSecrets"
+
+apis:
+  - GET:
+      endpoint: /customer/{customerId}/availablePasses
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      query:
+        language: Language
+      response:
+        type: "[PassInfoAPIEntity]"
+
+  - GET:
+      endpoint: /customer/{customerId}/purchasedPasses
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      query:
+        status: StatusType
+        language: Language
+      response:
+        type: "[PurchasedPassAPIEntity]"
+
+  - GET:
+      endpoint: /customer/{customerId}/transactions
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[PurchasedPassTransactionAPIEntity]"
+
+  - POST:
+      endpoint: /customer/{customerId}/activateToday/{passNumber}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        passNumber: Int
+      query:
+        startDay: Day
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /customer/{customerId}/pass/{passId}/select
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        passId: Id Pass
+      request:
+        type: PurchasedPassSelectReq
+      response:
+        type: PassSelectionAPIEntity
+
+  - GET:
+      endpoint: customer/{customerId}/payment/{orderId}/status
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        orderId: Id PaymentOrder
+      response:
+        type: PaymentStatusResp
