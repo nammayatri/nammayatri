@@ -74,6 +74,7 @@ PurchasedPass:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
 
   queries:
     updateDeviceSwitchCount:
@@ -185,3 +186,4 @@ PassVerifyTransaction:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
