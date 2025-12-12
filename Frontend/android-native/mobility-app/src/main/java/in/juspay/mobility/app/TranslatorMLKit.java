@@ -168,23 +168,23 @@ public class TranslatorMLKit {
     }
 
     public interface TranslationCallBack {
-        void onSuccess(String string);
-        void onError();
+        void onSuccess(String id, String string);
+        void onError(String id, Exception e);
     }
 
-    public void translateString(String initialAddress,TranslationCallBack callback) {
+    public void translateString(String id, String initialAddress,TranslationCallBack callback) {
         if (translator != null) {
             translator.translate(initialAddress)
                     .addOnSuccessListener(
                             translatedText -> {
-                                callback.onSuccess(translatedText);
+                                callback.onSuccess(id, translatedText);
                             })
                     .addOnFailureListener(
                             e -> {
-                                callback.onError();
+                                callback.onError(id, e);
                             });
         } else {
-            callback.onError();
+            callback.onError(id,new NullPointerException("translator is null"));
         }
     }
 
