@@ -22,6 +22,7 @@ import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CallFeedback as CallFeedback
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
+import qualified API.Action.UI.DriverProfile as DriverProfile
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
 import qualified API.Action.UI.DriverWallet as DriverWallet
 import qualified API.Action.UI.EditBooking as EditBooking
@@ -92,6 +93,7 @@ type API =
            :<|> OrgAdmin.API
            :<|> Payment.API
            :<|> Driver.API
+           :<|> DriverProfile.API
            :<|> DriverProfileSummary.API
            :<|> Transporter.API
            :<|> Route.API
@@ -153,6 +155,7 @@ handler =
     :<|> OrgAdmin.handler
     :<|> Payment.handler
     :<|> Driver.handler
+    :<|> DriverProfile.handler
     :<|> DriverProfileSummary.handler
     :<|> Transporter.handler
     :<|> Route.handler
