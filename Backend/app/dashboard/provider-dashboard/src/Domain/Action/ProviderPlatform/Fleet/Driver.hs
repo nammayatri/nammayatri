@@ -74,6 +74,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetVehicleListStats,
     getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles,
     getDriverFleetDriverDetails,
+    postDriverFleetDashboardAnalyticsCache,
   )
 where
 
@@ -641,3 +642,10 @@ getDriverFleetDriverDetails merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let fleetOwnerId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverDetails) fleetOwnerId driverId
+
+postDriverFleetDashboardAnalyticsCache :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.FleetDashboardAnalyticsCacheReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverFleetDashboardAnalyticsCache merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  unless (DP.isAdmin apiTokenInfo.person) $ throwError AccessDenied
+  transaction <- buildTransaction apiTokenInfo Nothing (Nothing :: Maybe Common.AddVehicleReq)
+  T.withTransactionStoring transaction $ Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetDashboardAnalyticsCache) req
