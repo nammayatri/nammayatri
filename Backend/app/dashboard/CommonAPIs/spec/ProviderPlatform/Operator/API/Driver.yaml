@@ -221,9 +221,9 @@ types:
     - derive: "'HideSecrets"
 
   AllTimeOperatorAnalyticsRes:
-    - rating: Double
-    - cancellationRate: Double
-    - acceptanceRate: Double
+    - rating: Maybe Double
+    - cancellationRate: Maybe Double
+    - acceptanceRate: Maybe Double
 
   FilteredOperatorAnalyticsRes:
     - activeDriver: Int
