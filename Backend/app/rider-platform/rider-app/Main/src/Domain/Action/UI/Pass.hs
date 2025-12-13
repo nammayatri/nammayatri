@@ -176,6 +176,12 @@ purchasePassWithPayment person pass merchantId personId mbStartDay mbDeviceId mb
   let startDate = fromMaybe (DT.utctDay istTime) mbStartDay
       endDate = calculatePassEndDate startDate pass.maxValidDays
 
+  let (benefitType, benefitValue) = case pass.benefit of
+        Nothing -> (Nothing, Nothing)
+        Just DPass.FullSaving -> (Just DPurchasedPass.FullSaving, Nothing)
+        Just (DPass.FixedSaving amount) -> (Just DPurchasedPass.FixedSaving, Just amount)
+        Just (DPass.PercentageSaving percentage) -> (Just DPurchasedPass.PercentageSaving, Just percentage)
+
   mbSamePassDevice <- QPurchasedPass.findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId pass.passTypeId deviceId
   -- If there is no pass for the same device, try to find an existing Pending pass to reuse across devices and set it as mbSamePass
   mbSamePass <-
@@ -204,13 +210,7 @@ purchasePassWithPayment person pass merchantId personId mbStartDay mbDeviceId mb
         return samePass.id
       Nothing -> do
         newPurchasedPassId <- generateGUID
-        let (benefitType, benefitValue) = case pass.benefit of
-              Nothing -> (Nothing, Nothing)
-              Just DPass.FullSaving -> (Just DPurchasedPass.FullSaving, Nothing)
-              Just (DPass.FixedSaving amount) -> (Just DPurchasedPass.FixedSaving, Just amount)
-              Just (DPass.PercentageSaving percentage) -> (Just DPurchasedPass.PercentageSaving, Just percentage)
-
-            purchasedPass =
+        let purchasedPass =
               DPurchasedPass.PurchasedPass
                 { id = newPurchasedPassId,
                   passNumber = fromIntegral passNumber,
@@ -251,6 +251,9 @@ purchasePassWithPayment person pass merchantId personId mbStartDay mbDeviceId mb
             personId = personId,
             startDate,
             endDate,
+            benefitDescription = pass.benefitDescription,
+            benefitType = benefitType,
+            benefitValue = benefitValue,
             status = initialStatus,
             amount = pass.amount,
             passCode = pass.code,
@@ -462,10 +465,17 @@ buildPassAPIEntity mbLanguage personId pass = do
         Left _ -> return Nothing
         Right offersResp -> SOffer.mkCumulativeOfferResp person.merchantOperatingCityId offersResp []
 
+  let originalAmount = case pass.benefit of
+        Just DPass.FullSaving -> pass.amount
+        Just (DPass.FixedSaving value) -> pass.amount + value
+        Just (DPass.PercentageSaving percentage) -> pass.amount / (1 - (percentage / 100))
+        Nothing -> pass.amount
+
   return $
     PassAPI.PassAPIEntity
       { id = pass.id,
         amount = pass.amount,
+        originalAmount,
         savings = Nothing, -- TODO: Calculate based on benefit
         benefit = pass.benefit,
         benefitDescription = benefitDescription,
@@ -507,10 +517,16 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
   let name = maybe purchasedPass.passName (Just . (.message)) nameTranslation
   let benefitDescription = maybe purchasedPass.benefitDescription (.message) benefitTranslation
   let description = maybe purchasedPass.passDescription (Just . (.message)) descriptionTranslation
+  let originalAmount = case benefit of
+        Just DPass.FullSaving -> purchasedPass.passAmount
+        Just (DPass.FixedSaving value) -> purchasedPass.passAmount + value
+        Just (DPass.PercentageSaving percentage) -> purchasedPass.passAmount / (1 - (percentage / 100))
+        Nothing -> purchasedPass.passAmount
   return $
     PassAPI.PassAPIEntity
       { id = Id.cast purchasedPass.id,
-        amount = purchasedPass.passAmount,
+        amount = originalAmount, -- Doing this so that UI it shows the original amount instead of the discounted amount.
+        originalAmount = originalAmount,
         savings = Nothing,
         benefit = benefit,
         benefitDescription = benefitDescription,
@@ -613,12 +629,12 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
           when (passStatus == DPurchasedPass.PhotoPending) $ do
             sendPassPurchasedSuccessMessage purchasedPass.personId purchasedPass.merchantId purchasedPass.merchantOperatingCityId (fromMaybe "" purchasedPass.passName)
         when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
-          QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus
+          QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue
         -- If payment results in an active/prebooked pass, update purchased_pass.profilePicture from payment
         when (passStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
           QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
           when (passStatus == DPurchasedPass.Active && purchasedPassPayment.startDate <= purchasedPass.startDate && purchasedPassPayment.endDate <= purchasedPass.endDate) $
-            QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus
+            QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue
       case mbPassStatus of
         Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
         Just DPurchasedPass.PreBooked -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
@@ -769,7 +785,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
         Just firstPreBookedPayment -> do
           let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
           QPurchasedPassPayment.updateStatusByOrderId newStatus firstPreBookedPayment.orderId
-          QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus
+          QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus firstPreBookedPayment.benefitDescription firstPreBookedPayment.benefitType firstPreBookedPayment.benefitValue
         Nothing -> do
           QPurchasedPassPayment.expireOlderActivePaymentsByPurchasedPassId purchasedPass.id today
           QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
@@ -943,7 +959,7 @@ postMultimodalPassActivateToday (_mbCallerPersonId, _merchantId) passNumber mbSt
   unless (null overlappingPasses) $
     throwError (InvalidRequest "Cannot activate pass: date range overlaps with another active or prebooked pass")
 
-  QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus
+  QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue
   QPurchasedPassPayment.updatePurchaseDataByPurchasedPassIdAndStartEndDate purchasedPass.id purchasedPass.startDate purchasedPass.endDate newStartDate newEndDate newStatus
   return APISuccess.Success
 
