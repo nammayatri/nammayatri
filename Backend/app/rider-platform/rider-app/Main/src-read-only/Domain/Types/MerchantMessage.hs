@@ -55,6 +55,7 @@ data MessageKey
   | TICKET_MERCHANT_AGREEMENT_TEMPLATE
   | TICKET_MERCHANT_SNLTR_TEMPLATE
   | PARTNER_ORG_FRFS_TICKET_CANCEL_OTP
+  | PASS_PURCHASED_MESSAGE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

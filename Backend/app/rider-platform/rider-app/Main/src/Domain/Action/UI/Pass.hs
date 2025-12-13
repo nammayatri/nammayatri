@@ -27,6 +27,7 @@ import qualified Data.Time as DT
 import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PassCategory as DPassCategory
 import qualified Domain.Types.PassType as DPassType
@@ -44,9 +45,11 @@ import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Types as Lang
 import Kernel.Prelude
+import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -57,6 +60,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import Storage.Beam.Payment ()
@@ -73,6 +77,10 @@ import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import Tools.Error
 import qualified Tools.Payment as TPayment
+import Tools.SMS as Sms hiding (Success)
+
+defaultDashboardDeviceId :: Text
+defaultDashboardDeviceId = "dashboard-default-device-id"
 
 getMultimodalPassAvailablePasses ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
@@ -161,7 +169,7 @@ purchasePassWithPayment person pass merchantId personId mbStartDay mbDeviceId mb
   purchasedPassPaymentId <- generateGUID
   paymentOrderId <- generateGUID
   paymentOrderShortId <- generateShortId
-  let deviceId = fromMaybe "dashboard-default-device-id" mbDeviceId
+  let deviceId = fromMaybe defaultDashboardDeviceId mbDeviceId
 
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   passNumber <- getNextPassNumber
@@ -546,7 +554,7 @@ buildPurchasedPassAPIEntity ::
   DPurchasedPass.PurchasedPass ->
   m PassAPI.PurchasedPassAPIEntity
 buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = do
-  let deviceMismatch = maybe False (\deviceId -> purchasedPass.deviceId /= deviceId) mbDeviceId -- Nothing only for dashboard
+  let deviceMismatch = maybe False (\deviceId -> purchasedPass.deviceId /= deviceId && purchasedPass.deviceId /= defaultDashboardDeviceId) mbDeviceId -- Nothing only for dashboard
   passType <- B.runInReplica $ QPassType.findById purchasedPass.passTypeId >>= fromMaybeM (PassTypeNotFound purchasedPass.passTypeId.getId)
   passCategory <- B.runInReplica $ QPassCategory.findById passType.passCategoryId >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
   futureRenewals <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan Nothing Nothing purchasedPass.id DPurchasedPass.PreBooked purchasedPass.endDate
@@ -586,7 +594,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
 
 -- Webhook Handler for Pass Payment Status Updates
 passOrderStatusHandler ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
+  (HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools], MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
   Id.Id DOrder.PaymentOrder ->
   Id.Id DM.Merchant ->
   Payment.TransactionStatus ->
@@ -600,8 +608,10 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       istTime <- getLocalCurrentTime (19800 :: Seconds)
       let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (isJust purchasedPass.profilePicture) (purchasedPassPayment.startDate > DT.utctDay istTime) status
       whenJust mbPassStatus $ \passStatus -> do
-        when (purchasedPassPayment.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
+        when (purchasedPassPayment.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
           QPurchasedPassPayment.updateStatusByOrderId passStatus paymentOrderId
+          when (passStatus == DPurchasedPass.PhotoPending) $ do
+            sendPassPurchasedSuccessMessage purchasedPass.personId purchasedPass.merchantId purchasedPass.merchantOperatingCityId (fromMaybe "" purchasedPass.passName)
         when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
           QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus
         -- If payment results in an active/prebooked pass, update purchased_pass.profilePicture from payment
@@ -633,6 +643,18 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
       Payment.CANCELLED -> Just DPurchasedPass.Failed
       Payment.AUTO_REFUNDED -> Just DPurchasedPass.Refunded
       _ -> Nothing
+
+    sendPassPurchasedSuccessMessage :: (HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools], MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Id.Id DP.Person -> Id.Id DM.Merchant -> Id.Id DMOC.MerchantOperatingCity -> Text -> m ()
+    sendPassPurchasedSuccessMessage personId merchantId merchantOpCityId passName = do
+      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      mbPhoneNumber <- decrypt `mapM` person.mobileNumber
+      whenJust mbPhoneNumber $ \phoneNumber -> do
+        let countryCode = fromMaybe "+91" person.mobileCountryCode
+            phoneNumberWithCountryCode = countryCode <> phoneNumber
+        withLogTag ("sending Pass Purchased Success SMS" <> Id.getId person.id) $ do
+          buildSmsReq <- MessageBuilder.buildPassSuccessMessage merchantOpCityId $ MessageBuilder.BuildPassSuccessMessage {passName}
+          Sms.sendSMS merchantId merchantOpCityId (buildSmsReq phoneNumberWithCountryCode)
+            >>= Sms.checkSmsResult
 
 createPassReconEntry ::
   ( EsqDBFlow m r,
