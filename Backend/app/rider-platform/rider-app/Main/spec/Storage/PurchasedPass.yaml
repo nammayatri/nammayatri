@@ -98,6 +98,7 @@ PurchasedPassPayment:
     purchasedPassId: Id PurchasedPass
     amount: HighPrecMoney
     benefitDescription: Text
+    isDashboard: Maybe Bool
     benefitType: Maybe BenefitType
     benefitValue: Maybe HighPrecMoney
     personId: Id Person

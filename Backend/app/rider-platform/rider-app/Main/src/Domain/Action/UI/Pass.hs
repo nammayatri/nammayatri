@@ -141,7 +141,7 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
 
   -- Use Redis lock to prevent race condition when purchasing pass
   let lockKey = mkPassPurchaseLockKey personId pass.passTypeId
-  Redis.whenWithLockRedisAndReturnValue lockKey 60 (purchasePassWithPayment person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture) >>= \case
+  Redis.whenWithLockRedisAndReturnValue lockKey 60 (purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture) >>= \case
     Left _ -> do
       logError $ "Pass purchase already in progress for personId: " <> personId.getId <> " and passTypeId: " <> pass.passTypeId.getId
       throwError (InvalidRequest "Pass purchase already in progress, please try again")
@@ -155,6 +155,7 @@ purchasePassWithPayment ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     EsqDBReplicaFlow m r
   ) =>
+  Bool ->
   DP.Person ->
   DPass.Pass ->
   Id.Id DM.Merchant ->
@@ -163,7 +164,7 @@ purchasePassWithPayment ::
   Maybe Text ->
   Maybe Text ->
   m PassAPI.PassSelectionAPIEntity
-purchasePassWithPayment person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture = do
+purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture = do
   -- Check if pass is already purchased and active
   now <- getCurrentTime
   purchasedPassPaymentId <- generateGUID
@@ -252,6 +253,7 @@ purchasePassWithPayment person pass merchantId personId mbStartDay mbDeviceId mb
             startDate,
             endDate,
             benefitDescription = pass.benefitDescription,
+            isDashboard = Just isDashboard,
             benefitType = benefitType,
             benefitValue = benefitValue,
             status = initialStatus,
@@ -621,12 +623,13 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
   mbPurchasedPass <- maybe (pure Nothing) (QPurchasedPass.findById . (.purchasedPassId)) mbPurchasedPassPayment
   case (mbPurchasedPassPayment, mbPurchasedPass) of
     (Just purchasedPassPayment, Just purchasedPass) -> do
+      let isDashboard = fromMaybe False purchasedPassPayment.isDashboard
       istTime <- getLocalCurrentTime (19800 :: Seconds)
       let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (isJust purchasedPass.profilePicture) (purchasedPassPayment.startDate > DT.utctDay istTime) status
       whenJust mbPassStatus $ \passStatus -> do
         when (purchasedPassPayment.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
           QPurchasedPassPayment.updateStatusByOrderId passStatus paymentOrderId
-          when (passStatus == DPurchasedPass.PhotoPending) $ do
+          when (passStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending] && isDashboard) $ do
             sendPassPurchasedSuccessMessage purchasedPass.personId purchasedPass.merchantId purchasedPass.merchantOperatingCityId (fromMaybe "" purchasedPass.passName)
         when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
           QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue
