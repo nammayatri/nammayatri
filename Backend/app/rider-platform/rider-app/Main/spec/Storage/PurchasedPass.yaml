@@ -7,6 +7,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   FRFSVehicleServiceTier: Domain.Types.FRFSVehicleServiceTier
   ServiceTierType: BecknV2.FRFS.Enums
+  BenefitType: Domain.Types.PurchasedPass
 
 PurchasedPass:
   tableName: purchased_pass
@@ -96,6 +97,9 @@ PurchasedPassPayment:
     passName: Maybe Text
     purchasedPassId: Id PurchasedPass
     amount: HighPrecMoney
+    benefitDescription: Text
+    benefitType: Maybe BenefitType
+    benefitValue: Maybe HighPrecMoney
     personId: Id Person
     startDate: Day
     status: Domain.Types.PurchasedPass.StatusType
@@ -103,6 +107,15 @@ PurchasedPassPayment:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     profilePicture: Maybe Text
+
+  beamType:
+    benefitDescription: Maybe Text
+
+  fromTType:
+    benefitDescription: Kernel.Prelude.fromMaybe ""|I
+
+  toTType:
+    benefitDescription: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey

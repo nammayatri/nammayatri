@@ -34,6 +34,7 @@ data PassAPIEntity = PassAPIEntity
     maxTrips :: Data.Maybe.Maybe Kernel.Prelude.Int,
     name :: Data.Maybe.Maybe Data.Text.Text,
     offer :: Data.Maybe.Maybe SharedLogic.Offer.CumulativeOfferResp,
+    originalAmount :: Kernel.Types.Common.HighPrecMoney,
     savings :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType]
   }

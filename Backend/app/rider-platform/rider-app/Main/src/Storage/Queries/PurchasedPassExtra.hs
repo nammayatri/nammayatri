@@ -94,14 +94,20 @@ updatePurchaseData ::
   Day ->
   Day ->
   DPurchasedPass.StatusType ->
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe DPurchasedPass.BenefitType ->
+  Kernel.Prelude.Maybe HighPrecMoney ->
   m ()
-updatePurchaseData purchasedPassId startDate endDate status = do
+updatePurchaseData purchasedPassId startDate endDate status benefitDescription mbBenefitType mbBenefitValue = do
   now <- getCurrentTime
   updateWithKV
     ( [ Se.Set Beam.startDate startDate,
         Se.Set Beam.endDate endDate,
         Se.Set Beam.status status,
         Se.Set Beam.usedTripCount (Just 0),
+        Se.Set Beam.benefitDescription benefitDescription,
+        Se.Set Beam.benefitType mbBenefitType,
+        Se.Set Beam.benefitValue mbBenefitValue,
         Se.Set Beam.updatedAt now
       ]
         <> (if status == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0)] else [])
