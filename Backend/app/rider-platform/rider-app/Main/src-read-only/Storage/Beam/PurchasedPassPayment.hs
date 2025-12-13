@@ -20,6 +20,7 @@ data PurchasedPassPaymentT f = PurchasedPassPaymentT
     benefitValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     endDate :: B.C f Data.Time.Calendar.Day,
     id :: B.C f Kernel.Prelude.Text,
+    isDashboard :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     orderId :: B.C f Kernel.Prelude.Text,
