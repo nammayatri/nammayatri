@@ -795,7 +795,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
 
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
 
-  let passWithSameDevice = maybe allActivePurchasedPasses (\deviceId -> filter (\pass -> pass.deviceId == deviceId) allActivePurchasedPasses) mbDeviceId
+  let passWithSameDevice = maybe allActivePurchasedPasses (\deviceId -> filter (\pass -> pass.deviceId == deviceId || pass.deviceId == defaultDashboardDeviceId) allActivePurchasedPasses) mbDeviceId
   let purchasedPasses = if null passWithSameDevice then allActivePurchasedPasses else passWithSameDevice
 
   mapM (buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today) purchasedPasses
