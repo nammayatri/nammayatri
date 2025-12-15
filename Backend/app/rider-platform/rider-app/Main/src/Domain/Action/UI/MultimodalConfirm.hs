@@ -52,6 +52,7 @@ import BecknV2.FRFS.Enums
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
+import Control.Concurrent (modifyMVar)
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (nub, nubBy, partition)
@@ -139,6 +140,7 @@ import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Storage.Queries.SearchRequest as QSearchRequest
 import System.Environment (lookupEnv)
+import System.IO.Unsafe (unsafePerformIO)
 import Tools.Error
 import qualified Tools.Error as StationError
 import qualified Tools.Metrics as Metrics
@@ -725,6 +727,68 @@ getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber
     BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True
     _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
+type CacheKey = (Text, Maybe Text, Maybe Bool, Maybe Text, Maybe Text, Bool)
+
+type CacheValue = (Text, ApiTypes.PublicTransportData)
+
+type PublicTransportCache = MVar (HashMap.HashMap CacheKey CacheValue)
+
+{-# NOINLINE publicTransportCache #-}
+publicTransportCache :: PublicTransportCache
+publicTransportCache = unsafePerformIO $ newMVar HashMap.empty
+
+computeCacheKey ::
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Kernel.Types.Beckn.Context.City ->
+  Maybe Bool ->
+  Maybe Text ->
+  Maybe VehicleCategory ->
+  Bool ->
+  CacheKey
+computeCacheKey merchantOperatingCityId mbCity mbEnableSwitchRoute mbVehicleNumber mbVehicleType isPublicVehicleData =
+  ( merchantOperatingCityId.getId,
+    show <$> mbCity,
+    mbEnableSwitchRoute,
+    mbVehicleNumber,
+    show <$> mbVehicleType,
+    isPublicVehicleData
+  )
+
+computeVersionFromConfigs ::
+  [DIBC.IntegratedBPPConfig] ->
+  Maybe DRC.RiderConfig ->
+  Environment.Flow Text
+computeVersionFromConfigs integratedBPPConfigs mbRiderConfig = do
+  gtfsVersion <-
+    withTryCatch "getGtfsVersion:computeVersionFromConfigs" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
+      Left _ -> return (map (.feedKey) integratedBPPConfigs)
+      Right gtfsVersions -> return gtfsVersions
+  return $ T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (mbRiderConfig >>= (.domainPublicTransportDataVersion)))
+
+getCachedPublicTransportData ::
+  CacheKey ->
+  Text ->
+  Environment.Flow ApiTypes.PublicTransportData ->
+  Environment.Flow ApiTypes.PublicTransportData
+getCachedPublicTransportData cacheKey currentVersion computeData = do
+  cacheMap <- liftIO $ readMVar publicTransportCache
+  case HashMap.lookup cacheKey cacheMap of
+    Just (cachedVersion, cachedData)
+      | cachedVersion == currentVersion ->
+        return cachedData
+    _ -> do
+      _ <- liftIO $
+        modifyMVar publicTransportCache $ \cacheMap' ->
+          return (HashMap.delete cacheKey cacheMap', ())
+
+      newData <- computeData
+
+      _ <- liftIO $
+        modifyMVar publicTransportCache $ \cacheMap' ->
+          return (HashMap.insert cacheKey (currentVersion, newData) cacheMap', ())
+
+      return newData
+
 -- todo: segregate these APIs properly.
 
 getPublicTransportData ::
@@ -739,7 +803,36 @@ getPublicTransportData ::
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
 getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType = do
-  getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType False
+  -- Get parameters needed for cache key and version computation
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbRequestCity <- maybe (pure Nothing) (CQMOC.findByMerchantIdAndCity merchantId) mbCity
+  let merchantOperatingCityId = maybe person.merchantOperatingCityId (.id) mbRequestCity
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId
+  let vehicleTypes =
+        case mbVehicleType of
+          Just BUS -> [Enums.BUS]
+          Just METRO -> [Enums.METRO]
+          Just SUBWAY -> [Enums.SUBWAY]
+          _ -> [Enums.BUS, Enums.METRO, Enums.SUBWAY]
+
+  -- Get integratedBPPConfigs to compute version
+  integratedBPPConfigs <-
+    concatMapM
+      ( \vType ->
+          SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vType DIBC.MULTIMODAL
+      )
+      vehicleTypes
+
+  -- Compute version from integratedBPPConfigs
+  currentVersion <- computeVersionFromConfigs integratedBPPConfigs riderConfig
+
+  -- Compute cache key
+  let cacheKey = computeCacheKey merchantOperatingCityId mbCity mbEnableSwitchRoute mbVehicleNumber mbVehicleType False
+
+  -- Get from cache or compute and store
+  getCachedPublicTransportData cacheKey currentVersion $
+    getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType False
 
 getPublicTransportDataImpl ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
