@@ -78,19 +78,18 @@ processRating (personId, merchantId) request = do
     isValueAddNP <- CQVAN.isValueAddNP dFeedbackRes.providerId
     when isValueAddNP $ do
       void . withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq merchantId
-      whenJust dFeedbackRes.badgeMetadata $ \badgeMetadataList -> do
-        when (not (null badgeMetadataList)) $ do
-          merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-          void . withLongRetry $ CallBPPInternal.feedbackForm merchant.driverOfferBaseUrl (mkFeedbackFormReq request badgeMetadataList dFeedbackRes)
+      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      let badgeMetadataList = dFeedbackRes.badgeMetadata
+      void . withLongRetry $ CallBPPInternal.feedbackForm merchant.driverOfferBaseUrl (mkFeedbackFormReq request badgeMetadataList dFeedbackRes)
   pure Success
   where
-    mkFeedbackFormReq :: DFeedback.FeedbackReq -> [CallBPPInternal.BadgeMetadata] -> DFeedback.FeedbackRes -> CallBPPInternal.FeedbackFormReq
+    mkFeedbackFormReq :: DFeedback.FeedbackReq -> Maybe [CallBPPInternal.BadgeMetadata] -> DFeedback.FeedbackRes -> CallBPPInternal.FeedbackFormReq
     mkFeedbackFormReq req badgeMetadataList feedbackRes =
       CallBPPInternal.FeedbackFormReq
         { rideId = feedbackRes.bppBookingId.getId,
           rating = Just req.rating,
           feedbackDetails = req.feedbackDetails,
-          badges = Just badgeMetadataList,
+          badges = badgeMetadataList,
           feedback = Just []
         }
 
