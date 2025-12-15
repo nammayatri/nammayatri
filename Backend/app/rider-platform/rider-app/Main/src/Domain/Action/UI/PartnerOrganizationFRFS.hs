@@ -544,7 +544,6 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             toStationName = Just toStation'.name,
             fromStationAddress = fromStation'.address,
             toStationAddress = toStation'.address,
-            minimalData = Nothing,
             vehicleNumber = Nothing,
             ..
           }

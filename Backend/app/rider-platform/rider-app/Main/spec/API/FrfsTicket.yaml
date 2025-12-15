@@ -47,7 +47,6 @@ types:
     recentLocationId: Maybe (Id RecentLocation)
     busLocationData: Maybe [BusLocation]
     vehicleNumber: Maybe Text
-    minimalData: Maybe Bool
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
