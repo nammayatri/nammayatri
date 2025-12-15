@@ -6,6 +6,7 @@ imports:
   PersonRes: Dashboard.Common
   PersonIdsReq: Dashboard.Common
   PersonMobileNoReq: Dashboard.Common
+  PaymentMode: Domain.Types.PaymentMode
 
 module: Customer
 
@@ -117,6 +118,15 @@ apis:
       migrate:
         endpoint: CustomerAPI PersonIdCustomerEndpoint
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS FETCH_PERSON_ID
+  - POST:
+      endpoint: /{customerId}/updatePaymentMode
+      auth: ApiAuthV2
+      params:
+        customerId: Id Customer
+      request:
+        type: UpdatePaymentModeReq
+      response:
+        type: APISuccess
 
 types:
   CustomerListRes:
@@ -131,11 +141,13 @@ types:
     - phoneNo: Maybe Text
     - enabled: Bool
     - blocked: Bool
+    - paymentMode: Maybe PaymentMode
   CustomerInfoRes:
     - numberOfRides: Int
     - falseSafetyAlarmCount: Int
     - safetyCenterDisabledOnDate: Maybe UTCTime
     - totalSosCount: Int
+    - paymentMode: Maybe PaymentMode
   CustomerCancellationDuesSyncReq:
     - cancellationCharges: Maybe HighPrecMoney
     - cancellationChargesWithCurrency: Maybe PriceAPIEntity
@@ -150,5 +162,7 @@ types:
     - incrementCount: Maybe Bool
     - resetCount: Maybe Bool
     - derive: "'HideSecrets"
-
-
+  UpdatePaymentModeReq:
+    - recordType: NewType
+    - paymentMode: PaymentMode
+    - derive: "'HideSecrets"
