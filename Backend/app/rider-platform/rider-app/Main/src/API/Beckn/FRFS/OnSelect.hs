@@ -4,8 +4,10 @@ import qualified Beckn.ACL.FRFS.OnSelect as ACL
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import Data.Aeson (eitherDecodeStrict')
 import qualified Domain.Action.Beckn.FRFS.OnSelect as DOnSelect
 import Environment
+import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -14,16 +16,16 @@ import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import TransactionLogs.PushLogs
 
-type API = Spec.OnSelectAPI
+type API = Spec.OnSelectAPIBS
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onSelect
 
-onSelect ::
-  SignatureAuthResult ->
-  Spec.OnSelectReq ->
-  FlowHandler Spec.AckResponse
-onSelect _ req = withFlowHandlerAPI $ do
+onSelect :: SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
+onSelect _ reqBS = withFlowHandlerAPI $ do
+  req <- case decodeOnSelectReq reqBS of
+    Right r -> pure r
+    Left err -> throwError (InvalidRequest (toText err))
   transaction_id <- req.onSelectReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   logDebug $ "Received OnSelect request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
@@ -42,3 +44,14 @@ onSelectLockKey id = "FRFS:OnSelect:MessageId-" <> id
 
 onSelectProcessingLockKey :: Text -> Text
 onSelectProcessingLockKey id = "FRFS:OnSelect:Processing:MessageId-" <> id
+
+decodeOnSelectReq :: ByteString -> Either String Spec.OnSelectReq
+decodeOnSelectReq bs =
+  case eitherDecodeStrict' bs of
+    Right v -> Right v
+    Left _ ->
+      case Utils.unescapeQuotedJSON bs of
+        Just inner ->
+          eitherDecodeStrict' inner
+        Nothing ->
+          Left "Unable to decode OnSelectReq: invalid JSON format."
