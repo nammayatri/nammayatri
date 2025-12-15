@@ -28,7 +28,7 @@ data ONDCConfig = ONDCConfig
 
 data ONDCRequest = ONDCRequest
   { _type :: Text,
-    _data :: Text
+    _data :: Value
   }
   deriving (Generic, Eq, Show)
 
