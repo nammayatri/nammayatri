@@ -286,20 +286,10 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
   logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags) <> "| tagdata: " <> show tagData
   let allTags = ride.rideTags <> eitherToMaybe nammaTags
   QRide.updateRideTags allTags ride.id
-  driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let tags = fromMaybe [] allTags
   when (bookingCReason.reasonCode == Just userNoShowCancellationReason && validUserNoShowCancellation `notElem` tags) $
     logError $ "Customer no show tag was not applied: rideId: " <> ride.id.getId
-  case bookingCReason.source of
-    SBCR.ByDriver -> do
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-        Analytics.updateOperatorAnalyticsCancelCount transporterConfig ride.driverId
-      QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
-    SBCR.ByUser -> do
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-        Analytics.updateFleetOwnerAnalyticsCustomerCancelCount ride.driverId transporterConfig
-      QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId
-    _ -> pure ()
+  Analytics.updateCancellationAnalyticsAndDriverStats transporterConfig ride bookingCReason
   return $ fromMaybe [] allTags
 
 driverDistanceToPickup ::
