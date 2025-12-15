@@ -54,7 +54,6 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
       Se.Set Beam.isOnSearchReceived isOnSearchReceived,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.minimalData minimalData,
       Se.Set Beam.multimodalSearchRequestId multimodalSearchRequestId,
       Se.Set Beam.onSearchFailed onSearchFailed,
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),

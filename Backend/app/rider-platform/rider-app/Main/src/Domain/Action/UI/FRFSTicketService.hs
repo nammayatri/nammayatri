@@ -649,7 +649,6 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             validTill = Just validTill,
             searchAsParentStops = searchAsParentStops,
             busLocationData = fromMaybe [] busLocationData,
-            minimalData,
             ..
           }
   upsertJourneyLegAction searchReqId.getId
@@ -666,12 +665,13 @@ getFrfsSearchQuote :: (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetry
 getFrfsSearchQuote (mbPersonId, _) searchId_ = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   search <- QFRFSSearch.findById searchId_ >>= fromMaybeM (InvalidRequest "Invalid search id")
+  integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity search
   unless (personId == search.riderId) $ throwError AccessDenied
   (quotes :: [DFRFSQuote.FRFSQuote]) <- B.runInReplica $ QFRFSQuote.findAllBySearchId searchId_
   mapM
     ( \quote -> do
         let (routeStations :: Maybe [FRFSRouteStationsAPI], stations :: Maybe [FRFSStationAPI]) =
-              if fromMaybe False search.minimalData
+              if integratedBppConfig.platformType == DIBC.MULTIMODAL
                 then (Nothing, Nothing)
                 else (decodeFromText =<< quote.routeStationsJson, decodeFromText quote.stationsJson)
         quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
@@ -1163,13 +1163,19 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
           booking <- QFRFSTicketBooking.findById bookingPayment.frfsTicketBookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
           person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
           paymentOrder <- QPaymentOrder.findById bookingPayment.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found")
-          bookingStatus <- frfsBookingStatus (booking.riderId, merchantId) False (withPaymentStatusResponseHandler bookingPayment paymentOrder) booking person switchFRFSQuoteTier
-          return (bookingStatus, booking)
+          integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+          journeyId <- getJourneyIdFromBooking booking
+          mbBookingStatus <-
+            if integratedBppConfig.platformType == DIBC.MULTIMODAL && isJust journeyId
+              then do
+                bookingStatus <- frfsBookingStatus (booking.riderId, merchantId) False (withPaymentStatusResponseHandler bookingPayment paymentOrder) booking person switchFRFSQuoteTier
+                return $ Just bookingStatus
+              else return Nothing
+          return (mbBookingStatus, booking, journeyId)
       )
       bookingPayments
-  let (bookingsStatus, bookings) = unzip bookingsStatusWithBooking
-  let firstBooking = listToMaybe bookings
-  journeyId <- maybe (pure Nothing) getJourneyIdFromBooking firstBooking
+  let (bookingsStatus, _, journeyIds) = unzip3 bookingsStatusWithBooking
+      journeyId = listToMaybe $ catMaybes journeyIds
   return $
     ( evaluateConditions
         [ (Just DFRFSTicketBooking.CONFIRMED, Nothing, DPayment.FulfillmentSucceeded, all), -- Ticket Generated
@@ -1180,12 +1186,13 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
           (Just DFRFSTicketBooking.FAILED, Just FRFSTicketService.FAILURE, DPayment.FulfillmentFailed, all), -- Booking Payment Failed
           (Just DFRFSTicketBooking.FAILED, Just FRFSTicketService.SUCCESS, DPayment.FulfillmentFailed, any) -- Paid but Booking Failed
         ]
-        bookingsStatus,
+        (catMaybes bookingsStatus),
       journeyId <&> (.getId),
       Nothing
     )
   where
     -- evaluateConditions :: Foldable t => [(Maybe DFRFSTicketBooking.FRFSTicketBookingStatus, Maybe FRFSTicketService.FRFSBookingPaymentStatusAPI, Payment.PaymentFulfillmentStatus, ((a -> Bool) -> t a -> Bool))] -> [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes] -> Payment.PaymentFulfillmentStatus
+    evaluateConditions _ [] = DPayment.FulfillmentPending
     evaluateConditions [] _ = DPayment.FulfillmentPending
     evaluateConditions (condition : conditions) bookings = do
       let (mbBookingStatus, mbBookingPaymentStatus, paymentFulfillmentStatus, conditionFn) = condition
@@ -1602,8 +1609,6 @@ buildFRFSTicketBookingStatusAPIRes ::
   m FRFSTicketService.FRFSTicketBookingStatusAPIRes
 buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-  stations <- mapM (Utils.mkPOrgStationAPI booking.partnerOrgId integratedBppConfig) =<< (decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db"))
-  let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
   merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
   let tickets =
@@ -1613,6 +1618,19 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
           )
           tickets'
       fareParameters = FRFSUtils.mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
+  (routeStations :: Maybe [FRFSRouteStationsAPI], stations :: Maybe [FRFSStationAPI]) <- do
+    if integratedBppConfig.platformType == DIBC.MULTIMODAL
+      then return (Nothing, Nothing)
+      else do
+        let stationsJson :: Maybe [FRFSStationAPI] = decodeFromText booking.stationsJson
+        case stationsJson of
+          Just stations -> do
+            proccessedStations <- mapM (Utils.mkPOrgStationAPI booking.partnerOrgId integratedBppConfig) stations
+            let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
+            return (routeStations, Just proccessedStations)
+          Nothing -> do
+            let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
+            return (routeStations, Nothing)
   return $
     FRFSTicketService.FRFSTicketBookingStatusAPIRes
       { bookingId = booking.id,
@@ -1633,6 +1651,7 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
         isFareChanged = booking.isFareChanged,
         googleWalletJWTUrl = booking.googleWalletJWTUrl,
         integratedBppConfigId = booking.integratedBppConfigId,
+        stations = fromMaybe [] stations,
         ..
       }
 
