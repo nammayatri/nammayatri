@@ -175,7 +175,8 @@ data DriveVehicleAssociationListItemT = DriveVehicleAssociationListItemT
     fleetOwnerId :: Kernel.Prelude.Text,
     fleetOwnerName :: Kernel.Prelude.Text,
     requestReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    responseReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    responseReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    associatedOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

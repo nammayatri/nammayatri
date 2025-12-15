@@ -1349,6 +1349,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity mbIsActive mbLimit mbOff
                   isDriverActive = isDriverActive,
                   isDriverOnRide = Just isDriverOnRide,
                   isDriverOnPickup = Just isDriverOnPickup,
+                  associatedOn = fda.associatedOn,
                   upcomingRouteCode = routeCode,
                   verificationDocsStatus =
                     Just
@@ -1414,13 +1415,18 @@ getDriverFleetVehicleAssociation merchantShortId _opCity mbLimit mbOffset mbVehi
             return (completedRides, earning)
           Nothing -> return (0, 0) ------------ when we are not including stats then we will return 0
         rcActiveAssociation <- QRCAssociation.findActiveAssociationByRC vrc.id True
-        (driverName, conductorName, driverId, driverPhoneNo, driverStatus, isDriverOnPickup, isDriverOnRide, routeCode) <- case rcActiveAssociation of
-          Just activeAssociation -> getFleetDriverInfo fleetOwnerId activeAssociation.driverId False ------- when vehicle is in active state
+        ((driverName, conductorName, driverId, driverPhoneNo, driverStatus, isDriverOnPickup, isDriverOnRide, routeCode), mbAssociatedOn) <- case rcActiveAssociation of
+          Just activeAssociation -> do
+            driverInfo <- getFleetDriverInfo fleetOwnerId activeAssociation.driverId False
+            return (driverInfo, Just activeAssociation.associatedOn)
+          ------- when vehicle is in active state
           Nothing -> do
             latestAssociation <- QRCAssociation.findLatestLinkedByRCId vrc.id now ------- when there is not any active association then i will find out the latest association  (vehicle is in inActive state)
             case latestAssociation of
-              Just latestAssoc -> getFleetDriverInfo fleetOwnerId latestAssoc.driverId False
-              Nothing -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Just False, Just False, Nothing) -------- when vehicle is unAssigned
+              Just latestAssoc -> do
+                driverInfo <- getFleetDriverInfo fleetOwnerId latestAssoc.driverId False
+                return (driverInfo, Just latestAssoc.associatedOn)
+              Nothing -> pure ((Nothing, Nothing, Nothing, Nothing, Nothing, Just False, Just False, Nothing), Nothing) -------- when vehicle is unAssigned
         let vehicleType = DCommon.castVehicleVariantDashboard vrc.vehicleVariant
         let isDriverActive = isJust driverName -- Check if there is a current active driver
         let isRcAssociated = isJust rcActiveAssociation
@@ -1457,6 +1463,7 @@ getDriverFleetVehicleAssociation merchantShortId _opCity mbLimit mbOffset mbVehi
                   upcomingRouteCode = routeCode,
                   requestReason = Nothing,
                   responseReason = Nothing,
+                  associatedOn = mbAssociatedOn,
                   ..
                 }
         pure ls

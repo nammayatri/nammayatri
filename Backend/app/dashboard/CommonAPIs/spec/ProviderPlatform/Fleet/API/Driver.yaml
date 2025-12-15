@@ -1733,6 +1733,7 @@ types:
     - fleetOwnerName: Text
     - requestReason: Maybe Text
     - responseReason: Maybe Text
+    - associatedOn: Maybe UTCTime
   VerificationDocsStatus:
     - vehicleRegistrationCertificate: Maybe VerificationStatus
     - vehiclePermit: Maybe VerificationStatus
