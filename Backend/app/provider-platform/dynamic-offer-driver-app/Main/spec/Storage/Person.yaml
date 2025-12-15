@@ -62,6 +62,7 @@ Person:
     alternateMobileNumber : Maybe (EncryptedHashedField e Text)
     faceImageId : Maybe (Id MediaFile)
     qrImageId : Maybe (Id MediaFile)
+    vehicleImageId : Maybe (Id MediaFile)
     merchantOperatingCityId : Id MerchantOperatingCity
     totalEarnedCoins : Int
     usedCoins : Int

@@ -504,6 +504,11 @@ updateQrMediaId (Id driverId) qrImageId = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamP.qrImageId (getId <$> qrImageId), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq driverId]
 
+updateVehicleMediaId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe (Id MediaFile) -> m ()
+updateVehicleMediaId (Id driverId) vehicleImageId = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamP.vehicleImageId (getId <$> vehicleImageId), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq driverId]
+
 findAllMerchantIdByPhoneNo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DbHash -> m [Person]
 findAllMerchantIdByPhoneNo countryCode mobileNumberHash =
   findAllWithKV

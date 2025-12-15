@@ -117,3 +117,9 @@ ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN react_bundle_version text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN vehicle_image_id character varying(36) ;

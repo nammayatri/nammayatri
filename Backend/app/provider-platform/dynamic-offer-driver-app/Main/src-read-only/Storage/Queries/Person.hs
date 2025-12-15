@@ -162,6 +162,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.useFakeOtp useFakeOtp,
       Se.Set Beam.usedCoins usedCoins,
+      Se.Set Beam.vehicleImageId (Kernel.Types.Id.getId <$> vehicleImageId),
       Se.Set Beam.whatsappNotificationEnrollStatus whatsappNotificationEnrollStatus
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

@@ -666,7 +666,7 @@ data DriverPhotoUploadReq = DriverPhotoUploadReq
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ImageType = ProfilePhoto | QrImage
+data ImageType = ProfilePhoto | QrImage | VehiclePhoto
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
 
 data DriverAlternateNumberReq = DriverAlternateNumberReq
@@ -1913,6 +1913,9 @@ driverPhotoUploadHitsCountKey driverId = "BPP:ProfilePhoto:verify:" <> getId dri
 driverQrUploadHitsCountKey :: Id SP.Person -> Text
 driverQrUploadHitsCountKey driverId = "BPP:QRImage" <> getId driverId <> ":hitsCount"
 
+driverVehiclePhotoUploadHitsCountKey :: Id SP.Person -> Text
+driverVehiclePhotoUploadHitsCountKey driverId = "BPP:VehiclePhoto:verify:" <> getId driverId <> ":hitsCount"
+
 driverProfileImagesUpload :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Issue.IssueMediaUploadReq -> Flow Issue.IssueMediaUploadRes
 driverProfileImagesUpload (driverId, merchantId, merchantOpCityId) Issue.IssueMediaUploadReq {..} = do
   Issue.issueMediaUpload' (cast driverId, cast merchantId, cast merchantOpCityId) driverIssueHandle Issue.IssueMediaUploadReq {..} "driver-profile-images" ("driverId-" <> getId driverId)
@@ -1923,6 +1926,7 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
   let (hitsCountKey, basePath, domain) = case imageType_ of
         ProfilePhoto -> (driverPhotoUploadHitsCountKey, "/driver-profile-picture/", "driver/profile/photo")
         QrImage -> (driverQrUploadHitsCountKey, "/driver-qr/", "driver/qr/image")
+        VehiclePhoto -> (driverVehiclePhotoUploadHitsCountKey, "/driver-vehicle-photo/", "driver/vehicle/photo")
 
   checkSlidingWindowLimit (hitsCountKey driverId)
   person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound (getId driverId))
@@ -1950,8 +1954,11 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
         QrImage -> whenJust person.qrImageId $ \mediaFileId -> do
           QPerson.updateQrMediaId driverId Nothing
           MFQuery.deleteById mediaFileId
+        VehiclePhoto -> whenJust person.vehicleImageId $ \mediaFileId -> do
+          QPerson.updateVehicleMediaId driverId Nothing
+          MFQuery.deleteById mediaFileId
 
-  createMediaEntry driverId Common.AddLinkAsMedia {url = fileUrl, fileType} filePath
+  createMediaEntry driverId Common.AddLinkAsMedia {url = fileUrl, fileType} filePath imageType_
   where
     validateContentType = do
       case fileType of
@@ -1964,11 +1971,14 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
 fetchDriverPhoto :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> Flow Text
 fetchDriverPhoto _ filePath = S3.get $ T.unpack filePath
 
-createMediaEntry :: Id SP.Person -> Common.AddLinkAsMedia -> Text -> Flow APISuccess
-createMediaEntry driverId Common.AddLinkAsMedia {..} filePath = do
+createMediaEntry :: Id SP.Person -> Common.AddLinkAsMedia -> Text -> ImageType -> Flow APISuccess
+createMediaEntry driverId Common.AddLinkAsMedia {..} filePath imageType = do
   fileEntity <- mkFile url
   MFQuery.create fileEntity
-  QPerson.updateMediaId driverId (Just fileEntity.id)
+  case imageType of
+    ProfilePhoto -> QPerson.updateMediaId driverId (Just fileEntity.id)
+    QrImage -> QPerson.updateQrMediaId driverId (Just fileEntity.id)
+    VehiclePhoto -> QPerson.updateVehicleMediaId driverId (Just fileEntity.id)
   return Success
   where
     mkFile fileUrl = do

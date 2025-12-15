@@ -69,6 +69,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             updatedAt = updatedAt,
             useFakeOtp = useFakeOtp,
             usedCoins = usedCoins,
+            vehicleImageId = Kernel.Types.Id.Id <$> vehicleImageId,
             whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus
           }
 
@@ -122,5 +123,6 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.updatedAt = updatedAt,
         Beam.useFakeOtp = useFakeOtp,
         Beam.usedCoins = usedCoins,
+        Beam.vehicleImageId = Kernel.Types.Id.getId <$> vehicleImageId,
         Beam.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus
       }

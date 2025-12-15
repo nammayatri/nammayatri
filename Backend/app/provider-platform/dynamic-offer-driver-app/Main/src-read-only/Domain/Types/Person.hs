@@ -62,13 +62,14 @@ data PersonE e = Person
     updatedAt :: Kernel.Prelude.UTCTime,
     useFakeOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     usedCoins :: Kernel.Prelude.Int,
+    vehicleImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     whatsappNotificationEnrollStatus :: Kernel.Prelude.Maybe Kernel.External.Whatsapp.Interface.Types.OptApiMethods
   }
   deriving (Generic)
 
-type Person = PersonE ('AsEncrypted)
+type Person = PersonE 'AsEncrypted
 
-type DecryptedPerson = PersonE ('AsUnencrypted)
+type DecryptedPerson = PersonE 'AsUnencrypted
 
 instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
@@ -119,6 +120,7 @@ instance EncryptedItem Person where
           updatedAt = updatedAt entity,
           useFakeOtp = useFakeOtp entity,
           usedCoins = usedCoins entity,
+          vehicleImageId = vehicleImageId entity,
           whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus entity
         }
   decryptItem entity = do
@@ -168,6 +170,7 @@ instance EncryptedItem Person where
             updatedAt = updatedAt entity,
             useFakeOtp = useFakeOtp entity,
             usedCoins = usedCoins entity,
+            vehicleImageId = vehicleImageId entity,
             whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus entity
           },
         ""
@@ -180,20 +183,20 @@ instance EncryptedItem' Person where
 
 type Driver = Person
 
-data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data Role = DRIVER | ADMIN | FLEET_OWNER | FLEET_BUSINESS | OPERATOR deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data Role = DRIVER | ADMIN | FLEET_OWNER | FLEET_BUSINESS | OPERATOR deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''Role))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Role)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''Role))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''Role)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''IdentifierType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''IdentifierType)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''IdentifierType))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''IdentifierType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''Gender))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Gender)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''Gender))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''Gender)

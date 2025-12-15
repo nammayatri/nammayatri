@@ -429,6 +429,7 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         whatsappNotificationEnrollStatus = Nothing,
         alternateMobileNumber = Nothing,
         faceImageId = Nothing,
+        vehicleImageId = Nothing,
         qrImageId = Nothing,
         totalEarnedCoins = 0,
         usedCoins = 0,
