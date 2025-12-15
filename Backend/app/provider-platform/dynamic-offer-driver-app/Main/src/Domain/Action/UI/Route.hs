@@ -21,12 +21,25 @@ module Domain.Action.UI.Route
   )
 where
 
+import qualified Data.List.NonEmpty as NE
+import Domain.Action.UI.Ride.EndRide.Internal (pickNWayPoints)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RideRoute as RI
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Common (HighPrecMeters)
+import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
+import Kernel.Utils.Error.Throwing
+import Kernel.Utils.Logging
+import SharedLogic.Ride (searchRequestKey)
+import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Maps as Maps
 
 getRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
@@ -38,5 +51,43 @@ getPickupRoutes (_, merchantId, merchantOpCityId) enityId req = do
   Maps.getPickupRoutes merchantId merchantOpCityId enityId req
 
 getTripRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getTripRoutes (_, merchantId, merchantOpCityId) enityId req = do
-  Maps.getTripRoutes merchantId merchantOpCityId enityId req
+getTripRoutes (personId, merchantId, merchantOpCityId) entityId req = do
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  ride' <- QRide.getInProgressByDriverId driver.id
+  case ride' of
+    Just ride -> do
+      booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      let entityId' = Just $ fromMaybe (getId ride.id) entityId
+      let key = searchRequestKey booking.transactionId
+      mbRouteInfo :: Maybe RI.RouteInfo <- Redis.withMasterRedis $ Redis.get key
+      case mbRouteInfo of
+        Just routeInfo -> do
+          let src = (NE.head req.waypoints) :: Maps.LatLong
+          let points = fromMaybe [] routeInfo.points
+          selectedWaypoints <- getSelectedWaypoints src points
+          let req' :: Maps.GetRoutesReq =
+                Maps.GetRoutesReq
+                  { waypoints = NE.fromList ([src] ++ selectedWaypoints ++ [NE.last req.waypoints]),
+                    mode = req.mode,
+                    calcPoints = req.calcPoints
+                  }
+          Maps.getTripRoutes merchantId merchantOpCityId entityId' req'
+        Nothing -> do
+          logDebug $ "No route info found in redis"
+          Maps.getTripRoutes merchantId merchantOpCityId entityId' req
+    Nothing -> do
+      Maps.getTripRoutes merchantId merchantOpCityId entityId req
+
+getSelectedWaypoints :: ServiceFlow m r => Maps.LatLong -> [Maps.LatLong] -> m [Maps.LatLong]
+getSelectedWaypoints src waypoints =
+  case waypoints of
+    (pt : pts) -> do
+      let distance = distanceBetweenInMeters src pt
+      if distance < (50 :: HighPrecMeters)
+        then pure $ pickNWayPoints 5 pts
+        else do
+          logDebug $ "Distance between src and pt is greater than 50 meters, so not picking any waypoints"
+          pure []
+    [] -> do
+      logDebug $ "No waypoints to pick"
+      pure []
