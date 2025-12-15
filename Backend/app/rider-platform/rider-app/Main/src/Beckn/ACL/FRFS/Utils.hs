@@ -106,9 +106,9 @@ mkFareBreakup fareBreakup = do
   title <- fareBreakup.quotationBreakupInnerTitle & fromMaybeM (InvalidRequest "Title not found")
   price <- fareBreakup.quotationBreakupInnerPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Price not found")
 
-  breakupItem <- fareBreakup.quotationBreakupInnerItem & fromMaybeM (InvalidRequest "BreakupItem not found")
-  let pricePerUnit = breakupItem.itemPrice >>= Utils.parseMoney & fromMaybe price
-  let quantity = breakupItem.itemQuantity >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybe 1
+  let breakupItem = fareBreakup.quotationBreakupInnerItem
+      pricePerUnit = breakupItem >>= (.itemPrice) >>= Utils.parseMoney & fromMaybe price
+      quantity = breakupItem >>= (.itemQuantity) >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybe 1
 
   pure $
     Domain.DFareBreakUp
@@ -123,13 +123,13 @@ parseTickets item fulfillments = do
   fulfillmentIds <- item.itemFulfillmentIds & fromMaybeM (InvalidRequest "FulfillmentIds not found")
   when (null fulfillmentIds) $ throwError $ InvalidRequest "Empty fulfillmentIds"
 
-  let ticketFulfillments = filterByIds fulfillmentIds "TICKET"
-      finalTicketFulfillments = if not (null ticketFulfillments) then ticketFulfillments else filterByIds fulfillmentIds "TRIP"
+  let ticketFulfillments = filterByIds "TICKET"
+      finalTicketFulfillments = if not (null ticketFulfillments) then ticketFulfillments else filterByIds "TRIP"
   when (null finalTicketFulfillments) $ throwError $ InvalidRequest "No ticket fulfillment found"
   fallbackTicketNumber <- getTicketNumber
   return $ mapMaybe (parseTicket fallbackTicketNumber) finalTicketFulfillments
   where
-    filterByIds fIds fullfillmentType = filter (\f -> f.fulfillmentId `elem` (Just <$> fIds) && f.fulfillmentType == Just fullfillmentType) fulfillments
+    filterByIds fullfillmentType = filter (\f -> f.fulfillmentType == Just fullfillmentType) fulfillments
 
 getTicketNumber :: (MonadFlow m) => m (Maybe Text)
 getTicketNumber = do
@@ -405,8 +405,10 @@ data BppData = BppData
 mkCheckInprogressKey :: Text -> Text
 mkCheckInprogressKey transactionId = "FRFS:OnStatus:Solicited-" <> transactionId
 
-mkDCategorySelect :: (MonadFlow m) => Spec.Item -> m Domain.DCategorySelect
-mkDCategorySelect orderItem = do
+type ItemWithPrice = (Spec.Item, Price)
+
+mkDCategorySelect :: (MonadFlow m) => ItemWithPrice -> m Domain.DCategorySelect
+mkDCategorySelect (orderItem, quoteOfferedPrice) = do
   bppItemId' <- orderItem.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
   quantity' <- orderItem.itemQuantity >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybeM (InvalidRequest "Item Quantity not found")
   let category =
@@ -414,6 +416,44 @@ mkDCategorySelect orderItem = do
           Just "SJT" -> ADULT
           Just "SFSJT" -> FEMALE
           _ -> ADULT
-      originalPrice = orderItem.itemPrice >>= Utils.parsePrice
-      offeredPrice = orderItem.itemPrice >>= Utils.parseOfferPrice
-  return $ DCategorySelect {bppItemId = bppItemId', quantity = quantity', category = category, price = fromMaybe (Price (Money 0) (HighPrecMoney 0.0) INR) (offeredPrice <|> originalPrice)}
+      itemOfferedPrice = orderItem.itemPrice >>= Utils.parseOfferPrice
+      offeredPrice = fromMaybe quoteOfferedPrice itemOfferedPrice
+  return $ DCategorySelect {bppItemId = bppItemId', quantity = quantity', category = category, price = fromMaybe (Price (Money 0) (HighPrecMoney 0.0) INR) (Just offeredPrice)}
+
+getBreakupPrice :: MonadFlow m => Spec.QuotationBreakupInner -> m Price
+getBreakupPrice b = b.quotationBreakupInnerPrice >>= Utils.parsePrice & fromMaybeM (InvalidRequest "Invalid breakup price")
+
+computeOrderAdjustments :: MonadFlow m => [Spec.QuotationBreakupInner] -> m (Price, Price)
+computeOrderAdjustments breakup = do
+  let isToll b = b.quotationBreakupInnerTitle == Just "TOLL"
+      isOffer b = b.quotationBreakupInnerTitle == Just "OFFER"
+  tollPrices <- traverse getBreakupPrice (filter isToll breakup)
+  offerPrices <- traverse getBreakupPrice (filter isOffer breakup)
+  toll <- sumPrices tollPrices
+  offer <- sumPrices offerPrices
+  pure (toll, offer)
+
+baseFareForItem :: MonadFlow m => Text -> [Spec.QuotationBreakupInner] -> m Price
+baseFareForItem itemId breakup = do
+  let isBaseFare b =
+        b.quotationBreakupInnerTitle == Just "BASE_FARE"
+          && (b.quotationBreakupInnerItem >>= (.itemId)) == Just itemId
+
+  prices <- traverse getBreakupPrice (filter isBaseFare breakup)
+
+  case prices of
+    [] -> throwError (InvalidRequest ("BASE_FARE not found for item " <> itemId))
+    _ -> sumPrices prices
+
+zipItemsWithPrice :: MonadFlow m => [Spec.Item] -> [Spec.QuotationBreakupInner] -> m [(Spec.Item, Price)]
+zipItemsWithPrice items breakup = do
+  (toll, offer) <- computeOrderAdjustments breakup
+  forM items $ \item -> do
+    itemId <- item.itemId & fromMaybeM (InvalidRequest "ItemId not found")
+    baseFare <- baseFareForItem itemId breakup
+    finalWithToll <- addPrice baseFare toll
+    finalPrice <- subtractPrice finalWithToll offer
+    pure (item, finalPrice)
+
+sumPrices :: (MonadThrow m, Log m) => [Price] -> m Price
+sumPrices prices = withCurrencyCheckingList prices $ \mbCurrency amounts -> mkPrice mbCurrency (sum amounts)

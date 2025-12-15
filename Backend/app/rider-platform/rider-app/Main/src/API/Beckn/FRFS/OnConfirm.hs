@@ -19,8 +19,10 @@ import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import Data.Aeson (eitherDecodeStrict')
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DOnConfirm
 import Environment
+import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -32,16 +34,16 @@ import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import TransactionLogs.PushLogs
 
-type API = Spec.OnConfirmAPI
+type API = Spec.OnConfirmAPIBS
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onConfirm
 
-onConfirm ::
-  SignatureAuthResult ->
-  Spec.OnConfirmReq ->
-  FlowHandler Spec.AckResponse
-onConfirm _ req = withFlowHandlerAPI $ do
+onConfirm :: SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
+onConfirm _ reqBS = withFlowHandlerAPI $ do
+  req <- case decodeOnConfirmReq reqBS of
+    Right r -> pure r
+    Left err -> throwError (InvalidRequest (toText err))
   transaction_id <- req.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   bookingId <- req.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   ticketBooking <- QFRFSTicketBooking.findById (Id bookingId) >>= fromMaybeM (InvalidRequest "Invalid booking id")
@@ -65,3 +67,14 @@ onConfirmLockKey id = "FRFS:OnConfirm:bppOrderId-" <> id
 
 onConfirmProcessingLockKey :: Text -> Text
 onConfirmProcessingLockKey id = "FRFS:OnConfirm:Processing:bppOrderId-" <> id
+
+decodeOnConfirmReq :: ByteString -> Either String Spec.OnConfirmReq
+decodeOnConfirmReq bs =
+  case eitherDecodeStrict' bs of
+    Right v -> Right v
+    Left _ ->
+      case Utils.unescapeQuotedJSON bs of
+        Just inner ->
+          eitherDecodeStrict' inner
+        Nothing ->
+          Left "Unable to decode OnConfirmReq: invalid JSON format."
