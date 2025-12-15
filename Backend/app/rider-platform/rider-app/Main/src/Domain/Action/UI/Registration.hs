@@ -408,6 +408,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         if identifierType == SP.DEVICE
           then do
             _ <- RegistrationToken.create regToken
+            void $ RegistrationToken.setDirectAuth regToken.id (castChannelToMedium otpChannel)
             pure $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) Nothing person.blocked Nothing Nothing
           else do
             deploymentVersion <- asks (.version)
