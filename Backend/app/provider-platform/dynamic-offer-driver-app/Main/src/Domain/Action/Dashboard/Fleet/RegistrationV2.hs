@@ -26,6 +26,7 @@ import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.FleetOwnerInformation as FOI
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -34,6 +35,7 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (encrypt, getDbHash)
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -424,13 +426,20 @@ postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerI
           SPBA.PersonStripeInfo
             { personDob = fleetOwnerInfo.fleetDob,
               address = Just stripeAddress,
-              idNumber = Just stripeIdNumber
+              idNumber = Just stripeIdNumber,
+              businessType = castBusinessType fleetOwnerInfo.fleetType
             }
   let fleetRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
   castFleetBankAccountLinkResp <$> SPBA.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle paymentMode fleetOwner
 
 castFleetBankAccountLinkResp :: Onboarding.BankAccountLinkResp -> Common.FleetBankAccountLinkResp
 castFleetBankAccountLinkResp Onboarding.BankAccountLinkResp {..} = Common.FleetBankAccountLinkResp {..}
+
+castBusinessType :: DFOI.FleetType -> Payment.BusinessType
+castBusinessType = \case
+  DFOI.NORMAL_FLEET -> Payment.Individual
+  DFOI.RENTAL_FLEET -> Payment.Individual
+  DFOI.BUSINESS_FLEET -> Payment.Company
 
 getRegistrationV2RegisterBankAccountStatus ::
   ShortId DMerchant.Merchant ->

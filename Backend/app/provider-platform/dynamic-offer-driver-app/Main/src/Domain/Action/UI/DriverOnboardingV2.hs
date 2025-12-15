@@ -37,6 +37,7 @@ import Kernel.Beam.Functions
 import qualified Kernel.External.BackgroundVerification.Interface as BackgroundVerification
 import Kernel.External.Encryption
 import Kernel.External.Maps (LatLong (..))
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (Language (..), ServiceFlow)
 import qualified Kernel.External.Verification.Interface as VI
 import qualified Kernel.Prelude
@@ -907,7 +908,8 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) paymentMode = do
           SPBA.PersonStripeInfo
             { personDob = driverLicense.driverDob,
               address = Nothing, -- will add later
-              idNumber = Nothing -- will add later
+              idNumber = Nothing, -- will add later
+              businessType = Payment.Individual
             }
   let driverRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
   SPBA.getPersonRegisterBankAccountLink driverRegisterBankAccountLinkHandle paymentMode person

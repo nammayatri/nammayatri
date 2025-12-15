@@ -3,7 +3,7 @@
 
 module API.Types.ProviderPlatform.Fleet.Endpoints.Driver where
 
-import qualified API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
@@ -1055,7 +1055,7 @@ data UpdateFleetOwnerInfoReq = UpdateFleetOwnerInfoReq
     stripeAddress :: Kernel.Prelude.Maybe Dashboard.Common.Driver.StripeAddress,
     stripeIdNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    fleetType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType
+    fleetType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetType
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

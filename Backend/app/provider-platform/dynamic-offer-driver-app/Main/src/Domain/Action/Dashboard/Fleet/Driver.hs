@@ -1765,17 +1765,20 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
             DP.lastName = req.lastName
           }
   mbUpdFleetOwnerinfo <- do
-    fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
-    reqStripeIdNumber <- forM req.stripeIdNumber encrypt
-    let updFleetOwnerInfo =
-          fleetOwnerInfo
-            { DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
-              DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
-              DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob,
-              DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
-              DFOI.fleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
-            }
-    pure $ Just updFleetOwnerInfo
+    if isJust req.stripeAddress || isJust req.stripeIdNumber || isJust req.fleetDob || isJust req.fleetType || isJust req.fleetName
+      then do
+        fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
+        reqStripeIdNumber <- forM req.stripeIdNumber encrypt
+        let updFleetOwnerInfo =
+              fleetOwnerInfo
+                { DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
+                  DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
+                  DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob,
+                  DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
+                  DFOI.fleetType = maybe fleetOwnerInfo.fleetType DRegV2.castFleetType req.fleetType
+                }
+        pure $ Just updFleetOwnerInfo
+      else pure Nothing
 
   QPerson.updateFleetOwnerDetails personId updDriver
   whenJust mbUpdFleetOwnerinfo FOI.updateFleetOwnerInfo
