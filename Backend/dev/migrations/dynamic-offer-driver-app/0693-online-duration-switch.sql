@@ -7,3 +7,4 @@ WHERE merchant_operating_city_id IN (
     WHERE merchant_short_id = 'MSIL_PARTNER'
     AND city = 'Delhi'
 );
+dslsamdlas
