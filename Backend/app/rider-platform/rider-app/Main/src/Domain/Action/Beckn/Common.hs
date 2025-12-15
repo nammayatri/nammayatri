@@ -1132,6 +1132,7 @@ validateRideCompletedReq RideCompletedReq {..} = do
   booking <- QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bookingDetails.bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   let bookingCanBeCompleted = booking.status == DRB.TRIP_ASSIGNED
+      rideIsNew = ride.status == DRide.NEW
       rideCanBeCompleted = ride.status == DRide.INPROGRESS
       bookingAlreadyCompleted = booking.status == DRB.COMPLETED
       rideAlreadyCompleted = ride.status == DRide.COMPLETED
@@ -1140,7 +1141,7 @@ validateRideCompletedReq RideCompletedReq {..} = do
     else do
       unless (isInitiatedByCronJob || bookingCanBeCompleted || (bookingAlreadyCompleted && rideCanBeCompleted)) $
         throwError (BookingInvalidStatus $ show booking.status)
-      unless (isInitiatedByCronJob || rideCanBeCompleted || (rideAlreadyCompleted && bookingCanBeCompleted)) $
+      unless (isInitiatedByCronJob || rideCanBeCompleted || ((rideAlreadyCompleted || rideIsNew) && bookingCanBeCompleted)) $
         throwError (RideInvalidStatus $ show ride.status)
       person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
       return . Left $ ValidatedRideCompletedReq {..}

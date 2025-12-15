@@ -27,6 +27,7 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Cancel as DCancel
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.CancellationReason as DTCR
 import Domain.Types.Merchant (Merchant)
@@ -44,6 +45,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import qualified Lib.DriverCoins.Types as DCT
 import Servant hiding (throwError)
 import qualified SharedLogic.SearchTryLocker as STL
+import SharedLogic.SyncRide (rideSync)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -87,49 +89,56 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
       internalEndPointHashMap <- asks (.internalEndPointHashMap)
       merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
       booking <- QRB.findById cancelRideReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelRideReq.bookingId.getId)
-      fork "cancel received pushing ondc logs" do
-        void $ pushLogs "cancel" (toJSON reqV2) merchant.id.getId "MOBILITY"
-      let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
-      bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-      ttl <- bppConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-      context <- ContextV2.buildContextV2 Context.ON_CANCEL Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)
-      let cancelStatus = A.decode . A.encode =<< cancelRideReq.cancelStatus
-      case cancelStatus of
-        Just Enums.CONFIRM_CANCEL -> do
-          Redis.whenWithLockRedis (cancelLockKey cancelRideReq.bookingId.getId) 60 $ do
-            (_merchant, _booking) <- DCancel.validateCancelRequest transporterId subscriber cancelRideReq
-            mbActiveSearchTry <- QST.findActiveTryByQuoteId _booking.quoteId
-            fork ("cancelBooking:" <> cancelRideReq.bookingId.getId) $ do
-              (isReallocated, cancellationCharge) <- DCancel.cancel cancelRideReq merchant booking mbActiveSearchTry
+      if (booking.status == DBooking.COMPLETED)
+        then do
+          logError $ "Completed booking cancel request received for ride id : " <> cancelRideReq.bookingId.getId
+          mbRide <- QRide.findActiveByRBId booking.id
+          void $ rideSync Nothing mbRide booking merchant
+          return Ack
+        else do
+          fork "cancel received pushing ondc logs" do
+            void $ pushLogs "cancel" (toJSON reqV2) merchant.id.getId "MOBILITY"
+          let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
+          bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+          ttl <- bppConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+          context <- ContextV2.buildContextV2 Context.ON_CANCEL Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)
+          let cancelStatus = A.decode . A.encode =<< cancelRideReq.cancelStatus
+          case cancelStatus of
+            Just Enums.CONFIRM_CANCEL -> do
+              Redis.whenWithLockRedis (cancelLockKey cancelRideReq.bookingId.getId) 60 $ do
+                (_merchant, _booking) <- DCancel.validateCancelRequest transporterId subscriber cancelRideReq
+                mbActiveSearchTry <- QST.findActiveTryByQuoteId _booking.quoteId
+                fork ("cancelBooking:" <> cancelRideReq.bookingId.getId) $ do
+                  (isReallocated, cancellationCharge) <- DCancel.cancel cancelRideReq merchant booking mbActiveSearchTry
+                  let onCancelBuildReq =
+                        OC.DBookingCancelledReqV2
+                          { booking = booking,
+                            cancellationSource = DBCR.ByUser,
+                            cancellationFee = cancellationCharge
+                          }
+                  unless isReallocated $ do
+                    buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
+                    void $
+                      Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
+                        pure buildOnCancelMessageV2
+            Just Enums.SOFT_CANCEL -> do
+              mbRide <- QRide.findActiveByRBId booking.id
+              cancellationCharges <- maybe (return Nothing) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer $ DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason) mbRide
+              void $ case (cancellationCharges, mbRide) of
+                (Just priceEntity, Just ride) -> QRide.updateCancellationFeeIfCancelledField (Just priceEntity.amount) ride.id
+                _ -> return ()
               let onCancelBuildReq =
                     OC.DBookingCancelledReqV2
                       { booking = booking,
                         cancellationSource = DBCR.ByUser,
-                        cancellationFee = cancellationCharge
+                        cancellationFee = cancellationCharges
                       }
-              unless isReallocated $ do
-                buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
-                void $
-                  Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
-                    pure buildOnCancelMessageV2
-        Just Enums.SOFT_CANCEL -> do
-          mbRide <- QRide.findActiveByRBId booking.id
-          cancellationCharges <- maybe (return Nothing) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer $ DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason) mbRide
-          void $ case (cancellationCharges, mbRide) of
-            (Just priceEntity, Just ride) -> QRide.updateCancellationFeeIfCancelledField (Just priceEntity.amount) ride.id
-            _ -> return ()
-          let onCancelBuildReq =
-                OC.DBookingCancelledReqV2
-                  { booking = booking,
-                    cancellationSource = DBCR.ByUser,
-                    cancellationFee = cancellationCharges
-                  }
-          buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
-          void $
-            Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
-              pure buildOnCancelMessageV2
-        _ -> throwError $ InvalidRequest "Invalid cancel status"
-      return Ack
+              buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
+              void $
+                Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
+                  pure buildOnCancelMessageV2
+            _ -> throwError $ InvalidRequest "Invalid cancel status"
+          return Ack
     DCancel.CancelSearch cancelSearchReq -> do
       searchTry <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
       -- Lock Description: This is a Lock held between Driver Respond and Cancel Search, if Driver Respond Quote is OnGoing then the Cancel Search will fail with `DriverAlreadyQuoted`.
