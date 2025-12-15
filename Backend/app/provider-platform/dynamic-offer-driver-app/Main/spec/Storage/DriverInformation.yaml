@@ -30,6 +30,8 @@ DriverInformation:
       derive: "HttpInstance"
     PayoutVpaStatus:
       enum: "VIA_WEBHOOK, MANUALLY_ADDED, VERIFIED_BY_USER"
+    OnboardingAs:
+      enum: "FLEET_DRIVER, INDIVIDUAL"
     DriverSummary:
       totalEarnings: Money
       bonusEarned: Money
@@ -140,6 +142,7 @@ DriverInformation:
     ruleBasedUpgradeTiers: Maybe [UpgradedTier]
     dailyExtraKms: Maybe HighPrecMeters
     weeklyExtraKms: Maybe HighPrecMeters
+    onboardingAs: Maybe OnboardingAs
 
   default:
     active: "false"
@@ -206,6 +209,7 @@ DriverInformation:
     softBlockStiers: "text[]"
     servicesEnabledForSubscription: "text[]"
     ruleBasedUpgradeTiers: "json"
+    onboardingAs: character varying (255)
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
@@ -302,6 +306,7 @@ DriverInformation:
           isTTSEnabled,
           isHighAccuracyLocationEnabled,
           rideRequestVolumeEnabled,
+          onboardingAs,
         ]
       where: driverId
     updateRentalInterCityAndIntraCitySwitch:

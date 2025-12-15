@@ -42,6 +42,7 @@ import Domain.Types.AadhaarCard
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverFee as DDF
 import Domain.Types.DriverInformation
+import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverLicense
 import Domain.Types.DriverPanCard
 import Domain.Types.DriverRCAssociation
@@ -504,8 +505,14 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         reactVersion = person.reactBundleVersion,
         driverMode = info.mode,
         lastOfflineTime = info.lastOfflineTime,
-        drunkAndDriveViolationCount
+        drunkAndDriveViolationCount,
+        onboardingAs = castOnboardingAs <$> info.onboardingAs
       }
+  where
+    castOnboardingAs :: DI.OnboardingAs -> Common.OnboardingAs
+    castOnboardingAs = \case
+      DI.FLEET_DRIVER -> Common.FLEET_DRIVER
+      DI.INDIVIDUAL -> Common.INDIVIDUAL
 
 buildAadhaarAssociationAPIEntity :: EncFlow m r => DriverInformation -> AadhaarCard -> m Common.AadhaarAssociationAPIEntity
 buildAadhaarAssociationAPIEntity driverInfo AadhaarCard {..} = do
