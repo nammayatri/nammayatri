@@ -140,7 +140,8 @@ data AuthReq = AuthReq
     registrationLon :: Maybe Double,
     enableOtpLessRide :: Maybe Bool,
     allowBlockedUserLogin :: Maybe Bool,
-    isOperatorReq :: Maybe Bool
+    isOperatorReq :: Maybe Bool,
+    reuseToken :: Maybe Bool
   }
   deriving (Generic, ToJSON, Show, ToSchema)
 
@@ -167,6 +168,7 @@ instance A.FromJSON AuthReq where
         <*> obj .:? "enableOtpLessRide"
         <*> obj .:? "allowBlockedUserLogin"
         <*> obj .:? "isOperatorReq"
+        <*> obj .:? "reuseToken"
     A.String s ->
       case A.eitherDecodeStrict (TE.encodeUtf8 s) of
         Left err -> fail err
@@ -251,6 +253,19 @@ data AuthVerifyRes = AuthVerifyRes
 authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCount"
 
+findReusableToken :: (CacheFlow m r, EsqDBFlow m r, MonadTime m) => Id SP.Person -> m (Maybe SR.RegistrationToken)
+findReusableToken personId = do
+  regTokens <- RegistrationToken.findAllByPersonId personId
+  let verifiedTokens = filter (\token -> token.verified) regTokens
+  validTokens <-
+    filterM
+      ( \token -> do
+          isExpiredBool <- isExpired (realToFrac (token.tokenExpiry * 24 * 60 * 60)) token.updatedAt
+          return (not isExpiredBool)
+      )
+      verifiedTokens
+  return $ listToMaybe $ sortOn (Down . (.updatedAt)) validTokens
+
 auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "kafkaProducerTools" ::: KafkaProducerTools],
     CacheFlow m r,
@@ -334,7 +349,48 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
-  regToken <- makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM False
+
+  (mbDepotCode, mbIsDepotAdmin) <-
+    if req.isOperatorReq == Just True
+      then do
+        mbDepotManager <- QDepotManager.findByPersonId person.id
+        return (mbDepotManager <&> (.depotCode), mbDepotManager <&> (.isAdmin))
+      else return (Nothing, Nothing)
+
+  -- Check if we should reuse an existing token
+  mbReusableToken <-
+    if (fromMaybe False req.reuseToken) && (fromMaybe False req.isOperatorReq) && (mbDepotCode /= Nothing)
+      then findReusableToken person.id
+      else return Nothing
+
+  -- Create new registration token entry with same token value if reusing, otherwise new token
+  regToken <- case mbReusableToken of
+    Just existingToken -> do
+      -- Create new entry with same token value but new id, new OTP, reset attempts
+      otp <- maybe generateOTPCode return useFakeOtpM
+      rtid <- L.generateGUID
+      currentTime <- getCurrentTime
+      return $
+        SR.RegistrationToken
+          { id = Id rtid,
+            token = existingToken.token, -- Reuse same token value
+            attempts = scfg.attempts,
+            authMedium = castChannelToMedium otpChannel,
+            authType = SR.OTP,
+            authValueHash = otp,
+            verified = False,
+            authExpiry = scfg.authExpiry,
+            tokenExpiry = scfg.tokenExpiry,
+            entityId = entityId,
+            merchantId = mkId,
+            entityType = SR.USER,
+            createdAt = currentTime,
+            updatedAt = currentTime,
+            info = Nothing,
+            createdViaPartnerOrgId = Nothing
+          }
+    Nothing -> makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM False
+
   if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
     then do
       deploymentVersion <- asks (.version)
@@ -354,12 +410,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
           riderConfig.emailOtpConfig
           mbSenderHash
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
-  (mbDepotCode, mbIsDepotAdmin) <-
-    if req.isOperatorReq == Just True
-      then do
-        mbDepotManager <- QDepotManager.findByPersonId person.id
-        return (mbDepotManager <&> (.depotCode), mbDepotManager <&> (.isAdmin))
-      else return (Nothing, Nothing)
+
   return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked mbDepotCode mbIsDepotAdmin
   where
     castChannelToMedium :: SOTP.OTPChannel -> SR.Medium
@@ -1007,7 +1058,8 @@ createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
                 registrationLon = Nothing,
                 enableOtpLessRide = Nothing,
                 allowBlockedUserLogin = Nothing,
-                isOperatorReq = Nothing
+                isOperatorReq = Nothing,
+                reuseToken = Nothing
               }
       createdPerson <-
         createPerson authReq SP.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing
