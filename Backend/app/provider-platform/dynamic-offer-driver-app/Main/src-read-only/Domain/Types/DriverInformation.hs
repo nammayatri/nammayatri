@@ -78,6 +78,7 @@ data DriverInformationE e = DriverInformation
     numOfLocks :: Kernel.Prelude.Int,
     onRide :: Kernel.Prelude.Bool,
     onRideTripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
+    onboardingAs :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.OnboardingAs,
     onboardingVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     onlineDurationRefreshedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     panNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
@@ -90,7 +91,7 @@ data DriverInformationE e = DriverInformation
     payoutVpaStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus,
     planExpiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     preferredPrimarySpecialLocId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation),
-    preferredSecondarySpecialLocIds :: [(Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)],
+    preferredSecondarySpecialLocIds :: [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation],
     prepaidSubscriptionBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -120,9 +121,9 @@ data DriverInformationE e = DriverInformation
   }
   deriving (Generic)
 
-type DriverInformation = DriverInformationE ('AsEncrypted)
+type DriverInformation = DriverInformationE 'AsEncrypted
 
-type DecryptedDriverInformation = DriverInformationE ('AsUnencrypted)
+type DecryptedDriverInformation = DriverInformationE 'AsUnencrypted
 
 instance EncryptedItem DriverInformation where
   type Unencrypted DriverInformation = (DecryptedDriverInformation, HashSalt)
@@ -185,6 +186,7 @@ instance EncryptedItem DriverInformation where
           numOfLocks = numOfLocks entity,
           onRide = onRide entity,
           onRideTripCategory = onRideTripCategory entity,
+          onboardingAs = onboardingAs entity,
           onboardingVehicleCategory = onboardingVehicleCategory entity,
           onlineDurationRefreshedAt = onlineDurationRefreshedAt entity,
           panNumber = panNumber_,
@@ -284,6 +286,7 @@ instance EncryptedItem DriverInformation where
             numOfLocks = numOfLocks entity,
             onRide = onRide entity,
             onRideTripCategory = onRideTripCategory entity,
+            onboardingAs = onboardingAs entity,
             onboardingVehicleCategory = onboardingVehicleCategory entity,
             onlineDurationRefreshedAt = onlineDurationRefreshedAt entity,
             panNumber = panNumber_,
@@ -368,12 +371,16 @@ data DriverSummary = DriverSummary
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data OnboardingAs = FLEET_DRIVER | INDIVIDUAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AirConditionedRestrictionType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverAutoPayStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
 
-$(mkHttpInstancesForEnum (''DriverAutoPayStatus))
+$(mkHttpInstancesForEnum ''DriverAutoPayStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutVpaStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OnboardingAs)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutVpaStatus)

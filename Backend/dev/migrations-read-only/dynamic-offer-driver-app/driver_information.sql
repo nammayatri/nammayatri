@@ -291,3 +291,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN rule_based_upgr
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN weekly_extra_kms integer ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN daily_extra_kms integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN onboarding_as character varying (255) ;
