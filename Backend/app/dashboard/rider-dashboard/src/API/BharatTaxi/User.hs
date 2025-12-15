@@ -34,8 +34,6 @@ import "lib-dashboard" Tools.Client as Client
 data EstimateRequest = EstimateRequest
   { from_id :: Text,
     to_id :: Text,
-    ride_type :: Text,
-    rider_id :: Text,
     luggage :: Int
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
@@ -74,6 +72,7 @@ type ExternalBookingAPI =
     :> "v1"
     :> "booking"
     :> QueryParam' '[Required] "estimateId" Text
+    :> QueryParam' '[Required] "rider_id" Text
     :> Header "accept" Text
     :> Header "token" Text
     :> Post '[JSON] Value
@@ -90,6 +89,7 @@ type API =
            :> Post '[JSON] Value
            :<|> "booking"
            :> QueryParam' '[Required] "estimateId" Text
+           :> QueryParam' '[Required] "rider_id" Text
            :> Post '[JSON] Value
        )
 
@@ -121,7 +121,7 @@ externalEstimateClient = ET.client externalEstimateAPI
 externalBookingAPI :: Proxy ExternalBookingAPI
 externalBookingAPI = Proxy
 
-externalBookingClient :: Text -> Maybe Text -> Maybe Text -> ET.EulerClient Value
+externalBookingClient :: Text -> Text -> Maybe Text -> Maybe Text -> ET.EulerClient Value
 externalBookingClient = ET.client externalBookingAPI
 
 -- | Bharat Taxi API DSL used with generic dashboard client.
@@ -129,7 +129,7 @@ data BharatTaxiAPIs = BharatTaxiAPIs
   { fromListDSL :: ET.EulerClient Value,
     toListDSL :: ET.EulerClient Value,
     estimateDSL :: EstimateRequest -> ET.EulerClient Value,
-    bookingDSL :: Text -> ET.EulerClient Value
+    bookingDSL :: Text -> Text -> ET.EulerClient Value
   }
 
 -- | Build BharatTaxiAPIs from the configured data-server token.
@@ -138,7 +138,7 @@ mkBharatTaxiAPIs token =
   let fromListDSL = externalFromListClient (Just "application/json") (Just token)
       toListDSL = externalToListClient (Just "application/json") (Just token)
       estimateDSL = externalEstimateClient (Just "application/json") (Just token)
-      bookingDSL estimateId = externalBookingClient estimateId (Just "application/json") (Just token)
+      bookingDSL estimateId riderId = externalBookingClient estimateId riderId (Just "application/json") (Just token)
    in BharatTaxiAPIs {..}
 
 -- | Generic caller for Bharat Taxi service, similar to callFleetAPI.
@@ -158,5 +158,5 @@ toList _ = withFlowHandlerAPI' $ callBharatTaxiAPI (.toListDSL)
 estimate :: TokenInfo -> EstimateRequest -> FlowHandler Value
 estimate _ req = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.estimateDSL req)
 
-booking :: TokenInfo -> Text -> FlowHandler Value
-booking _ estimateId = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.bookingDSL estimateId)
+booking :: TokenInfo -> Text -> Text -> FlowHandler Value
+booking _ estimateId riderId = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.bookingDSL estimateId riderId)
