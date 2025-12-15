@@ -372,6 +372,11 @@ Person:
       params: [defaultTestPaymentMethodId]
       where: id
 
+    updatePaymentMode:
+      kvFunction: updateWithKV
+      params: [paymentMode]
+      where: id
+
     findAllByDeviceId:
       kvFunction: findAllWithKV
       where: deviceId

@@ -23,6 +23,7 @@ module Domain.Action.Dashboard.Customer
     postCustomerUpdateSafetyCenterBlocking,
     postCustomerPersonNumbers,
     postCustomerPersonId,
+    postCustomerUpdatePaymentMode,
   )
 where
 
@@ -146,6 +147,7 @@ getCustomerInfo merchantShortId opCity customerId = do
       { numberOfRides,
         falseSafetyAlarmCount = safetySettings.falseSafetyAlarmCount,
         safetyCenterDisabledOnDate = safetySettings.safetyCenterDisabledOnDate,
+        paymentMode = customer.paymentMode,
         ..
       }
 
@@ -177,7 +179,8 @@ buildCustomerListItem person = do
         lastName = person.lastName,
         phoneNo,
         enabled = person.enabled,
-        blocked = person.blocked
+        blocked = person.blocked,
+        paymentMode = person.paymentMode
       }
 
 ---------------------------------------------------------------------
@@ -275,3 +278,17 @@ postCustomerPersonId _ _ req = do
         decMobile <- decrypt p
         return $ Common.PersonRes decMobile.id.getId decMobile.mobileNumber Nothing decMobile.merchantOperatingCityId.getId
       return decryptedPersons
+
+---------------------------------------------------------------------
+postCustomerUpdatePaymentMode :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Common.UpdatePaymentModeReq -> Flow APISuccess
+postCustomerUpdatePaymentMode merchantShortId opCity customerId req = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  let personId = cast @Common.Customer @DP.Person customerId
+  customer <-
+    runInReplica $
+      QP.findById personId
+        >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == customer.merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
+  QP.updatePaymentMode (Just req.paymentMode) personId
+  pure Success
