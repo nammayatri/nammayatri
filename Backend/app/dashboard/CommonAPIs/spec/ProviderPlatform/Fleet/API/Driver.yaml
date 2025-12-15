@@ -23,6 +23,8 @@ imports:
   GetRoutesResp: Kernel.External.Maps
   StripeAddress: Dashboard.Common.Driver
   FleetType: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+  TripCategory: Dashboard.Common
+  ServiceTierType: Dashboard.Common
 module: Driver
 
 apis:
@@ -1350,6 +1352,53 @@ apis:
               - offset: Int
             response:
               type: OnboardedDriversAndUnlinkedVehiclesRes
+
+  - GET: # ListScheduledBookingsForFleetOwnerAPI
+      endpoint: /fleet/scheduledBooking/list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - from: Day
+        - to: Day
+        - tripCategory: TripCategory
+        - currentLocation: LatLong
+      response:
+        type: FleetScheduledBookingListRes
+      helperApi:
+        - GET:
+            endpoint: /fleet/{fleetOwnerId}/scheduledBooking/list
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - limit: Int
+              - offset: Int
+              - from: Day
+              - to: Day
+              - tripCategory: TripCategory
+              - currentLocation: LatLong
+            response:
+              type: FleetScheduledBookingListRes
+
+  - POST: # AssignScheduledBookingToDriverAPI
+      endpoint: /fleet/scheduledBooking/assign
+      auth: ApiAuthV2
+      request:
+        type: AssignScheduledBookingReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/{fleetOwnerId}/scheduledBooking/assign
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            request:
+              type: AssignScheduledBookingReq
+            response:
+              type: APISuccess
+
 types:
   EstimatedRouteDetails:
     - polyline: Maybe Text
@@ -2030,6 +2079,48 @@ types:
   UnlinkedVehicle:
     - vehicleNo: Maybe Text
     - rcId: Maybe Text
+  FleetScheduledBookingListRes:
+    - bookings: [FleetScheduledBooking]
+  FleetScheduledBooking:
+    - bookingDetails: FleetBookingAPIEntity
+    - fareDetails: [RateCardItem]
+  FleetBookingAPIEntity:
+    - id: Text
+    - fromLocation: LocationAPIEntity
+    - toLocation: Maybe LocationAPIEntity
+    - estimatedFare: HighPrecMoney
+    - currency: Currency
+    - estimatedDistance: Maybe Meters
+    - estimatedDuration: Maybe Seconds
+    - startTime: UTCTime
+    - vehicleServiceTier: ServiceTierType
+    - vehicleServiceTierName: Text
+    - tripCategory: TripCategory
+    - distanceToPickup: Maybe Meters
+    - isScheduled: Bool
+  AssignScheduledBookingReq:
+    - bookingId: Text
+    - driverId: Id Driver
+    - clientId: Maybe Text
+    - derive: "'HideSecrets"
+  RateCardItem:
+    - title: Text
+    - price: Money
+    - priceWithCurrency: PriceAPIEntity
+  LocationAPIEntity:
+    - id: Text
+    - lat: Double
+    - lon: Double
+    - street: Maybe Text
+    - door: Maybe Text
+    - city: Maybe Text
+    - state: Maybe Text
+    - country: Maybe Text
+    - building: Maybe Text
+    - areaCode: Maybe Text
+    - area: Maybe Text
+    - instructions: Maybe Text
+    - extras: Maybe Text
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

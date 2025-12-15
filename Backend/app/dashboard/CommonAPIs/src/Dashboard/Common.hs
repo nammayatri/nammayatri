@@ -20,6 +20,12 @@ module Dashboard.Common
   ( module Dashboard.Common,
     module Domain.Types.VehicleVariant,
     VehicleCategory (CAR, MOTORCYCLE, TRAIN, BUS, FLIGHT, AUTO_CATEGORY, AMBULANCE, TRUCK),
+    ServiceTierType,
+    TripCategory,
+    OneWayMode,
+    TripMode,
+    RentalMode,
+    RideShareMode,
     module Reexport,
   )
 where
@@ -31,6 +37,8 @@ import qualified Data.Csv as Csv
 import Data.OpenApi
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import Domain.Types.ServiceTierType (ServiceTierType (..))
+import Domain.Types.Trip (OneWayMode (..), RentalMode, RideShareMode, TripCategory (..), TripMode (..))
 import Domain.Types.VehicleCategory
 import Domain.Types.VehicleVariant
 import Kernel.Prelude

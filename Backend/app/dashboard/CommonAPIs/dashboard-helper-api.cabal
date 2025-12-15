@@ -181,6 +181,7 @@ library
     , esqueleto
     , euler-hs
     , extra
+    , hashable
     , mobility-core
     , openapi3
     , persistent

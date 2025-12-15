@@ -74,17 +74,20 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetDriverUpdate,
     getDriverFleetVehicleListStats,
     getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles,
+    getDriverFleetScheduledBookingList,
+    postDriverFleetScheduledBookingAssign,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Endpoints.Driver as Common
+import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import Control.Applicative (optional)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import Data.Char (isDigit)
 import Data.Csv
-import Data.List (groupBy, sortOn)
+import Data.List (groupBy, nub, sortOn)
 import Data.List.NonEmpty (fromList, toList)
 import qualified Data.List.NonEmpty as NE
 import Data.List.Split (chunksOf)
@@ -98,11 +101,13 @@ import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegV2
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
+import qualified Domain.Action.UI.Driver as UIDriver
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.WMB as DWMB
+import qualified Domain.Types as DTC
 import qualified Domain.Types.Alert as DTA
 import Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.AlertRequest as DTR
@@ -119,12 +124,13 @@ import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.FleetOwnerInformation as DFOI
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as TR
 import qualified Domain.Types.Route as DRoute
-import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.TransporterConfig as DTCConfig
 import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
 import qualified Domain.Types.VehicleCategory as DVC
@@ -162,6 +168,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.FleetBadgeAssociation as CFBA
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Clickhouse.FleetDriverAssociation as CFDA
 import qualified Storage.Clickhouse.FleetOperatorDailyStats as CFODS
@@ -788,7 +795,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
   where
     handleAddVehicleWithTry ::
       DM.Merchant ->
-      DTC.TransporterConfig ->
+      DTCConfig.TransporterConfig ->
       Maybe Text ->
       Text ->
       Common.RegisterRCReq ->
@@ -1554,7 +1561,7 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
         persons <- fetchPersons (map Id driverIds) Nothing Nothing useDBForAnalytics
         pure $ Map.fromList $ map (\person -> (person.personId, buildDriverFullName person)) persons
 
-    buildEarningsResponse :: DTC.TransporterConfig -> QFODSExtra.DriverEarningsAggregated -> (Text, Common.FleetDriverEarningsStatsRes)
+    buildEarningsResponse :: DTCConfig.TransporterConfig -> QFODSExtra.DriverEarningsAggregated -> (Text, Common.FleetDriverEarningsStatsRes)
     buildEarningsResponse config agg =
       let onlineEarningGross = fromMaybe (HighPrecMoney 0.0) agg.onlineTotalEarningSum
           cashEarningGross = fromMaybe (HighPrecMoney 0.0) agg.cashTotalEarningSum
@@ -1580,7 +1587,7 @@ getDriverFleetDriverListStats merchantShortId opCity fleetOwnerId mbFrom mbTo mb
               }
           )
 
-    buildMetricsResponse :: DTC.TransporterConfig -> Day -> Day -> QFODSExtra.DriverMetricsAggregated -> (Text, Common.FleetDriverMetricsStatsRes)
+    buildMetricsResponse :: DTCConfig.TransporterConfig -> Day -> Day -> QFODSExtra.DriverMetricsAggregated -> (Text, Common.FleetDriverMetricsStatsRes)
     buildMetricsResponse config _ _ agg =
       -- commenting for compilation
       let onlineEarning = fromMaybe (HighPrecMoney 0.0) agg.onlineTotalEarningSum
@@ -2700,7 +2707,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
 
   pure $ Common.APISuccessWithUnprocessedEntities unprocessedEntities
   where
-    processDriverByFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
+    processDriverByFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriverByFleetOwner merchant moc transporterConfig fleetOwner req_ = do
       validateDriverName req_.driverName
       validateMobileNumber transporterConfig req_.driverPhoneNumber DCommon.mobileIndianCode
@@ -2715,7 +2722,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           throwError AccessDenied
       linkDriverToFleetOwner merchant moc fleetOwner Nothing req_
 
-    processDriverByOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
+    processDriverByOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
     processDriverByOperator merchant moc transporterConfig operator req_ = do
       validateDriverName req_.driverName
       validateMobileNumber transporterConfig req_.driverPhoneNumber DCommon.mobileIndianCode
@@ -2791,7 +2798,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
 
-validateMobileNumber :: DTC.TransporterConfig -> Text -> Text -> Flow ()
+validateMobileNumber :: DTCConfig.TransporterConfig -> Text -> Text -> Flow ()
 validateMobileNumber transporterConfig mobileNumber mobileCountryCode = do
   when (fromMaybe False transporterConfig.enableMobileNumberValidation) $ do
     result <- try (void $ runRequestValidation Common.validateIndianMobileNumber (Common.UpdatePhoneNumberReq {newPhoneNumber = mobileNumber, newCountryCode = mobileCountryCode}))
@@ -3597,7 +3604,7 @@ getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbVehicleNo m
     maxLimit = 10
     defaultLimit = 5
 
-convertToFleetVehicleStatsItem :: DTC.TransporterConfig -> [FleetRcDailyStatsAggregated] -> Map.Map Text DVRC.VehicleRegistrationCertificate -> [Common.FleetVehicleStatsItem]
+convertToFleetVehicleStatsItem :: DTCConfig.TransporterConfig -> [FleetRcDailyStatsAggregated] -> Map.Map Text DVRC.VehicleRegistrationCertificate -> [Common.FleetVehicleStatsItem]
 convertToFleetVehicleStatsItem transporterConfig agg vehicleMap =
   map mkItem agg
   where
@@ -3690,3 +3697,125 @@ getDriverFleetDriverDetails merchantShortId opCity fleetOwnerId driverId = do
         email = person.email,
         ..
       }
+
+----------------------------------------------------------------------
+getDriverFleetScheduledBookingList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Day ->
+  Maybe Day ->
+  Maybe DTC.TripCategory ->
+  Maybe LatLong ->
+  Flow Common.FleetScheduledBookingListRes
+getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbFromDay mbToDay mbTripCategory mbCurrentLocation = do
+  -- check if fleet owner or stop sending fleetOwnerId
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  if transporterConfig.disableListScheduledBookingAPI
+    then pure $ Common.FleetScheduledBookingListRes {bookings = []}
+    else do
+      case (mbFromDay, mbToDay) of -- added to support more days with same API later
+        (Just from, Just to) -> do
+          when (from > to) $ throwError (InvalidRequest "From date should be less than to date")
+
+          let limit = fromMaybe 10 mbLimit
+              offset = fromMaybe 0 mbOffset
+              possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
+              tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
+          cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+          let allVehicleVariants = nub $ concatMap (.allowedVehicleVariant) cityServiceTiers
+          now <- getCurrentTime
+          let currentDay = utctDay now
+              safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
+
+          scheduledBookings <-
+            if currentDay >= from
+              then UIDriver.getTodayScheduledBookings now merchantOpCityId allVehicleVariants mbCurrentLocation transporterConfig Nothing tripCategory (toInteger limit) (toInteger offset) safelimit
+              else UIDriver.getTommorowScheduledBookings now (UTCTime from 0) merchantOpCityId allVehicleVariants mbCurrentLocation transporterConfig Nothing tripCategory (toInteger limit) (toInteger offset)
+
+          bookings <- mapM (UIDriver.buildBookingAPIEntityFromBooking mbCurrentLocation) (catMaybes scheduledBookings)
+          fleetBookings <- mapM convertToFleetScheduledBooking (catMaybes bookings)
+
+          pure $ Common.FleetScheduledBookingListRes {bookings = fleetBookings}
+        _ -> pure $ Common.FleetScheduledBookingListRes {bookings = []}
+  where
+    convertToFleetScheduledBooking :: UIDriver.ScheduleBooking -> Flow Common.FleetScheduledBooking
+    convertToFleetScheduledBooking UIDriver.ScheduleBooking {..} = do
+      fleetBookingDetails <- convertBookingAPIEntity bookingDetails
+      fleetFareDetails <- mapM convertRateCardItem fareDetails
+      pure $
+        Common.FleetScheduledBooking
+          { bookingDetails = fleetBookingDetails,
+            fareDetails = fleetFareDetails
+          }
+
+    convertBookingAPIEntity :: UIDriver.BookingAPIEntity -> Flow Common.FleetBookingAPIEntity
+    convertBookingAPIEntity UIDriver.BookingAPIEntity {..} = do
+      fromLoc <- convertLocation fromLocation
+      toLoc <- mapM convertLocation toLocation
+      pure $
+        Common.FleetBookingAPIEntity
+          { id = id.getId,
+            fromLocation = fromLoc,
+            toLocation = toLoc,
+            estimatedFare = estimatedFare,
+            currency = currency,
+            estimatedDistance = estimatedDistance,
+            estimatedDuration = estimatedDuration,
+            startTime = startTime,
+            vehicleServiceTier = vehicleServiceTier,
+            vehicleServiceTierName = vehicleServiceTierName,
+            tripCategory = tripCategory,
+            distanceToPickup = distanceToPickup,
+            isScheduled = isScheduled
+          }
+
+    convertLocation :: DLoc.Location -> Flow Common.LocationAPIEntity
+    convertLocation DLoc.Location {..} = do
+      let DLoc.LocationAddress {..} = address
+      pure $
+        Common.LocationAPIEntity
+          { id = id.getId,
+            lat = lat,
+            lon = lon,
+            street = street,
+            door = door,
+            city = city,
+            state = state,
+            country = country,
+            building = building,
+            areaCode = areaCode,
+            area = area,
+            instructions = instructions,
+            extras = extras
+          }
+
+    convertRateCardItem :: DOVT.RateCardItem -> Flow Common.RateCardItem
+    convertRateCardItem DOVT.RateCardItem {..} = do
+      pure $
+        Common.RateCardItem
+          { title = title,
+            price = price,
+            priceWithCurrency = priceWithCurrency
+          }
+
+----------------------------------------------------------------------
+postDriverFleetScheduledBookingAssign ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.AssignScheduledBookingReq ->
+  Flow APISuccess
+postDriverFleetScheduledBookingAssign merchantShortId opCity fleetOwnerId Common.AssignScheduledBookingReq {..} = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let driverPersonId = cast @Common.Driver @DP.Person driverId
+  fleetDriverAssociation <- QFDAExtra.findByDriverId driverPersonId True >>= fromMaybeM (InvalidRequest "Driver not associated with fleet")
+  unless (fleetDriverAssociation.fleetOwnerId == fleetOwnerId) $ throwError (InvalidRequest "Driver does not belong to this fleet owner")
+  void $ UIDriver.acceptScheduledBooking (driverPersonId, merchant.id, merchantOpCityId) clientId (Id bookingId)
+  pure Success

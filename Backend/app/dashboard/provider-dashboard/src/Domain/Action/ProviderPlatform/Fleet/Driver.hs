@@ -74,6 +74,8 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetVehicleListStats,
     getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles,
     getDriverFleetDriverDetails,
+    getDriverFleetScheduledBookingList,
+    postDriverFleetScheduledBookingAssign,
   )
 where
 
@@ -641,3 +643,17 @@ getDriverFleetDriverDetails merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let fleetOwnerId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverDetails) fleetOwnerId driverId
+
+getDriverFleetScheduledBookingList :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Common.TripCategory) -> Kernel.Prelude.Maybe (Kernel.External.Maps.Types.LatLong) -> Environment.Flow Common.FleetScheduledBookingListRes)
+getDriverFleetScheduledBookingList merchantShortId opCity apiTokenInfo limit offset from to tripCategory currentLocation = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let fleetOwnerId = apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetScheduledBookingList) fleetOwnerId limit offset from to tripCategory currentLocation
+
+postDriverFleetScheduledBookingAssign :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AssignScheduledBookingReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverFleetScheduledBookingAssign merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req.driverId) (Just req)
+  T.withTransactionStoring transaction $ do
+    let fleetOwnerId = apiTokenInfo.personId.getId
+    Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetScheduledBookingAssign) fleetOwnerId req
