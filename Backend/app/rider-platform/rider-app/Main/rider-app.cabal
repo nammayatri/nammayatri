@@ -876,6 +876,7 @@ library
       Domain.Types.PassType
       Domain.Types.PassVerifyTransaction
       Domain.Types.PaymentCustomer
+      Domain.Types.PaymentTransactionOfferPayout
       Domain.Types.PayoutConfig
       Domain.Types.Person
       Domain.Types.PersonDefaultEmergencyNumber
@@ -1024,6 +1025,7 @@ library
       Storage.Beam.PassType
       Storage.Beam.PassVerifyTransaction
       Storage.Beam.PaymentCustomer
+      Storage.Beam.PaymentTransactionOfferPayout
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
       Storage.Beam.PersonDefaultEmergencyNumber
@@ -1237,6 +1239,7 @@ library
       Storage.Queries.PassType
       Storage.Queries.PassVerifyTransaction
       Storage.Queries.PaymentCustomer
+      Storage.Queries.PaymentTransactionOfferPayout
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
       Storage.Queries.PersonDefaultEmergencyNumber
