@@ -51,7 +51,7 @@ where
 import qualified Data.Aeson as A
 import Data.Aeson.Types ((.:), (.:?))
 import Data.Either.Extra (eitherToMaybe)
-import Data.List (nub)
+import Data.List (head, nub)
 import Data.Maybe (listToMaybe)
 import Data.OpenApi hiding (email, info, tags)
 import qualified Data.Text as T
@@ -140,7 +140,8 @@ data AuthReq = AuthReq
     registrationLon :: Maybe Double,
     enableOtpLessRide :: Maybe Bool,
     allowBlockedUserLogin :: Maybe Bool,
-    isOperatorReq :: Maybe Bool
+    isOperatorReq :: Maybe Bool,
+    reuseToken :: Maybe Bool
   }
   deriving (Generic, ToJSON, Show, ToSchema)
 
@@ -167,6 +168,7 @@ instance A.FromJSON AuthReq where
         <*> obj .:? "enableOtpLessRide"
         <*> obj .:? "allowBlockedUserLogin"
         <*> obj .:? "isOperatorReq"
+        <*> obj .:? "reuseToken"
     A.String s ->
       case A.eitherDecodeStrict (TE.encodeUtf8 s) of
         Left err -> fail err
@@ -335,13 +337,23 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
   regToken <- makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM False
+  (regTokenToUse, shouldCreate) <-
+    if req.reuseToken == Just True
+      then do
+        existingTokens <- RegistrationToken.findAllByPersonIdAndMerchantId person.id merchant.id
+        if not (null existingTokens)
+          then do
+            let existingToken = head existingTokens
+            return (existingToken, False)
+          else return (regToken, True)
+      else return (regToken, True)
   if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
     then do
       deploymentVersion <- asks (.version)
       void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion
-      RegistrationToken.create regToken
+      when shouldCreate $ RegistrationToken.create regTokenToUse
       when (isNothing useFakeOtpM) $ do
-        let otpCode = SR.authValueHash regToken
+        let otpCode = SR.authValueHash regTokenToUse
         SOTP.sendOTP
           otpChannel
           otpCode
@@ -360,7 +372,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         mbDepotManager <- QDepotManager.findByPersonId person.id
         return (mbDepotManager <&> (.depotCode), mbDepotManager <&> (.isAdmin))
       else return (Nothing, Nothing)
-  return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked mbDepotCode mbIsDepotAdmin
+  return $ AuthRes regTokenToUse.id regTokenToUse.attempts regTokenToUse.authType Nothing Nothing person.blocked mbDepotCode mbIsDepotAdmin
   where
     castChannelToMedium :: SOTP.OTPChannel -> SR.Medium
     castChannelToMedium SOTP.SMS = SR.SMS
@@ -1004,7 +1016,8 @@ createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
                 registrationLon = Nothing,
                 enableOtpLessRide = Nothing,
                 allowBlockedUserLogin = Nothing,
-                isOperatorReq = Nothing
+                isOperatorReq = Nothing,
+                reuseToken = Nothing
               }
       createdPerson <-
         createPerson authReq SP.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing

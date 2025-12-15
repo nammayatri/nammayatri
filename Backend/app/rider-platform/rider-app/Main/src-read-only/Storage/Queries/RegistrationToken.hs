@@ -22,6 +22,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RegistrationToken.RegistrationToken] -> m ())
 createMany = traverse_ create
 
+findAllByPersonIdAndMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Domain.Types.RegistrationToken.RegistrationToken]))
+findAllByPersonIdAndMerchantId entityId merchantId = do findAllWithKV [Se.Set Beam.entityId entityId, Se.Set Beam.merchantId merchantId] []
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken -> m (Maybe Domain.Types.RegistrationToken.RegistrationToken))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 

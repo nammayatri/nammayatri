@@ -56,5 +56,9 @@ RegistrationToken:
       params: [attempts]
       where: id
 
+    findAllByPersonIdAndMerchantId:
+      kvFunction: findAllWithKV
+      params: [entityId, merchantId]
+
   extraOperations:
     - EXTRA_QUERY_FILE
