@@ -705,13 +705,13 @@ validateRCActivation driverId transporterConfig rc = do
       mLastRideAssigned <- RQuery.findLastRideAssigned oldDriverId
       case mLastRideAssigned of
         Just lastRide -> do
-          if nominalDiffTimeToSeconds (diffUTCTime now lastRide.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline
+          if (nominalDiffTimeToSeconds (diffUTCTime now lastRide.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline) && driverInfo.onRide == False
             then deactivateFunc oldDriverId
             else throwError RCActiveOnOtherAccount
         Nothing -> do
           -- if driver didn't take any ride yet
           person <- Person.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
-          if nominalDiffTimeToSeconds (diffUTCTime now person.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline
+          if (nominalDiffTimeToSeconds (diffUTCTime now person.createdAt) > transporterConfig.automaticRCActivationCutOff || canUnlinkWhenOffline) && driverInfo.onRide == False
             then deactivateFunc oldDriverId
             else throwError RCActiveOnOtherAccount
 
