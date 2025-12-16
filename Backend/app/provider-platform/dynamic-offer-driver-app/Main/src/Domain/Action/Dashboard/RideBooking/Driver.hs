@@ -180,9 +180,11 @@ postDriverCollectCash ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->
+  Maybe Text ->
   Text ->
   Flow APISuccess
-postDriverCollectCash mId city driver requestorId = recordPayment False mId city driver requestorId YATRI_SUBSCRIPTION Nothing
+postDriverCollectCash mId city driver mbVendorId requestorId =
+  recordPayment False mId city driver requestorId YATRI_SUBSCRIPTION Nothing mbVendorId True
 
 ---------------------------------------------------------------------
 postDriverV2CollectCash ::
@@ -191,11 +193,12 @@ postDriverV2CollectCash ::
   Id Common.Driver ->
   Text ->
   Common.ServiceNames ->
+  Maybe Text ->
   Flow APISuccess
-postDriverV2CollectCash mId city driver requestorId serviceName = collectCashV2 mId city driver requestorId serviceName Nothing
+postDriverV2CollectCash mId city driver requestorId serviceName mbVendorId = collectCashV2 mId city driver requestorId serviceName Nothing mbVendorId True
 
-collectCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> Maybe Common.ExemptionAndCashCollectionDriverFeeReq -> Flow APISuccess
-collectCashV2 mId city driver requestorId serviceName mbExemptionAndCashCollectionDriverFeeReq = recordPayment False mId city driver requestorId (DCommon.mapServiceName serviceName) mbExemptionAndCashCollectionDriverFeeReq
+collectCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> Maybe Common.ExemptionAndCashCollectionDriverFeeReq -> Maybe Text -> Bool -> Flow APISuccess
+collectCashV2 mId city driver requestorId serviceName mbExemptionAndCashCollectionDriverFeeReq mbVendorId isVolunteerReq = recordPayment False mId city driver requestorId (DCommon.mapServiceName serviceName) mbExemptionAndCashCollectionDriverFeeReq mbVendorId isVolunteerReq
 
 ---------------------------------------------------------------------
 postDriverExemptCash ::
@@ -204,7 +207,7 @@ postDriverExemptCash ::
   Id Common.Driver ->
   Text ->
   Flow APISuccess
-postDriverExemptCash mId city driver requestorId = recordPayment True mId city driver requestorId YATRI_SUBSCRIPTION Nothing
+postDriverExemptCash mId city driver requestorId = recordPayment True mId city driver requestorId YATRI_SUBSCRIPTION Nothing Nothing False
 
 paymentStatus :: Bool -> DriverFeeStatus
 paymentStatus isExempted
@@ -214,16 +217,17 @@ paymentStatus isExempted
 recordPaymentLockKey :: Id Common.Driver -> Text
 recordPaymentLockKey driverId = "RP:LK:DId:-" <> driverId.getId
 
-recordPayment :: Bool -> ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> ServiceNames -> Maybe Common.ExemptionAndCashCollectionDriverFeeReq -> Flow APISuccess
-recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceName mbExemptionAndCashCollectionDriverFeeReq = do
+recordPayment :: Bool -> ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> ServiceNames -> Maybe Common.ExemptionAndCashCollectionDriverFeeReq -> Maybe Text -> Bool -> Flow APISuccess
+recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceName mbExemptionAndCashCollectionDriverFeeReq mbVendorId isVolunteerReq = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica (QPerson.findById personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  when (fromMaybe False transporterConfig.enableVendorCheckForCollectingDues && not isExempted) $ do
-    case mbExemptionAndCashCollectionDriverFeeReq >>= (.vendorId) of
+  let isVendorValidationRequired = fromMaybe False transporterConfig.enableVendorCheckForCollectingDues && not isExempted && isVolunteerReq
+  when isVendorValidationRequired $ do
+    case mbVendorId of
       Nothing -> throwError $ InvalidRequest "vendorId is required."
       Just vendorId -> do
         volunteer <- QVF.findActiveVolunteerByIdAndVendorId (Id requestorId) vendorId
@@ -246,7 +250,7 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
     now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
     QDriverInfo.updatePendingPayment False driverId
     QDriverInfo.updateSubscription True driverId
-    mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now (mbExemptionAndCashCollectionDriverFeeReq >>= (.vendorId))) ((.id) <$> driverFees)
+    mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now mbVendorId) ((.id) <$> driverFees)
     invoices <- (B.runInReplica . QINV.findActiveManualOrMandateSetupInvoiceByFeeId . (.id)) `mapM` driverFees
     mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) (concat invoices)
     unless isExempted $ do
@@ -295,7 +299,7 @@ postDriverV2ExemptCash ::
 postDriverV2ExemptCash mId city driver requestorId serviceName = exemptCashV2 mId city driver requestorId serviceName Nothing
 
 exemptCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> Maybe Common.ExemptionAndCashCollectionDriverFeeReq -> Flow APISuccess
-exemptCashV2 mId city driver requestorId serviceName mbExemptionAndCashCollectionDriverFeeReq = recordPayment True mId city driver requestorId (DCommon.mapServiceName serviceName) mbExemptionAndCashCollectionDriverFeeReq
+exemptCashV2 mId city driver requestorId serviceName mbExemptionAndCashCollectionDriverFeeReq = recordPayment True mId city driver requestorId (DCommon.mapServiceName serviceName) mbExemptionAndCashCollectionDriverFeeReq Nothing False
 
 ---------------------------------------------------------------------
 getDriverInfo ::
@@ -905,4 +909,4 @@ postDriverExemptDriverFee ::
 postDriverExemptDriverFee mId city driver requestorId serviceName req = do
   if req.isExempt
     then exemptCashV2 mId city driver requestorId serviceName (Just req)
-    else collectCashV2 mId city driver requestorId serviceName (Just req)
+    else collectCashV2 mId city driver requestorId serviceName (Just req) Nothing False
