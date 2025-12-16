@@ -122,7 +122,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
             redisResp <- Redis.safeGet redisKey
             case redisResp of
               Just subwayFares -> do
-                let cachedFares = filter (\fare -> maybe False (\fd -> fd.via == changeOver) fare.fareDetails) subwayFares
+                let cachedFares = filter (\fare -> maybe False (\fd -> fd.via == rawChangeOver) fare.fareDetails) subwayFares
                 if null cachedFares
                   then fetchAndCacheFares config' redisKey changeOver rawChangeOver viaPoints isFareMandatory
                   else return (isFareMandatory, cachedFares)
