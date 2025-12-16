@@ -125,7 +125,7 @@ handler merchant req validatedQuote = do
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mFleetOwnerId <- QFDA.findByDriverId driver.id True
       (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId (Just req.enableOtpLessRide) (mFleetOwnerId <&> (.fleetOwnerId) <&> Id)
-      void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
+      void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) Nothing
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
 

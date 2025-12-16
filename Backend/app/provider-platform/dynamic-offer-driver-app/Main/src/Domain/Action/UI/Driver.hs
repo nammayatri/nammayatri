@@ -1590,9 +1590,9 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               throwError QuoteAlreadyRejected
             whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
             driverFCMPulledList <- case DTC.tripCategoryToPricingPolicy searchTry.tripCategory of
-              DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats
-              DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
-            when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig True True False False
+              DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig
+              DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig
+            when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id searchTry.requestId driverFCMPulledList
             unless (sReqFD.isForwardRequest) $ Redis.unlockRedis (editDestinationLockKey driverId)
@@ -1602,12 +1602,12 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               else do
                 void $ Redis.unlockRedis (editDestinationLockKey driverId)
     Reject -> do
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig True False True False
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False True False
       QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       DP.removeSearchReqIdFromMap merchantId driverId searchTry.requestId
       unlockRedisQuoteKeys
     Pulled -> do
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig True False False True
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
       QSRD.updateDriverResponse (Just Pulled) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       throwError UnexpectedResponseValue
   pure Success
@@ -1714,8 +1714,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       driverPoolCfg <- SCDPC.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist searchRepeatType searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
       pure driverPoolCfg.driverQuoteLimit
 
-    acceptDynamicOfferDriverRequest :: DM.Merchant -> DST.SearchTry -> DSR.SearchRequest -> SP.Person -> SearchRequestForDriver -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe HighPrecMoney -> DStats.DriverStats -> Flow [SearchRequestForDriver]
-    acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue driverStats = do
+    acceptDynamicOfferDriverRequest :: DM.Merchant -> DST.SearchTry -> DSR.SearchRequest -> SP.Person -> SearchRequestForDriver -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe HighPrecMoney -> DStats.DriverStats -> TransporterConfig -> Flow [SearchRequestForDriver]
+    acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue driverStats transporterConfig = do
       let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
       logDebug $ "offered fare: " <> show reqOfferedValue
       quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq (fromMaybe SL.Default searchReq.area) searchTry.searchRepeatType searchTry.searchRepeatCounter
@@ -1771,7 +1771,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
         if (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
           then runInMasterRedis $ QSRD.findAllActiveBySTId searchTry.id DSRD.Active
           else pure []
-      pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
+      pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) transporterConfig
       sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
       return driverFCMPulledList
       where
@@ -1786,13 +1786,12 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             else do
               return False
 
-acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> Flow [SearchRequestForDriver]
-acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId = do
+acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> TransporterConfig -> Flow [SearchRequestForDriver]
+acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId transporterConfig = do
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer fare in static trips")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
   booking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
   when booking.isScheduled $ removeBookingFromRedis booking
-  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   isBookingAssignmentInprogress' <- CS.isBookingAssignmentInprogress booking.id
   when isBookingAssignmentInprogress' $ throwError RideRequestAlreadyAccepted
   isBookingCancelled' <- CS.isBookingCancelled booking.id
@@ -1804,7 +1803,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id)
   driverFCMPulledList <-
     case mbSearchTry of
-      Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
+      Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id (mkPrice (Just quote.currency) quote.estimatedFare) (Just transporterConfig)
       Nothing -> pure []
   uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
   handle (errHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
@@ -2696,6 +2695,8 @@ getDummyRideRequest ::
     EncFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasKafkaProducer r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -2875,14 +2876,15 @@ acceptScheduledBooking ::
   Maybe Text ->
   Id DRB.Booking ->
   Flow APISuccess
-acceptScheduledBooking (personId, merchantId, _) clientId bookingId = do
+acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = do
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   booking <- runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   upcomingOrActiveRide <- runInReplica $ QRide.getUpcomingOrActiveByDriverId driver.id
   unless (isNothing upcomingOrActiveRide) $ throwError (RideInvalidStatus "Cannot accept booking during active or already having upcoming ride.")
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
-  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId
+  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig
   pure Success
 
 clearDriverFeeWithCreate ::

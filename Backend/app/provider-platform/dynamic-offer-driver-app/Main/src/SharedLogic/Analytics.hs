@@ -434,6 +434,28 @@ updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporte
       let totalRequestCountKey = makeOperatorAnalyticsKey operatorId TOTAL_REQUEST_COUNT
       ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId totalRequestCountKey Redis.incrby 1
 
+-- | Batch update total request count for multiple drivers at once
+-- This is more efficient than calling updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount for each driver
+updateOperatorAnalyticsTotalRequestCountBatch ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  [Id DP.Person] ->
+  TC.TransporterConfig ->
+  m ()
+updateOperatorAnalyticsTotalRequestCountBatch driverIds transporterConfig = do
+  -- Fetch all fleet associations for drivers in batch
+  fleetAssociations <- QFDA.findAllByDriverIds driverIds
+  let fleetDriverPairs = [(fa.fleetOwnerId, fa.driverId.getId) | fa <- fleetAssociations]
+
+  -- Update fleet owner stats in batch (both overall and daily)
+  unless (null fleetDriverPairs) $
+    SFleetOperatorStats.incrementTotalRequestCountBatch fleetDriverPairs transporterConfig
+
 -- | Update the operator analytics rating score for a driver
 updateOperatorAnalyticsRatingScoreKey ::
   ( MonadFlow m,
