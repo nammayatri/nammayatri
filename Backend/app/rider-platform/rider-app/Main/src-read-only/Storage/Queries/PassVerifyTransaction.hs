@@ -36,7 +36,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.PassVerifyTransaction.PassVerifyTransaction {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.destinationStopCode destinationStopCode,
+    [ Se.Set Beam.autoActivated autoActivated,
+      Se.Set Beam.destinationStopCode destinationStopCode,
       Se.Set Beam.fleetId fleetId,
       Se.Set Beam.isActuallyValid isActuallyValid,
       Se.Set Beam.purchasePassId (Kernel.Types.Id.getId purchasePassId),
