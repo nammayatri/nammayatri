@@ -18,8 +18,10 @@ import qualified Beckn.ACL.FRFS.OnStatus as ACL
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import Data.Aeson (eitherDecodeStrict')
 import qualified Domain.Action.Beckn.FRFS.OnStatus as DOnStatus
 import Environment
+import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -28,16 +30,16 @@ import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import TransactionLogs.PushLogs
 
-type API = Spec.OnStatusAPI
+type API = Spec.OnStatusAPIBS
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onStatus
 
-onStatus ::
-  SignatureAuthResult ->
-  Spec.OnStatusReq ->
-  FlowHandler Spec.AckResponse
-onStatus _ req = withFlowHandlerAPI $ do
+onStatus :: SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
+onStatus _ reqBS = withFlowHandlerAPI $ do
+  req <- case decodeOnStatusReq reqBS of
+    Right r -> pure r
+    Left err -> throwError (InvalidRequest (toText err))
   transaction_id <- req.onStatusReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   logDebug $ "Received OnStatus request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
@@ -56,3 +58,14 @@ onStatusLockKey id = "FRFS:OnStatus:bppOrderId-" <> id
 
 onConfirmProcessingLockKey :: Text -> Text
 onConfirmProcessingLockKey id = "FRFS:OnStatus:Processing:bppOrderId-" <> id
+
+decodeOnStatusReq :: ByteString -> Either String Spec.OnStatusReq
+decodeOnStatusReq bs =
+  case eitherDecodeStrict' bs of
+    Right v -> Right v
+    Left _ ->
+      case Utils.unescapeQuotedJSON bs of
+        Just inner ->
+          eitherDecodeStrict' inner
+        Nothing ->
+          Left "Unable to decode OnStatusReq: invalid JSON format."

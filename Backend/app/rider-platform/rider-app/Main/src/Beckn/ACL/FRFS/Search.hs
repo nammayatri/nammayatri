@@ -19,7 +19,6 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
-import qualified BecknV2.OnDemand.Tags as Tags
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Station as DStation
 import Kernel.Prelude
@@ -67,48 +66,12 @@ tfIntentFulfillment :: Spec.VehicleCategory -> Maybe DStation.Station -> Maybe D
 tfIntentFulfillment vehicleType mbFromStation mbToStation =
   Just $
     Spec.Fulfillment
-      { fulfillmentId = Just "5000",
+      { fulfillmentId = Nothing,
         fulfillmentStops = maybe Nothing (\(fromStation, toStation) -> tfStops (Just fromStation) (Just toStation)) ((,) <$> mbFromStation <*> mbToStation),
-        fulfillmentTags = Just [mkRouteTags],
+        fulfillmentTags = Nothing,
         fulfillmentType = Nothing,
         fulfillmentVehicle = tfVehicle vehicleType
       }
-
-mkRouteTags :: Spec.TagGroup
-mkRouteTags =
-  Spec.TagGroup
-    { tagGroupDisplay = Just False,
-      tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just $ show Tags.ROUTE_INFO,
-              descriptorName = Nothing,
-              descriptorImages = Nothing
-            },
-      tagGroupList =
-        Just
-          [ Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tags.ROUTE_ID,
-                        descriptorName = Nothing,
-                        descriptorImages = Nothing
-                      },
-                tagValue = Just "8"
-              },
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tags.ROUTE_DIRECTION,
-                        descriptorName = Nothing,
-                        descriptorImages = Nothing
-                      },
-                tagValue = Just "UP"
-              }
-          ]
-    }
 
 tfStops :: Maybe DStation.Station -> Maybe DStation.Station -> Maybe [Spec.Stop]
 tfStops mbFromStation mbToStation =
