@@ -321,7 +321,8 @@ data FRFSFare = FRFSFare
   { farePolicyId :: Maybe (Id DFRFSFarePolicy.FRFSFarePolicy),
     categories :: [FRFSTicketCategory],
     fareDetails :: Maybe Quote.FRFSFareDetails,
-    vehicleServiceTier :: FRFSVehicleServiceTier
+    vehicleServiceTier :: FRFSVehicleServiceTier,
+    fareQuoteType :: Maybe Quote.FRFSQuoteType
   }
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
@@ -385,7 +386,8 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
               serviceTierDescription = vehicleServiceTier.description,
               serviceTierLongName = vehicleServiceTier.longName,
               isAirConditioned = vehicleServiceTier.isAirConditioned
-            }
+            },
+        fareQuoteType = Nothing
       }
 
 getCachedRouteStopFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
@@ -448,43 +450,55 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
                             serviceTierDescription = vehicleServiceTier.description,
                             serviceTierLongName = vehicleServiceTier.longName,
                             isAirConditioned = vehicleServiceTier.isAirConditioned
-                          }
+                          },
+                      fareQuoteType = Nothing
                     }
             _ -> return [] -- No stage information available
         _ -> return [] -- Start or end stop not found in trip
     Nothing -> return [] -- Trip details not found
 
-getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
-getFares riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
-  faresResult <- withTryCatch "getFareThroughGTFS:getFares" (getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
-  fares <- case faresResult of
-    Left err -> do
-      logError $ "Error in getFareThroughGTFS (GraphQL/GTFS): " <> show err
-      return []
-    Right fares' -> return fares'
+getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> [Spec.ServiceTierType] -> [Quote.FRFSQuoteType] -> m [FRFSFare]
+getFares riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode blacklistedServiceTiers blacklistedFareQuoteTypes = do
+  fares <- getFaresUtil
+  let filteredFares =
+        filter
+          ( \fare ->
+              notElem fare.vehicleServiceTier.serviceTierType blacklistedServiceTiers
+                && maybe True (\ft -> notElem ft blacklistedFareQuoteTypes) (fare.fareQuoteType)
+          )
+          fares
+  return filteredFares
+  where
+    getFaresUtil = do
+      faresResult <- withTryCatch "getFareThroughGTFS:getFares" (getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
+      fares <- case faresResult of
+        Left err -> do
+          logError $ "Error in getFareThroughGTFS (GraphQL/GTFS): " <> show err
+          return []
+        Right fares' -> return fares'
 
-  if null fares
-    then do
-      withTryCatch "getFare:getFares" (getFare riderId vehicleType serviceTier integratedBPPConfig.id merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
-        >>= \case
-          Left err -> do
-            logError $ "Error in getFare: " <> show err
-            return []
-          Right fares' ->
-            case integratedBPPConfig.providerConfig of
-              DIBC.ONDC DIBC.ONDCBecknConfig {fareCachingAllowed} -> do
-                if null fares' && (fareCachingAllowed == Just True)
-                  then do
-                    -- TODO: hamdle serviceTier passing stuff here
-                    withTryCatch "getCachedRouteStopFares:getFares" (getCachedRouteStopFares riderId vehicleType integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
-                      >>= \case
-                        Left err -> do
-                          logError $ "Error in getCachedRouteStopFares: " <> show err
-                          return fares'
-                        Right cachedFares -> return cachedFares
-                  else return fares'
-              _ -> return fares'
-    else return fares
+      if null fares
+        then do
+          withTryCatch "getFare:getFares" (getFare riderId vehicleType serviceTier integratedBPPConfig.id merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
+            >>= \case
+              Left err -> do
+                logError $ "Error in getFare: " <> show err
+                return []
+              Right fares' ->
+                case integratedBPPConfig.providerConfig of
+                  DIBC.ONDC DIBC.ONDCBecknConfig {fareCachingAllowed} -> do
+                    if null fares' && (fareCachingAllowed == Just True)
+                      then do
+                        -- TODO: hamdle serviceTier passing stuff here
+                        withTryCatch "getCachedRouteStopFares:getFares" (getCachedRouteStopFares riderId vehicleType integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
+                          >>= \case
+                            Left err -> do
+                              logError $ "Error in getCachedRouteStopFares: " <> show err
+                              return fares'
+                            Right cachedFares -> return cachedFares
+                      else return fares'
+                  _ -> return fares'
+        else return fares
 
 data VehicleTracking = VehicleTracking
   { nextStop :: Maybe RouteStopMapping.RouteStopMapping,

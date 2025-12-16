@@ -31,14 +31,14 @@ import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
-getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> NonEmpty CallAPI.BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> m (Bool, [FRFSFare])
-getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId = do
-  withTryCatch "callExternalBPP:getFares" (CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId) >>= \case
+getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> NonEmpty CallAPI.BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> m (Bool, [FRFSFare])
+getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes = do
+  withTryCatch "callExternalBPP:getFares" (CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes) >>= \case
     Left _ -> return (True, [])
     Right fares -> return fares
 
-search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> m DOnSearch
-search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails = do
+search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> m DOnSearch
+search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes = do
   quotes <- buildQuotes routeDetails
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
@@ -75,13 +75,13 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                     endStopCode = endStationCode,
                     travelTime = Nothing
                   }
-          mkQuote serviceTier searchReq.vehicleType [routeInfo]
+          mkQuote serviceTier searchReq.vehicleType [routeInfo] blacklistedServiceTiers blacklistedFareQuoteTypes
         Nothing -> do
           routesInfo <- bool getPossibleRoutesBetweenTwoStops getPossibleRoutesBetweenTwoParentStops (fromMaybe False searchReq.searchAsParentStops) startStationCode endStationCode integratedBPPConfig
           quotes <-
             mapM
               ( \routeInfo -> do
-                  mkQuote Nothing searchReq.vehicleType [routeInfo]
+                  mkQuote Nothing searchReq.vehicleType [routeInfo] blacklistedServiceTiers blacklistedFareQuoteTypes
               )
               routesInfo
           return $ concat quotes
@@ -105,15 +105,15 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                       }
               )
               routesDetails
-          mkQuote Nothing searchReq.vehicleType routesInfo
+          mkQuote Nothing searchReq.vehicleType routesInfo blacklistedServiceTiers blacklistedFareQuoteTypes
 
-    mkQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Maybe Spec.ServiceTierType -> Spec.VehicleCategory -> [RouteStopInfo] -> m [DQuote]
-    mkQuote _serviceTier _vehicleType [] = return []
-    mkQuote serviceTier vehicleType routesInfo = do
+    mkQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Maybe Spec.ServiceTierType -> Spec.VehicleCategory -> [RouteStopInfo] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> m [DQuote]
+    mkQuote _serviceTier _vehicleType [] _blServiceTiers _blFareQuoteTypes = return []
+    mkQuote serviceTier vehicleType routesInfo blServiceTiers blFareQuoteTypes = do
       let fareRouteDetails = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode}) routesInfo
       stations <- CallAPI.buildStations fareRouteDetails integratedBPPConfig
       let nonEmptyFareRouteDetails = NE.fromList fareRouteDetails
-      (_, fares) <- CallAPI.getFares searchReq.riderId merchant merchantOperatingCity integratedBPPConfig nonEmptyFareRouteDetails vehicleType serviceTier searchReq.multimodalSearchRequestId
+      (_, fares) <- CallAPI.getFares searchReq.riderId merchant merchantOperatingCity integratedBPPConfig nonEmptyFareRouteDetails vehicleType serviceTier searchReq.multimodalSearchRequestId blServiceTiers blFareQuoteTypes
       return $
         map
           ( \FRFSFare {..} ->

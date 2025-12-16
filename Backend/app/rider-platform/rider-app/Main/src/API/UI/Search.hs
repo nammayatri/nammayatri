@@ -34,6 +34,7 @@ import qualified API.Types.UI.RiderLocation as RL
 import qualified API.UI.CancelSearch as CancelSearch
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums
 import Control.Applicative ((<|>))
 import Data.Aeson
@@ -48,6 +49,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.EstimateStatus as Estimate
+import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as Journey
@@ -144,6 +146,7 @@ type API =
       :> Header "is-dashboard-request" Bool
       :> Header "imei-number" Text
       :> Header "departure-time" UTCTime
+      :> QueryParam "filterServiceAndJrnyType" Bool
       :> Post '[JSON] MultimodalSearchResp
 
 type SearchAPI =
@@ -157,6 +160,7 @@ type SearchAPI =
     :> Header "client-id" (Id DC.Client)
     :> Header "x-device" Text
     :> Header "is-dashboard-request" Bool
+    :> QueryParam "filterServiceAndJrnyType" Bool
     :> Post '[JSON] DSearch.SearchResp
 
 handler :: FlowServer API
@@ -177,11 +181,11 @@ getAllRoutesLoadedKey searchReqId = do
     Just allRoutesLoaded -> return allRoutesLoaded
     Nothing -> return False
 
-search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> FlowHandler DSearch.SearchResp
-search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice = withFlowHandlerAPI . search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice
+search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> FlowHandler DSearch.SearchResp
+search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbFilterServiceAndJrnyType = withFlowHandlerAPI . search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbFilterServiceAndJrnyType
 
-search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Flow DSearch.SearchResp
-search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest = withPersonIdLogTag personId $ do
+search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Flow DSearch.SearchResp
+search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType = withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
   merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -214,7 +218,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
   fork "Multimodal Search" $ do
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     if riderConfig.makeMultiModalSearch
-      then void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId Nothing)
+      then void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId Nothing mbFilterServiceAndJrnyType)
       else QSearchRequest.updateAllJourneysLoaded (Just True) dSearchRes.searchRequest.id
   return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
   where
@@ -263,8 +267,8 @@ handleBookingCancellation merchantId _personId stuckRideAutoCancellationBuffer s
         _ -> do
           return True
 
-multimodalSearchHandler :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Bool -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe UTCTime -> FlowHandler MultimodalSearchResp
-multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbImeiNumber mbDepartureTime = withFlowHandlerAPI $
+multimodalSearchHandler :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Bool -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe UTCTime -> Maybe Bool -> FlowHandler MultimodalSearchResp
+multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbImeiNumber mbDepartureTime mbFilterServiceAndJrnyType = withFlowHandlerAPI $
   withPersonIdLogTag personId $ do
     checkSearchRateLimit personId
     fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
@@ -274,10 +278,10 @@ multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVe
     dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) True Nothing
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let initiateJourney = fromMaybe False mbInitiateJourney
-    JMU.measureLatency (multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId mbDepartureTime) "multiModalSearch"
+    JMU.measureLatency (multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId mbDepartureTime mbFilterServiceAndJrnyType) "multiModalSearch"
 
-multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> Bool -> DSearch.SearchReq -> Id Person.Person -> Maybe UTCTime -> Flow MultimodalSearchResp
-multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJourney req' personId mbDepartureTime = withLogTag ("multimodalSearch" <> searchRequest.id.getId) $ do
+multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> Bool -> DSearch.SearchReq -> Id Person.Person -> Maybe UTCTime -> Maybe Bool -> Flow MultimodalSearchResp
+multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJourney req' personId mbDepartureTime filterServiceAndJrnyType = withLogTag ("multimodalSearch" <> searchRequest.id.getId) $ do
   now <- getCurrentTime
   userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
   let req = DSearch.extractSearchDetails now req'
@@ -304,7 +308,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
           case vehicleCategory of
             BecknV2.OnDemand.Enums.BUS -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
             BecknV2.OnDemand.Enums.METRO -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
-            BecknV2.OnDemand.Enums.SUBWAY -> JMU.measureLatency (JMU.buildTrainAllViaRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode False personId searchRequest.id.getId) "buildTrainAllViaRoutes"
+            BecknV2.OnDemand.Enums.SUBWAY -> JMU.measureLatency (JMU.buildTrainAllViaRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode False personId searchRequest.id.getId blacklistedServiceTiers blacklistedFareQuoteTypes) "buildTrainAllViaRoutes"
             _ -> return ([], [])
         | otherwise = return ([], [])
   (directSingleModeRoutes, restOfViaPoints) <- result
@@ -432,10 +436,10 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                   if forkInitiateFirstJourney
                     then do
                       fork "Initiate first the route" $ do
-                        void $ DMC.postMultimodalInitiateSimpl firstJourneyLegs firstJourney
+                        void $ DMC.postMultimodalInitiateSimpl firstJourneyLegs firstJourney blacklistedServiceTiers blacklistedFareQuoteTypes
                       return Nothing
                     else do
-                      res <- JMU.measureLatency (DMC.postMultimodalInitiateSimpl firstJourneyLegs firstJourney) "DMC.postMultimodalInitiateSimpl"
+                      res <- JMU.measureLatency (DMC.postMultimodalInitiateSimpl firstJourneyLegs firstJourney blacklistedServiceTiers blacklistedFareQuoteTypes) "DMC.postMultimodalInitiateSimpl"
                       return $ Just res
                 fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences routeLiveInfo allJourneysLoaded searchRequest.busLocationData
                 return resp
@@ -495,7 +499,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 relevanceScore = updatedRoute.relevanceScore,
                 busLocationData
               }
-      JM.init initReq userPreferences
+      JM.init initReq userPreferences blacklistedServiceTiers blacklistedFareQuoteTypes
 
     updateRouteWithLegDurations :: MultiModalTypes.MultiModalRoute -> Flow MultiModalTypes.MultiModalRoute
     updateRouteWithLegDurations route_ = do
@@ -585,6 +589,16 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                   toDepartureTime = newLegToDeparture,
                   routeDetails = updatedRouteDetails
                 }
+
+    blacklistedServiceTiers =
+      if filterServiceAndJrnyType == Just False
+        then []
+        else [Spec.AC_EMU_FIRST_CLASS]
+
+    blacklistedFareQuoteTypes =
+      if filterServiceAndJrnyType == Just False
+        then []
+        else [DFRFSQuote.ReturnJourney]
 
     processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> Bool -> [RL.BusLocation] -> Flow ()
     processRestOfRoutes routes userPreferences routeLiveInfo allJourneysLoaded busLocationData = do
