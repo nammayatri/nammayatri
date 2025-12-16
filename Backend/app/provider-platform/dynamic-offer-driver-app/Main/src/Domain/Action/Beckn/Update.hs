@@ -208,8 +208,9 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                   (snapToRoadFailed, editDestinationPoints) <- getLatlongsViaSnapToRoad (editDestinationWaypoints <> currentLocationPointsBatch.loc) merchantOperatingCity.merchantId merchantOperatingCity.id
                   logTagError "DebugErrorLog: EditDestSoftUpdate" $ "snapped edit destination points count: " <> show (length editDestinationPoints)
                   alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
+                  let startPoint = if length alreadySnappedPoints > 0 then (fst $ last alreadySnappedPoints) else (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon)
                   let (currentLocPoint :: Maps.LatLong) =
-                        fromMaybe (fst $ last alreadySnappedPoints) $
+                        fromMaybe startPoint $
                           (if not $ null currentLocationPointsBatch.loc then Just (last currentLocationPointsBatch.loc) else Nothing)
                             <|> (if not $ null editDestinationWaypoints then Just (last editDestinationWaypoints) else Nothing)
                   logTagError "DebugErrorLog: EditDestSoftUpdate" $ "Already snapped points count: " <> show (length alreadySnappedPoints)
