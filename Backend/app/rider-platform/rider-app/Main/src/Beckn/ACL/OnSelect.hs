@@ -24,6 +24,7 @@ import BecknV2.Utils
 import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
+import qualified Domain.Types.VehicleVariant as VehVar
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
@@ -89,7 +90,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
   tripCategory <- (fulfillment.fulfillmentType >>= (Just . Utils.fulfillmentTypeToTripCategory)) & fromMaybeM (InvalidRequest "Missing fulfillmentType")
   quoteDetails <- buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill
   vehicle <- fulfillment.fulfillmentVehicle & fromMaybeM (InvalidRequest "Missing fulfillmentVehicle")
-  let mbVariant = Utils.parseVehicleVariant vehicle.vehicleCategory vehicle.vehicleVariant
+  let mbVariant = VehVar.parseVehicleVariantFromBeckn vehicle.vehicleCategory vehicle.vehicleVariant
   let serviceTierName = Utils.getServiceTierName item
   let serviceTierShortDesc = Utils.getServiceTierShortDesc item
   let billingCategory = getBillingCategoryTag item.itemTags

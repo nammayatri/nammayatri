@@ -69,6 +69,7 @@ import Kernel.Types.Confidence
 import Kernel.Types.Id
 import qualified Kernel.Types.Price
 import Kernel.Utils.Common hiding (mkPrice)
+import qualified SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
@@ -213,87 +214,12 @@ mkBppUri merchantId =
   asks (.nwAddress)
     <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId)
 
-castVariant :: Variant.VehicleVariant -> (Text, Text)
-castVariant Variant.SEDAN = (show Enums.CAB, "SEDAN")
-castVariant Variant.HATCHBACK = (show Enums.CAB, "HATCHBACK")
-castVariant Variant.SUV = (show Enums.CAB, "SUV")
-castVariant Variant.AUTO_RICKSHAW = (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
-castVariant Variant.TAXI = (show Enums.CAB, "TAXI")
-castVariant Variant.TAXI_PLUS = (show Enums.CAB, "TAXI_PLUS")
-castVariant Variant.PREMIUM_SEDAN = (show Enums.CAB, "PREMIUM_SEDAN")
-castVariant Variant.BLACK = (show Enums.CAB, "BLACK")
-castVariant Variant.BLACK_XL = (show Enums.CAB, "BLACK_XL")
-castVariant Variant.BIKE = (show Enums.TWO_WHEELER, "BIKE")
-castVariant Variant.DELIVERY_BIKE = (show Enums.TWO_WHEELER, "DELIVERY_BIKE")
-castVariant Variant.AMBULANCE_TAXI = (show Enums.AMBULANCE, "AMBULANCE_TAXI")
-castVariant Variant.AMBULANCE_TAXI_OXY = (show Enums.AMBULANCE, "AMBULANCE_TAXI_OXY")
-castVariant Variant.AMBULANCE_AC = (show Enums.AMBULANCE, "AMBULANCE_AC")
-castVariant Variant.AMBULANCE_AC_OXY = (show Enums.AMBULANCE, "AMBULANCE_AC_OXY")
-castVariant Variant.AMBULANCE_VENTILATOR = (show Enums.AMBULANCE, "AMBULANCE_VENTILATOR")
-castVariant Variant.SUV_PLUS = (show Enums.CAB, "SUV_PLUS")
-castVariant Variant.HERITAGE_CAB = (show Enums.CAB, "HERITAGE_CAB")
-castVariant Variant.EV_AUTO_RICKSHAW = (show Enums.AUTO_RICKSHAW, "EV_AUTO_RICKSHAW")
-castVariant Variant.DELIVERY_LIGHT_GOODS_VEHICLE = (show Enums.TRUCK, "DELIVERY_LIGHT_GOODS_VEHICLE")
-castVariant Variant.DELIVERY_TRUCK_MINI = (show Enums.TRUCK, "DELIVERY_TRUCK_MINI")
-castVariant Variant.DELIVERY_TRUCK_SMALL = (show Enums.TRUCK, "DELIVERY_TRUCK_SMALL")
-castVariant Variant.DELIVERY_TRUCK_MEDIUM = (show Enums.TRUCK, "DELIVERY_TRUCK_MEDIUM")
-castVariant Variant.DELIVERY_TRUCK_LARGE = (show Enums.TRUCK, "DELIVERY_TRUCK_LARGE")
-castVariant Variant.DELIVERY_TRUCK_ULTRA_LARGE = (show Enums.TRUCK, "DELIVERY_TRUCK_ULTRA_LARGE")
-castVariant Variant.BUS_NON_AC = (show Enums.BUS, "BUS_NON_AC")
-castVariant Variant.BUS_AC = (show Enums.BUS, "BUS_AC")
-castVariant Variant.BOAT = (show Enums.BOAT, "BOAT")
-castVariant Variant.AUTO_PLUS = (show Enums.AUTO_RICKSHAW, "AUTO_PLUS")
-castVariant Variant.VIP_ESCORT = (show Enums.CAB, "VIP_ESCORT")
-castVariant Variant.VIP_OFFICER = (show Enums.CAB, "VIP_OFFICER")
-castVariant Variant.AC_PRIORITY = (show Enums.CAB, "AC_PRIORITY")
-castVariant Variant.BIKE_PLUS = (show Enums.TWO_WHEELER, "BIKE_PLUS")
-castVariant Variant.E_RICKSHAW = (show Enums.AUTO_RICKSHAW, "E_RICKSHAW")
-
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
 
 castDPaymentType :: DMPM.PaymentType -> Text
 castDPaymentType DMPM.ON_FULFILLMENT = show Enums.ON_FULFILLMENT
 castDPaymentType DMPM.POSTPAID = show Enums.ON_FULFILLMENT
-
-parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe Variant.VehicleVariant
-parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
-  (Just "CAB", Just "SEDAN") -> Just Variant.SEDAN
-  (Just "CAB", Just "SUV") -> Just Variant.SUV
-  (Just "CAB", Just "HATCHBACK") -> Just Variant.HATCHBACK
-  (Just "CAB", Just "PREMIUM_SEDAN") -> Just Variant.PREMIUM_SEDAN
-  (Just "CAB", Just "BLACK") -> Just Variant.BLACK
-  (Just "CAB", Just "SUV_PLUS") -> Just Variant.SUV_PLUS
-  (Just "CAB", Just "HERITAGE_CAB") -> Just Variant.HERITAGE_CAB
-  (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just Variant.AUTO_RICKSHAW
-  (Just "AUTO_RICKSHAW", Just "EV_AUTO_RICKSHAW") -> Just Variant.EV_AUTO_RICKSHAW
-  (Just "AUTO_RICKSHAW", Just "AUTO_PLUS") -> Just Variant.AUTO_PLUS
-  (Just "CAB", Just "TAXI") -> Just Variant.TAXI
-  (Just "CAB", Just "TAXI_PLUS") -> Just Variant.TAXI_PLUS
-  (Just "MOTORCYCLE", Just "BIKE") -> Just Variant.BIKE -- becomes redundant, TODO : remove in next release
-  (Just "MOTORCYCLE", Just "DELIVERY_BIKE") -> Just Variant.DELIVERY_BIKE -- becomes redundant, TODO : remove in next release
-  (Just "TWO_WHEELER", Just "BIKE") -> Just Variant.BIKE
-  (Just "TWO_WHEELER", Just "DELIVERY_BIKE") -> Just Variant.DELIVERY_BIKE
-  (Just "AMBULANCE", Just "AMBULANCE_TAXI") -> Just Variant.AMBULANCE_TAXI
-  (Just "AMBULANCE", Just "AMBULANCE_TAXI_OXY") -> Just Variant.AMBULANCE_TAXI_OXY
-  (Just "AMBULANCE", Just "AMBULANCE_AC") -> Just Variant.AMBULANCE_AC
-  (Just "AMBULANCE", Just "AMBULANCE_AC_OXY") -> Just Variant.AMBULANCE_AC_OXY
-  (Just "AMBULANCE", Just "AMBULANCE_VENTILATOR") -> Just Variant.AMBULANCE_VENTILATOR
-  (Just "TRUCK", Just "DELIVERY_LIGHT_GOODS_VEHICLE") -> Just Variant.DELIVERY_LIGHT_GOODS_VEHICLE
-  (Just "TRUCK", Just "DELIVERY_TRUCK_MINI") -> Just Variant.DELIVERY_TRUCK_MINI
-  (Just "TRUCK", Just "DELIVERY_TRUCK_SMALL") -> Just Variant.DELIVERY_TRUCK_SMALL
-  (Just "TRUCK", Just "DELIVERY_TRUCK_MEDIUM") -> Just Variant.DELIVERY_TRUCK_MEDIUM
-  (Just "TRUCK", Just "DELIVERY_TRUCK_LARGE") -> Just Variant.DELIVERY_TRUCK_LARGE
-  (Just "TRUCK", Just "DELIVERY_TRUCK_ULTRA_LARGE") -> Just Variant.DELIVERY_TRUCK_ULTRA_LARGE
-  (Just "BUS", Just "BUS_NON_AC") -> Just Variant.BUS_NON_AC
-  (Just "BUS", Just "BUS_AC") -> Just Variant.BUS_AC
-  (Just "CAB", Just "VIP_ESCORT") -> Just Variant.VIP_ESCORT
-  (Just "CAB", Just "VIP_OFFICER") -> Just Variant.VIP_OFFICER
-  (Just "CAB", Just "AC_PRIORITY") -> Just Variant.AC_PRIORITY
-  (Just "TWO_WHEELER", Just "BIKE_PLUS") -> Just Variant.BIKE_PLUS
-  (Just "MOTORCYCLE", Just "BIKE_PLUS") -> Just Variant.BIKE_PLUS
-  (Just "AUTO_RICKSHAW", Just "E_RICKSHAW") -> Just Variant.E_RICKSHAW
-  _ -> Nothing
 
 parseAddress :: MonadFlow m => Spec.Location -> m (Maybe DL.LocationAddress)
 parseAddress loc@Spec.Location {..} = do
@@ -565,7 +491,7 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
               },
         fulfillmentVehicle =
           mbVehicle >>= \vehicle -> do
-            let (category, variant) = castVariant vehicle.variant
+            let (category, variant) = Variant.castVariantToBeckn vehicle.variant
             Just $
               Spec.Vehicle
                 { vehicleColor = Just vehicle.color,
@@ -1646,42 +1572,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
         getDurationToNearestDriver :: Maybe DTC.AvgSpeedOfVechilePerKm -> Maybe Text
         getDurationToNearestDriver avgSpeedOfVehicle = do
           avgSpeed <- avgSpeedOfVehicle
-          let variantSpeed = case pricing.vehicleVariant of
-                Variant.SEDAN -> avgSpeed.sedan.getKilometers
-                Variant.SUV -> avgSpeed.suv.getKilometers
-                Variant.HATCHBACK -> avgSpeed.hatchback.getKilometers
-                Variant.AUTO_RICKSHAW -> avgSpeed.autorickshaw.getKilometers
-                Variant.BIKE -> avgSpeed.bike.getKilometers
-                Variant.DELIVERY_BIKE -> avgSpeed.bike.getKilometers
-                Variant.TAXI -> avgSpeed.taxi.getKilometers
-                Variant.TAXI_PLUS -> avgSpeed.ambulance.getKilometers
-                Variant.PREMIUM_SEDAN -> avgSpeed.premiumsedan.getKilometers
-                Variant.BLACK -> avgSpeed.black.getKilometers
-                Variant.BLACK_XL -> avgSpeed.blackxl.getKilometers
-                Variant.AMBULANCE_TAXI -> avgSpeed.ambulance.getKilometers
-                Variant.AMBULANCE_TAXI_OXY -> avgSpeed.ambulance.getKilometers
-                Variant.AMBULANCE_AC -> avgSpeed.ambulance.getKilometers
-                Variant.AMBULANCE_AC_OXY -> avgSpeed.ambulance.getKilometers
-                Variant.AMBULANCE_VENTILATOR -> avgSpeed.ambulance.getKilometers
-                Variant.SUV_PLUS -> avgSpeed.suvplus.getKilometers
-                Variant.HERITAGE_CAB -> avgSpeed.heritagecab.getKilometers
-                Variant.EV_AUTO_RICKSHAW -> avgSpeed.evautorickshaw.getKilometers
-                Variant.DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
-                Variant.DELIVERY_TRUCK_MINI -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
-                Variant.DELIVERY_TRUCK_SMALL -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
-                Variant.DELIVERY_TRUCK_MEDIUM -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
-                Variant.DELIVERY_TRUCK_LARGE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
-                Variant.DELIVERY_TRUCK_ULTRA_LARGE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
-                Variant.BUS_NON_AC -> avgSpeed.busNonAc.getKilometers
-                Variant.BUS_AC -> avgSpeed.busAc.getKilometers
-                Variant.BOAT -> avgSpeed.boat.getKilometers
-                Variant.AUTO_PLUS -> avgSpeed.autorickshaw.getKilometers
-                Variant.VIP_ESCORT -> avgSpeed.vipEscort.getKilometers
-                Variant.VIP_OFFICER -> avgSpeed.vipOfficer.getKilometers
-                Variant.AC_PRIORITY -> avgSpeed.sedan.getKilometers
-                Variant.BIKE_PLUS -> avgSpeed.bikeplus.getKilometers
-                Variant.E_RICKSHAW -> avgSpeed.erickshaw.getKilometers
-
+          let variantSpeed = (DP.getVehicleAvgSpeed pricing.vehicleVariant avgSpeed).getKilometers
           getDuration pricing.distanceToNearestDriver variantSpeed
 
         getDuration :: Maybe Meters -> Int -> Maybe Text
@@ -1858,7 +1749,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
               },
         fulfillmentVehicle =
           mbVehicle >>= \vehicle -> do
-            let (category, variant) = castVariant vehicle.variant
+            let (category, variant) = Variant.castVariantToBeckn vehicle.variant
             Just $
               Spec.Vehicle
                 { vehicleColor = Just vehicle.color,

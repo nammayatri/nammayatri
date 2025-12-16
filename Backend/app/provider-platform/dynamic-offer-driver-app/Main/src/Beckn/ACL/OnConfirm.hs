@@ -25,6 +25,7 @@ import qualified Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.FarePolicy as FarePolicyD
+import qualified Domain.Types.VehicleVariant as Variant
 import Kernel.Prelude
 import Kernel.Utils.Common
 
@@ -82,7 +83,7 @@ tfPayments res bppConfig = do
 
 tfVehicle :: DConfirm.DConfirmResp -> Maybe Spec.Vehicle
 tfVehicle res = do
-  let (category, variant) = Utils.castVariant res.vehicleVariant
+  let (category, variant) = Variant.castVariantToBeckn res.vehicleVariant
   Just
     Spec.Vehicle
       { vehicleCategory = Just category,

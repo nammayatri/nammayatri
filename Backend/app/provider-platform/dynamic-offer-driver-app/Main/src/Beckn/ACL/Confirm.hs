@@ -23,6 +23,7 @@ import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
 import Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types.Booking (BookingStatus (NEW))
+import qualified Domain.Types.VehicleVariant as Variant
 import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
@@ -56,7 +57,7 @@ buildConfirmReqV2 req isValueAddNP = do
   let mbRiderName = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personName)
   let vehCategory = fulfillment.fulfillmentVehicle >>= (.vehicleCategory)
       vehVariant = fulfillment.fulfillmentVehicle >>= (.vehicleVariant)
-  vehicleVariant <- Utils.parseVehicleVariant vehCategory vehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:-" <> show vehCategory <> ", variant:-" <> show vehVariant)
+  vehicleVariant <- Variant.parseVehicleVariantFromBeckn vehCategory vehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:-" <> show vehCategory <> ", variant:-" <> show vehVariant)
   let nightSafetyCheck = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getNightSafetyCheckTag isValueAddNP
       enableFrequentLocationUpdates = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableFrequentLocationUpdatesTag
       enableOtpLessRide = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableOtpLessRideTag

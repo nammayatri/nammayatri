@@ -25,6 +25,7 @@ import Domain.Action.Beckn.Init as DInit
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.FarePolicy as FarePolicyD
+import qualified Domain.Types.VehicleVariant as Variant
 import Kernel.Prelude
 import qualified Kernel.Types.Common as Common
 import Kernel.Utils.Common
@@ -116,7 +117,7 @@ tfPayments res bppConfig = do
 
 tfVehicle :: DInit.InitRes -> Maybe Spec.Vehicle
 tfVehicle res = do
-  let (category, variant) = Utils.castVariant res.vehicleVariant
+  let (category, variant) = Variant.castVariantToBeckn res.vehicleVariant
   Just
     Spec.Vehicle
       { vehicleCategory = Just category,

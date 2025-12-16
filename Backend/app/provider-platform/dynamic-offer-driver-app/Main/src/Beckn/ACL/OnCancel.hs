@@ -37,6 +37,7 @@ import Domain.Types.OnCancel as Reexport
 import qualified Domain.Types.OnCancel as OC
 import Domain.Types.Ride
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleVariant as Variant
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
@@ -255,7 +256,7 @@ tfItemPrice booking =
 tfVehicle :: Maybe DVeh.Vehicle -> Maybe Spec.Vehicle
 tfVehicle mbVehicle =
   mbVehicle >>= \vehicle -> do
-    let (category, variant) = BUtils.castVariant vehicle.variant
+    let (category, variant) = Variant.castVariantToBeckn vehicle.variant
     Just $
       Spec.Vehicle
         { vehicleColor = Just vehicle.color,

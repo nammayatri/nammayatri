@@ -30,6 +30,7 @@ import qualified Domain.Action.Beckn.OnInit as DOnInit
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, (%~))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -221,7 +222,7 @@ tfCustomer res =
 
 tfVehicle :: DOnInit.OnInitRes -> Maybe Spec.Vehicle
 tfVehicle res = do
-  let (category, variant) = Utils.castVehicleVariant res.vehicleVariant
+  let (category, variant) = VehVar.castVariantToBeckn res.vehicleVariant
   Just $
     Spec.Vehicle
       { vehicleCategory = Just category,

@@ -14,6 +14,7 @@ import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Trip as Trip
+import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
@@ -34,7 +35,7 @@ buildInitReqMessage uiConfirm isValueAddNP bapConfig riderConfig = do
 
 tfFulfillmentVehicle :: SharedLogic.Confirm.DConfirmRes -> BecknV2.OnDemand.Types.Vehicle
 tfFulfillmentVehicle uiConfirm = do
-  let (category, variant) = Beckn.OnDemand.Utils.Common.castVehicleVariant uiConfirm.vehicleVariant
+  let (category, variant) = VehVar.castVariantToBeckn uiConfirm.vehicleVariant
   let vehicleCategory_ = Just category
   let vehicleColor_ = Nothing
   let vehicleMake_ = Nothing

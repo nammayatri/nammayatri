@@ -6,49 +6,10 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.Utils as Utils
 import Data.Text as T
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.VehicleVariant as VehVar
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (..))
 import Kernel.Utils.Common (decodeFromText, fromMaybeM)
-
-castVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
-castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVariant) of
-  (Just "CAB", Just "SEDAN") -> Just VehVar.SEDAN
-  (Just "CAB", Just "SUV") -> Just VehVar.SUV
-  (Just "CAB", Just "SUV_PLUS") -> Just VehVar.SUV_PLUS
-  (Just "CAB", Just "HERITAGE_CAB") -> Just VehVar.HERITAGE_CAB
-  (Just "CAB", Just "HATCHBACK") -> Just VehVar.HATCHBACK
-  (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just VehVar.AUTO_RICKSHAW
-  (Just "AUTO_RICKSHAW", Just "EV_AUTO_RICKSHAW") -> Just VehVar.EV_AUTO_RICKSHAW
-  (Just "AUTO_RICKSHAW", Just "AUTO_PLUS") -> Just VehVar.AUTO_PLUS
-  (Just "CAB", Just "TAXI") -> Just VehVar.TAXI
-  (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
-  (Just "CAB", Just "PREMIUM_SEDAN") -> Just VehVar.PREMIUM_SEDAN
-  (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE -- becomes redundant, TODO : remove in next release
-  (Just "MOTORCYCLE", Just "DELIVERY_BIKE") -> Just VehVar.DELIVERY_BIKE -- becomes redundant, TODO : remove in next release
-  (Just "TWO_WHEELER", Just "BIKE") -> Just VehVar.BIKE
-  (Just "TWO_WHEELER", Just "DELIVERY_BIKE") -> Just VehVar.DELIVERY_BIKE
-  (Just "AMBULANCE", Just "AMBULANCE_TAXI") -> Just VehVar.AMBULANCE_TAXI
-  (Just "AMBULANCE", Just "AMBULANCE_TAXI_OXY") -> Just VehVar.AMBULANCE_TAXI_OXY
-  (Just "AMBULANCE", Just "AMBULANCE_AC") -> Just VehVar.AMBULANCE_AC
-  (Just "AMBULANCE", Just "AMBULANCE_AC_OXY") -> Just VehVar.AMBULANCE_AC_OXY
-  (Just "AMBULANCE", Just "AMBULANCE_VENTILATOR") -> Just VehVar.AMBULANCE_VENTILATOR
-  (Just "TRUCK", Just "DELIVERY_LIGHT_GOODS_VEHICLE") -> Just VehVar.DELIVERY_LIGHT_GOODS_VEHICLE
-  (Just "TRUCK", Just "DELIVERY_TRUCK_MINI") -> Just VehVar.DELIVERY_TRUCK_MINI
-  (Just "TRUCK", Just "DELIVERY_TRUCK_SMALL") -> Just VehVar.DELIVERY_TRUCK_SMALL
-  (Just "TRUCK", Just "DELIVERY_TRUCK_MEDIUM") -> Just VehVar.DELIVERY_TRUCK_MEDIUM
-  (Just "TRUCK", Just "DELIVERY_TRUCK_LARGE") -> Just VehVar.DELIVERY_TRUCK_LARGE
-  (Just "TRUCK", Just "DELIVERY_TRUCK_ULTRA_LARGE") -> Just VehVar.DELIVERY_TRUCK_ULTRA_LARGE
-  (Just "BUS", Just "BUS_NON_AC") -> Just VehVar.BUS_NON_AC
-  (Just "BUS", Just "BUS_AC") -> Just VehVar.BUS_AC
-  (Just "CAB", Just "VIP_ESCORT") -> Just VehVar.VIP_ESCORT
-  (Just "CAB", Just "VIP_OFFICER") -> Just VehVar.VIP_OFFICER
-  (Just "CAB", Just "AC_PRIORITY") -> Just VehVar.AC_PRIORITY
-  (Just "TWO_WHEELER", Just "BIKE_PLUS") -> Just VehVar.BIKE_PLUS
-  (Just "MOTORCYCLE", Just "BIKE_PLUS") -> Just VehVar.BIKE_PLUS
-  (Just "AUTO_RICKSHAW", Just "E_RICKSHAW") -> Just VehVar.E_RICKSHAW
-  _ -> Nothing
 
 castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector
 castPaymentCollector "BAP" = return DMPM.BAP

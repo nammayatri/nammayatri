@@ -45,12 +45,14 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as DFP
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.TransporterConfig (AvgSpeedOfVechilePerKm)
+import qualified Domain.Types.VehicleVariant as DV
 import EulerHS.Prelude hiding (elem, id, map, sum)
 import GHC.Float (int2Double)
 import Kernel.Prelude as KP
 import Kernel.Types.Id (Id)
 import qualified Kernel.Types.Price as Price
 import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)
+import qualified SharedLogic.DriverPool as DP
 
 mkFareParamsBreakups :: (HighPrecMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
@@ -728,44 +730,8 @@ calculateFareParameters params = do
     calculateExtraTimeFare :: Meters -> Maybe HighPrecMoney -> Maybe Seconds -> ServiceTierType -> AvgSpeedOfVechilePerKm -> Maybe HighPrecMoney
     calculateExtraTimeFare distance perMinuteRideExtraTimeCharge actualRideDuration serviceTier avgSpeedOfVehicle = do
       let actualRideDurationInMinutes = secondsToMinutes <$> actualRideDuration
-      let avgSpeedOfVehicle' = realToFrac @_ @Double case serviceTier of
-            SEDAN -> avgSpeedOfVehicle.sedan.getKilometers
-            SUV -> avgSpeedOfVehicle.suv.getKilometers
-            HATCHBACK -> avgSpeedOfVehicle.hatchback.getKilometers
-            AUTO_RICKSHAW -> avgSpeedOfVehicle.autorickshaw.getKilometers
-            BIKE -> avgSpeedOfVehicle.bike.getKilometers
-            DELIVERY_BIKE -> avgSpeedOfVehicle.bike.getKilometers
-            TAXI -> avgSpeedOfVehicle.taxi.getKilometers
-            TAXI_PLUS -> avgSpeedOfVehicle.taxiplus.getKilometers
-            PREMIUM_SEDAN -> avgSpeedOfVehicle.premiumsedan.getKilometers
-            BLACK -> avgSpeedOfVehicle.black.getKilometers
-            BLACK_XL -> avgSpeedOfVehicle.blackxl.getKilometers
-            ECO -> avgSpeedOfVehicle.hatchback.getKilometers
-            COMFY -> avgSpeedOfVehicle.sedan.getKilometers
-            PREMIUM -> avgSpeedOfVehicle.sedan.getKilometers
-            AMBULANCE_TAXI -> avgSpeedOfVehicle.ambulance.getKilometers
-            AMBULANCE_TAXI_OXY -> avgSpeedOfVehicle.ambulance.getKilometers
-            AMBULANCE_AC -> avgSpeedOfVehicle.ambulance.getKilometers
-            AMBULANCE_AC_OXY -> avgSpeedOfVehicle.ambulance.getKilometers
-            AMBULANCE_VENTILATOR -> avgSpeedOfVehicle.ambulance.getKilometers
-            SUV_PLUS -> avgSpeedOfVehicle.suvplus.getKilometers
-            HERITAGE_CAB -> avgSpeedOfVehicle.heritagecab.getKilometers
-            EV_AUTO_RICKSHAW -> avgSpeedOfVehicle.evautorickshaw.getKilometers
-            DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
-            DELIVERY_TRUCK_MINI -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
-            DELIVERY_TRUCK_SMALL -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
-            DELIVERY_TRUCK_MEDIUM -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
-            DELIVERY_TRUCK_LARGE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
-            DELIVERY_TRUCK_ULTRA_LARGE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
-            BUS_NON_AC -> avgSpeedOfVehicle.busNonAc.getKilometers
-            BUS_AC -> avgSpeedOfVehicle.busAc.getKilometers
-            AUTO_PLUS -> avgSpeedOfVehicle.autorickshaw.getKilometers
-            BOAT -> avgSpeedOfVehicle.boat.getKilometers
-            VIP_ESCORT -> avgSpeedOfVehicle.vipEscort.getKilometers
-            VIP_OFFICER -> avgSpeedOfVehicle.vipOfficer.getKilometers
-            AC_PRIORITY -> avgSpeedOfVehicle.sedan.getKilometers
-            BIKE_PLUS -> avgSpeedOfVehicle.bikeplus.getKilometers
-            E_RICKSHAW -> avgSpeedOfVehicle.erickshaw.getKilometers
+      let variant = DV.castServiceTierToVariant serviceTier
+      let avgSpeedOfVehicle' = realToFrac @_ @Double $ (DP.getVehicleAvgSpeed variant avgSpeedOfVehicle).getKilometers
       if avgSpeedOfVehicle' > 0
         then do
           let distanceInKilometer = realToFrac @_ @Double distance.getMeters / 1000

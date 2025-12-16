@@ -30,6 +30,7 @@ import qualified Domain.Action.UI.Select as DSelect
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Location as Location
 import Domain.Types.RiderConfig
+import qualified Domain.Types.VehicleVariant as VehVar
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -115,7 +116,7 @@ tfCustomer mbPhoneNumber = do
 
 tfVehicle :: DSelect.DSelectRes -> Spec.Vehicle
 tfVehicle res =
-  let (category, variant) = UCommon.castVehicleVariant res.variant
+  let (category, variant) = VehVar.castVariantToBeckn res.variant
       vehicleColor = Nothing
       vehicleMake = Nothing
       vehicleModel = Nothing

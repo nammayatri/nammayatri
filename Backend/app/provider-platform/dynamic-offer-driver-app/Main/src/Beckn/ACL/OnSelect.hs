@@ -34,6 +34,7 @@ import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as Variant
 import Kernel.Prelude
 import qualified Kernel.Types.Common as Common (mkPrice)
 import Kernel.Types.Id (ShortId)
@@ -106,7 +107,7 @@ mkPaymentV2 bppConfig merchant driverQuote mbPaymentId = do
 
 mkVehicleV2 :: DQuote.DriverQuote -> Spec.Vehicle
 mkVehicleV2 quote =
-  let (category, variant) = Utils.castVariant quote.vehicleVariant
+  let (category, variant) = Variant.castVariantToBeckn quote.vehicleVariant
    in Spec.Vehicle
         { vehicleCategory = Just category,
           vehicleVariant = Just variant,

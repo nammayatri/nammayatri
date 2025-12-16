@@ -18,8 +18,10 @@
 
 module Domain.Types.VehicleVariant where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import Data.Aeson
+import qualified Data.List as DL
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified EulerHS.Prelude as EP
@@ -71,167 +73,120 @@ allVehicleVariants = [minBound .. maxBound]
 
 $(mkHttpInstancesForEnum ''VehicleVariant)
 
+data VariantMetadata = VariantMetadata
+  { vehicleCategory :: DVC.VehicleCategory,
+    becknCategory :: Enums.VehicleCategory,
+    becknVariantString :: Text,
+    avgSpeedFieldName :: Text,
+    serviceTierType :: Maybe DVST.ServiceTierType
+  }
+  deriving (Show, Eq)
+
+serviceTierSpecialCases :: [(DVST.ServiceTierType, VehicleVariant)]
+serviceTierSpecialCases =
+  [ (DVST.ECO, HATCHBACK),
+    (DVST.COMFY, SEDAN),
+    (DVST.PREMIUM, SEDAN)
+  ]
+
+variantMetadataMap :: [(VehicleVariant, VariantMetadata)]
+variantMetadataMap =
+  [ (SEDAN, VariantMetadata DVC.CAR Enums.CAB "SEDAN" "sedan" (Just DVST.SEDAN)),
+    (SUV, VariantMetadata DVC.CAR Enums.CAB "SUV" "suv" (Just DVST.SUV)),
+    (HATCHBACK, VariantMetadata DVC.CAR Enums.CAB "HATCHBACK" "hatchback" (Just DVST.HATCHBACK)),
+    (AUTO_RICKSHAW, VariantMetadata DVC.AUTO_CATEGORY Enums.AUTO_RICKSHAW "AUTO_RICKSHAW" "autorickshaw" (Just DVST.AUTO_RICKSHAW)),
+    (AUTO_PLUS, VariantMetadata DVC.AUTO_CATEGORY Enums.AUTO_RICKSHAW "AUTO_PLUS" "autorickshaw" (Just DVST.AUTO_PLUS)),
+    (TAXI, VariantMetadata DVC.CAR Enums.CAB "TAXI" "taxi" (Just DVST.TAXI)),
+    (TAXI_PLUS, VariantMetadata DVC.CAR Enums.CAB "TAXI_PLUS" "taxiplus" (Just DVST.TAXI_PLUS)),
+    (PREMIUM_SEDAN, VariantMetadata DVC.CAR Enums.CAB "PREMIUM_SEDAN" "premiumsedan" (Just DVST.PREMIUM_SEDAN)),
+    (BLACK, VariantMetadata DVC.CAR Enums.CAB "BLACK" "black" (Just DVST.BLACK)),
+    (BLACK_XL, VariantMetadata DVC.CAR Enums.CAB "BLACK_XL" "blackxl" (Just DVST.BLACK_XL)),
+    (BIKE, VariantMetadata DVC.MOTORCYCLE Enums.MOTORCYCLE "BIKE" "bike" (Just DVST.BIKE)),
+    (AMBULANCE_TAXI, VariantMetadata DVC.AMBULANCE Enums.AMBULANCE "AMBULANCE_TAXI" "ambulance" (Just DVST.AMBULANCE_TAXI)),
+    (AMBULANCE_TAXI_OXY, VariantMetadata DVC.AMBULANCE Enums.AMBULANCE "AMBULANCE_TAXI_OXY" "ambulance" (Just DVST.AMBULANCE_TAXI_OXY)),
+    (AMBULANCE_AC, VariantMetadata DVC.AMBULANCE Enums.AMBULANCE "AMBULANCE_AC" "ambulance" (Just DVST.AMBULANCE_AC)),
+    (AMBULANCE_AC_OXY, VariantMetadata DVC.AMBULANCE Enums.AMBULANCE "AMBULANCE_AC_OXY" "ambulance" (Just DVST.AMBULANCE_AC_OXY)),
+    (AMBULANCE_VENTILATOR, VariantMetadata DVC.AMBULANCE Enums.AMBULANCE "AMBULANCE_VENTILATOR" "ambulance" (Just DVST.AMBULANCE_VENTILATOR)),
+    (SUV_PLUS, VariantMetadata DVC.CAR Enums.CAB "SUV_PLUS" "suvplus" (Just DVST.SUV_PLUS)),
+    (DELIVERY_BIKE, VariantMetadata DVC.MOTORCYCLE Enums.MOTORCYCLE "DELIVERY_BIKE" "bike" (Just DVST.DELIVERY_BIKE)),
+    (DELIVERY_LIGHT_GOODS_VEHICLE, VariantMetadata DVC.TRUCK Enums.TRUCK "DELIVERY_LIGHT_GOODS_VEHICLE" "deliveryLightGoodsVehicle" (Just DVST.DELIVERY_LIGHT_GOODS_VEHICLE)),
+    (DELIVERY_TRUCK_MINI, VariantMetadata DVC.TRUCK Enums.TRUCK "DELIVERY_TRUCK_MINI" "deliveryLightGoodsVehicle" (Just DVST.DELIVERY_TRUCK_MINI)),
+    (DELIVERY_TRUCK_SMALL, VariantMetadata DVC.TRUCK Enums.TRUCK "DELIVERY_TRUCK_SMALL" "deliveryLightGoodsVehicle" (Just DVST.DELIVERY_TRUCK_SMALL)),
+    (DELIVERY_TRUCK_MEDIUM, VariantMetadata DVC.TRUCK Enums.TRUCK "DELIVERY_TRUCK_MEDIUM" "deliveryLightGoodsVehicle" (Just DVST.DELIVERY_TRUCK_MEDIUM)),
+    (DELIVERY_TRUCK_LARGE, VariantMetadata DVC.TRUCK Enums.TRUCK "DELIVERY_TRUCK_LARGE" "deliveryLightGoodsVehicle" (Just DVST.DELIVERY_TRUCK_LARGE)),
+    (DELIVERY_TRUCK_ULTRA_LARGE, VariantMetadata DVC.TRUCK Enums.TRUCK "DELIVERY_TRUCK_ULTRA_LARGE" "deliveryLightGoodsVehicle" (Just DVST.DELIVERY_TRUCK_ULTRA_LARGE)),
+    (BUS_NON_AC, VariantMetadata DVC.BUS Enums.BUS "BUS_NON_AC" "busNonAc" (Just DVST.BUS_NON_AC)),
+    (BUS_AC, VariantMetadata DVC.BUS Enums.BUS "BUS_AC" "busAc" (Just DVST.BUS_AC)),
+    (HERITAGE_CAB, VariantMetadata DVC.CAR Enums.CAB "HERITAGE_CAB" "heritagecab" (Just DVST.HERITAGE_CAB)),
+    (EV_AUTO_RICKSHAW, VariantMetadata DVC.AUTO_CATEGORY Enums.AUTO_RICKSHAW "EV_AUTO_RICKSHAW" "evautorickshaw" (Just DVST.EV_AUTO_RICKSHAW)),
+    (BOAT, VariantMetadata DVC.BOAT Enums.BOAT "BOAT" "boat" (Just DVST.BOAT)),
+    (VIP_ESCORT, VariantMetadata DVC.CAR Enums.CAB "VIP_ESCORT" "vipEscort" (Just DVST.VIP_ESCORT)),
+    (VIP_OFFICER, VariantMetadata DVC.CAR Enums.CAB "VIP_OFFICER" "vipOfficer" (Just DVST.VIP_OFFICER)),
+    (AC_PRIORITY, VariantMetadata DVC.CAR Enums.CAB "AC_PRIORITY" "sedan" (Just DVST.AC_PRIORITY)),
+    (BIKE_PLUS, VariantMetadata DVC.MOTORCYCLE Enums.MOTORCYCLE "BIKE_PLUS" "bikeplus" (Just DVST.BIKE_PLUS)),
+    (E_RICKSHAW, VariantMetadata DVC.AUTO_CATEGORY Enums.AUTO_RICKSHAW "E_RICKSHAW" "erickshaw" (Just DVST.E_RICKSHAW))
+  ]
+
+getVariantMetadata :: VehicleVariant -> Maybe VariantMetadata
+getVariantMetadata variant = lookup variant variantMetadataMap
+
+getVehicleCategoryForVariant :: VehicleVariant -> DVC.VehicleCategory
+getVehicleCategoryForVariant variant = maybe DVC.AUTO_CATEGORY vehicleCategory (getVariantMetadata variant)
+
+getRawBecknCategoryForVariant :: VehicleVariant -> Enums.VehicleCategory -- Returns MOTORCYCLE for bike variants, not TWO_WHEELER (can be deprecarted I think but created for safety)
+getRawBecknCategoryForVariant variant = maybe Enums.CAB becknCategory (getVariantMetadata variant)
+
+getBecknCategoryForVariant :: VehicleVariant -> Enums.VehicleCategory -- Converts MOTORCYCLE to TWO_WHEELER for API compatibility :)
+getBecknCategoryForVariant variant = case getRawBecknCategoryForVariant variant of
+  Enums.MOTORCYCLE -> Enums.TWO_WHEELER
+  cat -> cat
+
+getBecknVariantString :: VehicleVariant -> Text
+getBecknVariantString variant = maybe (show variant) becknVariantString (getVariantMetadata variant)
+
+castVariantToBeckn :: VehicleVariant -> (Text, Text)
+castVariantToBeckn variant = (show $ getBecknCategoryForVariant variant, getBecknVariantString variant)
+
 castServiceTierToVariant :: DVST.ServiceTierType -> VehicleVariant
-castServiceTierToVariant = \case
-  DVST.SEDAN -> SEDAN
-  DVST.ECO -> SEDAN
-  DVST.COMFY -> SEDAN
-  DVST.PREMIUM -> SEDAN
-  DVST.HATCHBACK -> HATCHBACK
-  DVST.TAXI -> TAXI
-  DVST.SUV -> SUV
-  DVST.TAXI_PLUS -> TAXI_PLUS
-  DVST.AUTO_RICKSHAW -> AUTO_RICKSHAW
-  DVST.EV_AUTO_RICKSHAW -> EV_AUTO_RICKSHAW
-  DVST.PREMIUM_SEDAN -> PREMIUM_SEDAN
-  DVST.BLACK -> BLACK
-  DVST.BLACK_XL -> BLACK_XL
-  DVST.BIKE -> BIKE
-  DVST.AMBULANCE_TAXI -> AMBULANCE_TAXI
-  DVST.AMBULANCE_TAXI_OXY -> AMBULANCE_TAXI_OXY
-  DVST.AMBULANCE_AC -> AMBULANCE_AC
-  DVST.AMBULANCE_AC_OXY -> AMBULANCE_AC_OXY
-  DVST.AMBULANCE_VENTILATOR -> AMBULANCE_VENTILATOR
-  DVST.SUV_PLUS -> SUV_PLUS
-  DVST.HERITAGE_CAB -> HERITAGE_CAB
-  DVST.DELIVERY_BIKE -> DELIVERY_BIKE
-  DVST.DELIVERY_LIGHT_GOODS_VEHICLE -> DELIVERY_LIGHT_GOODS_VEHICLE
-  DVST.DELIVERY_TRUCK_MINI -> DELIVERY_TRUCK_MINI
-  DVST.DELIVERY_TRUCK_SMALL -> DELIVERY_TRUCK_SMALL
-  DVST.DELIVERY_TRUCK_MEDIUM -> DELIVERY_TRUCK_MEDIUM
-  DVST.DELIVERY_TRUCK_LARGE -> DELIVERY_TRUCK_LARGE
-  DVST.DELIVERY_TRUCK_ULTRA_LARGE -> DELIVERY_TRUCK_ULTRA_LARGE
-  DVST.BUS_NON_AC -> BUS_NON_AC
-  DVST.BUS_AC -> BUS_AC
-  DVST.AUTO_PLUS -> AUTO_PLUS
-  DVST.BOAT -> BOAT
-  DVST.VIP_ESCORT -> VIP_ESCORT
-  DVST.VIP_OFFICER -> VIP_OFFICER
-  DVST.AC_PRIORITY -> AC_PRIORITY
-  DVST.BIKE_PLUS -> BIKE_PLUS
-  DVST.E_RICKSHAW -> E_RICKSHAW
+castServiceTierToVariant serviceTier = case lookup serviceTier serviceTierSpecialCases of
+  Just variant -> variant
+  Nothing -> case DL.find (\(_, metadata) -> metadata.serviceTierType == Just serviceTier) variantMetadataMap of
+    Just (variant, _) -> variant
+    Nothing -> SEDAN -- TODO: Handle properly
 
 castVariantToServiceTier :: VehicleVariant -> DVST.ServiceTierType
-castVariantToServiceTier = \case
-  SEDAN -> DVST.SEDAN
-  HATCHBACK -> DVST.HATCHBACK
-  TAXI -> DVST.TAXI
-  SUV -> DVST.SUV
-  TAXI_PLUS -> DVST.TAXI_PLUS
-  PREMIUM_SEDAN -> DVST.PREMIUM_SEDAN
-  BLACK -> DVST.BLACK
-  BLACK_XL -> DVST.BLACK_XL
-  AUTO_RICKSHAW -> DVST.AUTO_RICKSHAW
-  BIKE -> DVST.BIKE
-  AMBULANCE_TAXI -> DVST.AMBULANCE_TAXI
-  AMBULANCE_TAXI_OXY -> DVST.AMBULANCE_TAXI_OXY
-  AMBULANCE_AC -> DVST.AMBULANCE_AC
-  AMBULANCE_AC_OXY -> DVST.AMBULANCE_AC_OXY
-  AMBULANCE_VENTILATOR -> DVST.AMBULANCE_VENTILATOR
-  SUV_PLUS -> DVST.SUV_PLUS
-  EV_AUTO_RICKSHAW -> DVST.EV_AUTO_RICKSHAW
-  HERITAGE_CAB -> DVST.HERITAGE_CAB
-  DELIVERY_BIKE -> DVST.DELIVERY_BIKE
-  DELIVERY_LIGHT_GOODS_VEHICLE -> DVST.DELIVERY_LIGHT_GOODS_VEHICLE
-  DELIVERY_TRUCK_MINI -> DVST.DELIVERY_TRUCK_MINI
-  DELIVERY_TRUCK_SMALL -> DVST.DELIVERY_TRUCK_SMALL
-  DELIVERY_TRUCK_MEDIUM -> DVST.DELIVERY_TRUCK_MEDIUM
-  DELIVERY_TRUCK_LARGE -> DVST.DELIVERY_TRUCK_LARGE
-  DELIVERY_TRUCK_ULTRA_LARGE -> DVST.DELIVERY_TRUCK_ULTRA_LARGE
-  BUS_NON_AC -> DVST.BUS_NON_AC
-  BUS_AC -> DVST.BUS_AC
-  AUTO_PLUS -> DVST.AUTO_PLUS
-  BOAT -> DVST.BOAT
-  VIP_ESCORT -> DVST.VIP_ESCORT
-  VIP_OFFICER -> DVST.VIP_OFFICER
-  AC_PRIORITY -> DVST.AC_PRIORITY
-  BIKE_PLUS -> DVST.BIKE_PLUS
-  E_RICKSHAW -> DVST.E_RICKSHAW
-
-castVehicleVariantToVehicleCategory :: VehicleVariant -> DVC.VehicleCategory
-castVehicleVariantToVehicleCategory = \case
-  SEDAN -> DVC.CAR
-  SUV -> DVC.CAR
-  HATCHBACK -> DVC.CAR
-  AUTO_RICKSHAW -> DVC.AUTO_CATEGORY
-  TAXI -> DVC.CAR
-  TAXI_PLUS -> DVC.CAR
-  PREMIUM_SEDAN -> DVC.CAR
-  BLACK -> DVC.CAR
-  BLACK_XL -> DVC.CAR
-  BIKE -> DVC.MOTORCYCLE
-  AMBULANCE_TAXI -> DVC.AMBULANCE
-  AMBULANCE_TAXI_OXY -> DVC.AMBULANCE
-  AMBULANCE_AC -> DVC.AMBULANCE
-  AMBULANCE_AC_OXY -> DVC.AMBULANCE
-  AMBULANCE_VENTILATOR -> DVC.AMBULANCE
-  SUV_PLUS -> DVC.CAR
-  EV_AUTO_RICKSHAW -> DVC.AUTO_CATEGORY
-  HERITAGE_CAB -> DVC.CAR
-  DELIVERY_BIKE -> DVC.MOTORCYCLE
-  DELIVERY_LIGHT_GOODS_VEHICLE -> DVC.TRUCK
-  DELIVERY_TRUCK_MINI -> DVC.TRUCK
-  DELIVERY_TRUCK_SMALL -> DVC.TRUCK
-  DELIVERY_TRUCK_MEDIUM -> DVC.TRUCK
-  DELIVERY_TRUCK_LARGE -> DVC.TRUCK
-  DELIVERY_TRUCK_ULTRA_LARGE -> DVC.TRUCK
-  BUS_NON_AC -> DVC.BUS
-  BUS_AC -> DVC.BUS
-  AUTO_PLUS -> DVC.AUTO_CATEGORY
-  BOAT -> DVC.BOAT
-  VIP_ESCORT -> DVC.CAR
-  VIP_OFFICER -> DVC.CAR
-  AC_PRIORITY -> DVC.CAR
-  BIKE_PLUS -> DVC.MOTORCYCLE
-  E_RICKSHAW -> DVC.AUTO_CATEGORY
+castVariantToServiceTier variant = case getVariantMetadata variant >>= serviceTierType of
+  Just serviceTier -> serviceTier
+  Nothing -> DVST.SEDAN -- TODO: Handle properly
 
 castServiceTierToVehicleCategory :: DVST.ServiceTierType -> DVC.VehicleCategory
-castServiceTierToVehicleCategory = \case
-  DVST.SEDAN -> DVC.CAR
-  DVST.ECO -> DVC.CAR
-  DVST.COMFY -> DVC.CAR
-  DVST.PREMIUM -> DVC.CAR
-  DVST.HATCHBACK -> DVC.CAR
-  DVST.TAXI -> DVC.CAR
-  DVST.SUV -> DVC.CAR
-  DVST.TAXI_PLUS -> DVC.CAR
-  DVST.AUTO_RICKSHAW -> DVC.AUTO_CATEGORY
-  DVST.PREMIUM_SEDAN -> DVC.CAR
-  DVST.BLACK -> DVC.CAR
-  DVST.BLACK_XL -> DVC.CAR
-  DVST.BIKE -> DVC.MOTORCYCLE
-  DVST.AMBULANCE_TAXI -> DVC.AMBULANCE
-  DVST.AMBULANCE_TAXI_OXY -> DVC.AMBULANCE
-  DVST.AMBULANCE_AC -> DVC.AMBULANCE
-  DVST.AMBULANCE_AC_OXY -> DVC.AMBULANCE
-  DVST.AMBULANCE_VENTILATOR -> DVC.AMBULANCE
-  DVST.SUV_PLUS -> DVC.CAR
-  DVST.EV_AUTO_RICKSHAW -> DVC.AUTO_CATEGORY
-  DVST.HERITAGE_CAB -> DVC.CAR
-  DVST.DELIVERY_BIKE -> DVC.MOTORCYCLE
-  DVST.DELIVERY_LIGHT_GOODS_VEHICLE -> DVC.TRUCK
-  DVST.DELIVERY_TRUCK_MINI -> DVC.TRUCK
-  DVST.DELIVERY_TRUCK_SMALL -> DVC.TRUCK
-  DVST.DELIVERY_TRUCK_MEDIUM -> DVC.TRUCK
-  DVST.DELIVERY_TRUCK_LARGE -> DVC.TRUCK
-  DVST.DELIVERY_TRUCK_ULTRA_LARGE -> DVC.TRUCK
-  DVST.BUS_NON_AC -> DVC.BUS
-  DVST.BUS_AC -> DVC.BUS
-  DVST.AUTO_PLUS -> DVC.AUTO_CATEGORY
-  DVST.BOAT -> DVC.BOAT
-  DVST.VIP_ESCORT -> DVC.CAR
-  DVST.VIP_OFFICER -> DVC.CAR
-  DVST.AC_PRIORITY -> DVC.CAR
-  DVST.BIKE_PLUS -> DVC.MOTORCYCLE
-  DVST.E_RICKSHAW -> DVC.AUTO_CATEGORY
+castServiceTierToVehicleCategory serviceTier = getVehicleCategoryForVariant $ castServiceTierToVariant serviceTier
+
+parseVehicleVariantFromBeckn :: Maybe Text -> Maybe Text -> Maybe VehicleVariant
+parseVehicleVariantFromBeckn mbCategory mbVariant =
+  let normalizedCategory = case mbCategory of
+        Just "MOTORCYCLE" -> Just "TWO_WHEELER"
+        Just "TWO_WHEELER" -> Just "TWO_WHEELER"
+        cat -> cat
+   in case (normalizedCategory, mbVariant) of
+        (Just catStr, Just varStr) ->
+          DL.find
+            ( \(variant, _) ->
+                show (getBecknCategoryForVariant variant) == catStr
+                  && getBecknVariantString variant == varStr
+            )
+            variantMetadataMap
+            <&> fst
+        _ -> Nothing
+
+castVehicleVariantToVehicleCategory :: VehicleVariant -> DVC.VehicleCategory
+castVehicleVariantToVehicleCategory = getVehicleCategoryForVariant
 
 getVehicleCategory :: Maybe DVC.VehicleCategory -> VehicleVariant -> Maybe DVC.VehicleCategory
 getVehicleCategory mbVehicleCategory variant = mbVehicleCategory <|> (Just $ castVehicleVariantToVehicleCategory variant)
 
 getVehicleCategoryFromVehicleVariantDefault :: Maybe VehicleVariant -> DVC.VehicleCategory
-getVehicleCategoryFromVehicleVariantDefault = maybe defaultCategory castVehicleVariantToVehicleCategory
-  where
-    defaultCategory = DVC.AUTO_CATEGORY
+getVehicleCategoryFromVehicleVariantDefault = maybe DVC.AUTO_CATEGORY castVehicleVariantToVehicleCategory -- handle default properly
 
 getTruckVehicleVariant :: Maybe Float -> Maybe Float -> VehicleVariant -> VehicleVariant
 getTruckVehicleVariant mbGrossVehicleWeight mbUnladdenWeight currentVariant = flip (maybe currentVariant) ((,) <$> mbGrossVehicleWeight <*> mbUnladdenWeight) $
