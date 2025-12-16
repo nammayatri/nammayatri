@@ -49,6 +49,7 @@ saveFeedbackFormResult feedbackFormReq = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   config <- QTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   let shouldSendPN = maybe False (.enableFeedbackNotification) config.feedbackNotificationConfig
+  let allowNotificationOnEmptyBadge = maybe False (.allowNotificationOnEmptyBadge) config.feedbackNotificationConfig
   case feedbackFormReq.badges of
     Just badgeMetadataList | not (null badgeMetadataList) -> do
       addFeedbackWithBadgeKeys badgeMetadataList ride ride.driverId feedbackFormReq.rating
@@ -60,7 +61,7 @@ saveFeedbackFormResult feedbackFormReq = do
       feedbackChipsList <- getFeedbackAnswers feedbackFormReq
       addFeedback feedbackChipsList ride ride.driverId feedbackFormReq.rating
       updateFeedbackBadgeOld feedbackChipsList ride.driverId ride.merchantId ride.merchantOperatingCityId
-      when shouldSendPN $
+      when (shouldSendPN && allowNotificationOnEmptyBadge) $
         whenJust feedbackFormReq.rating $ \rating -> do
           scheduleFeedbackPN ride rating Nothing config.feedbackNotificationConfig
 
