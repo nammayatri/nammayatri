@@ -74,20 +74,42 @@ findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId passTypeId device
       (Just 0)
     <&> listToMaybe
 
+findPendingPassByPersonIdAndPassTypeId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DPassType.PassType ->
+  m (Maybe DPurchasedPass.PurchasedPass)
+findPendingPassByPersonIdAndPassTypeId personId merchantId passTypeId =
+  findOneWithKV
+    [ Se.Is Beam.personId $ Se.Eq (getId personId),
+      Se.Is Beam.merchantId $ Se.Eq (getId merchantId),
+      Se.Is Beam.passTypeId $ Se.Eq (getId passTypeId),
+      Se.Is Beam.status $ Se.Not $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked]
+    ]
+
 updatePurchaseData ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DPurchasedPass.PurchasedPass ->
   Day ->
   Day ->
   DPurchasedPass.StatusType ->
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe DPurchasedPass.BenefitType ->
+  Kernel.Prelude.Maybe HighPrecMoney ->
+  HighPrecMoney ->
   m ()
-updatePurchaseData purchasedPassId startDate endDate status = do
+updatePurchaseData purchasedPassId startDate endDate status benefitDescription mbBenefitType mbBenefitValue amount = do
   now <- getCurrentTime
   updateWithKV
     ( [ Se.Set Beam.startDate startDate,
         Se.Set Beam.endDate endDate,
         Se.Set Beam.status status,
         Se.Set Beam.usedTripCount (Just 0),
+        Se.Set Beam.benefitDescription benefitDescription,
+        Se.Set Beam.benefitType mbBenefitType,
+        Se.Set Beam.benefitValue mbBenefitValue,
+        Se.Set Beam.passAmount amount,
         Se.Set Beam.updatedAt now
       ]
         <> (if status == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0)] else [])

@@ -381,7 +381,7 @@ data DriverWalletConfig = DriverWalletConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data FeedbackNotificationConfig = FeedbackNotificationConfig {enableFeedbackNotification :: Kernel.Prelude.Bool, feedbackNotificationDelayInSec :: Kernel.Prelude.Int}
+data FeedbackNotificationConfig = FeedbackNotificationConfig {allowNotificationOnEmptyBadge :: Kernel.Prelude.Bool, enableFeedbackNotification :: Kernel.Prelude.Bool, feedbackNotificationDelayInSec :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}

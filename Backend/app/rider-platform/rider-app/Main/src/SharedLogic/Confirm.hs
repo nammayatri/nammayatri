@@ -53,6 +53,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
 import SharedLogic.MerchantPaymentMethod
+import qualified SharedLogic.Payment as SPayment
 -- import SharedLogic.Type
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -103,7 +104,8 @@ data DConfirmRes = DConfirmRes
     confirmResDetails :: Maybe DConfirmResDetails,
     isAdvanceBookingEnabled :: Maybe Bool,
     isInsured :: Maybe Bool,
-    insuredAmount :: Maybe Text
+    insuredAmount :: Maybe Text,
+    paymentMode :: Maybe DMPM.PaymentMode
   }
   deriving (Show, Generic)
 
@@ -139,9 +141,10 @@ confirm DConfirmReq {..} = do
   when (quote.validTill < now) $ throwError (InvalidRequest $ "Quote expired " <> show quote.id) -- init validation check
   (bppQuoteId, mbEsimateId) <- getBppQuoteId now quote.quoteDetails
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   when (merchant.onlinePayment && paymentInstrument /= Just DMPM.Cash) $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
-    QPerson.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
+    SPayment.updateDefaultPersonPaymentMethodId person paymentMethodId -- Make payment method as default payment method for customer
   activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
   case activeBooking of
     Just booking | not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking OnConfirm
@@ -156,7 +159,7 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions
+  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId paymentInstrument isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions person.paymentMode
   -- check also for the booking parties
   checkIfActiveRidePresentForParties bookingParties
   when isScheduled $ do
@@ -166,7 +169,6 @@ confirm DConfirmReq {..} = do
       let dfCalculationJobTs = max 2 scheduleAfter
           scheduledRidePopupToRiderJobData = ScheduledRidePopupToRiderJobData {bookingId = booking.id}
       createJobIn @_ @'ScheduledRidePopupToRider (Just searchRequest.merchantId) (Just merchantOperatingCityId) dfCalculationJobTs (scheduledRidePopupToRiderJobData :: ScheduledRidePopupToRiderJobData)
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhone <-
     if isValueAddNP
@@ -214,6 +216,7 @@ confirm DConfirmReq {..} = do
         isAdvanceBookingEnabled = searchRequest.isAdvanceBookingEnabled,
         isInsured = Just $ booking.isInsured,
         insuredAmount = booking.driverInsuredAmount,
+        paymentMode = booking.paymentMode,
         ..
       }
   where
@@ -303,8 +306,9 @@ buildBooking ::
   Bool ->
   Maybe Text ->
   [LYT.ConfigVersionMap] ->
+  Maybe DMPM.PaymentMode ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions = do
+buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId paymentInstrument isScheduled disabilityTag configInExperimentVersions paymentMode = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   bookingParties <- buildPartiesLinks id

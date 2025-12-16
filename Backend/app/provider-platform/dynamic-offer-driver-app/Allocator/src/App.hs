@@ -56,6 +56,7 @@ import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferra
 import SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP (checkExotelCallStatusAndNotifyBAP)
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (sendScheduledRideAssignedOnUpdate)
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver (sendScheduledRideNotificationsToDriver, sendTagActionNotification)
+import SharedLogic.Allocator.Jobs.SendFeedbackPN (sendFeedbackPN)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
@@ -130,6 +131,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendWebhookWithRetryToExternal)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . installationStatus)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . mediaFileDocumentComplete)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendFeedbackPN)
     }
 
 runDriverOfferAllocator ::

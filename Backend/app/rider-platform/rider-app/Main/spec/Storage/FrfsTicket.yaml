@@ -40,6 +40,8 @@ imports:
   FRFSCategoryTag: Domain.Types.FRFSQuoteCategorySpec
   OfferedValue: Domain.Types.FRFSQuoteCategorySpec
   FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
+  BusLocation: API.Types.UI.RiderLocation
+  Value: Data.Aeson
 
 FRFSSearch:
   tableName: frfs_search
@@ -48,6 +50,12 @@ FRFSSearch:
     id: Id FRFSSearch
     fromStationCode: Text
     toStationCode: Text
+    fromStationPoint: Maybe LatLong
+    toStationPoint: Maybe LatLong
+    fromStationName: Maybe Text
+    toStationName: Maybe Text
+    fromStationAddress: Maybe Text
+    toStationAddress: Maybe Text
     routeCode: Maybe Text
     quantity: Int
     vehicleType: VehicleCategory
@@ -63,6 +71,8 @@ FRFSSearch:
     validTill: Maybe UTCTime
     multimodalSearchRequestId: Maybe Text
     searchAsParentStops: Maybe Bool
+    busLocationData: "[BusLocation]"
+    vehicleNumber: Maybe Text
 
   beamFields:
     fromStationCode:
@@ -71,6 +81,34 @@ FRFSSearch:
       toStationId: Text
     routeCode:
       routeId: Maybe Text
+    fromStationPoint:
+      fromStationLat: Maybe Double
+      fromStationLon: Maybe Double
+    toStationPoint:
+      toStationLat: Maybe Double
+      toStationLon: Maybe Double
+
+  beamType:
+    busLocationData: Maybe Value
+
+  toTType:
+    fromStationLat: (.lat) <$> fromStationPoint|E
+    fromStationLon: (.lon) <$> fromStationPoint|E
+    toStationLat: (.lat) <$> toStationPoint|E
+    toStationLon: (.lon) <$> toStationPoint|E
+    busLocationData: Just $ toJSON busLocationData|E
+
+  fromTType:
+    fromStationPoint: Kernel.External.Maps.Types.LatLong <$> fromStationLat <*> fromStationLon|E
+    toStationPoint: Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon|E
+    busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
+
+  sqlType:
+    fromStationLat: double precision
+    fromStationLon: double precision
+    toStationLat: double precision
+    toStationLon: double precision
+    busLocationData: "json"
 
   excludedDefaultQueries:
     - create
@@ -106,6 +144,12 @@ FRFSQuote:
     _type: FRFSQuoteType
     fromStationCode: Text
     toStationCode: Text
+    fromStationPoint: Maybe LatLong
+    toStationPoint: Maybe LatLong
+    fromStationName: Maybe Text
+    toStationName: Maybe Text
+    fromStationAddress: Maybe Text
+    toStationAddress: Maybe Text
     stationsJson: Text
     routeStationsJson: Maybe Text
     vehicleType: VehicleCategory
@@ -127,6 +171,8 @@ FRFSQuote:
     bppDelayedInterest: Maybe Int
     oldCacheDump: Maybe Text
     multimodalSearchRequestId: Maybe Text
+    busLocationData: "[BusLocation]"
+    vehicleNumber: Maybe Text
   beamFields:
     fromStationCode:
       fromStationId: Text
@@ -139,9 +185,16 @@ FRFSQuote:
       ticketTypeCode: Maybe Text
       trainTypeCode: Maybe Text
       appSession: Maybe Int
+    fromStationPoint:
+      fromStationLat: Maybe Double
+      fromStationLon: Maybe Double
+    toStationPoint:
+      toStationLat: Maybe Double
+      toStationLon: Maybe Double
 
   beamType:
     vehicleVariant: Maybe VehicleVariant
+    busLocationData: Maybe Value
 
   types:
     FRFSQuoteType:
@@ -157,6 +210,9 @@ FRFSQuote:
   fromTType:
     applicableDiscountIds: (Kernel.Types.Id.Id <$> ) <$>|I
     fareDetails: Domain.Types.FRFSQuote.FRFSFareDetails <$> appSession <*> distance <*> providerRouteId <*> ticketTypeCode <*> trainTypeCode <*> via|E
+    fromStationPoint: Kernel.External.Maps.Types.LatLong <$> fromStationLat <*> fromStationLon|E
+    toStationPoint: Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon|E
+    busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
 
   toTType:
     currency: (Kernel.Prelude.fmap (.currency))|I
@@ -167,9 +223,19 @@ FRFSQuote:
     ticketTypeCode: (fareDetails <&> (.ticketTypeCode))|E
     trainTypeCode: (fareDetails <&> (.trainTypeCode))|E
     appSession: (fareDetails <&> (.appSession))|E
+    fromStationLat: (.lat) <$> fromStationPoint|E
+    fromStationLon: (.lon) <$> fromStationPoint|E
+    toStationLat: (.lat) <$> toStationPoint|E
+    toStationLon: (.lon) <$> toStationPoint|E
+    busLocationData: Just $ toJSON busLocationData|E
 
   sqlType:
     applicableDiscountIds: "text[]"
+    busLocationData: "json"
+    fromStationLat: double precision
+    fromStationLon: double precision
+    toStationLat: double precision
+    toStationLon: double precision
 
   constraints:
     id: PrimaryKey
@@ -265,6 +331,10 @@ FRFSQuoteCategory:
       kvFunction: updateWithKV
       params: [finalPrice, updatedAt]
       where: id
+    updateOfferedPriceByQuoteId:
+      kvFunction: updateWithKV
+      params: [offeredPrice, updatedAt]
+      where: quoteId
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
@@ -282,6 +352,12 @@ FRFSTicketBooking:
     _type: FRFSQuoteType
     fromStationCode: Text
     toStationCode: Text
+    fromStationAddress: Maybe Text
+    toStationAddress: Maybe Text
+    fromStationPoint: Maybe LatLong
+    toStationPoint: Maybe LatLong
+    fromStationName: Maybe Text
+    toStationName: Maybe Text
     vehicleType: VehicleCategory
     bppSubscriberId: Text
     bppSubscriberUrl: Text
@@ -319,6 +395,8 @@ FRFSTicketBooking:
     multimodalSearchRequestId: Maybe Text
     failureReason: Maybe Text
     isSingleMode: Maybe Bool
+    busLocationData: "[BusLocation]"
+    vehicleNumber: Maybe Text
 
   default:
     customerCancelled: "false"
@@ -331,6 +409,15 @@ FRFSTicketBooking:
     totalPrice:
       currency: Maybe Currency
       price: HighPrecMoney
+    fromStationPoint:
+      fromStationLat: Maybe Double
+      fromStationLon: Maybe Double
+    toStationPoint:
+      toStationLat: Maybe Double
+      toStationLon: Maybe Double
+
+  beamType:
+    busLocationData: Maybe Value
 
   types:
     CashbackStatus:
@@ -338,10 +425,25 @@ FRFSTicketBooking:
 
   fromTType:
     totalPrice: Kernel.Types.Common.mkPrice currency price|E
+    busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
+    fromStationPoint: Kernel.External.Maps.Types.LatLong <$> fromStationLat <*> fromStationLon|E
+    toStationPoint: Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon|E
 
   toTType:
     price: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
+    busLocationData: Just $ toJSON busLocationData|E
+    fromStationLat: (.lat) <$> fromStationPoint|E
+    fromStationLon: (.lon) <$> fromStationPoint|E
+    toStationLat: (.lat) <$> toStationPoint|E
+    toStationLon: (.lon) <$> toStationPoint|E
+
+  sqlType:
+    busLocationData: "json"
+    fromStationLat: double precision
+    fromStationLon: double precision
+    toStationLat: double precision
+    toStationLon: double precision
 
   constraints:
     id: PrimaryKey
@@ -438,6 +540,10 @@ FRFSTicketBooking:
     updateFailureReasonById:
       kvFunction: updateOneWithKV
       params: [failureReason]
+      where: id
+    updateTotalPriceById:
+      kvFunction: updateOneWithKV
+      params: [totalPrice]
       where: id
 
   extraOperations:

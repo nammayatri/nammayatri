@@ -35,6 +35,7 @@ types:
   PassAPIEntity:
     id: Id Pass
     amount: HighPrecMoney
+    originalAmount: HighPrecMoney
     savings: Maybe HighPrecMoney
     benefit: Maybe Benefit
     benefitDescription: Text
@@ -75,6 +76,11 @@ types:
   PassSwitchDeviceIdReq:
     deviceId: Maybe Text
     imeiNumber: Maybe Text
+
+  PassUploadProfilePictureReq:
+    purchasedPassId: Id PurchasedPass
+    profilePicture: Text
+    imeiNumber: Text
 
   PurchasedPassAPIEntity:
     id: Id PurchasedPass
@@ -186,5 +192,15 @@ apis:
       auth: TokenAuth
       params:
         passNumber: Int
+      query:
+        date: Day
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /multimodal/pass/uploadProfilePicture
+      auth: TokenAuth
+      request:
+        type: PassUploadProfilePictureReq
       response:
         type: APISuccess

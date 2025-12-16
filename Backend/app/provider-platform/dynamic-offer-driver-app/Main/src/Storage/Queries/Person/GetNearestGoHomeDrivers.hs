@@ -55,7 +55,8 @@ data NearestGoHomeDriversReq = NearestGoHomeDriversReq
     onlinePayment :: Bool,
     isValueAddNP :: Bool,
     now :: UTCTime,
-    prepaidSubscriptionAndWalletEnabled :: Bool
+    prepaidSubscriptionAndWalletEnabled :: Bool,
+    paymentMode :: Maybe MP.PaymentMode
   }
 
 data NearestGoHomeDriversResult = NearestGoHomeDriversResult
@@ -108,7 +109,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
   driverBankAccounts <-
     if onlinePayment
-      then QDBA.getDriverOrFleetBankAccounts (driverLocs <&> (.driverId))
+      then QDBA.getDriverOrFleetBankAccounts paymentMode (driverLocs <&> (.driverId))
       else return []
 
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)

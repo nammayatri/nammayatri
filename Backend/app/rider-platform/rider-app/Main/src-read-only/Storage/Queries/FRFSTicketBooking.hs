@@ -150,6 +150,16 @@ updateStatusValidTillAndPaymentTxnById status validTill paymentTxnId id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.status status, Se.Set Beam.validTill validTill, Se.Set Beam.paymentTxnId paymentTxnId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateTotalPriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateTotalPriceById totalPrice id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
+      Se.Set Beam.price ((.amount) totalPrice),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateValidTillById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateValidTillById validTill id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.validTill validTill, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -169,6 +179,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.bppOrderId bppOrderId,
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
+      Se.Set Beam.busLocationData (Just $ toJSON busLocationData),
       Se.Set Beam.cancellationCharges cancellationCharges,
       Se.Set Beam.cashbackPayoutOrderId cashbackPayoutOrderId,
       Se.Set Beam.cashbackStatus cashbackStatus,
@@ -176,7 +187,11 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.discountedTickets discountedTickets,
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
       Se.Set Beam.failureReason failureReason,
+      Se.Set Beam.fromStationAddress fromStationAddress,
       Se.Set Beam.fromStationId fromStationCode,
+      Se.Set Beam.fromStationName fromStationName,
+      Se.Set Beam.fromStationLat ((.lat) <$> fromStationPoint),
+      Se.Set Beam.fromStationLon ((.lon) <$> fromStationPoint),
       Se.Set Beam.googleWalletJWTUrl googleWalletJWTUrl,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isBookingCancellable isBookingCancellable,
@@ -204,10 +219,15 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.startTime startTime,
       Se.Set Beam.stationsJson stationsJson,
       Se.Set Beam.status status,
+      Se.Set Beam.toStationAddress toStationAddress,
       Se.Set Beam.toStationId toStationCode,
+      Se.Set Beam.toStationName toStationName,
+      Se.Set Beam.toStationLat ((.lat) <$> toStationPoint),
+      Se.Set Beam.toStationLon ((.lon) <$> toStationPoint),
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
       Se.Set Beam.price ((.amount) totalPrice),
       Se.Set Beam.validTill validTill,
+      Se.Set Beam.vehicleNumber vehicleNumber,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.updatedAt _now
     ]

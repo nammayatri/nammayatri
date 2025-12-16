@@ -6,6 +6,7 @@ module API.Types.Dashboard.AppManagement where
 import qualified API.Types.Dashboard.AppManagement.Customer
 import qualified API.Types.Dashboard.AppManagement.EventManagement
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
+import qualified API.Types.Dashboard.AppManagement.Pass
 import qualified API.Types.Dashboard.AppManagement.TicketDashboard
 import qualified API.Types.Dashboard.AppManagement.Tickets
 import qualified Data.List
@@ -19,6 +20,7 @@ data AppManagementUserActionType
   = CUSTOMER API.Types.Dashboard.AppManagement.Customer.CustomerUserActionType
   | EVENT_MANAGEMENT API.Types.Dashboard.AppManagement.EventManagement.EventManagementUserActionType
   | MERCHANT_ONBOARDING API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingUserActionType
+  | PASS API.Types.Dashboard.AppManagement.Pass.PassUserActionType
   | TICKET_DASHBOARD API.Types.Dashboard.AppManagement.TicketDashboard.TicketDashboardUserActionType
   | TICKETS API.Types.Dashboard.AppManagement.Tickets.TicketsUserActionType
   deriving stock (Generic, Eq, Ord)
@@ -29,6 +31,7 @@ instance Text.Show.Show AppManagementUserActionType where
     CUSTOMER e -> "CUSTOMER/" <> show e
     EVENT_MANAGEMENT e -> "EVENT_MANAGEMENT/" <> show e
     MERCHANT_ONBOARDING e -> "MERCHANT_ONBOARDING/" <> show e
+    PASS e -> "PASS/" <> show e
     TICKET_DASHBOARD e -> "TICKET_DASHBOARD/" <> show e
     TICKETS e -> "TICKETS/" <> show e
 
@@ -48,6 +51,15 @@ instance Text.Read.Read AppManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "MERCHANT_ONBOARDING/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( PASS v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "PASS/" r,
                    ( v1,
                      r2
                      ) <-
@@ -76,4 +88,4 @@ instance Text.Read.Read AppManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [(''AppManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''AppManagementUserActionType])

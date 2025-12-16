@@ -114,25 +114,25 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
       fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
       return (isFareMandatory, fares)
     CRIS config' -> do
-      (viaPoints, changeOver) <- getChangeOverAndViaPoints (NE.toList fareRouteDetails) integrationBPPConfig
+      (viaPoints, changeOver, rawChangeOver) <- getChangeOverAndViaPoints (NE.toList fareRouteDetails) integrationBPPConfig
       maybe
-        (callCRISAPI config' changeOver viaPoints >>= \fares -> return (isFareMandatory, fares))
+        (callCRISAPI config' changeOver rawChangeOver viaPoints >>= \fares -> return (isFareMandatory, fares))
         ( \searchReqId -> do
             let redisKey = CRISRouteFare.mkRouteFareKey startStopCode endStopCode searchReqId
             redisResp <- Redis.safeGet redisKey
             case redisResp of
               Just subwayFares -> do
-                let cachedFares = filter (\fare -> maybe False (\fd -> fd.via == changeOver) fare.fareDetails) subwayFares
+                let cachedFares = filter (\fare -> maybe False (\fd -> fd.via == rawChangeOver) fare.fareDetails) subwayFares
                 if null cachedFares
-                  then fetchAndCacheFares config' redisKey changeOver viaPoints isFareMandatory
+                  then fetchAndCacheFares config' redisKey changeOver rawChangeOver viaPoints isFareMandatory
                   else return (isFareMandatory, cachedFares)
-              Nothing -> fetchAndCacheFares config' redisKey changeOver viaPoints isFareMandatory
+              Nothing -> fetchAndCacheFares config' redisKey changeOver rawChangeOver viaPoints isFareMandatory
         )
         mbSearchReqId
   where
-    callCRISAPI config' changeOver viaPoints = do
+    callCRISAPI config' changeOver rawChangeOver viaPoints = do
       let (_, startStop, endStop) = getRouteCodeAndStartAndStop
-      routeFareReq <- JMU.getRouteFareRequest startStop endStop changeOver viaPoints riderId (config'.useRouteFareV4 /= Just True)
+      routeFareReq <- JMU.getRouteFareRequest startStop endStop changeOver rawChangeOver viaPoints riderId (config'.useRouteFareV4 /= Just True)
       resp <- withTryCatch "CRIS:getRouteFare" $ if config'.useRouteFareV4 == Just True then CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq False else CRISRouteFareV3.getRouteFare config' merchanOperatingCity.id routeFareReq True False
       case resp of
         Left err -> do
@@ -140,8 +140,8 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
           return []
         Right (fares, _) -> return fares
 
-    fetchAndCacheFares config' redisKey changeOver viaPoints isFareMandatory = do
-      fares <- callCRISAPI config' changeOver viaPoints
+    fetchAndCacheFares config' redisKey changeOver rawChangeOver viaPoints isFareMandatory = do
+      fares <- callCRISAPI config' changeOver rawChangeOver viaPoints
       unless (null fares) $ Redis.setExp redisKey fares 1800
       return (isFareMandatory, fares)
 
@@ -236,7 +236,7 @@ getStationList integrationBPPConfig = do
 getPaymentDetails :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams
 getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = error "Unimplemented!"
 
-getChangeOverAndViaPoints :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => [BasicRouteDetail] -> IntegratedBPPConfig -> m (Text, Text)
+getChangeOverAndViaPoints :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => [BasicRouteDetail] -> IntegratedBPPConfig -> m (Text, Text, Text)
 getChangeOverAndViaPoints fareRouteDetails integrationBPPConfig = do
   allStations <- buildStations fareRouteDetails integrationBPPConfig
   let stationCodes = map (.stationCode) allStations
@@ -255,7 +255,8 @@ getChangeOverAndViaPoints fareRouteDetails integrationBPPConfig = do
       changeOverStations = filter (`elem` configuredChangeOverStations) changeOverPoints
       viaPoints = if null viaStations then " " else T.intercalate "-" viaStations
       changeOver = if null changeOverStations then " " else T.intercalate "-" changeOverStations
-  return (viaPoints, changeOver)
+      rawChangeOver = if null changeOverPoints then " " else T.intercalate "-" changeOverPoints
+  return (viaPoints, changeOver, rawChangeOver)
 
 buildStations :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => [BasicRouteDetail] -> IntegratedBPPConfig -> m [DStation]
 buildStations basicRouteDetails integratedBPPConfig = do

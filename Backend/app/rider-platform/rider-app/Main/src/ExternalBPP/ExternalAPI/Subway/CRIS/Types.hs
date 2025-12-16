@@ -16,6 +16,7 @@ data CRISFareRequest = CRISFareRequest
     appSession :: Int,
     sourceCode :: Text,
     changeOver :: Text,
+    rawChangeOver :: Text,
     destCode :: Text,
     via :: Text
   }

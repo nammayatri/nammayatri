@@ -48,162 +48,7 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN journey_leg_id character varying(36
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
 ALTER TABLE atlas_app.frfs_search ALTER COLUMN journey_leg_id TYPE text;
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
 
 
 ------- SQL updates -------
@@ -213,22 +58,36 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN multimodal_search_request_id text ;
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
 ALTER TABLE atlas_app.frfs_search ADD COLUMN search_as_parent_stops boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN to_station_lon double precision ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN to_station_lat double precision ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN from_station_lon double precision ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN from_station_lat double precision ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN to_station_name text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN to_station_address text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN from_station_name text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN from_station_address text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN bus_location_data json ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN vehicle_number text ;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN minimal_data boolean ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
 
 
 

@@ -42,6 +42,8 @@ module SharedLogic.MessageBuilder
     buildFRFSTicketCancelOTPMessage,
     BuildFRFSTicketCancelOTPMessageReq (..),
     templateText,
+    BuildPassSuccessMessage (..),
+    buildPassSuccessMessage,
   )
 where
 
@@ -326,3 +328,14 @@ buildDeliveryDetailsMessage merchantOperatingCityId req = do
       ("appUrl", req.appUrl),
       ("otp", req.otp)
     ]
+
+newtype BuildPassSuccessMessage = BuildPassSuccessMessage
+  { passName :: Text
+  }
+
+buildPassSuccessMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildPassSuccessMessage -> m SmsReqBuilder
+buildPassSuccessMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.PASS_PURCHASED_MESSAGE Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.PASS_PURCHASED_MESSAGE))
+  buildSendSmsReq merchantMessage [("passName", req.passName)]

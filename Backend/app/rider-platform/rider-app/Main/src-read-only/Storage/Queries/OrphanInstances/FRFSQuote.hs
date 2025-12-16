@@ -6,10 +6,12 @@ module Storage.Queries.OrphanInstances.FRFSQuote where
 import qualified Domain.Types.FRFSQuote
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.FRFSQuote as Beam
 
 instance FromTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
@@ -22,10 +24,14 @@ instance FromTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
             bppItemId = bppItemId,
             bppSubscriberId = bppSubscriberId,
             bppSubscriberUrl = bppSubscriberUrl,
+            busLocationData = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData),
             discountedTickets = discountedTickets,
             eventDiscountAmount = eventDiscountAmount,
             fareDetails = Domain.Types.FRFSQuote.FRFSFareDetails <$> appSession <*> distance <*> providerRouteId <*> ticketTypeCode <*> trainTypeCode <*> via,
+            fromStationAddress = fromStationAddress,
             fromStationCode = fromStationId,
+            fromStationName = fromStationName,
+            fromStationPoint = Kernel.External.Maps.Types.LatLong <$> fromStationLat <*> fromStationLon,
             id = Kernel.Types.Id.Id id,
             integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -41,8 +47,12 @@ instance FromTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
             routeStationsJson = routeStationsJson,
             searchId = Kernel.Types.Id.Id searchId,
             stationsJson = stationsJson,
+            toStationAddress = toStationAddress,
             toStationCode = toStationId,
+            toStationName = toStationName,
+            toStationPoint = Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon,
             validTill = validTill,
+            vehicleNumber = vehicleNumber,
             vehicleType = vehicleType,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -56,6 +66,7 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.bppItemId = bppItemId,
         Beam.bppSubscriberId = bppSubscriberId,
         Beam.bppSubscriberUrl = bppSubscriberUrl,
+        Beam.busLocationData = Just $ toJSON busLocationData,
         Beam.discountedTickets = discountedTickets,
         Beam.eventDiscountAmount = eventDiscountAmount,
         Beam.appSession = fareDetails <&> (.appSession),
@@ -64,7 +75,11 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.ticketTypeCode = fareDetails <&> (.ticketTypeCode),
         Beam.trainTypeCode = fareDetails <&> (.trainTypeCode),
         Beam.via = fareDetails <&> (.via),
+        Beam.fromStationAddress = fromStationAddress,
         Beam.fromStationId = fromStationCode,
+        Beam.fromStationName = fromStationName,
+        Beam.fromStationLat = (.lat) <$> fromStationPoint,
+        Beam.fromStationLon = (.lon) <$> fromStationPoint,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
@@ -80,8 +95,13 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.routeStationsJson = routeStationsJson,
         Beam.searchId = Kernel.Types.Id.getId searchId,
         Beam.stationsJson = stationsJson,
+        Beam.toStationAddress = toStationAddress,
         Beam.toStationId = toStationCode,
+        Beam.toStationName = toStationName,
+        Beam.toStationLat = (.lat) <$> toStationPoint,
+        Beam.toStationLon = (.lon) <$> toStationPoint,
         Beam.validTill = validTill,
+        Beam.vehicleNumber = vehicleNumber,
         Beam.vehicleType = vehicleType,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

@@ -168,6 +168,7 @@ library
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
+      Domain.Action.Dashboard.AppManagement.Pass
       Domain.Action.Dashboard.AppManagement.TicketDashboard
       Domain.Action.Dashboard.AppManagement.Tickets
       Domain.Action.Dashboard.Booking
@@ -645,6 +646,7 @@ library
       API.Action.Dashboard.AppManagement.Customer
       API.Action.Dashboard.AppManagement.EventManagement
       API.Action.Dashboard.AppManagement.MerchantOnboarding
+      API.Action.Dashboard.AppManagement.Pass
       API.Action.Dashboard.AppManagement.TicketDashboard
       API.Action.Dashboard.AppManagement.Tickets
       API.Action.Dashboard.IssueManagement
@@ -715,10 +717,12 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.Customer
       API.Types.Dashboard.AppManagement.Endpoints.EventManagement
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
+      API.Types.Dashboard.AppManagement.Endpoints.Pass
       API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard
       API.Types.Dashboard.AppManagement.Endpoints.Tickets
       API.Types.Dashboard.AppManagement.EventManagement
       API.Types.Dashboard.AppManagement.MerchantOnboarding
+      API.Types.Dashboard.AppManagement.Pass
       API.Types.Dashboard.AppManagement.TicketDashboard
       API.Types.Dashboard.AppManagement.Tickets
       API.Types.Dashboard.RideBooking
@@ -872,6 +876,7 @@ library
       Domain.Types.PassType
       Domain.Types.PassVerifyTransaction
       Domain.Types.PaymentCustomer
+      Domain.Types.PaymentTransactionOfferPayout
       Domain.Types.PayoutConfig
       Domain.Types.Person
       Domain.Types.PersonDefaultEmergencyNumber
@@ -1020,6 +1025,7 @@ library
       Storage.Beam.PassType
       Storage.Beam.PassVerifyTransaction
       Storage.Beam.PaymentCustomer
+      Storage.Beam.PaymentTransactionOfferPayout
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
       Storage.Beam.PersonDefaultEmergencyNumber
@@ -1233,6 +1239,7 @@ library
       Storage.Queries.PassType
       Storage.Queries.PassVerifyTransaction
       Storage.Queries.PaymentCustomer
+      Storage.Queries.PaymentTransactionOfferPayout
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
       Storage.Queries.PersonDefaultEmergencyNumber

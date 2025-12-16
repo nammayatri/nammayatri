@@ -5,6 +5,7 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.DriverBankAccount as DDBA
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -33,10 +34,12 @@ newtype PersonRegisterBankAccountLinkHandle = PersonRegisterBankAccountLinkHandl
 
 getPersonRegisterBankAccountLink ::
   PersonRegisterBankAccountLinkHandle ->
+  Maybe DMPM.PaymentMode ->
   Domain.Types.Person.Person ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-getPersonRegisterBankAccountLink h person = do
+getPersonRegisterBankAccountLink h mbPaymentMode person = do
   mPersonBankAccount <- runInReplica $ QDBA.findByPrimaryKey person.id
+  paymentMode <- validatePaymentMode mbPaymentMode mPersonBankAccount
   now <- getCurrentTime
   case mPersonBankAccount of
     Just bankAccount -> do
@@ -50,15 +53,16 @@ getPersonRegisterBankAccountLink h person = do
                   { chargesEnabled = bankAccount.chargesEnabled,
                     accountLink = link,
                     accountUrlExpiry = expiry,
-                    detailsSubmitted = bankAccount.detailsSubmitted
+                    detailsSubmitted = bankAccount.detailsSubmitted,
+                    paymentMode
                   }
-            else refreshLink bankAccount
-        _ -> refreshLink bankAccount
-    _ -> createAccount now
+            else refreshLink bankAccount paymentMode
+        _ -> refreshLink bankAccount paymentMode
+    _ -> createAccount now paymentMode
   where
-    refreshLink :: DDBA.DriverBankAccount -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-    refreshLink bankAccount = do
-      resp <- TPayment.retryAccountLink person.merchantId person.merchantOperatingCityId bankAccount.accountId
+    refreshLink :: DDBA.DriverBankAccount -> DMPM.PaymentMode -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
+    refreshLink bankAccount paymentMode = do
+      resp <- TPayment.retryAccountLink person.merchantId person.merchantOperatingCityId (Just paymentMode) bankAccount.accountId
       accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
       QDBA.updateAccountLink (Just accountUrl) (Just resp.accountUrlExpiry) person.id
       return $
@@ -66,11 +70,12 @@ getPersonRegisterBankAccountLink h person = do
           { chargesEnabled = bankAccount.chargesEnabled,
             accountLink = accountUrl,
             accountUrlExpiry = resp.accountUrlExpiry,
-            detailsSubmitted = bankAccount.detailsSubmitted
+            detailsSubmitted = bankAccount.detailsSubmitted,
+            paymentMode
           }
 
-    createAccount :: UTCTime -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-    createAccount now = do
+    createAccount :: UTCTime -> DMPM.PaymentMode -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
+    createAccount now paymentMode = do
       merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
       when (merchantOpCity.country `notElem` [Context.USA, Context.Netherlands, Context.Finland]) $ throwError $ InvalidRequest "Bank account creation is only supported for USA, Netherlands and Finland"
 
@@ -105,7 +110,7 @@ getPersonRegisterBankAccountLink h person = do
                 idNumber,
                 mobileNumber = mobileCountryCode <> mobileNumber
               }
-      resp <- TPayment.createIndividualConnectAccount person.merchantId person.merchantOperatingCityId createAccountReq
+      resp <- TPayment.createIndividualConnectAccount person.merchantId person.merchantOperatingCityId (Just paymentMode) createAccountReq
       accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
       let driverBankAccount =
             DDBA.DriverBankAccount
@@ -117,6 +122,7 @@ getPersonRegisterBankAccountLink h person = do
                 driverId = person.id,
                 merchantId = Just person.merchantId,
                 merchantOperatingCityId = Just person.merchantOperatingCityId,
+                paymentMode = Just paymentMode,
                 createdAt = now,
                 updatedAt = now
               }
@@ -126,26 +132,39 @@ getPersonRegisterBankAccountLink h person = do
           { chargesEnabled = resp.chargesEnabled,
             accountLink = accountUrl,
             accountUrlExpiry = resp.accountUrlExpiry,
-            detailsSubmitted = resp.detailsSubmitted
+            detailsSubmitted = resp.detailsSubmitted,
+            paymentMode
           }
+
+validatePaymentMode :: Maybe DMPM.PaymentMode -> Maybe DDBA.DriverBankAccount -> Environment.Flow DMPM.PaymentMode
+validatePaymentMode mbPaymentMode mbDriverBankAccount = do
+  let paymentMode = fromMaybe DMPM.LIVE mbPaymentMode
+  whenJust mbDriverBankAccount $ \driverBankAccount -> do
+    let paymentMode' = fromMaybe DMPM.LIVE driverBankAccount.paymentMode
+    unless (paymentMode == paymentMode') $
+      throwError (InvalidRequest "Wrong payment mode")
+  pure paymentMode
 
 getPersonRegisterBankAccountStatus ::
   Domain.Types.Person.Person ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountResp
 getPersonRegisterBankAccountStatus person = do
   driverBankAccount <- runInReplica $ QDBA.findByPrimaryKey person.id >>= fromMaybeM (DriverBankAccountNotFound person.id.getId)
+  let paymentMode = fromMaybe DMPM.LIVE driverBankAccount.paymentMode
   if driverBankAccount.chargesEnabled
     then
       return $
         API.Types.UI.DriverOnboardingV2.BankAccountResp
           { chargesEnabled = driverBankAccount.chargesEnabled,
-            detailsSubmitted = driverBankAccount.detailsSubmitted
+            detailsSubmitted = driverBankAccount.detailsSubmitted,
+            paymentMode
           }
     else do
-      resp <- TPayment.getAccount person.merchantId person.merchantOperatingCityId driverBankAccount.accountId
+      resp <- TPayment.getAccount person.merchantId person.merchantOperatingCityId (Just paymentMode) driverBankAccount.accountId
       QDBA.updateAccountStatus resp.chargesEnabled resp.detailsSubmitted person.id
       return $
         API.Types.UI.DriverOnboardingV2.BankAccountResp
           { chargesEnabled = resp.chargesEnabled,
-            detailsSubmitted = resp.detailsSubmitted
+            detailsSubmitted = resp.detailsSubmitted,
+            paymentMode
           }

@@ -130,7 +130,8 @@ data HandlerEnv = HandlerEnv
     inMemEnv :: KTC.InMemEnv,
     url :: Maybe Text,
     googleSAPrivateKey :: String,
-    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
+    noSignatureSubscribers :: [Text]
   }
   deriving (Generic)
 

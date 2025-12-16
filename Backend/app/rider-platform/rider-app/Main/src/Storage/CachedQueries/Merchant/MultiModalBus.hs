@@ -9,6 +9,7 @@ module Storage.CachedQueries.Merchant.MultiModalBus
     BusDataWithRoutesInfo (..),
     getRoutesBuses,
     getBusesForRoutes,
+    hasLiveVehicles,
     mkRouteKey,
     withCrossAppRedisNew,
     utcToIST,
@@ -124,3 +125,12 @@ getRoutesBuses routeId integratedBppConfig = do
 
 getBusesForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [Text] -> DIBC.IntegratedBPPConfig -> m [RouteWithBuses]
 getBusesForRoutes routeCodes integratedBppConfig = mapConcurrently (\routeCode -> getRoutesBuses routeCode integratedBppConfig) routeCodes
+
+hasLiveVehicles :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> DIBC.IntegratedBPPConfig -> m Bool
+hasLiveVehicles routeId integratedBppConfig = do
+  let redisPrefix = case integratedBppConfig.providerConfig of
+        DIBC.ONDC config -> config.redisPrefix
+        _ -> Nothing
+  let key = mkRouteKey redisPrefix routeId
+  res <- withCrossAppRedisNew $ Hedis.ttl key
+  return $ res >= -1

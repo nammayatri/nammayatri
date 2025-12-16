@@ -331,6 +331,9 @@ types:
     - softBlockReasonFlag: Maybe Text
     - driverMode: Maybe DriverMode
     - lastOfflineTime: Maybe UTCTime
+    - onboardingAs: Maybe OnboardingAs
+  OnboardingAs:
+    enum: "FLEET_DRIVER, INDIVIDUAL"
   GetFeedbackListRes:
     - feedbacks: [DriverFeedbackAPIEntity]
   DriverFeedbackAPIEntity:

@@ -14,7 +14,7 @@
 
 module Beckn.ACL.FRFS.OnInit where
 
-import Beckn.ACL.FRFS.Utils (mkDCategorySelect)
+import Beckn.ACL.FRFS.Utils (mkDCategorySelect, zipItemsWithPrice)
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
@@ -42,19 +42,20 @@ buildOnInitReq onInitReq = do
 
   providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "Provider not found")
 
-  item <- order.orderItems >>= listToMaybe & fromMaybeM (InvalidRequest "Item not found")
-  let orderItems = fromMaybe [item] order.orderItems
-
-  selectedCategories <- mapM mkDCategorySelect orderItems
+  orderItems <- order.orderItems & fromMaybeM (InvalidRequest "Order items not found")
 
   quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
+  quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
+
+  itemsWithPrice <- zipItemsWithPrice orderItems quoteBreakup
+
+  selectedCategories <- mapM mkDCategorySelect itemsWithPrice
 
   orderPayment <- order.orderPayments >>= listToMaybe & fromMaybeM (InvalidRequest "OrderPayment not found")
   orderPaymentParams <- orderPayment.paymentParams & fromMaybeM (InvalidRequest "PaymentParams not found")
   bankAccNum <- orderPaymentParams.paymentParamsBankAccountNumber & fromMaybeM (InvalidRequest "PaymentParamsBankAccountNumber not found")
   bankCode <- orderPaymentParams.paymentParamsBankCode & fromMaybeM (InvalidRequest "PaymentParamsBankCode not found")
 
-  quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
   totalPrice <- quotation.quotationPrice >>= Utils.parsePrice & fromMaybeM (InvalidRequest "Invalid quotationPrice")
 
   fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup

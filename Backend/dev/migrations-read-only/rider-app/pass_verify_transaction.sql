@@ -17,3 +17,8 @@ ALTER TABLE atlas_app.pass_verify_transaction ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.pass_verify_transaction ADD COLUMN source_stop_code text ;
 ALTER TABLE atlas_app.pass_verify_transaction ADD COLUMN destination_stop_code text ;
+
+
+------- SQL updates -------
+
+CREATE INDEX pass_verify_transaction_idx_purchase_pass_id ON atlas_app.pass_verify_transaction USING btree (purchase_pass_id);

@@ -21,3 +21,15 @@ ALTER TABLE atlas_app.purchased_pass_payment ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN profile_picture text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN benefit_value double precision ;
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN benefit_type text ;
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN benefit_description text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN is_dashboard boolean ;

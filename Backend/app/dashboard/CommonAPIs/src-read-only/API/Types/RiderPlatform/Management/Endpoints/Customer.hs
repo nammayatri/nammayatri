@@ -7,6 +7,7 @@ import qualified Dashboard.Common
 import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
+import qualified Domain.Types.PaymentMode
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -43,7 +44,8 @@ data CustomerInfoRes = CustomerInfoRes
   { numberOfRides :: Kernel.Prelude.Int,
     falseSafetyAlarmCount :: Kernel.Prelude.Int,
     safetyCenterDisabledOnDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    totalSosCount :: Kernel.Prelude.Int
+    totalSosCount :: Kernel.Prelude.Int,
+    paymentMode :: Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -55,7 +57,8 @@ data CustomerListItem = CustomerListItem
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     phoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
-    blocked :: Kernel.Prelude.Bool
+    blocked :: Kernel.Prelude.Bool,
+    paymentMode :: Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -64,6 +67,13 @@ data CustomerListRes = CustomerListRes {totalItems :: Kernel.Prelude.Int, summar
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+newtype UpdatePaymentModeReq = UpdatePaymentModeReq {paymentMode :: Domain.Types.PaymentMode.PaymentMode}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets UpdatePaymentModeReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data UpdateSafetyCenterBlockingReq = UpdateSafetyCenterBlockingReq {incrementCount :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, resetCount :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -71,7 +81,7 @@ data UpdateSafetyCenterBlockingReq = UpdateSafetyCenterBlockingReq {incrementCou
 instance Kernel.Types.HideSecrets.HideSecrets UpdateSafetyCenterBlockingReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> PostCustomerCancellationDuesSync :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId))
+type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> PostCustomerCancellationDuesSync :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId :<|> PostCustomerUpdatePaymentMode))
 
 type GetCustomerList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> QueryParam "enabled" Kernel.Prelude.Bool
@@ -117,6 +127,13 @@ type PostCustomerPersonNumbers = ("personNumbers" :> Kernel.ServantMultipart.Mul
 
 type PostCustomerPersonId = ("personId" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.PersonMobileNoReq :> Post '[JSON] [Dashboard.Common.PersonRes])
 
+type PostCustomerUpdatePaymentMode =
+  ( Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "updatePaymentMode" :> ReqBody '[JSON] UpdatePaymentModeReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
 data CustomerAPIs = CustomerAPIs
   { getCustomerList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Customer) -> EulerHS.Types.EulerClient CustomerListRes,
     deleteCustomerDelete :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -127,13 +144,14 @@ data CustomerAPIs = CustomerAPIs
     getCustomerCancellationDuesDetails :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient CancellationDuesDetailsRes,
     postCustomerUpdateSafetyCenterBlocking :: Kernel.Types.Id.Id Dashboard.Common.Customer -> UpdateSafetyCenterBlockingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postCustomerPersonNumbers :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.PersonIdsReq) -> EulerHS.Types.EulerClient [Dashboard.Common.PersonRes],
-    postCustomerPersonId :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.PersonMobileNoReq) -> EulerHS.Types.EulerClient [Dashboard.Common.PersonRes]
+    postCustomerPersonId :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.PersonMobileNoReq) -> EulerHS.Types.EulerClient [Dashboard.Common.PersonRes],
+    postCustomerUpdatePaymentMode :: Kernel.Types.Id.Id Dashboard.Common.Customer -> UpdatePaymentModeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkCustomerAPIs :: (Client EulerHS.Types.EulerClient API -> CustomerAPIs)
 mkCustomerAPIs customerClient = (CustomerAPIs {..})
   where
-    getCustomerList :<|> deleteCustomerDelete :<|> postCustomerBlock :<|> postCustomerUnblock :<|> getCustomerInfo :<|> postCustomerCancellationDuesSync :<|> getCustomerCancellationDuesDetails :<|> postCustomerUpdateSafetyCenterBlocking :<|> postCustomerPersonNumbers :<|> postCustomerPersonId = customerClient
+    getCustomerList :<|> deleteCustomerDelete :<|> postCustomerBlock :<|> postCustomerUnblock :<|> getCustomerInfo :<|> postCustomerCancellationDuesSync :<|> getCustomerCancellationDuesDetails :<|> postCustomerUpdateSafetyCenterBlocking :<|> postCustomerPersonNumbers :<|> postCustomerPersonId :<|> postCustomerUpdatePaymentMode = customerClient
 
 data CustomerUserActionType
   = GET_CUSTOMER_LIST
@@ -146,6 +164,7 @@ data CustomerUserActionType
   | POST_CUSTOMER_UPDATE_SAFETY_CENTER_BLOCKING
   | POST_CUSTOMER_PERSON_NUMBERS
   | POST_CUSTOMER_PERSON_ID
+  | POST_CUSTOMER_UPDATE_PAYMENT_MODE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

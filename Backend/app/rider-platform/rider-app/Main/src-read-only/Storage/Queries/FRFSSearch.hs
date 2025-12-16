@@ -44,7 +44,12 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.fromStationId fromStationCode,
+    [ Se.Set Beam.busLocationData (Just $ toJSON busLocationData),
+      Se.Set Beam.fromStationAddress fromStationAddress,
+      Se.Set Beam.fromStationId fromStationCode,
+      Se.Set Beam.fromStationName fromStationName,
+      Se.Set Beam.fromStationLat ((.lat) <$> fromStationPoint),
+      Se.Set Beam.fromStationLon ((.lon) <$> fromStationPoint),
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isOnSearchReceived isOnSearchReceived,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -58,8 +63,13 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.routeId routeCode,
       Se.Set Beam.searchAsParentStops searchAsParentStops,
+      Se.Set Beam.toStationAddress toStationAddress,
       Se.Set Beam.toStationId toStationCode,
+      Se.Set Beam.toStationName toStationName,
+      Se.Set Beam.toStationLat ((.lat) <$> toStationPoint),
+      Se.Set Beam.toStationLon ((.lon) <$> toStationPoint),
       Se.Set Beam.validTill validTill,
+      Se.Set Beam.vehicleNumber vehicleNumber,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.updatedAt _now
     ]

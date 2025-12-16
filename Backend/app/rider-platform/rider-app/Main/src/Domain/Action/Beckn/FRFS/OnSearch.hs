@@ -81,6 +81,24 @@ data DOnSearch = DOnSearch
   }
   deriving (Show)
 
+data DiscoveryOnSearchReq = DiscoveryOnSearchReq
+  { transactionId :: Text,
+    messageId :: Text,
+    pageNumber :: Int,
+    totalPages :: Int,
+    bppSubscriberId :: Text,
+    bppSubscriberUrl :: Text,
+    stationList :: [DStation],
+    merchantId :: Text
+  }
+
+data DiscoveryCounter = DiscoveryCounter
+  { merchantId :: Text,
+    pageNo :: Int,
+    maxPageNo :: Int
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
 data DVehicleServiceTier = DVehicleServiceTier
   { serviceTierType :: Spec.ServiceTierType,
     serviceTierProviderCode :: Text,
@@ -385,6 +403,14 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             Quote.updatedAt = now,
             Quote.integratedBppConfigId = search.integratedBppConfigId,
             Quote.multimodalSearchRequestId = search.multimodalSearchRequestId,
+            Quote.busLocationData = search.busLocationData,
+            Quote.fromStationAddress = search.fromStationAddress,
+            Quote.fromStationName = search.fromStationName,
+            Quote.fromStationPoint = search.fromStationPoint,
+            Quote.toStationAddress = search.toStationAddress,
+            Quote.toStationName = search.toStationName,
+            Quote.toStationPoint = search.toStationPoint,
+            Quote.vehicleNumber = search.vehicleNumber,
             bppDelayedInterest = readMaybe . T.unpack =<< dOnSearch.bppDelayedInterest,
             oldCacheDump = Nothing,
             ..
@@ -506,7 +532,15 @@ updateQuotes ((quotesFromCache, quotesFromCacheCategories), (quotesFromOnSearch,
       Quote.eventDiscountAmount = quotesFromOnSearch.eventDiscountAmount,
       Quote.integratedBppConfigId = quotesFromOnSearch.integratedBppConfigId,
       Quote.discountedTickets = quotesFromOnSearch.discountedTickets,
-      Quote.multimodalSearchRequestId = quotesFromOnSearch.multimodalSearchRequestId
+      Quote.multimodalSearchRequestId = quotesFromOnSearch.multimodalSearchRequestId,
+      Quote.busLocationData = quotesFromOnSearch.busLocationData,
+      Quote.fromStationAddress = quotesFromOnSearch.fromStationAddress,
+      Quote.fromStationName = quotesFromOnSearch.fromStationName,
+      Quote.fromStationPoint = quotesFromOnSearch.fromStationPoint,
+      Quote.toStationAddress = quotesFromOnSearch.toStationAddress,
+      Quote.toStationName = quotesFromOnSearch.toStationName,
+      Quote.toStationPoint = quotesFromOnSearch.toStationPoint,
+      Quote.vehicleNumber = quotesFromOnSearch.vehicleNumber
     }
   where
     toJsonText :: FRFSCachedQuote -> Text
@@ -614,3 +648,12 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote adultPrice in
   QFRFP.create frfsRouteFareProduct
   QFFP.create farePolicy
   QRSF.create routeStopFare
+
+discoveryOnSearch ::
+  ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r
+  ) =>
+  DiscoveryOnSearchReq ->
+  m ()
+discoveryOnSearch _discoveryReq = pure ()

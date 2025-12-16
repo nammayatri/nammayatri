@@ -86,7 +86,8 @@ data NearestDriversOnRideReq = NearestDriversOnRideReq
     paymentInstrument :: Maybe MP.PaymentInstrument,
     onlinePayment :: Bool,
     now :: UTCTime,
-    prepaidSubscriptionAndWalletEnabled :: Bool
+    prepaidSubscriptionAndWalletEnabled :: Bool,
+    paymentMode :: Maybe MP.PaymentMode
   }
 
 getNearestDriversCurrentlyOnRide ::
@@ -108,7 +109,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
   drivers <- Int.getDrivers vehicles
   driverBankAccounts <-
     if onlinePayment
-      then QDBA.getDriverOrFleetBankAccounts (driverLocs <&> (.driverId))
+      then QDBA.getDriverOrFleetBankAccounts paymentMode (driverLocs <&> (.driverId))
       else return []
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
   let driversCurrentlyOnRideForForwardBatch = filter (\di -> (isJust di.onRideTripCategory && show (fromJust di.onRideTripCategory) `elem` currentRideTripCategoryValidForForwardBatching) && (isJust di.driverTripEndLocation) && (di.hasRideStarted == Just True)) driverInfos

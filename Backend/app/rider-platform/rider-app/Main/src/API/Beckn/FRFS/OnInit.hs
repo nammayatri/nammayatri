@@ -18,8 +18,10 @@ import qualified Beckn.ACL.FRFS.OnInit as ACL
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import Data.Aeson (eitherDecodeStrict')
 import qualified Domain.Action.Beckn.FRFS.OnInit as DOnInit
 import Environment
+import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -28,16 +30,16 @@ import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import TransactionLogs.PushLogs
 
-type API = Spec.OnInitAPI
+type API = Spec.OnInitAPIBS
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onInit
 
-onInit ::
-  SignatureAuthResult ->
-  Spec.OnInitReq ->
-  FlowHandler Spec.AckResponse
-onInit _ req = withFlowHandlerAPI $ do
+onInit :: SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
+onInit _ reqBS = withFlowHandlerAPI $ do
+  req <- case decodeOnInitReq reqBS of
+    Right r -> pure r
+    Left err -> throwError (InvalidRequest (toText err))
   transaction_id <- req.onInitReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   logDebug $ "Received OnInit request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
@@ -56,3 +58,14 @@ onInitLockKey id = "FRFS:OnInit:MessageId-" <> id
 
 onInitProcessingLockKey :: Text -> Text
 onInitProcessingLockKey id = "FRFS:OnInit:Processing:MessageId-" <> id
+
+decodeOnInitReq :: ByteString -> Either String Spec.OnInitReq
+decodeOnInitReq bs =
+  case eitherDecodeStrict' bs of
+    Right v -> Right v
+    Left _ ->
+      case Utils.unescapeQuotedJSON bs of
+        Just inner ->
+          eitherDecodeStrict' inner
+        Nothing ->
+          Left "Unable to decode OnInitReq: invalid JSON format."

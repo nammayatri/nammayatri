@@ -90,6 +90,7 @@ dependencies:
   - vector
   - singletons-th
   - shared-services
+  - hashable
 
 ghc-options:
   - -Wall

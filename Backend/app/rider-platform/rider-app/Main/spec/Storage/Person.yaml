@@ -18,6 +18,7 @@ imports:
   TagNameValueExpiry: Lib.Yudhishthira.Types
   ServiceTierType: Domain.Types.ServiceTierType
   VehicleCategory : BecknV2.OnDemand.Enums
+  PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
 
 Person:
   tableName: person
@@ -106,8 +107,10 @@ Person:
     blockedCount : Maybe Int
     registeredViaPartnerOrgId : Maybe (Id PartnerOrganization)
     customerPaymentId : Maybe CustomerId
+    customerTestPaymentId : Maybe CustomerId
     juspayCustomerPaymentID: Maybe CustomerId
     defaultPaymentMethodId: Maybe PaymentMethodId
+    defaultTestPaymentMethodId: Maybe PaymentMethodId
     enableOtpLessRide : Maybe Bool
     deviceId : Maybe Text
     informPoliceSos : Bool
@@ -122,6 +125,7 @@ Person:
     verificationChannel: Maybe Text
     liveActivityToken : Maybe Text
     comments: "Maybe [Text]"
+    paymentMode: Maybe PaymentMode
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -348,6 +352,11 @@ Person:
       params: [customerPaymentId]
       where: id
 
+    updateTestCustomerPaymentId:
+      kvFunction: updateWithKV
+      params: [customerTestPaymentId]
+      where: id
+
     updateJuspayCustomerPaymentId:
       kvFunction: updateWithKV
       params: [juspayCustomerPaymentID]
@@ -356,6 +365,16 @@ Person:
     updateDefaultPaymentMethodId:
       kvFunction: updateWithKV
       params: [defaultPaymentMethodId]
+      where: id
+
+    updateDefaultTestPaymentMethodId:
+      kvFunction: updateWithKV
+      params: [defaultTestPaymentMethodId]
+      where: id
+
+    updatePaymentMode:
+      kvFunction: updateWithKV
+      params: [paymentMode]
       where: id
 
     findAllByDeviceId:

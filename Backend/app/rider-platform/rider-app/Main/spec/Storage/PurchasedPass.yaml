@@ -7,13 +7,14 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   FRFSVehicleServiceTier: Domain.Types.FRFSVehicleServiceTier
   ServiceTierType: BecknV2.FRFS.Enums
+  BenefitType: Domain.Types.PurchasedPass
 
 PurchasedPass:
   tableName: purchased_pass
 
   types:
     StatusType:
-      enum: "Pending,Active,PreBooked,Failed,Expired,RefundPending,RefundInitiated,Refunded,RefundFailed"
+      enum: "Pending,Active,PreBooked,Failed,Expired,RefundPending,RefundInitiated,Refunded,RefundFailed,PhotoPending"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
 
     BenefitType:
@@ -23,6 +24,7 @@ PurchasedPass:
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <StatusType>
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <StatusType>
+    - Custom Kernel.Utils.TH.mkToHttpInstanceForEnum <StatusType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <BenefitType>
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <BenefitType>
 
@@ -73,6 +75,7 @@ PurchasedPass:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
 
   queries:
     updateDeviceSwitchCount:
@@ -94,6 +97,10 @@ PurchasedPassPayment:
     passName: Maybe Text
     purchasedPassId: Id PurchasedPass
     amount: HighPrecMoney
+    benefitDescription: Text
+    isDashboard: Maybe Bool
+    benefitType: Maybe BenefitType
+    benefitValue: Maybe HighPrecMoney
     personId: Id Person
     startDate: Day
     status: Domain.Types.PurchasedPass.StatusType
@@ -101,6 +108,15 @@ PurchasedPassPayment:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     profilePicture: Maybe Text
+
+  beamType:
+    benefitDescription: Maybe Text
+
+  fromTType:
+    benefitDescription: Kernel.Prelude.fromMaybe ""|I
+
+  toTType:
+    benefitDescription: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -184,3 +200,4 @@ PassVerifyTransaction:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES

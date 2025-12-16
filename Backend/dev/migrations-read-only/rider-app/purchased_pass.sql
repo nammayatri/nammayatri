@@ -43,6 +43,7 @@ ALTER TABLE atlas_app.purchased_pass ADD COLUMN verification_validity integer ;
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN profile_picture text ;
 
 
+
 ------- SQL updates -------
 
-CREATE INDEX idx_purchased_pass_pass_number ON atlas_app.purchased_pass USING btree (pass_number);
+CREATE INDEX purchased_pass_idx_pass_number ON atlas_app.purchased_pass USING btree (pass_number);

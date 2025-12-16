@@ -2,6 +2,7 @@
 
 module API.Types.UI.FRFSTicketService where
 
+import qualified API.Types.UI.RiderLocation
 import qualified BecknV2.FRFS.Enums
 import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
@@ -37,6 +38,18 @@ data BookingFareAcceptedReq = BookingFareAcceptedReq {isFareAccepted :: Kernel.P
 
 data BookingFeedbackReq = BookingFeedbackReq {feedbackDetails :: Data.Text.Text}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CategoryInfoResponse = CategoryInfoResponse
+  { categoryFinalPrice :: Data.Maybe.Maybe Kernel.Types.Common.PriceAPIEntity,
+    categoryId :: Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory,
+    categoryMeta :: Data.Maybe.Maybe Domain.Types.FRFSQuoteCategory.QuoteCategoryMetadata,
+    categoryName :: Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType,
+    categoryOfferedPrice :: Kernel.Types.Common.PriceAPIEntity,
+    categoryPrice :: Kernel.Types.Common.PriceAPIEntity,
+    categorySelectedQuantity :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSBookingFeedbackReq
@@ -121,6 +134,7 @@ data FRFSPossibleStopsReq = FRFSPossibleStopsReq {stationCodes :: [Data.Text.Tex
 
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+    categories :: [CategoryInfoResponse],
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
@@ -183,17 +197,20 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSSearchAPIReq = FRFSSearchAPIReq
-  { fromStationCode :: Data.Text.Text,
+  { busLocationData :: Data.Maybe.Maybe [API.Types.UI.RiderLocation.BusLocation],
+    fromStationCode :: Data.Text.Text,
     quantity :: Kernel.Prelude.Int,
     recentLocationId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     routeCode :: Data.Maybe.Maybe Data.Text.Text,
     searchAsParentStops :: Data.Maybe.Maybe Kernel.Prelude.Bool,
-    toStationCode :: Data.Text.Text
+    serviceTier :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    toStationCode :: Data.Text.Text,
+    vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSSearchAPIRes = FRFSSearchAPIRes {searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch}
+data FRFSSearchAPIRes = FRFSSearchAPIRes {quotes :: [FRFSQuoteAPIRes], searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

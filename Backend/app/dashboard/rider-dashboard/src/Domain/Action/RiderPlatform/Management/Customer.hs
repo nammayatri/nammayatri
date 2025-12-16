@@ -11,6 +11,7 @@ module Domain.Action.RiderPlatform.Management.Customer
     postCustomerUpdateSafetyCenterBlocking,
     postCustomerPersonNumbers,
     postCustomerPersonId,
+    postCustomerUpdatePaymentMode,
   )
 where
 
@@ -109,3 +110,10 @@ postCustomerPersonNumbers merchantShortId opCity apiTokenInfo req = do
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $
     API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (Dashboard.Common.addMultipartBoundary "XXX00XXX" . (.customerDSL.postCustomerPersonNumbers)) req
+
+postCustomerUpdatePaymentMode :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.UpdatePaymentModeReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postCustomerUpdatePaymentMode merchantShortId opCity apiTokenInfo customerId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction do
+    API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.postCustomerUpdatePaymentMode) customerId req

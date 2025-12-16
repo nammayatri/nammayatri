@@ -62,6 +62,7 @@ buildSearchReq messageId subscriber req context = do
       isMultimodalSearch = Beckn.OnDemand.Utils.Search.getIsMultimodalSearch req
       isReserveRide = getIsReserveRide req
       reserveRideEstimate = getReserveRideEstimate req isReserveRide
+      paymentMode = Beckn.OnDemand.Utils.Search.getPaymentMode req
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   customerPhoneNum_ <- getPhoneNumberFromTag $ Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress

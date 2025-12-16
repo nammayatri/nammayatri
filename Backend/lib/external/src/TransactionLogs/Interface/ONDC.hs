@@ -14,9 +14,6 @@
 
 module TransactionLogs.Interface.ONDC where
 
-import qualified Data.Aeson as A
-import qualified Data.Text.Lazy as LT
-import qualified Data.Text.Lazy.Encoding as LTE
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
@@ -34,9 +31,8 @@ pushTxnLogs config req =
   OF.pushTxnLogsAPI config (mkONDCRequest req)
 
 mkONDCRequest :: IT.TransactionLogReq -> ONDC.ONDCRequest
-mkONDCRequest IT.TransactionLogReq {..} = do
-  let jsonText = LT.toStrict $ LTE.decodeUtf8 $ A.encode logData
+mkONDCRequest IT.TransactionLogReq {..} =
   ONDC.ONDCRequest
     { _type = logType,
-      _data = jsonText
+      _data = logData
     }

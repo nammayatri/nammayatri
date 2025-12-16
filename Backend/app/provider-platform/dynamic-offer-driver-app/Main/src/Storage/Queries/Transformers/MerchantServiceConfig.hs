@@ -16,6 +16,7 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
+import qualified Kernel.External.Payment.Stripe.Config as Stripe
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -44,6 +45,7 @@ getConfigJSON = \case
     Sms.DigoEngageSmsConfig cfg -> toJSON cfg
     Sms.VonageSmsConfig cfg -> toJSON cfg
     Sms.KarixSmsConfig cfg -> toJSON cfg
+    Sms.PinbixSmsConfig cfg -> toJSON cfg
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig cfg -> toJSON cfg
     Whatsapp.TataCommunicationsConfig cfg -> toJSON cfg
@@ -109,6 +111,7 @@ getServiceName = \case
     Sms.DigoEngageSmsConfig _ -> Domain.SmsService Sms.DigoEngage
     Sms.VonageSmsConfig _ -> Domain.SmsService Sms.VonageSms
     Sms.KarixSmsConfig _ -> Domain.SmsService Sms.KarixSms
+    Sms.PinbixSmsConfig _ -> Domain.SmsService Sms.PinbixSms
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig _ -> Domain.WhatsappService Whatsapp.GupShup
     Whatsapp.TataCommunicationsConfig _ -> Domain.WhatsappService Whatsapp.TataCommunications
@@ -126,25 +129,13 @@ getServiceName = \case
     Call.TataClickToCallConfig _ -> Domain.CallService Call.TataClickToCall
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
     AadhaarVerification.GridlineConfig _ -> Domain.AadhaarVerificationService AadhaarVerification.Gridline
-  Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig cfg -> case cfg.serviceMode of
-      Just Juspay.AA -> Domain.PaymentService Payment.AAJuspay
-      _ -> Domain.PaymentService Payment.Juspay
-    Payment.StripeConfig _ -> Domain.PaymentService Payment.Stripe
+  Domain.PaymentServiceConfig paymentCfg -> Domain.PaymentService $ getPaymentServiceConfigJson paymentCfg
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> Domain.PayoutService Payout.Juspay
   Domain.RentalPayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> Domain.RentalPayoutService Payout.Juspay
-  Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig cfg -> case cfg.serviceMode of
-      Just Juspay.AA -> Domain.RentalPaymentService Payment.AAJuspay
-      _ -> Domain.RentalPaymentService Payment.Juspay
-    Payment.StripeConfig _ -> Domain.RentalPaymentService Payment.Stripe
-  Domain.CautioPaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig cfg -> case cfg.serviceMode of
-      Just Juspay.AA -> Domain.RentalPaymentService Payment.AAJuspay
-      _ -> Domain.RentalPaymentService Payment.Juspay
-    Payment.StripeConfig _ -> Domain.CautioPaymentService Payment.Stripe
+  Domain.RentalPaymentServiceConfig paymentCfg -> Domain.RentalPaymentService $ getPaymentServiceConfigJson paymentCfg
+  Domain.CautioPaymentServiceConfig paymentCfg -> Domain.CautioPaymentService $ getPaymentServiceConfigJson paymentCfg
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> Domain.IssueTicketService Ticket.Kapture
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
@@ -165,6 +156,16 @@ getServiceName = \case
   Domain.DashCamServiceConfig dashcamCfg -> case dashcamCfg of
     DashcamInter.CautioConfig _ -> Domain.DashCamService Dashcam.Cautio
 
+getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
+getPaymentServiceConfigJson = \case
+  Payment.JuspayConfig cfg -> case cfg.serviceMode of
+    Just Juspay.AA -> Payment.AAJuspay
+    _ -> Payment.Juspay
+  Payment.StripeConfig cfg -> case cfg.serviceMode of
+    Just Stripe.Live -> Payment.Stripe
+    Just Stripe.Test -> Payment.StripeTest
+    Nothing -> Payment.Stripe
+
 mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceName -> m Domain.ServiceConfig
 mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> show configJSON <> " Error:" <> err)) return $ case serviceName of
   Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> eitherValue configJSON
@@ -179,6 +180,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.SmsService Sms.DigoEngage -> Domain.SmsServiceConfig . Sms.DigoEngageSmsConfig <$> eitherValue configJSON
   Domain.SmsService Sms.VonageSms -> Domain.SmsServiceConfig . Sms.VonageSmsConfig <$> eitherValue configJSON
   Domain.SmsService Sms.KarixSms -> Domain.SmsServiceConfig . Sms.KarixSmsConfig <$> eitherValue configJSON
+  Domain.SmsService Sms.PinbixSms -> Domain.SmsServiceConfig . Sms.PinbixSmsConfig <$> eitherValue configJSON
   Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> eitherValue configJSON
   Domain.WhatsappService Whatsapp.TataCommunications -> Domain.WhatsappServiceConfig . Whatsapp.TataCommunicationsConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> eitherValue configJSON
@@ -192,19 +194,13 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.CallService Call.TataClickToCall -> Domain.CallServiceConfig . Call.TataClickToCallConfig <$> eitherValue configJSON
   Domain.CallService Call.Knowlarity -> Left "No Config Found For Knowlarity."
   Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> eitherValue configJSON
-  Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
-  Domain.PaymentService Payment.AAJuspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
-  Domain.PaymentService Payment.Stripe -> Domain.PaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
+  Domain.PaymentService paymentServiceName -> Domain.PaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.PayoutService Payout.Juspay -> Domain.PayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
   Domain.PayoutService Payout.AAJuspay -> Domain.PayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPayoutService Payout.Juspay -> Domain.RentalPayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
   Domain.RentalPayoutService Payout.AAJuspay -> Domain.RentalPayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
-  Domain.RentalPaymentService Payment.AAJuspay -> Domain.RentalPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
-  Domain.RentalPaymentService Payment.Juspay -> Domain.RentalPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
-  Domain.RentalPaymentService Payment.Stripe -> Domain.RentalPaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
-  Domain.CautioPaymentService Payment.Juspay -> Domain.CautioPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
-  Domain.CautioPaymentService Payment.AAJuspay -> Domain.CautioPaymentServiceConfig . Payment.JuspayConfig <$> eitherValue configJSON
-  Domain.CautioPaymentService Payment.Stripe -> Domain.CautioPaymentServiceConfig . Payment.StripeConfig <$> eitherValue configJSON
+  Domain.RentalPaymentService paymentServiceName -> Domain.RentalPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+  Domain.CautioPaymentService paymentServiceName -> Domain.CautioPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> eitherValue configJSON
@@ -217,8 +213,15 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI -> Domain.LLMChatCompletionServiceConfig . CIT.AzureOpenAI <$> eitherValue configJSON
   Domain.LLMChatCompletionService ChatCompletion.Types.Gemini -> Domain.LLMChatCompletionServiceConfig . CIT.Gemini <$> eitherValue configJSON
   Domain.DashCamService Dashcam.Cautio -> Domain.DashCamServiceConfig . DashcamInter.CautioConfig <$> eitherValue configJSON
-  where
-    eitherValue :: FromJSON a => A.Value -> Either Text a
-    eitherValue value = case A.fromJSON value of
-      A.Success a -> Right a
-      A.Error err -> Left $ T.pack err
+
+eitherValue :: FromJSON a => A.Value -> Either Text a
+eitherValue value = case A.fromJSON value of
+  A.Success a -> Right a
+  A.Error err -> Left $ T.pack err
+
+mkPaymentServiceConfig :: A.Value -> Payment.PaymentService -> Either Text Payment.PaymentServiceConfig
+mkPaymentServiceConfig configJSON = \case
+  Payment.Juspay -> Payment.JuspayConfig <$> eitherValue configJSON
+  Payment.AAJuspay -> Payment.JuspayConfig <$> eitherValue configJSON
+  Payment.Stripe -> Payment.StripeConfig <$> eitherValue configJSON
+  Payment.StripeTest -> Payment.StripeConfig <$> eitherValue configJSON

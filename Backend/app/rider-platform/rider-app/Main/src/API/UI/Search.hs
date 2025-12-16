@@ -40,7 +40,6 @@ import Data.Aeson
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
-import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Action.UI.MultimodalConfirm as DMC
 import qualified Domain.Action.UI.Quote as DQuote
 import qualified Domain.Action.UI.Search as DSearch
@@ -107,7 +106,6 @@ import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
 import Tools.Error
 import qualified Tools.Maps as Maps
-import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.MultiModal as TMultiModal
 import TransactionLogs.Types
 
@@ -296,28 +294,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
     case req' of
       DSearch.PTSearch ptSearchDetails -> do
         case (mbIntegratedBPPConfig, ptSearchDetails.vehicleNumber, ptSearchDetails.routeCode) of
-          (Just integratedBPPConfig, Just userPassedVehicleNumber, Just userPassedRouteCode) -> do
-            fork "getVehicleLiveRouteInfo" $ Metrics.incrementBusScanSearchRequestCount "ANNA_APP" merchantOperatingCityId.getId
-            mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo userPassedVehicleNumber
-            mbRouteLiveInfo <-
-              case mbVehicleOverrideInfo of
-                Just (updatedVehicleNumber, newDeviceWaybillNo) -> do
-                  mbUpdatedVehicleRouteInfo <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig] updatedVehicleNumber Nothing
-                  if Just newDeviceWaybillNo /= ((.waybillId) . snd =<< mbUpdatedVehicleRouteInfo)
-                    then do
-                      Dispatcher.delFleetOverrideInfo userPassedVehicleNumber
-                      JMU.getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber Nothing
-                    else pure mbUpdatedVehicleRouteInfo
-                Nothing -> JMU.getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber Nothing
-            return $
-              maybe
-                Nothing
-                ( \routeLiveInfo@(JMU.VehicleLiveRouteInfo {..}) ->
-                    if routeCode == Just userPassedRouteCode
-                      then Just routeLiveInfo
-                      else Just (JMU.VehicleLiveRouteInfo {routeCode = Just userPassedRouteCode, ..})
-                )
-                (snd <$> mbRouteLiveInfo)
+          (Just integratedBPPConfig, Just userPassedVehicleNumber, Just userPassedRouteCode) -> JMU.getLiveRouteInfo integratedBPPConfig userPassedVehicleNumber userPassedRouteCode
           _ -> return Nothing
       _ -> return Nothing
   let result
@@ -784,8 +761,8 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
         (Just fromCode, Just toCode, Just routeCode) -> do
           case integratedBPPConfig.providerConfig of
             DIBC.CRIS config' -> do
-              (viaPoints, changeOver) <- CallAPI.getChangeOverAndViaPoints [CallAPI.BasicRouteDetail {routeCode = routeCode, startStopCode = fromCode, endStopCode = toCode}] integratedBPPConfig
-              routeFareReq <- JMU.getRouteFareRequest fromCode toCode changeOver viaPoints personId False
+              (viaPoints, changeOver, rawChangeOver) <- CallAPI.getChangeOverAndViaPoints [CallAPI.BasicRouteDetail {routeCode = routeCode, startStopCode = fromCode, endStopCode = toCode}] integratedBPPConfig
+              routeFareReq <- JMU.getRouteFareRequest fromCode toCode changeOver rawChangeOver viaPoints personId False
               (_, sdkToken) <- RouteFareV3.getRouteFare config' mocId routeFareReq False True
               return $ sdkToken
             _ -> return Nothing

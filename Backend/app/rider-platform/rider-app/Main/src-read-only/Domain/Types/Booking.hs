@@ -75,6 +75,7 @@ data Booking = Booking
     multimodalSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     paymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
+    paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
     paymentStatus :: Kernel.Prelude.Maybe Domain.Types.Extra.Booking.PaymentStatus,
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     preferSafetyPlus :: Kernel.Prelude.Bool,

@@ -419,8 +419,10 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
       fromStationCode <- ((journeyLeg.fromStopDetails >>= (.stopCode)) <|> ((journeyLeg.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
       toStationCode <- ((journeyLeg.toStopDetails >>= (.stopCode)) <|> ((journeyLeg.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
       let routeCode = listToMaybe frfsRouteDetails >>= (.routeCode)
+          serviceTier = listToMaybe frfsRouteDetails >>= (.serviceTier)
           searchAsParentStops = Nothing
-      return $ API.FRFSSearchAPIReq {..}
+          busLocationData = Just journeyLeg.busLocationData
+      return $ API.FRFSSearchAPIReq {vehicleNumber = journeyLeg.finalBoardedBusNumber, ..}
 
     getFrfsRouteDetails :: JT.SearchRequestFlow m r c => [RD.RouteDetails] -> m [FRFSRouteDetails]
     getFrfsRouteDetails routeDetails = do
@@ -448,7 +450,7 @@ confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse v
       _ -> do
         void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer integratedBppConfig
   where
-    processOnSelect :: (FRFSConfirmFlow m r) => DIBC.IntegratedBPPConfig -> DOnSelect -> Maybe Bool -> Maybe Bool -> m ()
+    processOnSelect :: (FRFSConfirmFlow m r c) => DIBC.IntegratedBPPConfig -> DOnSelect -> Maybe Bool -> Maybe Bool -> m ()
     processOnSelect integratedBppConfig onSelectReq mbSingleMode enableOffer = do
       (merchant', quote', _) <- DOnSelect.validateRequest onSelectReq
       DOnSelect.onSelect onSelectReq merchant' quote' mbSingleMode enableOffer crisSdkResponse integratedBppConfig

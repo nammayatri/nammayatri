@@ -35,7 +35,7 @@ getRouteByRouteId ::
   IntegratedBPPConfig ->
   Text ->
   m (Maybe Route.Route)
-getRouteByRouteId integratedBPPConfig routeId = do
+getRouteByRouteId integratedBPPConfig routeId = IM.withInMemCache ["RouteByRouteId", integratedBPPConfig.id.getId, routeId] 43200 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   route <- Flow.getRouteByRouteId baseUrl integratedBPPConfig.feedKey routeId
   case route of

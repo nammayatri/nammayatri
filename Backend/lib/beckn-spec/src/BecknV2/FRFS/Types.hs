@@ -67,7 +67,9 @@ module BecknV2.FRFS.Types
 where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, genericParseJSON, genericToJSON)
+import qualified Data.Aeson as A
 import Data.Aeson.Types (Options (..), defaultOptions)
+import qualified Data.Aeson.Types as A
 import qualified Data.Char as Char
 import Data.Data (Data)
 import Data.List (lookup)
@@ -337,7 +339,9 @@ data Catalog = Catalog
   { -- |
     catalogDescriptor :: Maybe Descriptor,
     -- |
-    catalogProviders :: Maybe [Provider]
+    catalogProviders :: Maybe [Provider],
+    -- |
+    catalogTags :: Maybe [TagGroup]
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -356,7 +360,8 @@ optionsCatalog =
   where
     table =
       [ ("catalogDescriptor", "descriptor"),
-        ("catalogProviders", "providers")
+        ("catalogProviders", "providers"),
+        ("catalogTags", "tags")
       ]
 
 -- | A label under which a collection of items can be grouped.
@@ -652,7 +657,21 @@ data Fulfillment = Fulfillment
   deriving (Show, Eq, Generic, Data)
 
 instance FromJSON Fulfillment where
-  parseJSON = genericParseJSON optionsFulfillment
+  parseJSON = A.withObject "Fulfillment" $ \o -> do
+    fulfillmentId <- o A..:? "id" >>= traverse parseAsText
+    fulfillmentStops <- o A..:? "stops"
+    fulfillmentTags <- o A..:? "tags"
+    fulfillmentType <- o A..:? "type"
+    fulfillmentVehicle <- o A..:? "vehicle"
+    pure Fulfillment {..}
+    where
+      parseAsText :: A.Value -> A.Parser Text
+      parseAsText = \case
+        A.String t -> pure t
+        A.Number n -> pure (T.pack (show n))
+        -- Treat missing/null as parsing failure:
+        A.Null -> fail "fulfillmentId cannot be null"
+        v -> A.typeMismatch "String or Number" v
 
 instance ToJSON Fulfillment where
   toJSON = genericToJSON optionsFulfillment

@@ -14,6 +14,7 @@
 
 module Tools.Payment where
 
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -94,6 +95,7 @@ createIndividualConnectAccount ::
   ServiceFlow m r =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
   Payment.IndividualConnectAccountReq ->
   m Payment.IndividualConnectAccountResp
 createIndividualConnectAccount = runWithServiceConfig Payment.createIndividualConnectAccount (.createBankAccount)
@@ -102,6 +104,7 @@ retryAccountLink ::
   ServiceFlow m r =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
   Payment.AccountId ->
   m Payment.RetryAccountLink
 retryAccountLink = runWithServiceConfig Payment.retryAccountLink (.retryBankAccountLink)
@@ -110,9 +113,17 @@ getAccount ::
   ServiceFlow m r =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
   Payment.AccountId ->
   m Payment.ConnectAccountResp
 getAccount = runWithServiceConfig Payment.getAccount (.getBankAccount)
+
+modifyPaymentServiceByMode :: Payment.PaymentService -> DMPM.PaymentMode -> Payment.PaymentService
+modifyPaymentServiceByMode Payment.Stripe DMPM.LIVE = Payment.Stripe
+modifyPaymentServiceByMode Payment.Stripe DMPM.TEST = Payment.StripeTest
+modifyPaymentServiceByMode Payment.StripeTest _ = Payment.StripeTest
+modifyPaymentServiceByMode Payment.Juspay _ = Payment.Juspay
+modifyPaymentServiceByMode Payment.AAJuspay _ = Payment.AAJuspay
 
 runWithServiceConfig ::
   ServiceFlow m r =>
@@ -120,13 +131,15 @@ runWithServiceConfig ::
   (DMSUC.MerchantServiceUsageConfig -> Payment.PaymentService) ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe DMPM.PaymentMode ->
   req ->
   m resp
-runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
+runWithServiceConfig func getCfg _merchantId merchantOpCityId paymentMode req = do
   orgPaymentsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  let paymentService = modifyPaymentServiceByMode (getCfg orgPaymentsConfig) (fromMaybe DMPM.LIVE paymentMode)
   orgPaymentServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.PaymentService $ getCfg orgPaymentsConfig) merchantOpCityId
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Payments" (show $ getCfg orgPaymentsConfig))
+    CQMSC.findByServiceAndCity (DMSC.PaymentService paymentService) merchantOpCityId
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Payments" (show paymentService))
   case orgPaymentServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig msc -> func msc req
     _ -> throwError $ InternalError "Unknown Service Config"

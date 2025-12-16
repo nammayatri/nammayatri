@@ -28,22 +28,29 @@ imports:
   RecentLocation: Domain.Types.RecentLocation
   TimeOfDay: Date.Time
   FRFSQuoteCategory: Domain.Types.FRFSQuoteCategory
+  QuoteCategoryMetadata: Domain.Types.FRFSQuoteCategory
+  BusLocation: API.Types.UI.RiderLocation
 
 module: FRFSTicketService
 types:
   FRFSDiscoverySearchAPIReq:
     city: City
     vehicleType: VehicleCategory
+
   FRFSSearchAPIReq:
     fromStationCode: Text
     toStationCode: Text
     routeCode: Maybe Text
+    serviceTier: Maybe ServiceTierType
     quantity: Int
     searchAsParentStops: Maybe Bool
     recentLocationId: Maybe (Id RecentLocation)
+    busLocationData: Maybe [BusLocation]
+    vehicleNumber: Maybe Text
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
+    quotes: [FRFSQuoteAPIRes] # For Sync Search API, we return the quotes for the search.
 
   FRFSQuoteAPIRes:
     quoteId: Id FRFSQuote
@@ -58,6 +65,8 @@ types:
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
     integratedBppConfigId: Id IntegratedBPPConfig
+    categories: [CategoryInfoResponse]
+
     derive: "Show"
 
   FRFSDiscountRes:
@@ -79,6 +88,16 @@ types:
     tnc: Maybe Text
     code: Maybe Text
     eligibility: Bool
+    derive: "Show"
+
+  CategoryInfoResponse:
+    categoryId: Id FRFSQuoteCategory
+    categoryName: FRFSQuoteCategoryType
+    categoryMeta: Maybe QuoteCategoryMetadata
+    categoryPrice: PriceAPIEntity
+    categoryOfferedPrice: PriceAPIEntity
+    categoryFinalPrice: Maybe PriceAPIEntity
+    categorySelectedQuantity: Int
     derive: "Show"
 
   FRFSCategorySelectionReq:

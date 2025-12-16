@@ -21,8 +21,9 @@ import qualified Domain.Types.FRFSQuote as DQuote
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
 import Kernel.Beam.Functions
-import Kernel.External.Types (ServiceFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -36,8 +37,9 @@ import qualified Storage.Queries.FRFSQuote as Qquote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Tools.Metrics as Metrics
+import qualified UrlShortner.Common as UrlShortner
 
-type FRFSConfirmFlow m r =
+type FRFSConfirmFlow m r c =
   ( MonadFlow m,
     BeamFlow m r,
     EsqDBReplicaFlow m r,
@@ -45,7 +47,13 @@ type FRFSConfirmFlow m r =
     BecknAPICallFlow m r,
     EncFlow m r,
     ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasShortDurationRetryCfg r c,
+    HasLongDurationRetryCfg r c,
+    SchedulerFlow r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String]
   )
 
 validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r) => DOnSelect -> m (Merchant.Merchant, DQuote.FRFSQuote, DIBC.IntegratedBPPConfig)
@@ -57,7 +65,7 @@ validateRequest DOnSelect {..} = do
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   return (merchant, quote, integratedBppConfig)
 
-onSelect :: (FRFSConfirmFlow m r) => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> Maybe Bool -> Maybe APITypes.CrisSdkResponse -> DIBC.IntegratedBPPConfig -> m ()
+onSelect :: (FRFSConfirmFlow m r c) => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> Maybe Bool -> Maybe APITypes.CrisSdkResponse -> DIBC.IntegratedBPPConfig -> m ()
 onSelect onSelectReq merchant quote isSingleMode mbEnableOffer crisSdkResponse integratedBppConfig = do
   logDebug $ "onSelect isSingleMode: " <> show isSingleMode <> " mbEnableOffer: " <> show mbEnableOffer <> " crisSdkResponse: " <> show crisSdkResponse
   Metrics.finishMetrics Metrics.SELECT_FRFS merchant.name onSelectReq.transactionId quote.merchantOperatingCityId.getId

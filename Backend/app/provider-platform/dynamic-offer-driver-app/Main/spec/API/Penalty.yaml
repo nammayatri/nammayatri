@@ -20,3 +20,4 @@ types:
   PenaltyCheckRes:
     - isCancellationPenaltyApplicable: Maybe Bool
     - cancellationPenaltyAmount: Maybe HighPrecMoney
+    - cancellationValidity: Maybe Text

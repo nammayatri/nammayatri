@@ -53,6 +53,7 @@ import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Action.UI.Registration as DR
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.ClientPersonInfo as DCP
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person (RideShareOptions)
@@ -166,7 +167,8 @@ data ProfileRes = ProfileRes
     publicTransportVersion :: Maybe Text,
     isMultimodalRider :: Bool,
     customerTags :: DA.Value,
-    profilePicture :: Maybe Text
+    profilePicture :: Maybe Text,
+    paymentMode :: Maybe DMPM.PaymentMode
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -198,7 +200,8 @@ data UpdateProfileReq = UpdateProfileReq
     latestLon :: Maybe Double,
     marketingParams :: Maybe MarketingParams,
     mbMobileNumber :: Maybe Text,
-    mbMobileCountryCode :: Maybe Text
+    mbMobileCountryCode :: Maybe Text,
+    paymentMode :: Maybe DMPM.PaymentMode
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -447,6 +450,7 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       req.liveActivityToken
       Nothing
       Nothing
+      req.paymentMode
   updateDisability req.hasDisability req.disability personId
 
 updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess

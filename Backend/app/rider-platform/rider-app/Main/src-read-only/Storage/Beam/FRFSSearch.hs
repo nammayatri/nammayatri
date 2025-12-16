@@ -4,6 +4,7 @@
 module Storage.Beam.FRFSSearch where
 
 import qualified BecknV2.FRFS.Enums
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import Kernel.External.Encryption
@@ -12,7 +13,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FRFSSearchT f = FRFSSearchT
-  { fromStationId :: B.C f Kernel.Prelude.Text,
+  { busLocationData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    fromStationAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fromStationId :: B.C f Kernel.Prelude.Text,
+    fromStationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fromStationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    fromStationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     id :: B.C f Kernel.Prelude.Text,
     integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     isOnSearchReceived :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -27,8 +33,13 @@ data FRFSSearchT f = FRFSSearchT
     riderId :: B.C f Kernel.Prelude.Text,
     routeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     searchAsParentStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    toStationAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toStationId :: B.C f Kernel.Prelude.Text,
+    toStationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    toStationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    toStationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     validTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    vehicleNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

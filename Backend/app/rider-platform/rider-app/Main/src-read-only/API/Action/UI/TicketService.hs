@@ -278,7 +278,7 @@ type API =
            Domain.Types.TicketBooking.BookingStatus
       :> Get
            ('[JSON])
-           [API.Types.UI.TicketService.TicketBookingDetails]
+           API.Types.UI.TicketService.TicketPlaceBookingList
   )
 
 handler :: Environment.FlowServer API
@@ -462,6 +462,6 @@ getTicketPlaceBookings ::
     Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
     Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
     Domain.Types.TicketBooking.BookingStatus ->
-    Environment.FlowHandler [API.Types.UI.TicketService.TicketBookingDetails]
+    Environment.FlowHandler API.Types.UI.TicketService.TicketPlaceBookingList
   )
 getTicketPlaceBookings a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketPlaceBookings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1

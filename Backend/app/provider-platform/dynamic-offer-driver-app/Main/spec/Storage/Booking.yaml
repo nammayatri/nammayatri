@@ -21,6 +21,7 @@ imports:
   ParcelType: Domain.Types.ParcelType
   BillingCategory: SharedLogic.Type
   PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
+  PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -100,6 +101,7 @@ Booking:
     exotelDeclinedCallStatusReceivingTime: Maybe UTCTime
     numberOfLuggages: Maybe Int
     paymentInstrument: Maybe PaymentInstrument
+    paymentMode: Maybe PaymentMode
     commission: Maybe HighPrecMoney
 
   excludedFields:

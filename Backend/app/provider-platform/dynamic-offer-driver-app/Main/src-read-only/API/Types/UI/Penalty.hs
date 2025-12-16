@@ -14,6 +14,10 @@ data PenaltyCheckReq = PenaltyCheckReq {rideId :: Kernel.Prelude.Text, point :: 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PenaltyCheckRes = PenaltyCheckRes {isCancellationPenaltyApplicable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, cancellationPenaltyAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney}
+data PenaltyCheckRes = PenaltyCheckRes
+  { isCancellationPenaltyApplicable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    cancellationPenaltyAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationValidity :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
