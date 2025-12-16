@@ -350,8 +350,6 @@ data BecknTag
     ENCODED_POLYLINE
   | WAYPOINTS
   | MULTIPLE_ROUTES
-  | ROUTE_ID
-  | ROUTE_DIRECTION
   | -- ###################
     -- Custom tags
     -- ###################
@@ -507,8 +505,6 @@ instance CompleteTag BecknTag where
     ROUND_TRIP -> (Just "Round trip", Nothing)
     WAYPOINTS -> (Just "WAYPOINTS", Nothing)
     MULTIPLE_ROUTES -> (Just "Multiple Routes", Nothing)
-    ROUTE_ID -> (Just "Route ID", Nothing)
-    ROUTE_DIRECTION -> (Just "Route Direction", Nothing)
     DRIVER_IDENTITY -> (Just "Driver Identity", Nothing)
     BUYER_FINDER_FEES_PERCENTAGE -> (Just "Buyer Finder Fees", Nothing)
     SETTLEMENT_AMOUNT -> (Just "Settlement amount", Nothing)
@@ -603,8 +599,6 @@ instance CompleteTag BecknTag where
     IS_INSURED -> INSURANCE_INFO
     INSURED_AMOUNT -> INSURANCE_INFO
     NYREGULAR_SUBSCRIPTION_CHARGE -> GENERAL_INFO
-    ROUTE_ID -> ROUTE_INFO
-    ROUTE_DIRECTION -> ROUTE_INFO
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

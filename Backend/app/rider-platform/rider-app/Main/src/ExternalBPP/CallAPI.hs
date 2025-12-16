@@ -90,8 +90,6 @@ discoverySearch merchant bapConfig integratedBPPConfig req = do
   transactionId <- generateGUID
   let requestCity = SIBC.resolveOndcCity integratedBPPConfig req.city
   bknSearchReq <- ACL.buildSearchReq transactionId req.vehicleType bapConfig Nothing Nothing requestCity
-  let redisCounter = DOnSearch.DiscoveryCounter {merchantId = merchant.id.getId, pageNo = 0, maxPageNo = 9999}
-  Redis.setExp (discoverySearchCounterKey (show transactionId)) redisCounter 3600
   logDebug $ "FRFS Discovery SearchReq " <> encodeToText bknSearchReq
   case integratedBPPConfig.providerConfig of
     ONDC ONDCBecknConfig {networkHostUrl} -> do

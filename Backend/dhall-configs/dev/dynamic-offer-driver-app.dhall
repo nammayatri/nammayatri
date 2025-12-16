@@ -366,9 +366,6 @@ let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
 let driverFleetLocationListAPIRateLimitOptions =
       { limit = +5, limitResetTimeInSec = +30 }
 
-let noSignatureSubscribers =
-      [ "pre-prod-ondc-ticketing-api-delhi.transportstack.in" ]
-
 in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
@@ -473,5 +470,4 @@ in  { esqDBCfg
     , minDistanceBetweenTwoPoints = +25
     , inMemConfig
     , driverFleetLocationListAPIRateLimitOptions
-    , noSignatureSubscribers
     }
