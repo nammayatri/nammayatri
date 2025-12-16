@@ -17,4 +17,4 @@ postSearchRide ::
   Environment.Flow API.UI.Search.SearchResp
 postSearchRide merchantShortId _opCity personId req = do
   m <- findMerchantByShortId merchantShortId
-  API.UI.Search.search' (personId, m.id) req Nothing Nothing Nothing Nothing Nothing Nothing (Just True)
+  API.UI.Search.search' (personId, m.id) req Nothing Nothing Nothing Nothing Nothing Nothing (Just True) (Just False)

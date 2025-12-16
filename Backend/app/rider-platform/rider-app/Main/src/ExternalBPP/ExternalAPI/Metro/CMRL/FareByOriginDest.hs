@@ -109,7 +109,8 @@ getFareByOriginDest integrationBPPConfig config fareReq = do
                           serviceTierDescription = "ORDINARY",
                           serviceTierLongName = "ORDINARY",
                           isAirConditioned = Just False
-                        }
+                        },
+                    fareQuoteType = Nothing
                   }
               ]
           Nothing -> return []

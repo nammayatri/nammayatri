@@ -14,6 +14,7 @@ import qualified Domain.Action.Beckn.FRFS.OnInit as DOnInit
 import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.FRFS.OnStatus as DOnStatus
 import Domain.Types.BecknConfig
+import Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuote as DQuote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import Domain.Types.FRFSRouteDetails
@@ -100,15 +101,15 @@ discoverySearch merchant bapConfig integratedBPPConfig req = do
     _ -> do
       void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
 
-search :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> Maybe HighPrecMoney -> [FRFSRouteDetails] -> IntegratedBPPConfig -> m ()
-search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails integratedBPPConfig = do
+search :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> Maybe HighPrecMoney -> [FRFSRouteDetails] -> IntegratedBPPConfig -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> m ()
+search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails integratedBPPConfig blacklistedServiceTiers blacklistedFareQuoteTypes = do
   Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
   case integratedBPPConfig.providerConfig of
     ONDC ONDCBecknConfig {networkHostUrl, networkId, fareCachingAllowed} -> do
       fork ("FRFS ONDC SearchReq for " <> show bapConfig.vehicleCategory) $ do
         case (fareCachingAllowed, networkHostUrl, networkId, mbFare) of
           (Just True, Just _, Just _, Just _) ->
-            withTryCatch "callExternalBPP:searchFlow" (Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig networkHostUrl networkId searchReq routeDetails)
+            withTryCatch "callExternalBPP:searchFlow" (Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig networkHostUrl networkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes)
               >>= \case
                 Left err -> do
                   logError $ "Error in calling ONDC Search: " <> show err
@@ -119,7 +120,7 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
                     else processOnSearch onSearchReq
           _ -> callOndcSearch networkHostUrl
     _ -> do
-      onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails
+      onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes
       processOnSearch onSearchReq
   where
     processOnSearch :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => DOnSearch.DOnSearch -> m ()

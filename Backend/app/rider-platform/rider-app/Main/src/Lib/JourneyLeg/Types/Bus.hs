@@ -4,6 +4,7 @@ import API.Types.UI.FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSQuote
+import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as FRFSSearch
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
@@ -26,7 +27,9 @@ data BusLegRequestSearchData = BusLegRequestSearchData
     multimodalSearchRequestId :: Maybe Text,
     recentLocationId :: Maybe (Id DRecentLocation.RecentLocation),
     serviceTier :: Maybe Spec.ServiceTierType,
-    upsertJourneyLegAction :: forall m r c. JL.SearchRequestFlow m r c => Text -> m ()
+    upsertJourneyLegAction :: forall m r c. JL.SearchRequestFlow m r c => Text -> m (),
+    blacklistedServiceTiers :: [Spec.ServiceTierType],
+    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType]
   }
 
 data BusLegRequestConfirmData = BusLegRequestConfirmData
@@ -72,7 +75,9 @@ data BusLegRequestGetFareData = BusLegRequestGetFareData
     riderId :: Id DPerson.Person,
     fromArrivalTime :: Maybe UTCTime,
     serviceType :: Maybe Spec.ServiceTierType,
-    merchantOpCity :: DMOC.MerchantOperatingCity
+    merchantOpCity :: DMOC.MerchantOperatingCity,
+    blacklistedServiceTiers :: [Spec.ServiceTierType],
+    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType]
   }
 
 data BusLegRequest

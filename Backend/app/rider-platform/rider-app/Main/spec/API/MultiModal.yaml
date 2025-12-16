@@ -373,6 +373,8 @@ apis:
       endpoint: /multimodal/{journeyId}/initiate
       params:
         journeyId: Id Journey
+      query:
+        filterServiceAndJrnyType: Bool
       response:
         type: JourneyInfoResp
   - POST:
@@ -411,6 +413,8 @@ apis:
       endpoint: /multimodal/{journeyId}/switch # combine with other legs if they match
       params:
         journeyId: Id Journey
+      query:
+        filterServiceAndJrnyType: Bool
       request:
         type: SwitchLegReq
       response:

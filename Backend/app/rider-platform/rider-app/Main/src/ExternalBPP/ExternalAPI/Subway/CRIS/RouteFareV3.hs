@@ -188,7 +188,8 @@ getRouteFare config merchantOperatingCityId request useCache getAllFares = do
                         serviceTierDescription = serviceTier.description,
                         serviceTierLongName = serviceTier.longName,
                         isAirConditioned = serviceTier.isAirConditioned
-                      }
+                      },
+                  fareQuoteType = Nothing
                 }
       let fareCacheKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver getAllFares
       let fares = concat frfsDetails

@@ -45,6 +45,9 @@ type API =
            "journeyId"
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "initiate"
+      :> QueryParam
+           "filterServiceAndJrnyType"
+           Kernel.Prelude.Bool
       :> Post
            '[JSON]
            API.Types.UI.MultimodalConfirm.JourneyInfoResp
@@ -102,6 +105,9 @@ type API =
            "journeyId"
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "switch"
+      :> QueryParam
+           "filterServiceAndJrnyType"
+           Kernel.Prelude.Bool
       :> ReqBody
            '[JSON]
            API.Types.UI.MultimodalConfirm.SwitchLegReq
@@ -552,9 +558,10 @@ postMultimodalInitiate ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalInitiate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalInitiate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalInitiate a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalInitiate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalConfirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -600,10 +607,11 @@ postMultimodalSwitch ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     API.Types.UI.MultimodalConfirm.SwitchLegReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalSwitch a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalSwitch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalSwitch a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalSwitch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postMultimodalJourneyLegSkip ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
