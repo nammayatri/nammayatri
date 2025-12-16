@@ -162,8 +162,7 @@ data AppCfg = AppCfg
     minDistanceBetweenTwoPoints :: Int,
     tsServiceConfig :: CPT.TSServiceConfig,
     inMemConfig :: KTC.InMemConfig,
-    driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
-    noSignatureSubscribers :: [Text]
+    driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions
   }
   deriving (Generic, FromDhall)
 
@@ -276,8 +275,7 @@ data AppEnv = AppEnv
     tsServiceConfig :: CPT.TSServiceConfig,
     inMemEnv :: KTC.InMemEnv,
     url :: Maybe Text,
-    driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
-    noSignatureSubscribers :: [Text]
+    driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions
   }
   deriving (Generic)
 

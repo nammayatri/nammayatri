@@ -62,8 +62,7 @@ data AppCfg = AppCfg
     kafkaProducerCfg :: KafkaProducerCfg,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    internalEndPointMap :: M.Map BaseUrl BaseUrl,
-    noSignatureSubscribers :: [Text]
+    internalEndPointMap :: M.Map BaseUrl BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -104,8 +103,7 @@ data AppEnv = AppEnv
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    url :: Maybe Text,
-    noSignatureSubscribers :: [Text]
+    url :: Maybe Text
   }
   deriving (Generic)
 

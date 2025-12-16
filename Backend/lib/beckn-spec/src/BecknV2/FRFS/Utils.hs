@@ -194,6 +194,3 @@ defaultBusBoardingRelationshitCfg Spec.ORDINARY = [Spec.ORDINARY]
 defaultBusBoardingRelationshitCfg Spec.EXECUTIVE = [Spec.ORDINARY, Spec.EXECUTIVE]
 defaultBusBoardingRelationshitCfg Spec.AC = [Spec.ORDINARY, Spec.EXECUTIVE, Spec.AC]
 defaultBusBoardingRelationshitCfg a = [a]
-
-discoverySearchCounterKey :: Text -> Text
-discoverySearchCounterKey transactionId = "FRFS:Discovery:SearchReq:Counter" <> transactionId

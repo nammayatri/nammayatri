@@ -19,14 +19,12 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import Data.List (groupBy, sortBy)
-import qualified Data.Text as T
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import qualified Domain.Types.Extra.IntegratedBPPConfig as DIBCExtra
 import qualified Domain.Types.FRFSQuote as DQuote
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
-import Domain.Types.StationType as Station
-import qualified Kernel.External.Maps as Maps
+import Domain.Types.StationType
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -341,93 +339,3 @@ castVehicleVariantToServiceTierType = \case
   "THIRD_CLASS" -> Spec.THIRD_CLASS
   "AC_EMU_FIRST_CLASS" -> Spec.AC_EMU_FIRST_CLASS
   _ -> Spec.ORDINARY -- Default fallback
-
-buildDiscoveryOnSearchReq :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Spec.OnSearchReq -> Domain.DiscoveryCounter -> m Domain.DiscoveryOnSearchReq
-buildDiscoveryOnSearchReq req discoveryCounter = do
-  msg <- req.onSearchReqMessage & fromMaybeM (InvalidRequest "Message not found")
-  transactionId <- req.onSearchReqContext.contextTransactionId & fromMaybeM (InvalidRequest "Missing transactionId")
-  messageId <- req.onSearchReqContext.contextMessageId & fromMaybeM (InvalidRequest "Missing messageId")
-  let getPageInfo tag = (Utils.getTag "PAGINATION" "PAGINATION_ID" tag, Utils.getTag "PAGINATION" "MAX_PAGE_NUMBER" tag)
-      (currPageNoTxt, totalPagesTxt) = maybe (Nothing, Nothing) getPageInfo msg.onSearchReqMessageCatalog.catalogTags
-      mbCurrPageNo :: Maybe Int = currPageNoTxt >>= (readMaybe . T.unpack)
-      mbMaxPageCount :: Maybe Int = totalPagesTxt >>= (readMaybe . T.unpack)
-  case (mbCurrPageNo, mbMaxPageCount) of
-    (Just currPageNo, Just maxPageCount) -> do
-      when (currPageNo /= discoveryCounter.pageNo + 1 || maxPageCount /= discoveryCounter.maxPageNo) $ throwError (InvalidRequest "Invalid pagination. Page progression mismatch")
-    _ -> pure ()
-  bppSubscriberId <- req.onSearchReqContext.contextBppId & fromMaybeM (InvalidRequest "BppSubscriberId not found")
-  bppSubscriberUrl <- req.onSearchReqContext.contextBppUri & fromMaybeM (InvalidRequest "BppSubscriberUrl not found")
-
-  let providers = fromMaybe [] msg.onSearchReqMessageCatalog.catalogProviders
-      fulfillments = providers >>= (fromMaybe [] . (.providerFulfillments))
-      stopsWithIdx =
-        fulfillments >>= \f ->
-          let fs = fromMaybe [] f.fulfillmentStops
-              len = length fs
-           in zipWith (\stop idx -> (stop, idx, len)) fs [0 ..]
-      stations = mapMaybe castStation stopsWithIdx
-  return
-    Domain.DiscoveryOnSearchReq
-      { transactionId = transactionId,
-        messageId = messageId,
-        pageNumber = discoveryCounter.pageNo,
-        totalPages = discoveryCounter.maxPageNo,
-        bppSubscriberId = bppSubscriberId,
-        bppSubscriberUrl = bppSubscriberUrl,
-        stationList = stations,
-        merchantId = discoveryCounter.merchantId
-      }
-  where
-    castStation :: (Spec.Stop, Int, Int) -> Maybe Domain.DStation
-    castStation (stop, idx, len) = do
-      stopCode <- stop.stopLocation >>= (.locationDescriptor) >>= (.descriptorCode)
-      stationName <- stop.stopLocation >>= (.locationDescriptor) >>= (.descriptorName)
-      let stationGps = stop.stopLocation >>= (.locationGps) & parseLatLong
-          stationLat = stationGps <&> (.lat)
-          stationLon = stationGps <&> (.lon)
-          stationType = getStationType idx len
-      pure $
-        Domain.DStation
-          { stationCode = stopCode,
-            stationName = stationName,
-            stationLat = stationLat,
-            stationLon = stationLon,
-            stationType = stationType,
-            stopSequence = Just idx,
-            towards = Nothing
-          }
-
-    parseLatLong :: Maybe Text -> Maybe Maps.LatLong
-    parseLatLong Nothing = Nothing
-    parseLatLong (Just a) =
-      case T.splitOn "," a of
-        [latStr, lonStr] ->
-          case (readMaybe (T.unpack latStr), readMaybe (T.unpack lonStr)) of
-            (Just lat, Just lon) -> Just (Maps.LatLong lat lon)
-            _ -> Nothing
-        _ -> Nothing
-
-    getStationType idx len =
-      let lastIdx = len - 1
-       in case idx of
-            0 -> Station.START
-            _ | idx == lastIdx -> Station.END
-            _ -> Station.INTERMEDIATE
-
--- validateAndUpdateCounter :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Maybe Int -> Maybe Int -> m (Maybe Domain.DiscoveryCounter)
--- validateAndUpdateCounter transactionId mbCurrPageNo mbMaxPageCount = do
---   case (mbCurrPageNo, mbMaxPageCount) of
---     (Nothing, _)    -> pure Nothing
---     (_, Nothing)    -> pure Nothing
---     (Just currPageNo, Just maxPageCount) -> do
---       redisValue <- Redis.safeGet (Utils.discoverySearchCounterKey (show transactionId))
---       case redisValue of
---         Nothing -> pure Nothing
---         Just Domain.DiscoveryCounter {merchantId, pageNo, maxPageNo} -> do
---           when (currPageNo /= pageNo + 1 || maxPageCount /= maxPageNo) $ throwError (InvalidRequest "Invalid pagination. Page progression mismatch")
---           pure $
---             Just Domain.DiscoveryCounter
---               { merchantId = merchantId
---               , pageNo = currPageNo
---               , maxPageNo = maxPageNo
---               }

@@ -81,24 +81,6 @@ data DOnSearch = DOnSearch
   }
   deriving (Show)
 
-data DiscoveryOnSearchReq = DiscoveryOnSearchReq
-  { transactionId :: Text,
-    messageId :: Text,
-    pageNumber :: Int,
-    totalPages :: Int,
-    bppSubscriberId :: Text,
-    bppSubscriberUrl :: Text,
-    stationList :: [DStation],
-    merchantId :: Text
-  }
-
-data DiscoveryCounter = DiscoveryCounter
-  { merchantId :: Text,
-    pageNo :: Int,
-    maxPageNo :: Int
-  }
-  deriving (Show, Generic, ToJSON, FromJSON)
-
 data DVehicleServiceTier = DVehicleServiceTier
   { serviceTierType :: Spec.ServiceTierType,
     serviceTierProviderCode :: Text,
@@ -648,12 +630,3 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote adultPrice in
   QFRFP.create frfsRouteFareProduct
   QFFP.create farePolicy
   QRSF.create routeStopFare
-
-discoveryOnSearch ::
-  ( EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    CacheFlow m r
-  ) =>
-  DiscoveryOnSearchReq ->
-  m ()
-discoveryOnSearch _discoveryReq = pure ()
