@@ -33,6 +33,7 @@ module Domain.Action.Dashboard.Merchant
     postMerchantConfigOperatingCityWhiteList,
     postMerchantConfigMerchantPushNotificationUpsert,
     postMerchantConfigMerchantMessageUpsert,
+    postMerchantConfigDisabilityTranslationUpsert,
   )
 where
 
@@ -52,6 +53,7 @@ import qualified Data.Vector as V
 import qualified Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.BusinessHour
+import qualified Domain.Types.DisabilityTranslation as DDT
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Geometry as DGEO
 import qualified Domain.Types.Merchant as DM
@@ -124,6 +126,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.BusinessHour as SQBH
 import qualified Storage.Queries.BusinessHourExtra as SQBHE
+import qualified Storage.Queries.DisabilityTranslation as QDT
 import qualified Storage.Queries.Geometry as QGEO
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
@@ -1836,3 +1839,62 @@ postMerchantConfigMerchantMessageUpsert merchantShortId opCity req = do
                   CQMM.create newMM
                   return (errors, Map.empty)
             _ -> return (errors <> ["Invalid messageKey, language or jsonData for key: " <> messageKeyText], Map.empty)
+
+---------------------------------------------------------------------
+-- Upsert Disability Translation CSV
+---------------------------------------------------------------------
+
+data DisabilityTranslationCSVRow = DisabilityTranslationCSVRow
+  { dtDisabilityId :: Text,
+    dtDisabilityTag :: Text,
+    dtLanguage :: Text,
+    dtTranslation :: Text
+  }
+  deriving (Generic, Show)
+
+instance FromNamedRecord DisabilityTranslationCSVRow where
+  parseNamedRecord r =
+    DisabilityTranslationCSVRow
+      <$> r .: "disability_id"
+      <*> r .: "disability_tag"
+      <*> r .: "language"
+      <*> r .: "translation"
+
+postMerchantConfigDisabilityTranslationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertDisabilityTranslationCsvReq -> Flow Common.UpsertDisabilityTranslationCsvResp
+postMerchantConfigDisabilityTranslationUpsert merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  result <-
+    Redis.whenWithLockRedisAndReturnValue (merchantCityLockKey merchantOpCity.id.getId) 60 $ do
+      logTagInfo "Upserting Disability Translations for merchant: " (show merchant.id <> " and city: " <> show opCity)
+      csvRows <- readCsvDisabilityTranslation req.file
+      (errors, _) <- foldlM processDisabilityTranslation ([], Map.empty) csvRows
+      return $
+        Common.UpsertDisabilityTranslationCsvResp
+          { unprocessedEntities = errors,
+            success = "Disability Translations updated successfully"
+          }
+  case result of
+    Right resp -> return resp
+    Left _ -> throwError $ InvalidRequest "Could not acquire lock"
+  where
+    readCsvDisabilityTranslation csvFile = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector DisabilityTranslationCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> pure $ V.toList v
+
+    processDisabilityTranslation (errors, _) row = do
+      let disabilityId = row.dtDisabilityId
+          disabilityTag = row.dtDisabilityTag
+          language = row.dtLanguage
+          translation = row.dtTranslation
+      let newDisabilityTranslation =
+            DDT.DisabilityTranslation
+              { DDT.disabilityId = Id disabilityId,
+                DDT.disabilityTag = disabilityTag,
+                DDT.language = language,
+                DDT.translation = translation
+              }
+      QDT.create newDisabilityTranslation
+      return (errors, Map.empty)

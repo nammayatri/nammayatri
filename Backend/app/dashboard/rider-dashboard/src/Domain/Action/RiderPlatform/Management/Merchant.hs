@@ -32,6 +32,7 @@ module Domain.Action.RiderPlatform.Management.Merchant
     postMerchantConfigMerchantCreate,
     postMerchantConfigMerchantPushNotificationUpsert,
     postMerchantConfigMerchantMessageUpsert,
+    postMerchantConfigDisabilityTranslationUpsert,
   )
 where
 
@@ -262,3 +263,9 @@ postMerchantConfigMerchantMessageUpsert merchantShortId opCity apiTokenInfo req 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigMerchantMessageUpsert)) req
+
+postMerchantConfigDisabilityTranslationUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertDisabilityTranslationCsvReq -> Flow Common.UpsertDisabilityTranslationCsvResp
+postMerchantConfigDisabilityTranslationUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigDisabilityTranslationUpsert)) req

@@ -53,6 +53,8 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantConfigMerchantPushNotificationUpsert,
     postMerchantConfigMerchantOverlayUpsert,
     postMerchantConfigMerchantMessageUpsert,
+    postMerchantConfigTranslationsUpsert,
+    postMerchantConfigPlanTranslationUpsert,
   )
 where
 
@@ -489,6 +491,18 @@ postMerchantConfigMerchantMessageUpsert merchantShortId opCity apiTokenInfo req 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigMerchantMessageUpsert)) req
+
+postMerchantConfigTranslationsUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertTranslationsCsvReq -> Flow Common.UpsertTranslationsCsvResp
+postMerchantConfigTranslationsUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigTranslationsUpsert)) req
+
+postMerchantConfigPlanTranslationUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertPlanTranslationCsvReq -> Flow Common.UpsertPlanTranslationCsvResp
+postMerchantConfigPlanTranslationUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigPlanTranslationUpsert)) req
 
 getMerchantConfigFarePolicyExport :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Kernel.Prelude.Text)
 getMerchantConfigFarePolicyExport merchantShortId opCity apiTokenInfo = do

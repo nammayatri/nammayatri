@@ -395,6 +395,22 @@ apis:
       response:
         type: UpsertMerchantMessageCsvResp
       userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_MERCHANT_MESSAGE_CSV
+  - POST: # UpsertTranslationsCsvAPI
+      endpoint: /config/translations/upsert
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertTranslationsCsvReq
+      response:
+        type: UpsertTranslationsCsvResp
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_TRANSLATIONS_CSV
+  - POST: # UpsertPlanTranslationCsvAPI
+      endpoint: /config/planTranslation/upsert
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertPlanTranslationCsvReq
+      response:
+        type: UpsertPlanTranslationCsvResp
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_PLAN_TRANSLATION_CSV
   - POST: # UpsertSpecialLocationAPI
       endpoint: /specialLocation/upsert
       query:
@@ -890,6 +906,22 @@ types:
     - merchantId: Text
     - derive: "'HideSecrets"
   UpsertMerchantMessageCsvResp:
+    - unprocessedEntities: [Text]
+    - success: Text
+  UpsertTranslationsCsvReq:
+    - file: FilePath
+    - merchantOperatingCity: Text
+    - merchantId: Text
+    - derive: "'HideSecrets"
+  UpsertTranslationsCsvResp:
+    - unprocessedEntities: [Text]
+    - success: Text
+  UpsertPlanTranslationCsvReq:
+    - file: FilePath
+    - merchantOperatingCity: Text
+    - merchantId: Text
+    - derive: "'HideSecrets"
+  UpsertPlanTranslationCsvResp:
     - unprocessedEntities: [Text]
     - success: Text
   SchedulerTriggerReq:

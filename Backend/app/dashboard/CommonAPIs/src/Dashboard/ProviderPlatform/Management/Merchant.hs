@@ -274,3 +274,29 @@ instance ToMultipart Tmp UpsertMerchantMessageCsvReq where
     MultipartData
       [Input "merchantOperatingCity" form.merchantOperatingCity, Input "merchantId" form.merchantId]
       [FileData "file" (T.pack form.file) "" (form.file)]
+
+instance FromMultipart Tmp UpsertTranslationsCsvReq where
+  fromMultipart form =
+    UpsertTranslationsCsvReq
+      <$> fmap fdPayload (lookupFile "file" form)
+      <*> lookupInput "merchantOperatingCity" form
+      <*> lookupInput "merchantId" form
+
+instance ToMultipart Tmp UpsertTranslationsCsvReq where
+  toMultipart form =
+    MultipartData
+      [Input "merchantOperatingCity" form.merchantOperatingCity, Input "merchantId" form.merchantId]
+      [FileData "file" (T.pack form.file) "" (form.file)]
+
+instance FromMultipart Tmp UpsertPlanTranslationCsvReq where
+  fromMultipart form =
+    UpsertPlanTranslationCsvReq
+      <$> fmap fdPayload (lookupFile "file" form)
+      <*> lookupInput "merchantOperatingCity" form
+      <*> lookupInput "merchantId" form
+
+instance ToMultipart Tmp UpsertPlanTranslationCsvReq where
+  toMultipart form =
+    MultipartData
+      [Input "merchantOperatingCity" form.merchantOperatingCity, Input "merchantId" form.merchantId]
+      [FileData "file" (T.pack form.file) "" (form.file)]

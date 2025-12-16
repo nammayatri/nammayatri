@@ -53,6 +53,8 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigMerchantPushNotificationUpsert,
     postMerchantConfigMerchantOverlayUpsert,
     postMerchantConfigMerchantMessageUpsert,
+    postMerchantConfigTranslationsUpsert,
+    postMerchantConfigPlanTranslationUpsert,
   )
 where
 
@@ -106,6 +108,7 @@ import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.PlanTranslation as PlanTrans
 import qualified Domain.Types.RegistryMapFallback as RMF
 import qualified Domain.Types.SubscriptionConfig as DSC
+import qualified Domain.Types.Translations as DTranslations
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.ValueAddNP as VNP
 import qualified Domain.Types.VehicleCategory as DVC
@@ -200,6 +203,7 @@ import qualified Storage.Queries.PlanTranslation as SQPT
 import qualified Storage.Queries.RegistryMapFallback as QRMF
 import qualified Storage.Queries.SubscriptionConfig as QSC
 import qualified Storage.Queries.Transformers.MerchantMessage as Transformers
+import qualified Storage.Queries.Translations as QTranslations
 import qualified Storage.Queries.ValueAddNP as SQVNP
 import qualified Storage.Queries.WhiteListOrg as QWLO
 import Tools.Error
@@ -3797,3 +3801,144 @@ postMerchantConfigMerchantMessageUpsert merchantShortId opCity req = do
                   CQMM.create newMM
                   return (errors, Map.empty)
             _ -> return (errors <> ["Invalid messageKey, language or jsonData for key: " <> messageKeyText], Map.empty)
+
+---------------------------------------------------------------------
+-- Upsert Translations CSV
+---------------------------------------------------------------------
+
+data TranslationsCSVRow = TranslationsCSVRow
+  { trMessageKey :: Text,
+    trLanguage :: Text,
+    trMessage :: Text
+  }
+  deriving (Generic, Show)
+
+instance FromNamedRecord TranslationsCSVRow where
+  parseNamedRecord r =
+    TranslationsCSVRow
+      <$> r .: "message_key"
+      <*> r .: "language"
+      <*> r .: "message"
+
+postMerchantConfigTranslationsUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertTranslationsCsvReq -> Flow Common.UpsertTranslationsCsvResp
+postMerchantConfigTranslationsUpsert merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  result <-
+    Hedis.whenWithLockRedisAndReturnValue (merchantCityLockKey merchantOpCity.id.getId) 60 $ do
+      logTagInfo "Upserting Translations for merchant: " (show merchant.id <> " and city: " <> show opCity)
+      csvRows <- readCsvTranslations req.file
+      (errors, _) <- foldlM (processTranslation merchantOpCity) ([], Map.empty) csvRows
+      return $
+        Common.UpsertTranslationsCsvResp
+          { unprocessedEntities = errors,
+            success = "Translations updated successfully"
+          }
+  case result of
+    Right resp -> return resp
+    Left _ -> throwError $ InvalidRequest "Could not acquire lock"
+  where
+    readCsvTranslations csvFile = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector TranslationsCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> pure $ V.toList v
+
+    processTranslation _merchantOpCity (errors, _) row = do
+      let messageKey = row.trMessageKey
+          language = readMaybe (T.unpack row.trLanguage) :: Maybe External.Language
+          message = row.trMessage
+      case language of
+        Just lang -> do
+          existingTranslation <- QTranslations.isTranslationExist messageKey lang
+          now <- getCurrentTime
+          translationId <- generateGUID
+          let newTranslation =
+                DTranslations.Translations
+                  { DTranslations.id = translationId,
+                    DTranslations.messageKey = messageKey,
+                    DTranslations.language = lang,
+                    DTranslations.message = message,
+                    DTranslations.createdAt = now,
+                    DTranslations.updatedAt = now
+                  }
+          if existingTranslation
+            then do
+              QTranslations.updateByPrimaryKey newTranslation
+              return (errors, Map.empty)
+            else do
+              QTranslations.create newTranslation
+              return (errors, Map.empty)
+        Nothing -> return (errors <> ["Invalid language for messageKey: " <> messageKey], Map.empty)
+
+---------------------------------------------------------------------
+-- Upsert Plan Translation CSV
+---------------------------------------------------------------------
+
+data PlanTranslationCSVRow = PlanTranslationCSVRow
+  { ptPlanId :: Text,
+    ptLanguage :: Text,
+    ptName :: Text,
+    ptDescription :: Text
+  }
+  deriving (Generic, Show)
+
+instance FromNamedRecord PlanTranslationCSVRow where
+  parseNamedRecord r =
+    PlanTranslationCSVRow
+      <$> r .: "plan_id"
+      <*> r .: "language"
+      <*> r .: "name"
+      <*> r .: "description"
+
+postMerchantConfigPlanTranslationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertPlanTranslationCsvReq -> Flow Common.UpsertPlanTranslationCsvResp
+postMerchantConfigPlanTranslationUpsert merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  result <-
+    Hedis.whenWithLockRedisAndReturnValue (merchantCityLockKey merchantOpCity.id.getId) 60 $ do
+      logTagInfo "Upserting Plan Translations for merchant: " (show merchant.id <> " and city: " <> show opCity)
+      csvRows <- readCsvPlanTranslation req.file
+      (errors, _) <- foldlM processPlanTranslation ([], Map.empty) csvRows
+      return $
+        Common.UpsertPlanTranslationCsvResp
+          { unprocessedEntities = errors,
+            success = "Plan Translations updated successfully"
+          }
+  case result of
+    Right resp -> return resp
+    Left _ -> throwError $ InvalidRequest "Could not acquire lock"
+  where
+    readCsvPlanTranslation csvFile = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector PlanTranslationCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> pure $ V.toList v
+
+    processPlanTranslation (errors, _) row = do
+      let planIdText = row.ptPlanId
+          language = readMaybe (T.unpack row.ptLanguage) :: Maybe External.Language
+          name = row.ptName
+          description = row.ptDescription
+      case language of
+        Just lang -> do
+          existingPlanTranslation <- SQPT.findByPlanIdAndLanguage (Id planIdText) lang
+          now <- getCurrentTime
+          let newPlanTranslation =
+                PlanTrans.PlanTranslation
+                  { PlanTrans.planId = Id planIdText,
+                    PlanTrans.language = lang,
+                    PlanTrans.name = name,
+                    PlanTrans.description = description,
+                    PlanTrans.createdAt = now,
+                    PlanTrans.updatedAt = now
+                  }
+          case existingPlanTranslation of
+            Just oldPT -> do
+              SQPT.updateByPrimaryKey newPlanTranslation {PlanTrans.createdAt = oldPT.createdAt}
+              Hedis.del $ SCQPT.makePlanIdAndLanguageKey (Id planIdText) lang
+              return (errors, Map.empty)
+            Nothing -> do
+              SQPT.create newPlanTranslation
+              return (errors, Map.empty)
+        Nothing -> return (errors <> ["Invalid language for planId: " <> planIdText], Map.empty)
