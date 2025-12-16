@@ -21,6 +21,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantServiceUsageConfigSmsUpdate,
     postMerchantServiceConfigVerificationUpdate,
     postMerchantConfigFarePolicyUpsert,
+    getMerchantConfigFarePolicyExport,
     postMerchantConfigOperatingCityCreate,
     postMerchantUpdateOnboardingVehicleVariantMapping,
     postMerchantConfigSpecialLocationUpsert,
@@ -1220,6 +1221,202 @@ data FarePolicyCSVRow = FarePolicyCSVRow
   }
   deriving (Show)
 
+instance ToNamedRecord FarePolicyCSVRow where
+  toNamedRecord FarePolicyCSVRow {..} =
+    namedRecord
+      [ "city" .= city,
+        "vehicle_service_tier" .= vehicleServiceTier,
+        "area" .= area,
+        "tripCategory" .= tripCategory,
+        "fare_policy_key" .= farePolicyKey,
+        "night_shift_start" .= nightShiftStart,
+        "night_shift_end" .= nightShiftEnd,
+        "min_allowed_trip_distance" .= minAllowedTripDistance,
+        "max_allowed_trip_distance" .= maxAllowedTripDistance,
+        "service_charge" .= serviceCharge,
+        "toll_charges" .= tollCharges,
+        "pet_charges" .= petCharges,
+        "business_discount_percentage" .= businessDiscountPercentage,
+        "priority_charges" .= priorityCharges,
+        "tip_options" .= tipOptions,
+        "govt_charges" .= govtCharges,
+        "fare_policy_type" .= farePolicyType,
+        "description" .= description,
+        "congestion_charge_multiplier" .= congestionChargeMultiplier,
+        "congestion_charge_multiplier_include_base_fare" .= congestionChargeMultiplierIncludeBaseFare,
+        "parking_charge" .= parkingCharge,
+        "per_stop_charge" .= perStopCharge,
+        "currency" .= currency,
+        "base_distance" .= baseDistance,
+        "base_fare" .= baseFare,
+        "dead_km_fare" .= deadKmFare,
+        "pickup_charges_min" .= pickupChargesMin,
+        "pickup_charges_max" .= pickupChargesMax,
+        "waiting_charge" .= waitingCharge,
+        "waiting_charge_type" .= waitingChargeType,
+        "night_shift_charge" .= nightShiftCharge,
+        "night_shift_charge_type" .= nightShiftChargeType,
+        "free_wating_time" .= freeWatingTime,
+        "start_distance_driver_addition" .= startDistanceDriverAddition,
+        "min_fee" .= minFee,
+        "max_fee" .= maxFee,
+        "step_fee" .= stepFee,
+        "default_step_fee" .= defaultStepFee,
+        "extra_km_rate_start_distance" .= extraKmRateStartDistance,
+        "per_extra_km_rate" .= perExtraKmRate,
+        "base_fare_depreciation" .= baseFareDepreciation,
+        "peak_timings" .= peakTimings,
+        "peak_days" .= peakDays,
+        "cancellation_fare_policy_description" .= cancellationFarePolicyDescription,
+        "free_cancellation_time_seconds" .= freeCancellationTimeSeconds,
+        "max_cancellation_charge" .= maxCancellationCharge,
+        "max_waiting_time_at_pickup_seconds" .= maxWaitingTimeAtPickupSeconds,
+        "min_cancellation_charge" .= minCancellationCharge,
+        "per_metre_cancellation_charge" .= perMetreCancellationCharge,
+        "per_minute_cancellation_charge" .= perMinuteCancellationCharge,
+        "percentage_of_ride_fare_to_be_charged" .= percentageOfRideFareToBeCharged,
+        "platform_fee_charge_type" .= platformFeeChargeType,
+        "platform_fee_charge" .= platformFeeCharge,
+        "platform_fee_cgst" .= platformFeeCgst,
+        "platform_fee_sgst" .= platformFeeSgst,
+        "platform_fee_charge_fare_policy_level" .= platformFeeChargeFarePolicyLevel,
+        "platform_fee_cgst_fare_policy_level" .= platformFeeCgstFarePolicyLevel,
+        "platform_fee_sgst_pare_policy_level" .= platformFeeSgstFarePolicyLevel,
+        "platform_fee_charges_by" .= platformFeeChargesBy,
+        "per_minute_ride_extra_time_charge" .= perMinuteRideExtraTimeCharge,
+        "search_source" .= searchSource,
+        "per_extra_min_rate" .= perExtraMinRate,
+        "included_km_per_hr" .= includedKmPerHr,
+        "planned_per_km_rate" .= plannedPerKmRate,
+        "max_additional_kms_limit" .= maxAdditionalKmsLimit,
+        "total_additional_kms_limit" .= totalAdditionalKmsLimit,
+        "time_percentage" .= timePercentage,
+        "distance_percentage" .= distancePercentage,
+        "fare_percentage" .= farePercentage,
+        "include_actual_time_percentage" .= includeActualTimePercentage,
+        "include_actual_dist_percentage" .= includeActualDistPercentage,
+        "ride_duration" .= rideDuration,
+        "buffer_kms" .= bufferKms,
+        "buffer_meters" .= bufferMeters,
+        "per_hour_charge" .= perHourCharge,
+        "per_km_rate_one_way" .= perKmRateOneWay,
+        "per_km_rate_round_trip" .= perKmRateRoundTrip,
+        "km_per_planned_extra_hour" .= kmPerPlannedExtraHour,
+        "per_day_max_hour_allowance" .= perDayMaxHourAllowance,
+        "per_day_max_allowance_in_mins" .= perDayMaxAllowanceInMins,
+        "default_wait_time_at_destination" .= defaultWaitTimeAtDestination,
+        "enabled" .= enabled,
+        "pickup_buffer_in_secs_for_night_shift_cal" .= pickupBufferInSecsForNightShiftCal,
+        "disable_recompute" .= disableRecompute,
+        "state_entry_permit_charges" .= stateEntryPermitCharges,
+        "additional_charges" .= conditionalCharges,
+        "driver_cancellation_penalty_amount" .= driverCancellationPenaltyAmount,
+        "per_luggage_charge" .= perLuggageCharge,
+        "return_fee" .= returnFee,
+        "booth_charges" .= boothCharges,
+        "vat_charge_config" .= vatChargeConfig,
+        "commission_charge_config" .= commissionChargeConfig,
+        "toll_tax_charge_config" .= tollTaxCharge
+      ]
+
+farePolicyCSVHeader :: Header
+farePolicyCSVHeader =
+  V.fromList
+    [ "city",
+      "vehicle_service_tier",
+      "area",
+      "tripCategory",
+      "fare_policy_key",
+      "night_shift_start",
+      "night_shift_end",
+      "min_allowed_trip_distance",
+      "max_allowed_trip_distance",
+      "service_charge",
+      "toll_charges",
+      "pet_charges",
+      "business_discount_percentage",
+      "priority_charges",
+      "tip_options",
+      "govt_charges",
+      "fare_policy_type",
+      "description",
+      "congestion_charge_multiplier",
+      "congestion_charge_multiplier_include_base_fare",
+      "parking_charge",
+      "per_stop_charge",
+      "currency",
+      "base_distance",
+      "base_fare",
+      "dead_km_fare",
+      "pickup_charges_min",
+      "pickup_charges_max",
+      "waiting_charge",
+      "waiting_charge_type",
+      "night_shift_charge",
+      "night_shift_charge_type",
+      "free_wating_time",
+      "start_distance_driver_addition",
+      "min_fee",
+      "max_fee",
+      "step_fee",
+      "default_step_fee",
+      "extra_km_rate_start_distance",
+      "per_extra_km_rate",
+      "base_fare_depreciation",
+      "peak_timings",
+      "peak_days",
+      "cancellation_fare_policy_description",
+      "free_cancellation_time_seconds",
+      "max_cancellation_charge",
+      "max_waiting_time_at_pickup_seconds",
+      "min_cancellation_charge",
+      "per_metre_cancellation_charge",
+      "per_minute_cancellation_charge",
+      "percentage_of_ride_fare_to_be_charged",
+      "platform_fee_charge_type",
+      "platform_fee_charge",
+      "platform_fee_cgst",
+      "platform_fee_sgst",
+      "platform_fee_charge_fare_policy_level",
+      "platform_fee_cgst_fare_policy_level",
+      "platform_fee_sgst_pare_policy_level",
+      "platform_fee_charges_by",
+      "per_minute_ride_extra_time_charge",
+      "search_source",
+      "per_extra_min_rate",
+      "included_km_per_hr",
+      "planned_per_km_rate",
+      "max_additional_kms_limit",
+      "total_additional_kms_limit",
+      "time_percentage",
+      "distance_percentage",
+      "fare_percentage",
+      "include_actual_time_percentage",
+      "include_actual_dist_percentage",
+      "ride_duration",
+      "buffer_kms",
+      "buffer_meters",
+      "per_hour_charge",
+      "per_km_rate_one_way",
+      "per_km_rate_round_trip",
+      "km_per_planned_extra_hour",
+      "per_day_max_hour_allowance",
+      "per_day_max_allowance_in_mins",
+      "default_wait_time_at_destination",
+      "enabled",
+      "pickup_buffer_in_secs_for_night_shift_cal",
+      "disable_recompute",
+      "state_entry_permit_charges",
+      "additional_charges",
+      "driver_cancellation_penalty_amount",
+      "per_luggage_charge",
+      "return_fee",
+      "booth_charges",
+      "vat_charge_config",
+      "commission_charge_config",
+      "toll_tax_charge_config"
+    ]
+
 instance FromNamedRecord FarePolicyCSVRow where
   parseNamedRecord r =
     FarePolicyCSVRow
@@ -1317,6 +1514,293 @@ instance FromNamedRecord FarePolicyCSVRow where
 
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
+
+-- | Export all enabled fare policies for a merchant operating city as CSV
+getMerchantConfigFarePolicyExport :: ShortId DM.Merchant -> Context.City -> Flow Text
+getMerchantConfigFarePolicyExport merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  logTagInfo "Exporting Fare Policies for merchant: " (show merchant.id <> " and city: " <> show opCity)
+
+  -- Fetch all enabled fare products for this city
+  fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId merchantOpCity.id
+
+  -- For each fare product, fetch the associated fare policy and convert to CSV row
+  csvRows <- forM fareProducts $ \fp -> do
+    mbFarePolicy <- CQFP.findById Nothing fp.farePolicyId
+    case mbFarePolicy of
+      Nothing -> do
+        logTagWarning "FarePolicyExport" $ "Fare policy not found for fare product: " <> show fp.id
+        return Nothing
+      Just farePolicy -> do
+        mbCancellationPolicy <- case farePolicy.cancellationFarePolicyId of
+          Just cfpId -> QCFP.findById cfpId
+          Nothing -> return Nothing
+        let csvRow = farePolicyToCSVRow opCity merchantOpCity.distanceUnit fp farePolicy mbCancellationPolicy
+        return $ Just csvRow
+
+  let validRows = catMaybes csvRows
+  let csvContent = TEnc.decodeUtf8 $ LBS.toStrict $ encodeByNameWith defaultEncodeOptions farePolicyCSVHeader validRows
+  return csvContent
+  where
+    -- Convert FareProduct + FarePolicy to FarePolicyCSVRow
+    farePolicyToCSVRow :: Context.City -> DistanceUnit -> DFareProduct.FareProduct -> FarePolicy.FarePolicy -> Maybe DTCFP.CancellationFarePolicy -> FarePolicyCSVRow
+    farePolicyToCSVRow city _distanceUnit fp farePolicy mbCancellationPolicy =
+      let -- Extract fare policy type
+          farePolicyTypeText = case farePolicy.farePolicyDetails of
+            FarePolicy.ProgressiveDetails _ -> "Progressive"
+            FarePolicy.SlabsDetails _ -> "Slabs"
+            FarePolicy.RentalDetails _ -> "Rental"
+            FarePolicy.InterCityDetails _ -> "InterCity"
+            FarePolicy.AmbulanceDetails _ -> "Ambulance"
+
+          -- Extract congestion charge multiplier info
+          (congestionMultiplierVal, includeBaseFare) = case farePolicy.congestionChargeMultiplier of
+            Just (FarePolicy.BaseFareAndExtraDistanceFare val) -> (showT val, "True")
+            Just (FarePolicy.ExtraDistanceFare val) -> (showT val, "False")
+            Nothing -> ("", "")
+
+          -- Extract night shift bounds
+          (nightShiftStartVal, nightShiftEndVal) = case farePolicy.nightShiftBounds of
+            Just bounds -> (showT bounds.nightShiftStart, showT bounds.nightShiftEnd)
+            Nothing -> ("00:00:00", "00:00:00")
+
+          -- Extract allowed trip distance bounds
+          (minTripDist, maxTripDist) = case farePolicy.allowedTripDistanceBounds of
+            Just bounds -> (showT bounds.minAllowedTripDistance, showT bounds.maxAllowedTripDistance)
+            Nothing -> ("0", "100000")
+
+          -- Extract time bounds for peak timings/days
+          (peakTimingsVal, peakDaysVal) = case fp.timeBounds of
+            TB.Unbounded -> ("" :: Text, "" :: Text)
+            TB.BoundedByDay _ -> ("" :: Text, "" :: Text)
+            TB.BoundedByWeekday bounds ->
+              let allTimings = bounds.monday ++ bounds.tuesday ++ bounds.wednesday ++ bounds.thursday ++ bounds.friday ++ bounds.saturday ++ bounds.sunday
+                  days =
+                    catMaybes
+                      [ if not (null bounds.monday) then Just Monday else Nothing,
+                        if not (null bounds.tuesday) then Just Tuesday else Nothing,
+                        if not (null bounds.wednesday) then Just Wednesday else Nothing,
+                        if not (null bounds.thursday) then Just Thursday else Nothing,
+                        if not (null bounds.friday) then Just Friday else Nothing,
+                        if not (null bounds.saturday) then Just Saturday else Nothing,
+                        if not (null bounds.sunday) then Just Sunday else Nothing
+                      ]
+               in (showT (DL.nub allTimings), showT days)
+
+          -- Extract cancellation policy info
+          (cfpDesc, cfpFreeSecs, cfpMaxCharge, cfpMaxWaitSecs, cfpMinCharge, cfpPerMetre, cfpPerMin, cfpPercent) =
+            case mbCancellationPolicy of
+              Just cfp ->
+                ( cfp.description,
+                  showT cfp.freeCancellationTimeSeconds,
+                  showT cfp.maxCancellationCharge,
+                  showT cfp.maxWaitingTimeAtPickupSeconds,
+                  showT cfp.minCancellationCharge,
+                  showT cfp.perMetreCancellationCharge,
+                  showT cfp.perMinuteCancellationCharge,
+                  showT cfp.percentageOfRideFareToBeCharged
+                )
+              Nothing -> ("", "", "", "", "", "", "", "")
+
+          -- Progressive details extraction
+          (baseDist, baseFareVal, deadKmFare, pickupMin, pickupMax, waitCharge, waitType, nightCharge, nightType, freeWait, extraKmStart, perExtraKm, baseFareDeprec, platformFeeType, platformFeeVal, pfCgst, pfSgst, _pfInfo) =
+            case farePolicy.farePolicyDetails of
+              FarePolicy.ProgressiveDetails details ->
+                let firstSection = NE.head details.perExtraKmRateSections
+                    (wc, wt, fw) = case details.waitingChargeInfo of
+                      Just wci -> (extractWaitingCharge wci.waitingCharge, extractWaitingChargeType wci.waitingCharge, showT wci.freeWaitingTime)
+                      Nothing -> ("0", "PerMinuteWaitingCharge", "0")
+                    (nc, nt) = case details.nightShiftCharge of
+                      Just (FarePolicy.ProgressiveNightShiftCharge val) -> (showT val, "ProgressiveNightShiftCharge")
+                      Just (FarePolicy.ConstantNightShiftCharge val) -> (showT val, "ConstantNightShiftCharge")
+                      Nothing -> ("", "")
+                 in -- Note: FPProgressiveDetails doesn't have platformFeeInfo, use empty values
+                    ( showT details.baseDistance,
+                      showT details.baseFare,
+                      showT details.deadKmFare,
+                      showT details.pickupCharges.pickupChargesMin,
+                      showT details.pickupCharges.pickupChargesMax,
+                      wc,
+                      wt,
+                      nc,
+                      nt,
+                      fw,
+                      showT firstSection.startDistance,
+                      showT firstSection.perExtraKmRate,
+                      showT firstSection.baseFareDepreciation,
+                      "" :: Text,
+                      "" :: Text,
+                      "" :: Text,
+                      "" :: Text,
+                      "" :: Text -- platformFeeInfo fields empty for progressive
+                    )
+              _ -> ("", "", "", "", "", "0", "PerMinuteWaitingCharge", "", "", "0", "0", "0", "0", "", "", "", "", "")
+
+          -- Driver extra fee bounds
+          (driverAddStart, driverMinFee, driverMaxFee, driverStepFee, driverDefaultStep) =
+            case farePolicy.driverExtraFeeBounds of
+              Just bounds ->
+                let firstElem = NE.head bounds
+                 in (showT firstElem.startDistance, showT firstElem.minFee, showT firstElem.maxFee, showT firstElem.stepFee, showT firstElem.defaultStepFee)
+              Nothing -> ("", "", "", "", "")
+
+          -- Rental details
+          (perExtraMinRateVal, includedKmPerHrVal, plannedPerKmRateVal, maxAddKmsVal, totalAddKmsVal, rideDurVal, bufferKmsVal, bufferMetersVal, perHourChargeVal) =
+            case farePolicy.farePolicyDetails of
+              FarePolicy.RentalDetails details ->
+                let firstBuffer = NE.head details.distanceBuffers
+                 in ( showT details.perExtraMinRate,
+                      showT details.includedKmPerHr,
+                      showT details.plannedPerKmRate,
+                      showT details.maxAdditionalKmsLimit,
+                      showT details.totalAdditionalKmsLimit,
+                      showT firstBuffer.rideDuration,
+                      showT firstBuffer.bufferKms,
+                      showT firstBuffer.bufferMeters,
+                      showT details.perHourCharge
+                    )
+              _ -> ("", "", "", "", "", "", "", "", "")
+
+          -- Rental/InterCity pricing slabs
+          (timePct, distPct, farePct, actualTimePct, actualDistPct) =
+            case farePolicy.farePolicyDetails of
+              FarePolicy.RentalDetails details ->
+                let firstSlab = NE.head details.pricingSlabs
+                 in (showT firstSlab.timePercentage, showT firstSlab.distancePercentage, showT firstSlab.farePercentage, showT firstSlab.includeActualTimePercentage, showT firstSlab.includeActualDistPercentage)
+              FarePolicy.InterCityDetails details ->
+                let firstSlab = NE.head details.pricingSlabs
+                 in (showT firstSlab.timePercentage, showT firstSlab.distancePercentage, showT firstSlab.farePercentage, showT firstSlab.includeActualTimePercentage, showT firstSlab.includeActualDistPercentage)
+              _ -> ("", "", "", "", "")
+
+          -- InterCity details
+          (perKmOneWay, perKmRoundTrip, kmPerExtraHour, perDayMaxHour, perDayMaxMins, defaultWaitDest, stateEntryPermit) =
+            case farePolicy.farePolicyDetails of
+              FarePolicy.InterCityDetails details ->
+                ( showT details.perKmRateOneWay,
+                  showT details.perKmRateRoundTrip,
+                  showT details.kmPerPlannedExtraHour,
+                  showT details.perDayMaxHourAllowance,
+                  maybe "" showT details.perDayMaxAllowanceInMins,
+                  showT details.defaultWaitTimeAtDestination,
+                  maybe "" showT details.stateEntryPermitCharges
+                )
+              _ -> ("", "", "", "", "", "", "")
+
+          -- JSON encode complex fields
+          conditionalChargesJson = if null farePolicy.conditionalCharges then "" else TEnc.decodeUtf8 $ LBS.toStrict $ A.encode farePolicy.conditionalCharges
+          vatChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.vatChargeConfig
+          commissionChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.commissionChargeConfig
+          tollTaxChargeJson = maybe "" (TEnc.decodeUtf8 . LBS.toStrict . A.encode) farePolicy.tollTaxChargeConfig
+          returnFeeVal = maybe "" showT farePolicy.returnFee
+          boothChargesVal = maybe "" showT farePolicy.boothCharges
+       in FarePolicyCSVRow
+            { city = showT city,
+              vehicleServiceTier = showT fp.vehicleServiceTier,
+              area = showT fp.area,
+              tripCategory = showT fp.tripCategory,
+              farePolicyKey = farePolicy.id.getId,
+              nightShiftStart = nightShiftStartVal,
+              nightShiftEnd = nightShiftEndVal,
+              minAllowedTripDistance = minTripDist,
+              maxAllowedTripDistance = maxTripDist,
+              serviceCharge = maybe "" showT farePolicy.serviceCharge,
+              tollCharges = maybe "" showT farePolicy.tollCharges,
+              petCharges = maybe "" showT farePolicy.petCharges,
+              businessDiscountPercentage = maybe "" showT farePolicy.businessDiscountPercentage,
+              priorityCharges = maybe "" showT farePolicy.priorityCharges,
+              tipOptions = maybe "" showT farePolicy.tipOptions,
+              govtCharges = maybe "" showT farePolicy.govtCharges,
+              farePolicyType = farePolicyTypeText,
+              description = fromMaybe "" farePolicy.description,
+              congestionChargeMultiplier = congestionMultiplierVal,
+              congestionChargeMultiplierIncludeBaseFare = includeBaseFare,
+              parkingCharge = maybe "" showT farePolicy.parkingCharge,
+              perStopCharge = maybe "" showT farePolicy.perStopCharge,
+              currency = showT farePolicy.currency,
+              baseDistance = baseDist,
+              baseFare = baseFareVal,
+              deadKmFare = deadKmFare,
+              pickupChargesMin = pickupMin,
+              pickupChargesMax = pickupMax,
+              waitingCharge = waitCharge,
+              waitingChargeType = waitType,
+              nightShiftCharge = nightCharge,
+              nightShiftChargeType = nightType,
+              freeWatingTime = freeWait,
+              startDistanceDriverAddition = driverAddStart,
+              minFee = driverMinFee,
+              maxFee = driverMaxFee,
+              stepFee = driverStepFee,
+              defaultStepFee = driverDefaultStep,
+              extraKmRateStartDistance = extraKmStart,
+              perExtraKmRate = perExtraKm,
+              baseFareDepreciation = baseFareDeprec,
+              peakTimings = peakTimingsVal,
+              peakDays = peakDaysVal,
+              cancellationFarePolicyDescription = cfpDesc,
+              freeCancellationTimeSeconds = cfpFreeSecs,
+              maxCancellationCharge = cfpMaxCharge,
+              maxWaitingTimeAtPickupSeconds = cfpMaxWaitSecs,
+              minCancellationCharge = cfpMinCharge,
+              perMetreCancellationCharge = cfpPerMetre,
+              perMinuteCancellationCharge = cfpPerMin,
+              percentageOfRideFareToBeCharged = cfpPercent,
+              platformFeeChargeType = platformFeeType,
+              platformFeeCharge = platformFeeVal,
+              platformFeeCgst = pfCgst,
+              platformFeeSgst = pfSgst,
+              platformFeeChargeFarePolicyLevel = maybe "" showT farePolicy.platformFee,
+              platformFeeCgstFarePolicyLevel = maybe "" showT farePolicy.cgst,
+              platformFeeSgstFarePolicyLevel = maybe "" showT farePolicy.sgst,
+              platformFeeChargesBy = showT farePolicy.platformFeeChargesBy,
+              perMinuteRideExtraTimeCharge = maybe "" showT farePolicy.perMinuteRideExtraTimeCharge,
+              searchSource = showT fp.searchSource,
+              perExtraMinRate = perExtraMinRateVal,
+              includedKmPerHr = includedKmPerHrVal,
+              plannedPerKmRate = plannedPerKmRateVal,
+              maxAdditionalKmsLimit = maxAddKmsVal,
+              totalAdditionalKmsLimit = totalAddKmsVal,
+              timePercentage = timePct,
+              distancePercentage = distPct,
+              farePercentage = farePct,
+              includeActualTimePercentage = actualTimePct,
+              includeActualDistPercentage = actualDistPct,
+              rideDuration = rideDurVal,
+              bufferKms = bufferKmsVal,
+              bufferMeters = bufferMetersVal,
+              perHourCharge = perHourChargeVal,
+              perKmRateOneWay = perKmOneWay,
+              perKmRateRoundTrip = perKmRoundTrip,
+              kmPerPlannedExtraHour = kmPerExtraHour,
+              perDayMaxHourAllowance = perDayMaxHour,
+              perDayMaxAllowanceInMins = perDayMaxMins,
+              defaultWaitTimeAtDestination = defaultWaitDest,
+              enabled = showT fp.enabled,
+              pickupBufferInSecsForNightShiftCal = maybe "" showT farePolicy.pickupBufferInSecsForNightShiftCal,
+              disableRecompute = maybe "" showT fp.disableRecompute,
+              stateEntryPermitCharges = stateEntryPermit,
+              conditionalCharges = conditionalChargesJson,
+              driverCancellationPenaltyAmount = maybe "" showT farePolicy.driverCancellationPenaltyAmount,
+              perLuggageCharge = maybe "" showT farePolicy.perLuggageCharge,
+              returnFee = returnFeeVal,
+              boothCharges = boothChargesVal,
+              vatChargeConfig = vatChargeJson,
+              commissionChargeConfig = commissionChargeJson,
+              tollTaxCharge = tollTaxChargeJson
+            }
+
+    -- Helper functions
+    showT :: Show a => a -> Text
+    showT = T.pack . show
+
+    extractWaitingCharge :: FarePolicy.WaitingCharge -> Text
+    extractWaitingCharge (FarePolicy.PerMinuteWaitingCharge val) = showT val
+    extractWaitingCharge (FarePolicy.ConstantWaitingCharge val) = showT val
+
+    extractWaitingChargeType :: FarePolicy.WaitingCharge -> Text
+    extractWaitingChargeType (FarePolicy.PerMinuteWaitingCharge _) = "PerMinuteWaitingCharge"
+    extractWaitingChargeType (FarePolicy.ConstantWaitingCharge _) = "ConstantWaitingCharge"
 
 postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do

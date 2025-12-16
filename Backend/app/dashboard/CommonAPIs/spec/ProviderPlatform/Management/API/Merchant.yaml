@@ -320,6 +320,11 @@ apis:
         endpoint: MerchantAPI UpsertFarePolicyEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_FARE_POLICY
+  - GET: # ExportFarePolicyAPI
+      endpoint: /config/farePolicy/export
+      auth: ApiAuthV2
+      response:
+        type: Text
   - POST: # CreateMerchantOperatingCityAPI
       endpoint: /config/operatingCity/create
       auth: ApiAuthV2
