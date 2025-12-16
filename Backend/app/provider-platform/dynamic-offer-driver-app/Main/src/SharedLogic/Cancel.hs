@@ -32,6 +32,7 @@ import qualified Domain.Types.SearchTry as DST
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.Vehicle as DVeh
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
@@ -77,6 +78,8 @@ reAllocateBookingIfPossible ::
     HasField "searchRequestExpirationSeconds" r NominalDiffTime,
     HasField "version" r DeploymentVersion,
     HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,

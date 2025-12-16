@@ -45,6 +45,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -347,21 +348,25 @@ buildTrackingUrl rideId = do
         baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
       }
 
-deactivateExistingQuotes :: Id DTMM.MerchantOperatingCity -> Id Merchant -> Id Person -> Id SearchTry -> Price -> Flow [SearchRequestForDriver]
-deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId estimatedFare = do
+deactivateExistingQuotes :: Id DTMM.MerchantOperatingCity -> Id Merchant -> Id Person -> Id SearchTry -> Price -> Maybe DTC.TransporterConfig -> Flow [SearchRequestForDriver]
+deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId estimatedFare mbTransporterConfig = do
   driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId SReqD.Active
   QDQ.setInactiveBySTId searchTryId
   QSRD.setInactiveBySTId searchTryId
-  pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare
+  transporterConfig <- case mbTransporterConfig of
+    Just transporterConfig -> pure transporterConfig
+    Nothing -> SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare transporterConfig
   return driverSearchReqs
 
-pullExistingRideRequests :: Id DTMM.MerchantOperatingCity -> [SearchRequestForDriver] -> Id Merchant -> Id Person -> Price -> Flow ()
-pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare = do
+pullExistingRideRequests :: Id DTMM.MerchantOperatingCity -> [SearchRequestForDriver] -> Id Merchant -> Id Person -> Price -> DTC.TransporterConfig -> Flow ()
+pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare transporterConfig = do
   for_ driverSearchReqs $ \driverReq -> do
     let driverId = driverReq.driverId
     unless (driverId == quoteDriverId) $ do
       DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast driverReq.driverId) driverReq.requestId
       DP.removeSearchReqIdFromMap merchantId driverId driverReq.requestId
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
       void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive Nothing driverReq.renderedAt driverReq.respondedAt driverReq.id
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare

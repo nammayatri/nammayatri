@@ -1,5 +1,6 @@
 module SharedLogic.FleetOperatorStats where
 
+import qualified Data.Map as Map
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
@@ -8,6 +9,7 @@ import qualified Domain.Types.FleetOperatorStats as DFS
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.TransporterConfig as DTTC
 import Kernel.Prelude hiding (getField)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import qualified Storage.Queries.FareParameters as QFareParameters
 import qualified Storage.Queries.FleetOperatorDailyStats as QFleetOpsDaily
@@ -504,3 +506,64 @@ updateOnlineDurationDaily fleetOperatorId driverId transporterConfig newOnlineDu
     mbDriverStats
     (\_driverStats -> QFleetOpsDaily.updateOnlineDurationByFleetOperatorIdAndDate (Just newOnlineDurationDriver) fleetOperatorId driverId merchantLocalDate)
     (\stats -> stats {DFODS.onlineDuration = Just newOnlineDurationDriver})
+
+-- | Batch increment total request count for multiple fleet owners at once
+-- Groups drivers by fleet owner and increments counts in batch
+incrementTotalRequestCountBatch ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
+  [(Text, Text)] -> -- List of (fleetOwnerId, driverId) pairs
+  DTTC.TransporterConfig ->
+  m ()
+incrementTotalRequestCountBatch fleetDriverPairs transporterConfig = do
+  nowUTCTime <- getCurrentTime
+  let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
+  let merchantLocalDate = utctDay now
+
+  -- Group by fleet owner
+  let groupedByFleet = groupByFleetOwner fleetDriverPairs
+
+  -- For each fleet owner, update stats under a Redis lock to avoid races
+  forM_ groupedByFleet $ \(fleetOwnerId, driverIds) ->
+    Redis.withWaitAndLockRedis (makeFleetOperatorMetricLockKey fleetOwnerId) 10 5000 $ do
+      let driverCount = length driverIds
+
+      -- Update or create overall stats (increment by number of drivers)
+      mbFleetStats <- QFleetOps.findByPrimaryKey fleetOwnerId
+      case mbFleetStats of
+        Just s -> do
+          let newTotalRequestCount = Just (fromMaybe 0 s.totalRequestCount + driverCount)
+          QFleetOps.updateRequestCountsByFleetOperatorId s.acceptationRequestCount newTotalRequestCount fleetOwnerId
+        Nothing -> do
+          initStats <- buildInitialFleetOperatorStats fleetOwnerId transporterConfig
+          QFleetOps.create initStats {DFS.totalRequestCount = Just driverCount}
+
+      -- Fetch daily stats for fleet-level and all drivers
+      let allFleetDriverIds = fleetOwnerId : driverIds
+      existingDailyStats <- QFleetOpsDailyExtra.findByFleetOperatorIdAndDateWithDriverIdsIn fleetOwnerId allFleetDriverIds merchantLocalDate
+      let existingStatsMap = Map.fromList [(s.fleetDriverId, s) | s <- existingDailyStats]
+
+      -- Update fleet-level daily stats
+      let mbFleetDailyStats = Map.lookup fleetOwnerId existingStatsMap
+      case mbFleetDailyStats of
+        Just fleetStats -> do
+          let newTotal = Just (fromMaybe 0 fleetStats.totalRequestCount + driverCount)
+          QFleetOpsDaily.updateRequestCountsByFleetOperatorIdAndDate fleetStats.rejectedRequestCount fleetStats.pulledRequestCount fleetStats.acceptationRequestCount newTotal fleetOwnerId fleetOwnerId merchantLocalDate
+        Nothing -> do
+          initStats <- buildInitialFleetOperatorDailyStats fleetOwnerId fleetOwnerId merchantLocalDate transporterConfig nowUTCTime
+          QFleetOpsDaily.create initStats {DFODS.totalRequestCount = Just driverCount}
+
+      -- Update each driver's daily stats
+      forM_ driverIds $ \driverId -> do
+        let mbDriverDailyStats = Map.lookup driverId existingStatsMap
+        case mbDriverDailyStats of
+          Just driverStats -> do
+            let newTotal = Just (fromMaybe 0 driverStats.totalRequestCount + 1)
+            QFleetOpsDaily.updateRequestCountsByFleetOperatorIdAndDate driverStats.rejectedRequestCount driverStats.pulledRequestCount driverStats.acceptationRequestCount newTotal fleetOwnerId driverId merchantLocalDate
+          Nothing -> do
+            initStats <- buildInitialFleetOperatorDailyStats fleetOwnerId driverId merchantLocalDate transporterConfig nowUTCTime
+            QFleetOpsDaily.create initStats {DFODS.totalRequestCount = Just 1}
+  where
+    groupByFleetOwner :: [(Text, Text)] -> [(Text, [Text])]
+    groupByFleetOwner pairs =
+      let grouped = Map.fromListWith (++) [(foid, [did]) | (foid, did) <- pairs]
+       in Map.toList grouped

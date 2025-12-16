@@ -33,6 +33,7 @@ import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -67,6 +68,8 @@ triggerDummyRideRequest ::
     EncFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasKafkaProducer r
   ) =>
   DP.Person ->
