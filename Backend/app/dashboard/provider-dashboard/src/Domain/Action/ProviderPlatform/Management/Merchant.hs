@@ -50,6 +50,9 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantConfigUpsertPlanAndConfigSubscription,
     postMerchantConfigOperatingCityWhiteList,
     postMerchantConfigMerchantCreate,
+    postMerchantConfigMerchantPushNotificationUpsert,
+    postMerchantConfigMerchantOverlayUpsert,
+    postMerchantConfigMerchantMessageUpsert,
   )
 where
 
@@ -468,6 +471,24 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
 
 postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes
 postMerchantConfigMerchantCreate merchantShortId opCity apiTokenInfo req = processMerchantCreateRequest merchantShortId opCity apiTokenInfo True req
+
+postMerchantConfigMerchantPushNotificationUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertMerchantPushNotificationCsvReq -> Flow Common.UpsertMerchantPushNotificationCsvResp
+postMerchantConfigMerchantPushNotificationUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigMerchantPushNotificationUpsert)) req
+
+postMerchantConfigMerchantOverlayUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertMerchantOverlayCsvReq -> Flow Common.UpsertMerchantOverlayCsvResp
+postMerchantConfigMerchantOverlayUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigMerchantOverlayUpsert)) req
+
+postMerchantConfigMerchantMessageUpsert :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertMerchantMessageCsvReq -> Flow Common.UpsertMerchantMessageCsvResp
+postMerchantConfigMerchantMessageUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigMerchantMessageUpsert)) req
 
 getMerchantConfigFarePolicyExport :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Kernel.Prelude.Text)
 getMerchantConfigFarePolicyExport merchantShortId opCity apiTokenInfo = do

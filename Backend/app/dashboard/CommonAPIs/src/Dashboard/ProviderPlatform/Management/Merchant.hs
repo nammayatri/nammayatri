@@ -235,3 +235,42 @@ instance ToMultipart Tmp UpdateOnboardingVehicleVariantMappingReq where
     MultipartData
       [Input "vehicleCategory" form.vehicleCategory]
       [FileData "file" (T.pack form.file) "" (form.file)]
+
+instance FromMultipart Tmp UpsertMerchantPushNotificationCsvReq where
+  fromMultipart form =
+    UpsertMerchantPushNotificationCsvReq
+      <$> fmap fdPayload (lookupFile "file" form)
+      <*> lookupInput "merchantOperatingCity" form
+      <*> lookupInput "merchantId" form
+
+instance ToMultipart Tmp UpsertMerchantPushNotificationCsvReq where
+  toMultipart form =
+    MultipartData
+      [Input "merchantOperatingCity" form.merchantOperatingCity, Input "merchantId" form.merchantId]
+      [FileData "file" (T.pack form.file) "" (form.file)]
+
+instance FromMultipart Tmp UpsertMerchantOverlayCsvReq where
+  fromMultipart form =
+    UpsertMerchantOverlayCsvReq
+      <$> fmap fdPayload (lookupFile "file" form)
+      <*> lookupInput "merchantOperatingCity" form
+      <*> lookupInput "merchantId" form
+
+instance ToMultipart Tmp UpsertMerchantOverlayCsvReq where
+  toMultipart form =
+    MultipartData
+      [Input "merchantOperatingCity" form.merchantOperatingCity, Input "merchantId" form.merchantId]
+      [FileData "file" (T.pack form.file) "" (form.file)]
+
+instance FromMultipart Tmp UpsertMerchantMessageCsvReq where
+  fromMultipart form =
+    UpsertMerchantMessageCsvReq
+      <$> fmap fdPayload (lookupFile "file" form)
+      <*> lookupInput "merchantOperatingCity" form
+      <*> lookupInput "merchantId" form
+
+instance ToMultipart Tmp UpsertMerchantMessageCsvReq where
+  toMultipart form =
+    MultipartData
+      [Input "merchantOperatingCity" form.merchantOperatingCity, Input "merchantId" form.merchantId]
+      [FileData "file" (T.pack form.file) "" (form.file)]

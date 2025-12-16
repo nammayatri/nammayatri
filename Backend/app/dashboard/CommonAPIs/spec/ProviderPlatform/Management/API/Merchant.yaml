@@ -371,6 +371,30 @@ apis:
         endpoint: MerchantAPI UpsertSpecialLocationCsvEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_CSV
+  - POST: # UpsertMerchantPushNotificationCsvAPI
+      endpoint: /config/merchantPushNotification/upsert
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertMerchantPushNotificationCsvReq
+      response:
+        type: UpsertMerchantPushNotificationCsvResp
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_MERCHANT_PUSH_NOTIFICATION_CSV
+  - POST: # UpsertMerchantOverlayCsvAPI
+      endpoint: /config/merchantOverlay/upsert
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertMerchantOverlayCsvReq
+      response:
+        type: UpsertMerchantOverlayCsvResp
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_MERCHANT_OVERLAY_CSV
+  - POST: # UpsertMerchantMessageCsvAPI
+      endpoint: /config/merchantMessage/upsert
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertMerchantMessageCsvReq
+      response:
+        type: UpsertMerchantMessageCsvResp
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_MERCHANT_MESSAGE_CSV
   - POST: # UpsertSpecialLocationAPI
       endpoint: /specialLocation/upsert
       query:
@@ -844,6 +868,30 @@ types:
     - recordType: NewType
     - file: FilePath
     - derive: "'HideSecrets"
+  UpsertMerchantPushNotificationCsvReq:
+    - file: FilePath
+    - merchantOperatingCity: Text
+    - merchantId: Text
+    - derive: "'HideSecrets"
+  UpsertMerchantPushNotificationCsvResp:
+    - unprocessedEntities: [Text]
+    - success: Text
+  UpsertMerchantOverlayCsvReq:
+    - file: FilePath
+    - merchantOperatingCity: Text
+    - merchantId: Text
+    - derive: "'HideSecrets"
+  UpsertMerchantOverlayCsvResp:
+    - unprocessedEntities: [Text]
+    - success: Text
+  UpsertMerchantMessageCsvReq:
+    - file: FilePath
+    - merchantOperatingCity: Text
+    - merchantId: Text
+    - derive: "'HideSecrets"
+  UpsertMerchantMessageCsvResp:
+    - unprocessedEntities: [Text]
+    - success: Text
   SchedulerTriggerReq:
     - scheduledAt: Maybe UTCTime
     - jobName: Maybe JobName

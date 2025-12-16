@@ -30,6 +30,8 @@ module Domain.Action.RiderPlatform.Management.Merchant
     postMerchantSchedulerTrigger,
     postMerchantConfigOperatingCityWhiteList,
     postMerchantConfigMerchantCreate,
+    postMerchantConfigMerchantPushNotificationUpsert,
+    postMerchantConfigMerchantMessageUpsert,
   )
 where
 
@@ -248,3 +250,15 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           enabled = Just enableForMerchant,
           ..
         }
+
+postMerchantConfigMerchantPushNotificationUpsert :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.UpsertMerchantPushNotificationCsvReq -> Environment.Flow Common.UpsertMerchantPushNotificationCsvResp)
+postMerchantConfigMerchantPushNotificationUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigMerchantPushNotificationUpsert)) req
+
+postMerchantConfigMerchantMessageUpsert :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.UpsertMerchantMessageCsvReq -> Environment.Flow Common.UpsertMerchantMessageCsvResp)
+postMerchantConfigMerchantMessageUpsert merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigMerchantMessageUpsert)) req

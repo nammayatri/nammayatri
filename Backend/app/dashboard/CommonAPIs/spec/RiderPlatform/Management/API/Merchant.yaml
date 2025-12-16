@@ -254,6 +254,23 @@ apis:
             response:
               type: CreateMerchantOperatingCityRes
       userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+  - POST: # UpsertMerchantPushNotificationCsvAPI
+      endpoint: /config/merchantPushNotification/upsert
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertMerchantPushNotificationCsvReq
+      response:
+        type: UpsertMerchantPushNotificationCsvResp
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_MERCHANT_PUSH_NOTIFICATION_CSV
+  - POST: # UpsertMerchantMessageCsvAPI
+      endpoint: /config/merchantMessage/upsert
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertMerchantMessageCsvReq
+      response:
+        type: UpsertMerchantMessageCsvResp
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_MERCHANT_MESSAGE_CSV
+
 
 types:
   MerchantUpdateReq:
@@ -274,6 +291,22 @@ types:
     - jobName: Maybe JobName
     - jobData: Text
     - derive: "'HideSecrets"
+  UpsertMerchantPushNotificationCsvReq:
+    - file: FilePath
+    - merchantOperatingCity: Text
+    - merchantId: Text
+    - derive: "'HideSecrets"
+  UpsertMerchantPushNotificationCsvResp:
+    - unprocessedEntities: [Text]
+    - success: Text
+  UpsertMerchantMessageCsvReq:
+    - file: FilePath
+    - merchantOperatingCity: Text
+    - merchantId: Text
+    - derive: "'HideSecrets"
+  UpsertMerchantMessageCsvResp:
+    - unprocessedEntities: [Text]
+    - success: Text
   JobName:
     - enum: "NyRegularMasterTrigger"
 
