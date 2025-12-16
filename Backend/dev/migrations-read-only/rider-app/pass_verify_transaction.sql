@@ -27,3 +27,4 @@ CREATE INDEX pass_verify_transaction_idx_purchase_pass_id ON atlas_app.pass_veri
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.pass_verify_transaction ADD COLUMN is_actually_valid boolean ;
+ALTER TABLE atlas_app.pass_verify_transaction ADD COLUMN auto_activated boolean ;

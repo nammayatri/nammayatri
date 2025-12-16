@@ -62,6 +62,7 @@ types:
     currentLat: Maybe Double
     currentLon: Maybe Double
     stopId: Maybe Text
+    autoActivated: Maybe Bool
 
   PassSelectionAPIEntity:
     purchasedPassId: Id PurchasedPass
@@ -88,6 +89,7 @@ types:
     passEntity: PassDetailsAPIEntity
     tripsLeft: Maybe Int
     lastVerifiedVehicleNumber: Maybe Text
+    isAutoVerified: Bool
     status: StatusType
     purchaseDate: Day
     daysToExpire: Int
