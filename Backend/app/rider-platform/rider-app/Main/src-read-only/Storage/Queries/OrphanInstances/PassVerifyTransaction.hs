@@ -17,7 +17,8 @@ instance FromTType' Beam.PassVerifyTransaction Domain.Types.PassVerifyTransactio
     pure $
       Just
         Domain.Types.PassVerifyTransaction.PassVerifyTransaction
-          { destinationStopCode = destinationStopCode,
+          { autoActivated = autoActivated,
+            destinationStopCode = destinationStopCode,
             fleetId = fleetId,
             id = Kernel.Types.Id.Id id,
             isActuallyValid = isActuallyValid,
@@ -34,7 +35,8 @@ instance FromTType' Beam.PassVerifyTransaction Domain.Types.PassVerifyTransactio
 instance ToTType' Beam.PassVerifyTransaction Domain.Types.PassVerifyTransaction.PassVerifyTransaction where
   toTType' (Domain.Types.PassVerifyTransaction.PassVerifyTransaction {..}) = do
     Beam.PassVerifyTransactionT
-      { Beam.destinationStopCode = destinationStopCode,
+      { Beam.autoActivated = autoActivated,
+        Beam.destinationStopCode = destinationStopCode,
         Beam.fleetId = fleetId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isActuallyValid = isActuallyValid,

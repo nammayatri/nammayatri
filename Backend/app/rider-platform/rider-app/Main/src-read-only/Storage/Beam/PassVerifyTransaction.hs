@@ -11,7 +11,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PassVerifyTransactionT f = PassVerifyTransactionT
-  { destinationStopCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+  { autoActivated :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    destinationStopCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     fleetId :: (B.C f Kernel.Prelude.Text),
     id :: (B.C f Kernel.Prelude.Text),
     isActuallyValid :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
