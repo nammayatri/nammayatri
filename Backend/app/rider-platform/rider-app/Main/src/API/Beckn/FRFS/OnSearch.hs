@@ -23,6 +23,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
+import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import Environment
 import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
@@ -47,7 +48,7 @@ onSearch _ reqBS = withFlowHandlerAPI $ do
   withTransactionIdLogTag' transaction_id $ do
     message_id <- req.onSearchReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
     logDebug $ "Received OnSearch request" <> encodeToText req
-    mbDiscoveryCounter :: Maybe DOnSearch.DiscoveryCounter <- Redis.safeGet (Utils.discoverySearchCounterKey (show transaction_id))
+    mbDiscoveryCounter :: Maybe Domain.DiscoveryCounter <- Redis.safeGet (Utils.discoverySearchCounterKey (show transaction_id))
     case mbDiscoveryCounter of
       Just discoveryCounter -> do
         logDebug $ "Using discovery on_search logic for txn: " <> show transaction_id
@@ -82,7 +83,7 @@ decodeOnSearchReq bs =
   case eitherDecodeStrict' bs of
     Right v -> Right v
     Left _ ->
-      case Utils.unescapeQuotedJSON bs of
+      case unescapeQuotedJSON bs of
         Just inner ->
           eitherDecodeStrict' inner
         Nothing ->

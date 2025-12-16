@@ -331,10 +331,6 @@ FRFSQuoteCategory:
       kvFunction: updateWithKV
       params: [finalPrice, updatedAt]
       where: id
-    updateOfferedPriceByQuoteId:
-      kvFunction: updateWithKV
-      params: [offeredPrice, updatedAt]
-      where: quoteId
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking

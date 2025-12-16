@@ -1,6 +1,6 @@
 module Beckn.ACL.FRFS.OnSelect where
 
-import Beckn.ACL.FRFS.Utils (mkDCategorySelect, zipItemsWithPrice)
+import Beckn.ACL.FRFS.Utils (mkDCategorySelect)
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
@@ -28,14 +28,11 @@ buildOnSelectReq onSelectReq = do
 
   providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "Provider not found")
 
-  orderItems <- order.orderItems & fromMaybeM (InvalidRequest "Order items not found")
+  let orderItems = fromMaybe [] order.orderItems
+  selectedCategories <- mapM mkDCategorySelect orderItems
 
   quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
   quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
-
-  itemsWithPrice <- zipItemsWithPrice orderItems quoteBreakup
-
-  selectedCategories <- mapM mkDCategorySelect itemsWithPrice
 
   fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
 

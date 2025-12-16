@@ -38,11 +38,6 @@ updateFinalPriceByQuoteCategoryId finalPrice id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.finalPrice ((Kernel.Prelude.fmap (.amount)) finalPrice), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateOfferedPriceByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ())
-updateOfferedPriceByQuoteId offeredPrice quoteId = do
-  _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.offeredPrice ((.amount) offeredPrice), Se.Set Beam.updatedAt _now] [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)]
-
 updateQuantityByQuoteCategoryId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m ())
 updateQuantityByQuoteCategoryId selectedQuantity id = do
   _now <- getCurrentTime

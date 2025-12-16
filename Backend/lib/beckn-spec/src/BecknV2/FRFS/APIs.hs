@@ -59,14 +59,6 @@ type OnSelectAPI =
 onSelectAPI :: Proxy OnSelectAPI
 onSelectAPI = Proxy
 
-type OnSelectAPIBS =
-  "on_select"
-    :> ReqBody '[JSONBS] ByteString
-    :> Post '[JSON] Spec.AckResponse
-
-onSelectAPIBS :: Proxy OnSelectAPIBS
-onSelectAPIBS = Proxy
-
 type InitAPI =
   "init"
     :> ReqBody '[JSON] Spec.InitReq
@@ -82,14 +74,6 @@ type OnInitAPI =
 
 onInitAPI :: Proxy OnInitAPI
 onInitAPI = Proxy
-
-type OnInitAPIBS =
-  "on_init"
-    :> ReqBody '[JSONBS] ByteString
-    :> Post '[JSON] Spec.AckResponse
-
-onInitAPIBS :: Proxy OnInitAPIBS
-onInitAPIBS = Proxy
 
 type ConfirmAPI =
   "confirm"
@@ -107,14 +91,6 @@ type OnConfirmAPI =
 onConfirmAPI :: Proxy OnConfirmAPI
 onConfirmAPI = Proxy
 
-type OnConfirmAPIBS =
-  "on_confirm"
-    :> ReqBody '[JSONBS] ByteString
-    :> Post '[JSON] Spec.AckResponse
-
-onConfirmAPIBS :: Proxy OnConfirmAPIBS
-onConfirmAPIBS = Proxy
-
 type StatusAPI =
   "status"
     :> ReqBody '[JSON] Spec.StatusReq
@@ -130,14 +106,6 @@ type OnStatusAPI =
 
 onStatusAPI :: Proxy OnStatusAPI
 onStatusAPI = Proxy
-
-type OnStatusAPIBS =
-  "on_status"
-    :> ReqBody '[JSONBS] ByteString
-    :> Post '[JSON] Spec.AckResponse
-
-onStatusAPIBS :: Proxy OnStatusAPIBS
-onStatusAPIBS = Proxy
 
 type CancelAPI =
   "cancel"
@@ -155,14 +123,6 @@ type OnCancelAPI =
 onCancelAPI :: Proxy OnCancelAPI
 onCancelAPI = Proxy
 
-type OnCancelAPIBS =
-  "on_cancel"
-    :> ReqBody '[JSONBS] ByteString
-    :> Post '[JSON] Spec.AckResponse
-
-onCancelAPIBS :: Proxy OnCancelAPIBS
-onCancelAPIBS = Proxy
-
 type OnUpdateAPI =
   "on_update"
     :> ReqBody '[JSON] Spec.OnUpdateReq
@@ -170,11 +130,3 @@ type OnUpdateAPI =
 
 onUpdateAPI :: Proxy OnUpdateAPI
 onUpdateAPI = Proxy
-
-type OnUpdateAPIBS =
-  "on_update"
-    :> ReqBody '[JSONBS] ByteString
-    :> Post '[JSON] Spec.AckResponse
-
-onUpdateAPIBS :: Proxy OnUpdateAPIBS
-onUpdateAPIBS = Proxy
