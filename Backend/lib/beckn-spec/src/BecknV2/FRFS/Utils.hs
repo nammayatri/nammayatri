@@ -4,9 +4,12 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec hiding (Domain)
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified Data.Aeson as A
+import qualified Data.ByteString as BS
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time
 import Data.Time.Format.ISO8601 (iso8601ParseM, iso8601Show)
+import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Error as Error
@@ -197,3 +200,13 @@ defaultBusBoardingRelationshitCfg a = [a]
 
 discoverySearchCounterKey :: Text -> Text
 discoverySearchCounterKey transactionId = "FRFS:Discovery:SearchReq:Counter" <> transactionId
+
+unescapeQuotedJSON :: ByteString -> Maybe ByteString
+unescapeQuotedJSON bs =
+  if BS.length bs >= 2 && BS.head bs == 34 && BS.last bs == 34
+    then
+      let inner = BS.init (BS.tail bs)
+       in case A.eitherDecodeStrict' ("\"" <> inner <> "\"") :: Either String T.Text of
+            Right txt -> Just (TE.encodeUtf8 txt)
+            Left _ -> Nothing
+    else Nothing
