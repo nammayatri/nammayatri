@@ -44,7 +44,8 @@ data AppCfg = AppCfg
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
     disableSignatureAuth :: Bool,
-    internalEndPointMap :: M.Map BaseUrl BaseUrl
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    noSignatureSubscribers :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -71,7 +72,8 @@ data AppEnv = AppEnv
     shouldLogRequestId :: Bool,
     sessionId :: Maybe Text,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    url :: Maybe Text
+    url :: Maybe Text,
+    noSignatureSubscribers :: [Text]
   }
   deriving (Generic)
 

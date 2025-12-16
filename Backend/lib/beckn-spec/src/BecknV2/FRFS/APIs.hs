@@ -16,6 +16,7 @@ module BecknV2.FRFS.APIs where
 
 import qualified BecknV2.FRFS.Types as Spec
 import EulerHS.Prelude
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type SearchAPI =
@@ -25,6 +26,14 @@ type SearchAPI =
 
 searchAPI :: Proxy SearchAPI
 searchAPI = Proxy
+
+type OnSearchAPIBS =
+  "on_search"
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] Spec.AckResponse
+
+onSearchAPIBS :: Proxy OnSearchAPIBS
+onSearchAPIBS = Proxy
 
 type OnSearchAPI =
   "on_search"
