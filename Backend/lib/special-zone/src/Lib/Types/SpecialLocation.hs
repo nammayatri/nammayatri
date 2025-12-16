@@ -44,6 +44,7 @@ data SpecialLocation = SpecialLocation
     linkedLocationsIds :: [Id SpecialLocation],
     locationType :: SpecialLocationType,
     enabled :: Bool,
+    priority :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

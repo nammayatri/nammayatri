@@ -368,6 +368,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             merchantOperatingCityId = Just merchantOperatingCityId,
             linkedLocationsIds = maybe [] (.linkedLocationsIds) mbExistingSpLoc,
             locationType = SL.Closed,
+            priority = 0,
             merchantId = Just merchantId,
             ..
           }
@@ -1370,7 +1371,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoAddress :: Text,
     gateInfoHasGeom :: Text,
     gateInfoCanQueueUpOnGate :: Text,
-    gateInfoType :: Text
+    gateInfoType :: Text,
+    priority :: Text
   }
   deriving (Show)
 
@@ -1392,6 +1394,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "gate_info_has_geom"
       <*> r .: "gate_info_can_queue_up_on_gate"
       <*> r .: "gate_info_type"
+      <*> r .: "priority"
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1429,6 +1432,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       locationGeom <- getGeomFromKML locationGeomFile >>= fromMaybeM (InvalidRequest $ "Not able to convert the given KML to PostGis geom for location: " <> locationName)
       category :: Text <- cleanCSVField idx row.category "Category"
       let locationType :: Maybe SL.SpecialLocationType = readMaybeCSVField idx row.locationType "Location Type"
+          priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
       gateInfoId <- generateGUID
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
@@ -1459,6 +1463,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 gates = [],
                 locationType = fromMaybe SL.Open locationType,
                 geom = Just $ T.pack locationGeom,
+                priority = fromMaybe 0 priority,
                 createdAt = now,
                 updatedAt = now
               }
