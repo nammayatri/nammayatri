@@ -554,7 +554,7 @@ sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   buildSmsReq <-
-    MessageBuilder.buildAddedAsEmergencyContactMessage person.merchantOperatingCityId $
+    MessageBuilder.buildAddedAsEmergencyContactMessage person.merchantOperatingCityId person.language $
       MessageBuilder.BuildAddedAsEmergencyContactMessageReq
         { userName = SLP.getName person,
           appUrl = riderConfig.appUrl
@@ -734,6 +734,7 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
       req.email
       riderConfig.emailOtpConfig
       Nothing
+      person.language
 
   case identifierType of
     SP.MOBILENUMBER -> do

@@ -35,6 +35,7 @@ import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.MerchantMessage as Queries
+import qualified Storage.Queries.MerchantMessageExtra as QueriesExtra
 import qualified Tools.DynamicLogic as DynamicLogic
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantMessage -> m ()
@@ -84,14 +85,14 @@ makeMerchantOpCityIdAndMessageKeyAndLanguage id messageKey mbVehicleCategory mbL
 
 findByMerchantOpCityIdAndMessageKeyVehicleCategoryAndLanguage :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> Maybe Language -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
 findByMerchantOpCityIdAndMessageKeyVehicleCategoryAndLanguage id messageKey vehicleCategory language mbConfigVersionMap = do
-  -- First try with the specified language
+  -- First try with the specified language and vehicleCategory
   res <-
     DynamicLogic.findOneConfigWithCacheKey
       (cast id)
       (LYT.DRIVER_CONFIG LYT.MerchantMessage)
       mbConfigVersionMap
       Nothing
-      (Queries.findByMerchantOpCityIdAndMessageKeyAndLanguage id messageKey language)
+      (QueriesExtra.findByMerchantOpCityIdAndMessageKeyVehicleCategoryAndLanguage id messageKey vehicleCategory language)
       (makeMerchantOpCityIdAndMessageKeyAndLanguage id messageKey vehicleCategory language)
   case res of
     Just a -> return $ Just a
@@ -115,7 +116,7 @@ findByMerchantOpCityIdAndMessageKeyVehicleCategoryAndLanguage id messageKey vehi
               (LYT.DRIVER_CONFIG LYT.MerchantMessage)
               mbConfigVersionMap
               Nothing
-              (Queries.findByMerchantOpCityIdAndMessageKeyAndLanguage id messageKey (Just ENGLISH))
+              (QueriesExtra.findByMerchantOpCityIdAndMessageKeyVehicleCategoryAndLanguage id messageKey vehicleCategory (Just ENGLISH))
               (makeMerchantOpCityIdAndMessageKeyAndLanguage id messageKey vehicleCategory (Just ENGLISH))
           case resEnglish of
             Just a -> return $ Just a

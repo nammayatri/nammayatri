@@ -661,6 +661,7 @@ library
       Storage.Queries.MediaFileDocumentExtra
       Storage.Queries.MerchantClientConfigExtra
       Storage.Queries.MerchantExtra
+      Storage.Queries.MerchantMessageExtra
       Storage.Queries.MerchantPaymentMethodExtra
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MessageExtra

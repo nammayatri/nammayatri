@@ -671,7 +671,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
         let countryCode = fromMaybe "+91" person.mobileCountryCode
             phoneNumberWithCountryCode = countryCode <> phoneNumber
         withLogTag ("sending Pass Purchased Success SMS" <> Id.getId person.id) $ do
-          buildSmsReq <- MessageBuilder.buildPassSuccessMessage merchantOpCityId $ MessageBuilder.BuildPassSuccessMessage {passName}
+          buildSmsReq <- MessageBuilder.buildPassSuccessMessage merchantOpCityId person.language $ MessageBuilder.BuildPassSuccessMessage {passName}
           Sms.sendSMS merchantId merchantOpCityId (buildSmsReq phoneNumberWithCountryCode)
             >>= Sms.checkSmsResult
 

@@ -353,6 +353,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
           req.email
           riderConfig.emailOtpConfig
           mbSenderHash
+          person.language
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
   (mbDepotCode, mbIsDepotAdmin) <-
     if req.isOperatorReq == Just True
@@ -917,6 +918,7 @@ resend tokenId mbSenderHash = do
     receiverEmail
     riderConfig.emailOtpConfig
     mbSenderHash
+    person.language
 
   void $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing person.blocked Nothing Nothing

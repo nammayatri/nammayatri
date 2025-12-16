@@ -247,6 +247,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       req.mobileCountryCode
       req.mobileNumber
       req.email
+      person.language
 
   let attempts = SR.attempts token
       authId = SR.id token

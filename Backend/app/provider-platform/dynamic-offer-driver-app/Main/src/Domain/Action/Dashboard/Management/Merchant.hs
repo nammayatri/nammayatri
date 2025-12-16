@@ -3850,23 +3850,32 @@ postMerchantConfigTranslationsUpsert merchantShortId opCity req = do
           message = row.trMessage
       case language of
         Just lang -> do
-          existingTranslation <- QTranslations.isTranslationExist messageKey lang
+          existingTranslation <- QTranslations.findByMessageKeyAndLanguage messageKey lang
           now <- getCurrentTime
-          translationId <- generateGUID
-          let newTranslation =
-                DTranslations.Translations
-                  { DTranslations.id = translationId,
-                    DTranslations.messageKey = messageKey,
-                    DTranslations.language = lang,
-                    DTranslations.message = message,
-                    DTranslations.createdAt = now,
-                    DTranslations.updatedAt = now
-                  }
-          if existingTranslation
-            then do
-              QTranslations.updateByPrimaryKey newTranslation
+          case existingTranslation of
+            Just oldTranslation -> do
+              let updatedTranslation =
+                    DTranslations.Translations
+                      { DTranslations.id = oldTranslation.id,
+                        DTranslations.messageKey = messageKey,
+                        DTranslations.language = lang,
+                        DTranslations.message = message,
+                        DTranslations.createdAt = oldTranslation.createdAt,
+                        DTranslations.updatedAt = now
+                      }
+              QTranslations.updateByPrimaryKey updatedTranslation
               return (errors, Map.empty)
-            else do
+            Nothing -> do
+              translationId <- generateGUID
+              let newTranslation =
+                    DTranslations.Translations
+                      { DTranslations.id = translationId,
+                        DTranslations.messageKey = messageKey,
+                        DTranslations.language = lang,
+                        DTranslations.message = message,
+                        DTranslations.createdAt = now,
+                        DTranslations.updatedAt = now
+                      }
               QTranslations.create newTranslation
               return (errors, Map.empty)
         Nothing -> return (errors <> ["Invalid language for messageKey: " <> messageKey], Map.empty)

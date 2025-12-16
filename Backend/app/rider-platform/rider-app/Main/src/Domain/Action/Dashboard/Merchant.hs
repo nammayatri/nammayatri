@@ -127,6 +127,7 @@ import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.BusinessHour as SQBH
 import qualified Storage.Queries.BusinessHourExtra as SQBHE
 import qualified Storage.Queries.DisabilityTranslation as QDT
+import qualified Storage.Queries.DisabilityTranslationExtra as QDTE
 import qualified Storage.Queries.Geometry as QGEO
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
@@ -1805,7 +1806,7 @@ postMerchantConfigMerchantMessageUpsert merchantShortId opCity req = do
               senderHeader = row.mmSenderHeader
           case (messageKey, language, jsonData) of
             (Just msgKey, Just lang, Just _jd) -> do
-              existingMM <- CQMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCity.id msgKey Nothing
+              existingMM <- CQMM.findByMerchantOperatingCityIdAndMessageKeyAndLanguage merchantOpCity.id msgKey (Just lang) Nothing
               let jsonDataConverted = Transformers.valueToJsonData jsonData
               now <- getCurrentTime
               let newMM =
@@ -1896,5 +1897,11 @@ postMerchantConfigDisabilityTranslationUpsert merchantShortId opCity req = do
                 DDT.language = language,
                 DDT.translation = translation
               }
-      QDT.create newDisabilityTranslation
-      return (errors, Map.empty)
+      existingTranslation <- QDTE.findByDisabilityIdAndLanguage (Id disabilityId) language
+      case existingTranslation of
+        Just _ -> do
+          QDTE.updateByPrimaryKey newDisabilityTranslation
+          return (errors, Map.empty)
+        Nothing -> do
+          QDT.create newDisabilityTranslation
+          return (errors, Map.empty)

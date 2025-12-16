@@ -68,7 +68,6 @@ import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
-import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (GenericError (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -504,7 +503,8 @@ postMerchantConfigPlanTranslationUpsert merchantShortId opCity apiTokenInfo req 
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigPlanTranslationUpsert)) req
 
-getMerchantConfigFarePolicyExport :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow Kernel.Prelude.Text)
+getMerchantConfigFarePolicyExport :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Flow Text
 getMerchantConfigFarePolicyExport merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigFarePolicyExport)
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigFarePolicyExport)

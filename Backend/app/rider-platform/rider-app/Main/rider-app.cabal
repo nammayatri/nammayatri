@@ -532,6 +532,7 @@ library
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReasonExtra
       Storage.Queries.DisabilityExtra
+      Storage.Queries.DisabilityTranslationExtra
       Storage.Queries.EstimateBreakup
       Storage.Queries.EstimateExtra
       Storage.Queries.ExophoneExtra

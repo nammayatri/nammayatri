@@ -62,7 +62,7 @@ sendSMS ::
   m ()
 sendSMS merchantId merchantOpCity phoneNo name trackLink = do
   buildSmsReq <-
-    MessageBuilder.buildFollowRideStartedMessage merchantOpCity $
+    MessageBuilder.buildFollowRideStartedMessage merchantOpCity Nothing $
       MessageBuilder.BuildFollowRideMessageReq
         { userName = fromMaybe "" name,
           rideLink = trackLink
