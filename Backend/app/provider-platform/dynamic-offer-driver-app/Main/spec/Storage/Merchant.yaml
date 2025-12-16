@@ -880,6 +880,7 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     FeedbackNotificationConfig:
       enableFeedbackNotification: Bool
+      allowNotificationOnEmptyBadge: Bool
       feedbackNotificationDelayInSec: Int
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
   beamInstance:
