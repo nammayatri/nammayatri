@@ -72,6 +72,9 @@ buildOnSearchReq onSearchReq = do
         )
         payments
 
+  when (null interestTags) $
+    throwError $ InvalidRequest "Payment tags are missing for all payments"
+
   let bppDelayedInterest = listToMaybe interestTags
 
   -- Get IntegratedBPPConfig to check mergeQuoteCriteria
