@@ -15,7 +15,7 @@ import qualified Storage.Queries.OrphanInstances.PassVerifyTransaction ()
 findLastVerifiedVehicleNumberByPurchasePassId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id PurchasedPass.PurchasedPass ->
-  m (Maybe Text)
+  m (Maybe (Text, Maybe Kernel.Prelude.Bool))
 findLastVerifiedVehicleNumberByPurchasePassId purchasePassId = do
   now <- getCurrentTime
   transactions <-
@@ -29,5 +29,5 @@ findLastVerifiedVehicleNumberByPurchasePassId purchasePassId = do
       (Just 1)
       (Just 0)
   case listToMaybe transactions of
-    Just transaction -> return (Just transaction.fleetId)
+    Just transaction -> return (Just (transaction.fleetId, transaction.autoActivated))
     Nothing -> return Nothing
