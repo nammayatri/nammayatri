@@ -793,7 +793,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
         Just firstPreBookedPayment -> do
           let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
           QPurchasedPassPayment.updateStatusByOrderId newStatus firstPreBookedPayment.orderId
-          QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus firstPreBookedPayment.benefitDescription firstPreBookedPayment.benefitType firstPreBookedPayment.benefitValue purchasedPass.passAmount
+          QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus firstPreBookedPayment.benefitDescription firstPreBookedPayment.benefitType firstPreBookedPayment.benefitValue firstPreBookedPayment.amount
         Nothing -> do
           QPurchasedPassPayment.expireOlderActivePaymentsByPurchasedPassId purchasedPass.id today
           QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
