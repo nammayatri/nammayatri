@@ -817,8 +817,9 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (InvalidRequest $ "Pass will be active from " <> show purchasedPass.startDate)
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   (integratedBPPConfig, vehicleLiveRouteInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs passVerifyReq.vehicleNumber (Just True) >>= fromMaybeM (InvalidRequest $ "Entered Bus OTP: " <> passVerifyReq.vehicleNumber <> " is invalid. Please check again.")
-  unless (vehicleLiveRouteInfo.serviceType `elem` purchasedPass.applicableVehicleServiceTiers) $
-    throwError $ InvalidRequest ("This pass is only " <> purchasedPass.benefitDescription)
+  when (fromMaybe True vehicleLiveRouteInfo.isActuallyValid) $ do
+    unless (vehicleLiveRouteInfo.serviceType `elem` purchasedPass.applicableVehicleServiceTiers) $
+      throwError $ InvalidRequest ("This pass is only " <> purchasedPass.benefitDescription)
   routeStopMapping <-
     case vehicleLiveRouteInfo.routeCode of
       Just routeCode ->
@@ -847,7 +848,8 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
             createdAt = now,
             updatedAt = now,
             merchantId = Just merchantId,
-            merchantOperatingCityId = Just person.merchantOperatingCityId
+            merchantOperatingCityId = Just person.merchantOperatingCityId,
+            isActuallyValid = Just $ fromMaybe True vehicleLiveRouteInfo.isActuallyValid
           }
   QPassVerifyTransaction.create passVerifyTransaction
   return APISuccess.Success
