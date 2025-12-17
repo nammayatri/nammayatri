@@ -88,6 +88,7 @@ import qualified SharedLogic.FareCalculatorV2 as FareV2
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
+import qualified SharedLogic.TollsDetector as TollsDetector
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.TransporterConfig as QTC
@@ -436,8 +437,21 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                 when distanceCalculationFailed $ do
                   logWarning $ "Failed to calculate distance for this ride: " <> rideId.getId
 
+                -- Check for pending tolls (entry detected but exit not found) and validate against estimate
+                mbValidatedPendingToll <-
+                  TollsDetector.checkAndValidatePendingTolls
+                    updRide.driverId
+                    updRide.estimatedTollCharges
+                    updRide.estimatedTollNames
+
+                -- Log if we have validated toll but can't apply due to route deviation
+                when (isJust mbValidatedPendingToll && pickupDropOutsideOfThreshold) $ do
+                  logWarning $ "Validated pending toll found but NOT applying due to pickup/drop outside threshold. RideId: " <> rideId.getId
+
                 let (tollCharges, tollNames, tollConfidence) = do
                       let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
+                          -- Only apply validated pending toll if pickup/drop is within threshold (route was as expected)
+                          canApplyValidatedPendingToll = not pickupDropOutsideOfThreshold
                       if distanceCalculationFailure
                         then
                           if isJust updRide.estimatedTollCharges
@@ -450,9 +464,21 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                                     else
                                       if updRide.driverDeviatedToTollRoute == Just True
                                         then (updRide.estimatedTollCharges, updRide.estimatedTollNames, Just Neutral)
-                                        else (Nothing, Nothing, Just Unsure)
-                            else (Nothing, Nothing, Nothing)
-                        else (updRide.tollCharges, updRide.tollNames, Just Sure)
+                                        else case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
+                                          (True, Just (pendingCharges, pendingNames)) ->
+                                            (Just pendingCharges, Just pendingNames, Just Neutral)
+                                          _ -> (Nothing, Nothing, Just Unsure)
+                            else case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
+                              (True, Just (pendingCharges, pendingNames)) ->
+                                (Just pendingCharges, Just pendingNames, Just Unsure)
+                              _ -> (Nothing, Nothing, Nothing)
+                        else case (updRide.tollCharges, canApplyValidatedPendingToll, mbValidatedPendingToll) of
+                          (Just charges, _, _) ->
+                            (Just charges, updRide.tollNames, Just Sure)
+                          (Nothing, True, Just (pendingCharges, pendingNames)) ->
+                            (Just pendingCharges, Just pendingNames, Just Neutral)
+                          (Nothing, _, _) ->
+                            (Nothing, Nothing, Nothing)
 
                 fork "ride-interpolation" $ do
                   interpolatedPoints <- getInterpolatedPoints updRide.driverId
