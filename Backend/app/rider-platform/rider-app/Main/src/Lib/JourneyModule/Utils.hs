@@ -1410,7 +1410,7 @@ getRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints perso
     then getDummyRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints
     else do
       person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      when person.isNew $ throwError (InvalidRequest "Guest users cannot book train rides") -- Blocks quest user from making subway fare request
+      when person.isNew $ throwError (InvalidRequest "Guest users cannot book train rides") -- Blocks guest user from making subway fare request
       mbMobileNumber <- mapM decrypt person.mobileNumber
       mbImeiNumber <- mapM decrypt person.imeiNumber
       sessionId <- getRandomInRange (1, 1000000 :: Int)
