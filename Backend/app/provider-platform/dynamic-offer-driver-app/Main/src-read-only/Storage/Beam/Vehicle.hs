@@ -37,6 +37,7 @@ data VehicleT f = VehicleT
     size :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     variant :: B.C f Domain.Types.VehicleVariant.VehicleVariant,
     vehicleClass :: B.C f Kernel.Prelude.Text,
+    vehicleImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

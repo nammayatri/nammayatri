@@ -12,6 +12,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.UpgradedTier
 import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
+import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
@@ -38,6 +39,7 @@ data Vehicle = Vehicle
     size :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     variant :: Domain.Types.VehicleVariant.VehicleVariant,
     vehicleClass :: Kernel.Prelude.Text,
+    vehicleImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     vehicleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     vehicleTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
@@ -60,6 +62,7 @@ data VehicleAPIEntity = VehicleAPIEntity
     registrationNo :: Kernel.Prelude.Text,
     serviceTierType :: Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType,
     variant :: Domain.Types.VehicleVariant.VehicleVariant,
+    vehicleImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     vehicleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

@@ -12,6 +12,7 @@ types:
     profileImage: "Maybe Text"
     otherImages: "[Text]"
     otherImageIds: "[Text]"
+    vehicleImage: "Maybe Text"
   DriverProfileQuesReq:
     aspirations : "[Text]"
     drivingSince : "Maybe Int"
