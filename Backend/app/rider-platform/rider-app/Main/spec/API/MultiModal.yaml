@@ -319,7 +319,7 @@ types:
     enum: "LiveRouteInfo RouteWithLiveVehicle, AlternateLiveRoutesInfo [RouteWithLiveVehicle]"
 
   RouteServiceabilityReq:
-    routeCode: Text
+    routeCode: Maybe Text
     sourceStopCode: Maybe Text
     destinationStopCode: Maybe Text
     serviceTierType: Maybe ServiceTierType
