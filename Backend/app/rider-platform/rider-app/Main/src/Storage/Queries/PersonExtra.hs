@@ -82,6 +82,16 @@ updateImeiNumber imeiNumber id = do
     ]
     [Se.Is BeamP.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateIsNew :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()
+updateIsNew isNew id = do
+  -- Currently used only to track for if someone is logged in (Chennai One)
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.isNew isNew,
+      Se.Set BeamP.updatedAt _now
+    ]
+    [Se.Is BeamP.id (Se.Eq (Kernel.Types.Id.getId id))]
+
 updateMobileNumberByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Kernel.External.Encryption.EncryptedHashedField 'AsEncrypted Text -> DbHash -> Text -> m ()
 updateMobileNumberByPersonId (Id personId) encMobile mobileNumberHash mobileCountryCode = do
   now <- getCurrentTime
