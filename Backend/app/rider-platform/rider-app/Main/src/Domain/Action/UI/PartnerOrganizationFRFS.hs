@@ -69,6 +69,7 @@ import qualified ExternalBPP.CallAPI as CallExternalBPP
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.Maps as Maps
+import Kernel.External.Types (Language)
 import qualified Kernel.Prelude as KP
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB
@@ -804,19 +805,19 @@ partnerOrgAuth ticketBookingId = do
       unless isTokenNew $ RegistrationToken.updateOtpByIdForPartnerOrgId regToken.id partnerOrgId newOtp scfg.authExpiry
       let mRiderMobileCountryCode = person.mobileCountryCode
       mobileNumber <- mapM decrypt person.mobileNumber
-      sendTicketCancelOTPSMS mobileNumber mRiderMobileCountryCode ticketBooking newOtp
+      sendTicketCancelOTPSMS mobileNumber mRiderMobileCountryCode ticketBooking newOtp person.language
       maskedMobileNumber <- (maskMobileNumber <$> mobileNumber) & fromMaybeM (PersonFieldNotPresent "mobileNumber")
       return $ PartnerOrgAuthRes regToken.id maskedMobileNumber
       where
-        sendTicketCancelOTPSMS :: Maybe Text -> Maybe Text -> DFTB.FRFSTicketBooking -> Text -> Flow ()
-        sendTicketCancelOTPSMS mRiderNumber mRiderMobileCountryCode ticketBooking' otpCode' =
+        sendTicketCancelOTPSMS :: Maybe Text -> Maybe Text -> DFTB.FRFSTicketBooking -> Text -> Maybe Language -> Flow ()
+        sendTicketCancelOTPSMS mRiderNumber mRiderMobileCountryCode ticketBooking' otpCode' mbLanguage =
           withLogTag ("SMS:PersonId:" <> ticketBooking'.riderId.getId) $ do
             mobileNumber <- mRiderNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
             let mocId = ticketBooking'.merchantOperatingCityId
                 countryCode = fromMaybe "+91" mRiderMobileCountryCode
                 phoneNumber = countryCode <> mobileNumber
             buildSmsReq <-
-              MessageBuilder.buildFRFSTicketCancelOTPMessage mocId $
+              MessageBuilder.buildFRFSTicketCancelOTPMessage mocId mbLanguage $
                 MessageBuilder.BuildFRFSTicketCancelOTPMessageReq
                   { otp = otpCode'
                   }

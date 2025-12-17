@@ -10,6 +10,7 @@ import Domain.Types.Extra.MerchantMessage as ReExport
 import qualified Domain.Types.Extra.MerchantMessage
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -18,6 +19,7 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
   { containsUrlButton :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     jsonData :: Domain.Types.Extra.MerchantMessage.MerchantMessageDefaultDataJSON,
+    language :: Kernel.Prelude.Maybe Kernel.External.Types.Language,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     message :: Kernel.Prelude.Text,

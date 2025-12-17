@@ -53,6 +53,7 @@ import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import qualified Domain.Types.PartnerOrganization as DPO
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Types.Id
@@ -72,6 +73,15 @@ type BuildMessageFlow m r =
     CacheFlow m r
   )
 
+-- Helper function to find merchant message with language fallback
+findMerchantMessageWithLanguageFallback :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> Maybe Language -> m (Maybe DMM.MerchantMessage)
+findMerchantMessageWithLanguageFallback merchantOpCityId messageKey mbLanguage =
+  case mbLanguage of
+    Just _language ->
+      QMM.findByMerchantOperatingCityIdAndMessageKeyAndLanguage merchantOpCityId messageKey mbLanguage Nothing
+    Nothing ->
+      QMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey Nothing
+
 type SmsReqBuilder = Text -> Sms.SendSMSReq
 
 buildSendSmsReq :: BuildMessageFlow m r => DMM.MerchantMessage -> [(Text, Text)] -> m SmsReqBuilder
@@ -88,10 +98,10 @@ data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   }
   deriving (Generic)
 
-buildSendOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m SmsReqBuilder
-buildSendOTPMessage merchantOperatingCityId req = do
+buildSendOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildSendOTPMessageReq -> m SmsReqBuilder
+buildSendOTPMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_OTP Nothing
+    findMerchantMessageWithLanguageFallback merchantOperatingCityId DMM.SEND_OTP mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_OTP))
   buildSendSmsReq merchantMessage [("otp", req.otp), ("hash", req.hash)]
 
@@ -100,10 +110,10 @@ newtype BuildFRFSTicketCancelOTPMessageReq = BuildFRFSTicketCancelOTPMessageReq
   }
   deriving (Generic)
 
-buildFRFSTicketCancelOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildFRFSTicketCancelOTPMessageReq -> m SmsReqBuilder
-buildFRFSTicketCancelOTPMessage merchantOperatingCityId req = do
+buildFRFSTicketCancelOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildFRFSTicketCancelOTPMessageReq -> m SmsReqBuilder
+buildFRFSTicketCancelOTPMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.PARTNER_ORG_FRFS_TICKET_CANCEL_OTP Nothing
+    findMerchantMessageWithLanguageFallback merchantOperatingCityId DMM.PARTNER_ORG_FRFS_TICKET_CANCEL_OTP mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.PARTNER_ORG_FRFS_TICKET_CANCEL_OTP))
   buildSendSmsReq merchantMessage [("otp", req.otp)]
 
@@ -113,10 +123,10 @@ data BuildSendBookingOTPMessageReq = BuildSendBookingOTPMessageReq
   }
   deriving (Generic)
 
-buildSendBookingOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendBookingOTPMessageReq -> m SmsReqBuilder
-buildSendBookingOTPMessage merchantOperatingCityId req = do
+buildSendBookingOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildSendBookingOTPMessageReq -> m SmsReqBuilder
+buildSendBookingOTPMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_BOOKING_OTP Nothing
+    findMerchantMessageWithLanguageFallback merchantOperatingCityId DMM.SEND_BOOKING_OTP mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_BOOKING_OTP))
   buildSendSmsReq merchantMessage [("otp", req.otp), ("amount", req.amount)]
 
@@ -125,20 +135,20 @@ newtype BuildSendRideEndOTPMessageReq = BuildSendRideEndOTPMessageReq
   }
   deriving (Generic)
 
-buildSendRideEndOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendRideEndOTPMessageReq -> m SmsReqBuilder
-buildSendRideEndOTPMessage merchantOperatingCityId req = do
+buildSendRideEndOTPMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildSendRideEndOTPMessageReq -> m SmsReqBuilder
+buildSendRideEndOTPMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_RIDE_END_OTP Nothing
+    findMerchantMessageWithLanguageFallback merchantOperatingCityId DMM.SEND_RIDE_END_OTP mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_RIDE_END_OTP))
   buildSendSmsReq merchantMessage [("otp", req.otp)]
 
 data BuildGenericMessageReq = BuildGenericMessageReq {}
   deriving (Generic)
 
-buildGenericMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> BuildGenericMessageReq -> m SmsReqBuilder
-buildGenericMessage merchantOpCityId messageKey _ = do
+buildGenericMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> Maybe Language -> BuildGenericMessageReq -> m SmsReqBuilder
+buildGenericMessage merchantOpCityId messageKey mbLanguage _ = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey Nothing
+    findMerchantMessageWithLanguageFallback merchantOpCityId messageKey mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show messageKey))
   let jsonData = merchantMessage.jsonData
   buildSendSmsReq merchantMessage [("var1", fromMaybe "" jsonData.var1), ("var2", fromMaybe "" jsonData.var2), ("var3", fromMaybe "" jsonData.var3)]
@@ -151,13 +161,13 @@ data BuildSOSAlertMessageReq = BuildSOSAlertMessageReq
   }
   deriving (Generic)
 
-buildSOSAlertMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m SmsReqBuilder
-buildSOSAlertMessage merchantOperatingCityId req = do
+buildSOSAlertMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildSOSAlertMessageReq -> m SmsReqBuilder
+buildSOSAlertMessage merchantOperatingCityId mbLanguage req = do
   shortenedTrackingUrl <- shortenTrackingUrl req.rideLink
   let messageKey = if req.isRideEnded then DMM.POST_RIDE_SOS else DMM.SEND_SOS_ALERT
       smsParams = if req.isRideEnded then [("userName", req.userName), ("rideEndTime", fromMaybe "" req.rideEndTime)] else [("userName", req.userName), ("rideLink", shortenedTrackingUrl)]
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey Nothing
+    findMerchantMessageWithLanguageFallback merchantOperatingCityId messageKey mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId $ show messageKey)
   buildSendSmsReq merchantMessage smsParams
 
@@ -166,10 +176,10 @@ newtype BuildMarkRideAsSafeMessageReq = BuildMarkRideAsSafeMessageReq
   }
   deriving (Generic)
 
-buildMarkRideAsSafeMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildMarkRideAsSafeMessageReq -> m SmsReqBuilder
-buildMarkRideAsSafeMessage merchantOperatingCityId req = do
+buildMarkRideAsSafeMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildMarkRideAsSafeMessageReq -> m SmsReqBuilder
+buildMarkRideAsSafeMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.MARK_RIDE_AS_SAFE Nothing
+    findMerchantMessageWithLanguageFallback merchantOperatingCityId DMM.MARK_RIDE_AS_SAFE mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.MARK_RIDE_AS_SAFE))
   buildSendSmsReq merchantMessage [("userName", req.userName)]
 
@@ -179,10 +189,10 @@ data BuildFollowRideMessageReq = BuildFollowRideMessageReq
   }
   deriving (Generic)
 
-buildFollowRideStartedMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildFollowRideMessageReq -> m SmsReqBuilder
-buildFollowRideStartedMessage merchantOperatingCityId req = do
+buildFollowRideStartedMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildFollowRideMessageReq -> m SmsReqBuilder
+buildFollowRideStartedMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.FOLLOW_RIDE Nothing
+    findMerchantMessageWithLanguageFallback merchantOperatingCityId DMM.FOLLOW_RIDE mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.FOLLOW_RIDE))
   buildSendSmsReq merchantMessage [("userName", req.userName), ("rideLink", req.rideLink)]
 
@@ -192,10 +202,10 @@ data BuildAddedAsEmergencyContactMessageReq = BuildAddedAsEmergencyContactMessag
   }
   deriving (Generic)
 
-buildAddedAsEmergencyContactMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildAddedAsEmergencyContactMessageReq -> m SmsReqBuilder
-buildAddedAsEmergencyContactMessage merchantOperatingCityId req = do
+buildAddedAsEmergencyContactMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildAddedAsEmergencyContactMessageReq -> m SmsReqBuilder
+buildAddedAsEmergencyContactMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.ADDED_AS_EMERGENCY_CONTACT Nothing
+    findMerchantMessageWithLanguageFallback merchantOperatingCityId DMM.ADDED_AS_EMERGENCY_CONTACT mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.ADDED_AS_EMERGENCY_CONTACT))
   buildSendSmsReq merchantMessage [("userName", req.userName), ("appUrl", req.appUrl)]
 
@@ -205,10 +215,10 @@ data BuildTicketBookingCancelledMessageReq = BuildTicketBookingCancelledMessageR
   }
   deriving (Generic)
 
-buildTicketBookingCancelled :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildTicketBookingCancelledMessageReq -> m SmsReqBuilder
-buildTicketBookingCancelled merchantOperatingCityId req = do
+buildTicketBookingCancelled :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildTicketBookingCancelledMessageReq -> m SmsReqBuilder
+buildTicketBookingCancelled merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.TICKET_BOOKING_CANCELLED Nothing
+    findMerchantMessageWithLanguageFallback merchantOperatingCityId DMM.TICKET_BOOKING_CANCELLED mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.TICKET_BOOKING_CANCELLED))
   buildSendSmsReq merchantMessage [("personName", req.personName), ("categoryName", req.categoryName)]
 
@@ -218,8 +228,8 @@ data BuildFRFSTicketBookedMessageReq = BuildFRFSTicketBookedMessageReq
   }
   deriving (Generic, Show)
 
-buildFRFSTicketBookedMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Id DPO.PartnerOrganization -> BuildFRFSTicketBookedMessageReq -> m (Maybe SmsReqBuilder)
-buildFRFSTicketBookedMessage merchantOperatingCityId pOrgId req = do
+buildFRFSTicketBookedMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Id DPO.PartnerOrganization -> Maybe Language -> BuildFRFSTicketBookedMessageReq -> m (Maybe SmsReqBuilder)
+buildFRFSTicketBookedMessage merchantOperatingCityId pOrgId mbLanguage req = do
   smsPOCfg <- do
     pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.TICKET_SMS >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.TICKET_SMS)
     DPOC.getTicketSMSConfig pOrgCfg.config
@@ -230,7 +240,7 @@ buildFRFSTicketBookedMessage merchantOperatingCityId pOrgId req = do
       2. `{#TICKET_PLURAL#}` as a placeholder for the word "tickets are" or "ticket is"
   -}
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.METRO_TICKET_BOOKED Nothing
+    findMerchantMessageWithLanguageFallback merchantOperatingCityId DMM.METRO_TICKET_BOOKED mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.METRO_TICKET_BOOKED))
 
   forM smsPOCfg.publicUrl $
@@ -256,10 +266,10 @@ data BuildFRFSTicketCancelMessageReq = BuildFRFSTicketCancelMessageReq
   }
   deriving (Generic, Show)
 
-buildFRFSTicketCancelMessage :: (BuildMessageFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Id DPO.PartnerOrganization -> BuildFRFSTicketCancelMessageReq -> m (Maybe SmsReqBuilder)
-buildFRFSTicketCancelMessage merchantOperatingCityId pOrgId req = do
+buildFRFSTicketCancelMessage :: (BuildMessageFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Id DPO.PartnerOrganization -> Maybe Language -> BuildFRFSTicketCancelMessageReq -> m (Maybe SmsReqBuilder)
+buildFRFSTicketCancelMessage merchantOperatingCityId pOrgId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.METRO_TICKET_BOOKING_CANCELLED Nothing
+    findMerchantMessageWithLanguageFallback merchantOperatingCityId DMM.METRO_TICKET_BOOKING_CANCELLED mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.METRO_TICKET_BOOKING_CANCELLED))
   smsPOCfg <- do
     pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.TICKET_SMS >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.TICKET_SMS)
@@ -309,13 +319,13 @@ data BuildDeliveryMessageReq = BuildDeliveryMessageReq
     deliveryMessageType :: DeliveryMessageRequestType
   }
 
-buildDeliveryDetailsMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> BuildDeliveryMessageReq -> m SmsReqBuilder
-buildDeliveryDetailsMessage merchantOperatingCityId req = do
+buildDeliveryDetailsMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildDeliveryMessageReq -> m SmsReqBuilder
+buildDeliveryDetailsMessage merchantOperatingCityId mbLanguage req = do
   let merchantMessageKey = case req.deliveryMessageType of
         SenderReq -> bool DMM.SMS_DELIVERY_DETAILS_SENDER DMM.POST_DELIVERY_SENDER req.hasEnded
         ReceiverReq -> bool DMM.PRE_PICKUP_DELIVERY_RECEIVER DMM.SMS_DELIVERY_DETAILS_RECEIVER req.pickedUp
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId merchantMessageKey Nothing
+    findMerchantMessageWithLanguageFallback merchantOperatingCityId merchantMessageKey mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show merchantMessageKey))
   shortTrackingUrl <- maybe (pure mempty) shortenTrackingUrl req.trackingUrl
   buildSendSmsReq
@@ -333,9 +343,9 @@ newtype BuildPassSuccessMessage = BuildPassSuccessMessage
   { passName :: Text
   }
 
-buildPassSuccessMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildPassSuccessMessage -> m SmsReqBuilder
-buildPassSuccessMessage merchantOperatingCityId req = do
+buildPassSuccessMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Language -> BuildPassSuccessMessage -> m SmsReqBuilder
+buildPassSuccessMessage merchantOperatingCityId mbLanguage req = do
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.PASS_PURCHASED_MESSAGE Nothing
+    findMerchantMessageWithLanguageFallback merchantOperatingCityId DMM.PASS_PURCHASED_MESSAGE mbLanguage
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.PASS_PURCHASED_MESSAGE))
   buildSendSmsReq merchantMessage [("passName", req.passName)]

@@ -149,7 +149,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
   safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
   let localRideEndTime = addUTCTime (secondsToNominalDiffTime riderConfig.timeDiffFromUtc) <$> ride.rideEndTime
   buildSmsReq <-
-    MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
+    MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId person.language $
       MessageBuilder.BuildSOSAlertMessageReq
         { userName = SLP.getName person,
           rideLink = trackLink,

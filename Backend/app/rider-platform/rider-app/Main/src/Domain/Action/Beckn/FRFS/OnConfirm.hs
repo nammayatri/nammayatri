@@ -190,7 +190,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
   buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
-  void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
+  void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters person.language
   void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
   void $ CQP.clearPSCache booking.riderId
   whenJust booking.partnerOrgId $ \pOrgId -> do
@@ -209,7 +209,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
         void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
   return ()
   where
-    sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode fareParameters =
+    sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode fareParameters mbLanguage =
       whenJust booking'.partnerOrgId $ \pOrgId -> do
         fork "send ticket booked sms" $
           withLogTag ("SMS:FRFSBookingId:" <> booking'.id.getId) $ do
@@ -218,7 +218,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
                 countryCode = fromMaybe "+91" mRiderMobileCountryCode
                 phoneNumber = countryCode <> mobileNumber
             mbBuildSmsReq <-
-              MessageBuilder.buildFRFSTicketBookedMessage mocId pOrgId $
+              MessageBuilder.buildFRFSTicketBookedMessage mocId pOrgId mbLanguage $
                 MessageBuilder.BuildFRFSTicketBookedMessageReq
                   { countOfTickets = fareParameters.totalQuantity,
                     bookingId = booking'.id

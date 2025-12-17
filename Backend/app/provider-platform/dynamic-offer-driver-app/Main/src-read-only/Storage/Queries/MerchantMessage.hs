@@ -11,6 +11,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
@@ -42,6 +43,18 @@ findByMerchantOpCityIdAndMessageKey merchantOperatingCityId messageKey = do
         ]
     ]
 
+findByMerchantOpCityIdAndMessageKeyAndLanguage ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.MerchantMessage.MessageKey -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
+findByMerchantOpCityIdAndMessageKeyAndLanguage merchantOperatingCityId messageKey language = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.messageKey $ Se.Eq messageKey,
+          Se.Is Beam.language $ Se.Eq language
+        ]
+    ]
+
 findByMerchantOpCityIdAndMessageKeyVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.MerchantMessage.MessageKey -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
@@ -60,6 +73,7 @@ updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
   updateWithKV
     [ Se.Set Beam.containsUrlButton containsUrlButton,
       Se.Set Beam.jsonData (Just $ Data.Aeson.toJSON jsonData),
+      Se.Set Beam.language language,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.message message,
       Se.Set Beam.senderHeader senderHeader,
@@ -77,6 +91,7 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
           { containsUrlButton = containsUrlButton,
             createdAt = createdAt,
             jsonData = fromMaybe Data.Default.Class.def (Storage.Queries.Transformers.MerchantMessage.valueToJsonData =<< jsonData),
+            language = language,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             message = message,
@@ -93,6 +108,7 @@ instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMess
       { Beam.containsUrlButton = containsUrlButton,
         Beam.createdAt = createdAt,
         Beam.jsonData = Just $ Data.Aeson.toJSON jsonData,
+        Beam.language = language,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.message = message,

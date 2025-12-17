@@ -28,6 +28,7 @@ import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
@@ -123,10 +124,11 @@ notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig 
       timeStamp = show $ utctDay nowLocale
       merchantOpCityId = transporterConfig.merchantOperatingCityId
       mkey = messageKey
+  let driverLanguage = fromMaybe ENGLISH driver.language
   withLogTag ("personId_" <> personId.getId) $ do
     case channel of
       SMS -> do
-        (mbSender, message, templateId) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey Nothing MessageBuilder.BuildGenericMessageReq {}
+        (mbSender, message, templateId) <- MessageBuilder.buildGenericMessage merchantOpCityId (Just driverLanguage) mkey Nothing MessageBuilder.BuildGenericMessageReq {}
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
           >>= Sms.checkSmsResult

@@ -14,6 +14,7 @@ import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -78,7 +79,7 @@ handleCancelledStatus merchant booking refundAmount cancellationCharges messageI
       cancelJourney booking
   void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId
-  void $ sendTicketCancelSMS mRiderNumber person.mobileCountryCode booking fareParameters
+  void $ sendTicketCancelSMS mRiderNumber person.mobileCountryCode booking fareParameters person.language
   handleGoogleWalletStatusUpdate booking
   bapConfig <-
     CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId merchant.id (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)
@@ -96,8 +97,8 @@ checkRefundAndCancellationCharges bookingId refundAmount cancellationCharges = d
         throwError $ InternalError $ "Cancellation Charges mismatch in onCancel Req " <> "cancellationCharges: " <> show cancellationCharges <> " charges: " <> show charges
     _ -> throwError $ InternalError "Refund Amount or Cancellation Charges not found in booking"
 
-sendTicketCancelSMS :: Maybe Text -> Maybe Text -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSUtils.FRFSFareParameters -> Flow ()
-sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode booking fareParameters =
+sendTicketCancelSMS :: Maybe Text -> Maybe Text -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSUtils.FRFSFareParameters -> Maybe Language -> Flow ()
+sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode booking fareParameters mbLanguage =
   whenJust booking.partnerOrgId $ \pOrgId -> do
     fork "send ticket cancel sms" $
       withLogTag ("SMS:FRFSBookingId:" <> booking.id.getId) $ do
@@ -107,7 +108,7 @@ sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode booking fareParameters 
             phoneNumber = countryCode <> mobileNumber
 
         mbBuildSmsReq <-
-          MessageBuilder.buildFRFSTicketCancelMessage mocId pOrgId $
+          MessageBuilder.buildFRFSTicketCancelMessage mocId pOrgId mbLanguage $
             MessageBuilder.BuildFRFSTicketCancelMessageReq
               { countOfTickets = fareParameters.totalQuantity,
                 bookingId = booking.id

@@ -34,6 +34,7 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (encrypt, getDbHash)
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -327,6 +328,9 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled req = do
       deploymentVersion <- asks (.version)
       person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled
       pure person.id
+  personLanguage <- case mbPerson of
+    Just person -> pure $ fromMaybe ENGLISH person.language
+    Nothing -> pure ENGLISH
   let useFakeOtpM = useFakeSms smsCfg
   otp <- maybe generateOTPCode (return . show) useFakeOtpM
   whenNothing_ useFakeOtpM $ do
@@ -336,7 +340,7 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled req = do
     withLogTag ("mobileNumber" <> req.mobileNumber) $
       do
         (mbSender, message, templateId) <-
-          MessageBuilder.buildSendOTPMessage merchantOpCityId $
+          MessageBuilder.buildSendOTPMessage merchantOpCityId (Just personLanguage) $
             MessageBuilder.BuildSendOTPMessageReq
               { otp = otpCode,
                 hash = otpHash

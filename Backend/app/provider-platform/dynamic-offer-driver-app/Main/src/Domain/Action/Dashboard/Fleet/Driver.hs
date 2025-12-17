@@ -142,6 +142,7 @@ import EulerHS.Prelude (whenNothing_, (<|>))
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude hiding (toList)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.ClickhouseV2 as CH
@@ -1953,8 +1954,9 @@ postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwner
 
         otpCode <- maybe generateOTPCode return useFakeOtpM
         whenNothing_ useFakeOtpM $ do
+          let personLanguage = fromMaybe ENGLISH person.language
           (mbSender, message, templateId) <-
-            MessageBuilder.buildFleetJoiningMessage merchantOpCityId $
+            MessageBuilder.buildFleetJoiningMessage merchantOpCityId (Just personLanguage) $
               MessageBuilder.BuildFleetJoiningMessageReq
                 { otp = otpCode,
                   fleetOwnerName = fleetOwnerName
@@ -2001,7 +2003,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
         whenNothing_ useFakeOtpM $
           do
             (mbSender, message, templateId) <-
-              MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId $
+              MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId person.language $
                 MessageBuilder.BuildDownloadAppMessageReq
                   { fleetOwnerName = fleetOwner.firstName
                   }
@@ -2790,9 +2792,10 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       let countryCode = fromMaybe "+91" person.mobileCountryCode
           phoneNumber = countryCode <> mobileNumber
       smsCfg <- asks (.smsCfg)
+      let personLanguage = fromMaybe ENGLISH person.language
       withLogTag ("sending Deeplink Auth SMS" <> getId person.id) $ do
         (mbSender, message, templateId) <-
-          MessageBuilder.buildFleetDeepLinkAuthMessage merchantOpCityId $
+          MessageBuilder.buildFleetDeepLinkAuthMessage merchantOpCityId (Just personLanguage) $
             MessageBuilder.BuildFleetDeepLinkAuthMessage
               { fleetOwnerName = fleetOwner.firstName
               }
@@ -2804,9 +2807,10 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       let countryCode = fromMaybe "+91" person.mobileCountryCode
           phoneNumber = countryCode <> mobileNumber
       smsCfg <- asks (.smsCfg)
+      let personLanguage = fromMaybe ENGLISH person.language
       withLogTag ("sending Operator Deeplink Auth SMS" <> getId person.id) $ do
         (mbSender, message, templateId) <-
-          MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId $
+          MessageBuilder.buildOperatorDeepLinkAuthMessage merchantOpCityId (Just personLanguage) $
             MessageBuilder.BuildOperatorDeepLinkAuthMessage
               { operatorName = operator.firstName
               }

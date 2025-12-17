@@ -31,7 +31,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payment.Interface.Types
-import Kernel.External.Types (ServiceFlow)
+import Kernel.External.Types (Language (ENGLISH), ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto as Esq hiding (Value, groupBy, on)
@@ -296,8 +296,9 @@ sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount mbChannel sendDeep
       when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
     Just MessageKey.SMS -> do
       smsCfg <- asks (.smsCfg)
+      let driverLanguage = fromMaybe ENGLISH driver.language
       (mbSender, message, templateId) <-
-        MessageBuilder.buildSendPaymentLink merchantOpCityId $
+        MessageBuilder.buildSendPaymentLink merchantOpCityId (Just driverLanguage) $
           MessageBuilder.BuildSendPaymentLinkReq
             { paymentLink = webPaymentLink,
               amount = show (fromMaybe 0 mbAmount)

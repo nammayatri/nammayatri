@@ -19,6 +19,7 @@ module Storage.CachedQueries.Merchant.MerchantMessage
     findAllByMerchantOpCityIdInRideFlow,
     findByMerchantOperatingCityIdAndMessageKey,
     findByMerchantOperatingCityIdAndMessageKeyInRideFlow,
+    findByMerchantOperatingCityIdAndMessageKeyAndLanguage,
     clearCache,
     clearCacheById,
   )
@@ -26,6 +27,7 @@ where
 
 import Domain.Types.MerchantMessage
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -61,6 +63,56 @@ findByMerchantOperatingCityIdAndMessageKeyInRideFlow id messageKey configVersion
 
 makeMerchantOperatingCityIdAndMessageKey :: Id MerchantOperatingCity -> MessageKey -> Text
 makeMerchantOperatingCityIdAndMessageKey id messageKey = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey
+
+makeMerchantOperatingCityIdAndMessageKeyAndLanguage :: Id MerchantOperatingCity -> MessageKey -> Maybe Language -> Text
+makeMerchantOperatingCityIdAndMessageKeyAndLanguage id messageKey mbLanguage = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey <> maybe "" ((":Lang-" <>) . show) mbLanguage
+
+findByMerchantOperatingCityIdAndMessageKeyAndLanguage :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe Language -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
+findByMerchantOperatingCityIdAndMessageKeyAndLanguage id messageKey language mbConfigVersionMap = do
+  -- First try with the specified language
+  res <-
+    DynamicLogic.findOneConfigWithCacheKey
+      (cast id)
+      (LYT.RIDER_CONFIG LYT.MerchantMessage)
+      mbConfigVersionMap
+      Nothing
+      (Queries.findByMerchantOperatingCityIdAndMessageKeyAndLanguage id messageKey language)
+      (makeMerchantOperatingCityIdAndMessageKeyAndLanguage id messageKey language)
+  case res of
+    Just a -> return $ Just a
+    Nothing -> do
+      -- Fallback: if requested language wasn't ENGLISH, try with ENGLISH
+      if language == Just ENGLISH
+        then do
+          -- Already tried ENGLISH, now try without language filter (older method)
+          DynamicLogic.findOneConfigWithCacheKey
+            (cast id)
+            (LYT.RIDER_CONFIG LYT.MerchantMessage)
+            mbConfigVersionMap
+            Nothing
+            (Queries.findByMerchantOperatingCityIdAndMessageKey id messageKey)
+            (makeMerchantOperatingCityIdAndMessageKey id messageKey)
+        else do
+          -- Try with ENGLISH as fallback
+          resEnglish <-
+            DynamicLogic.findOneConfigWithCacheKey
+              (cast id)
+              (LYT.RIDER_CONFIG LYT.MerchantMessage)
+              mbConfigVersionMap
+              Nothing
+              (Queries.findByMerchantOperatingCityIdAndMessageKeyAndLanguage id messageKey (Just ENGLISH))
+              (makeMerchantOperatingCityIdAndMessageKeyAndLanguage id messageKey (Just ENGLISH))
+          case resEnglish of
+            Just a -> return $ Just a
+            Nothing ->
+              -- Final fallback: try without language filter (older method)
+              DynamicLogic.findOneConfigWithCacheKey
+                (cast id)
+                (LYT.RIDER_CONFIG LYT.MerchantMessage)
+                mbConfigVersionMap
+                Nothing
+                (Queries.findByMerchantOperatingCityIdAndMessageKey id messageKey)
+                (makeMerchantOperatingCityIdAndMessageKey id messageKey)
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> m ()
 clearCache merchantOperatingCityId messageKey =

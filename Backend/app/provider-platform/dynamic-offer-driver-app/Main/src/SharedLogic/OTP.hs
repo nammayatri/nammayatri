@@ -24,6 +24,7 @@ import qualified Domain.Types.MerchantOperatingCity as MOC
 import qualified Domain.Types.Person as Person
 import qualified Email.AWS.Flow as Email
 import qualified EulerHS.Language as L
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Sms.Config
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
@@ -54,8 +55,9 @@ sendOTPByIdentifierType ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Language ->
   m ()
-sendOTPByIdentifierType identifierType otpCode personId merchantId merchantOpCityId mbCountryCode mbMobileNumber mbEmail = do
+sendOTPByIdentifierType identifierType otpCode personId merchantId merchantOpCityId mbCountryCode mbMobileNumber mbEmail mbLanguage = do
   smsCfg <- asks (.smsCfg)
   let otpHash = smsCfg.credConfig.otpHash
 
@@ -66,7 +68,7 @@ sendOTPByIdentifierType identifierType otpCode personId merchantId merchantOpCit
       let phoneNumber = countryCode <> mobileNumber
       withLogTag ("personId_" <> getId personId) $ do
         (mbSender, message, templateId) <-
-          MessageBuilder.buildSendOTPMessage merchantOpCityId $
+          MessageBuilder.buildSendOTPMessage merchantOpCityId mbLanguage $
             MessageBuilder.BuildSendOTPMessageReq
               { otp = otpCode,
                 hash = otpHash

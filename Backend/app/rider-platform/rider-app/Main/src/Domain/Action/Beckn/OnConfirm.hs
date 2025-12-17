@@ -134,7 +134,7 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
             let countryCode = fromMaybe "+91" customer.mobileCountryCode
             let phoneNumber = countryCode <> mobileNumber
             buildSmsReq <-
-              MessageBuilder.buildSendBookingOTPMessage merchantOperatingCityId $
+              MessageBuilder.buildSendBookingOTPMessage merchantOperatingCityId customer.language $
                 MessageBuilder.BuildSendBookingOTPMessageReq
                   { otp = show otp,
                     amount = show (booking.estimatedTotalFare.amountInt)

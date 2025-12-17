@@ -1309,17 +1309,17 @@ notifyRideStartToEmergencyContacts booking ride = do
           --     [ fromMaybe "" name,
           --       " wants you to follow their ride"
           --     ]
-          Nothing -> sendSMS contact rider.firstName trackLink
+          Nothing -> sendSMS contact rider.firstName trackLink rider.language
     else logInfo "Follow ride is not enabled"
   where
     updateFollowsRideCount emPersonId = do
       void $ CQFollowRide.updateFollowRideList emPersonId booking.riderId True
       Person.updateFollowsRide True emPersonId
 
-    sendSMS emergencyContact name trackLink = do
+    sendSMS emergencyContact name trackLink mbLanguage = do
       shortenedTrackingUrl <- MessageBuilder.shortenTrackingUrl trackLink
       buildSmsReq <-
-        MessageBuilder.buildFollowRideStartedMessage booking.merchantOperatingCityId $
+        MessageBuilder.buildFollowRideStartedMessage booking.merchantOperatingCityId mbLanguage $
           MessageBuilder.BuildFollowRideMessageReq
             { userName = fromMaybe "" name,
               rideLink = shortenedTrackingUrl
