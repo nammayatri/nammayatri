@@ -29,6 +29,51 @@ clearTollStartGateBatchCache :: (CacheFlow m r) => Id DP.Driver -> m ()
 clearTollStartGateBatchCache driverId = do
   Hedis.del $ tollStartGateTrackingKey driverId
 
+-- | Validates pending tolls (entry detected, exit not found) against estimated tolls
+-- | Used at end ride to apply toll charges when exit gate was never detected
+-- | Returns Nothing if validation fails or no estimate exists (conservative approach for safety)
+checkAndValidatePendingTolls ::
+  (CacheFlow m r) =>
+  Id DP.Driver ->
+  Maybe HighPrecMoney ->
+  Maybe [Text] ->
+  m (Maybe (HighPrecMoney, [Text]))
+checkAndValidatePendingTolls driverId estimatedTollCharges estimatedTollNames = do
+  mbPendingTolls :: Maybe [Toll] <- Hedis.safeGet (tollStartGateTrackingKey driverId)
+
+  case (mbPendingTolls, estimatedTollCharges, estimatedTollNames) of
+    (Just pendingTolls, Just estCharges, Just estNames) -> do
+      -- Check if any cached toll name matches the estimated toll names
+      let nameMatchingTolls = filter (\toll -> elem toll.name estNames) pendingTolls
+
+      if not $ null nameMatchingTolls
+        then do
+          -- Found matching toll(s) - use estimated charges
+          logInfo $
+            "Pending toll validated with estimate: "
+              <> show estNames
+              <> " - ₹"
+              <> show estCharges
+          return $ Just (estCharges, estNames)
+        else do
+          -- Toll names don't match - don't charge for safety
+          logWarning $
+            "Pending toll does not match estimate. NOT charging for safety. "
+              <> "Cached: "
+              <> show (map (.name) pendingTolls)
+              <> " | Estimated: "
+              <> show estNames
+          return Nothing
+    (Just pendingTolls, _, _) -> do
+      -- Entry detected but NO estimated toll - don't charge without validation
+      logWarning $
+        "Pending toll found WITHOUT estimate. NOT charging for safety: "
+          <> show (map (\t -> (t.name, t.price.amount)) pendingTolls)
+      return Nothing
+    (Nothing, _, _) ->
+      -- No pending tolls in cache
+      return Nothing
+
 -- This function is triggered when allTollCombinationsWithStartGates are found intersecting the route to find the exit segment intersection on the further route and return the remaining route after intersection.
 getExitTollAndRemainingRoute :: RoutePoints -> [Toll] -> Maybe (RoutePoints, Toll)
 getExitTollAndRemainingRoute [] _ = Nothing
