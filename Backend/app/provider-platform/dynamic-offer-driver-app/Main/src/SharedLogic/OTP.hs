@@ -54,10 +54,11 @@ sendOTPByIdentifierType ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   m ()
-sendOTPByIdentifierType identifierType otpCode personId merchantId merchantOpCityId mbCountryCode mbMobileNumber mbEmail = do
+sendOTPByIdentifierType identifierType otpCode personId merchantId merchantOpCityId mbCountryCode mbMobileNumber mbEmail mbSenderHash = do
   smsCfg <- asks (.smsCfg)
-  let otpHash = smsCfg.credConfig.otpHash
+  let otpHash = fromMaybe smsCfg.credConfig.otpHash mbSenderHash
 
   case identifierType of
     Person.MOBILENUMBER -> do

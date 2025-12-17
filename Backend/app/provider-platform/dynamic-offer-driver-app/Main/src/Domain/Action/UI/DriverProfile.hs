@@ -80,6 +80,7 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
       req.mobileCountryCode
       (Just req.value)
       Nothing
+      Nothing
 
   case identifierType of
     SP.MOBILENUMBER -> do
