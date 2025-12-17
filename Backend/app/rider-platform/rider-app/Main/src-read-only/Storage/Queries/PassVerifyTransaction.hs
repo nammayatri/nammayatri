@@ -38,6 +38,7 @@ updateByPrimaryKey (Domain.Types.PassVerifyTransaction.PassVerifyTransaction {..
   updateWithKV
     [ Se.Set Beam.destinationStopCode destinationStopCode,
       Se.Set Beam.fleetId fleetId,
+      Se.Set Beam.isActuallyValid isActuallyValid,
       Se.Set Beam.purchasePassId (Kernel.Types.Id.getId purchasePassId),
       Se.Set Beam.sourceStopCode sourceStopCode,
       Se.Set Beam.validTill validTill,
