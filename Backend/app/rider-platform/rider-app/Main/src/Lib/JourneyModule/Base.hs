@@ -157,7 +157,9 @@ init journeyReq userPreferences = do
                           waybillId = liveInfo.waybillId,
                           scheduleNo = liveInfo.scheduleNo,
                           updateSource = Just DJourneyLeg.UserSpotBooked,
-                          serviceTierType = Just liveInfo.serviceType
+                          serviceTierType = Just liveInfo.serviceType,
+                          busConductorId = liveInfo.busConductorId,
+                          busDriverId = liveInfo.busDriverId
                         }
                   else Nothing
           journeyLeg <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) fromLocation toLocation journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.parentSearchId journeyReq.maximumWalkDistance mbTotalLegFare Nothing onboardedSingleModeVehicle ((.serviceType) <$> journeyReq.routeLiveInfo) journeyReq.busLocationData

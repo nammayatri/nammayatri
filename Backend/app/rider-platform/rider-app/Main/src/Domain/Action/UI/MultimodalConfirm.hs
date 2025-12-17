@@ -1418,7 +1418,9 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
             waybillId = reqJourneyLeg.finalBoardedWaybillId,
             scheduleNo = reqJourneyLeg.finalBoardedScheduleNo,
             updateSource = reqJourneyLeg.finalBoardedBusNumberSource,
-            serviceTierType = reqJourneyLeg.finalBoardedBusServiceTierType
+            serviceTierType = reqJourneyLeg.finalBoardedBusServiceTierType,
+            busConductorId = reqJourneyLeg.busConductorId,
+            busDriverId = reqJourneyLeg.busDriverId
           }
   newJourneyLeg <-
     JMTypes.mkJourneyLeg
