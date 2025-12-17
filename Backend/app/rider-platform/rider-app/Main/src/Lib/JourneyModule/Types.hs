@@ -436,7 +436,9 @@ data BusLegExtraInfo = BusLegExtraInfo
     legEndTime :: Maybe UTCTime,
     discounts :: Maybe [FRFSTicketServiceAPI.FRFSDiscountRes],
     categories :: [FRFSTicketServiceAPI.CategoryInfoResponse],
-    categoryBookingDetails :: Maybe [CategoryBookingDetails] -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
+    categoryBookingDetails :: Maybe [CategoryBookingDetails], -- TODO :: To be deprecated once UI starts consuming `categories` instead as this is redundant data.
+    busConductorId :: Maybe Text,
+    busDriverId :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -945,6 +947,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   trackingStatus = journeyLegDetail.trackingStatus,
                   trackingStatusLastUpdatedAt = journeyLegDetail.trackingStatusLastUpdatedAt,
                   fleetNo = journeyLeg.finalBoardedBusNumber,
+                  busConductorId = journeyLeg.busConductorId,
+                  busDriverId = journeyLeg.busDriverId,
                   legStartTime = journeyRouteDetail.legStartTime,
                   legEndTime = journeyRouteDetail.legEndTime,
                   discounts =
@@ -1185,6 +1189,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                   trackingStatus = journeyLegDetail.trackingStatus,
                   trackingStatusLastUpdatedAt = journeyLegDetail.trackingStatusLastUpdatedAt,
                   fleetNo = journeyLeg.finalBoardedBusNumber,
+                  busConductorId = journeyLeg.busConductorId,
+                  busDriverId = journeyLeg.busDriverId,
                   legStartTime = journeyRouteDetail.legStartTime,
                   legEndTime = journeyRouteDetail.legEndTime,
                   discounts =
@@ -1296,7 +1302,9 @@ data FinalBoardedBusData = FinalBoardedBusData
     waybillId :: Maybe Text,
     scheduleNo :: Maybe Text,
     updateSource :: Maybe DJL.BusBoardingMethod,
-    serviceTierType :: Maybe Spec.ServiceTierType
+    serviceTierType :: Maybe Spec.ServiceTierType,
+    busConductorId :: Maybe Text,
+    busDriverId :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1366,6 +1374,8 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         legPricingId = Nothing,
         changedBusesInSequence = Nothing,
         finalBoardedBusNumber = mbFinalBoardedBusData >>= (.busNumber),
+        busConductorId = mbFinalBoardedBusData >>= (.busConductorId),
+        busDriverId = mbFinalBoardedBusData >>= (.busDriverId),
         finalBoardedBusServiceTierType = mbFinalBoardedBusData >>= (.serviceTierType),
         userBookedBusServiceTierType = mbUserBookedServiceTierType,
         finalBoardedDepotNo = mbFinalBoardedBusData >>= (.depotNo),

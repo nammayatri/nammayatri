@@ -249,6 +249,8 @@ JourneyLeg:
     finalBoardedScheduleNo: Maybe Text
     finalBoardedBusServiceTierType: Maybe ServiceTierType
     userBookedBusServiceTierType: Maybe ServiceTierType
+    busConductorId: Maybe Text
+    busDriverId: Maybe Text
     busLocationData: "[BusLocation]"
 
   sqlType:
