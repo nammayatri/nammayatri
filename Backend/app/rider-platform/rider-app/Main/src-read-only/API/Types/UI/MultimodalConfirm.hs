@@ -286,7 +286,7 @@ data RouteAvailabilityResp = RouteAvailabilityResp {availableRoutes :: [Availabl
 
 data RouteServiceabilityReq = RouteServiceabilityReq
   { destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    routeCode :: Kernel.Prelude.Text,
+    routeCode :: Maybe Kernel.Prelude.Text,
     serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
