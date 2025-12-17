@@ -14,6 +14,7 @@ data PassVerifyTransactionT f = PassVerifyTransactionT
   { destinationStopCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     fleetId :: (B.C f Kernel.Prelude.Text),
     id :: (B.C f Kernel.Prelude.Text),
+    isActuallyValid :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     purchasePassId :: (B.C f Kernel.Prelude.Text),
     sourceStopCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     validTill :: (B.C f Kernel.Prelude.UTCTime),
