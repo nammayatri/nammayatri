@@ -86,7 +86,7 @@ updateIsNew :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Boo
 updateIsNew isNew id = do
   -- Currently used only to track for if someone is logged in (Chennai One)
   _now <- getCurrentTime
-  updateWithKV
+  updateOneWithKV
     [ Se.Set BeamP.isNew isNew,
       Se.Set BeamP.updatedAt _now
     ]
