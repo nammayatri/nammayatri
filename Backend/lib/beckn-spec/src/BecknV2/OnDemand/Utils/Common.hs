@@ -24,6 +24,7 @@ import Domain.Types
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as DTV
+import qualified Domain.Types.VehicleVariant as VVM
 import EulerHS.Prelude
 import Kernel.Prelude (intToNominalDiffTime, listToMaybe)
 import qualified Kernel.Types.Beckn.Gps as Gps
@@ -65,41 +66,7 @@ computeTtlISO8601 ttlInSec =
    in Utils.formatTimeDifference ttlToNominalDiffTime
 
 mapVariantToVehicle :: DTV.VehicleVariant -> Enums.VehicleCategory
-mapVariantToVehicle = \case
-  DTV.SEDAN -> Enums.CAB
-  DTV.HATCHBACK -> Enums.CAB
-  DTV.TAXI -> Enums.CAB
-  DTV.SUV -> Enums.CAB
-  DTV.TAXI_PLUS -> Enums.CAB
-  DTV.PREMIUM_SEDAN -> Enums.CAB
-  DTV.BLACK -> Enums.CAB
-  DTV.BLACK_XL -> Enums.CAB
-  DTV.BIKE -> Enums.MOTORCYCLE
-  DTV.AUTO_RICKSHAW -> Enums.AUTO_RICKSHAW
-  DTV.AMBULANCE_TAXI -> Enums.AMBULANCE
-  DTV.AMBULANCE_TAXI_OXY -> Enums.AMBULANCE
-  DTV.AMBULANCE_AC -> Enums.AMBULANCE
-  DTV.AMBULANCE_AC_OXY -> Enums.AMBULANCE
-  DTV.AMBULANCE_VENTILATOR -> Enums.AMBULANCE
-  DTV.SUV_PLUS -> Enums.CAB
-  DTV.HERITAGE_CAB -> Enums.CAB
-  DTV.EV_AUTO_RICKSHAW -> Enums.AUTO_RICKSHAW
-  DTV.DELIVERY_BIKE -> Enums.MOTORCYCLE
-  DTV.DELIVERY_LIGHT_GOODS_VEHICLE -> Enums.TRUCK
-  DTV.DELIVERY_TRUCK_MINI -> Enums.TRUCK
-  DTV.DELIVERY_TRUCK_SMALL -> Enums.TRUCK
-  DTV.DELIVERY_TRUCK_MEDIUM -> Enums.TRUCK
-  DTV.DELIVERY_TRUCK_LARGE -> Enums.TRUCK
-  DTV.DELIVERY_TRUCK_ULTRA_LARGE -> Enums.TRUCK
-  DTV.BUS_NON_AC -> Enums.BUS
-  DTV.BUS_AC -> Enums.BUS
-  DTV.AUTO_PLUS -> Enums.AUTO_RICKSHAW
-  DTV.BOAT -> Enums.BOAT
-  DTV.VIP_ESCORT -> Enums.CAB
-  DTV.VIP_OFFICER -> Enums.CAB
-  DTV.AC_PRIORITY -> Enums.CAB
-  DTV.BIKE_PLUS -> Enums.MOTORCYCLE
-  DTV.E_RICKSHAW -> Enums.AUTO_RICKSHAW
+mapVariantToVehicle = VVM.getRawBecknCategoryForVariant
 
 castVehicleCategoryToDomain :: Enums.VehicleCategory -> DVC.VehicleCategory
 castVehicleCategoryToDomain = \case
@@ -112,45 +79,8 @@ castVehicleCategoryToDomain = \case
   Enums.BOAT -> DVC.BOAT
   _ -> DVC.CAR -- not used
 
-mapServiceTierToCategory :: ServiceTierType -> Enums.VehicleCategory
-mapServiceTierToCategory = \case
-  SEDAN -> Enums.CAB
-  HATCHBACK -> Enums.CAB
-  TAXI -> Enums.CAB
-  SUV -> Enums.CAB
-  TAXI_PLUS -> Enums.CAB
-  COMFY -> Enums.CAB
-  ECO -> Enums.CAB
-  PREMIUM -> Enums.CAB
-  PREMIUM_SEDAN -> Enums.CAB
-  BLACK -> Enums.CAB
-  BLACK_XL -> Enums.CAB
-  AUTO_RICKSHAW -> Enums.AUTO_RICKSHAW
-  EV_AUTO_RICKSHAW -> Enums.AUTO_RICKSHAW
-  BIKE -> Enums.MOTORCYCLE
-  AMBULANCE_TAXI -> Enums.AMBULANCE
-  AMBULANCE_TAXI_OXY -> Enums.AMBULANCE
-  AMBULANCE_AC -> Enums.AMBULANCE
-  AMBULANCE_AC_OXY -> Enums.AMBULANCE
-  AMBULANCE_VENTILATOR -> Enums.AMBULANCE
-  SUV_PLUS -> Enums.CAB
-  HERITAGE_CAB -> Enums.CAB
-  DELIVERY_BIKE -> Enums.MOTORCYCLE
-  DELIVERY_LIGHT_GOODS_VEHICLE -> Enums.TRUCK
-  DELIVERY_TRUCK_MINI -> Enums.TRUCK
-  DELIVERY_TRUCK_SMALL -> Enums.TRUCK
-  DELIVERY_TRUCK_MEDIUM -> Enums.TRUCK
-  DELIVERY_TRUCK_LARGE -> Enums.TRUCK
-  DELIVERY_TRUCK_ULTRA_LARGE -> Enums.TRUCK
-  BUS_NON_AC -> Enums.BUS
-  BUS_AC -> Enums.BUS
-  AUTO_PLUS -> Enums.AUTO_RICKSHAW
-  BOAT -> Enums.BOAT
-  VIP_ESCORT -> Enums.CAB
-  VIP_OFFICER -> Enums.CAB
-  AC_PRIORITY -> Enums.CAB
-  BIKE_PLUS -> Enums.MOTORCYCLE
-  E_RICKSHAW -> Enums.AUTO_RICKSHAW
+mapServiceTierToCategory :: ServiceTierType -> Enums.VehicleCategory -- error to come
+mapServiceTierToCategory serviceTier = VVM.getBecknCategoryForVariant $ VVM.castServiceTierToVariant serviceTier
 
 getListOfServiceTireTypes :: Enums.VehicleCategory -> [DVST.ServiceTierType]
 getListOfServiceTireTypes Enums.CAB = [DVST.SEDAN, DVST.SUV, DVST.HATCHBACK, DVST.TAXI, DVST.TAXI_PLUS, DVST.ECO, DVST.COMFY, DVST.PREMIUM, DVST.PREMIUM_SEDAN, DVST.BLACK, DVST.BLACK_XL, DVST.SUV_PLUS, DVST.HERITAGE_CAB, DVST.VIP_ESCORT, DVST.VIP_OFFICER, DVST.AC_PRIORITY]

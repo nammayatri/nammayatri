@@ -9,6 +9,7 @@ import qualified Data.List
 import qualified Data.Text
 import qualified Domain.Action.Beckn.Search
 import Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.VehicleVariant as Variant
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
@@ -98,7 +99,7 @@ tfProviderItems res isValueAddNP pricing = do
 
 tfVehicle :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Vehicle
 tfVehicle pricing = do
-  let (category, variant) = Beckn.OnDemand.Utils.Common.castVariant pricing.vehicleVariant
+  let (category, variant) = Variant.castVariantToBeckn pricing.vehicleVariant
       vehicleCategory_ = Just category
       vehicleColor_ = Nothing
       vehicleMake_ = Nothing

@@ -63,7 +63,7 @@ getVehicleVariant provider item = do
       category = vehicle >>= (.vehicleCategory)
       capacity = vehicle >>= (.vehicleCapacity)
   let variant = map T.toUpper variant'
-      mbDVehVariant = Common.parseVehicleVariant category variant
+      mbDVehVariant = VehicleVariant.parseVehicleVariantFromBeckn category variant
   vehicleVariant <- mbDVehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:-" <> show category <> ",vehicle variant:-" <> show variant)
   pure (vehicleVariant, capacity)
 
@@ -72,7 +72,7 @@ isValidVehVariant fulfillment = do
   let variant' = fulfillment.fulfillmentVehicle >>= (.vehicleVariant)
       variant = map T.toUpper variant'
       category = fulfillment.fulfillmentVehicle >>= (.vehicleCategory)
-      mbDVehVariant = Common.parseVehicleVariant category variant
+      mbDVehVariant = VehicleVariant.parseVehicleVariantFromBeckn category variant
   unless (isJust mbDVehVariant) $ do
     logWarning $ "Unable to parse vehicle category:-" <> show category <> ",vehicle variant:-" <> show variant
   return $ isJust mbDVehVariant
@@ -421,7 +421,7 @@ makeLatLong provider vehicleVariant location = do
           >>= ( \fulf ->
                   fulf.fulfillmentVehicle
                     >>= ( \fVehicle ->
-                            Common.parseVehicleVariant
+                            VehicleVariant.parseVehicleVariantFromBeckn
                               fVehicle.vehicleCategory
                               (map T.toUpper (fVehicle.vehicleVariant))
                         )

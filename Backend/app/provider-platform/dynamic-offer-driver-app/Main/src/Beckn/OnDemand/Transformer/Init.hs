@@ -14,6 +14,7 @@ import Domain.Types
 import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.Location as Location
 import qualified Domain.Types.Trip as Trip
+import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
@@ -41,7 +42,7 @@ buildDInitReq subscriber req isValueAddNP = do
   let paymentMode = req.initReqMessage.confirmReqMessageOrder.orderPayments >>= Kernel.Prelude.listToMaybe <&> Beckn.OnDemand.Utils.Init.mkPaymentMode & Kernel.Prelude.join
   let vehCategory = req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleCategory)
       vehVariant = req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleVariant)
-  vehicleVariant_ <- Beckn.OnDemand.Utils.Init.castVehicleVariant vehCategory vehVariant & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest $ "Unable to parse vehicle variant:-" <> show vehVariant <> ",vehicle category:-" <> show vehCategory)
+  vehicleVariant_ <- VehVar.parseVehicleVariantFromBeckn vehCategory vehVariant & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest $ "Unable to parse vehicle variant:-" <> show vehVariant <> ",vehicle category:-" <> show vehCategory)
   let bppSubscriberId_ = req.initReqContext.contextBppId
   riderPhoneNumber <- req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentCustomer) >>= (.customerContact) >>= (.contactPhone) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Customer Phone not found.")
   let mbRiderName = req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personName)

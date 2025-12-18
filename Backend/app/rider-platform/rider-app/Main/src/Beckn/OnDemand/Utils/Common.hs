@@ -30,7 +30,6 @@ import qualified Domain.Types.LocationAddress as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as MOC
 import qualified Domain.Types.ServiceTierType as DVST
-import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, (%~))
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.Prelude as KP
@@ -193,82 +192,6 @@ mkPaymentTags =
             tagDisplay = Just False,
             tagValue = Just "https://example-test-bap.com/static-terms.txt"
           }
-
-castVehicleVariant :: VehVar.VehicleVariant -> (Text, Text)
-castVehicleVariant = \case
-  VehVar.SEDAN -> (show Enums.CAB, "SEDAN")
-  VehVar.SUV -> (show Enums.CAB, "SUV")
-  VehVar.HATCHBACK -> (show Enums.CAB, "HATCHBACK")
-  VehVar.AUTO_RICKSHAW -> (show Enums.AUTO_RICKSHAW, "AUTO_RICKSHAW")
-  VehVar.TAXI -> (show Enums.CAB, "TAXI")
-  VehVar.TAXI_PLUS -> (show Enums.CAB, "TAXI_PLUS")
-  VehVar.PREMIUM_SEDAN -> (show Enums.CAB, "PREMIUM_SEDAN")
-  VehVar.BLACK -> (show Enums.CAB, "BLACK")
-  VehVar.BLACK_XL -> (show Enums.CAB, "BLACK_XL")
-  VehVar.BIKE -> (show Enums.TWO_WHEELER, "BIKE") -- When parsing from beckn to domain, convert to MOTORCYCLE
-  VehVar.DELIVERY_BIKE -> (show Enums.TWO_WHEELER, "DELIVERY_BIKE")
-  VehVar.AMBULANCE_TAXI -> (show Enums.AMBULANCE, "AMBULANCE_TAXI")
-  VehVar.AMBULANCE_TAXI_OXY -> (show Enums.AMBULANCE, "AMBULANCE_TAXI_OXY")
-  VehVar.AMBULANCE_AC -> (show Enums.AMBULANCE, "AMBULANCE_AC")
-  VehVar.AMBULANCE_AC_OXY -> (show Enums.AMBULANCE, "AMBULANCE_AC_OXY")
-  VehVar.AMBULANCE_VENTILATOR -> (show Enums.AMBULANCE, "AMBULANCE_VENTILATOR")
-  VehVar.SUV_PLUS -> (show Enums.CAB, "SUV_PLUS")
-  VehVar.HERITAGE_CAB -> (show Enums.CAB, "HERITAGE_CAB")
-  VehVar.EV_AUTO_RICKSHAW -> (show Enums.AUTO_RICKSHAW, "EV_AUTO_RICKSHAW")
-  VehVar.DELIVERY_LIGHT_GOODS_VEHICLE -> (show Enums.TRUCK, "DELIVERY_LIGHT_GOODS_VEHICLE")
-  VehVar.DELIVERY_TRUCK_MINI -> (show Enums.TRUCK, "DELIVERY_TRUCK_MINI")
-  VehVar.DELIVERY_TRUCK_SMALL -> (show Enums.TRUCK, "DELIVERY_TRUCK_SMALL")
-  VehVar.DELIVERY_TRUCK_MEDIUM -> (show Enums.TRUCK, "DELIVERY_TRUCK_MEDIUM")
-  VehVar.DELIVERY_TRUCK_LARGE -> (show Enums.TRUCK, "DELIVERY_TRUCK_LARGE")
-  VehVar.DELIVERY_TRUCK_ULTRA_LARGE -> (show Enums.TRUCK, "DELIVERY_TRUCK_ULTRA_LARGE")
-  VehVar.BUS_NON_AC -> (show Enums.BUS, "BUS_NON_AC")
-  VehVar.BUS_AC -> (show Enums.BUS, "BUS_AC")
-  VehVar.AUTO_PLUS -> (show Enums.AUTO_RICKSHAW, "AUTO_PLUS")
-  VehVar.BOAT -> (show Enums.BOAT, "BOAT")
-  VehVar.VIP_ESCORT -> (show Enums.CAB, "VIP_ESCORT")
-  VehVar.VIP_OFFICER -> (show Enums.CAB, "VIP_OFFICER")
-  VehVar.AC_PRIORITY -> (show Enums.CAB, "AC_PRIORITY")
-  VehVar.BIKE_PLUS -> (show Enums.TWO_WHEELER, "BIKE_PLUS")
-  VehVar.E_RICKSHAW -> (show Enums.AUTO_RICKSHAW, "E_RICKSHAW")
-
-parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
-parseVehicleVariant mbCategory mbVariant =
-  case (mbCategory, mbVariant) of
-    (Just "CAB", Just "SEDAN") -> Just VehVar.SEDAN
-    (Just "CAB", Just "SUV") -> Just VehVar.SUV
-    (Just "CAB", Just "HATCHBACK") -> Just VehVar.HATCHBACK
-    (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just VehVar.AUTO_RICKSHAW
-    (Just "CAB", Just "TAXI") -> Just VehVar.TAXI
-    (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
-    (Just "CAB", Just "BLACK") -> Just VehVar.BLACK
-    (Just "CAB", Just "BLACK_XL") -> Just VehVar.BLACK_XL
-    (Just "CAB", Just "PREMIUM_SEDAN") -> Just VehVar.PREMIUM_SEDAN
-    (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE -- becomes redundant, TODO : remove in next release
-    (Just "TWO_WHEELER", Just "BIKE") -> Just VehVar.BIKE
-    (Just "TWO_WHEELER", Just "DELIVERY_BIKE") -> Just VehVar.DELIVERY_BIKE
-    (Just "AMBULANCE", Just "AMBULANCE_TAXI") -> Just VehVar.AMBULANCE_TAXI
-    (Just "AMBULANCE", Just "AMBULANCE_TAXI_OXY") -> Just VehVar.AMBULANCE_TAXI_OXY
-    (Just "AMBULANCE", Just "AMBULANCE_AC") -> Just VehVar.AMBULANCE_AC
-    (Just "AMBULANCE", Just "AMBULANCE_AC_OXY") -> Just VehVar.AMBULANCE_AC_OXY
-    (Just "AMBULANCE", Just "AMBULANCE_VENTILATOR") -> Just VehVar.AMBULANCE_VENTILATOR
-    (Just "CAB", Just "SUV_PLUS") -> Just VehVar.SUV_PLUS
-    (Just "CAB", Just "HERITAGE_CAB") -> Just VehVar.HERITAGE_CAB
-    (Just "AUTO_RICKSHAW", Just "EV_AUTO_RICKSHAW") -> Just VehVar.EV_AUTO_RICKSHAW
-    (Just "AUTO_RICKSHAW", Just "AUTO_PLUS") -> Just VehVar.AUTO_PLUS
-    (Just "TRUCK", Just "DELIVERY_LIGHT_GOODS_VEHICLE") -> Just VehVar.DELIVERY_LIGHT_GOODS_VEHICLE
-    (Just "TRUCK", Just "DELIVERY_TRUCK_MINI") -> Just VehVar.DELIVERY_TRUCK_MINI
-    (Just "TRUCK", Just "DELIVERY_TRUCK_SMALL") -> Just VehVar.DELIVERY_TRUCK_SMALL
-    (Just "TRUCK", Just "DELIVERY_TRUCK_MEDIUM") -> Just VehVar.DELIVERY_TRUCK_MEDIUM
-    (Just "TRUCK", Just "DELIVERY_TRUCK_LARGE") -> Just VehVar.DELIVERY_TRUCK_LARGE
-    (Just "TRUCK", Just "DELIVERY_TRUCK_ULTRA_LARGE") -> Just VehVar.DELIVERY_TRUCK_ULTRA_LARGE
-    (Just "BOAT", Just "BOAT") -> Just VehVar.BOAT
-    (Just "CAB", Just "VIP_ESCORT") -> Just VehVar.VIP_ESCORT
-    (Just "CAB", Just "VIP_OFFICER") -> Just VehVar.VIP_OFFICER
-    (Just "CAB", Just "AC_PRIORITY") -> Just VehVar.AC_PRIORITY
-    (Just "TWO_WHEELER", Just "BIKE_PLUS") -> Just VehVar.BIKE_PLUS
-    (Just "MOTORCYCLE", Just "BIKE_PLUS") -> Just VehVar.BIKE_PLUS
-    (Just "AUTO_RICKSHAW", Just "E_RICKSHAW") -> Just VehVar.E_RICKSHAW
-    _ -> Nothing
 
 castCancellationSourceV2 :: Text -> SBCR.CancellationSource
 castCancellationSourceV2 = \case
