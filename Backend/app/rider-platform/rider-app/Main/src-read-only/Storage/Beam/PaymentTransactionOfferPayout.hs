@@ -16,6 +16,7 @@ data PaymentTransactionOfferPayoutT f = PaymentTransactionOfferPayoutT
     bookingCreatedAt :: B.C f Kernel.Prelude.UTCTime,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     id :: B.C f Kernel.Prelude.Text,
+    isConsumedByCron :: B.C f Kernel.Prelude.Bool,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     networkOrderId :: B.C f Kernel.Prelude.Text,
@@ -25,6 +26,7 @@ data PaymentTransactionOfferPayoutT f = PaymentTransactionOfferPayoutT
     paymentRRN :: B.C f Kernel.Prelude.Text,
     paymentTxnId :: B.C f Kernel.Prelude.Text,
     providerAgency :: B.C f Kernel.Prelude.Text,
+    settledAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
     settlementReference :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     settlementTs :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     updatedAt :: B.C f Kernel.Prelude.UTCTime

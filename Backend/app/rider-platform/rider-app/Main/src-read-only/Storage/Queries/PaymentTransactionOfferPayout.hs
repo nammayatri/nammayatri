@@ -25,6 +25,7 @@ instance FromTType' Beam.PaymentTransactionOfferPayout Domain.Types.PaymentTrans
             bookingCreatedAt = bookingCreatedAt,
             createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
+            isConsumedByCron = isConsumedByCron,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             networkOrderId = networkOrderId,
@@ -34,6 +35,7 @@ instance FromTType' Beam.PaymentTransactionOfferPayout Domain.Types.PaymentTrans
             paymentRRN = paymentRRN,
             paymentTxnId = paymentTxnId,
             providerAgency = providerAgency,
+            settledAmount = settledAmount,
             settlementReference = settlementReference,
             settlementTs = settlementTs,
             updatedAt = updatedAt
@@ -46,6 +48,7 @@ instance ToTType' Beam.PaymentTransactionOfferPayout Domain.Types.PaymentTransac
         Beam.bookingCreatedAt = bookingCreatedAt,
         Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.isConsumedByCron = isConsumedByCron,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.networkOrderId = networkOrderId,
@@ -55,6 +58,7 @@ instance ToTType' Beam.PaymentTransactionOfferPayout Domain.Types.PaymentTransac
         Beam.paymentRRN = paymentRRN,
         Beam.paymentTxnId = paymentTxnId,
         Beam.providerAgency = providerAgency,
+        Beam.settledAmount = settledAmount,
         Beam.settlementReference = settlementReference,
         Beam.settlementTs = settlementTs,
         Beam.updatedAt = updatedAt
