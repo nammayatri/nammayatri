@@ -351,17 +351,6 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       SP.DEVICE -> case req.imeiNumber of -- IdentifierType for verification-less login
         Nothing -> throwError $ InvalidRequest "Anonymous request missing imeiNumber"
         Just imei -> do
-          -- TODO: ONLY FOR TESTING IN MASTER, REMOVE BEFORE PRODUCTION,Chennai One merchant and city
-          -- BEGIN
-          merchantOperatingCityId <-
-            CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
-              >>= fmap (.id)
-                . fromMaybeM
-                  ( MerchantOperatingCityNotFound $
-                      "merchantId: " <> merchant.id.getId <> " ,city: " <> show merchant.defaultCity
-                  )
-          unless (merchant.id.getId == "19dded4d-51dd-4dcd-a07d-d353649d8595" && merchantOperatingCityId.getId == "fc87c15e-29aa-492b-835f-bda8ff00c840") $ throwError $ InvalidRequest "NOT_ALLOWED_FOR_THIS_MERCHANT"
-          -- END
           let notificationToken = req.notificationToken
           person <-
             Person.findByImeiNumber imei
@@ -451,12 +440,6 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
         pure $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing Nothing
 
-  (mbDepotCode, mbIsDepotAdmin) <-
-    if req.isOperatorReq == Just True
-      then do
-        mbDepotManager <- QDepotManager.findByPersonId person.id
-        return (mbDepotManager <&> (.depotCode), mbDepotManager <&> (.isAdmin))
-      else return (Nothing, Nothing)
   return $ authResBase {depotCode = mbDepotCode, isDepotAdmin = mbIsDepotAdmin}
   where
     castChannelToMedium :: SOTP.OTPChannel -> SR.Medium
@@ -509,7 +492,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
       mbEncEmail <- encrypt `mapM` reqWithMobileNumber.email
       mbEncBusinessEmail <- encrypt `mapM` reqWithMobileNumber.businessEmail
       _ <- RegistrationToken.setDirectAuth regToken.id SR.SIGNATURE
-      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumber.firstName <|> person.firstName <|> Just "User") reqWithMobileNumber.middleName reqWithMobileNumber.lastName mbEncEmail mbEncBusinessEmail deviceToken notificationToken (reqWithMobileNumber.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumber.gender <|> Just person.gender) mbRnVersion (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing person Nothing Nothing Nothing
+      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumber.firstName <|> person.firstName <|> Just "User") reqWithMobileNumber.middleName reqWithMobileNumber.lastName mbEncEmail mbEncBusinessEmail deviceToken notificationToken (reqWithMobileNumber.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumber.gender <|> Just person.gender) mbRnVersion (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing person Nothing Nothing Nothing Nothing
       personAPIEntity <- verifyFlow person regToken reqWithMobileNumber.whatsappNotificationEnroll deviceToken
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked Nothing Nothing
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing Nothing
@@ -1030,10 +1013,9 @@ cleanCachedTokens personId = do
 
 -- TODO: ONLY FOR TESTING IN MASTER, REMOVE BEFORE PRODUCTION, Chennai One merchant and city
 -- BEGIN
-isChennaiOne :: SP.Person -> Bool
-isChennaiOne person =
-  person.merchantId.getId == "19dded4d-51dd-4dcd-a07d-d353649d8595"
-    && person.merchantOperatingCityId.getId == "fc87c15e-29aa-492b-835f-bda8ff00c840"
+isDeviceIdentifierType :: SP.Person -> Bool
+isDeviceIdentifierType person =
+  person.identifierType == SP.DEVICE
 
 -- END
 
@@ -1054,7 +1036,7 @@ linkAndMerge req = do
   let personId = Id regToken.entityId
 
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  unless (isChennaiOne person) $ throwError $ InvalidRequest "NOT_ALLOWED_FOR_THIS_MERCHANT"
+  unless (isDeviceIdentifierType person) $ throwError $ InvalidRequest "NOT_ALLOWED_FOR_THIS_MERCHANT"
 
   mobileNumber' <- req.mobileNumber & fromMaybeM (InvalidRequest "MOBILE_REQUIRED")
   mobileCountryCode' <- req.mobileCountryCode & fromMaybeM (InvalidRequest "COUNTRY_CODE_REQUIRED")
@@ -1086,7 +1068,7 @@ logout personId = do
   -- TODO: ONLY FOR TESTING IN MASTER, REMOVE BEFORE PRODUCTION,Chennai One merchant and city
   -- BEGIN
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  when (isChennaiOne person) $
+  when (isDeviceIdentifierType person) $
     -- END
     void $ PersonExtra.updateIsNew True personId -- Setting isNew to True to track guest status (chennai one)
   void $ RegistrationToken.deleteByPersonId personId
