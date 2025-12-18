@@ -420,27 +420,25 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
           }
     Nothing -> makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM False
 
-  authResBase <- do
-    if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
-      then
-        if identifierType == SP.DEVICE -- Sends back verified token if DEVICE IdentifierType, else uses pre-existing OTP flow
-          then do
-            _ <- RegistrationToken.create regToken
-            void $ RegistrationToken.setDirectAuth regToken.id (castChannelToMedium otpChannel)
-            pure $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) Nothing person.blocked Nothing Nothing
-          else do
-            deploymentVersion <- asks (.version)
-            void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion
-            RegistrationToken.create regToken
-            when (isNothing useFakeOtpM) $ do
-              let otpCode = SR.authValueHash regToken
-              SOTP.sendOTP otpChannel otpCode person.id person.merchantId merchantOperatingCityId req.mobileCountryCode req.mobileNumber req.email riderConfig.emailOtpConfig mbSenderHash
-            pure $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing Nothing
-      else do
-        logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
-        pure $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing Nothing
+  if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
+    then
+      if identifierType == SP.DEVICE -- Sends back verified token if DEVICE IdentifierType, else uses pre-existing OTP flow
+        then do
+          _ <- RegistrationToken.create regToken
+          void $ RegistrationToken.setDirectAuth regToken.id (castChannelToMedium otpChannel)
+        else do
+          deploymentVersion <- asks (.version)
+          void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion
+          RegistrationToken.create regToken
+          when (isNothing useFakeOtpM) $ do
+            let otpCode = SR.authValueHash regToken
+            SOTP.sendOTP otpChannel otpCode person.id person.merchantId merchantOperatingCityId req.mobileCountryCode req.mobileNumber req.email riderConfig.emailOtpConfig mbSenderHash
+    else do
+      logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
 
-  return $ authResBase {depotCode = mbDepotCode, isDepotAdmin = mbIsDepotAdmin}
+  if identifierType == SP.DEVICE
+    then return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) Nothing person.blocked mbDepotCode mbIsDepotAdmin
+    else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked mbDepotCode mbIsDepotAdmin
   where
     castChannelToMedium :: SOTP.OTPChannel -> SR.Medium
     castChannelToMedium SOTP.SMS = SR.SMS
