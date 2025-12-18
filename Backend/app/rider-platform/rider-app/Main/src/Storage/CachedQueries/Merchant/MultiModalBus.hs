@@ -125,11 +125,8 @@ getRoutesBuses routeId = do
 getBusesForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [Text] -> m [RouteWithBuses]
 getBusesForRoutes = mapConcurrently getRoutesBuses
 
-hasLiveVehicles :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> DIBC.IntegratedBPPConfig -> m Bool
-hasLiveVehicles routeId integratedBppConfig = do
-  let redisPrefix = case integratedBppConfig.providerConfig of
-        DIBC.ONDC config -> config.redisPrefix
-        _ -> Nothing
-  let key = mkRouteKey redisPrefix routeId
+hasLiveVehicles :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> m Bool
+hasLiveVehicles routeId = do
+  let key = mkRouteKey routeId
   res <- withCrossAppRedisNew $ Hedis.ttl key
   return $ res >= -1

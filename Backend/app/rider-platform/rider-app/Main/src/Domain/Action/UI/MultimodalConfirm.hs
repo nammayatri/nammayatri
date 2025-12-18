@@ -1707,7 +1707,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
   mbRouteBusData <-
     case req.routeCode of
       Just routeCode -> do
-        routeBusData <- CQMMB.getRoutesBuses routeCode integratedBPPConfig
+        routeBusData <- CQMMB.getRoutesBuses routeCode
         if null routeBusData.buses then pure Nothing else pure $ Just routeBusData
       Nothing -> do
         pure Nothing
@@ -1729,7 +1729,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
   alternateRoutes <- filter (\x -> Just x /= req.routeCode) <$> JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
   case mbRouteBusData of
     Nothing -> do
-      busesForRoutes <- CQMMB.getBusesForRoutes alternateRoutes integratedBPPConfig
+      busesForRoutes <- CQMMB.getBusesForRoutes alternateRoutes
       alterateLiveVehicleData <-
         catMaybes
           <$> mapM
@@ -1757,7 +1757,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       alternateRouteDetails <-
         mapM
           ( \route -> do
-              isLive <- CQMMB.hasLiveVehicles route.code integratedBPPConfig
+              isLive <- CQMMB.hasLiveVehicles route.code
               return $
                 API.Types.UI.MultimodalConfirm.AlternateRouteDetails
                   { routeCode = route.code,
