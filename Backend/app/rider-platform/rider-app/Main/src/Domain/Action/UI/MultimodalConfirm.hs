@@ -225,7 +225,8 @@ postMultimodalConfirm (_mbPersonId, _merchantId) journeyId forcedBookLegOrder jo
           >>= \case
             Just paymentOrder -> do
               person <- QP.findById journey.riderId >>= fromMaybeM (InvalidRequest "Person not found")
-              buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking
+              let isSingleMode = fromMaybe False journey.isSingleMode
+              buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking isSingleMode
             Nothing -> return Nothing
       Nothing -> return Nothing
   pure ApiTypes.JourneyConfirmResp {ApiTypes.orderSdkPayload = sdkPayload, ApiTypes.gatewayReferenceId = paymentGateWayId, result = "Success"}
@@ -260,6 +261,9 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   legs <- QJourneyLeg.getJourneyLegs journeyId
   allJourneyFrfsBookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
+  let isSingleMode = case allJourneyFrfsBookings of
+        [_] -> True
+        _ -> False
   bookingsPaymentOrders <-
     mapM
       ( \booking -> do
@@ -273,7 +277,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
                           merchantOperatingCityId = fromMaybe booking.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
                           orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
                       void $ SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
-                      createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType
+                      createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode
                       return (createOrderResp, Just paymentBooking.status)
                     Nothing -> return (Nothing, Nothing)
               Nothing -> return (Nothing, Nothing)
@@ -318,13 +322,13 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
       DFRFSTicketBookingPayment.REFUND_FAILED -> FRFSTicketServiceAPI.REFUND_FAILED
       DFRFSTicketBookingPayment.REFUND_INITIATED -> FRFSTicketServiceAPI.REFUND_INITIATED
 
-buildCreateOrderResp :: DOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.Types.Person.Person -> Payment.PaymentServiceType -> Environment.Flow (Maybe Payment.CreateOrderResp)
-buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType = do
+buildCreateOrderResp :: DOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.Types.Person.Person -> Payment.PaymentServiceType -> Bool -> Environment.Flow (Maybe Payment.CreateOrderResp)
+buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode = do
   personEmail <- mapM decrypt person.email
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   isSplitEnabled_ <- Payment.getIsSplitEnabled (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled
+  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrder.id.getId,
