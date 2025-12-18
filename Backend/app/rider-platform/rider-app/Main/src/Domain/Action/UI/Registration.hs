@@ -421,20 +421,28 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
     Nothing -> makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM False
 
   if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
-    then
+    then do
+      deploymentVersion <- asks (.version)
+      void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion
+      RegistrationToken.create regToken
       if identifierType == SP.DEVICE -- Sends back verified token if DEVICE IdentifierType, else uses pre-existing OTP flow
         then do
-          _ <- RegistrationToken.create regToken
           void $ RegistrationToken.setDirectAuth regToken.id (castChannelToMedium otpChannel)
         else do
-          deploymentVersion <- asks (.version)
-          void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion
-          RegistrationToken.create regToken
           when (isNothing useFakeOtpM) $ do
             let otpCode = SR.authValueHash regToken
-            SOTP.sendOTP otpChannel otpCode person.id person.merchantId merchantOperatingCityId req.mobileCountryCode req.mobileNumber req.email riderConfig.emailOtpConfig mbSenderHash
-    else do
-      logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
+            SOTP.sendOTP
+              otpChannel
+              otpCode
+              person.id
+              person.merchantId
+              merchantOperatingCityId
+              req.mobileCountryCode
+              req.mobileNumber
+              req.email
+              riderConfig.emailOtpConfig
+              mbSenderHash
+    else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
 
   if identifierType == SP.DEVICE
     then return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) Nothing person.blocked mbDepotCode mbIsDepotAdmin
@@ -1034,12 +1042,22 @@ linkAndMerge req = do
   let personId = Id regToken.entityId
 
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  unless (isDeviceIdentifierType person) $ throwError $ InvalidRequest "NOT_ALLOWED_FOR_THIS_MERCHANT"
+  unless (isDeviceIdentifierType person) $
+    throwError $ InvalidRequest "NOT_ALLOWED_FOR_THIS_MERCHANT"
 
   mobileNumber' <- req.mobileNumber & fromMaybeM (InvalidRequest "MOBILE_REQUIRED")
   mobileCountryCode' <- req.mobileCountryCode & fromMaybeM (InvalidRequest "COUNTRY_CODE_REQUIRED")
 
+  case person.imeiNumber of -- Checking for imei consistency
+    Just storedEncImei -> do
+      suppliedImei <- req.imeiNumber & fromMaybeM (InvalidRequest "IMEI_REQUIRED")
+      storedImei <- decrypt storedEncImei
+      when (storedImei /= suppliedImei) $
+        throwError $ InvalidRequest "IMEI_DOES_NOT_MATCH_USER"
+    Nothing -> pure ()
+
   whenJust req.imeiNumber $ \imei -> do
+    -- Checking for imei uniqueness
     mbByImei <- PersonExtra.findByImeiNumber imei
     case mbByImei of
       Just p
