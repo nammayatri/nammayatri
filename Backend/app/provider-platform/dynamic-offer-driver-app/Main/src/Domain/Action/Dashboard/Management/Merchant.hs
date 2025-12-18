@@ -1835,6 +1835,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 merchantOperatingCityId = Just (cast merchantOpCity.id),
                 linkedLocationsIds = [],
                 gates = [],
+                priority = 0,
                 locationType = fromMaybe SL.Open locationType,
                 geom = Just $ T.pack locationGeom,
                 createdAt = now,
@@ -1945,6 +1946,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             linkedLocationsIds = maybe [] (.linkedLocationsIds) mbExistingSpLoc,
             locationType = SL.Closed,
             merchantId = Just merchantId,
+            priority = 0,
             ..
           }
 
