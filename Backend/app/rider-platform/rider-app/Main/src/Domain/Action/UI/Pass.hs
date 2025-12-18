@@ -788,7 +788,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
         Just firstPreBookedPayment -> do
           let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
           QPurchasedPassPayment.updateStatusByOrderId newStatus firstPreBookedPayment.orderId
-          QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus firstPreBookedPayment.benefitDescription firstPreBookedPayment.benefitType firstPreBookedPayment.benefitValue purchasedPassPayment.amount
+          QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus firstPreBookedPayment.benefitDescription firstPreBookedPayment.benefitType firstPreBookedPayment.benefitValue firstPreBookedPayment.amount
         Nothing -> do
           QPurchasedPassPayment.expireOlderActivePaymentsByPurchasedPassId purchasedPass.id today
           QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
@@ -964,7 +964,7 @@ postMultimodalPassActivateToday (_mbCallerPersonId, _merchantId) passNumber mbSt
   unless (null overlappingPasses) $
     throwError (InvalidRequest "Cannot activate pass: date range overlaps with another active or prebooked pass")
 
-  QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPassPayment.amount
+  QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.amount
   QPurchasedPassPayment.updatePurchaseDataByPurchasedPassIdAndStartEndDate purchasedPass.id purchasedPass.startDate purchasedPass.endDate newStartDate newEndDate newStatus
   return APISuccess.Success
 
