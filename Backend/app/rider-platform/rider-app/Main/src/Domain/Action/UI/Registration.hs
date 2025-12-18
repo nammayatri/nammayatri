@@ -353,7 +353,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         Just imei -> do
           let notificationToken = req.notificationToken
           person <-
-            Person.findByImeiNumber imei
+            PersonExtra.findByImeiNumber imei
               >>= do
                 maybe (createPerson req SP.DEVICE notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) merchant Nothing (Just imei)) pure
           return (person, SOTP.SMS)
