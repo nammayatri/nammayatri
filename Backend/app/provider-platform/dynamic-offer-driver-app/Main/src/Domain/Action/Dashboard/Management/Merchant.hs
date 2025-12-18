@@ -1795,7 +1795,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoAddress :: Text,
     gateInfoHasGeom :: Text,
     gateInfoCanQueueUpOnGate :: Text,
-    gateInfoType :: Text
+    gateInfoType :: Text,
+    priority :: Text
   }
   deriving (Show)
 
@@ -1817,6 +1818,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "gate_info_has_geom"
       <*> r .: "gate_info_can_queue_up_on_gate"
       <*> r .: "gate_info_type"
+      <*> r .: "priority"
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1864,6 +1866,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       gateInfoType :: DGI.GateType <- readCSVField idx row.gateInfoType "Gate Info (type)"
       gateInfoHasGeom :: Bool <- readCSVField idx row.gateInfoHasGeom "Gate Info (geom)"
       gateInfoCanQueueUpOnGate :: Bool <- readCSVField idx row.gateInfoCanQueueUpOnGate "Gate Info (can_queue_up_on_gate)"
+      priority :: Int <- readCSVField idx row.priority "Priority"
       gateInfoGeom <- do
         if gateInfoHasGeom
           then do
@@ -1885,7 +1888,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 locationType = fromMaybe SL.Open locationType,
                 geom = Just $ T.pack locationGeom,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                priority
               }
           gateInfo =
             DGI.GateInfo
@@ -1992,6 +1996,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             linkedLocationsIds = maybe [] (.linkedLocationsIds) mbExistingSpLoc,
             locationType = SL.Closed,
             merchantId = Just merchantId,
+            priority = maybe 0 (.priority) mbExistingSpLoc,
             ..
           }
 
