@@ -187,6 +187,12 @@ setJourneyLegTrackingStatus journeyLeg subLegOrder trackingStatus trackingStatus
 
 getTaxiJourneyLegTrackingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => JourneyBookingStatus -> DRouteDetails.RouteDetails -> m TrackingStatus
 getTaxiJourneyLegTrackingStatus taxiJourneyLegStatus journeyRouteDetails = do
+  let shouldResetToInPlan = \case
+        Initial _ -> True
+        TaxiEstimate _ -> True
+        TaxiBooking _ -> True
+        TaxiRide DTaxiRide.CANCELLED -> True
+        _ -> False
   case taxiJourneyLegStatus of
     TaxiRide DTaxiRide.INPROGRESS -> do
       when (journeyRouteDetails.trackingStatus /= Just Ongoing) $ do
@@ -200,14 +206,13 @@ getTaxiJourneyLegTrackingStatus taxiJourneyLegStatus journeyRouteDetails = do
       when (journeyRouteDetails.trackingStatus /= Just Finished) $ do
         void $ QRouteDetails.updateTrackingStatus (Just Finished) journeyRouteDetails.id
       return Finished
-    bookingStatus ->
-      -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
-      if journeyRouteDetails.trackingStatus `elem` [Just Arriving, Just AlmostArrived, Just Arrived] && bookingStatus `elem` [TaxiEstimate DTaxiEstimate.CANCELLED, TaxiEstimate DTaxiEstimate.COMPLETED, TaxiBooking DTaxiBooking.CANCELLED, TaxiRide DTaxiRide.CANCELLED]
-        then do
-          when (journeyRouteDetails.trackingStatus /= Just InPlan) $ do
-            void $ QRouteDetails.updateTrackingStatus (Just InPlan) journeyRouteDetails.id
-          return InPlan
-        else return (fromMaybe InPlan journeyRouteDetails.trackingStatus)
+    bookingStatus
+      | shouldResetToInPlan bookingStatus -> do
+        -- handles cancellation and find another driver for taxi leg in journey.
+        when (journeyRouteDetails.trackingStatus /= Just InPlan) $
+          void $ QRouteDetails.updateTrackingStatus (Just InPlan) journeyRouteDetails.id
+        return InPlan
+      | otherwise -> return (fromMaybe InPlan journeyRouteDetails.trackingStatus)
 
 getFRFSJourneyLegTrackingStatus :: Maybe DFRFSBooking.FRFSTicketBooking -> DRouteDetails.RouteDetails -> TrackingStatus
 getFRFSJourneyLegTrackingStatus _mbBooking journeyRouteDetails = fromMaybe InPlan journeyRouteDetails.trackingStatus
