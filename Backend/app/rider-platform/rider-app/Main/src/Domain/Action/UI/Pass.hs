@@ -831,8 +831,8 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
             riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
             case integratedBPPConfigs of
               [] -> throwError (InvalidRequest "No integrated BPP config available for auto activation")
-              (nearbyConfig : _) -> do
-                buses <- FRFS.getNearbyBusesFRFS (LatLong lat lon) riderConfig nearbyConfig
+              (_ : _) -> do
+                buses <- FRFS.getNearbyBusesFRFS (LatLong lat lon) riderConfig
                 let busesWithVehicle = filter (isJust . (.vehicle_number)) buses
                 when (null busesWithVehicle) $ throwError (InvalidRequest "No nearby buses found for auto activation")
 
