@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.special_location ADD COLUMN priority integer NOT NULL DEFAULT 0;
