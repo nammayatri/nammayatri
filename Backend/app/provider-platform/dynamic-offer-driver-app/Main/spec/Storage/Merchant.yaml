@@ -878,6 +878,10 @@ TransporterConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
       fleetPrepaidSubscriptionThreshold: Maybe HighPrecMoney
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    FeedbackNotificationConfig:
+      enableFeedbackNotification: Bool
+      feedbackNotificationDelayInSec: Int
+      derive': Generic, Show, ToJSON, FromJSON, Read,Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
@@ -907,6 +911,7 @@ TransporterConfig:
     dpBlackListedGeohash: Maybe [Text]
     dpGeoHashPercision: Maybe Int
     fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig
+    feedbackNotificationConfig: Maybe FeedbackNotificationConfig
     onboardingTryLimit: Int
     onboardingRetryTimeInHours: Int
     checkImageExtractionForDashboard: Bool
@@ -1171,6 +1176,7 @@ TransporterConfig:
     aaEnabledClientSdkVersion: Maybe Text
     isMLBasedDynamicPricingEnabled: Maybe Bool
     cancellationRateSlabConfig: Maybe Value
+    feedbackNotificationConfig: Maybe Value
 
   beamFields:
     fcmConfig:
@@ -1250,6 +1256,7 @@ TransporterConfig:
     analyticsConfig: Just . Data.Aeson.toJSON|I
     driverWalletConfig: Just . Data.Aeson.toJSON|I
     subscriptionConfig: Just . Data.Aeson.toJSON|I
+    feedbackNotificationConfig: Data.Aeson.toJSON <$> feedbackNotificationConfig|E
 
   intermediateTransformers:
     fromTType:
@@ -1259,6 +1266,8 @@ TransporterConfig:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig {fcmUrl = fcmUrl', fcmServiceAccount = fcmServiceAccount, fcmTokenKeyPrefix = fcmTokenKeyPrefix}|E
+    feedbackNotificationConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< feedbackNotificationConfig|E
     driverPaymentCycleBuffer: Kernel.Utils.Common.secondsToNominalDiffTime|I
     driverPaymentCycleDuration: Kernel.Utils.Common.secondsToNominalDiffTime|I
     driverPaymentCycleStartTime: Kernel.Utils.Common.secondsToNominalDiffTime|I

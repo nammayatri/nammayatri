@@ -21,7 +21,7 @@ import Data.Text as T
 
 import Data.Time.Calendar (Day)
 import Domain.Types.Common
-import Domain.Types.FeedbackForm
+import qualified Domain.Types.FeedbackForm as DFF
 import Domain.Types.Merchant
 import qualified Domain.Types.RefereeLink as LibTypes
 import EulerHS.Types (EulerClient, client)
@@ -123,6 +123,23 @@ callCustomerFCM ::
 callCustomerFCM apiKey internalUrl bppRideId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callCustomerFCMClient bppRideId (Just apiKey)) "CallCustomerFCM" callCustomerFCMApi
+
+data FeedbackFormReq = FeedbackFormReq
+  { rideId :: Text,
+    rating :: Maybe Int,
+    feedbackDetails :: Maybe Text,
+    badges :: Maybe [BadgeMetadata],
+    feedback :: Maybe [DFF.FeedbackAnswer]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data BadgeMetadata = BadgeMetadata
+  { badgeKey :: Text,
+    sendPN :: Bool,
+    priority :: Maybe Int,
+    badgeText :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 type FeedbackFormAPI =
   "internal"
@@ -668,11 +685,30 @@ type FleetVehicleListAPI =
     :> Header "token" Text
     :> Get '[JSON] FleetVehicleListResp
 
+type FleetVehicleListAPIV2 =
+  "internal"
+    :> "fleet"
+    :> "VehicleAssociation"
+    :> "list"
+    :> "v2"
+    :> MandatoryQueryParam "ticketPlaceId" Text
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> QueryParam "searchString" Text
+    :> Header "token" Text
+    :> Get '[JSON] FleetVehicleListResp
+
 fleetVehicleListClient :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> EulerClient FleetVehicleListResp
 fleetVehicleListClient = client fleetVehicleListApi
 
 fleetVehicleListApi :: Proxy FleetVehicleListAPI
 fleetVehicleListApi = Proxy
+
+fleetVehicleListV2Client :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> EulerClient FleetVehicleListResp
+fleetVehicleListV2Client = client fleetVehicleListApiV2
+
+fleetVehicleListApiV2 :: Proxy FleetVehicleListAPIV2
+fleetVehicleListApiV2 = Proxy
 
 getFleetVehicles ::
   ( MonadFlow m,
@@ -690,6 +726,23 @@ getFleetVehicles merchant placeId mbLimit mbOffset mbSearchString = do
   let internalUrl = merchant.driverOfferBaseUrl
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (fleetVehicleListClient placeId mbLimit mbOffset mbSearchString (Just apiKey)) "FleetVehicleList" fleetVehicleListApi
+
+getFleetVehiclesV2 ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Merchant ->
+  Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  m FleetVehicleListResp
+getFleetVehiclesV2 merchant placeId mbLimit mbOffset mbSearchString = do
+  let apiKey = merchant.driverOfferApiKey
+  let internalUrl = merchant.driverOfferBaseUrl
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (fleetVehicleListV2Client placeId mbLimit mbOffset mbSearchString (Just apiKey)) "FleetVehicleListV2" fleetVehicleListApiV2
 
 type GetIsInterCityAPI =
   "internal"
@@ -736,7 +789,9 @@ data CreateFleetBookingInformationReq = CreateFleetBookingInformationReq
     ticketPlaceId :: Maybe Text,
     ticketBookingShortId :: Text,
     ticketBookingServiceShortId :: Text,
-    paymentMethod :: Maybe Text
+    paymentMethod :: Maybe Text,
+    customerMobileNumber :: Maybe Text,
+    customerName :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -755,13 +810,18 @@ data UpdateFleetBookingInformationReq = UpdateFleetBookingInformationReq
     ticketBookingShortId :: Text,
     ticketBookingServiceShortId :: Text,
     assignments :: Maybe [BookingAssignment],
-    paymentMethod :: Maybe Text
+    paymentMethod :: Maybe Text,
+    customerMobileNumber :: Maybe Text,
+    customerName :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 data BookingAssignment = BookingAssignment
   { fleetOwnerId :: Text,
-    vehicleNo :: Text
+    vehicleNo :: Text,
+    skuDurationMins :: Maybe Int,
+    assignmentStartTime :: Maybe UTCTime,
+    assignmentEndTime :: Maybe UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 

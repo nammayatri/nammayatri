@@ -2,6 +2,7 @@
 
 module API.Types.UI.TicketService where
 
+import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Data.Time.Calendar
@@ -142,7 +143,7 @@ data TicketBookingCategoryDetails = TicketBookingCategoryDetails
     id :: Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory,
     name :: Data.Text.Text,
     peopleCategories :: [TicketBookingPeopleCategoryDetails],
-    serviceCategoryId :: Kernel.Prelude.Maybe Data.Text.Text
+    serviceCategoryId :: Kernel.Prelude.Maybe (Data.Text.Text)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -154,6 +155,8 @@ data TicketBookingCategoryReq = TicketBookingCategoryReq {categoryId :: Kernel.T
 data TicketBookingDetails = TicketBookingDetails
   { amount :: Kernel.Types.Common.HighPrecMoney,
     amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+    customerName :: Kernel.Prelude.Maybe Data.Text.Text,
+    customerPhoneNumber :: Kernel.Prelude.Maybe Data.Text.Text,
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
     personId :: Data.Text.Text,
@@ -266,6 +269,10 @@ data TicketPlaceAvailability = TicketPlaceAvailability {closedDays :: [Kernel.Pr
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data TicketPlaceBookingList = TicketPlaceBookingList {bookings :: [API.Types.UI.TicketService.TicketBookingDetails], summary :: Dashboard.Common.Summary}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data TicketPlaceResp = TicketPlaceResp {subPlaces :: [Domain.Types.TicketSubPlace.TicketSubPlace], ticketPlace :: Domain.Types.TicketPlace.TicketPlace}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -303,6 +310,7 @@ data TicketServiceVerificationReq = TicketServiceVerificationReq {assignments ::
 data TicketServiceVerificationResp = TicketServiceVerificationResp
   { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     amountWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    bookingShortId :: Kernel.Prelude.Maybe Data.Text.Text,
     categories :: [TicketBookingCategoryDetails],
     endTime :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     message :: Data.Text.Text,

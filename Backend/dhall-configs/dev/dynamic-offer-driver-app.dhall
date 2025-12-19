@@ -113,6 +113,18 @@ let eventTrackerKafkaConfig
       , kafkaKey = "dynamic-offer-driver-event-tracker-events"
       }
 
+let marketingParamsKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "MarketingParamsData"
+      , kafkaKey = "dynamic-offer-driver-app-marketing-events"
+      }
+
+let marketingParamsPreLoginKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "MarketingParamsPreLoginData"
+      , kafkaKey = "dynamic-offer-driver-app-marketing-events"
+      }
+
 let sampleLogConfig
     : Text
     = "log-stream"
@@ -156,6 +168,17 @@ let eventStreamMappings =
         , streamConfig =
             globalCommon.streamConfig.KafkaStream eventTrackerKafkaConfig
         , eventTypes = [ globalCommon.eventType.EventTracker ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream marketingParamsKafkaConfig
+        , eventTypes = [ globalCommon.eventType.MarketingParamsData ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream
+              marketingParamsPreLoginKafkaConfig
+        , eventTypes = [ globalCommon.eventType.MarketingParamsPreLoginData ]
         }
       ]
 

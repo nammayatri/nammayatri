@@ -64,4 +64,4 @@ instance Text.Read.Read FleetUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [''FleetUserActionType])
+$(Data.Singletons.TH.genSingletons [(''FleetUserActionType)])

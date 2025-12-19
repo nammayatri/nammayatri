@@ -395,7 +395,9 @@ data FleetBookingItem = FleetBookingItem
     updatedAt :: Kernel.Prelude.UTCTime,
     fleetOwnerId :: Kernel.Prelude.Text,
     fleetOwnerName :: Kernel.Prelude.Text,
-    paymentMethod :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    paymentMethod :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    customerMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    customerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

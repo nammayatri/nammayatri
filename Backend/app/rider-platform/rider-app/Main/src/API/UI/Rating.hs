@@ -33,10 +33,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Tools.Auth
+import Tools.Error
 
 -------- Feedback Flow and Know your Driver Flow----------
 type API =
@@ -71,10 +74,24 @@ processRating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackR
 processRating (personId, merchantId) request = do
   dFeedbackRes <- DFeedback.feedback request personId
   becknReq <- ACL.buildRatingReqV2 dFeedbackRes
-  fork "call bpp rating api" $ do
+  fork "call bpp feedback apis" $ do
     isValueAddNP <- CQVAN.isValueAddNP dFeedbackRes.providerId
-    when isValueAddNP . void . withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq merchantId
+    when isValueAddNP $ do
+      void . withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq merchantId
+      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      let badgeMetadataList = dFeedbackRes.badgeMetadata
+      void . withLongRetry $ CallBPPInternal.feedbackForm merchant.driverOfferBaseUrl (mkFeedbackFormReq request badgeMetadataList dFeedbackRes)
   pure Success
+  where
+    mkFeedbackFormReq :: DFeedback.FeedbackReq -> Maybe [CallBPPInternal.BadgeMetadata] -> DFeedback.FeedbackRes -> CallBPPInternal.FeedbackFormReq
+    mkFeedbackFormReq req badgeMetadataList feedbackRes =
+      CallBPPInternal.FeedbackFormReq
+        { rideId = feedbackRes.bppRideId.getId,
+          rating = Just req.rating,
+          feedbackDetails = req.feedbackDetails,
+          badges = badgeMetadataList,
+          feedback = Just []
+        }
 
 knowYourDriver :: (Id Person.Person, Id Merchant.Merchant) -> Id DRide.Ride -> Maybe Bool -> App.FlowHandler DFeedback.DriverProfileResponse
 knowYourDriver (personId, _merchantId) rideId withImages = withFlowHandlerAPI . withPersonIdLogTag personId $ DFeedback.knowYourDriver rideId withImages

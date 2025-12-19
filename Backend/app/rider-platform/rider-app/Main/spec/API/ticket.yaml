@@ -30,6 +30,7 @@ imports:
   Refunds: Lib.Payment.Domain.Types.Refunds
   Person: Domain.Types.Person
   CreateOrderResp: Kernel.External.Payment.Interface.Types
+  Summary: Dashboard.Common
 
 module: TicketService
 types:
@@ -143,6 +144,8 @@ types:
     ticketPlaceName: Text
     ticketSubPlaceId: Maybe Text
     personId: Text
+    customerName: Maybe Text
+    customerPhoneNumber: Maybe Text
     amount: HighPrecMoney
     amountWithCurrency: PriceAPIEntity
     visitDate: Day
@@ -230,6 +233,7 @@ types:
     message: Text
     status: TicketVerificationStatus
     amount: Maybe HighPrecMoney
+    bookingShortId: Maybe Text
     amountWithCurrency: Maybe PriceAPIEntity
     verificationCount: Maybe Int
     startTime: Maybe TimeOfDay
@@ -263,6 +267,10 @@ types:
   TicketPlaceResp:
     ticketPlace: TicketPlace
     subPlaces: "[TicketSubPlace]"
+
+  TicketPlaceBookingList:
+    - bookings: [API.Types.UI.TicketService.TicketBookingDetails]
+    - summary: Summary
 
 apis:
   # GET /ticket/places
@@ -435,3 +443,30 @@ apis:
         - searchString: Text
       response:
         type: "[TicketFleetVehicleResp]"
+  - GET:
+      endpoint: /ticket/places/{placeId}/fleet/VehicleAssociation/list/v2
+      name: getTicketFleetVehiclesV2
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      query:
+        - limit: Int
+        - offset: Int
+        - searchString: Text
+      response:
+        type: "[TicketFleetVehicleResp]"
+
+  # GET /ticket/places/{placeId}/bookings/list
+  - GET:
+      endpoint: /ticket/places/{placeId}/bookings/list
+      name: getTicketPlaceBookings
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      query:
+        limit: Int
+        offset: Int
+      mandatoryQuery:
+        status: BookingStatus
+      response:
+        type: TicketPlaceBookingList

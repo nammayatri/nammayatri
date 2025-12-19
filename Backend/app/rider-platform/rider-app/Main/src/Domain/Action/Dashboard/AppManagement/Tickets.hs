@@ -3,6 +3,7 @@ module Domain.Action.Dashboard.AppManagement.Tickets
     postTicketsServices,
     getTicketsPlaces,
     getTicketFleetVehicles,
+    getTicketFleetVehiclesV2,
     postTicketsUpdate,
     postTicketsBookingsCancel,
     postTicketsServiceCancel,
@@ -28,6 +29,7 @@ module Domain.Action.Dashboard.AppManagement.Tickets
     postTicketBookingCashCollect,
     postTicketPlacesDirectBook,
     getTicketsDashboardBookingStatus,
+    getTicketPlaceBookings,
   )
 where
 
@@ -346,3 +348,27 @@ postTicketPlacesDirectBook ::
 postTicketPlacesDirectBook merchantShortId _opCity placeId requestorId req = do
   m <- findMerchantByShortId merchantShortId
   Domain.Action.UI.TicketService.postTicketPlacesDirectBook (Nothing, m.id) requestorId placeId req
+
+getTicketFleetVehiclesV2 ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Environment.Flow [API.Types.UI.TicketService.TicketFleetVehicleResp]
+getTicketFleetVehiclesV2 merchantShortId _opCity placeId mbLimit mbOffset mbSearchString = do
+  m <- findMerchantByShortId merchantShortId
+  Domain.Action.UI.TicketService.getTicketFleetVehiclesV2 (Nothing, m.id) placeId mbLimit mbOffset mbSearchString
+
+getTicketPlaceBookings ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+  Maybe Int ->
+  Maybe Int ->
+  Domain.Types.TicketBooking.BookingStatus ->
+  Environment.Flow API.Types.UI.TicketService.TicketPlaceBookingList
+getTicketPlaceBookings merchantShortId _opCity placeId mbLimit mbOffset status = do
+  m <- findMerchantByShortId merchantShortId
+  Domain.Action.UI.TicketService.getTicketPlaceBookings (Nothing, m.id) placeId mbLimit mbOffset status

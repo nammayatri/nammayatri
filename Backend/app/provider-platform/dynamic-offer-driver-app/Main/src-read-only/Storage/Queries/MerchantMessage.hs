@@ -59,6 +59,7 @@ updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.containsUrlButton containsUrlButton,
+      Se.Set Beam.createdAt createdAt,
       Se.Set Beam.jsonData (Just $ Data.Aeson.toJSON jsonData),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.message message,

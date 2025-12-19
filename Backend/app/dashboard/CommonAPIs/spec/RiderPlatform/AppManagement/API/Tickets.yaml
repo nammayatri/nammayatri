@@ -7,6 +7,7 @@ imports:
   TicketBookingDetails: API.Types.UI.TicketService
   TicketServiceVerificationResp: API.Types.UI.TicketService
   TicketFleetVehicleResp: API.Types.UI.TicketService
+  TicketPlaceBookingList: API.Types.UI.TicketService
   TicketServiceVerificationReq: API.Types.UI.TicketService
   TicketService: Domain.Types.TicketService
   TicketBookingService: Domain.Types.TicketBookingService
@@ -25,6 +26,7 @@ imports:
   TicketBookingAPIEntityV2: API.Types.UI.TicketService
   BookingStatus: Domain.Types.TicketBooking
   PaymentMethod: Domain.Types.TicketBooking
+  Summary: Dashboard.Common
 
 importPackageOverrides:
   API.Types.UI.TicketService: "rider-app"
@@ -223,6 +225,18 @@ apis:
         - searchString: Text
       response:
         type: "[TicketFleetVehicleResp]"
+  - GET:
+      endpoint: /ticket/places/{placeId}/fleet/VehicleAssociation/list/v2
+      name: getTicketFleetVehiclesV2
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      query:
+        - limit: Int
+        - offset: Int
+        - searchString: Text
+      response:
+        type: "[TicketFleetVehicleResp]"
   - POST: # VerifyBookingDetailsAPI
       endpoint: /tickets/{personServiceId}/{ticketServiceShortId}/verify/v2
       name: PostTicketBookingsVerifyV2
@@ -315,6 +329,20 @@ apis:
         type: DirectTicketBookingReq
       response:
         type: DirectTicketBookingResp
+
+  - GET: # GetTicketPlaceBookingsAPI
+      endpoint: /ticket/places/{placeId}/bookings/list
+      name: GetTicketPlaceBookings
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      query:
+        - limit: Int
+        - offset: Int
+      mandatoryQuery:
+        status: BookingStatus
+      response:
+        type: TicketPlaceBookingList
 
 types:
   SendVerifyOtpReq:

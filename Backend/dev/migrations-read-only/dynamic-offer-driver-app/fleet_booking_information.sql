@@ -34,3 +34,10 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_booking_information ADD COLUMN ticket_b
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_booking_information ADD COLUMN payment_method text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_booking_information ADD COLUMN customer_name text ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_booking_information ADD COLUMN customer_mobile_number_hash bytea ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_booking_information ADD COLUMN customer_mobile_number_encrypted character varying(255) ;

@@ -12,9 +12,11 @@ import Tools.Beam.UtilsTH
 
 data FeedbackT f = FeedbackT
   { badge :: B.C f Kernel.Prelude.Text,
+    badgeKey :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    rating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)

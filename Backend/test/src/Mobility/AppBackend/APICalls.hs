@@ -80,7 +80,8 @@ callAppFeedback ratingValue rideId =
             wasRideSafe = Nothing,
             wasOfferedAssistance = Nothing,
             shouldFavDriver = Nothing,
-            mbAudio = Nothing
+            mbAudio = Nothing,
+            feedbackAnswers = Nothing
           }
    in appFeedback appRegistrationToken request
 
