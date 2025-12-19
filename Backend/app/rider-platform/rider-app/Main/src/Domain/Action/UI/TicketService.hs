@@ -823,8 +823,7 @@ getTicketPlaceBookings (_mbPersonId, _merchantId') placeId mbLimit mbOffset book
                 status = status,
                 amount = amount.amount,
                 amountWithCurrency = mkPriceAPIEntity amount,
-                allowCancellation = ticketService.allowCancellation,
-                noteInfo = ticketService.note
+                allowCancellation = ticketService.allowCancellation
               }
 
         mkTicketBookingCategoryDetails :: DTB.TicketBookingServiceCategory -> Environment.Flow API.Types.UI.TicketService.TicketBookingCategoryDetails
