@@ -238,4 +238,10 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_charges_on_cance
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN billing_category text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN toll_ids text[] ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_toll_ids text[] ;
