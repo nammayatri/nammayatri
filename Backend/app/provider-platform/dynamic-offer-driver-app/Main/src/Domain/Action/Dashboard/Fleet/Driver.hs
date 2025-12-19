@@ -1749,11 +1749,11 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   whenJust req.mobileNo $ \reqMobileNo -> do
     mobileNumberHash <- getDbHash reqMobileNo
-    person <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe "+91" req.mobileCountryCode) mobileNumberHash merchant.id driver.role
-    when (isJust person && (person >>= Just . (.id)) /= Just personId) $ throwError (MobileNumberAlreadyLinked reqMobileNo)
+    person <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe "+91" req.mobileCountryCode) mobileNumberHash merchant.id DP.FLEET_OWNER
+    when (isJust person) $ throwError (MobileNumberAlreadyLinked reqMobileNo)
   whenJust req.email $ \reqEmail -> do
-    person <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id driver.role
-    when (isJust person && (person >>= Just . (.id)) /= Just personId) $ throwError (EmailAlreadyLinked reqEmail)
+    person <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id DP.FLEET_OWNER
+    when (isJust person) $ throwError (EmailAlreadyLinked reqEmail)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   encNewPhoneNumber <- forM req.mobileNo encrypt
