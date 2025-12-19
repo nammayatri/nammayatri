@@ -128,3 +128,14 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN number_of_luggages 
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN payment_mode text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN toll_ids text[] ;

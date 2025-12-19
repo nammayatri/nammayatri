@@ -172,3 +172,7 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN billing_category text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN payment_instrument text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN toll_ids text[] ;

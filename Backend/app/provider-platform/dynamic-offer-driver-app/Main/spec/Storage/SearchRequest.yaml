@@ -51,6 +51,7 @@ SearchRequest:
     customerCancellationDues: Maybe HighPrecMoney
     tollCharges: Maybe HighPrecMoney
     tollNames: Maybe [Text]
+    tollIds: Maybe [Text]
     isReallocationEnabled: Maybe Bool
     toLocation: Maybe Location
     estimatedDistance: Maybe Meters
@@ -173,6 +174,7 @@ SearchRequest:
     estimateId: character varying(36)
     currency: character varying(255)
     tollNames: "text[]"
+    tollIds: "text[]"
     driverDefaultExtraFee: double precision
     driverDefaultExtraFeeAmount: double precision
     customerLanguage: character varying(36)

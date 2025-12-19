@@ -160,7 +160,7 @@ data ServiceHandle m = ServiceHandle
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> HighPrecMoney -> Meters -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
-    finalDistanceCalculation :: Maybe MapsServiceConfig -> Bool -> Bool -> Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Maybe HighPrecMoney -> Maybe [Text] -> Bool -> Bool -> Bool -> m (),
+    finalDistanceCalculation :: Maybe MapsServiceConfig -> Bool -> Bool -> Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Maybe HighPrecMoney -> Maybe [Text] -> Maybe [Text] -> Bool -> Bool -> Bool -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
     clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: Maybe CacKey -> m (Maybe DTConf.TransporterConfig),
@@ -386,6 +386,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix later with rentals
         estimatedTollCharges = rideOld.estimatedTollCharges
         estimatedTollNames = rideOld.estimatedTollNames
+        estimatedTollIds = rideOld.estimatedTollIds
         shouldRectifyDistantPointsSnapToRoadFailure = DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
     advanceRide <- runInMasterDbAndRedis $ QRide.getActiveAdvancedRideByDriverId driverId
     tripEndPoints <- do
@@ -426,7 +427,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                       else pure Nothing
                   let passedThroughDrop = any (isDropInsideThreshold booking thresholdConfig) tripEndPoints'
                   logDebug $ "Did we passed through drop yet in endRide" <> show passedThroughDrop <> " " <> show tripEndPoints'
-                  withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) thresholdConfig.enableTollCrossedNotifications rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames pickupDropOutsideOfThreshold passedThroughDrop (booking.tripCategory == DTC.OneWay DTC.MeterRide)
+                  withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) thresholdConfig.enableTollCrossedNotifications rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames estimatedTollIds pickupDropOutsideOfThreshold passedThroughDrop (booking.tripCategory == DTC.OneWay DTC.MeterRide)
 
                 updRide <- runInMasterDbAndRedis $ findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
@@ -435,18 +436,21 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                 when distanceCalculationFailed $ do
                   logWarning $ "Failed to calculate distance for this ride: " <> rideId.getId
 
-                -- Check for pending tolls (entry detected but exit not found) and validate against estimate
+                -- Check for pending tolls (entry detected but exit not found) and validate against estimate using IDs
                 mbValidatedPendingToll <-
                   TollsDetector.checkAndValidatePendingTolls
                     updRide.driverId
                     updRide.estimatedTollCharges
                     updRide.estimatedTollNames
+                    updRide.estimatedTollIds
+                    updRide.tollCharges
+                    updRide.tollIds
 
                 -- Log if we have validated toll but can't apply due to route deviation
                 when (isJust mbValidatedPendingToll && pickupDropOutsideOfThreshold) $ do
                   logWarning $ "Validated pending toll found but NOT applying due to pickup/drop outside threshold. RideId: " <> rideId.getId
 
-                let (tollCharges, tollNames, tollConfidence) = do
+                let (tollCharges, tollNames, tollIds, tollConfidence) = do
                       let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
                           -- Only apply validated pending toll if pickup/drop is within threshold (route was as expected)
                           canApplyValidatedPendingToll = not pickupDropOutsideOfThreshold
@@ -455,35 +459,54 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                           if isJust updRide.estimatedTollCharges
                             then
                               if updRide.estimatedTollCharges == Just 0
-                                then (Nothing, Nothing, Nothing)
+                                then (Nothing, Nothing, Nothing, Nothing)
                                 else
                                   if isJust updRide.tollCharges
-                                    then (updRide.tollCharges, updRide.tollNames, Just Neutral)
+                                    then case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
+                                      (True, Just (pendingCharges, pendingNames, pendingIds)) ->
+                                        -- Some detected + some pending (same as distance calc success case)
+                                        let combinedCharges = fromMaybe 0 updRide.tollCharges + pendingCharges
+                                            combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
+                                            combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
+                                         in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
+                                      _ ->
+                                        -- No pending tolls or route deviated
+                                        (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Neutral)
                                     else
                                       if updRide.driverDeviatedToTollRoute == Just True
-                                        then (updRide.estimatedTollCharges, updRide.estimatedTollNames, Just Neutral)
+                                        then (updRide.estimatedTollCharges, updRide.estimatedTollNames, updRide.estimatedTollIds, Just Neutral)
                                         else case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                                          (True, Just (pendingCharges, pendingNames)) ->
-                                            (Just pendingCharges, Just pendingNames, Just Neutral)
-                                          _ -> (Nothing, Nothing, Just Unsure)
+                                          (True, Just (pendingCharges, pendingNames, pendingIds)) ->
+                                            -- Combine detected + pending tolls
+                                            let combinedCharges = fromMaybe 0 updRide.tollCharges + pendingCharges
+                                                combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
+                                                combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
+                                             in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
+                                          _ -> (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Unsure)
                             else case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                              (True, Just (pendingCharges, pendingNames)) ->
-                                (Just pendingCharges, Just pendingNames, Just Unsure)
-                              _ -> (Nothing, Nothing, Nothing)
+                              (True, Just (pendingCharges, pendingNames, pendingIds)) ->
+                                (Just pendingCharges, Just pendingNames, Just pendingIds, Just Unsure)
+                              _ -> (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
                         else case (updRide.tollCharges, canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                          (Just charges, _, _) ->
-                            (Just charges, updRide.tollNames, Just Sure)
-                          (Nothing, True, Just (pendingCharges, pendingNames)) ->
-                            (Just pendingCharges, Just pendingNames, Just Neutral)
-                          (Nothing, _, _) ->
-                            (Nothing, Nothing, Nothing)
+                          (Just charges, _, Nothing) ->
+                            (Just charges, updRide.tollNames, updRide.tollIds, Just Sure)
+                          (Just charges, True, Just (pendingCharges, pendingNames, pendingIds)) ->
+                            -- Some detected + some pending
+                            let combinedCharges = charges + pendingCharges
+                                combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
+                                combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
+                             in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
+                          (Nothing, True, Just (pendingCharges, pendingNames, pendingIds)) ->
+                            (Just pendingCharges, Just pendingNames, Just pendingIds, Just Neutral)
+                          _ ->
+                            (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
 
                 fork "ride-interpolation" $ do
                   interpolatedPoints <- getInterpolatedPoints updRide.driverId
                   let rideInterpolationData = RideInterpolationData {interpolatedPoints = interpolatedPoints, rideId = updRide.id}
                   when (isJust updRide.driverDeviatedToTollRoute && tollConfidence == Just Sure && ((maybe True (== 0) tollCharges && isJust updRide.estimatedTollCharges) || fromMaybe False (((,) <$> tollCharges <*> updRide.estimatedTollCharges) <&> \(tollCharges', estimatedTollCharges') -> tollCharges' /= estimatedTollCharges'))) $ pushToKafka rideInterpolationData "ride-interpolated-waypoints" updRide.id.getId
 
-                let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
+                let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollIds = tollIds, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
 
                 (chargeableDistance, finalFare, mbUpdatedFareParams) <-
                   if shouldRectifyDistantPointsSnapToRoadFailure

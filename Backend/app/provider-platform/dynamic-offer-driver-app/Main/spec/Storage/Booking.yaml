@@ -73,6 +73,7 @@ Booking:
     riderName: Maybe Text
     paymentMethodId: Maybe (Id MerchantPaymentMethod)
     tollNames: Maybe [Text]
+    tollIds: Maybe [Text]
     createdAt: UTCTime
     updatedAt: UTCTime
     paymentUrl: Maybe Text
@@ -221,6 +222,7 @@ Booking:
     distanceToPickup: double precision
     currency: character varying(255)
     tollNames: "text[]"
+    tollIds: "text[]"
     estimateId: character varying(255)
     configInExperimentVersions: "json"
 

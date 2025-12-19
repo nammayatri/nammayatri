@@ -59,6 +59,7 @@ Estimate:
       isCustomerPrefferedSearchRoute: Maybe Bool
       isBlockedRoute: Maybe Bool
       tollNames: Maybe [Text]
+      tollIds: Maybe [Text]
       eligibleForUpgrade: Bool
       createdAt: UTCTime
       updatedAt: UTCTime
