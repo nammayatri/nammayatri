@@ -181,12 +181,6 @@ getDriverFleetDashboardAnalytics a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ 
 postDriverDashboardFleetEstimateRoute :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.Driver.EstimateRouteReq -> Environment.FlowHandler Kernel.External.Maps.GetRoutesResp)
 postDriverDashboardFleetEstimateRoute a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.Driver.postDriverDashboardFleetEstimateRoute a4 a3 a2 a1
 
-postDriverFleetApproveDriver :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.Driver.ApproveDriverReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postDriverFleetApproveDriver a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.Driver.postDriverFleetApproveDriver a4 a3 a2 a1
-
-postDriverFleetDriverUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.Driver.UpdateDriverReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postDriverFleetDriverUpdate a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.Driver.postDriverFleetDriverUpdate a5 a4 a3 a2 a1
-
 postDriverFleetTripTransactionsV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Driver.TripStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.Driver.TripTransactionRespT)
 postDriverFleetTripTransactionsV2 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Fleet.Driver.postDriverFleetTripTransactionsV2 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
 
