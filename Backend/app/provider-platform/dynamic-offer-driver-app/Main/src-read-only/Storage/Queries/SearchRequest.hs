@@ -99,6 +99,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.toLocGeohash toLocGeohash,
       Se.Set Beam.toLocationId (Kernel.Types.Id.getId . (.id) <$> toLocation),
       Se.Set Beam.tollCharges tollCharges,
+      Se.Set Beam.tollIds tollIds,
       Se.Set Beam.tollNames tollNames,
       Se.Set Beam.transactionId transactionId,
       Se.Set Beam.tripCategory tripCategory,

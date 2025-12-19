@@ -94,8 +94,10 @@ Ride:
     isFreeRide: Maybe Bool
     estimatedTollCharges: Maybe HighPrecMoney
     estimatedTollNames: Maybe [Text]
+    estimatedTollIds: Maybe [Text]
     tollCharges: Maybe HighPrecMoney
     tollNames: Maybe [Text]
+    tollIds: Maybe [Text]
     driverGoHomeRequestId: Maybe (Id DriverGoHomeRequest)
     safetyAlertTriggered: Bool
     tollConfidence: Maybe Confidence

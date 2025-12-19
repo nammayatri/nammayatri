@@ -57,6 +57,7 @@ data Estimate = Estimate
     supplyDemandRatioFromLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     supplyDemandRatioToLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     tipOptions :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],
+    tollIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     tripCategory :: Domain.Types.Common.TripCategory,
     updatedAt :: Kernel.Prelude.UTCTime,

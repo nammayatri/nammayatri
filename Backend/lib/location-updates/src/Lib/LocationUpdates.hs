@@ -49,8 +49,8 @@ initializeDistanceCalculation ih rideId driverId pt = withRideIdLogTag rideId $ 
   ih.expireInterpolatedPoints driverId
   ih.addPoints driverId $ pt :| []
 
-finalDistanceCalculation :: (CacheFlow m r, Log m, MonadThrow m, MonadFlow m) => I.RideInterpolationHandler person m -> Maybe MapsServiceConfig -> Bool -> Bool -> Id ride -> Id person -> NonEmpty LatLong -> Meters -> Maybe HighPrecMoney -> Maybe [Text] -> Bool -> Bool -> Bool -> m ()
-finalDistanceCalculation ih rectifyDistantPointsFailureUsing isTollApplicable sendTollCrossedNotification rideId driverId pts estDist estTollCharges estTollNames pickupDropOutsideThreshold passedThroughDrop isMeterRide = withRideIdLogTag rideId $ I.processWaypoints ih driverId True estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable sendTollCrossedNotification passedThroughDrop isMeterRide pts
+finalDistanceCalculation :: (CacheFlow m r, Log m, MonadThrow m, MonadFlow m) => I.RideInterpolationHandler person m -> Maybe MapsServiceConfig -> Bool -> Bool -> Id ride -> Id person -> NonEmpty LatLong -> Meters -> Maybe HighPrecMoney -> Maybe [Text] -> Maybe [Text] -> Bool -> Bool -> Bool -> m ()
+finalDistanceCalculation ih rectifyDistantPointsFailureUsing isTollApplicable sendTollCrossedNotification rideId driverId pts estDist estTollCharges estTollNames estTollIds pickupDropOutsideThreshold passedThroughDrop isMeterRide = withRideIdLogTag rideId $ I.processWaypoints ih driverId True estDist estTollCharges estTollNames estTollIds pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable sendTollCrossedNotification passedThroughDrop isMeterRide pts
 
 getInterpolatedPoints :: I.RideInterpolationHandler person m -> Id person -> m [LatLong]
 getInterpolatedPoints ih = ih.getInterpolatedPoints
@@ -59,7 +59,7 @@ clearInterpolatedPoints :: I.RideInterpolationHandler person m -> Id person -> m
 clearInterpolatedPoints ih = ih.clearInterpolatedPoints
 
 addIntermediateRoutePoints :: (CacheFlow m r, Log m, MonadThrow m, MonadFlow m) => I.RideInterpolationHandler person m -> Maybe MapsServiceConfig -> Bool -> Bool -> Id ride -> Id person -> Bool -> Bool -> NonEmpty LatLong -> m ()
-addIntermediateRoutePoints ih rectifyDistantPointsFailureUsing isTollApplicable sendTollCrossedNotification rideId driverId passedThroughDrop isMeterRide = withRideIdLogTag rideId . I.processWaypoints ih driverId False 0 Nothing Nothing False rectifyDistantPointsFailureUsing isTollApplicable sendTollCrossedNotification passedThroughDrop isMeterRide -- estimateDistace and estimatedTollCharges not required in case of add intermediatory points
+addIntermediateRoutePoints ih rectifyDistantPointsFailureUsing isTollApplicable sendTollCrossedNotification rideId driverId passedThroughDrop isMeterRide = withRideIdLogTag rideId . I.processWaypoints ih driverId False 0 Nothing Nothing Nothing False rectifyDistantPointsFailureUsing isTollApplicable sendTollCrossedNotification passedThroughDrop isMeterRide -- estimateDistace, estimatedTollCharges and estimatedTollIds not required in case of add intermediatory points
 
 isDistanceCalculationFailed :: I.RideInterpolationHandler person m -> Id person -> m Bool
 isDistanceCalculationFailed ih = ih.isDistanceCalculationFailed
