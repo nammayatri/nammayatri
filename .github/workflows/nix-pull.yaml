@@ -1,19 +1,11 @@
 name: Nix CI
 
 on:
-  push:
-    branches: 
-      - "main"
-      - "prodHotPush-Common"
-      - "prodHotPush-MMFRFS"
-      - "prodHotPush-BAP"
-      - "prodHotPush-BPP"
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches: 
       - "main"
       - "prodHotPush-Common"
-      - "prodHotPush-MMFRFS"
       - "prodHotPush-BAP"
       - "prodHotPush-BPP"
   workflow_dispatch:
