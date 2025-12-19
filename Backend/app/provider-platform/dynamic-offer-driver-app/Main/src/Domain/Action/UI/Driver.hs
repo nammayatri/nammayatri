@@ -303,6 +303,7 @@ import Storage.Queries.Ride as Ride
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import qualified Storage.Queries.SearchRequestForDriverExtra as QSRDE
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VendorFee as QVF
@@ -1552,8 +1553,10 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     case mSReqFD of
       Just srfd -> return srfd
       Nothing -> do
-        logWarning $ "Search request not found for the driver with driverId " <> driverId.getId <> " and searchTryId " <> searchTryId.getId
-        throwError RideRequestAlreadyAccepted
+        logWarning $ "Active Search request not found for the driver with driverId " <> driverId.getId <> " and searchTryId " <> searchTryId.getId
+        QSRDE.findAnyAcceptedBySTId searchTry.id >>= \case
+          Just _srfd -> throwError $ RideRequestAlreadyAccepted
+          Nothing -> throwError $ CustomerCancelled
   driverStats <- QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case req.response of
