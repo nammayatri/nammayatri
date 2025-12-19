@@ -298,6 +298,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         tollConfidence = Nothing,
         estimatedTollCharges = booking.fareParams.tollCharges,
         estimatedTollNames = booking.tollNames,
+        estimatedTollIds = booking.tollIds,
+        tollIds = Nothing,
         uiDistanceCalculationWithAccuracy = Nothing,
         uiDistanceCalculationWithoutAccuracy = Nothing,
         isFreeRide = Just False,

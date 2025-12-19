@@ -90,6 +90,7 @@ data Booking = Booking
     stops :: [Domain.Types.Location.Location],
     toLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
+    tollIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     transactionId :: Kernel.Prelude.Text,
     tripCategory :: Domain.Types.Common.TripCategory,
