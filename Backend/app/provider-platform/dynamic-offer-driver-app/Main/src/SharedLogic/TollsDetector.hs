@@ -53,7 +53,9 @@ getAggregatedTollChargesAndNamesOnRoute mbDriverId route@(p1 : p2 : ps) tolls (t
         Just (remainingRoute, toll) -> getAggregatedTollChargesAndNamesOnRoute mbDriverId remainingRoute tolls (tollCharges + toll.price.amount, tollNames <> [toll.name], toll.isAutoRickshawAllowed, toll.isTwoWheelerAllowed)
         Nothing -> do
           whenJust mbDriverId $ \driverId -> do
-            Hedis.setExp (tollStartGateTrackingKey driverId) allTollCombinationsWithStartGates 21600 -- 6 hours
+            mbCachedStarts <- Hedis.safeGet (tollStartGateTrackingKey driverId)
+            let updatedTollCombinationsWithStartGates = fromMaybe [] mbCachedStarts <> allTollCombinationsWithStartGates
+            Hedis.setExp (tollStartGateTrackingKey driverId) updatedTollCombinationsWithStartGates 21600 -- 6 hours
           return (tollCharges, tollNames, tollIsAutoRickshawAllowed, tollIsTwoWheelerAllowed)
     else getAggregatedTollChargesAndNamesOnRoute mbDriverId (p2 : ps) tolls (tollCharges, tollNames, tollIsAutoRickshawAllowed, tollIsTwoWheelerAllowed)
 
@@ -100,4 +102,4 @@ getTollInfoOnRoute merchantOperatingCityId mbDriverId route = do
           getAggregatedTollCharges remainingRoute eligibleTollsThatMaybePresentOnTheRoute (toll.price.amount, [toll.name])
         Nothing -> do
           logWarning $ "No exit segment of tolls with start segment marked from previous batch found for driverId : " <> driverId.getId <> " TollCombinationsWithStartGatesInPrevBatch : " <> show tollCombinationsWithStartGatesInPrevBatch <> " route : " <> show route
-          return Nothing
+          getAggregatedTollCharges route eligibleTollsThatMaybePresentOnTheRoute (0, [])
