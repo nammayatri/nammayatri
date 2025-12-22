@@ -57,3 +57,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN vehicle_tags text[] ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN rule_based_upgrade_tiers json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN vehicle_image_id character varying(36) ;
