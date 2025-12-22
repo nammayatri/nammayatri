@@ -31,6 +31,9 @@ imports:
   FilePath: EulerHS.Prelude
   WhiteListOperatingCityReq: Dashboard.Common.Merchant
   WhiteListOperatingCityRes: Dashboard.Common.Merchant
+  GatesInfo: Lib.Types.SpecialLocation
+  MerchantOperatingCity: Dashboard.Common
+  SpecialLocationType: Lib.Types.SpecialLocation
 
 module: Merchant
 
@@ -199,6 +202,13 @@ apis:
         endpoint: MerchantAPI DeleteSpecialLocationGateEndpoint
         endpointV2:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE
+  - POST: # GetSpecialLocationListAPI
+      endpoint: /specialLocation/list
+      auth: ApiAuthV2
+      request:
+        type: GetSpecialLocationListReq
+      response:
+        type: "[SpecialLocationListRes]"
   - POST: #ToggleConfigPriorityAPI
       endpoint: /config/{configName}/failover
       params:
@@ -276,6 +286,22 @@ types:
     - derive: "'HideSecrets"
   JobName:
     - enum: "NyRegularMasterTrigger"
+  GetSpecialLocationListReq:
+    - limit: Maybe Int
+    - offset: Maybe Int
+    - enabled: Maybe Bool
+    - category: [Text]
+    - merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+  SpecialLocationListRes:
+    - id: Id SpecialLocation
+    - locationName: Text
+    - category: Text
+    - enabled: Bool
+    - locationType: SpecialLocationType
+    - merchantId: Maybe Text
+    - merchantOperatingCityId: Maybe Text
+    - priority: Int
+    - gates: [GatesInfo]
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
