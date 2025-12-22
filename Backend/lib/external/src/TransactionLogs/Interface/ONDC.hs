@@ -14,6 +14,7 @@
 
 module TransactionLogs.Interface.ONDC where
 
+import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
@@ -33,6 +34,6 @@ pushTxnLogs config req =
 mkONDCRequest :: IT.TransactionLogReq -> ONDC.ONDCRequest
 mkONDCRequest IT.TransactionLogReq {..} =
   ONDC.ONDCRequest
-    { _type = logType,
+    { _type = T.toLower logType,
       _data = logData
     }

@@ -60,6 +60,8 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as AKey
+import qualified Data.Aeson.KeyMap as AKM
 import Data.Default.Class
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.List as DL
@@ -1258,5 +1260,16 @@ callBecknAPIWithSignature' ::
   m res
 callBecknAPIWithSignature' merchantId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") do
-    void $ pushLogs b (toJSON req') merchantId.getId "MOBILITY"
+    let reqJson = toJSON req'
+        updatedReqJson = case reqJson of
+          A.Object obj ->
+            case AKM.lookup (AKey.fromText "context") obj of
+              Just (A.Object ctxObj) ->
+                case AKM.lookup (AKey.fromText "action") ctxObj of
+                  Just (A.String actionStr) ->
+                    A.Object $ AKM.insert (AKey.fromText "context") (A.Object $ AKM.insert (AKey.fromText "action") (A.String $ T.toLower actionStr) ctxObj) obj
+                  _ -> reqJson
+              _ -> reqJson
+          _ -> reqJson
+    void $ pushLogs (T.toLower b) updatedReqJson merchantId.getId "MOBILITY"
   Beckn.callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'
