@@ -27,13 +27,14 @@ import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Servant.SignatureAuth
+import qualified Kernel.Utils.Servant.SignatureAuth as SignatureAuth
 import Servant
 import Storage.Beam.SystemConfigs ()
+import TransactionLogs.PushLogs
 
 type API =
   Capture "merchantId" (Id Merchant)
-    :> SignatureAuth 'Domain.MOBILITY "Authorization"
+    :> SignatureAuth.SignatureAuth 'Domain.MOBILITY "Authorization"
     :> Update.UpdateAPIV2
 
 handler :: FlowServer API
@@ -41,15 +42,17 @@ handler = update
 
 update ::
   Id Merchant ->
-  SignatureAuthResult ->
+  SignatureAuth.SignatureAuthResult ->
   Update.UpdateReqV2 ->
   FlowHandler AckResponse
-update merchantId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $ do
+update merchantId (SignatureAuth.SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $ do
   transactionId <- Utils.getTransactionId req.updateReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "updateAPI" "Received update API call."
     dUpdateReq <- ACL.buildUpdateReq merchantId subscriber req
     let bookingId = DUpdate.getBookingId dUpdateReq
+    fork "update request pushing ondc logs" $
+      void $ pushLogs "update" (toJSON req) merchantId.getId "MOBILITY"
     Redis.whenWithLockRedis (updateLockKey bookingId.getId) 60 $ do
       fork "update request processing" $
         Redis.whenWithLockRedis (updateProcessingLockKey bookingId.getId) 60 $
