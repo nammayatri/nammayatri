@@ -222,7 +222,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       SP.EMAIL -> do
         email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
         person <-
-          QP.findByEmailAndMerchant (Just email) merchant.id
+          QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id SP.DRIVER
             >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
         return (person, SP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"

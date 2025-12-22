@@ -63,7 +63,7 @@ postMultimodalParkingBook mbApiKey req = do
 
   isSplitEnabled <- TPayment.getIsSplitEnabled person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking
   isPercentageSplitEnabled <- TPayment.getIsPercentageSplit person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking
-  splitSettlementDetails <- TPayment.mkSplitSettlementDetails isSplitEnabled req.amount [] isPercentageSplitEnabled
+  splitSettlementDetails <- TPayment.mkSplitSettlementDetails isSplitEnabled req.amount [] isPercentageSplitEnabled False
 
   customerEmail <- fromMaybe "noreply@nammayatri.in" <$> mapM decrypt person.email
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt

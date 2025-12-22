@@ -1,0 +1,176 @@
+name: Nix CI
+
+on:
+  push:
+    branches: 
+      - "main"
+      - "prodHotPush-Common"
+      - "prodHotPush-BAP"
+      - "prodHotPush-BPP"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  packages: write
+
+jobs:
+  check-conditions:
+    runs-on: ubuntu-latest
+    outputs:
+      should-proceed: ${{ steps.evaluate.outputs.should_proceed }}
+      has-backend: ${{ steps.check-labels.outputs.has_backend }}
+      should-push-docker: ${{ steps.check-docker-push.outputs.should_push_docker }}
+    steps:
+      - name: Apply labels
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        uses: actions/labeler@v4
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+      
+      - name: Check global conditions
+        id: evaluate
+        run: |
+          # Check if workflow should proceed (non-matrix conditions)
+          if [[ "${{ github.event.pull_request.merged }}" == "true" || 
+                "${{ github.event_name }}" != "pull_request" || 
+                "${{ github.event.action }}" != "closed" ]]; then
+            echo "should_proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Check for backend label
+        id: check-labels
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            sleep 5 # Small delay to ensure labels are applied
+            response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels")
+            has_backend=$(echo "$response" | jq 'map(select(.name == "backend")) | length > 0')
+          else
+            # For direct pushes to main/prodHotPush-Common, assume backend changes
+            has_backend=true
+          fi
+          echo "has_backend=${has_backend}" >> $GITHUB_OUTPUT
+          echo "Label check result: ${has_backend}"
+      - name: Check docker push conditions
+        id: check-docker-push
+        run: |
+          # Moving the docker push conditions here from the build job
+          if [[ "${{ github.ref }}" == "refs/heads/main" || 
+                "${{ github.ref }}" == "refs/heads/prodHotPush-Common" || 
+                "${{ github.ref }}" == "refs/heads/prodHotPush-MMFRFS" ||
+                "${{ github.ref }}" == "refs/heads/prodHotPush-BAP" ||
+                "${{ github.ref }}" == "refs/heads/prodHotPush-BPP" ||
+                "${{ github.event.pull_request.merged }}" == "true" ]]; then
+            echo "should_push_docker=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_push_docker=false" >> $GITHUB_OUTPUT
+          fi
+  build:
+    name: ${{ matrix.name }}
+    needs: [check-conditions]
+    continue-on-error: ${{ matrix.continue-on-error }}
+    if: needs.check-conditions.outputs.should-proceed == 'true' && needs.check-conditions.outputs.has-backend == 'true'
+    strategy:
+      matrix:
+        include:
+          - system: x86_64-linux
+            host: x86_64-linux-critical
+            arch: amd64
+            name: Master Release Build
+            continue-on-error: false
+          # - system: aarch64-darwin
+          #   host: aarch64-darwin
+          #   name: Mac Cache Server
+          #   continue-on-error: false
+      fail-fast: false
+    runs-on: ${{ matrix.host }}
+    outputs:
+      docker-image-name: ${{ steps.docker.outputs.base_image }}
+    steps:
+      - name: Check matrix conditions
+        id: check-conditions
+        run: |
+          # Should build check (skip aarch64-linux on non-main)
+          if [[ "${{ matrix.system }}" == "aarch64-linux" && "${{ github.ref }}" != "refs/heads/main" ]]; then
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Checkout repository
+        if: steps.check-conditions.outputs.should_build == 'true'
+        uses: actions/checkout@v4
+
+      - name: Build all flake outputs
+        if: steps.check-conditions.outputs.should_build == 'true'
+        run: |
+          om ci run --systems "${{ matrix.system }}" --no-link -- -v
+
+      - name: Build And Push Docker image
+        id: docker
+        if: steps.check-conditions.outputs.should_build == 'true' && (matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux') && needs.check-conditions.outputs.should-push-docker == 'true'
+        env:
+          DOCKER_REGISTRY: ghcr.io
+        run: |
+          nix build .#packages.${{ matrix.system }}.dockerImage
+    
+          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag)"
+          echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
+
+          gunzip -c ./result > image.tar || cp ./result image.tar
+          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
+          # crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}-${{ matrix.arch }}" use this for multi arch builds, not needed for now
+          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
+          crane auth logout ${DOCKER_REGISTRY}
+
+  # create-manifest:
+  #   needs: [build, check-conditions]
+  #   if: needs.check-conditions.outputs.should-push-docker == 'true'
+  #   env:
+  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     BASE_IMAGE_NAME: ${{ needs.build.outputs.docker-image-name }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Create and push MultiArch manifest
+  #       run: |
+  #         echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+  #         # Check if both architecture-specific images exist
+  #         if docker manifest inspect "${BASE_IMAGE_NAME}-amd64" > /dev/null 2>&1 && \
+  #            docker manifest inspect "${BASE_IMAGE_NAME}-arm64" > /dev/null 2>&1; then
+  #           # Create the manifest
+  #           docker manifest create "$BASE_IMAGE_NAME" \
+  #               --amend "${BASE_IMAGE_NAME}-amd64" \
+  #               --amend "${BASE_IMAGE_NAME}-arm64"
+
+  #           # Push the manifest
+  #           docker manifest push "$BASE_IMAGE_NAME"
+  #         else
+  #           echo "One or more architecture-specific images are missing"
+  #           exit 1
+  #         fi
+
+  #         docker logout ghcr.io
+
+
+  # The previous job would have already built for macOS but we must do it again
+  # from NixOS host (via remote builder protocol) so as to populate its local
+  # Nix store, and thus provide macOS binaries as part of our Nix cache.
+
+  # macos-build-for-cache:
+  #   runs-on: ${{ matrix.host }}
+  #   needs: [build, check-conditions]
+  #   if: github.ref == 'refs/heads/main'
+  #   strategy:
+  #     matrix:
+  #       system: [aarch64-darwin]
+  #       host: [x86_64-linux]
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #     - name: Build all flake outputs
+  #       run: |
+  #         om ci run --systems "${{ matrix.system }}" --no-link -- -v

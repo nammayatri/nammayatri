@@ -225,7 +225,8 @@ postMultimodalConfirm (_mbPersonId, _merchantId) journeyId forcedBookLegOrder jo
           >>= \case
             Just paymentOrder -> do
               person <- QP.findById journey.riderId >>= fromMaybeM (InvalidRequest "Person not found")
-              buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking
+              let isSingleMode = fromMaybe False journey.isSingleMode
+              buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking isSingleMode
             Nothing -> return Nothing
       Nothing -> return Nothing
   pure ApiTypes.JourneyConfirmResp {ApiTypes.orderSdkPayload = sdkPayload, ApiTypes.gatewayReferenceId = paymentGateWayId, result = "Success"}
@@ -260,6 +261,9 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   legs <- QJourneyLeg.getJourneyLegs journeyId
   allJourneyFrfsBookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
+  let isSingleMode = case allJourneyFrfsBookings of
+        [_] -> True
+        _ -> False
   bookingsPaymentOrders <-
     mapM
       ( \booking -> do
@@ -273,7 +277,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
                           merchantOperatingCityId = fromMaybe booking.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
                           orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
                       void $ SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
-                      createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType
+                      createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode
                       return (createOrderResp, Just paymentBooking.status)
                     Nothing -> return (Nothing, Nothing)
               Nothing -> return (Nothing, Nothing)
@@ -318,13 +322,13 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
       DFRFSTicketBookingPayment.REFUND_FAILED -> FRFSTicketServiceAPI.REFUND_FAILED
       DFRFSTicketBookingPayment.REFUND_INITIATED -> FRFSTicketServiceAPI.REFUND_INITIATED
 
-buildCreateOrderResp :: DOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.Types.Person.Person -> Payment.PaymentServiceType -> Environment.Flow (Maybe Payment.CreateOrderResp)
-buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType = do
+buildCreateOrderResp :: DOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.Types.Person.Person -> Payment.PaymentServiceType -> Bool -> Environment.Flow (Maybe Payment.CreateOrderResp)
+buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode = do
   personEmail <- mapM decrypt person.email
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   isSplitEnabled_ <- Payment.getIsSplitEnabled (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled
+  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrder.id.getId,
@@ -1418,7 +1422,9 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
             waybillId = reqJourneyLeg.finalBoardedWaybillId,
             scheduleNo = reqJourneyLeg.finalBoardedScheduleNo,
             updateSource = reqJourneyLeg.finalBoardedBusNumberSource,
-            serviceTierType = reqJourneyLeg.finalBoardedBusServiceTierType
+            serviceTierType = reqJourneyLeg.finalBoardedBusServiceTierType,
+            busConductorId = reqJourneyLeg.busConductorId,
+            busDriverId = reqJourneyLeg.busDriverId
           }
   newJourneyLeg <-
     JMTypes.mkJourneyLeg
@@ -1682,7 +1688,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-  routeStopMapping <- OTPRest.getRouteStopMappingByRouteCode req.routeCode integratedBPPConfig
+  routeStopMapping <- maybe (pure []) (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) req.routeCode
   let getLiveVehicles busesData =
         catMaybes
           <$> mapM
@@ -1704,7 +1710,13 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                     return Nothing
             )
             busesData
-  routeBusData <- CQMMB.getRoutesBuses req.routeCode integratedBPPConfig
+  mbRouteBusData <-
+    case req.routeCode of
+      Just routeCode -> do
+        routeBusData <- CQMMB.getRoutesBuses routeCode integratedBPPConfig
+        if null routeBusData.buses then pure Nothing else pure $ Just routeBusData
+      Nothing -> do
+        pure Nothing
   (srcCode, destCode) <- fromMaybeM (InvalidRequest "Source or destination stop code not found") $
     case (req.sourceStopCode, req.destinationStopCode) of
       (Just sourceStopCode, Just destinationStopCode) -> do
@@ -1720,28 +1732,33 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
         let destinationStopCode = fmap (.stopCode) . listToMaybe $ reverse routeStopMapping
         (,) <$> sourceStopCode <*> destinationStopCode
 
-  alternateRoutes <- JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
-  case routeBusData.buses of
-    [] -> do
+  alternateRoutes <- filter (\x -> Just x /= req.routeCode) <$> JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
+  case mbRouteBusData of
+    Nothing -> do
       busesForRoutes <- CQMMB.getBusesForRoutes alternateRoutes integratedBPPConfig
       alterateLiveVehicleData <-
-        mapM
-          ( \routeInfo -> do
-              route <- OTPRest.getRouteByRouteId integratedBPPConfig routeInfo.routeId >>= fromMaybeM (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId)
-              liveVehicles <- getLiveVehicles routeInfo.buses
-              return $
-                API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
-                  { liveVehicles,
-                    routeCode = routeInfo.routeId,
-                    routeShortName = route.shortName,
-                    alternateRouteInfo = Nothing
-                  }
-          )
-          busesForRoutes
+        catMaybes
+          <$> mapM
+            ( \routeInfo -> do
+                route <- OTPRest.getRouteByRouteId integratedBPPConfig routeInfo.routeId >>= fromMaybeM (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId)
+                liveVehicles <- getLiveVehicles routeInfo.buses
+                case liveVehicles of
+                  [] -> return Nothing
+                  _ ->
+                    return $
+                      Just $
+                        API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+                          { liveVehicles,
+                            routeCode = routeInfo.routeId,
+                            routeShortName = route.shortName,
+                            alternateRouteInfo = Nothing
+                          }
+            )
+            busesForRoutes
       return $ ApiTypes.AlternateLiveRoutesInfo alterateLiveVehicleData
-    busesData -> do
-      selectedRoute <- OTPRest.getRouteByRouteId integratedBPPConfig req.routeCode >>= fromMaybeM (InvalidRequest $ "Req Route not found with id: " <> req.routeCode)
-      liveVehicles <- getLiveVehicles busesData
+    Just routeBusData -> do
+      selectedRoute <- OTPRest.getRouteByRouteId integratedBPPConfig routeBusData.routeId >>= fromMaybeM (InvalidRequest $ "Req Route not found with id: " <> show req.routeCode)
+      liveVehicles <- getLiveVehicles routeBusData.buses
       alternateRouteInfo <- catMaybes <$> mapM (OTPRest.getRouteByRouteId integratedBPPConfig) alternateRoutes
       alternateRouteDetails <-
         mapM
@@ -1758,7 +1775,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
       return . ApiTypes.LiveRouteInfo $
         API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
           { liveVehicles,
-            routeCode = req.routeCode,
+            routeCode = routeBusData.routeId,
             routeShortName = selectedRoute.shortName,
             alternateRouteInfo = Just alternateRouteDetails
           }

@@ -175,6 +175,7 @@ findSpecialLocationByLatLongFull point = do
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
       where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
+      orderBy [asc (specialLocation ^. SpecialLocationPriority)]
       return (specialLocation, F.getGeomGeoJSON)
   mapM makeFullSpecialLocation (listToMaybe mbRes)
 
@@ -184,6 +185,7 @@ findSpecialLocationByLatLongNearby point radius = do
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
       where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. pointCloseByOrWithin (point.lon, point.lat) (val radius)
+      orderBy [asc (specialLocation ^. SpecialLocationPriority)]
       return (specialLocation, F.getGeomGeoJSON)
   return $ listToMaybe specialLocations
 
@@ -200,6 +202,7 @@ findSpecialLocationByLatLong' point = do
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
       where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
+      orderBy [asc (specialLocation ^. SpecialLocationPriority)]
       return specialLocation
   return $ listToMaybe specialLocations
 
@@ -209,6 +212,7 @@ findSpecialLocationByLatLong point = do
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
       where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
+      orderBy [asc (specialLocation ^. SpecialLocationPriority)]
       return (specialLocation, F.getGeomGeoJSON)
   return $ listToMaybe specialLocations
 

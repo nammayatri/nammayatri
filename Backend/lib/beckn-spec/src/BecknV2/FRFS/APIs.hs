@@ -16,6 +16,7 @@ module BecknV2.FRFS.APIs where
 
 import qualified BecknV2.FRFS.Types as Spec
 import EulerHS.Prelude
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type SearchAPI =
@@ -25,6 +26,14 @@ type SearchAPI =
 
 searchAPI :: Proxy SearchAPI
 searchAPI = Proxy
+
+type OnSearchAPIBS =
+  "on_search"
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] Spec.AckResponse
+
+onSearchAPIBS :: Proxy OnSearchAPIBS
+onSearchAPIBS = Proxy
 
 type OnSearchAPI =
   "on_search"
@@ -50,6 +59,14 @@ type OnSelectAPI =
 onSelectAPI :: Proxy OnSelectAPI
 onSelectAPI = Proxy
 
+type OnSelectAPIBS =
+  "on_select"
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] Spec.AckResponse
+
+onSelectAPIBS :: Proxy OnSelectAPIBS
+onSelectAPIBS = Proxy
+
 type InitAPI =
   "init"
     :> ReqBody '[JSON] Spec.InitReq
@@ -65,6 +82,14 @@ type OnInitAPI =
 
 onInitAPI :: Proxy OnInitAPI
 onInitAPI = Proxy
+
+type OnInitAPIBS =
+  "on_init"
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] Spec.AckResponse
+
+onInitAPIBS :: Proxy OnInitAPIBS
+onInitAPIBS = Proxy
 
 type ConfirmAPI =
   "confirm"
@@ -82,6 +107,14 @@ type OnConfirmAPI =
 onConfirmAPI :: Proxy OnConfirmAPI
 onConfirmAPI = Proxy
 
+type OnConfirmAPIBS =
+  "on_confirm"
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] Spec.AckResponse
+
+onConfirmAPIBS :: Proxy OnConfirmAPIBS
+onConfirmAPIBS = Proxy
+
 type StatusAPI =
   "status"
     :> ReqBody '[JSON] Spec.StatusReq
@@ -97,6 +130,14 @@ type OnStatusAPI =
 
 onStatusAPI :: Proxy OnStatusAPI
 onStatusAPI = Proxy
+
+type OnStatusAPIBS =
+  "on_status"
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] Spec.AckResponse
+
+onStatusAPIBS :: Proxy OnStatusAPIBS
+onStatusAPIBS = Proxy
 
 type CancelAPI =
   "cancel"
@@ -114,6 +155,14 @@ type OnCancelAPI =
 onCancelAPI :: Proxy OnCancelAPI
 onCancelAPI = Proxy
 
+type OnCancelAPIBS =
+  "on_cancel"
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] Spec.AckResponse
+
+onCancelAPIBS :: Proxy OnCancelAPIBS
+onCancelAPIBS = Proxy
+
 type OnUpdateAPI =
   "on_update"
     :> ReqBody '[JSON] Spec.OnUpdateReq
@@ -121,3 +170,11 @@ type OnUpdateAPI =
 
 onUpdateAPI :: Proxy OnUpdateAPI
 onUpdateAPI = Proxy
+
+type OnUpdateAPIBS =
+  "on_update"
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] Spec.AckResponse
+
+onUpdateAPIBS :: Proxy OnUpdateAPIBS
+onUpdateAPIBS = Proxy

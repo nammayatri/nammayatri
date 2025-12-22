@@ -340,6 +340,9 @@ let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
 
 let disableViaPointTimetableCheck = False
 
+let noSignatureSubscribers =
+      [ "pre-prod-ondc-ticketing-api-delhi.transportstack.in" ]
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -438,4 +441,5 @@ in  { esqDBCfg
     , frfsMetricsRateLimitHits = +100
     , frfsMetricsRateLimitWindowSec = +60
     , corporatePartnerApiToken = sec.corporatePartnerApiToken
+    , noSignatureSubscribers
     }

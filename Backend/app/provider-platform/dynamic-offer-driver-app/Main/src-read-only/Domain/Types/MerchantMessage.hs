@@ -73,6 +73,7 @@ data MessageKey
   | OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE
   | FLEET_LINK_SUCCESS_MESSAGE
   | FLEET_UNLINK_SUCCESS_MESSAGE
+  | DOCUMENT_INVALID
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

@@ -348,7 +348,8 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       createdAt = now,
       updatedAt = now,
       vehicleTags = vehicleTag,
-      ruleBasedUpgradeTiers = Nothing
+      ruleBasedUpgradeTiers = Nothing,
+      vehicleImageId = rc.vehicleImageId
     }
 
 makeVehicleAPIEntity :: Maybe DVST.ServiceTierType -> Vehicle -> VehicleAPIEntity
@@ -447,7 +448,8 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
       createdAt = now,
       unencryptedCertificateNumber = input.registrationNumber,
       approved = Just False,
-      updatedAt = now
+      updatedAt = now,
+      vehicleImageId = Nothing
     }
 
 validateRCStatus :: CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> (Documents.VerificationStatus, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)

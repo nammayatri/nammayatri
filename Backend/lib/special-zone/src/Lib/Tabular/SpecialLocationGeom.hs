@@ -40,6 +40,7 @@ mkPersist
       linkedLocationsIds (PostgresList Text),
       locationType Domain.SpecialLocationType
       geom Text Maybe
+      priority Int
       enabled Bool
       createdAt UTCTime
       updatedAt UTCTime

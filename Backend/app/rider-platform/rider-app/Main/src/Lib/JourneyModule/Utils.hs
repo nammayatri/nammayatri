@@ -1273,7 +1273,10 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
   (vendorSplitDetails, amountUpdated) <- createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
   isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing paymentType -- TODO :: You can be moved inside :)
   isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId merchantOperatingCityId Nothing paymentType
-  splitDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails isPercentageSplitEnabled
+  let isSingleMode = case bookings of
+        [_] -> True
+        _ -> False
+  splitDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails isPercentageSplitEnabled isSingleMode
   baskets <- createBasketFromBookings bookings merchantId merchantOperatingCityId paymentType mbEnableOffer
   let splitDetailsAmount = TPayment.extractSplitSettlementDetailsAmount splitDetails
   if frfsConfig.canUpdateExistingPaymentOrder
@@ -1397,7 +1400,10 @@ data VehicleLiveRouteInfo = VehicleLiveRouteInfo
     scheduleNo :: Maybe Text,
     tripNumber :: Maybe Int,
     depot :: Maybe Text,
-    remaining_trip_details :: Maybe [NandiTypes.BusScheduleTrip]
+    remaining_trip_details :: Maybe [NandiTypes.BusScheduleTrip],
+    isActuallyValid :: Maybe Bool,
+    busConductorId :: Maybe Text,
+    busDriverId :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -1442,7 +1448,7 @@ getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq
         mbResult
           <&> ( \result ->
                   ( integratedBPPConfig,
-                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number}
+                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot, isActuallyValid = result.is_actually_valid, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number, busConductorId = result.conductor_id, busDriverId = result.driver_id}
                   )
               )
 
