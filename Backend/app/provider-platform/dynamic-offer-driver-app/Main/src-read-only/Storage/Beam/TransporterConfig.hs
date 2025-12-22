@@ -152,6 +152,7 @@ data TransporterConfigT f = TransporterConfigT
     freeTrialDays :: B.C f Kernel.Prelude.Int,
     generateReferralCodeForFleet :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     generateReferralCodeForOperator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    gpsTollBehaviorWindowDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     graceTimeForScheduledRidePickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     includeDriverCurrentlyOnRide :: B.C f Kernel.Prelude.Bool,
     isAAEnabledForRecurring :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

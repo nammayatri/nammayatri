@@ -331,6 +331,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         isPickupOrDestinationEdited = Just False,
         isInsured = booking.isInsured,
         commission = commission,
+        driverGpsTurnedOff = Nothing,
         insuredAmount = booking.insuredAmount,
         reactBundleVersion = driver.reactBundleVersion,
         driverCancellationPenaltyFeeId = Nothing,

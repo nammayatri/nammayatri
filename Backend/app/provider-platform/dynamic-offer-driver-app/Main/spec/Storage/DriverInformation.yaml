@@ -122,6 +122,7 @@ DriverInformation:
     softBlockStiers: "Maybe [ServiceTierType]"
     softBlockExpiryTime: Maybe UTCTime
     softBlockReasonFlag: Maybe Text
+    tollRouteBlockedTill: Maybe UTCTime
     isBlockedForReferralPayout: Maybe Bool
     onboardingVehicleCategory: Maybe VehicleCategory
     servicesEnabledForSubscription: "[ServiceNames]"
@@ -385,6 +386,10 @@ DriverInformation:
     updateWeeklyCancellationRateBlockingCooldown:
       kvFunction: updateOneWithKV
       params: [weeklyCancellationRateBlockingCooldown]
+      where: driverId
+    updateTollRouteBlockedTill:
+      kvFunction: updateOneWithKV
+      params: [tollRouteBlockedTill]
       where: driverId
     updateDailyAndWeeklyCancellationRateBlockingCooldown:
       kvFunction: updateOneWithKV

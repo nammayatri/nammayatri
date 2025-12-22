@@ -27,6 +27,7 @@ module Domain.Action.UI.Ride
     stopAction,
     uploadOdometerReading,
     uploadDeliveryImage,
+    setDriverGpsTurnedOff,
   )
 where
 
@@ -503,3 +504,11 @@ getRiderMobileNumber booking option = do
             Just rider -> Just <$> decrypt rider.mobileNumber
       else pure Nothing
   pure mbRiderNumber
+
+setDriverGpsTurnedOff :: Id DRide.Ride -> Flow APISuccess
+setDriverGpsTurnedOff rideId = do
+  ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress")
+  when (not $ fromMaybe False ride.driverGpsTurnedOff) $ void $ QRide.updateDriverGpsTurnedOff (Just True) rideId
+  logInfo $ "Driver GPS turned off flag set for rideId: " <> rideId.getId
+  pure Success

@@ -131,6 +131,7 @@ Ride:
     driverCancellationPenaltyAmount: Maybe HighPrecMoney
     driverCancellationPenaltyWaivedReason: Maybe Text
     commission: Maybe HighPrecMoney
+    driverGpsTurnedOff: Maybe Bool
 
   sqlType:
     id: character(36)
@@ -319,6 +320,10 @@ Ride:
     updateCancellationChargesOnCancel:
       kvFunction: updateOneWithKV
       params: [cancellationChargesOnCancel]
+      where: id
+    updateDriverGpsTurnedOff:
+      kvFunction: updateOneWithKV
+      params: [driverGpsTurnedOff]
       where: id
 
   excludedDefaultQueries:

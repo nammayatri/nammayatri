@@ -108,6 +108,7 @@ data DriverInformationT f = DriverInformationT
     specialLocWarriorEnabledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     subscribed :: B.C f Kernel.Prelude.Bool,
     tollRelatedIssueCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    tollRouteBlockedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     totalReferred :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     tripDistanceMaxThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     tripDistanceMinThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),

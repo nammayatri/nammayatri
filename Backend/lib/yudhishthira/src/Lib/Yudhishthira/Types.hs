@@ -199,6 +199,7 @@ data LogicDomain
   | ESTIMATE_TAGS
   | USER_CANCELLATION_DUES_WAIVE_OFF
   | FRFS_TICKET_CATEGORIES
+  | GPS_TOLL_BEHAVIOR
   | CONFIG ConfigType
   | RIDER_CONFIG ConfigType
   | DRIVER_CONFIG ConfigType
@@ -218,7 +219,8 @@ instance Enumerable LogicDomain where
       ESTIMATE_TAGS,
       FRFS_TICKET_CATEGORIES,
       CANCELLATION_COIN_POLICY,
-      CUMULATIVE_OFFER_POLICY
+      CUMULATIVE_OFFER_POLICY,
+      GPS_TOLL_BEHAVIOR
     ]
       ++ map CONFIG [minBound .. maxBound]
       ++ map RIDER_CONFIG [minBound .. maxBound]
@@ -248,6 +250,7 @@ generateLogicDomainShowInstances =
     ++ [show (UI_RIDER a b) | a <- a', b <- b']
     ++ [show CANCELLATION_COIN_POLICY]
     ++ [show CUMULATIVE_OFFER_POLICY]
+    ++ [show GPS_TOLL_BEHAVIOR]
   where
     configTypes = [minBound .. maxBound]
     a' = [minBound .. maxBound]
@@ -278,6 +281,7 @@ instance Show LogicDomain where
   show (UI_RIDER a b) = "UI-RIDER_" ++ show a ++ "_" ++ show b
   show CANCELLATION_COIN_POLICY = "CANCELLATION-COIN-POLICY"
   show CUMULATIVE_OFFER_POLICY = "CUMULATIVE-OFFER-POLICY"
+  show GPS_TOLL_BEHAVIOR = "GPS-TOLL-BEHAVIOR"
 
 instance Read LogicDomain where
   readsPrec :: Int -> ReadS LogicDomain
@@ -304,6 +308,8 @@ instance Read LogicDomain where
             [(CANCELLATION_COIN_POLICY, drop 1 rest)]
           "CUMULATIVE-OFFER-POLICY" ->
             [(CUMULATIVE_OFFER_POLICY, drop 1 rest)]
+          "GPS-TOLL-BEHAVIOR" ->
+            [(GPS_TOLL_BEHAVIOR, drop 1 rest)]
           "CONFIG" ->
             let (configType', rest1) = break (== '_') (drop 1 rest)
              in case readMaybe configType' of

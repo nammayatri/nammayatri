@@ -52,6 +52,7 @@ data Ride = Ride
     driverDeviatedFromRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverDeviatedToTollRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverGoHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
+    driverGpsTurnedOff :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     enableFrequentLocationUpdates :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableOtpLessRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
