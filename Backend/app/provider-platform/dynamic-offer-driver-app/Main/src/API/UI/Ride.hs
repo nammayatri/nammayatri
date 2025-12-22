@@ -137,6 +137,10 @@ type API =
                     :> "stop"
                     :> ReqBody '[JSON] LatLong
                     :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "driverGpsTurnedOff"
+                    :> Post '[JSON] APISuccess
                 )
          )
 
@@ -152,7 +156,8 @@ data EndRideReq = EndRideReq
     point :: LatLong,
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
-    odometer :: Maybe Ride.OdometerReading
+    odometer :: Maybe Ride.OdometerReading,
+    driverGpsTurnedOff :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -177,6 +182,7 @@ handler =
              :<|> arrivedAtDestination
              :<|> arrivedStop
              :<|> departedStop
+             :<|> markDriverGpsTurnedOff
          )
 
 startRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
@@ -268,3 +274,6 @@ uploadDeliveryImage (_, _, cityId) rideId req = withFlowHandlerAPI $ DRide.uploa
 
 arrivedAtDestination :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtDestination (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtDestination rideId req
+
+markDriverGpsTurnedOff :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> FlowHandler APISuccess
+markDriverGpsTurnedOff (_, _, _) rideId = withFlowHandlerAPI $ DRide.setDriverGpsTurnedOff rideId

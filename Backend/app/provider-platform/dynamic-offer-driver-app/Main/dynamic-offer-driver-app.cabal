@@ -393,6 +393,7 @@ library
       SharedLogic.Analytics
       SharedLogic.Beckn.Common
       SharedLogic.BehaviourManagement.CancellationRate
+      SharedLogic.BehaviourManagement.GpsTollBehavior
       SharedLogic.BehaviourManagement.IssueBreach
       SharedLogic.BehaviourManagement.IssueBreachMitigation
       SharedLogic.BlockedRouteDetector

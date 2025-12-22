@@ -80,6 +80,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import qualified SharedLogic.BehaviourManagement.GpsTollBehavior as GpsTollBehavior
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -102,6 +103,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.StopInformation as QSI
+import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
 import qualified Tools.Maps as TM
 import qualified Tools.Notifications as TN
@@ -124,7 +126,8 @@ data DriverEndRideReq = DriverEndRideReq
     requestor :: DP.Person,
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
-    odometer :: Maybe DRide.OdometerReading
+    odometer :: Maybe DRide.OdometerReading,
+    driverGpsTurnedOff :: Maybe Bool
   }
 
 data DashboardEndRideReq = DashboardEndRideReq
@@ -312,6 +315,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           Nothing -> pure ()
       -- throwError $ EndRideOtpRequired (show booking.tripCategory)
       uiDistanceCalculation rideOld.id driverReq.uiDistanceCalculationWithAccuracy driverReq.uiDistanceCalculationWithoutAccuracy
+      whenJust driverReq.driverGpsTurnedOff $ \gpsTurnedOff ->
+        when (gpsTurnedOff && not (fromMaybe False rideOld.driverGpsTurnedOff)) $ void $ QRide.updateDriverGpsTurnedOff (Just True) rideOld.id
       case requestor.role of
         DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
         _ -> throwError AccessDenied
@@ -555,6 +560,44 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
         DC.incrementValidRideCount driverId expirationPeriod 1
         DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
+
+    -- GPS Toll Behavior Check - evaluate if driver intentionally turned off GPS on toll route
+    fork "GpsTollBehavior Check" $ do
+      let isTollRide = isJust updRide.estimatedTollCharges || isJust updRide.tollCharges
+          gpsTurnedOff = fromMaybe False updRide.driverGpsTurnedOff
+      when (isTollRide && gpsTurnedOff) $ do
+        logInfo $ "Driver turned off GPS on toll ride. DriverId: " <> driverId.getId <> ", RideId: " <> updRide.id.getId
+        -- Get window days from config (default 15 days if not configured)
+        let windowDays = fromMaybe 15 thresholdConfig.gpsTollBehaviorWindowDays
+        -- Get historical bad behavior count from sliding window for configured days
+        badBehaviorCount <- GpsTollBehavior.getGpsTollBadBehaviorCount windowDays driverId
+        -- Build input data for JSON logic evaluation
+        let gpsTollBehaviorData =
+              GpsTollBehavior.GpsTollBehaviorData
+                { estimatedTollCharges = updRide.estimatedTollCharges,
+                  estimatedTollNames = updRide.estimatedTollNames,
+                  estimatedTollIds = updRide.estimatedTollIds,
+                  detectedTollCharges = updRide.tollCharges,
+                  detectedTollNames = updRide.tollNames,
+                  detectedTollIds = updRide.tollIds,
+                  gpsTurnedOffInCurrentRide = gpsTurnedOff,
+                  badBehaviorInTollRouteCount = badBehaviorCount
+                }
+        -- Fetch rules from App Dynamic Logic (GPS_TOLL_BEHAVIOR domain)
+        localTime <- getLocalCurrentTime thresholdConfig.timeDiffFromUtc
+        (allLogics, _mbVersion) <- getAppDynamicLogic (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR localTime Nothing Nothing
+        -- Evaluate behavior using App Dynamic Logic
+        output <- GpsTollBehavior.evaluateGpsTollBehavior allLogics gpsTollBehaviorData
+        logInfo $ "GPS Toll Behavior evaluation result: " <> show output
+        -- Increment bad behavior counter if needed
+        when output.shouldIncrementBadBehaviorTollCounter $ do
+          logInfo $ "Incrementing GPS toll bad behavior counter for driver: " <> driverId.getId
+          GpsTollBehavior.incrementGpsTollBadBehaviorCount driverId
+        -- Block driver for future toll rides if needed
+        when output.shouldBlockForFutureTollRide $ do
+          logWarning $ "Blocking driver for future toll rides: " <> driverId.getId <> ", duration: " <> show output.blockDurationInHours <> " hours"
+          GpsTollBehavior.blockDriverForTollRoutes driverId output.blockDurationInHours
+
     computeEligibleUpgradeTiers ride thresholdConfig
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId

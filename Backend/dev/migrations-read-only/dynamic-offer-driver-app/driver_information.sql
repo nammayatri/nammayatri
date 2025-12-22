@@ -285,3 +285,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN last_offline_ti
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN rule_based_upgrade_tiers json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN toll_route_blocked_till timestamp with time zone ;

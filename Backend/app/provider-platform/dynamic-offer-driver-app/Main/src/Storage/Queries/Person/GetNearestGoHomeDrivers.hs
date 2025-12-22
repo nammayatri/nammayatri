@@ -86,7 +86,8 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     driverTags :: A.Value,
     score :: Maybe A.Value,
     tripDistanceMinThreshold :: Maybe Meters,
-    tripDistanceMaxThreshold :: Maybe Meters
+    tripDistanceMaxThreshold :: Maybe Meters,
+    isTollRouteEligible :: Bool -- True if driver is not blocked for toll routes
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -164,6 +165,10 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
       where
         mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
+          -- Driver is eligible for toll routes if not blocked or block has expired
+          let tollRouteEligible = case info.tollRouteBlockedTill of
+                Nothing -> True
+                Just blockTill -> blockTill < now
           Just $
             NearestGoHomeDriversResult
               { driverId = cast person.id,
@@ -192,5 +197,6 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
                 driverTags = Yudhishthira.convertTags $ fromMaybe [] person.driverTag,
                 score = Nothing,
                 tripDistanceMinThreshold = Nothing,
-                tripDistanceMaxThreshold = Nothing
+                tripDistanceMaxThreshold = Nothing,
+                isTollRouteEligible = tollRouteEligible
               }
