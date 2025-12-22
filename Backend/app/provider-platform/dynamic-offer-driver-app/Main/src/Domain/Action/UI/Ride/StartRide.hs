@@ -35,6 +35,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
+import Domain.Types.Toll
 import qualified Domain.Types.TransporterConfig as DTConf
 import Environment (Flow)
 import EulerHS.Prelude
@@ -56,6 +57,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride (calculateEstimatedEndTimeRange)
 import qualified SharedLogic.ScheduledNotifications as SN
+import SharedLogic.TollsDetector
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.Queries.Booking as QRB
@@ -200,6 +202,16 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
       void $ Redis.del (StopDetection.mkStopCountRedisKey rideId.getId)
       whenWithLocationUpdatesLock driverId $ do
+        mbCachedStarts <- Redis.safeGet @[Toll] (tollStartGateTrackingKey driverId)
+        whenJust mbCachedStarts $ \starts ->
+          logError $
+            "TollFlow: startRide cached start-gate state"
+              <> " driverId="
+              <> driverId.getId
+              <> " rideId="
+              <> rideId.getId
+              <> " cachedStarts="
+              <> show (map (.name) starts)
         withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
         withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer transporterConfig driverInfo
 

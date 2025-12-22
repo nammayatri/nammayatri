@@ -454,6 +454,32 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                             else (Nothing, Nothing, Nothing)
                         else (updRide.tollCharges, updRide.tollNames, Just Sure)
 
+                when
+                  ( updRide.driverDeviatedToTollRoute == Just True
+                      || isJust updRide.estimatedTollCharges
+                      || isJust updRide.tollCharges
+                  )
+                  $ logError $
+                    "TollFlow: endRide toll decision"
+                      <> " rideId="
+                      <> rideId.getId
+                      <> " driverId="
+                      <> driverId.getId
+                      <> " estCharges="
+                      <> show updRide.estimatedTollCharges
+                      <> " finalCharges="
+                      <> show tollCharges
+                      <> " finalNames="
+                      <> show tollNames
+                      <> " confidence="
+                      <> show tollConfidence
+                      <> " distanceCalcFailed="
+                      <> show distanceCalculationFailed
+                      <> " deviatedToToll="
+                      <> show updRide.driverDeviatedToTollRoute
+                      <> " selfTuned="
+                      <> show updRide.numberOfSelfTuned
+
                 fork "ride-interpolation" $ do
                   interpolatedPoints <- getInterpolatedPoints updRide.driverId
                   let rideInterpolationData = RideInterpolationData {interpolatedPoints = interpolatedPoints, rideId = updRide.id}

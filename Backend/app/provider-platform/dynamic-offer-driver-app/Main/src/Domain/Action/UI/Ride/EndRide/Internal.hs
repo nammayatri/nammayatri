@@ -71,6 +71,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.SubscriptionTransaction as SubscriptionTransaction
+import Domain.Types.Toll
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Variant
@@ -199,7 +200,26 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   Hedis.del $ multipleRouteKey booking.transactionId
   Hedis.del $ searchRequestKey booking.transactionId
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
+  mbCachedStarts <- Hedis.safeGet @[Toll] (SharedLogic.TollsDetector.tollStartGateTrackingKey ride.driverId)
+  whenJust mbCachedStarts $ \starts ->
+    logError $
+      "TollFlow: endRide before clearing start-gate cache"
+        <> " driverId="
+        <> ride.driverId.getId
+        <> " rideId="
+        <> ride.id.getId
+        <> " cachedStarts="
+        <> show (fmap (.name) starts)
   clearTollStartGateBatchCache ride.driverId
+  mbCachedAfter <- Hedis.safeGet @[Toll] (SharedLogic.TollsDetector.tollStartGateTrackingKey ride.driverId)
+  logError $
+    "TollFlow: endRide after clearing start-gate cache"
+      <> " driverId="
+      <> ride.driverId.getId
+      <> " rideId="
+      <> ride.id.getId
+      <> " cachedStarts="
+      <> show (fmap (fmap (.name)) mbCachedAfter)
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   let currency = booking.currency
   let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues

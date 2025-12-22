@@ -115,7 +115,7 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
     updateRouteDeviationDetails :: Bool -> Bool -> Flow Bool
     updateRouteDeviationDetails isRouteDeviated alreadyDeviated = do
       when (isRouteDeviated && not alreadyDeviated) $ do
-        logInfo $ "Deviation detected for rideId: " <> getId ride.id
+        logError $ "TollFlow: driver_deviated_from_route set rideId=" <> getId ride.id
         QRide.updateDriverDeviatedFromRoute ride.id True
       return isRouteDeviated
 
@@ -198,6 +198,7 @@ updateTollRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints = 
   let driverDeviatedToTollRoute = fromMaybe False ride.driverDeviatedToTollRoute
   isTollPresentOnCurrentRoute <- isJust <$> TollsDetector.getTollInfoOnRoute merchantOpCityId (Just driverId) batchWaypoints
   when (isTollPresentOnCurrentRoute && not driverDeviatedToTollRoute) $ do
+    logError $ "TollFlow: driver_deviated_to_toll_route set rideId=" <> getId ride.id <> " driverId=" <> getId driverId
     QRide.updateDriverDeviatedToTollRoute ride.id isTollPresentOnCurrentRoute
   return (driverDeviatedToTollRoute, isTollPresentOnCurrentRoute)
 

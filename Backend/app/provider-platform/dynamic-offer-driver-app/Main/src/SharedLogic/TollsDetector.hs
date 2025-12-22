@@ -50,10 +50,26 @@ getAggregatedTollChargesAndNamesOnRoute mbDriverId route@(p1 : p2 : ps) tolls (t
   if not $ null allTollCombinationsWithStartGates
     then do
       case getExitTollAndRemainingRoute route allTollCombinationsWithStartGates of
-        Just (remainingRoute, toll) -> getAggregatedTollChargesAndNamesOnRoute mbDriverId remainingRoute tolls (tollCharges + toll.price.amount, tollNames <> [toll.name], toll.isAutoRickshawAllowed, toll.isTwoWheelerAllowed)
+        Just (remainingRoute, toll) -> do
+          whenJust mbDriverId $ \driverId ->
+            logError $
+              "TollFlow: toll exit gates intersection found (same batch)"
+                <> " driverId="
+                <> driverId.getId
+                <> " toll="
+                <> toll.name
+          getAggregatedTollChargesAndNamesOnRoute mbDriverId remainingRoute tolls (tollCharges + toll.price.amount, tollNames <> [toll.name], toll.isAutoRickshawAllowed, toll.isTwoWheelerAllowed)
         Nothing -> do
           whenJust mbDriverId $ \driverId -> do
             Hedis.setExp (tollStartGateTrackingKey driverId) allTollCombinationsWithStartGates 21600 -- 6 hours
+            logError $
+              "TollFlow: toll start gates intersection (without exit) cached"
+                <> " driverId="
+                <> driverId.getId
+                <> " startGates="
+                <> show (map (.name) allTollCombinationsWithStartGates)
+                <> " segment="
+                <> show (p1, p2)
           return (tollCharges, tollNames, tollIsAutoRickshawAllowed, tollIsTwoWheelerAllowed)
     else getAggregatedTollChargesAndNamesOnRoute mbDriverId (p2 : ps) tolls (tollCharges, tollNames, tollIsAutoRickshawAllowed, tollIsTwoWheelerAllowed)
 
@@ -96,8 +112,14 @@ getTollInfoOnRoute merchantOperatingCityId mbDriverId route = do
     getAggregatedTollChargesConsideringStartSegmentFromPrevBatchWhileOnRide driverId tollCombinationsWithStartGatesInPrevBatch eligibleTollsThatMaybePresentOnTheRoute = do
       case getExitTollAndRemainingRoute route tollCombinationsWithStartGatesInPrevBatch of
         Just (remainingRoute, toll) -> do
+          logError $
+            "TollFlow: toll exit gates intersection found for cached starts (previous batch)"
+              <> " driverId="
+              <> driverId.getId
+              <> " toll="
+              <> toll.name
           clearTollStartGateBatchCache driverId
           getAggregatedTollCharges remainingRoute eligibleTollsThatMaybePresentOnTheRoute (toll.price.amount, [toll.name])
         Nothing -> do
-          logWarning $ "No exit segment of tolls with start segment marked from previous batch found for driverId : " <> driverId.getId <> " TollCombinationsWithStartGatesInPrevBatch : " <> show tollCombinationsWithStartGatesInPrevBatch <> " route : " <> show route
+          logError $ "TollFlow: No exit segment of tolls with start segment marked from previous batch found for driverId : " <> driverId.getId <> " TollCombinationsWithStartGatesInPrevBatch : " <> show tollCombinationsWithStartGatesInPrevBatch <> " route : " <> show route
           return Nothing
