@@ -71,7 +71,8 @@ data NearestDriversResult = NearestDriversResult
     score :: Maybe A.Value,
     tripDistanceMinThreshold :: Maybe Meters,
     tripDistanceMaxThreshold :: Maybe Meters,
-    maxPickupDistance :: Maybe Meters
+    maxPickupDistance :: Maybe Meters,
+    isTollRouteEligible :: Bool -- True if tollRouteBlockedTill is Nothing or < now
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -167,6 +168,10 @@ getNearestDrivers NearestDriversReq {..} = do
       where
         mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
+          -- Driver is eligible for toll routes if not blocked or block has expired
+          let tollRouteEligible = case info.tollRouteBlockedTill of
+                Nothing -> True
+                Just blockTill -> blockTill < now
           Just $
             NearestDriversResult
               { driverId = cast person.id,
@@ -195,7 +200,8 @@ getNearestDrivers NearestDriversReq {..} = do
                 score = Nothing,
                 tripDistanceMinThreshold = info.tripDistanceMinThreshold,
                 tripDistanceMaxThreshold = info.tripDistanceMaxThreshold,
-                maxPickupDistance = info.maxPickupRadius
+                maxPickupDistance = info.maxPickupRadius,
+                isTollRouteEligible = tollRouteEligible
               }
 
 hasSufficientBalance ::

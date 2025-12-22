@@ -304,6 +304,11 @@ updateTollRelatedIssueCount tollRelatedIssueCount driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.tollRelatedIssueCount tollRelatedIssueCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateTollRouteBlockedTill :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateTollRouteBlockedTill tollRouteBlockedTill driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.tollRouteBlockedTill tollRouteBlockedTill, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateTripEndLocation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.External.Maps.LatLong -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateTripEndLocation driverTripEndLocation driverId = do
   _now <- getCurrentTime
@@ -420,6 +425,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.specialLocWarriorEnabledAt specialLocWarriorEnabledAt,
       Se.Set Beam.subscribed subscribed,
       Se.Set Beam.tollRelatedIssueCount tollRelatedIssueCount,
+      Se.Set Beam.tollRouteBlockedTill tollRouteBlockedTill,
       Se.Set Beam.totalReferred totalReferred,
       Se.Set Beam.tripDistanceMaxThreshold tripDistanceMaxThreshold,
       Se.Set Beam.tripDistanceMinThreshold tripDistanceMinThreshold,
