@@ -8,6 +8,7 @@ imports:
   VehicleVariant: Domain.Types.VehicleVariant
   UpgradedTier: Domain.Types.UpgradedTier
   Value: Data.Aeson
+  MediaFile: IssueManagement.Domain.Types.MediaFile
 Vehicle:
   tableName: vehicle
 
@@ -26,6 +27,7 @@ Vehicle:
       category: Maybe VehicleCategory
       capacity: Maybe Int
       createdAt: UTCTime
+      vehicleImageId: Maybe (Id MediaFile)
 
   fields:
     driverId: Id Person
@@ -52,6 +54,7 @@ Vehicle:
     selectedServiceTiers: "[ServiceTierType]"
     vehicleTags: Maybe [Text]
     ruleBasedUpgradeTiers: Maybe [UpgradedTier]
+    vehicleImageId: Maybe (Id MediaFile)
 
   beamType:
     ruleBasedUpgradeTiers: Maybe Value
@@ -121,4 +124,8 @@ Vehicle:
     updateRuleBasedUpgradeTiers:
       kvFunction: updateOneWithKV
       params: [ruleBasedUpgradeTiers]
+      where: driverId
+    updateVehicleImageId:
+      kvFunction: updateOneWithKV
+      params: [vehicleImageId]
       where: driverId
