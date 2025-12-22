@@ -344,6 +344,7 @@ data DriverQuoteError
   | RecentActiveRide
   | DriverTransactionTryAgain (Maybe Text)
   | CustomerDestinationUpdated
+  | CustomerCancelled
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverQuoteError
@@ -363,6 +364,7 @@ instance IsBaseError DriverQuoteError where
   toMessage RecentActiveRide = Just "Cannot End Ride before 60 seconds"
   toMessage (DriverTransactionTryAgain driverId) = Just $ "Ongoing Transaction" <> maybe "" (<> "For DriverId") driverId <> ". Please try again later."
   toMessage CustomerDestinationUpdated = Just "Customer destination updated"
+  toMessage CustomerCancelled = Just "Customer cancelled the ride request"
 
 instance IsHTTPError DriverQuoteError where
   toErrorCode = \case
@@ -380,6 +382,7 @@ instance IsHTTPError DriverQuoteError where
     RecentActiveRide -> "RECENT_ACTIVE_RIDE"
     DriverTransactionTryAgain _ -> "DRIVER_TRANSACTION_TRY_AGAIN"
     CustomerDestinationUpdated -> "CUSTOMER_DESTINATION_UPDATED"
+    CustomerCancelled -> "CUSTOMER_CANCELLED"
 
   toHttpCode = \case
     FoundActiveQuotes -> E400
@@ -396,6 +399,7 @@ instance IsHTTPError DriverQuoteError where
     RecentActiveRide -> E400
     DriverTransactionTryAgain _ -> E409
     CustomerDestinationUpdated -> E400
+    CustomerCancelled -> E400
 
 instance IsAPIError DriverQuoteError
 

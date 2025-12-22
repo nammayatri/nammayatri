@@ -135,3 +135,7 @@ isDriverValidToCache validDeviceTypes driverDeviceType = do
   case (validDeviceTypes, driverDeviceType) of
     (Just valDeviceTypes, Just dDeviceType) -> pure $ dDeviceType `elem` valDeviceTypes
     _ -> pure False
+
+findAnyAcceptedBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchTry -> m (Maybe SearchRequestForDriver)
+findAnyAcceptedBySTId (Id searchTryId) = do
+  findOneWithKV [Se.And [Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId, Se.Is BeamSRFD.response $ Se.Eq (Just Domain.Accept)]]
