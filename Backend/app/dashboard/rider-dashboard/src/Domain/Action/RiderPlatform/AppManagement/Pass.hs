@@ -7,6 +7,7 @@ module Domain.Action.RiderPlatform.AppManagement.Pass
     postPassCustomerActivateToday,
     postPassCustomerPassSelect,
     getPassCustomerPaymentStatus,
+    postPassCustomerPassResetDeviceSwitchCount,
   )
 where
 
@@ -65,3 +66,9 @@ getPassCustomerPaymentStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.M
 getPassCustomerPaymentStatus merchantShortId opCity apiTokenInfo customerId orderId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.getPassCustomerPaymentStatus) customerId orderId
+
+postPassCustomerPassResetDeviceSwitchCount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPassCustomerPassResetDeviceSwitchCount merchantShortId opCity apiTokenInfo customerId purchasedPassId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.postPassCustomerPassResetDeviceSwitchCount) customerId purchasedPassId)
