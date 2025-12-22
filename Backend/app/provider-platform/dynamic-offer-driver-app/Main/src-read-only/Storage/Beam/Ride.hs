@@ -47,6 +47,7 @@ data RideT f = RideT
     driverDeviatedFromRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     driverDeviatedToTollRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     driverGoHomeRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    driverGpsTurnedOff :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     driverId :: B.C f Kernel.Prelude.Text,
     enableFrequentLocationUpdates :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOtpLessRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
