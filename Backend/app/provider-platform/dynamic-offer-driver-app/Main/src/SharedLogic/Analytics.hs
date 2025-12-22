@@ -16,6 +16,7 @@ module SharedLogic.Analytics where
 
 import qualified Data.Map as Map
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.DriverInformation as DI
@@ -472,8 +473,9 @@ updateOperatorAnalyticsTotalRideCount ::
   TC.TransporterConfig ->
   Id DP.Person ->
   DR.Ride ->
+  DBooking.Booking ->
   m ()
-updateOperatorAnalyticsTotalRideCount transporterConfig driverId ride = do
+updateOperatorAnalyticsTotalRideCount transporterConfig driverId ride booking = do
   mbOperatorId <- findOperatorIdForDriver driverId
   when (isNothing mbOperatorId) $ logTagInfo "AnalyticsUpdateTotalRideCount" $ "No operator found for driver: " <> show driverId
   whenJust mbOperatorId $ \operatorId -> do
@@ -488,7 +490,7 @@ updateOperatorAnalyticsTotalRideCount transporterConfig driverId ride = do
   whenJust mbFLeetOwner $ \fleetOwner -> do
     Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
       SFleetOperatorStats.incrementTotalRidesTotalDistAndTotalEarning fleetOwner.fleetOwnerId ride transporterConfig
-      SFleetOperatorStats.incrementTotalEarningDistanceAndCompletedRidesDaily fleetOwner.fleetOwnerId ride transporterConfig
+      SFleetOperatorStats.incrementTotalEarningDistanceAndCompletedRidesDaily fleetOwner.fleetOwnerId ride booking transporterConfig
 
 -- case newTotalRides of
 --   2 -> updatePeriodicMetrics transporterConfig operatorId GREATER_THAN_ONE_RIDE Redis.incr
@@ -650,12 +652,8 @@ incrementFleetOwnerAnalyticsActiveVehicleCount ::
   Id DP.Person ->
   m ()
 incrementFleetOwnerAnalyticsActiveVehicleCount mbFleetOwnerId driverId = do
-  case mbFleetOwnerId of
-    Just fleetOwnerId -> incrementActiveVehicleCount fleetOwnerId
-    Nothing -> do
-      mbFleetOwner <- QFDA.findByDriverId driverId True
-      when (isNothing mbFleetOwner) $ logTagError "AnalyticsUpdateActiveVehicleCount" $ "No fleet owner found for driver: " <> show driverId
-      whenJust mbFleetOwner $ \fleetOwner -> incrementActiveVehicleCount fleetOwner.fleetOwnerId
+  when (isNothing mbFleetOwnerId) $ logTagError "AnalyticsUpdateActiveVehicleCount" $ "No fleet owner found for linked vehicle of driver: " <> show driverId
+  whenJust mbFleetOwnerId $ \fleetOwnerId -> incrementActiveVehicleCount fleetOwnerId
   where
     incrementActiveVehicleCount fleetOwnerId = do
       let totalActiveVehicleCountKey = makeFleetAnalyticsKey fleetOwnerId ACTIVE_VEHICLE_COUNT
@@ -673,12 +671,8 @@ decrementFleetOwnerAnalyticsActiveVehicleCount ::
   Id DP.Person ->
   m ()
 decrementFleetOwnerAnalyticsActiveVehicleCount mbFleetOwnerId driverId = do
-  case mbFleetOwnerId of
-    Just fleetOwnerId -> decrementActiveVehicleCount fleetOwnerId
-    Nothing -> do
-      mbFleetOwner <- QFDA.findByDriverId driverId True
-      when (isNothing mbFleetOwner) $ logTagError "AnalyticsUpdateActiveVehicleCount" $ "No fleet owner found for driver: " <> show driverId
-      whenJust mbFleetOwner $ \fleetOwner -> decrementActiveVehicleCount fleetOwner.fleetOwnerId
+  when (isNothing mbFleetOwnerId) $ logTagError "AnalyticsUpdateActiveVehicleCount" $ "No fleet owner found for linked vehicle of driver: " <> show driverId
+  whenJust mbFleetOwnerId $ \fleetOwnerId -> decrementActiveVehicleCount fleetOwnerId
   where
     decrementActiveVehicleCount fleetOwnerId = do
       let totalActiveVehicleCountKey = makeFleetAnalyticsKey fleetOwnerId ACTIVE_VEHICLE_COUNT
