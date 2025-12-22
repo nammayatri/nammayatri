@@ -3804,15 +3804,8 @@ getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbF
               tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
           cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
           let allVehicleVariants = nub $ concatMap (.allowedVehicleVariant) cityServiceTiers
-          now <- getCurrentTime
-          let currentDay = utctDay now
               safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
-
-          scheduledBookings <-
-            if currentDay >= from
-              then UIDriver.getTodayScheduledBookings now merchantOpCityId allVehicleVariants mbCurrentLocation transporterConfig Nothing tripCategory (toInteger limit) (toInteger offset) safelimit
-              else UIDriver.getTommorowScheduledBookings now (UTCTime from 0) merchantOpCityId allVehicleVariants mbCurrentLocation transporterConfig Nothing tripCategory (toInteger limit) (toInteger offset)
-
+          scheduledBookings <- UIDriver.getScheduledBookings from merchantOpCityId allVehicleVariants mbCurrentLocation transporterConfig Nothing tripCategory (toInteger limit) (toInteger offset) safelimit
           bookings <- mapM (UIDriver.buildBookingAPIEntityFromBooking mbCurrentLocation) (catMaybes scheduledBookings)
           fleetBookings <- mapM convertToFleetScheduledBooking (catMaybes bookings)
 

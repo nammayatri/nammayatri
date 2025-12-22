@@ -80,8 +80,7 @@ module Domain.Action.UI.Driver
     getDummyRideRequest,
     listScheduledBookings,
     acceptScheduledBooking,
-    getTodayScheduledBookings,
-    getTommorowScheduledBookings,
+    getScheduledBookings,
     buildBookingAPIEntityFromBooking,
     mkBreakupItem,
     getInformationV2,
@@ -2731,7 +2730,6 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
           case driverInfo.latestScheduledBooking of
             Just _ -> pure $ ScheduledBookingRes []
             Nothing -> do
-              now <- getCurrentTime
               driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
               vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
               cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing
@@ -2743,16 +2741,10 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
                 then do
                   let vehicleVariants = nub $ castServiceTierToVariant <$> availableServiceTiers
                       tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
-                      currentDay = utctDay now
                       limit = fromMaybe 10 mbLimit
                       offset = fromMaybe 0 mbOffset
                       safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
-
-                  scheduledBookings <-
-                    if currentDay >= from
-                      then getTodayScheduledBookings now cityId vehicleVariants (Just dLoc) transporterConfig (Just availableServiceTiers) tripCategory limit offset safelimit
-                      else getTommorowScheduledBookings now (UTCTime from 0) cityId vehicleVariants (Just dLoc) transporterConfig (Just availableServiceTiers) tripCategory limit offset
-
+                  scheduledBookings <- getScheduledBookings from cityId vehicleVariants (Just dLoc) transporterConfig (Just availableServiceTiers) tripCategory limit offset safelimit
                   bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (catMaybes scheduledBookings)
                   let sortedBookings = sortBookingsByDistance (catMaybes bookings)
                   return $ ScheduledBookingRes sortedBookings
@@ -2810,6 +2802,9 @@ parseMember member = do
       return (idText, lat, lon, startTime, serviceTierType)
     _ -> Nothing
 
+-- Filters booking IDs by distance/time and fetches full booking data.
+-- Parses member strings to extract location/time, checks if driver can reach in time.
+-- Returns full booking objects from hash set for bookings within reach.
 returnFilteredBookings :: UTCTime -> [BS.ByteString] -> Maybe LatLong -> TransporterConfig -> Maybe [ServiceTierType] -> Text -> Integer -> Flow [Maybe DRB.Booking]
 returnFilteredBookings now res mbDLoc transporterConfig mbPossibleServiceTierTypes redisKeyForHset limit = do
   let parsedRes = mapMaybe (parseMember . decodeUtf8) res
@@ -2843,32 +2838,35 @@ mkBreakupItem currency title valueInText = do
         priceWithCurrency = mkPriceAPIEntity priceObject
       }
 
-getTodayScheduledBookings :: UTCTime -> Id DMOC.MerchantOperatingCity -> [VehicleVariant] -> Maybe LatLong -> TransporterConfig -> Maybe [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Integer -> Flow [Maybe DRB.Booking]
-getTodayScheduledBookings now mocCityId vehicleVariants mbDLoc transporterConfig mbPossibleServiceTierTypes tripCategories limit offset safelimit = do
-  let nextDay = addDays 1 (utctDay now)
-      nextDayStartTime = UTCTime nextDay 0
-      redisKeys = createRedisKeysForCombinations now mocCityId tripCategories vehicleVariants
-      redisKeyForHset = createRedisKeyForHset now mocCityId
-      startScore = calculateSortedSetScore $ addUTCTime 1800 now
-      endScore = calculateSortedSetScore $ addUTCTime (3600 * 2) now
-      startScore2 = calculateSortedSetScore $ addUTCTime ((3600 * 2) + 1) now
-      end = calculateSortedSetScore nextDayStartTime
-
-  res <- mapM (\key -> Redis.zRangeByScoreByCount key startScore endScore offset safelimit) redisKeys
-  res2 <- mapM (\key -> Redis.zRangeByScoreByCount key startScore2 end offset limit) redisKeys
-
-  returnFilteredBookings now (concat (res ++ res2)) mbDLoc transporterConfig mbPossibleServiceTierTypes redisKeyForHset limit
-
-getTommorowScheduledBookings :: UTCTime -> UTCTime -> Id DMOC.MerchantOperatingCity -> [VehicleVariant] -> Maybe LatLong -> TransporterConfig -> Maybe [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Flow [Maybe DRB.Booking]
-getTommorowScheduledBookings now dayStartTime mocCityId vehicleVariants mbDLoc transporterConfig mbPossibleServiceTierTypes tripCategories limit offset = do
-  let redisKeys = createRedisKeysForCombinations dayStartTime mocCityId tripCategories vehicleVariants
-      redisKeyForHset = createRedisKeyForHset dayStartTime mocCityId
-      startScore = calculateSortedSetScore dayStartTime
-      endScore = calculateSortedSetScore $ addUTCTime (3600 * 24) dayStartTime
-
-  res <- mapM (\key -> Redis.zRangeByScoreByCount key startScore endScore offset limit) redisKeys
-
-  returnFilteredBookings now (concat res) mbDLoc transporterConfig mbPossibleServiceTierTypes redisKeyForHset limit
+-- Retrieves scheduled bookings for a specified day from Redis.
+-- Gets current time and local time internally, then determines query strategy based on day comparison.
+-- For today: queries two windows (30min-2hrs with safelimit, 2hrs-midnight with limit), skips next 30min.
+-- For future days: queries full 24-hour window from midnight to midnight with limit.
+-- Uses local time for Redis keys/scores, converts to UTC for distance filtering.
+getScheduledBookings :: Day -> Id DMOC.MerchantOperatingCity -> [VehicleVariant] -> Maybe LatLong -> TransporterConfig -> Maybe [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Integer -> Flow [Maybe DRB.Booking]
+getScheduledBookings from mocCityId vehicleVariants mbDLoc transporterConfig mbPossibleServiceTierTypes tripCategories limit offset safelimit = do
+  now <- getCurrentTime
+  let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
+      localNow = addUTCTime timeDiff now
+      isToday = utctDay now >= from
+      referenceTime = if isToday then localNow else addUTCTime timeDiff (UTCTime from 0)
+      redisKeys = createRedisKeysForCombinations referenceTime mocCityId tripCategories vehicleVariants
+      redisKeyForHset = createRedisKeyForHset referenceTime mocCityId
+      queryTimeRange startTime endTime off lim =
+        concat <$> mapM (\key -> Redis.zRangeByScoreByCount key (calculateSortedSetScore startTime) (calculateSortedSetScore endTime) off lim) redisKeys
+      fetchTodayBookings = do
+        let window1Start = addUTCTime 1800 localNow
+            window1End = addUTCTime 7200 localNow
+            window2Start = addUTCTime 7201 localNow
+            window2End = UTCTime (addDays 1 (utctDay localNow)) 0
+        res1 <- queryTimeRange window1Start window1End offset safelimit
+        let remainingOffset = max 0 (offset - toInteger (length res1))
+        res2 <- queryTimeRange window2Start window2End remainingOffset limit
+        return $ res1 ++ res2
+      fetchFutureBookings =
+        queryTimeRange referenceTime (addUTCTime 86400 referenceTime) offset limit
+  res <- if isToday then fetchTodayBookings else fetchFutureBookings
+  returnFilteredBookings now res mbDLoc transporterConfig mbPossibleServiceTierTypes redisKeyForHset limit
 
 acceptScheduledBooking ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
