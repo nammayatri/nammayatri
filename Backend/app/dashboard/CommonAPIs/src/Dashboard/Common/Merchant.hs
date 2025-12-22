@@ -75,7 +75,13 @@ data FCMConfigUpdateReq = FCMConfigUpdateReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 mkFCMConfig :: Text -> FCMConfigUpdateReq -> FCM.FCMConfig
-mkFCMConfig fcmTokenKeyPrefix FCMConfigUpdateReq {..} = FCM.FCMConfig {..}
+mkFCMConfig fcmTokenKeyPrefix FCMConfigUpdateReq {..} =
+  FCM.FCMConfig
+    { fcmUrl = fcmUrl,
+      fcmServiceAccount = fcmServiceAccount,
+      fcmTokenKeyPrefix = fcmTokenKeyPrefix,
+      fcmNotificationObj = Nothing
+    }
 
 newtype FCMConfigUpdateTReq = FCMConfigUpdateTReq
   { fcmUrl :: BaseUrl
