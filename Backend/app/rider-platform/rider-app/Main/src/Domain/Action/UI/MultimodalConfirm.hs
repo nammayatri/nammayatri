@@ -40,6 +40,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalSwitchRoute,
     postMultimodalOrderSublegSetOnboardedVehicleDetails,
     postMultimodalSetRouteName,
+    updateBusLocation,
   )
 where
 
@@ -2080,3 +2081,66 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         Left err -> do
           logError $ "SetOnboarding OTPRest failed: " <> show err
           return Nothing
+
+updateBusLocation :: Maybe Double -> Maybe Double -> Maybe Text -> Environment.Flow Text
+updateBusLocation mbLat mbLon mbBusId =
+  case (mbLat, mbLon, mbBusId) of
+    (Just lat, Just lon, Just busId)
+      | lat < -90 || lat > 90 ->
+        pure "Invalid latitude"
+      | lon < -180 || lon > 180 ->
+        pure "Invalid longitude"
+      | otherwise -> do
+        logDebug $
+          "Updating bus location | busId="
+            <> busId
+            <> " lat="
+            <> T.pack (show lat)
+            <> " lon="
+            <> T.pack (show lon)
+
+        now <- getCurrentTime
+        let timestamp :: Int
+            timestamp = floor (utcTimeToPOSIXSeconds now)
+
+        let redisPrefix = Nothing
+        let busIdBS = encodeUtf8 busId
+
+        void $
+          CQMMB.withCrossAppRedisNew $
+            Redis.geoAdd
+              (busLocationKey redisPrefix)
+              [(lon, lat, busIdBS)]
+
+        let busMeta =
+              Aeson.object
+                [ "latitude" Aeson..= lat,
+                  "longitude" Aeson..= lon,
+                  "timestamp" Aeson..= timestamp,
+                  "vehicle_number" Aeson..= busId,
+                  "last_updated" Aeson..= timestamp
+                ]
+
+        let metaKey = busMetadataKey redisPrefix
+
+        void $
+          CQMMB.withCrossAppRedisNew $
+            Redis.hSetExp
+              metaKey
+              busId
+              busMeta
+              (24 * 60 * 60)
+
+        pure "Bus location updated successfully"
+    _ ->
+      pure "Invalid parameters provided"
+
+busLocationKey :: Maybe Text -> Text
+busLocationKey = \case
+  Just prefix -> prefix <> ":bus_locations"
+  Nothing -> "bus_locations"
+
+busMetadataKey :: Maybe Text -> Text
+busMetadataKey = \case
+  Just prefix -> prefix <> ":bus_metadata_v2"
+  Nothing -> "bus_metadata_v2"
