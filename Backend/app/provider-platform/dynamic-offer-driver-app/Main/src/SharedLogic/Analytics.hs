@@ -47,32 +47,34 @@ import Tools.Error
 data Period = Today | ThisWeek | ThisMonth | Yesterday | LastWeek | LastMonth
   deriving (Show, Eq)
 
-data AllTimeMetric = TOTAL_RIDE_COUNT | RATING_SUM | CANCEL_COUNT | ACCEPTATION_COUNT | TOTAL_REQUEST_COUNT
+data AllTimeMetric = TOTAL_RIDE_COUNT | RATING_SUM | RATING_COUNT | CANCEL_COUNT | ACCEPTATION_COUNT | TOTAL_REQUEST_COUNT
   deriving (Show, Eq, Ord)
 
 allTimeMetrics :: [AllTimeMetric]
-allTimeMetrics = [TOTAL_RIDE_COUNT, RATING_SUM, CANCEL_COUNT, ACCEPTATION_COUNT, TOTAL_REQUEST_COUNT]
+allTimeMetrics = [TOTAL_RIDE_COUNT, RATING_SUM, RATING_COUNT, CANCEL_COUNT, ACCEPTATION_COUNT, TOTAL_REQUEST_COUNT]
 
 allTimeKeys :: Text -> [Text]
 allTimeKeys operatorId = map (makeOperatorAnalyticsKey operatorId) allTimeMetrics
 
 data AllTimeFallbackRes = AllTimeFallbackRes
-  { totalRideCount :: Int,
-    ratingSum :: Int,
-    cancelCount :: Int,
-    acceptationCount :: Int,
-    totalRequestCount :: Int
+  { totalRideCount :: Maybe Int,
+    ratingSum :: Maybe Int,
+    ratingCount :: Maybe Int,
+    cancelCount :: Maybe Int,
+    acceptationCount :: Maybe Int,
+    totalRequestCount :: Maybe Int
   }
   deriving (Show, Eq)
 
 convertToAllTimeFallbackRes :: [(AllTimeMetric, Int)] -> CommonAllTimeFallbackRes
 convertToAllTimeFallbackRes metricsList =
   let metricsMap = Map.fromList metricsList
-      getMetricValue metric = Map.findWithDefault 0 metric metricsMap
+      getMetricValue metric = Map.lookup metric metricsMap
    in OperatorAllTimeFallback $
         AllTimeFallbackRes
           { totalRideCount = getMetricValue TOTAL_RIDE_COUNT,
             ratingSum = getMetricValue RATING_SUM,
+            ratingCount = getMetricValue RATING_COUNT,
             cancelCount = getMetricValue CANCEL_COUNT,
             acceptationCount = getMetricValue ACCEPTATION_COUNT,
             totalRequestCount = getMetricValue TOTAL_REQUEST_COUNT
@@ -84,13 +86,17 @@ data FleetAllTimeMetric = ACTIVE_DRIVER_COUNT | ACTIVE_VEHICLE_COUNT
 fleetAllTimeMetrics :: [FleetAllTimeMetric]
 fleetAllTimeMetrics = [ACTIVE_DRIVER_COUNT, ACTIVE_VEHICLE_COUNT]
 
+-- | Zip keys with optional values, dropping entries where the value is Nothing.
+zipJusts :: [a] -> [Maybe b] -> [(a, b)]
+zipJusts keys mbVals = [(k, v) | (k, Just v) <- zip keys mbVals]
+
 fleetAllTimeKeys :: Text -> [Text]
 fleetAllTimeKeys fleetOperatorId = map (makeFleetAnalyticsKey fleetOperatorId) fleetAllTimeMetrics
 
 data FleetAllTimeFallbackRes = FleetAllTimeFallbackRes
-  { activeDriverCount :: Int,
-    activeVehicleCount :: Int,
-    currentOnlineDriverCount :: Int
+  { activeDriverCount :: Maybe Int,
+    activeVehicleCount :: Maybe Int,
+    currentOnlineDriverCount :: Maybe Int
   }
   deriving (Show, Eq)
 
@@ -146,15 +152,15 @@ updateFleetOwnerAnalyticsKeys fleetOwnerId mbActiveDrivers mbActiveVehicles mbCu
   let codKey = DDF.getStatusKey fleetOwnerId DDF.ONLINE
   setOrDel codKey mbCurrentOnline
 
-convertToFleetAllTimeFallbackRes :: [(FleetAllTimeMetric, Int)] -> Int -> CommonAllTimeFallbackRes
-convertToFleetAllTimeFallbackRes metricsList currentOnlineDriverCount =
+convertToFleetAllTimeFallbackRes :: [(FleetAllTimeMetric, Int)] -> Maybe Int -> CommonAllTimeFallbackRes
+convertToFleetAllTimeFallbackRes metricsList mbCurrentOnlineDriverCount =
   let metricsMap = Map.fromList metricsList
-      getMetricValue metric = Map.findWithDefault 0 metric metricsMap
+      getMetricValue metric = Map.lookup metric metricsMap
    in FleetAllTimeFallback $
         FleetAllTimeFallbackRes
           { activeDriverCount = getMetricValue ACTIVE_DRIVER_COUNT,
             activeVehicleCount = getMetricValue ACTIVE_VEHICLE_COUNT,
-            currentOnlineDriverCount
+            currentOnlineDriverCount = mbCurrentOnlineDriverCount
           }
 
 makeFleetKeyPrefix :: Text -> Text
@@ -170,12 +176,12 @@ data CommonAllTimeFallbackRes
   deriving (Show, Eq)
 
 -- | Helper function to extract fleet analytics data from common result
-extractFleetAnalyticsData :: CommonAllTimeFallbackRes -> Flow (Int, Int, Int)
+extractFleetAnalyticsData :: CommonAllTimeFallbackRes -> Flow (Maybe Int, Maybe Int, Maybe Int)
 extractFleetAnalyticsData (FleetAllTimeFallback fleetData) = pure (fleetData.activeDriverCount, fleetData.activeVehicleCount, fleetData.currentOnlineDriverCount)
 extractFleetAnalyticsData _ = throwError $ InvalidRequest "Expected FleetAllTimeFallback but got OperatorAllTimeFallback"
 
-extractOperatorAnalyticsData :: CommonAllTimeFallbackRes -> Flow (Int, Int, Int, Int, Int)
-extractOperatorAnalyticsData (OperatorAllTimeFallback operatorData) = pure (operatorData.totalRideCount, operatorData.ratingSum, operatorData.cancelCount, operatorData.acceptationCount, operatorData.totalRequestCount)
+extractOperatorAnalyticsData :: CommonAllTimeFallbackRes -> Flow (Maybe Int, Maybe Int, Maybe Int, Maybe Int, Maybe Int, Maybe Int)
+extractOperatorAnalyticsData (OperatorAllTimeFallback operatorData) = pure (operatorData.totalRideCount, operatorData.ratingSum, operatorData.ratingCount, operatorData.cancelCount, operatorData.acceptationCount, operatorData.totalRequestCount)
 extractOperatorAnalyticsData _ = throwError $ InvalidRequest "Expected OperatorAllTimeFallback but got FleetAllTimeFallback"
 
 data PeriodMetric = ACTIVE_DRIVER | DRIVER_ENABLED | GREATER_THAN_ONE_RIDE | GREATER_THAN_TEN_RIDE | GREATER_THAN_FIFTY_RIDE
@@ -428,6 +434,28 @@ updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporte
       let totalRequestCountKey = makeOperatorAnalyticsKey operatorId TOTAL_REQUEST_COUNT
       ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId totalRequestCountKey Redis.incrby 1
 
+-- | Batch update total request count for multiple drivers at once
+-- This is more efficient than calling updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount for each driver
+updateOperatorAnalyticsTotalRequestCountBatch ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  [Id DP.Person] ->
+  TC.TransporterConfig ->
+  m ()
+updateOperatorAnalyticsTotalRequestCountBatch driverIds transporterConfig = do
+  -- Fetch all fleet associations for drivers in batch
+  fleetAssociations <- QFDA.findAllByDriverIds driverIds
+  let fleetDriverPairs = [(fa.fleetOwnerId, fa.driverId.getId) | fa <- fleetAssociations]
+
+  -- Update fleet owner stats in batch (both overall and daily)
+  unless (null fleetDriverPairs) $
+    SFleetOperatorStats.incrementTotalRequestCountBatch fleetDriverPairs transporterConfig
+
 -- | Update the operator analytics rating score for a driver
 updateOperatorAnalyticsRatingScoreKey ::
   ( MonadFlow m,
@@ -449,10 +477,12 @@ updateOperatorAnalyticsRatingScoreKey driverId transporterConfig ratingValue sho
   -- Operator analytics
   whenJust mbOperatorId $ \operatorId -> do
     let ratingSumKey = makeOperatorAnalyticsKey operatorId RATING_SUM
+    let ratingCountKey = makeOperatorAnalyticsKey operatorId RATING_COUNT
     Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $
       SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore operatorId transporterConfig ratingValue shouldIncrementCount
     -- Ensure Redis keys exist
     ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId ratingSumKey Redis.incrby (fromIntegral ratingValue)
+    ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId ratingCountKey Redis.incrby (if shouldIncrementCount then 1 else 0)
 
   -- Fleet owner analytics
   mbFLeetOwner <- QFDA.findByDriverId driverId True
@@ -693,14 +723,15 @@ fallbackToClickHouseAndUpdateRedisForAllTime ::
 fallbackToClickHouseAndUpdateRedisForAllTime operatorId allTimeKeysData = do
   logTagInfo "FallbackClickhouseAllTime" $ "Initiating ClickHouse query to retrieve analytics data for operator ID: " <> operatorId
   operatorStats <- CFO.sumStatsByFleetOperatorId operatorId
-  let tcr = fromMaybe 0 operatorStats.totalCompletedRidesSum
-      rs = fromMaybe 0 operatorStats.totalRatingScoreSum
-      dcc = fromMaybe 0 operatorStats.driverCancellationCountSum
-      ac = fromMaybe 0 operatorStats.acceptationRequestCountSum
-      trc = fromMaybe 0 operatorStats.totalRequestCountSum
+  let tcr = operatorStats.totalCompletedRidesSum
+      trn = operatorStats.totalRatingCountSum
+      rs = operatorStats.totalRatingScoreSum
+      dcc = operatorStats.driverCancellationCountSum
+      ac = operatorStats.acceptationRequestCountSum
+      trc = operatorStats.totalRequestCountSum
   -- update redis (best-effort)
-  mapM_ (uncurry Redis.set) (zip allTimeKeysData [tcr, rs, dcc, ac, trc])
-  pure $ convertToAllTimeFallbackRes (zip allTimeMetrics [tcr, rs, dcc, ac, trc])
+  mapM_ (uncurry Redis.set) (zipJusts allTimeKeysData [tcr, rs, trn, dcc, ac, trc])
+  pure $ convertToAllTimeFallbackRes (zipJusts allTimeMetrics [tcr, rs, trn, dcc, ac, trc])
 
 fallbackToClickHouseAndUpdateRedisForAllTimeFleet ::
   ( MonadFlow m,
@@ -718,34 +749,12 @@ fallbackToClickHouseAndUpdateRedisForAllTimeFleet fleetOwnerId fleetAllTimeKeysD
   mbDriverIds <- CFDA.getDriverIdsByFleetOwnerId fleetOwnerId
   let mbActiveDriverCount = length <$> mbDriverIds
   mbActiveVehicleCount <- maybe (pure Nothing) (CVehicle.countByDriverIds) mbDriverIds
-  currentOnlineDriverCount <- getOnlineDriverCount
-  -- update redis (best-effort)
-  case (mbActiveDriverCount, mbActiveVehicleCount) of
-    (Just activeDriverCount, Just activeVehicleCount) -> do
-      logTagInfo
-        "FallbackClickhouseAllTimeFleet"
-        ( "Both active driver count and active vehicle count found, updating both: "
-            <> show activeDriverCount
-            <> " and "
-            <> show activeVehicleCount
-        )
-      mapM_ (uncurry Redis.set) (zip fleetAllTimeKeysData [activeDriverCount, activeVehicleCount])
-      pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [activeDriverCount, activeVehicleCount]) currentOnlineDriverCount
-    (Just activeDriverCount, Nothing) -> do
-      logTagInfo
-        "FallbackClickhouseAllTimeFleet"
-        ("No active vehicle count found, updating active driver count: " <> show activeDriverCount)
-      mapM_ (uncurry Redis.set) [(makeFleetAnalyticsKey fleetOwnerId ACTIVE_DRIVER_COUNT, activeDriverCount)]
-      pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [activeDriverCount, 0]) currentOnlineDriverCount
-    (Nothing, Just activeVehicleCount) -> do
-      logTagInfo
-        "FallbackClickhouseAllTimeFleet"
-        ("No active driver count found, updating active vehicle count: " <> show activeVehicleCount)
-      mapM_ (uncurry Redis.set) [(makeFleetAnalyticsKey fleetOwnerId ACTIVE_VEHICLE_COUNT, activeVehicleCount)]
-      pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [0, activeVehicleCount]) currentOnlineDriverCount
-    (Nothing, Nothing) -> do
-      logTagError "FallbackClickhouseAllTimeFleet" "No active driver count or active vehicle count found"
-      pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics [0, 0]) currentOnlineDriverCount
+  mbCurrentOnlineDriverCount <- getOnlineDriverCount
+  logTagInfo "fallbackClickhouseAllTimeFleet" ("mbActiveDriverCount: " <> show mbActiveDriverCount <> ", mbActiveVehicleCount: " <> show mbActiveVehicleCount <> ", mbCurrentOnlineDriverCount: " <> show mbCurrentOnlineDriverCount)
+
+  mapM_ (uncurry Redis.set) (zipJusts fleetAllTimeKeysData [mbActiveDriverCount, mbActiveVehicleCount])
+
+  pure $ convertToFleetAllTimeFallbackRes (zipJusts fleetAllTimeMetrics [mbActiveDriverCount, mbActiveVehicleCount]) mbCurrentOnlineDriverCount
   where
     getOnlineDriverCount = do
       res <- DDF.getOnlineKeyValue fleetOwnerId
@@ -753,8 +762,8 @@ fallbackToClickHouseAndUpdateRedisForAllTimeFleet fleetOwnerId fleetAllTimeKeysD
         then do
           void $ SDFStatus.handleCacheMissForDriverFlowStatus DP.FLEET_OWNER fleetOwnerId (DDF.allKeys fleetOwnerId)
           onlineRes <- DDF.getOnlineKeyValue fleetOwnerId
-          pure (fromMaybe 0 onlineRes)
-        else pure (fromMaybe 0 res)
+          pure onlineRes
+        else pure res
 
 -- | Compute period dashboard analytics via ClickHouse for a given operator and time window
 fallbackComputePeriodOperatorAnalytics ::
@@ -839,13 +848,13 @@ handleCacheMissForAnalyticsAllTimeCommon role entityId allTimeKeysData = do
     Just True -> do
       logTagInfo logTag $ "inProgress key present for " <> show role <> "Id: " <> entityId <> ". Waiting for it to clear."
       SDFStatus.waitUntilKeyGone inProgressKey
-      allTimeKeysRes <- mapM (\key -> fromMaybe 0 <$> Redis.get @Int key) allTimeKeysData
+      allTimeKeysRes <- mapM (\key -> Redis.get @Int key) allTimeKeysData
+      logTagInfo logTag $ "allTimeKeysRes: " <> show allTimeKeysRes
       case role of
-        DP.OPERATOR ->
-          pure $ convertToAllTimeFallbackRes (zip allTimeMetrics allTimeKeysRes)
+        DP.OPERATOR -> pure $ convertToAllTimeFallbackRes (zipJusts allTimeMetrics allTimeKeysRes)
         DP.FLEET_OWNER -> do
-          currentOnlineDriverCount <- DDF.getOnlineKeyValue entityId
-          pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics allTimeKeysRes) (fromMaybe 0 currentOnlineDriverCount)
+          mbCurrentOnlineDriverCount <- DDF.getOnlineKeyValue entityId
+          pure $ convertToFleetAllTimeFallbackRes (zipJusts fleetAllTimeMetrics allTimeKeysRes) mbCurrentOnlineDriverCount
         _ -> throwError $ InvalidRequest $ "Unsupported role for analytics: " <> show role
     _ -> do
       lockAcquired <- Redis.setNxExpire inProgressKey 60 True -- 60 seconds expiry

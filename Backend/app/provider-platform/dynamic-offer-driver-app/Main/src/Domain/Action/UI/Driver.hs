@@ -80,8 +80,7 @@ module Domain.Action.UI.Driver
     getDummyRideRequest,
     listScheduledBookings,
     acceptScheduledBooking,
-    getTodayScheduledBookings,
-    getTommorowScheduledBookings,
+    getScheduledBookings,
     buildBookingAPIEntityFromBooking,
     mkBreakupItem,
     getInformationV2,
@@ -1590,9 +1589,9 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               throwError QuoteAlreadyRejected
             whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
             driverFCMPulledList <- case DTC.tripCategoryToPricingPolicy searchTry.tripCategory of
-              DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats
-              DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
-            when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig True True False False
+              DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig
+              DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig
+            when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id searchTry.requestId driverFCMPulledList
             unless (sReqFD.isForwardRequest) $ Redis.unlockRedis (editDestinationLockKey driverId)
@@ -1602,12 +1601,12 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               else do
                 void $ Redis.unlockRedis (editDestinationLockKey driverId)
     Reject -> do
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig True False True False
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False True False
       QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       DP.removeSearchReqIdFromMap merchantId driverId searchTry.requestId
       unlockRedisQuoteKeys
     Pulled -> do
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig True False False True
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
       QSRD.updateDriverResponse (Just Pulled) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       throwError UnexpectedResponseValue
   pure Success
@@ -1714,8 +1713,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       driverPoolCfg <- SCDPC.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist searchRepeatType searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
       pure driverPoolCfg.driverQuoteLimit
 
-    acceptDynamicOfferDriverRequest :: DM.Merchant -> DST.SearchTry -> DSR.SearchRequest -> SP.Person -> SearchRequestForDriver -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe HighPrecMoney -> DStats.DriverStats -> Flow [SearchRequestForDriver]
-    acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue driverStats = do
+    acceptDynamicOfferDriverRequest :: DM.Merchant -> DST.SearchTry -> DSR.SearchRequest -> SP.Person -> SearchRequestForDriver -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe HighPrecMoney -> DStats.DriverStats -> TransporterConfig -> Flow [SearchRequestForDriver]
+    acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue driverStats transporterConfig = do
       let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
       logDebug $ "offered fare: " <> show reqOfferedValue
       quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq (fromMaybe SL.Default searchReq.area) searchTry.searchRepeatType searchTry.searchRepeatCounter
@@ -1771,7 +1770,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
         if (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
           then runInMasterRedis $ QSRD.findAllActiveBySTId searchTry.id DSRD.Active
           else pure []
-      pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
+      pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) transporterConfig
       sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
       return driverFCMPulledList
       where
@@ -1786,13 +1785,12 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             else do
               return False
 
-acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> Flow [SearchRequestForDriver]
-acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId = do
+acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> TransporterConfig -> Flow [SearchRequestForDriver]
+acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId transporterConfig = do
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer fare in static trips")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
   booking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
   when booking.isScheduled $ removeBookingFromRedis booking
-  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   isBookingAssignmentInprogress' <- CS.isBookingAssignmentInprogress booking.id
   when isBookingAssignmentInprogress' $ throwError RideRequestAlreadyAccepted
   isBookingCancelled' <- CS.isBookingCancelled booking.id
@@ -1804,7 +1802,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id)
   driverFCMPulledList <-
     case mbSearchTry of
-      Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
+      Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id (mkPrice (Just quote.currency) quote.estimatedFare) (Just transporterConfig)
       Nothing -> pure []
   uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
   handle (errHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
@@ -2696,6 +2694,8 @@ getDummyRideRequest ::
     EncFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasKafkaProducer r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -2731,7 +2731,6 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
           case driverInfo.latestScheduledBooking of
             Just _ -> pure $ ScheduledBookingRes []
             Nothing -> do
-              now <- getCurrentTime
               driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
               vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
               cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing
@@ -2743,16 +2742,10 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
                 then do
                   let vehicleVariants = nub $ castServiceTierToVariant <$> availableServiceTiers
                       tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
-                      currentDay = utctDay now
                       limit = fromMaybe 10 mbLimit
                       offset = fromMaybe 0 mbOffset
                       safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
-
-                  scheduledBookings <-
-                    if currentDay >= from
-                      then getTodayScheduledBookings now cityId vehicleVariants (Just dLoc) transporterConfig (Just availableServiceTiers) tripCategory limit offset safelimit
-                      else getTommorowScheduledBookings now (UTCTime from 0) cityId vehicleVariants (Just dLoc) transporterConfig (Just availableServiceTiers) tripCategory limit offset
-
+                  scheduledBookings <- getScheduledBookings from cityId vehicleVariants (Just dLoc) transporterConfig (Just availableServiceTiers) tripCategory limit offset safelimit
                   bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (catMaybes scheduledBookings)
                   let sortedBookings = sortBookingsByDistance (catMaybes bookings)
                   return $ ScheduledBookingRes sortedBookings
@@ -2810,6 +2803,9 @@ parseMember member = do
       return (idText, lat, lon, startTime, serviceTierType)
     _ -> Nothing
 
+-- Filters booking IDs by distance/time and fetches full booking data.
+-- Parses member strings to extract location/time, checks if driver can reach in time.
+-- Returns full booking objects from hash set for bookings within reach.
 returnFilteredBookings :: UTCTime -> [BS.ByteString] -> Maybe LatLong -> TransporterConfig -> Maybe [ServiceTierType] -> Text -> Integer -> Flow [Maybe DRB.Booking]
 returnFilteredBookings now res mbDLoc transporterConfig mbPossibleServiceTierTypes redisKeyForHset limit = do
   let parsedRes = mapMaybe (parseMember . decodeUtf8) res
@@ -2843,46 +2839,50 @@ mkBreakupItem currency title valueInText = do
         priceWithCurrency = mkPriceAPIEntity priceObject
       }
 
-getTodayScheduledBookings :: UTCTime -> Id DMOC.MerchantOperatingCity -> [VehicleVariant] -> Maybe LatLong -> TransporterConfig -> Maybe [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Integer -> Flow [Maybe DRB.Booking]
-getTodayScheduledBookings now mocCityId vehicleVariants mbDLoc transporterConfig mbPossibleServiceTierTypes tripCategories limit offset safelimit = do
-  let nextDay = addDays 1 (utctDay now)
-      nextDayStartTime = UTCTime nextDay 0
-      redisKeys = createRedisKeysForCombinations now mocCityId tripCategories vehicleVariants
-      redisKeyForHset = createRedisKeyForHset now mocCityId
-      startScore = calculateSortedSetScore $ addUTCTime 1800 now
-      endScore = calculateSortedSetScore $ addUTCTime (3600 * 2) now
-      startScore2 = calculateSortedSetScore $ addUTCTime ((3600 * 2) + 1) now
-      end = calculateSortedSetScore nextDayStartTime
-
-  res <- mapM (\key -> Redis.zRangeByScoreByCount key startScore endScore offset safelimit) redisKeys
-  res2 <- mapM (\key -> Redis.zRangeByScoreByCount key startScore2 end offset limit) redisKeys
-
-  returnFilteredBookings now (concat (res ++ res2)) mbDLoc transporterConfig mbPossibleServiceTierTypes redisKeyForHset limit
-
-getTommorowScheduledBookings :: UTCTime -> UTCTime -> Id DMOC.MerchantOperatingCity -> [VehicleVariant] -> Maybe LatLong -> TransporterConfig -> Maybe [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Flow [Maybe DRB.Booking]
-getTommorowScheduledBookings now dayStartTime mocCityId vehicleVariants mbDLoc transporterConfig mbPossibleServiceTierTypes tripCategories limit offset = do
-  let redisKeys = createRedisKeysForCombinations dayStartTime mocCityId tripCategories vehicleVariants
-      redisKeyForHset = createRedisKeyForHset dayStartTime mocCityId
-      startScore = calculateSortedSetScore dayStartTime
-      endScore = calculateSortedSetScore $ addUTCTime (3600 * 24) dayStartTime
-
-  res <- mapM (\key -> Redis.zRangeByScoreByCount key startScore endScore offset limit) redisKeys
-
-  returnFilteredBookings now (concat res) mbDLoc transporterConfig mbPossibleServiceTierTypes redisKeyForHset limit
+-- Retrieves scheduled bookings for a specified day from Redis.
+-- Gets current time and local time internally, then determines query strategy based on day comparison.
+-- For today: queries two windows (30min-2hrs with safelimit, 2hrs-midnight with limit), skips next 30min.
+-- For future days: queries full 24-hour window from midnight to midnight with limit.
+-- Uses local time for Redis keys/scores, converts to UTC for distance filtering.
+getScheduledBookings :: Day -> Id DMOC.MerchantOperatingCity -> [VehicleVariant] -> Maybe LatLong -> TransporterConfig -> Maybe [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Integer -> Flow [Maybe DRB.Booking]
+getScheduledBookings from mocCityId vehicleVariants mbDLoc transporterConfig mbPossibleServiceTierTypes tripCategories limit offset safelimit = do
+  now <- getCurrentTime
+  let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
+      localNow = addUTCTime timeDiff now
+      isToday = utctDay now >= from
+      referenceTime = if isToday then localNow else addUTCTime timeDiff (UTCTime from 0)
+      redisKeys = createRedisKeysForCombinations referenceTime mocCityId tripCategories vehicleVariants
+      redisKeyForHset = createRedisKeyForHset referenceTime mocCityId
+      queryTimeRange startTime endTime off lim =
+        concat <$> mapM (\key -> Redis.zRangeByScoreByCount key (calculateSortedSetScore startTime) (calculateSortedSetScore endTime) off lim) redisKeys
+      fetchTodayBookings = do
+        let window1Start = addUTCTime 1800 localNow
+            window1End = addUTCTime 7200 localNow
+            window2Start = addUTCTime 7201 localNow
+            window2End = UTCTime (addDays 1 (utctDay localNow)) 0
+        res1 <- queryTimeRange window1Start window1End offset safelimit
+        let remainingOffset = max 0 (offset - toInteger (length res1))
+        res2 <- queryTimeRange window2Start window2End remainingOffset limit
+        return $ res1 ++ res2
+      fetchFutureBookings =
+        queryTimeRange referenceTime (addUTCTime 86400 referenceTime) offset limit
+  res <- if isToday then fetchTodayBookings else fetchFutureBookings
+  returnFilteredBookings now res mbDLoc transporterConfig mbPossibleServiceTierTypes redisKeyForHset limit
 
 acceptScheduledBooking ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Text ->
   Id DRB.Booking ->
   Flow APISuccess
-acceptScheduledBooking (personId, merchantId, _) clientId bookingId = do
+acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = do
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   booking <- runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   upcomingOrActiveRide <- runInReplica $ QRide.getUpcomingOrActiveByDriverId driver.id
   unless (isNothing upcomingOrActiveRide) $ throwError (RideInvalidStatus "Cannot accept booking during active or already having upcoming ride.")
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
-  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId
+  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig
   pure Success
 
 clearDriverFeeWithCreate ::

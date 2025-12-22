@@ -174,7 +174,7 @@ data DriverRCAssociationAPIEntity = DriverRCAssociationAPIEntity
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ExemptionAndCashCollectionDriverFeeReq = ExemptionAndCashCollectionDriverFeeReq {paymentIds :: [Kernel.Prelude.Text], isExempt :: Kernel.Prelude.Bool, vendorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data ExemptionAndCashCollectionDriverFeeReq = ExemptionAndCashCollectionDriverFeeReq {paymentIds :: [Kernel.Prelude.Text], isExempt :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -244,20 +244,28 @@ type GetDriverPaymentDue = ("paymentDue" :> QueryParam "countryCode" Kernel.Prel
 
 type PostDriverEnable = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "enable" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostDriverCollectCash = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "collectCash" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
-
-type PostDriverCollectCashHelper =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "collectCash" :> ReqBody '[JSON] Kernel.Prelude.Text
+type PostDriverCollectCash =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "collectCash" :> QueryParam "vendorId" Kernel.Prelude.Text
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type PostDriverV2CollectCash =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "v2" :> "collectCash" :> Capture "serviceName" Dashboard.Common.Driver.ServiceNames
-      :> Post
+type PostDriverCollectCashHelper =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "collectCash" :> QueryParam "vendorId" Kernel.Prelude.Text
+      :> ReqBody
            '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+           Kernel.Prelude.Text
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
+type PostDriverV2CollectCash =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "v2" :> "collectCash"
+      :> Capture
+           "serviceName"
+           Dashboard.Common.Driver.ServiceNames
+      :> QueryParam "vendorId" Kernel.Prelude.Text
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverCollectCashV2Helper =
@@ -265,7 +273,10 @@ type PostDriverCollectCashV2Helper =
       :> Capture
            "serviceName"
            Dashboard.Common.Driver.ServiceNames
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> QueryParam "vendorId" Kernel.Prelude.Text
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverExemptCash = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "exemptCash" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
@@ -390,8 +401,8 @@ type PostDriverExemptDriverFeeV2Helper =
 data DriverAPIs = DriverAPIs
   { getDriverPaymentDue :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient [DriverOutstandingBalanceResp],
     postDriverEnable :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverCollectCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverV2CollectCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverCollectCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverV2CollectCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverExemptCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverV2ExemptCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverInfo :: Kernel.Prelude.Text -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> EulerHS.Types.EulerClient DriverInfoRes,

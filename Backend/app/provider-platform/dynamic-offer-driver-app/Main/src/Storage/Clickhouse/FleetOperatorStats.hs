@@ -48,6 +48,7 @@ $(TH.mkClickhouseInstances ''FleetOperatorStatsT 'SELECT_FINAL_MODIFIER)
 
 data OperatorStatsAggregated = OperatorStatsAggregated
   { totalRatingScoreSum :: Maybe Int,
+    totalRatingCountSum :: Maybe Int,
     acceptationRequestCountSum :: Maybe Int,
     totalRequestCountSum :: Maybe Int,
     driverCancellationCountSum :: Maybe Int,
@@ -55,10 +56,11 @@ data OperatorStatsAggregated = OperatorStatsAggregated
   }
   deriving (Show, Generic)
 
-mkOperatorStatsAggregated :: (Maybe Int, Maybe Int, Maybe Int, Maybe Int, Maybe Int) -> OperatorStatsAggregated
-mkOperatorStatsAggregated (trs, arc, trc, dcc, tcr) =
+mkOperatorStatsAggregated :: (Maybe Int, Maybe Int, Maybe Int, Maybe Int, Maybe Int, Maybe Int) -> OperatorStatsAggregated
+mkOperatorStatsAggregated (trs, trn, arc, trc, dcc, tcr) =
   OperatorStatsAggregated
     { totalRatingScoreSum = trs,
+      totalRatingCountSum = trn,
       acceptationRequestCountSum = arc,
       totalRequestCountSum = trc,
       driverCancellationCountSum = dcc,
@@ -76,6 +78,7 @@ sumStatsByFleetOperatorId fleetOperatorId = do
         ( \fos ->
             CH.aggregate
               ( CH.sum_ fos.totalRatingScore,
+                CH.sum_ fos.totalRatingCount,
                 CH.sum_ fos.acceptationRequestCount,
                 CH.sum_ fos.totalRequestCount,
                 CH.sum_ fos.driverCancellationCount,
@@ -86,4 +89,4 @@ sumStatsByFleetOperatorId fleetOperatorId = do
           ( \fos -> fos.fleetOperatorId CH.==. fleetOperatorId
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorStatsTTable)
-  pure $ maybe (OperatorStatsAggregated Nothing Nothing Nothing Nothing Nothing) mkOperatorStatsAggregated (listToMaybe res)
+  pure $ maybe (OperatorStatsAggregated Nothing Nothing Nothing Nothing Nothing Nothing) mkOperatorStatsAggregated (listToMaybe res)

@@ -45,6 +45,7 @@ import Domain.Types.VehicleCategory as DTV
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as EMaps
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -57,6 +58,7 @@ import Lib.DriverCoins.Types as DCT
 import Lib.Scheduler.Environment
 import Lib.Yudhishthira.Types
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.DriverPool as SDP
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -91,6 +93,8 @@ sendSearchRequestToDrivers ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion],
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     LT.HasLocationService m r,
     JobCreator r m,
     HasShortDurationRetryCfg r c,
@@ -173,6 +177,11 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
             (Notify.cityFallback sReqFD.clientSdkVersion sReqFD.merchantOperatingCityId)
             (searchTry.merchantId `elem` otherMerchantIds) -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
     Notify.sendSearchRequestToDriverNotification searchReq.providerId fallBackCity sReqFD.driverId notificationData
+
+  -- Update operator/fleet analytics: batch increment total request count for all drivers at once
+  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+    let allDriverIds = map (.driverId) searchRequestsForDrivers
+    Analytics.updateOperatorAnalyticsTotalRequestCountBatch allDriverIds transporterConfig
   where
     getBaseFare ::
       ( MonadFlow m,

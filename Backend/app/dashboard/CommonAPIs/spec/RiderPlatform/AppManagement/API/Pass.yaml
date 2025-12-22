@@ -10,6 +10,7 @@ imports:
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   APISuccess: Kernel.Types.APISuccess
   Pass: Domain.Types.Pass
+  PurchasedPass: Domain.Types.PurchasedPass
   Day: Data.Time
 
 importPackageOverrides:
@@ -91,3 +92,12 @@ apis:
         orderId: Id PaymentOrder
       response:
         type: PaymentStatusResp
+
+  - POST:
+      endpoint: /customer/{customerId}/pass/{passId}/resetDeviceSwitchCount
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        passId: Id PurchasedPass
+      response:
+        type: APISuccess

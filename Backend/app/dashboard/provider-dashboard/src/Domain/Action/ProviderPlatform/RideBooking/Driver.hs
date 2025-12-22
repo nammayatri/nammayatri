@@ -76,19 +76,19 @@ postDriverEnable merchantShortId opCity apiTokenInfo driverId = do
   T.withTransactionStoring transaction $
     Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverEnable) driverId
 
-postDriverCollectCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
-postDriverCollectCash merchantShortId opCity apiTokenInfo driverId = do
+postDriverCollectCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Text -> Flow APISuccess
+postDriverCollectCash merchantShortId opCity apiTokenInfo driverId mbVendorId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverCollectCash) driverId apiTokenInfo.personId.getId
+    Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverCollectCash) driverId mbVendorId apiTokenInfo.personId.getId
 
-postDriverV2CollectCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.ServiceNames -> Flow APISuccess
-postDriverV2CollectCash merchantShortId opCity apiTokenInfo driverId serviceName = do
+postDriverV2CollectCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.ServiceNames -> Maybe Text -> Flow APISuccess
+postDriverV2CollectCash merchantShortId opCity apiTokenInfo driverId serviceName mbVendorId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverV2CollectCash) driverId apiTokenInfo.personId.getId serviceName
+    Client.callRideBookingAPI checkedMerchantId opCity (.driverDSL.postDriverV2CollectCash) driverId apiTokenInfo.personId.getId serviceName mbVendorId
 
 postDriverExemptCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverExemptCash merchantShortId opCity apiTokenInfo driverId = do

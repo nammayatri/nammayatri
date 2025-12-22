@@ -30,6 +30,22 @@ findByFleetOperatorIdAndDateWithDriverIds fleetOperatorId driverId merchantLocal
         ]
     ]
 
+-- Find records by fleetOperatorId, merchantLocalDate, and fleetDriverId IN a list of driver ids
+findByFleetOperatorIdAndDateWithDriverIdsIn ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  [Text] ->
+  Day ->
+  m [DFODS.FleetOperatorDailyStats]
+findByFleetOperatorIdAndDateWithDriverIdsIn fleetOperatorId driverIds merchantLocalDate = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
+          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate,
+          Se.Is Beam.fleetDriverId $ Se.In driverIds
+        ]
+    ]
+
 -- Aggregate earnings by driverId for a fleet owner
 data DriverEarningsAggregated = DriverEarningsAggregated
   { driverId :: Text,

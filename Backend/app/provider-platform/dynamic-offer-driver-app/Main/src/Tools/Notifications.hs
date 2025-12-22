@@ -14,8 +14,10 @@
 
 module Tools.Notifications where
 
+import Control.Applicative ((<|>))
 import Data.Aeson
 import Data.Default.Class
+import qualified Data.Map as M
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.CallFeedbackFCM as CallFeedbackFCM
@@ -44,6 +46,7 @@ import qualified EulerHS.Prelude hiding (null)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Notification.FCM.Flow as FCM
 import Kernel.External.Notification.FCM.Types as FCM
+import Kernel.External.Notification.Interface.FCM as FCMInterface
 import Kernel.External.Notification.Interface.GRPC as GRPC
 import Kernel.External.Notification.Types (NotificationService (..))
 import Kernel.External.Types (Language (..), ServiceFlow)
@@ -1399,13 +1402,22 @@ notifyWithGRPCProvider merchantOpCityId category title body clientId entityData 
           sound = Nothing
         }
 
+extractNotificationSoundIfMatches :: FCM.FCMConfig -> Notification.Category -> Maybe Text
+extractNotificationSoundIfMatches fcmCfg category = do
+  fcmNotifObj <- FCM.fcmNotificationObj fcmCfg
+  let notifType = FCMInterface.interfaceCategoryToFCMNotificationType category
+  M.lookup notifType fcmNotifObj
+
 {- Run with service Providers can be used to trigger Critical Notifications over multiple channels FCM & GRPC -}
 runWithServiceConfigForProviders ::
   ( ServiceFlow m r,
     ToJSON a,
     ToJSON b,
     ToJSON c,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Maybe Text ->
@@ -1414,34 +1426,41 @@ runWithServiceConfigForProviders ::
   (FCMData a -> FCMData c) ->
   m () ->
   m ()
-runWithServiceConfigForProviders merchantOpCityId clientId clientDevice req iosModifier = Notification.notifyPersonWithAllProviders handler req Nothing
+runWithServiceConfigForProviders merchantOpCityId clientId clientDevice req iosModifier clearToken = do
+  mbClientConfig <- QMCC.findByPackageOSAndService ClientFCMService (clientDevice <&> (.deviceType)) (fromMaybe "" clientId)
+  let notificationSound :: Maybe Text
+      notificationSound = do
+        clientConfig <- mbClientConfig
+        let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig
+        extractNotificationSoundIfMatches fcmCfg req.category
+  let reqWithSound = req {Notification.sound = notificationSound <|> req.sound}
+  Notification.notifyPersonWithAllProviders (handler mbClientConfig) reqWithSound Nothing clearToken
   where
-    handler = Notification.NotficationServiceHandler {..}
+    handler mbClientConfig = Notification.NotficationServiceHandler {..}
+      where
+        getNotificationServiceList = do
+          merchantServiceUsageConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+          let sendSearchReqNotificationList = merchantServiceUsageConfig.sendSearchRequestToDriver
+          when (null sendSearchReqNotificationList) $ throwError $ InternalError ("No notification service provider configured for the merchant Op city : " <> merchantOpCityId.getId)
+          pure sendSearchReqNotificationList
 
-    getNotificationServiceList = do
-      merchantServiceUsageConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-      let sendSearchReqNotificationList = merchantServiceUsageConfig.sendSearchRequestToDriver
-      when (null sendSearchReqNotificationList) $ throwError $ InternalError ("No notification service provider configured for the merchant Op city : " <> merchantOpCityId.getId)
-      pure sendSearchReqNotificationList
-
-    getServiceConfig FCM = do
-      mbClientConfig <- QMCC.findByPackageOSAndService (ClientFCMService) (clientDevice <&> (.deviceType)) (fromMaybe "" clientId)
-      case mbClientConfig of
-        Just clientConfig -> let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig in pure $ Notification.FCMConfig fcmCfg
-        Nothing -> do
+        getServiceConfig FCM =
+          case mbClientConfig of
+            Just clientConfig -> let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig in pure $ Notification.FCMConfig fcmCfg
+            Nothing -> do
+              merchantNotificationServiceConfig <-
+                QMSC.findByServiceAndCity (DMSC.NotificationService FCM) merchantOpCityId
+                  >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" (show FCM))
+              case merchantNotificationServiceConfig.serviceConfig of
+                DMSC.NotificationServiceConfig nsc -> pure nsc
+                _ -> throwError $ InternalError "Unknow Service Config"
+        getServiceConfig service = do
           merchantNotificationServiceConfig <-
-            QMSC.findByServiceAndCity (DMSC.NotificationService FCM) merchantOpCityId
-              >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" (show FCM))
+            QMSC.findByServiceAndCity (DMSC.NotificationService service) merchantOpCityId
+              >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" (show service))
           case merchantNotificationServiceConfig.serviceConfig of
             DMSC.NotificationServiceConfig nsc -> pure nsc
             _ -> throwError $ InternalError "Unknow Service Config"
-    getServiceConfig service = do
-      merchantNotificationServiceConfig <-
-        QMSC.findByServiceAndCity (DMSC.NotificationService service) merchantOpCityId
-          >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" (show service))
-      case merchantNotificationServiceConfig.serviceConfig of
-        DMSC.NotificationServiceConfig nsc -> pure nsc
-        _ -> throwError $ InternalError "Unknow Service Config"
 
 data CoinsNotificationData = CoinsNotificationData
   { coins :: Int,
