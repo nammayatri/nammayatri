@@ -19,11 +19,14 @@ import IssueManagement.Storage.BeamFlow
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (Unauthorized, throwError)
+import TransactionLogs.Interface.Types (KeyConfig, TokenConfig)
+import TransactionLogs.PushLogs
 
 type IssueAPI =
   Common.OnDemandAPI
@@ -32,13 +35,17 @@ type IssueAPI =
 issue ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     CoreMetrics m,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     BeamFlow m r,
     EsqDBReplicaFlow m r,
     HasField "sosAlertsTopicARN" r Text,
-    EncFlow m r
+    EncFlow m r,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Id Merchant ->
   Spec.IssueReq ->
@@ -53,6 +60,8 @@ issue merchantId req issueHandle identifier = do
   bap_uri <- req.context.contextBapUri & fromMaybeM (InvalidRequest "BapUri not found")
   bpp_uri <- req.context.contextBppUri & fromMaybeM (InvalidRequest "BppUri not found")
   logDebug $ "Received Issue request" <> encodeToText req
+  fork "IGM issue pushing ondc logs" . void $
+    pushLogs "issue" (toJSON req) merchantId.getId "MOBILITY"
   withTransactionIdLogTag' transaction_id $ do
     issueReq <- IACL.buildIssueReq req
     Redis.whenWithLockRedis (issueLockKey message_id) 60 $ do
@@ -75,11 +84,15 @@ issueProcessingLockKey id = "IGM:OnIssue:Processing:MessageId-" <> id
 onIssue ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     CoreMetrics m,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     BeamFlow m r,
-    EsqDBReplicaFlow m r
+    EsqDBReplicaFlow m r,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Id Merchant ->
   Spec.OnIssueReq ->
@@ -89,6 +102,8 @@ onIssue ::
 onIssue _merchantId req _ _identifier = do
   transaction_id <- req.onIssueReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   logDebug $ "Received OnIssue request" <> encodeToText req
+  fork "IGM on_issue pushing ondc logs" . void $
+    pushLogs "on_issue" (toJSON req) _merchantId.getId "MOBILITY"
   withTransactionIdLogTag' transaction_id $ do
     message_id <- req.onIssueReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
     onIssueReq <- OIACL.buildOnIssueReq req
@@ -108,11 +123,15 @@ onIssueProcessingLockKey id = "IGM:OnIssue:Processing:MessageId-" <> id
 issueStatus ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     CoreMetrics m,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     BeamFlow m r,
-    EsqDBReplicaFlow m r
+    EsqDBReplicaFlow m r,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Id Merchant ->
   Spec.IssueStatusReq ->
@@ -127,6 +146,8 @@ issueStatus _merchantId req issueHandle identifier = do
   bap_uri <- req.issueStatusReqContext.contextBapUri & fromMaybeM (InvalidRequest "BapUri not found")
   bpp_uri <- req.issueStatusReqContext.contextBppUri & fromMaybeM (InvalidRequest "BppUri not found")
   logDebug $ "Received IssueStatus request" <> encodeToText req
+  fork "IGM issue_status pushing ondc logs" . void $
+    pushLogs "issue_status" (toJSON req) _merchantId.getId "MOBILITY"
   withTransactionIdLogTag' transaction_id $ do
     issueStatusReq <- ISACL.buildIssueStatusReq req
     Redis.whenWithLockRedis (issueStatusLockKey message_id) 60 $ do
@@ -149,11 +170,15 @@ issueStatusProcessingLockKey id = "IGM:OnIssueStatus:Processing:MessageId-" <> i
 onIssueStatus ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     CoreMetrics m,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     BeamFlow m r,
-    EsqDBReplicaFlow m r
+    EsqDBReplicaFlow m r,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Id Merchant ->
   Spec.OnIssueStatusReq ->
@@ -163,6 +188,8 @@ onIssueStatus ::
 onIssueStatus _merchantId req _ _identifier = do
   transaction_id <- req.onIssueStatusReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   logDebug $ "Received OnIssueStatus request" <> encodeToText req
+  fork "IGM on_issue_status pushing ondc logs" . void $
+    pushLogs "on_issue_status" (toJSON req) _merchantId.getId "MOBILITY"
   withTransactionIdLogTag' transaction_id $ do
     message_id <- req.onIssueStatusReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
     onIssueStatusReq <- OISACL.buildOnIssueStatusReq req
