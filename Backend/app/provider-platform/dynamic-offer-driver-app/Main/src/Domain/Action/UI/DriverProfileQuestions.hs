@@ -32,6 +32,7 @@ import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.ChatCompletion as TC
 import Tools.Error
 
@@ -154,6 +155,11 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
   driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
   driverProfile <- DPQ.findByPersonId driverId
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  mbVehicle <- QVehicle.findById driverId
+  vehicleImage <- case mbVehicle of
+    Just vehicle -> do
+      fetchVehicleImage vehicle.vehicleImageId
+    Nothing -> pure Nothing
   profileImage <- case person.faceImageId of
     Just mediaId -> do
       mediaEntry <- runInReplica $ QMF.findById mediaId >>= fromMaybeM (FileDoNotExist driverId.getId)
@@ -176,7 +182,8 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
                 vehicleTags = fromMaybe [] res.vehicleTags,
                 otherImages = if isImages == Just True then images else [], -- fromMaybe [] res.images
                 profileImage = profileImage,
-                otherImageIds = fromMaybe [] res.imageIds
+                otherImageIds = fromMaybe [] res.imageIds,
+                vehicleImage = if isImages == Just True then vehicleImage else Nothing
               }
     Nothing ->
       pure $
@@ -188,7 +195,8 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
             vehicleTags = [],
             otherImages = [],
             profileImage = profileImage,
-            otherImageIds = []
+            otherImageIds = [],
+            vehicleImage = Nothing
           }
   where
     getImages imageIds = do
@@ -202,3 +210,14 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
     fetchLegacyProfileImage driverId =
       ImageQuery.findByPersonIdImageTypeAndValidationStatus driverId DTO.ProfilePhoto DImage.APPROVED
         >>= maybe (pure Nothing) (\image -> Just <$> S3.get (T.unpack image.s3Path))
+
+    fetchVehicleImage mbVehicleImageId = case mbVehicleImageId of
+      Just mediaId -> do
+        mbMediaEntry <- runInReplica $ QMF.findById mediaId
+        case mbMediaEntry of
+          Just mediaEntry -> do
+            case mediaEntry.s3FilePath of
+              Just s3Path -> Just <$> S3.get (T.unpack s3Path)
+              _ -> return Nothing
+          Nothing -> return Nothing
+      Nothing -> return Nothing

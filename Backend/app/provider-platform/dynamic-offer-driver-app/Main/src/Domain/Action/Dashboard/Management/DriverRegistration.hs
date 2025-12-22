@@ -34,6 +34,7 @@ import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as T
 import qualified Data.Tuple.Extra as TE
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
@@ -49,6 +50,7 @@ import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleCategory as DVC
@@ -64,7 +66,10 @@ import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.Encryption (decrypt, encrypt, hash)
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import Kernel.External.Types (ServiceFlow)
+import qualified Kernel.External.Types as Lang
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Documents (VerificationStatus (..))
@@ -77,7 +82,9 @@ import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
@@ -93,6 +100,7 @@ import qualified Storage.Queries.IdfyVerificationExtra as IDQuery
 import Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QDriver
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Translations as QTranslations
 import qualified Storage.Queries.VehicleFitnessCertificate as QFC
 import qualified Storage.Queries.VehicleInsurance as QVI
 import qualified Storage.Queries.VehicleNOC as QVNOC
@@ -102,6 +110,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
 import Tools.Notifications as Notify
+import qualified Tools.SMS as Sms
 
 getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Flow Common.DocumentsListResponse
 getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
@@ -948,18 +957,116 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
           QPan.updateVerificationStatusByImageId INVALID imageId
         _ -> throwError (InternalError "Unknown Config in reject update document")
       driver <- QDriver.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
-      Notify.notifyDriver merchantOperatingCityId notificationType (notificationTitle (show image.imageType)) (message (show image.imageType)) driver driver.deviceToken
-    Common.CommonDocumentReject commonRejectReq -> rejectAndUpdateCommonDocument commonRejectReq merchantOperatingCityId
+      let docType = show image.imageType
+          reason = imageRejectReq.reason
+      sendDocumentRejectionNotification merchantOperatingCityId docType reason driver
+    Common.CommonDocumentReject commonRejectReq -> do
+      let documentId = Id commonRejectReq.documentId.getId
+      document <- QCommonDriverOnboardingDocuments.findById documentId >>= fromMaybeM (DocumentNotFound documentId.getId)
+      whenJust document.driverId $ \driverId -> do
+        driver <- QDriver.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+        let merchantOpCityId = document.merchantOperatingCityId
+            docType = show document.documentType
+            reason = commonRejectReq.reason
+        sendDocumentRejectionNotification merchantOpCityId docType reason driver
+      rejectAndUpdateCommonDocument commonRejectReq merchantOperatingCityId
   where
     notificationType = FCM.DOCUMENT_INVALID
-    notificationTitle obj = "Attention: Your " <> obj <> " is invalid."
-    message obj = "Kindly reapply or reupload your " <> obj
-    rejectSSNAndSendNotification req merchantOpCityId = do
+
+    replacePlaceholders translatedDocType reason template = T.replace "{#docType#}" "" $ T.replace "{#documentType#}" translatedDocType $ T.replace "{#reason#}" reason template
+
+    translateDocumentType language docType = do
+      let translationKey = "DOC_TYPE_" <> docType
+      mbTranslation <- QTranslations.findByErrorAndLanguage translationKey language
+      case mbTranslation of
+        Just trans -> pure trans.message
+        Nothing
+          | language /= Lang.ENGLISH -> do
+            mbEnglishTranslation <- QTranslations.findByErrorAndLanguage translationKey Lang.ENGLISH
+            pure $ maybe docType (.message) mbEnglishTranslation
+          | otherwise -> pure docType
+
+    fetchPushNotificationTemplates merchantOpCityId language mbLanguage = do
+      mbPN <- CPN.findMatchingMerchantPN merchantOpCityId "DOCUMENT_INVALID" Nothing Nothing mbLanguage Nothing
+      case mbPN of
+        Just pn -> pure (pn.title, pn.body)
+        Nothing -> do
+          mbMerchantMessage <- QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.DOCUMENT_INVALID Nothing Nothing
+          case mbMerchantMessage of
+            Just mm -> pure ("", mm.message)
+            Nothing -> fetchFallbackTemplates merchantOpCityId language
+
+    fetchSmsTemplates merchantOpCityId language = do
+      mbMerchantMessage <- QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.DOCUMENT_INVALID Nothing Nothing
+      case mbMerchantMessage of
+        Just mm -> pure ("", mm.message)
+        Nothing -> fetchFallbackTemplates merchantOpCityId language
+
+    fetchFallbackTemplates _merchantOpCityId language = do
+      mbTitleTranslation <- QTranslations.findByErrorAndLanguage "DOCUMENT_INVALID_TITLE" language
+      mbBodyTranslation <- QTranslations.findByErrorAndLanguage "DOCUMENT_INVALID_BODY" language
+      case (mbTitleTranslation, mbBodyTranslation) of
+        (Just titleTrans, Just bodyTrans) -> pure (titleTrans.message, bodyTrans.message)
+        _ -> pure ("", "")
+
+    constructTitle translatedDocType template
+      | T.null template = "Attention: Your " <> translatedDocType <> " is invalid."
+      | otherwise = template
+
+    constructBody translatedDocType reason template
+      | T.null template = translatedDocType <> " rejected - " <> reason <> ". Please reupload the correct document."
+      | otherwise = template
+
+    buildPushMessages translatedDocType reason (titleTemplate, bodyTemplate) =
+      let title = constructTitle translatedDocType $ replacePlaceholders translatedDocType reason titleTemplate
+          body = constructBody translatedDocType reason $ replacePlaceholders translatedDocType reason bodyTemplate
+       in (title, body)
+
+    buildSmsMessage translatedDocType reason (titleTemplate, bodyTemplate) =
+      let smsTemplate = if T.null bodyTemplate then titleTemplate else bodyTemplate
+       in constructBody translatedDocType reason $ replacePlaceholders translatedDocType reason smsTemplate
+
+    sendRejectDocumentSmsWithBody :: (CacheFlow m r, EsqDBFlow m r, ServiceFlow m r, HasFlowEnv m r '["smsCfg" ::: SmsConfig]) => Id DMOC.MerchantOperatingCity -> Text -> DP.Person -> m ()
+    sendRejectDocumentSmsWithBody merchantOpCityId smsBody driver = do
+      mbMobileNumber <- mapM decrypt driver.mobileNumber
+      case mbMobileNumber of
+        Nothing -> logWarning $ "Cannot send rejection SMS: mobile number missing for driver " <> driver.id.getId
+        Just mobileNumber -> do
+          logDebug $ "Sending SMS - Driver: " <> driver.id.getId <> ", Language: " <> show driver.language <> ", Message: " <> smsBody
+          smsCfg <- asks (.smsCfg)
+          let countryCode = fromMaybe "+91" driver.mobileCountryCode
+              phoneNumber = countryCode <> mobileNumber
+              sender = smsCfg.sender
+              templateId = "" -- no dedicated template; send plain text
+          Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq smsBody phoneNumber sender templateId) >>= Sms.checkSmsResult
+
+    isDashboardSmsEnabled :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m Bool
+    isDashboardSmsEnabled merchantOpCityId =
+      CCT.findByMerchantOpCityId merchantOpCityId Nothing
+        >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        <&> (.enableDashboardSms)
+
+    sendDocumentRejectionNotification :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r, HasFlowEnv m r '["smsCfg" ::: SmsConfig]) => Id DMOC.MerchantOperatingCity -> Text -> Text -> DP.Person -> m ()
+    sendDocumentRejectionNotification merchantOpCityId docType reason driver = do
+      let language = fromMaybe Lang.ENGLISH driver.language
+      translatedDocType <- translateDocumentType language docType
+      pushTemplates <- fetchPushNotificationTemplates merchantOpCityId language driver.language
+      smsTemplates <- fetchSmsTemplates merchantOpCityId language
+      let (title, body) = buildPushMessages translatedDocType reason pushTemplates
+          smsBody = buildSmsMessage translatedDocType reason smsTemplates
+      Notify.notifyDriver merchantOpCityId notificationType title body driver driver.deviceToken
+      smsEnabled <- isDashboardSmsEnabled merchantOpCityId
+      when smsEnabled $ do
+        sendRejectDocumentSmsWithBody merchantOpCityId smsBody driver
+
+    rejectSSNAndSendNotification req _merchantOpCityId = do
       ssnEnc <- encrypt req.ssn
       QSSN.updateVerificationStatusAndReasonBySSN INVALID (Just req.reason) (ssnEnc & hash)
       ssnEntry <- QSSN.findBySSN (ssnEnc & hash) >>= fromMaybeM (InternalError "SSN not found by ssn no")
       driver <- QDriver.findById ssnEntry.driverId >>= fromMaybeM (PersonNotFound ssnEntry.driverId.getId)
-      Notify.notifyDriver merchantOpCityId notificationType (notificationTitle "SSN") (message "SSN") driver driver.deviceToken
+      let docType = "SSN"
+          reason = req.reason
+      sendDocumentRejectionNotification _merchantOpCityId docType reason driver
 
 postDriverRegistrationDocumentsUpdate :: ShortId DM.Merchant -> Context.City -> Common.UpdateDocumentRequest -> Flow APISuccess
 postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do

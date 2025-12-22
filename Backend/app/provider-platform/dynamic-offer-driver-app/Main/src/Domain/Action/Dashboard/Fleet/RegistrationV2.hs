@@ -44,6 +44,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -256,6 +257,10 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   void $ QP.create person
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
+  -- initialize fleet analytics counters to zero (best-effort, don't block fleet owner creation)
+  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
+    fork "initializing fleet analytics keys" $
+      Analytics.updateFleetOwnerAnalyticsKeys person.id.getId (Just 0) (Just 0) (Just 0)
   fork "creating fleet owner info" $ createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId)
   pure person
 

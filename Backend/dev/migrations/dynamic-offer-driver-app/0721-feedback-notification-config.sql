@@ -1,11 +1,11 @@
 -- QUERIES FOR MASTER
 UPDATE atlas_driver_offer_bpp.transporter_config
-SET feedback_notification_config = '{"enableFeedbackNotification":true,"feedbackNotificationDelayInSec":60}'
+SET feedback_notification_config = '{"enableFeedbackNotification":true,"allowNotificationOnEmptyBadge":true,"feedbackNotificationDelayInSec":60}'
 WHERE feedback_notification_config IS NULL;
 
 -- QUERIES FOR PROD
 -- UPDATE atlas_driver_offer_bpp.transporter_config
--- SET feedback_notification_config = '{"enableFeedbackNotification":false,"feedbackNotificationDelayInSec":7200}'
+-- SET feedback_notification_config = '{"enableFeedbackNotification":false,"enableFeedbackNotification":false,"feedbackNotificationDelayInSec":7200}'
 -- WHERE feedback_notification_config IS NULL;
 
 -- Insert FEEDBACK_BADGE_PN notification for ENGLISH

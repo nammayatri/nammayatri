@@ -188,6 +188,8 @@ PassVerifyTransaction:
     sourceStopCode: Maybe Text
     destinationStopCode: Maybe Text
     fleetId: Text
+    isActuallyValid: Maybe Bool
+    autoActivated: Maybe Bool
 
   constraints:
     id: PrimaryKey

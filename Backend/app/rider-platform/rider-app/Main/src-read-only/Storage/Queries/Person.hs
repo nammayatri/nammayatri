@@ -6,6 +6,7 @@ module Storage.Queries.Person (module Storage.Queries.Person, module ReExport) w
 
 import qualified BecknV2.OnDemand.Enums
 import qualified Data.Time
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
 import Kernel.Beam.Functions
@@ -148,6 +149,9 @@ updateLiveActivityToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kerne
 updateLiveActivityToken liveActivityToken id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.liveActivityToken liveActivityToken, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updatePaymentMode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePaymentMode paymentMode id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.paymentMode paymentMode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updatePayoutVpa :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutVpa payoutVpa id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.payoutVpa payoutVpa, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

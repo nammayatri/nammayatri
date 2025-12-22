@@ -12,9 +12,11 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data PassVerifyTransaction = PassVerifyTransaction
-  { destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { autoActivated :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fleetId :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.PassVerifyTransaction.PassVerifyTransaction,
+    isActuallyValid :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     purchasePassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     validTill :: Kernel.Prelude.UTCTime,

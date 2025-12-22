@@ -5,11 +5,15 @@ import qualified Domain.Types.FleetRcDailyStats as DFRDS
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.TransporterConfig as DTTC
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Storage.Queries.FleetRcDailyStats as QFRDS
 import qualified Storage.Queries.RideDetails as QRideDetails
+
+makeFleetRcMetricLockKey :: Text -> Text -> Text
+makeFleetRcMetricLockKey fleetOwnerId rcId = "FleetRcStats:Lock:" <> fleetOwnerId <> ":" <> rcId
 
 buildInitialFleetVehicleDailyStats :: (MonadFlow m) => Text -> Text -> Day -> DTTC.TransporterConfig -> Meters -> Seconds -> HighPrecMoney -> m DFRDS.FleetRcDailyStats
 buildInitialFleetVehicleDailyStats fleetOwnerId rcId merchantLocalDate transporterConfig rideDistance rideDuration totalEarnings = do
@@ -59,7 +63,7 @@ upsertFleetVehicleDailyStats fleetOwnerId rcId transporterConfig rideDistance ri
 
       QFRDS.updateByPrimaryKey dailyStats
 
-updateFleetVehicleDailyStats :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> DTTC.TransporterConfig -> Ride.Ride -> m ()
+updateFleetVehicleDailyStats :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r) => Text -> DTTC.TransporterConfig -> Ride.Ride -> m ()
 updateFleetVehicleDailyStats fleetOwnerId transporterConfig ride = do
   rideDetails <- QRideDetails.findById ride.id >>= fromMaybeM (InvalidRequest $ "RideDetailsNotFound: " <> ride.id.getId)
   rcId <- fromMaybeM (InvalidRequest $ "RcIdNotFound: " <> ride.id.getId) rideDetails.rcId
@@ -68,7 +72,8 @@ updateFleetVehicleDailyStats fleetOwnerId transporterConfig ride = do
   let rideDuration = fromMaybe (Seconds 0) rideDurationSeconds
   let totalEarnings = fromMaybe (HighPrecMoney 0) ride.fare
 
-  upsertFleetVehicleDailyStats fleetOwnerId rcId transporterConfig rideDistance rideDuration totalEarnings
+  Redis.withWaitAndLockRedis (makeFleetRcMetricLockKey fleetOwnerId rcId) 10 5000 $
+    upsertFleetVehicleDailyStats fleetOwnerId rcId transporterConfig rideDistance rideDuration totalEarnings
   where
     rideDurationSeconds :: Maybe Seconds
     rideDurationSeconds = do

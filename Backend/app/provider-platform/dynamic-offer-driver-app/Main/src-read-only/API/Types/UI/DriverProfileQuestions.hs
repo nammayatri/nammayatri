@@ -27,6 +27,7 @@ data DriverProfileQuesRes = DriverProfileQuesRes
     otherImages :: [Kernel.Prelude.Text],
     pledges :: [Kernel.Prelude.Text],
     profileImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleTags :: [Kernel.Prelude.Text]
   }
   deriving stock (Generic)

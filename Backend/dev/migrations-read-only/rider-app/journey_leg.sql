@@ -372,3 +372,11 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN bus_location_data json ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ALTER COLUMN service_types TYPE text;
+ALTER TABLE atlas_app.journey_leg ADD COLUMN bus_driver_id text ;
+ALTER TABLE atlas_app.journey_leg ADD COLUMN bus_conductor_id text ;

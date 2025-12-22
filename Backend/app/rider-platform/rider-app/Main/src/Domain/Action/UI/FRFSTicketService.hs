@@ -727,8 +727,8 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
           DIBC.ONDC DIBC.ONDCBecknConfig {multiInitAllowed} ->
             return $
               multiInitAllowed == Just True
-                && booking.status `elem` [DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
-          _ -> return $ booking.status `elem` [DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
+                && booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
+          _ -> return $ booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
       Nothing -> return True
   updatedQuoteCategories <-
     if isMultiInitAllowed
@@ -1096,7 +1096,9 @@ buildJourneyAndLeg booking fareParameters = do
               isDeleted = Just False,
               sequenceNumber = 0,
               multimodalSearchRequestId = Just booking.searchId.getId, -- Note :: This is not SearchRequest Table's ID. Do not use it to Query SearchReqeust Anywhere in Application.
-              busLocationData = booking.busLocationData
+              busLocationData = booking.busLocationData,
+              busConductorId = routeLiveInfo >>= (.busConductorId),
+              busDriverId = routeLiveInfo >>= (.busDriverId)
             }
 
     QLocation.createMany [fromLocation, toLocation]
@@ -1537,7 +1539,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
       isSplitEnabled_ <- Payment.getIsSplitEnabled merchantId_ merchantOperatingCityId Nothing (getPaymentType booking.vehicleType)
       isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId_ merchantOperatingCityId Nothing (getPaymentType booking.vehicleType)
-      splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled
+      let isSingleMode = fromMaybe False booking.isSingleMode
+      splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
       let createOrderReq =
             Payment.CreateOrderReq
               { orderId = paymentOrder.id.getId,

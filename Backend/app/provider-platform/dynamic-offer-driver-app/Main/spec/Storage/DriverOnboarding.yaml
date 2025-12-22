@@ -22,7 +22,7 @@ imports:
   ImageExtractionValidation: Domain.Types.IdfyVerification
   MediaFileDocumentType: Domain.Types.Common
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
-
+  MediaFile: IssueManagement.Domain.Types.MediaFile
 IdfyVerification:
   tableName: idfy_verification
   fields:
@@ -210,6 +210,7 @@ VehicleRegistrationCertificate:
     dateOfRegistration: Maybe UTCTime
     rejectReason: Maybe Text
     approved: Maybe Bool
+    vehicleImageId: Maybe (Id MediaFile)
   default:
     approved: "false"
   constraints:
@@ -265,6 +266,10 @@ VehicleRegistrationCertificate:
     updateMerchantIdAndCityIdById:
       kvFunction: updateWithKV
       params: [merchantId, merchantOperatingCityId]
+      where: id
+    updateVehicleImageId:
+      kvFunction: updateOneWithKV
+      params: [vehicleImageId]
       where: id
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -9,6 +9,7 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.Person
 import qualified Domain.Types.UpgradedTier
 import qualified Domain.Types.Vehicle
+import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -53,6 +54,13 @@ updateSelectedServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([D
 updateSelectedServiceTiers selectedServiceTiers driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.selectedServiceTiers selectedServiceTiers, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateVehicleImageId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateVehicleImageId vehicleImageId driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.vehicleImageId (Kernel.Types.Id.getId <$> vehicleImageId), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateVehicleModel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVehicleModel model driverId = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.model model, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]

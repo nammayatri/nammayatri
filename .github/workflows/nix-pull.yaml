@@ -1,19 +1,11 @@
 name: Nix CI
 
 on:
-  push:
-    branches: 
-      - "main"
-      - "prodHotPush-Common"
-      - "prodHotPush-MMFRFS"
-      - "prodHotPush-BAP"
-      - "prodHotPush-BPP"
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches: 
       - "main"
       - "prodHotPush-Common"
-      - "prodHotPush-MMFRFS"
       - "prodHotPush-BAP"
       - "prodHotPush-BPP"
   workflow_dispatch:
@@ -91,10 +83,10 @@ jobs:
             arch: amd64
             name: Master Release Build
             continue-on-error: false
-          - system: aarch64-darwin
-            host: aarch64-darwin
-            name: Mac Cache Server
-            continue-on-error: false
+          # - system: aarch64-darwin
+          #   host: aarch64-darwin
+          #   name: Mac Cache Server
+          #   continue-on-error: false
       fail-fast: false
     runs-on: ${{ matrix.host }}
     outputs:
@@ -169,17 +161,17 @@ jobs:
   # from NixOS host (via remote builder protocol) so as to populate its local
   # Nix store, and thus provide macOS binaries as part of our Nix cache.
 
-  macos-build-for-cache:
-    runs-on: ${{ matrix.host }}
-    needs: [build, check-conditions]
-    if: github.ref == 'refs/heads/main'
-    strategy:
-      matrix:
-        system: [aarch64-darwin]
-        host: [x86_64-linux]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Build all flake outputs
-        run: |
-          om ci run --systems "${{ matrix.system }}" --no-link -- -v
+  # macos-build-for-cache:
+  #   runs-on: ${{ matrix.host }}
+  #   needs: [build, check-conditions]
+  #   if: github.ref == 'refs/heads/main'
+  #   strategy:
+  #     matrix:
+  #       system: [aarch64-darwin]
+  #       host: [x86_64-linux]
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #     - name: Build all flake outputs
+  #       run: |
+  #         om ci run --systems "${{ matrix.system }}" --no-link -- -v

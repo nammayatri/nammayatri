@@ -47,6 +47,18 @@ import qualified Storage.CachedQueries.Person as CQP
 import Storage.Queries.Geometry (findGeometriesContaining)
 import Tools.Error
 
+data RestrictedHours = RestrictedHours
+  { startTime :: Maybe TimeOfDay,
+    endTime :: Maybe TimeOfDay
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+data PTRestrictedHours = PTRestrictedHours
+  { metro :: RestrictedHours,
+    subway :: RestrictedHours
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
 data ServiceabilityRes = ServiceabilityRes
   { serviceable :: Bool,
     city :: Maybe Context.City,
@@ -55,8 +67,9 @@ data ServiceabilityRes = ServiceabilityRes
     geoJson :: Maybe Text,
     hotSpotInfo :: [DHotSpot.HotSpotInfo],
     blockRadius :: Maybe Int,
-    isMetroServiceable :: Maybe Bool,
-    isSubwayServiceable :: Maybe Bool
+    isMetroServiceable :: Maybe Bool, -- deprecated
+    isSubwayServiceable :: Maybe Bool, -- deprecated
+    ptRestrictedHours :: Maybe PTRestrictedHours
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -85,6 +98,19 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
       now <- getCurrentTime
       let isOutsideMetroBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.qrTicketRestrictionStartTime riderConfig.qrTicketRestrictionEndTime now riderConfig.timeDiffFromUtc
       let isOutsideSubwayBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.subwayRestrictionStartTime riderConfig.subwayRestrictionEndTime now riderConfig.timeDiffFromUtc
+      let ptRestrictedHours =
+            PTRestrictedHours
+              { metro =
+                  RestrictedHours
+                    { startTime = riderConfig.qrTicketRestrictionStartTime,
+                      endTime = riderConfig.qrTicketRestrictionEndTime
+                    },
+                subway =
+                  RestrictedHours
+                    { startTime = riderConfig.subwayRestrictionStartTime,
+                      endTime = riderConfig.subwayRestrictionEndTime
+                    }
+              }
       return
         ServiceabilityRes
           { serviceable = True,
@@ -93,6 +119,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
             geoJson = (.geoJson) =<< filteredSpecialLocationBody,
             isMetroServiceable = Just (not isOutsideMetroBusinessHours),
             isSubwayServiceable = Just (not isOutsideSubwayBusinessHours),
+            ptRestrictedHours = Just ptRestrictedHours,
             ..
           }
     Nothing ->
@@ -105,6 +132,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
             geoJson = Nothing,
             isMetroServiceable = Nothing,
             isSubwayServiceable = Nothing,
+            ptRestrictedHours = Nothing,
             ..
           }
 

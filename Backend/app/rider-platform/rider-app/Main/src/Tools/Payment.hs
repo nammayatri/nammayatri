@@ -297,15 +297,15 @@ roundVendorFee vf = vf {splitAmount = roundToTwoDecimalPlaces vf.splitAmount}
 convertToPercentage :: HighPrecMoney -> HighPrecMoney -> HighPrecMoney
 convertToPercentage amount totalAmount = roundToTwoDecimalPlaces $ (amount / totalAmount) * 100
 
-mkSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecMoney -> [VendorSplitDetails] -> Bool -> m (Maybe SplitSettlementDetails)
-mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplitEnabled = case isSplitEnabled of
+mkSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecMoney -> [VendorSplitDetails] -> Bool -> Bool -> m (Maybe SplitSettlementDetails)
+mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplitEnabled isSingleMode = case isSplitEnabled of
   False -> return Nothing
   True -> do
     uuid <- L.generateGUID
     when (isPercentageSplitEnabled && totalAmount <= 0) $ do
       logError $ "Percentage split requested with non-positive total amount: " <> show totalAmount
       throwError (InternalError "Percentage split requires total amount > 0")
-    if isPercentageSplitEnabled
+    if isPercentageSplitEnabled && isSingleMode
       then do
         -- Create percentage-based splits with aggregation
         let sortedVendorFees = sortBy (compare `on` (\p -> (p.vendorId, p.ticketId))) (roundVendorFee <$> vendorFees)
@@ -384,15 +384,15 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplit
                     uniqueSplitId = fromMaybe uniqueId firstFee.ticketId
                   }
 
-mkUnaggregatedSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecMoney -> [VendorSplitDetails] -> Bool -> m (Maybe SplitSettlementDetails)
-mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplitEnabled = case isSplitEnabled of
+mkUnaggregatedSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecMoney -> [VendorSplitDetails] -> Bool -> Bool -> m (Maybe SplitSettlementDetails)
+mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplitEnabled isSingleMode = case isSplitEnabled of
   False -> return Nothing
   True -> do
     uuid <- L.generateGUID
     when (isPercentageSplitEnabled && totalAmount <= 0) $ do
       logError $ "Percentage split requested with non-positive total amount: " <> show totalAmount
       throwError (InternalError "Percentage split requires total amount > 0")
-    if isPercentageSplitEnabled
+    if isPercentageSplitEnabled && isSingleMode
       then do
         -- Create percentage-based splits
         let vendorPercentageSplits =

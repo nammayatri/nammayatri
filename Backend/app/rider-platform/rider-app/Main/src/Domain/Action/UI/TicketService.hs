@@ -324,7 +324,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   personEmail <- mapM decrypt person.email
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOpCity.id (Just placeId) Payment.Normal
-  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount.amount (fromMaybe [] vendorSplits) False
+  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount.amount (fromMaybe [] vendorSplits) False False
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = ticketBooking.id.getId,
@@ -1388,7 +1388,8 @@ buildAuthReqForDirectBooking req countryCode merchant =
       registrationLon = Nothing,
       enableOtpLessRide = Nothing,
       allowBlockedUserLogin = Nothing,
-      isOperatorReq = Nothing
+      isOperatorReq = Nothing,
+      reuseToken = Nothing
     }
 
 -- Create a direct booking for cash payment, bypassing the normal payment flow
@@ -2156,7 +2157,8 @@ postTicketDashboardRegister merchant req = do
                 registrationLon = Nothing,
                 enableOtpLessRide = Nothing,
                 allowBlockedUserLogin = Nothing,
-                isOperatorReq = Nothing
+                isOperatorReq = Nothing,
+                reuseToken = Nothing
               }
       merchantOperatingCityId <-
         CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity

@@ -16,10 +16,12 @@ module SharedLogic.Analytics where
 
 import qualified Data.Map as Map
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as TC
 import Environment
 import Kernel.Prelude
@@ -36,6 +38,7 @@ import qualified Storage.Clickhouse.FleetOperatorStats as CFO
 import qualified Storage.Clickhouse.Vehicle as CVehicle
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import Tools.Error
@@ -89,6 +92,58 @@ data FleetAllTimeFallbackRes = FleetAllTimeFallbackRes
     currentOnlineDriverCount :: Int
   }
   deriving (Show, Eq)
+
+-- | Update analytics and driver stats counters for a cancelled ride.
+updateCancellationAnalyticsAndDriverStats ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  TC.TransporterConfig ->
+  DRide.Ride ->
+  SBCR.BookingCancellationReason ->
+  m ()
+updateCancellationAnalyticsAndDriverStats transporterConfig ride bookingCReason = do
+  driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  case bookingCReason.source of
+    SBCR.ByDriver -> do
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
+        updateOperatorAnalyticsCancelCount transporterConfig ride.driverId
+      QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
+    SBCR.ByUser -> do
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
+        updateFleetOwnerAnalyticsCustomerCancelCount ride.driverId transporterConfig
+      QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId
+    _ -> pure ()
+
+-- | Update fleet owner analytics counters in Redis. Passing Nothing deletes the key.
+updateFleetOwnerAnalyticsKeys ::
+  (Redis.HedisFlow m r, MonadFlow m) =>
+  Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Int ->
+  m ()
+updateFleetOwnerAnalyticsKeys fleetOwnerId mbActiveDrivers mbActiveVehicles mbCurrentOnline = do
+  let setOrDel key = \case
+        Just v -> Redis.set key v
+        Nothing -> Redis.del key >> pure ()
+
+  -- active driver count
+  let adcKey = makeFleetAnalyticsKey fleetOwnerId ACTIVE_DRIVER_COUNT
+  setOrDel adcKey mbActiveDrivers
+
+  -- active vehicle count
+  let avcKey = makeFleetAnalyticsKey fleetOwnerId ACTIVE_VEHICLE_COUNT
+  setOrDel avcKey mbActiveVehicles
+
+  -- current online driver count uses ONLINE status key
+  let codKey = DDF.getStatusKey fleetOwnerId DDF.ONLINE
+  setOrDel codKey mbCurrentOnline
 
 convertToFleetAllTimeFallbackRes :: [(FleetAllTimeMetric, Int)] -> Int -> CommonAllTimeFallbackRes
 convertToFleetAllTimeFallbackRes metricsList currentOnlineDriverCount =

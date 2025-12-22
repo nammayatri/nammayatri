@@ -54,6 +54,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Common.FRFS as FRFS
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -65,6 +66,7 @@ import SharedLogic.Offer as SOffer
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Translations as QT
 import qualified Storage.Queries.FRFSRecon as QRecon
@@ -284,7 +286,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         vendorSplitList <- PaymentVendorSplits.createVendorSplit merchantId person.merchantOperatingCityId TPayment.FRFSPassPurchase itemDetails
         isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
-        splitSettlementDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled pass.amount vendorSplitList isPercentageSplitEnabled
+        splitSettlementDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled pass.amount vendorSplitList isPercentageSplitEnabled False
         let createOrderReq =
               Payment.CreateOrderReq
                 { orderId = paymentOrderId.getId,
@@ -591,7 +593,9 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
 
   let daysToExpire = fromIntegral $ DT.diffDays purchasedPass.endDate today
 
-  lastVerifiedVehicleNumber <- QPassVerifyTransaction.findLastVerifiedVehicleNumberByPurchasePassId purchasedPass.id
+  mbLastVerified <- QPassVerifyTransaction.findLastVerifiedVehicleNumberByPurchasePassId purchasedPass.id
+  let lastVerifiedVehicleNumber = fmap fst mbLastVerified
+  let isAutoVerified = (mbLastVerified >>= snd) == Just True
   return $
     PassAPI.PurchasedPassAPIEntity
       { id = purchasedPass.id,
@@ -599,6 +603,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         passEntity = passDetailsEntity,
         tripsLeft = tripsLeft,
         lastVerifiedVehicleNumber,
+        isAutoVerified,
         status = purchasedPass.status,
         startDate = purchasedPass.startDate,
         deviceMismatch,
@@ -632,12 +637,12 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
           when (passStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending] && isDashboard) $ do
             sendPassPurchasedSuccessMessage purchasedPass.personId purchasedPass.merchantId purchasedPass.merchantOperatingCityId (fromMaybe "" purchasedPass.passName)
         when (purchasedPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
-          QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue
+          QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
         -- If payment results in an active/prebooked pass, update purchased_pass.profilePicture from payment
         when (passStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
           QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
           when (passStatus == DPurchasedPass.Active && purchasedPassPayment.startDate <= purchasedPass.startDate && purchasedPassPayment.endDate <= purchasedPass.endDate) $
-            QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue
+            QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
       case mbPassStatus of
         Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
         Just DPurchasedPass.PreBooked -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
@@ -788,7 +793,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
         Just firstPreBookedPayment -> do
           let newStatus = if firstPreBookedPayment.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
           QPurchasedPassPayment.updateStatusByOrderId newStatus firstPreBookedPayment.orderId
-          QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus firstPreBookedPayment.benefitDescription firstPreBookedPayment.benefitType firstPreBookedPayment.benefitValue
+          QPurchasedPass.updatePurchaseData purchasedPass.id firstPreBookedPayment.startDate firstPreBookedPayment.endDate newStatus firstPreBookedPayment.benefitDescription firstPreBookedPayment.benefitType firstPreBookedPayment.benefitValue firstPreBookedPayment.amount
         Nothing -> do
           QPurchasedPassPayment.expireOlderActivePaymentsByPurchasedPassId purchasedPass.id today
           QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
@@ -816,11 +821,52 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (InvalidRequest $ "Pass will be active from " <> show purchasedPass.startDate)
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-  (integratedBPPConfig, vehicleLiveRouteInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs passVerifyReq.vehicleNumber (Just True) >>= fromMaybeM (InvalidRequest $ "Entered Bus OTP: " <> passVerifyReq.vehicleNumber <> " is invalid. Please check again.")
-  unless (vehicleLiveRouteInfo.serviceType `elem` purchasedPass.applicableVehicleServiceTiers) $
-    throwError $ InvalidRequest ("This pass is only " <> purchasedPass.benefitDescription)
+
+  -- If autoActivated is requested, find the nearest fleet (vehicle number) from user location
+  vehicleNumberToUse <-
+    if fromMaybe False passVerifyReq.autoActivated
+      then do
+        case (passVerifyReq.currentLat, passVerifyReq.currentLon) of
+          (Just lat, Just lon) -> do
+            riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+            case integratedBPPConfigs of
+              [] -> throwError (InvalidRequest "No integrated BPP config available for auto activation")
+              (nearbyConfig : _) -> do
+                buses <- FRFS.getNearbyBusesFRFS (LatLong lat lon) riderConfig nearbyConfig
+                let busesWithVehicle = filter (isJust . (.vehicle_number)) buses
+                when (null busesWithVehicle) $ throwError (InvalidRequest "No nearby buses found for auto activation")
+
+                -- Filter by purchased pass applicable service tiers
+                let applicableTiers = purchasedPass.applicableVehicleServiceTiers
+                busesFilteredByTier <-
+                  if null applicableTiers
+                    then return busesWithVehicle
+                    else
+                      filterM
+                        ( \b ->
+                            case b.vehicle_number of
+                              Just v -> do
+                                mbServiceTier <- JLU.getVehicleServiceTypeFromInMem integratedBPPConfigs v
+                                return $ maybe False (`elem` applicableTiers) mbServiceTier
+                              Nothing -> return False
+                        )
+                        busesWithVehicle
+
+                when (null busesFilteredByTier) $ throwError (InvalidRequest "No nearby buses found matching pass service tiers for auto activation")
+
+                let nearest = minimumBy (EHS.comparing (\b -> distanceBetweenInMeters (LatLong lat lon) (LatLong b.latitude b.longitude))) busesFilteredByTier
+                case nearest.vehicle_number of
+                  Just v -> return v
+                  Nothing -> throwError (InvalidRequest "No valid vehicle number found for nearest bus")
+          _ -> throwError (InvalidRequest "Location is required for auto activation")
+      else return passVerifyReq.vehicleNumber
+
+  (integratedBPPConfig, vehicleInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumberToUse (Just True) >>= fromMaybeM (InvalidRequest $ "Entered Bus OTP: " <> vehicleNumberToUse <> " is invalid. Please check again.")
+  when (fromMaybe True vehicleInfo.isActuallyValid) $ do
+    unless (vehicleInfo.serviceType `elem` purchasedPass.applicableVehicleServiceTiers) $
+      throwError $ InvalidRequest ("This pass is only " <> purchasedPass.benefitDescription)
   routeStopMapping <-
-    case vehicleLiveRouteInfo.routeCode of
+    case vehicleInfo.routeCode of
       Just routeCode ->
         withTryCatch
           "passVerify:getRouteStopMappingByRouteCodeInMem"
@@ -839,15 +885,17 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
         DPassVerifyTransaction.PassVerifyTransaction
           { id = id,
             purchasePassId = purchasedPassId,
+            autoActivated = Just (fromMaybe False passVerifyReq.autoActivated),
             validTill = addUTCTime (intToNominalDiffTime (fromIntegral purchasedPass.verificationValidity)) now,
             verifiedAt = now,
-            fleetId = passVerifyReq.vehicleNumber,
+            fleetId = vehicleNumberToUse,
             sourceStopCode = sourceStop,
             destinationStopCode = destinationStop,
             createdAt = now,
             updatedAt = now,
             merchantId = Just merchantId,
-            merchantOperatingCityId = Just person.merchantOperatingCityId
+            merchantOperatingCityId = Just person.merchantOperatingCityId,
+            isActuallyValid = Just $ fromMaybe True vehicleInfo.isActuallyValid
           }
   QPassVerifyTransaction.create passVerifyTransaction
   return APISuccess.Success
@@ -962,7 +1010,7 @@ postMultimodalPassActivateToday (_mbCallerPersonId, _merchantId) passNumber mbSt
   unless (null overlappingPasses) $
     throwError (InvalidRequest "Cannot activate pass: date range overlaps with another active or prebooked pass")
 
-  QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue
+  QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount
   QPurchasedPassPayment.updatePurchaseDataByPurchasedPassIdAndStartEndDate purchasedPass.id purchasedPass.startDate purchasedPass.endDate newStartDate newEndDate newStatus
   return APISuccess.Success
 

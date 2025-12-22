@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.special_location ADD COLUMN priority integer NOT NULL DEFAULT 0;

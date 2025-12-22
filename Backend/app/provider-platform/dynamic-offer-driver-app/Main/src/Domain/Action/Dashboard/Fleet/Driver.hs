@@ -76,6 +76,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles,
     getDriverFleetScheduledBookingList,
     postDriverFleetScheduledBookingAssign,
+    postDriverFleetDashboardAnalyticsCache,
   )
 where
 
@@ -3436,6 +3437,22 @@ getDriverDashboardFleetTripWaypoints _ _ tripTransactionId fleetOwnerId mbliteMo
 
 driverFleetTripWaypointsHitsCountKey :: Text -> Maybe Text -> Text
 driverFleetTripWaypointsHitsCountKey fleetOwnerId memberPersonId = "driverFleetTripWaypointsHitsCount:" <> fleetOwnerId <> ":" <> fromMaybe "" memberPersonId
+
+postDriverFleetDashboardAnalyticsCache ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.FleetDashboardAnalyticsCacheReq ->
+  Flow APISuccess
+postDriverFleetDashboardAnalyticsCache merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
+  -- validate fleet owner exists
+  _ <- QPerson.findById (Id req.fleetOwnerId) >>= fromMaybeM (PersonNotFound req.fleetOwnerId)
+
+  Analytics.updateFleetOwnerAnalyticsKeys req.fleetOwnerId req.activeDriverCount req.activeVehicleCount req.currentOnlineDriver
+  pure Success
 
 postDriverDashboardFleetEstimateRoute ::
   ShortId DM.Merchant ->

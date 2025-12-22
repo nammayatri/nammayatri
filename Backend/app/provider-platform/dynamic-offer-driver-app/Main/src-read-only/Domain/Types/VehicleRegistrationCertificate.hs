@@ -10,6 +10,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
+import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Documents
@@ -43,6 +44,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     vehicleColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleDoors :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleEnergyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     vehicleManufacturer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -58,9 +60,9 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   }
   deriving (Generic)
 
-type VehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsEncrypted)
+type VehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsEncrypted
 
-type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsUnencrypted)
+type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsUnencrypted
 
 instance EncryptedItem VehicleRegistrationCertificate where
   type Unencrypted VehicleRegistrationCertificate = (DecryptedVehicleRegistrationCertificate, HashSalt)
@@ -94,6 +96,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
           vehicleColor = vehicleColor entity,
           vehicleDoors = vehicleDoors entity,
           vehicleEnergyType = vehicleEnergyType entity,
+          vehicleImageId = vehicleImageId entity,
           vehicleManufacturer = vehicleManufacturer entity,
           vehicleModel = vehicleModel entity,
           vehicleModelYear = vehicleModelYear entity,
@@ -137,6 +140,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
             vehicleColor = vehicleColor entity,
             vehicleDoors = vehicleDoors entity,
             vehicleEnergyType = vehicleEnergyType entity,
+            vehicleImageId = vehicleImageId entity,
             vehicleManufacturer = vehicleManufacturer entity,
             vehicleModel = vehicleModel entity,
             vehicleModelYear = vehicleModelYear entity,
