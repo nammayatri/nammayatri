@@ -7,6 +7,7 @@ module Domain.Action.UI.Pass
     postMultimodalPassVerify,
     passOrderStatusHandler,
     postMultimodalPassSwitchDeviceId,
+    postMultimodalPassResetDeviceSwitchCount,
     getMultimodalPassTransactions,
     createPassReconEntry,
     postMultimodalPassActivateToday,
@@ -934,6 +935,21 @@ postMultimodalPassSwitchDeviceId (mbCallerPersonId, merchantId) req = do
   forM_ allActivePurchasedPasses $ \purchasedPass -> do
     when (purchasedPass.deviceId /= deviceId) $ do
       QPurchasedPass.updateDeviceIdById deviceId (purchasedPass.deviceSwitchCount + 1) purchasedPass.id
+  return APISuccess.Success
+
+postMultimodalPassResetDeviceSwitchCount ::
+  ( ( Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    Id.Id DPurchasedPass.PurchasedPass ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postMultimodalPassResetDeviceSwitchCount (mbCallerPersonId, merchantId) purchasedPassId = do
+  personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+  purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
+  unless (purchasedPass.personId == personId) $ throwError AccessDenied
+  unless (purchasedPass.merchantId == merchantId) $ throwError AccessDenied
+  QPurchasedPass.updateDeviceIdById purchasedPass.deviceId 0 purchasedPass.id
   return APISuccess.Success
 
 getMultimodalPassTransactions ::

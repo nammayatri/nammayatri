@@ -5,6 +5,7 @@ module Domain.Action.Dashboard.AppManagement.Pass
     postPassCustomerActivateToday,
     postPassCustomerPassSelect,
     getPassCustomerPaymentStatus,
+    postPassCustomerPassResetDeviceSwitchCount,
   )
 where
 
@@ -60,3 +61,8 @@ getPassCustomerPaymentStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.M
 getPassCustomerPaymentStatus merchantShortId _opCity personId orderId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   UIPayment.getStatus (personId, merchant.id) orderId
+
+postPassCustomerPassResetDeviceSwitchCount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPassCustomerPassResetDeviceSwitchCount merchantShortId _opCity personId purchasedPassId = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  DPass.postMultimodalPassResetDeviceSwitchCount (Just personId, merchant.id) purchasedPassId
