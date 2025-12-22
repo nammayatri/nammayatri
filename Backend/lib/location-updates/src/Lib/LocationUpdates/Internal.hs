@@ -291,7 +291,16 @@ recalcDistanceBatchStep RideInterpolationHandler {..} isMeterRide distanceCalcRe
     when isTollApplicable $ do
       mbTollCharges :: Maybe HighPrecMoney <- Redis.safeGet (onRideTollChargesKey driverId)
       tollNames :: [Text] <- Redis.lRange (onRideTollNamesKey driverId) 0 (-1)
-      whenJust mbTollCharges $ \tollCharges -> updateTollChargesAndNames driverId tollCharges tollNames
+      whenJust mbTollCharges $ \tollCharges -> do
+        logError $
+          "TollFlow: persisting tolls to ride table(on-ride snap)"
+            <> " driverId="
+            <> driverId.getId
+            <> " charges="
+            <> show tollCharges
+            <> " names="
+            <> show tollNames
+        updateTollChargesAndNames driverId tollCharges tollNames
   let newReferencePoint = if snapToRoadFailed then Nothing else lastMaybe interpolatedWps
   pure (distance, newReferencePoint, startPatching, servicesUsed, snapToRoadFailed)
   where

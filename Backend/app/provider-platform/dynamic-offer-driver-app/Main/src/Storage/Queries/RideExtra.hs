@@ -357,6 +357,17 @@ updateStatusByIds rideIds status = do
 updateDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMeters -> Int -> Int -> Maybe Int -> Bool -> m ()
 updateDistance driverId distance googleSnapCalls osrmSnapsCalls selfTunedCount isDistanceCalculationFailed = do
   now <- getCurrentTime
+  when isDistanceCalculationFailed $
+    logError $
+      "TollFlow: distance_calculation_failed set"
+        <> " driverId="
+        <> getId driverId
+        <> " googleCalls="
+        <> show googleSnapCalls
+        <> " osrmCalls="
+        <> show osrmSnapsCalls
+        <> " selfTuned="
+        <> show selfTunedCount
   updateWithKV
     ( [Se.Set BeamR.traveledDistance distance | not isDistanceCalculationFailed]
         <> [ Se.Set BeamR.numberOfSnapToRoadCalls (Just googleSnapCalls),
