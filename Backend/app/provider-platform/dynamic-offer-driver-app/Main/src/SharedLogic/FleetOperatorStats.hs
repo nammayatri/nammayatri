@@ -1,6 +1,8 @@
 module SharedLogic.FleetOperatorStats where
 
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
+import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FleetOperatorDailyStats as DFODS
 import qualified Domain.Types.FleetOperatorStats as DFS
 import qualified Domain.Types.Ride as DR
@@ -327,8 +329,8 @@ incrementCustomerCancellationCountDaily fleetOperatorId driverId transporterConf
     (\s -> s {DFODS.customerCancellationCount = Just 1})
 
 -- Daily: increment totals for earning, distance, and completed rides (aka ride completed)
-incrementTotalEarningDistanceAndCompletedRidesDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DR.Ride -> DTTC.TransporterConfig -> m ()
-incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId ride transporterConfig = do
+incrementTotalEarningDistanceAndCompletedRidesDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DR.Ride -> DBooking.Booking -> DTTC.TransporterConfig -> m ()
+incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId ride booking transporterConfig = do
   nowUTCTime <- getCurrentTime
   let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
   let merchantLocalDate = utctDay now
@@ -343,9 +345,18 @@ incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId ride transpo
         Nothing -> 0
     Nothing -> pure 0
 
-  -- Determine cash vs online platform fees based on onlinePayment field
+  -- Determine if payment is online or cash based on booking.paymentInstrument
+  -- If booking.paymentInstrument is Cash, it's cash payment
+  -- If booking.paymentInstrument is Nothing, check merchant.onlinePayment
+  -- Otherwise, it's online payment
+  let isOnlinePayment = case booking.paymentInstrument of
+        Just DMPM.Cash -> False
+        Nothing -> ride.onlinePayment
+        _ -> True
+
+  -- Determine cash vs online platform fees based on payment type
   let (cashPlatformFeeIncrement, onlinePlatformFeeIncrement) =
-        if ride.onlinePayment
+        if isOnlinePayment
           then (0, platformFeeTotal)
           else (platformFeeTotal, 0)
 
@@ -354,10 +365,10 @@ incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId ride transpo
         (Just startTime, Just endTime) -> Just (Seconds (round $ diffUTCTime endTime startTime))
         _ -> Nothing
 
-  -- Split earnings into online and cash based on onlinePayment field
+  -- Split earnings into online and cash based on payment type
   let rideFare = fromMaybe 0.0 ride.fare
       (onlineEarningIncrement, cashEarningIncrement) =
-        if ride.onlinePayment
+        if isOnlinePayment
           then (rideFare, 0.0)
           else (0.0, rideFare)
 

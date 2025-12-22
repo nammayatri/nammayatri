@@ -192,7 +192,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   void $ QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
   when thresholdConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
     fork "updateFleetVehicleDailyStats and updateOperatorAnalyticsTotalRideCount" $ do
-      Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig driverId ride
+      Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig driverId ride booking
       whenJust ride.fleetOwnerId $ \fleetOwnerId -> do
         FVS.updateFleetVehicleDailyStats fleetOwnerId.getId thresholdConfig ride
   when (isJust safetyPlusCharges) $ QDriverStats.incSafetyPlusRiderCountAndEarnings (cast ride.driverId) (fromMaybe 0.0 $ safetyPlusCharges <&> (.charge))
