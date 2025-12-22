@@ -30,10 +30,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelect :<|> GetPassCustomerPaymentStatus))
+type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelect :<|> GetPassCustomerPaymentStatus :<|> PostPassCustomerPassResetDeviceSwitchCount))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPassCustomerAvailablePasses merchantId city :<|> getPassCustomerPurchasedPasses merchantId city :<|> getPassCustomerTransactions merchantId city :<|> postPassCustomerActivateToday merchantId city :<|> postPassCustomerPassSelect merchantId city :<|> getPassCustomerPaymentStatus merchantId city
+handler merchantId city = getPassCustomerAvailablePasses merchantId city :<|> getPassCustomerPurchasedPasses merchantId city :<|> getPassCustomerTransactions merchantId city :<|> postPassCustomerActivateToday merchantId city :<|> postPassCustomerPassSelect merchantId city :<|> getPassCustomerPaymentStatus merchantId city :<|> postPassCustomerPassResetDeviceSwitchCount merchantId city
 
 type GetPassCustomerAvailablePasses =
   ( ApiAuth
@@ -83,6 +83,14 @@ type GetPassCustomerPaymentStatus =
       :> API.Types.Dashboard.AppManagement.Pass.GetPassCustomerPaymentStatus
   )
 
+type PostPassCustomerPassResetDeviceSwitchCount =
+  ( ApiAuth
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS) / ('API.Types.Dashboard.AppManagement.Pass.POST_PASS_CUSTOMER_PASS_RESET_DEVICE_SWITCH_COUNT))
+      :> API.Types.Dashboard.AppManagement.Pass.PostPassCustomerPassResetDeviceSwitchCount
+  )
+
 getPassCustomerAvailablePasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Environment.FlowHandler [API.Types.UI.Pass.PassInfoAPIEntity])
 getPassCustomerAvailablePasses merchantShortId opCity apiTokenInfo customerId language = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.getPassCustomerAvailablePasses merchantShortId opCity apiTokenInfo customerId language
 
@@ -100,3 +108,6 @@ postPassCustomerPassSelect merchantShortId opCity apiTokenInfo customerId passId
 
 getPassCustomerPaymentStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> Environment.FlowHandler Lib.Payment.Domain.Action.PaymentStatusResp)
 getPassCustomerPaymentStatus merchantShortId opCity apiTokenInfo customerId orderId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.getPassCustomerPaymentStatus merchantShortId opCity apiTokenInfo customerId orderId
+
+postPassCustomerPassResetDeviceSwitchCount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postPassCustomerPassResetDeviceSwitchCount merchantShortId opCity apiTokenInfo customerId passId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.postPassCustomerPassResetDeviceSwitchCount merchantShortId opCity apiTokenInfo customerId passId
