@@ -189,6 +189,7 @@ data LegStatus = LegStatus
 
 data LiveVehicleInfo = LiveVehicleInfo
   { eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
+    locationUTCTimestamp :: Kernel.Prelude.UTCTime,
     number :: Kernel.Prelude.Text,
     position :: Kernel.External.Maps.Types.LatLong,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -287,11 +288,12 @@ data RouteAvailabilityResp = RouteAvailabilityResp {availableRoutes :: [Availabl
 
 data RouteServiceabilityReq = RouteServiceabilityReq
   { destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    routeCode :: Maybe Kernel.Prelude.Text,
+    onlySelectedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteServiceabilityResp
@@ -304,7 +306,24 @@ data RouteStopMapping = RouteStopMapping {code :: Kernel.Prelude.Text, lat :: Ke
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RouteWithLiveVehicle = RouteWithLiveVehicle {alternateRouteInfo :: Kernel.Prelude.Maybe [AlternateRouteDetails], liveVehicles :: [LiveVehicleInfo], routeCode :: Kernel.Prelude.Text, routeShortName :: Kernel.Prelude.Text}
+data RouteWithLiveVehicle = RouteWithLiveVehicle
+  { alternateRouteInfo :: Kernel.Prelude.Maybe [AlternateRouteDetails],
+    liveVehicles :: [LiveVehicleInfo],
+    routeCode :: Kernel.Prelude.Text,
+    routeShortName :: Kernel.Prelude.Text,
+    schedules :: [ScheduledVehicleInfo]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ScheduledVehicleInfo = ScheduledVehicleInfo
+  { eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
+    locationUTCTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    position :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    vehicleNumber :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
