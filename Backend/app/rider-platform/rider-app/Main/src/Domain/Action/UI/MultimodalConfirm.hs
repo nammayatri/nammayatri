@@ -62,8 +62,7 @@ import Data.List (nub, nubBy, partition)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.CancellationReason as SCR

@@ -4,6 +4,7 @@
 
 module Storage.Queries.Ride (module Storage.Queries.Ride, module ReExport) where
 
+import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Ride
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -69,6 +70,13 @@ updateEstimatedEndTimeRange estimatedEndTimeRange id = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateFinalFarePolicyId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FarePolicy.FarePolicy) -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateFinalFarePolicyId finalFarePolicyId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.finalFarePolicyId (Kernel.Types.Id.getId <$> finalFarePolicyId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateIsPickupOrDestinationEdited :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateIsPickupOrDestinationEdited isPickupOrDestinationEdited id = do
