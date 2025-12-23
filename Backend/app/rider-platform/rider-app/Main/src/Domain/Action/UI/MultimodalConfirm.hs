@@ -40,6 +40,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalSwitchRoute,
     postMultimodalOrderSublegSetOnboardedVehicleDetails,
     postMultimodalSetRouteName,
+    updateBusLocation,
   )
 where
 
@@ -56,9 +57,12 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Concurrent (modifyMVar)
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.HashMap.Strict as HashMap
+import Data.Int ()
 import Data.List (nub, nubBy, partition)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.CancellationReason as SCR
@@ -94,6 +98,7 @@ import qualified Kernel.External.MultiModal.Interface as MultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude hiding (foldl')
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -124,6 +129,7 @@ import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.DeviceVehicleMapping as QDeviceVehicleMapping
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -2080,3 +2086,67 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         Left err -> do
           logError $ "SetOnboarding OTPRest failed: " <> show err
           return Nothing
+
+updateBusLocation ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Log m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  ApiTypes.UpdateBusLocationReq ->
+  [Kernel.Prelude.Text] ->
+  m Kernel.Types.APISuccess.APISuccess
+updateBusLocation req busOTPList = do
+  let busOTP =
+        fromMaybe
+          (error "busOTP query parameter is required")
+          (listToMaybe busOTPList)
+
+  deviceMappings <- QDeviceVehicleMapping.findByVehicleNo busOTP
+  deviceMapping <-
+    fromMaybeM
+      (InvalidRequest "Device not found for provided busOTP")
+      (listToMaybe deviceMappings)
+
+  now <- getCurrentTime
+
+  let serverTimeEpoch :: Int64
+      serverTimeEpoch =
+        floor (utcTimeToPOSIXSeconds now)
+
+  let requestTimestampSeconds :: Int64
+      requestTimestampSeconds =
+        floor (req.timestamp :: Double)
+
+  let kafkaPacket =
+        ApiTypes.KafKaPacket
+          { lat = req.lat,
+            long = req.long,
+            timestamp = requestTimestampSeconds,
+            deviceId = deviceMapping.deviceId,
+            vehicleNumber = busOTP,
+            speed = 0.0,
+            pushedToKafkaAt = serverTimeEpoch,
+            dataState = "L",
+            serverTime = serverTimeEpoch,
+            provider = "amnex",
+            raw = "",
+            client_ip = "0.0.0.0",
+            ign_status = "ON",
+            routeNumber = "101",
+            signalQuality = "Good"
+          }
+
+  logInfo $ "Kafka packet: " <> show kafkaPacket
+
+  let topicName = "gps_live_data"
+  let key = deviceMapping.deviceId
+
+  fork "Pushing bus location to Kafka" $ do
+    produceMessage (topicName, Just (TE.encodeUtf8 key)) kafkaPacket
+      `catch` \(e :: SomeException) ->
+        logError $
+          "Failed to push bus location to Kafka: " <> show e
+
+  pure Kernel.Types.APISuccess.Success
