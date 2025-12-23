@@ -64,6 +64,7 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     Sms.DigoEngageSmsConfig _ -> SmsService Sms.DigoEngage
     Sms.VonageSmsConfig _ -> SmsService Sms.VonageSms
     Sms.KarixSmsConfig _ -> SmsService Sms.KarixSms
+    Sms.PinbixSmsConfig _ -> SmsService Sms.PinbixSms
   WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
     Whatsapp.TataCommunicationsConfig _ -> WhatsappService Whatsapp.TataCommunications
