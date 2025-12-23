@@ -444,9 +444,12 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
               mbSenderHash
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
 
-  if identifierType == SP.DEVICE
-    then return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) Nothing person.blocked mbDepotCode mbIsDepotAdmin
-    else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked mbDepotCode mbIsDepotAdmin
+  let (authType', token') =
+        if identifierType == SP.DEVICE
+          then (SR.DIRECT, Just regToken.token)
+          else (regToken.authType, Nothing)
+
+  return $ AuthRes regToken.id regToken.attempts authType' token' Nothing person.blocked mbDepotCode mbIsDepotAdmin
   where
     castChannelToMedium :: SOTP.OTPChannel -> SR.Medium
     castChannelToMedium SOTP.SMS = SR.SMS
@@ -1017,13 +1020,9 @@ cleanCachedTokens personId = do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
 
--- TODO: ONLY FOR TESTING IN MASTER, REMOVE BEFORE PRODUCTION, Chennai One merchant and city
--- BEGIN
 isDeviceIdentifierType :: SP.Person -> Bool
 isDeviceIdentifierType person =
   person.identifierType == SP.DEVICE
-
--- END
 
 linkAndMerge ::
   ( CacheFlow m r,
@@ -1038,7 +1037,7 @@ linkAndMerge req = do
 
   regToken <-
     (req.token & fromMaybeM (InvalidRequest "TOKEN_REQUIRED"))
-      >>= (\t -> RegistrationToken.findByToken t >>= fromMaybeM (InvalidRequest "INVALID_TOKEN"))
+      >>= (\t -> RegistrationToken.findByToken t >>= fromMaybeM (GuestLinkTokenMissing "INVALID_TOKEN"))
   let personId = Id regToken.entityId
 
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -1081,11 +1080,8 @@ logout ::
 logout personId = do
   cleanCachedTokens personId
   void $ Person.updateDeviceToken Nothing personId
-  -- TODO: ONLY FOR TESTING IN MASTER, REMOVE BEFORE PRODUCTION,Chennai One merchant and city
-  -- BEGIN
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   when (isDeviceIdentifierType person) $
-    -- END
     void $ PersonExtra.updateIsNew True personId -- Setting isNew to True to track guest status (chennai one)
   void $ RegistrationToken.deleteByPersonId personId
   pure AP.Success
