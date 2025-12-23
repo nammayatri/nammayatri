@@ -32,6 +32,6 @@ validateRegisterReqWithLooseCheck FleetOwnerRegisterReqV2 {..} =
 validateInitiateLoginReqV2 :: Validate FleetOwnerLoginReqV2
 validateInitiateLoginReqV2 FleetOwnerLoginReqV2 {..} =
   sequenceA_
-    [ validateField "mobileNumber" mobileNumber P.indianMobileNumber,
+    [ validateField "mobileNumber" mobileNumber (P.mobileNumberByCountryCode mobileCountryCode),
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]

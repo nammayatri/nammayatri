@@ -94,7 +94,7 @@ validateOperator Common.OperatorRegisterReq {..} =
   sequenceA_
     [ validateField "firstName" firstName $ MinLength 1 `And` MaxLength 50 `And` P.name,
       validateField "lastName" lastName $ (MaxLength 50 `And` P.name),
-      validateField "mobileNumber" mobileNumber P.indianMobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode,
+      validateField "mobileNumber" mobileNumber (P.mobileNumberByCountryCode mobileCountryCode),
+      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode,
       validateField "email" email $ InMaybe P.email
     ]

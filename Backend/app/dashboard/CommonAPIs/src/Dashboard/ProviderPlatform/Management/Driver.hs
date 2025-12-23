@@ -48,8 +48,8 @@ validateUpdateDriverNameReq UpdateDriverNameReq {..} =
 validateIndianMobileNumber :: Validate UpdatePhoneNumberReq
 validateIndianMobileNumber UpdatePhoneNumberReq {..} =
   sequenceA_
-    [ validateField "newPhoneNumber" newPhoneNumber P.indianMobileNumber,
-      validateField "newCountryCode" newCountryCode P.mobileIndianCode
+    [ validateField "newPhoneNumber" newPhoneNumber (P.mobileNumberByCountryCode newCountryCode),
+      validateField "newCountryCode" newCountryCode P.mobileCountryCode
     ]
 
 instance HideSecrets ClearDriverFeeReq where

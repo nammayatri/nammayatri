@@ -110,7 +110,7 @@ validateUpdateFleetOwnerInfoReq UpdateFleetOwnerInfoReq {..} =
   sequenceA_
     [ validateField "firstName" firstName $ InMaybe $ MinLength 1 `And` MaxLength 50 `And` P.name,
       validateField "lastName" lastName $ InMaybe (MaxLength 50 `And` P.name),
-      validateField "mobileNo" mobileNo $ InMaybe $ P.indianMobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode $ InMaybe P.mobileIndianCode,
+      validateField "mobileNo" mobileNo $ InMaybe $ (P.mobileNumberByCountryCode mobileCountryCode),
+      validateField "mobileCountryCode" mobileCountryCode $ InMaybe P.mobileCountryCode,
       validateField "email" email $ InMaybe P.email
     ]

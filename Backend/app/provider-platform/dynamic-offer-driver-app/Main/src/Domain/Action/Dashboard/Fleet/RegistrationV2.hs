@@ -30,6 +30,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.TransporterConfig as DTCConfig
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
@@ -42,6 +43,7 @@ import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.Analytics as Analytics
