@@ -1554,8 +1554,10 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     case mSReqFD of
       Just srfd -> return srfd
       Nothing -> do
-        logWarning $ "Search request not found for the driver with driverId " <> driverId.getId <> " and searchTryId " <> searchTryId.getId
-        throwError RideRequestAlreadyAccepted
+        logWarning $ "Active Search request not found for the driver with driverId " <> driverId.getId <> " and searchTryId " <> searchTryId.getId
+        if searchTry.status == DST.COMPLETED
+          then throwError $ RideRequestAlreadyAccepted
+          else throwError $ CustomerCancelled
   driverStats <- QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case req.response of
