@@ -244,3 +244,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN billing_category text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN commission double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN final_fare_policy_id character(36) ;

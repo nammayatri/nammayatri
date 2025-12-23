@@ -607,6 +607,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
     if recomputeWithLatestPricing
       then getFarePolicyOnEndRide (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions
       else getFarePolicyByEstOrQuoteId (Just $ getCoordinates booking.fromLocation) (Just . getCoordinates =<< booking.toLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) finalDuration booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions
+  QRide.updateFinalFarePolicyId (Just farePolicy.id) ride.id
   if farePolicy.disableRecompute == Just True
     then return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing)
     else do

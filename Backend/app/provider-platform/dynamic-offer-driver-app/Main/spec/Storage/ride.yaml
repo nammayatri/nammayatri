@@ -24,6 +24,7 @@ imports:
   ServiceTierType: Domain.Types.Common
   TagNameValue: Lib.Yudhishthira.Types
   BillingCategory: SharedLogic.Type
+  FarePolicy: Domain.Types.FarePolicy
 
 Ride:
   tableName: ride
@@ -129,6 +130,7 @@ Ride:
     driverCancellationPenaltyAmount: Maybe HighPrecMoney
     driverCancellationPenaltyWaivedReason: Maybe Text
     commission: Maybe HighPrecMoney
+    finalFarePolicyId: Maybe (Id FarePolicy)
 
   sqlType:
     id: character(36)
@@ -147,6 +149,7 @@ Ride:
     endOdometerReadingFileId: character varying(36)
     deliveryFileIds: "text[]"
     rideTags: "text[]"
+    finalFarePolicyId: character(36)
 
   default:
     traveledDistance: '0'
@@ -317,6 +320,10 @@ Ride:
     updateCancellationChargesOnCancel:
       kvFunction: updateOneWithKV
       params: [cancellationChargesOnCancel]
+      where: id
+    updateFinalFarePolicyId:
+      kvFunction: updateOneWithKV
+      params: [finalFarePolicyId]
       where: id
 
   excludedDefaultQueries:
