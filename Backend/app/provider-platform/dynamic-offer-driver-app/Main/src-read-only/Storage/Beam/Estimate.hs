@@ -60,6 +60,7 @@ data EstimateT f = EstimateT
     supplyDemandRatioFromLoc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     supplyDemandRatioToLoc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     tipOptions :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Int]),
+    tollIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

@@ -70,6 +70,7 @@ data BppEstimate = BppEstimate
     supplyDemandRatioToLoc :: Maybe Double,
     tipOptions :: Maybe [Int],
     tollNames :: Maybe [Text],
+    tollIds :: Maybe [Text],
     tripCategory :: TripCategory,
     updatedAt :: UTCTime,
     vehicleServiceTier :: ServiceTierType,

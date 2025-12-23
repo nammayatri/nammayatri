@@ -87,6 +87,7 @@ data BookingT f = BookingT
     stopLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    tollIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     transactionId :: B.C f Kernel.Prelude.Text,
     bookingType :: B.C f Domain.Types.Booking.BookingType,

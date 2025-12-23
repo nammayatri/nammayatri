@@ -297,10 +297,19 @@ types:
     lat: Double
     lon: Double
 
+  ScheduledVehicleInfo:
+    vehicleNumber: Text
+    serviceTierType: ServiceTierType
+    serviceTierName: Maybe Text
+    locationUTCTimestamp: Maybe UTCTime
+    eta: Maybe [BusStopETA]
+    position: Maybe LatLong
+
   LiveVehicleInfo:
     number: Text
     serviceTierType: ServiceTierType
     serviceTierName: Maybe Text
+    locationUTCTimestamp: UTCTime
     eta: "Maybe [BusStopETA]"
     position: LatLong
 
@@ -313,6 +322,7 @@ types:
     routeCode: Text
     routeShortName: Text
     liveVehicles: [LiveVehicleInfo]
+    schedules: [ScheduledVehicleInfo]
     alternateRouteInfo: Maybe [AlternateRouteDetails]
 
   RouteServiceabilityResp:
@@ -323,6 +333,8 @@ types:
     sourceStopCode: Maybe Text
     destinationStopCode: Maybe Text
     serviceTierType: Maybe ServiceTierType
+    onlySelectedRoute: Maybe Bool
+    derive: "Show"
 
   AvailableRoute:
     source: SourceType

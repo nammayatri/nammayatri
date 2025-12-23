@@ -10,6 +10,7 @@ import Domain.Types.Station
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Time
+import Storage.CachedQueries.Merchant.MultiModalBus (BusStopETA)
 
 newtype NandiPatternsRes = NandiPatternsRes
   { patterns :: [NandiPattern]
@@ -191,6 +192,15 @@ data RouteInfoNandi = RouteInfoNandi
     stopCount :: Maybe Int
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data BusScheduleDetail = BusScheduleDetail
+  { eta :: [BusStopETA],
+    vehicle_no :: Text,
+    service_tier :: BecknV2.FRFS.Enums.ServiceTierType
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+type BusScheduleDetails = [BusScheduleDetail]
 
 data NandiTrip = NandiTrip
   { id :: Text,

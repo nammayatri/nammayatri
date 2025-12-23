@@ -22,10 +22,10 @@ import qualified Storage.Queries.Transformers.Ride
 
 instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
   fromTType' (Beam.RideT {..}) = do
-    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
-    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
-    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
-    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
+    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId
     merchantOperatingCityId' <- Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId merchantOperatingCityId
     stops' <- Storage.Queries.Transformers.Ride.getStops id hasStops
@@ -44,7 +44,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             chargeableDistance = chargeableDistance,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer),
+            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
             clientId = clientId,
             clientSdkVersion = clientSdkVersion',
             commission = commission,
@@ -61,6 +61,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             driverDeviatedFromRoute = driverDeviatedFromRoute,
             driverDeviatedToTollRoute = driverDeviatedToTollRoute,
             driverGoHomeRequestId = Kernel.Types.Id.Id <$> driverGoHomeRequestId,
+            driverGpsTurnedOff = driverGpsTurnedOff,
             driverId = Kernel.Types.Id.Id driverId,
             enableFrequentLocationUpdates = enableFrequentLocationUpdates,
             enableOtpLessRide = enableOtpLessRide,
@@ -68,6 +69,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             endOtp = endOtp,
             estimatedEndTimeRange = Storage.Queries.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd,
             estimatedTollCharges = estimatedTollCharges,
+            estimatedTollIds = estimatedTollIds,
             estimatedTollNames = estimatedTollNames,
             fare = fmap (Kernel.Types.Common.mkAmountWithDefault fareAmount) fare,
             fareParametersId = Kernel.Types.Id.Id <$> fareParametersId,
@@ -107,6 +109,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             toLocation = toLocation',
             tollCharges = tollCharges,
             tollConfidence = tollConfidence,
+            tollIds = tollIds,
             tollNames = tollNames,
             trackingUrl = trackingUrl',
             traveledDistance = traveledDistance,
@@ -136,10 +139,10 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.chargeableDistance = chargeableDistance,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = (clientDevice >>= (.deviceManufacturer)),
-        Beam.clientModelName = (clientDevice <&> (.deviceModel)),
-        Beam.clientOsType = (clientDevice <&> (.deviceType)),
-        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
+        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
+        Beam.clientModelName = clientDevice <&> (.deviceModel),
+        Beam.clientOsType = clientDevice <&> (.deviceType),
+        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
         Beam.clientId = clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.commission = commission,
@@ -156,6 +159,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.driverDeviatedFromRoute = driverDeviatedFromRoute,
         Beam.driverDeviatedToTollRoute = driverDeviatedToTollRoute,
         Beam.driverGoHomeRequestId = Kernel.Types.Id.getId <$> driverGoHomeRequestId,
+        Beam.driverGpsTurnedOff = driverGpsTurnedOff,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.enableFrequentLocationUpdates = enableFrequentLocationUpdates,
         Beam.enableOtpLessRide = enableOtpLessRide,
@@ -165,6 +169,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.estimatedEndTimeRangeEnd = Kernel.Prelude.fmap (.end) estimatedEndTimeRange,
         Beam.estimatedEndTimeRangeStart = Kernel.Prelude.fmap (.start) estimatedEndTimeRange,
         Beam.estimatedTollCharges = estimatedTollCharges,
+        Beam.estimatedTollIds = estimatedTollIds,
         Beam.estimatedTollNames = estimatedTollNames,
         Beam.fare = Kernel.Prelude.fmap roundToIntegral fare,
         Beam.fareAmount = fare,
@@ -204,6 +209,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.tipAmount = tipAmount,
         Beam.tollCharges = tollCharges,
         Beam.tollConfidence = tollConfidence,
+        Beam.tollIds = tollIds,
         Beam.tollNames = tollNames,
         Beam.trackingUrl = Kernel.Prelude.showBaseUrl trackingUrl,
         Beam.traveledDistance = traveledDistance,

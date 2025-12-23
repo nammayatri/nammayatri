@@ -208,8 +208,9 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                   (snapToRoadFailed, editDestinationPoints) <- getLatlongsViaSnapToRoad (editDestinationWaypoints <> currentLocationPointsBatch.loc) merchantOperatingCity.merchantId merchantOperatingCity.id
                   logTagError "DebugErrorLog: EditDestSoftUpdate" $ "snapped edit destination points count: " <> show (length editDestinationPoints)
                   alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
+                  let startPoint = if length alreadySnappedPoints > 0 then (fst $ last alreadySnappedPoints) else (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon)
                   let (currentLocPoint :: Maps.LatLong) =
-                        fromMaybe (fst $ last alreadySnappedPoints) $
+                        fromMaybe startPoint $
                           (if not $ null currentLocationPointsBatch.loc then Just (last currentLocationPointsBatch.loc) else Nothing)
                             <|> (if not $ null editDestinationWaypoints then Just (last editDestinationWaypoints) else Nothing)
                   logTagError "DebugErrorLog: EditDestSoftUpdate" $ "Already snapped points count: " <> show (length alreadySnappedPoints)
@@ -256,7 +257,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             let isTollAllowed =
                   maybe
                     True
-                    ( \(_, _, isAutoRickshawAllowed, isTwoWheelerAllowed) ->
+                    ( \(_, _, _, isAutoRickshawAllowed, isTwoWheelerAllowed) ->
                         (booking.vehicleServiceTier == DVST.AUTO_RICKSHAW && isAutoRickshawAllowed)
                           || (booking.vehicleServiceTier == DVST.BIKE && fromMaybe False isTwoWheelerAllowed)
                           || (booking.vehicleServiceTier /= DVST.AUTO_RICKSHAW && booking.vehicleServiceTier /= DVST.BIKE)
@@ -289,7 +290,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     estimatedRideDuration = Just duration,
                     timeDiffFromUtc = Nothing,
                     shouldApplyBusinessDiscount = booking.billingCategory == SLT.BUSINESS,
-                    tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _) -> tollCharges),
+                    tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _, _) -> tollCharges),
                     currency = booking.currency,
                     distanceUnit = booking.distanceUnit,
                     estimatedCongestionCharge = booking.estimatedCongestionCharge,

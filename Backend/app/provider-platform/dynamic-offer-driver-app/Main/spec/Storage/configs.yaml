@@ -63,6 +63,7 @@ DriverPoolConfig:
     distanceUnit: DistanceUnit
     enableUnifiedPooling: Maybe Bool
     dynamicBatchSize: Vector Int
+    selfRequestIfRiderIsDriver: Bool
 
   beamFields:
     dynamicBatchSize:
@@ -104,6 +105,7 @@ DriverPoolConfig:
     onRideBatchSplitConfig: "Array ['BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 4 }']"
     enableForwardBatching: "false"
     maxParallelSearchRequestsOnRide: "1"
+    selfRequestIfRiderIsDriver: "false"
 
   queries:
     findAllByMerchantOpCityId:

@@ -241,6 +241,7 @@ handler merchantId req validatedReq = do
             returnTime = searchRequest.returnTime,
             roundTrip = searchRequest.roundTrip,
             tollNames = if isTollApplicable then searchRequest.tollNames else Nothing,
+            tollIds = if isTollApplicable then searchRequest.tollIds else Nothing,
             estimateId = Just $ Id req.estimateId,
             paymentId = Nothing,
             isDashboardRequest = searchRequest.isDashboardRequest,

@@ -244,3 +244,14 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN billing_category text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN commission double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN toll_ids text[] ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_toll_ids text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_gps_turned_off boolean ;

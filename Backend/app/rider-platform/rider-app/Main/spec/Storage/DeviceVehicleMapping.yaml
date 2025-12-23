@@ -1,0 +1,59 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Data.Time
+  Text: Data.Text
+
+
+DeviceVehicleMapping:
+  tableName: device_vehicle_mapping
+
+  fields:
+    deviceId: Text
+    vehicleNo: Text
+    gtfsId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    deviceId: PrimaryKey
+
+  extraIndexes:
+    - columns: [vehicleNo]
+    - columns: [gtfsId]
+
+  queries:
+    findByDeviceId:
+      kvFunction: findOneWithKV
+      where:
+        eq:
+          - deviceId
+
+    findByVehicleNo:
+      kvFunction: findAllWithKV
+      where:
+        eq:
+          - vehicleNo
+
+    upsertMapping:
+      kvFunction: upsertWithKV
+      params:
+        - vehicleNo
+        - gtfsId
+      where:
+        eq:
+          - deviceId
+
+  cachedQueries:
+    findByDeviceIdCached:
+      withCrossAppRedis: true
+      returnType: One
+      queryType: FindAndCache
+      dbQuery: findByDeviceId
+      dbQueryParams:
+        - deviceId
+      keyParams:
+        - deviceId
+
+  extraOperations:
+    - GENERATE_INDEXES

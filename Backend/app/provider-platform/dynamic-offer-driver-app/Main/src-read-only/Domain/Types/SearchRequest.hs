@@ -74,6 +74,7 @@ data SearchRequest = SearchRequest
     toLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    tollIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     transactionId :: Kernel.Prelude.Text,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory,

@@ -109,7 +109,8 @@ data DriverPoolResult = DriverPoolResult
     score :: Maybe A.Value,
     minRideDistance :: Maybe Meters,
     maxRideDistance :: Maybe Meters,
-    maxPickupDistance :: Maybe Meters
+    maxPickupDistance :: Maybe Meters,
+    isTollRouteEligible :: Bool -- True if driver is not blocked for toll routes
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
@@ -143,7 +144,8 @@ instance Default DriverPoolResult where
         score = Nothing,
         minRideDistance = Nothing,
         maxRideDistance = Nothing,
-        maxPickupDistance = Nothing
+        maxPickupDistance = Nothing,
+        isTollRouteEligible = True
       }
 
 data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
@@ -175,7 +177,8 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     score :: Maybe A.Value,
     minRideDistance :: Maybe Meters,
     maxRideDistance :: Maybe Meters,
-    maxPickupDistance :: Maybe Meters
+    maxPickupDistance :: Maybe Meters,
+    isTollRouteEligible :: Bool -- True if driver is not blocked for toll routes
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 

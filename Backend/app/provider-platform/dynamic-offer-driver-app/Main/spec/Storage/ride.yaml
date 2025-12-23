@@ -94,8 +94,10 @@ Ride:
     isFreeRide: Maybe Bool
     estimatedTollCharges: Maybe HighPrecMoney
     estimatedTollNames: Maybe [Text]
+    estimatedTollIds: Maybe [Text]
     tollCharges: Maybe HighPrecMoney
     tollNames: Maybe [Text]
+    tollIds: Maybe [Text]
     driverGoHomeRequestId: Maybe (Id DriverGoHomeRequest)
     safetyAlertTriggered: Bool
     tollConfidence: Maybe Confidence
@@ -129,6 +131,7 @@ Ride:
     driverCancellationPenaltyAmount: Maybe HighPrecMoney
     driverCancellationPenaltyWaivedReason: Maybe Text
     commission: Maybe HighPrecMoney
+    driverGpsTurnedOff: Maybe Bool
 
   sqlType:
     id: character(36)
@@ -317,6 +320,10 @@ Ride:
     updateCancellationChargesOnCancel:
       kvFunction: updateOneWithKV
       params: [cancellationChargesOnCancel]
+      where: id
+    updateDriverGpsTurnedOff:
+      kvFunction: updateOneWithKV
+      params: [driverGpsTurnedOff]
       where: id
 
   excludedDefaultQueries:

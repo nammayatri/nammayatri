@@ -5,6 +5,7 @@ module API.Types.UI.MultimodalConfirm where
 import qualified API.Types.UI.FRFSTicketService
 import qualified BecknV2.FRFS.Enums
 import qualified Data.Aeson
+import Data.Int (Int64)
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Estimate
@@ -188,6 +189,7 @@ data LegStatus = LegStatus
 
 data LiveVehicleInfo = LiveVehicleInfo
   { eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
+    locationUTCTimestamp :: Kernel.Prelude.UTCTime,
     number :: Kernel.Prelude.Text,
     position :: Kernel.External.Maps.Types.LatLong,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -286,11 +288,12 @@ data RouteAvailabilityResp = RouteAvailabilityResp {availableRoutes :: [Availabl
 
 data RouteServiceabilityReq = RouteServiceabilityReq
   { destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    routeCode :: Maybe Kernel.Prelude.Text,
+    onlySelectedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteServiceabilityResp
@@ -303,7 +306,24 @@ data RouteStopMapping = RouteStopMapping {code :: Kernel.Prelude.Text, lat :: Ke
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RouteWithLiveVehicle = RouteWithLiveVehicle {alternateRouteInfo :: Kernel.Prelude.Maybe [AlternateRouteDetails], liveVehicles :: [LiveVehicleInfo], routeCode :: Kernel.Prelude.Text, routeShortName :: Kernel.Prelude.Text}
+data RouteWithLiveVehicle = RouteWithLiveVehicle
+  { alternateRouteInfo :: Kernel.Prelude.Maybe [AlternateRouteDetails],
+    liveVehicles :: [LiveVehicleInfo],
+    routeCode :: Kernel.Prelude.Text,
+    routeShortName :: Kernel.Prelude.Text,
+    schedules :: [ScheduledVehicleInfo]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ScheduledVehicleInfo = ScheduledVehicleInfo
+  { eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
+    locationUTCTimestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    position :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    vehicleNumber :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -397,4 +417,32 @@ data UpdatePaymentOrderReq = UpdatePaymentOrderReq {childTicketQuantity :: Kerne
 
 data UpdatePaymentOrderResp = UpdatePaymentOrderResp {sdkPayload :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.SDKPayloadDetails}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdateBusLocationReq = UpdateBusLocationReq
+  { lat :: Double,
+    long :: Double,
+    timestamp :: Double
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data KafKaPacket = KafKaPacket
+  { lat :: Double,
+    long :: Double,
+    timestamp :: Int64,
+    deviceId :: Kernel.Prelude.Text,
+    vehicleNumber :: Kernel.Prelude.Text,
+    speed :: Double,
+    pushedToKafkaAt :: Int64,
+    dataState :: Kernel.Prelude.Text,
+    serverTime :: Int64,
+    provider :: Kernel.Prelude.Text,
+    raw :: Kernel.Prelude.Text,
+    client_ip :: Kernel.Prelude.Text,
+    ign_status :: Kernel.Prelude.Text,
+    routeNumber :: Kernel.Prelude.Text,
+    signalQuality :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

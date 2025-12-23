@@ -576,3 +576,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN delete_driver_b
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN analytics_config SET DEFAULT '{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "enableFleetOperatorDashboardAnalytics": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null, "useDbForEarningAndMetrics": false}' :: json;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN gps_toll_behavior_window_days int ;
