@@ -486,11 +486,6 @@ nearbyBusKeyFRFS mbRedisPrefix = case mbRedisPrefix of
   Just prefix -> prefix <> ":bus_locations"
   Nothing -> "bus_locations"
 
-vehicleMetaKey :: Maybe Text -> Text
-vehicleMetaKey mbRedisPrefix = case mbRedisPrefix of
-  Just prefix -> prefix <> ":bus_metadata_v2"
-  Nothing -> "bus_metadata_v2"
-
 topVehicleCandidatesKeyFRFS :: Text -> Text
 topVehicleCandidatesKeyFRFS journeyLegId = "journeyLegTopVehicleCandidates:" <> journeyLegId
 
@@ -691,6 +686,21 @@ getUpcomingStopsForBus mbRouteStopMapping now mbTargetStation busData filterFrom
        in map toNextStopDetails filteredStops
     _ -> []
 
+getVehicleMetadata :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => [Text] -> DIBC.IntegratedBPPConfig -> m [Maybe BusDataWithRoutesInfo]
+getVehicleMetadata vehicleNumbers integratedBppConfig = do
+  let redisPrefix = case integratedBppConfig.providerConfig of
+        DIBC.ONDC config -> config.redisPrefix
+        _ -> Nothing
+  CQMMB.withCrossAppRedisNew $ Hedis.hmGet (vehicleMetaKey redisPrefix) vehicleNumbers
+  where
+    vehicleMetaKey :: Maybe Text -> Text
+    vehicleMetaKey mbRedisPrefix = case mbRedisPrefix of
+      Just prefix -> prefix <> ":bus_metadata_v2"
+      _ -> "bus_metadata_v2"
+
+getBusLiveInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => Text -> DIBC.IntegratedBPPConfig -> m (Maybe BusDataWithRoutesInfo)
+getBusLiveInfo vehicleNumber integratedBppConfig = listToMaybe . catMaybes <$> getVehicleMetadata [vehicleNumber] integratedBppConfig
+
 getNearbyBusesFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => LatLong -> DomainRiderConfig.RiderConfig -> DIBC.IntegratedBPPConfig -> m [BusDataWithRoutesInfo]
 getNearbyBusesFRFS userPos' riderConfig integratedBppConfig = do
   let nearbyBusSearchRadius :: Double = fromMaybe 0.5 riderConfig.nearbyBusSearchRadius
@@ -706,7 +716,7 @@ getNearbyBusesFRFS userPos' riderConfig integratedBppConfig = do
         pure []
       else do
         logDebug $ "getNearbyBusesFRFS: Fetching bus metadata for " <> show (length busesBS) <> " buses"
-        CQMMB.withCrossAppRedisNew $ Hedis.hmGet (vehicleMetaKey redisPrefix) busesBS
+        getVehicleMetadata busesBS integratedBppConfig
   logDebug $ "getNearbyBusesFRFS: buses: " <> show buses
   pure $ catMaybes buses
 

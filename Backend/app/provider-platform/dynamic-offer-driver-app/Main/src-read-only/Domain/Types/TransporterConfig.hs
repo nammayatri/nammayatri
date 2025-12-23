@@ -155,6 +155,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     freeTrialDays :: Kernel.Prelude.Int,
     generateReferralCodeForFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     generateReferralCodeForOperator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    gpsTollBehaviorWindowDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     graceTimeForScheduledRidePickup :: Kernel.Prelude.NominalDiffTime,
     includeDriverCurrentlyOnRide :: Kernel.Prelude.Bool,
     isAAEnabledForRecurring :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

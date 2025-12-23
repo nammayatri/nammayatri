@@ -71,6 +71,7 @@ data SearchRequestT f = SearchRequestT
     toLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    tollIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     transactionId :: B.C f Kernel.Prelude.Text,
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory),

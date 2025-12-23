@@ -40,6 +40,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalSwitchRoute,
     postMultimodalOrderSublegSetOnboardedVehicleDetails,
     postMultimodalSetRouteName,
+    updateBusLocation,
   )
 where
 
@@ -56,9 +57,13 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Concurrent (modifyMVar)
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.HashMap.Strict as HashMap
+import Data.Int ()
 import Data.List (nub, nubBy, partition)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.CancellationReason as SCR
@@ -94,12 +99,14 @@ import qualified Kernel.External.MultiModal.Interface as MultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude hiding (foldl')
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH
+import qualified Lib.JourneyLeg.Common.FRFS as JLCF
 import qualified Lib.JourneyLeg.Types as JL
 import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyModule.Base
@@ -124,6 +131,7 @@ import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.DeviceVehicleMapping as QDeviceVehicleMapping
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -1689,6 +1697,29 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   routeStopMapping <- maybe (pure []) (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) req.routeCode
+  let getBusScheduleInfo busScheduleDetails =
+        catMaybes
+          <$> mapM
+            ( \detail -> do
+                busLiveInfo <- JLCF.getBusLiveInfo detail.vehicle_no integratedBPPConfig
+                mbServiceTier <- JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig] detail.vehicle_no
+                case mbServiceTier of
+                  Just serviceTier -> do
+                    frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier person.merchantOperatingCityId integratedBPPConfig.id
+                    return . Just $
+                      API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo
+                        { eta = Just detail.eta,
+                          position = (\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo,
+                          locationUTCTimestamp = posixSecondsToUTCTime . fromIntegral . (.timestamp) <$> busLiveInfo,
+                          serviceTierType = serviceTier,
+                          serviceTierName = (.shortName) <$> frfsServiceTier,
+                          vehicleNumber = detail.vehicle_no
+                        }
+                  Nothing -> do
+                    logError $ "Vehicle info not found for bus: " <> detail.vehicle_no
+                    return Nothing
+            )
+            busScheduleDetails
   let getLiveVehicles busesData =
         catMaybes
           <$> mapM
@@ -1702,6 +1733,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                         { eta = bus.busData.eta_data,
                           number = bus.vehicleNumber,
                           position = LatLong bus.busData.latitude bus.busData.longitude,
+                          locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral bus.busData.timestamp,
                           serviceTierType = serviceTier,
                           serviceTierName = (.shortName) <$> frfsServiceTier
                         }
@@ -1712,12 +1744,12 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
             busesData
   mbRouteBusData <-
     case req.routeCode of
-      Just routeCode -> do
+      Just routeCode | req.onlySelectedRoute == Just True -> do
         routeBusData <- CQMMB.getRoutesBuses routeCode integratedBPPConfig
         if null routeBusData.buses then pure Nothing else pure $ Just routeBusData
-      Nothing -> do
+      _ -> do
         pure Nothing
-  (srcCode, destCode) <- fromMaybeM (InvalidRequest "Source or destination stop code not found") $
+  (srcCode, destCode) <- fromMaybeM (InvalidRequest $ "Source or destination stop code not found for req: " <> show req) $
     case (req.sourceStopCode, req.destinationStopCode) of
       (Just sourceStopCode, Just destinationStopCode) -> do
         Just (sourceStopCode, destinationStopCode)
@@ -1732,32 +1764,33 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
         let destinationStopCode = fmap (.stopCode) . listToMaybe $ reverse routeStopMapping
         (,) <$> sourceStopCode <*> destinationStopCode
 
-  alternateRoutes <- filter (\x -> Just x /= req.routeCode) <$> JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
   case mbRouteBusData of
     Nothing -> do
+      let userRequestedRouteCode = maybe [] (: []) req.routeCode
+      alternateRoutes <- (nub . (\rc -> userRequestedRouteCode <> rc)) <$> JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
       busesForRoutes <- CQMMB.getBusesForRoutes alternateRoutes integratedBPPConfig
       alterateLiveVehicleData <-
         catMaybes
           <$> mapM
             ( \routeInfo -> do
                 route <- OTPRest.getRouteByRouteId integratedBPPConfig routeInfo.routeId >>= fromMaybeM (InvalidRequest $ "Route not found with id: " <> routeInfo.routeId)
+                schedules <- getBusScheduleInfo =<< OTPRest.getRouteBusSchedule routeInfo.routeId integratedBPPConfig
                 liveVehicles <- getLiveVehicles routeInfo.buses
-                case liveVehicles of
-                  [] -> return Nothing
-                  _ ->
-                    return $
-                      Just $
-                        API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
-                          { liveVehicles,
-                            routeCode = routeInfo.routeId,
-                            routeShortName = route.shortName,
-                            alternateRouteInfo = Nothing
-                          }
+                return $
+                  Just $
+                    API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
+                      { liveVehicles,
+                        schedules,
+                        routeCode = routeInfo.routeId,
+                        routeShortName = route.shortName,
+                        alternateRouteInfo = Nothing
+                      }
             )
             busesForRoutes
       return $ ApiTypes.AlternateLiveRoutesInfo alterateLiveVehicleData
     Just routeBusData -> do
       selectedRoute <- OTPRest.getRouteByRouteId integratedBPPConfig routeBusData.routeId >>= fromMaybeM (InvalidRequest $ "Req Route not found with id: " <> show req.routeCode)
+      alternateRoutes <- filter (\x -> x /= routeBusData.routeId) <$> JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig
       liveVehicles <- getLiveVehicles routeBusData.buses
       alternateRouteInfo <- catMaybes <$> mapM (OTPRest.getRouteByRouteId integratedBPPConfig) alternateRoutes
       alternateRouteDetails <-
@@ -1772,9 +1805,11 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req = do
                   }
           )
           alternateRouteInfo
+      schedules <- getBusScheduleInfo =<< OTPRest.getRouteBusSchedule routeBusData.routeId integratedBPPConfig
       return . ApiTypes.LiveRouteInfo $
         API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
           { liveVehicles,
+            schedules,
             routeCode = routeBusData.routeId,
             routeShortName = selectedRoute.shortName,
             alternateRouteInfo = Just alternateRouteDetails
@@ -2080,3 +2115,67 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         Left err -> do
           logError $ "SetOnboarding OTPRest failed: " <> show err
           return Nothing
+
+updateBusLocation ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Log m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  ApiTypes.UpdateBusLocationReq ->
+  [Kernel.Prelude.Text] ->
+  m Kernel.Types.APISuccess.APISuccess
+updateBusLocation req busOTPList = do
+  let busOTP =
+        fromMaybe
+          (error "busOTP query parameter is required")
+          (listToMaybe busOTPList)
+
+  deviceMappings <- QDeviceVehicleMapping.findByVehicleNo busOTP
+  deviceMapping <-
+    fromMaybeM
+      (InvalidRequest "Device not found for provided busOTP")
+      (listToMaybe deviceMappings)
+
+  now <- getCurrentTime
+
+  let serverTimeEpoch :: Int64
+      serverTimeEpoch =
+        floor (utcTimeToPOSIXSeconds now)
+
+  let requestTimestampSeconds :: Int64
+      requestTimestampSeconds =
+        floor (req.timestamp :: Double)
+
+  let kafkaPacket =
+        ApiTypes.KafKaPacket
+          { lat = req.lat,
+            long = req.long,
+            timestamp = requestTimestampSeconds,
+            deviceId = deviceMapping.deviceId,
+            vehicleNumber = busOTP,
+            speed = 0.0,
+            pushedToKafkaAt = serverTimeEpoch,
+            dataState = "L",
+            serverTime = serverTimeEpoch,
+            provider = "amnex",
+            raw = "",
+            client_ip = "0.0.0.0",
+            ign_status = "ON",
+            routeNumber = "101",
+            signalQuality = "Good"
+          }
+
+  logInfo $ "Kafka packet: " <> show kafkaPacket
+
+  let topicName = "gps_live_data"
+  let key = deviceMapping.deviceId
+
+  fork "Pushing bus location to Kafka" $ do
+    produceMessage (topicName, Just (TE.encodeUtf8 key)) kafkaPacket
+      `catch` \(e :: SomeException) ->
+        logError $
+          "Failed to push bus location to Kafka: " <> show e
+
+  pure Kernel.Types.APISuccess.Success

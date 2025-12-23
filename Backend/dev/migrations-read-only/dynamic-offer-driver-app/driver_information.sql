@@ -296,3 +296,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN daily_extra_kms
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN onboarding_as character varying (255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN toll_route_blocked_till timestamp with time zone ;

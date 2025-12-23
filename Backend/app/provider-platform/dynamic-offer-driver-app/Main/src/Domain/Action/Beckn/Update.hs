@@ -257,7 +257,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             let isTollAllowed =
                   maybe
                     True
-                    ( \(_, _, isAutoRickshawAllowed, isTwoWheelerAllowed) ->
+                    ( \(_, _, _, isAutoRickshawAllowed, isTwoWheelerAllowed) ->
                         (booking.vehicleServiceTier == DVST.AUTO_RICKSHAW && isAutoRickshawAllowed)
                           || (booking.vehicleServiceTier == DVST.BIKE && fromMaybe False isTwoWheelerAllowed)
                           || (booking.vehicleServiceTier /= DVST.AUTO_RICKSHAW && booking.vehicleServiceTier /= DVST.BIKE)
@@ -290,7 +290,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     estimatedRideDuration = Just duration,
                     timeDiffFromUtc = Nothing,
                     shouldApplyBusinessDiscount = booking.billingCategory == SLT.BUSINESS,
-                    tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _) -> tollCharges),
+                    tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _, _) -> tollCharges),
                     currency = booking.currency,
                     distanceUnit = booking.distanceUnit,
                     estimatedCongestionCharge = booking.estimatedCongestionCharge,

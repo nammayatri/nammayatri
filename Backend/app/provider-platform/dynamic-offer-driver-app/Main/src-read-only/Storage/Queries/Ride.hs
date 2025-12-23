@@ -56,6 +56,11 @@ updateDriverCancellationPenaltyWaivedReasonAndAmount driverCancellationPenaltyWa
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateDriverGpsTurnedOff :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateDriverGpsTurnedOff driverGpsTurnedOff id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.driverGpsTurnedOff driverGpsTurnedOff, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateEstimatedEndTimeRange :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Ride.EstimatedEndTimeRange -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateEstimatedEndTimeRange estimatedEndTimeRange id = do
   _now <- getCurrentTime

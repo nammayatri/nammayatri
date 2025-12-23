@@ -50,6 +50,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
     radiusShrinkValueForDriversOnRide :: B.C f Kernel.Types.Common.Meters,
     radiusStepSize :: B.C f Kernel.Types.Common.Meters,
     scheduleTryTimes :: B.C f [Kernel.Prelude.Int],
+    selfRequestIfRiderIsDriver :: B.C f Kernel.Prelude.Bool,
     singleBatchProcessTime :: B.C f Kernel.Types.Common.Seconds,
     thresholdToIgnoreActualDistanceThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     timeBounds :: B.C f Kernel.Types.TimeBound.TimeBound,

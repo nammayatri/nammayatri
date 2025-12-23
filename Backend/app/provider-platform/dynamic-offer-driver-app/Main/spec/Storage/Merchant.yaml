@@ -1074,6 +1074,7 @@ TransporterConfig:
     otpRideStartRestrictionRadius: Maybe Meters
     disableListScheduledBookingAPI: Bool
     issueBreachConfig: Maybe [IssueBreachConfig]
+    gpsTollBehaviorWindowDays: Maybe Int
     recentScheduledBookingsSafeLimit: Int
     minDistanceForStopFcm: HighPrecMeters
     recomputeDistanceThresholds: Maybe [DistanceRecomputeConfigs]
@@ -1168,6 +1169,7 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Maybe Seconds
     disableListScheduledBookingAPI: Maybe Bool
     issueBreachConfig: Maybe Value
+    gpsTollBehaviorWindowDays: Maybe Int
     recentScheduledBookingsSafeLimit: Maybe Int
     minDistanceForStopFcm: Maybe HighPrecMeters
     recomputeDistanceThresholds: Maybe Value
@@ -1250,6 +1252,7 @@ TransporterConfig:
     dynamicReferralCodeValidForMinutes: Just dynamicReferralCodeValidForMinutes|E
     dynamicReferralCodeEnabled: Just dynamicReferralCodeEnabled|E
     issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
+    gpsTollBehaviorWindowDays: gpsTollBehaviorWindowDays|E
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
     recomputeDistanceThresholds: Kernel.Prelude.toJSON <$> recomputeDistanceThresholds|E
@@ -1332,6 +1335,7 @@ TransporterConfig:
     aaEnabledClientSdkVersion: fromMaybe Storage.Queries.Transformers.TransporterConfig.fallBackVersionInText aaEnabledClientSdkVersion|E
     issueBreachConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
+    gpsTollBehaviorWindowDays: gpsTollBehaviorWindowDays|E
     recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
     recomputeDistanceThresholds: |-
@@ -1400,6 +1404,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: json
     demandHotspotsConfig: json
     issueBreachConfig: json
+    gpsTollBehaviorWindowDays: int
     minDistanceForStopFcm: double precision
     recomputeDistanceThresholds: json
     minThresholdForPassThroughDestination: int

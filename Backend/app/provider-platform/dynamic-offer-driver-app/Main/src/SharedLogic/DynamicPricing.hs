@@ -87,7 +87,6 @@ data DynamicPricingData = DynamicPricingData
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
------------------Default values to be changed------------RITIKA
 instance Default DynamicPricingData where
   def =
     DynamicPricingData

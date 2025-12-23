@@ -82,6 +82,8 @@ import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.Queries.PersonExtra as QP
+import Storage.Queries.RiderDetails as RD
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.DynamicLogic
 import Tools.Maps as Maps
@@ -640,8 +642,14 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
           isLessThenNParallelRequests searchReq.id driverPoolCfg.merchantId driverPoolResult.driverPoolResult.driverId valueToPut driverPoolCfg.maxParallelSearchRequests fromScore
       )
       sortedPool'
+
+  finalPool <-
+    if driverPoolCfg.selfRequestIfRiderIsDriver
+      then checkSelfDriver sortedPool
+      else pure sortedPool
+
   pushTaggedPoolToKafka sortedPool
-  return (mbVersion, take batchSize sortedPool)
+  return (mbVersion, take batchSize finalPool)
   where
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
       DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject LYTU.convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
@@ -653,6 +661,27 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
       whenJust mbVersion $ \_ -> do
         when (isNothing mbPoolingLogicVersion) $
           QSR.updatePoolingLogicVersion mbVersion searchReq.id
+
+    checkSelfDriver pool = do
+      selfDriver <-
+        case searchReq.riderId of
+          Just riderId -> do
+            riderDetails <- RD.findById riderId
+            case riderDetails of
+              Just rider -> QP.findByMobileNumberAndMerchant rider.mobileNumber.hash driverPoolCfg.merchantId
+              Nothing -> pure Nothing
+          Nothing -> pure Nothing
+
+      case (selfDriver, batchNum) of
+        (Just driver, 0) -> do
+          let filteredPool =
+                filter
+                  ( \driverPoolResult ->
+                      driver.id == driverPoolResult.driverPoolResult.driverId
+                  )
+                  pool
+          pure $ if null filteredPool then pool else filteredPool
+        (_, _) -> pure pool
 
     pushTaggedPoolToKafka taggedPool = do
       pushToKafka
