@@ -72,3 +72,15 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN enable_unified_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN dynamic_batch_size integer[];
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN self_request_if_rider_is_driver boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ALTER COLUMN self_request_if_rider_is_driver SET DEFAULT false;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ALTER COLUMN self_request_if_rider_is_driver SET NOT NULL;
