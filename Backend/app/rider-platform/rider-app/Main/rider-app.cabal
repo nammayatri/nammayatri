@@ -808,6 +808,7 @@ library
       Domain.Types.DeletedPerson
       Domain.Types.Depot
       Domain.Types.DepotManager
+      Domain.Types.DeviceVehicleMapping
       Domain.Types.Disability
       Domain.Types.DisabilityTranslation
       Domain.Types.DispatcherHistory
@@ -957,6 +958,7 @@ library
       Storage.Beam.DeletedPerson
       Storage.Beam.Depot
       Storage.Beam.DepotManager
+      Storage.Beam.DeviceVehicleMapping
       Storage.Beam.Disability
       Storage.Beam.DisabilityTranslation
       Storage.Beam.DispatcherHistory
@@ -1080,6 +1082,7 @@ library
       Storage.Beam.VehicleRouteMapping
       Storage.Beam.VendorSplitDetails
       Storage.Beam.WhiteListOrg
+      Storage.CachedQueries.DeviceVehicleMapping
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.FRFSVehicleServiceTier
       Storage.CachedQueries.InsuranceConfig
@@ -1108,6 +1111,7 @@ library
       Storage.Queries.DeletedPerson
       Storage.Queries.Depot
       Storage.Queries.DepotManager
+      Storage.Queries.DeviceVehicleMapping
       Storage.Queries.Disability
       Storage.Queries.DisabilityTranslation
       Storage.Queries.DispatcherHistory
