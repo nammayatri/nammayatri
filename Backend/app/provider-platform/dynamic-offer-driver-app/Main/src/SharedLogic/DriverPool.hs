@@ -70,7 +70,6 @@ import Data.Time.Clock hiding (getCurrentTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Tuple.Extra (snd3)
 import qualified Data.Vector as V
-import Domain.Action.UI.Route as DRoute
 import Domain.Types as DVST
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
@@ -696,7 +695,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
       mapM
         ( \(ghReq, driver, driverGoHomePoolWithActualDistance) -> do
             routes <-
-              DRoute.getTripRoutes (driver.driverId, merchantId, merchantOpCityId) Nothing $
+              Maps.getTripRoutes merchantId merchantOpCityId Nothing $
                 Maps.GetRoutesReq
                   { waypoints = getCoordinates driver :| [getCoordinates ghReq],
                     mode = Just Maps.CAR,
