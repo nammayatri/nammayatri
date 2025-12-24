@@ -14,8 +14,7 @@
 
 module Domain.Action.Beckn.FRFS.OnInit where
 
-import qualified BecknV2.FRFS.Enums as Spec
-import Domain.Action.Beckn.FRFS.Common (DCategorySelect, DFareBreakUp)
+import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
@@ -118,7 +117,7 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
   when allLegsOnInitDone $ do
     Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 $ do
-      let paymentType = getPaymentType booking.vehicleType mbJourneyId
+      let paymentType = getPaymentType (isJust mbJourneyId) booking.vehicleType
       (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
       baskets <- case mbJourneyId of
         Just _ -> do
@@ -126,14 +125,6 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
         Nothing -> return Nothing
       createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
   where
-    getPaymentType vehicleType mbJourneyId = do
-      case mbJourneyId of
-        Just _ -> Payment.FRFSMultiModalBooking
-        Nothing -> do
-          case vehicleType of
-            Spec.METRO -> Payment.FRFSBooking
-            Spec.BUS -> Payment.FRFSBusBooking
-            Spec.SUBWAY -> Payment.FRFSBooking
     key journeyId = "initJourney-" <> journeyId
 
 createPayments ::

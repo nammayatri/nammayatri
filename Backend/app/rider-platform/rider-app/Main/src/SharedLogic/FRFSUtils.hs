@@ -12,7 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.FRFSUtils where
+module SharedLogic.FRFSUtils
+  ( module SharedLogic.FRFSUtils,
+    module Reexport,
+  )
+where
 
 import qualified API.Types.UI.FRFSTicketService as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
@@ -24,7 +28,6 @@ import Data.List (groupBy, nub, sortBy)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Domain.Action.Beckn.FRFS.Common
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Extra.VendorSplitDetails as VendorSplitDetails
@@ -78,6 +81,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.FRFSFareCalculator as Reexport
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -1052,66 +1056,6 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
             _ -> return dummyBasket
         _ -> return dummyBasket
 
-data CategoryPriceItem = CategoryPriceItem
-  { quantity :: Int,
-    unitPrice :: Price,
-    totalPrice :: Price,
-    categoryType :: FRFSQuoteCategoryType
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-data FRFSFareParameters = FRFSFareParameters
-  { priceItems :: [CategoryPriceItem],
-    totalPrice :: Price,
-    totalQuantity :: Int,
-    currency :: Currency
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-mkCategoryPriceItemFromQuoteCategories :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> [CategoryPriceItem]
-mkCategoryPriceItemFromQuoteCategories quoteCategories = map mkPriceItem quoteCategories
-  where
-    mkPriceItem :: DFRFSQuoteCategory.FRFSQuoteCategory -> CategoryPriceItem
-    mkPriceItem category =
-      let unitPrice = fromMaybe category.offeredPrice category.finalPrice
-       in CategoryPriceItem
-            { quantity = category.selectedQuantity,
-              unitPrice,
-              totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational category.selectedQuantity),
-              categoryType = category.category
-            }
-
-mkCategoryPriceItemFromDCategorySelect :: [DCategorySelect] -> [CategoryPriceItem]
-mkCategoryPriceItemFromDCategorySelect quoteCategories = mapMaybe mkPriceItem quoteCategories
-  where
-    mkPriceItem :: DCategorySelect -> Maybe CategoryPriceItem
-    mkPriceItem category = do
-      let quantity = category.quantity
-      let unitPrice = category.price
-      return $
-        CategoryPriceItem
-          { quantity = quantity,
-            unitPrice,
-            totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quantity),
-            categoryType = category.category
-          }
-
-mkFareParameters :: [CategoryPriceItem] -> FRFSFareParameters
-mkFareParameters priceItems =
-  let totalPrice =
-        Price
-          { amount = sum ((.totalPrice.amount) <$> priceItems),
-            amountInt = sum ((.totalPrice.amountInt) <$> priceItems),
-            currency = fromMaybe INR (listToMaybe (map (.unitPrice.currency) priceItems))
-          }
-      totalQuantity = sum ((.quantity) <$> priceItems)
-   in FRFSFareParameters
-        { priceItems = priceItems,
-          totalPrice = totalPrice,
-          totalQuantity = totalQuantity,
-          currency = totalPrice.currency
-        }
-
 -- TODO :: To be deprecated, and unified with SharedLogic.PaymentVendorSplits.createVendorSplit
 createVendorSplitFromBookings ::
   ( EsqDBReplicaFlow m r,
@@ -1235,3 +1179,9 @@ vendorSplitDetailSplitTypeToPaymentSplitType = \case
 mkCategoryInfoResponse :: DFRFSQuoteCategory.FRFSQuoteCategory -> APITypes.CategoryInfoResponse
 mkCategoryInfoResponse category =
   APITypes.CategoryInfoResponse {categoryId = category.id, categoryName = category.category, categoryMeta = category.categoryMeta, categoryPrice = mkPriceAPIEntity category.price, categoryOfferedPrice = mkPriceAPIEntity category.offeredPrice, categoryFinalPrice = mkPriceAPIEntity <$> category.finalPrice, categorySelectedQuantity = category.selectedQuantity}
+
+getPaymentType :: Bool -> Spec.VehicleCategory -> PaymentOrder.PaymentServiceType
+getPaymentType isMultiModalBooking = \case
+  Spec.METRO -> if isMultiModalBooking then PaymentOrder.FRFSMultiModalBooking else PaymentOrder.FRFSBooking
+  Spec.SUBWAY -> if isMultiModalBooking then PaymentOrder.FRFSMultiModalBooking else PaymentOrder.FRFSBooking
+  Spec.BUS -> if isMultiModalBooking then PaymentOrder.FRFSMultiModalBooking else PaymentOrder.FRFSBusBooking

@@ -30,6 +30,7 @@ imports:
   FRFSQuoteCategory: Domain.Types.FRFSQuoteCategory
   QuoteCategoryMetadata: Domain.Types.FRFSQuoteCategory
   BusLocation: API.Types.UI.RiderLocation
+  CrisSdkResponse: API.Types.UI.MultimodalConfirm
 
 module: FRFSTicketService
 types:
@@ -104,8 +105,17 @@ types:
     quoteCategoryId: Id FRFSQuoteCategory
     quantity: Int
 
+  CrisSdkResponse:
+    osType: Text
+    osBuildVersion: Text
+    bookAuthCode: Text
+    latency: Maybe Int
+    derive: "Show"
+
   FRFSQuoteConfirmReq:
     offered: Maybe [FRFSCategorySelectionReq]
+    crisSdkResponse: Maybe CrisSdkResponse
+    enableOffer: Maybe Bool
     ticketQuantity: Maybe Int # TODO: To Be Deprecated
     childTicketQuantity: Maybe Int # TODO: To Be Deprecated
 

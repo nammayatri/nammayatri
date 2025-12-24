@@ -13,7 +13,7 @@ import qualified Domain.Types.FRFSQuote as DQuote
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
-import SharedLogic.FRFSUtils
+import SharedLogic.FRFSFareCalculator
 
 buildSelectReq ::
   (MonadFlow m) =>
