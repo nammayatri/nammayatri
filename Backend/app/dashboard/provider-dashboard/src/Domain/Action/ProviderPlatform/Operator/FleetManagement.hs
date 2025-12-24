@@ -25,7 +25,6 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Person as QP
@@ -69,7 +68,6 @@ postFleetManagementFleetCreate ::
   API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerLoginReqV2 ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFleetManagementFleetCreate merchantShortId opCity apiTokenInfo req = do
-  runRequestValidation API.Types.ProviderPlatform.Fleet.RegistrationV2.validateInitiateLoginReqV2 req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let merchant = apiTokenInfo.merchant
   let enabled = not $ fromMaybe False merchant.requireAdminApprovalForFleetOnboarding
