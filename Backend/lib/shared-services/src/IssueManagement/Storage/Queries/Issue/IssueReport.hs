@@ -15,23 +15,26 @@ import Kernel.Types.Id
 create :: BeamFlow m r => IssueReport.IssueReport -> m ()
 create = createWithKV
 
-findAllWithOptions :: BeamFlow m r => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Maybe (Id Person) -> Maybe (Id Ride) -> Id MerchantOperatingCity -> m [IssueReport]
-findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId mbRideId merchantOperatingCityId = do
-  findAllWithOptionsKV conditions (Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
+findAllWithOptions :: BeamFlow m r => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Maybe (Id Person) -> Maybe (Id Ride) -> Maybe Text -> Id MerchantOperatingCity -> m (Int, [IssueReport])
+findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId mbRideId mbDescriptionSearch merchantOperatingCityId = do
+  let conditions =
+        [ And $
+            catMaybes
+              [ fmap (Is BeamIR.status . Eq) mbStatus,
+                fmap (Is BeamIR.assignee . Eq . Just) mbAssignee,
+                fmap (Is BeamIR.categoryId . Eq . Just . getId) mbCategoryId,
+                fmap (Is BeamIR.personId . Eq . getId) mbPersonId,
+                fmap (Is BeamIR.rideId . Eq . Just . getId) mbRideId,
+                fmap (\search -> Is BeamIR.description $ Like ("%" <> search <> "%")) mbDescriptionSearch
+              ]
+              <> [Is BeamIR.merchantOperatingCityId $ Eq (Just merchantOperatingCityId.getId), Is BeamIR.categoryId $ Not $ Eq Nothing]
+        ]
+  count <- findAllWithOptionsKV conditions (Desc BeamIR.createdAt) Nothing Nothing >>= pure . length
+  issueReports <- findAllWithOptionsKV conditions (Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
+  return (count, issueReports)
   where
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
-    conditions =
-      [ And $
-          catMaybes
-            [ fmap (Is BeamIR.status . Eq) mbStatus,
-              fmap (Is BeamIR.assignee . Eq . Just) mbAssignee,
-              fmap (Is BeamIR.categoryId . Eq . Just . getId) mbCategoryId,
-              fmap (Is BeamIR.personId . Eq . getId) mbPersonId,
-              fmap (Is BeamIR.rideId . Eq . Just . getId) mbRideId
-            ]
-            <> [Is BeamIR.merchantOperatingCityId $ Eq (Just merchantOperatingCityId.getId)]
-      ]
 
 findById :: BeamFlow m r => Id IssueReport -> m (Maybe IssueReport)
 findById (Id issueReportId) = findOneWithKV [And [Is BeamIR.id $ Eq issueReportId, Is BeamIR.deleted $ Eq False]]
