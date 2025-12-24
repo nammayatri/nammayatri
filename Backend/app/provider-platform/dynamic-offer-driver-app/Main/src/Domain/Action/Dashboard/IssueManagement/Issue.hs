@@ -56,7 +56,7 @@ getIssueList ::
   Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Common.Ride) ->
   Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueReportListResponse
 getIssueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbCountryCode mbMobileNumber mbRideShortId =
-  DIssue.issueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus (Kernel.Types.Id.cast <$> mbCategoryId) mbAssignee mbCountryCode mbMobileNumber mbRideShortId dashboardIssueHandle Common.DRIVER
+  DIssue.issueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus (Kernel.Types.Id.cast <$> mbCategoryId) Nothing mbAssignee mbCountryCode mbMobileNumber mbRideShortId Nothing dashboardIssueHandle Common.DRIVER
 
 getIssueInfo ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
