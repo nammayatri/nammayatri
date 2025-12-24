@@ -121,7 +121,7 @@ processRefundStatus refundEntry person paymentOrder = do
             logInfo $ "Updated refund status for " <> refundEntry.id.getId <> " to " <> show newStatus
 
           when (newStatus `notElem` nonTerminalStatuses) $ do
-            void $ SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
+            void $ SPayment.orderStatusHandler False paymentServiceType paymentOrder orderStatusCall
           return True
         Nothing -> return False
     else return False

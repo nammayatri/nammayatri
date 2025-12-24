@@ -115,4 +115,4 @@ processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
   person <- QPerson.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
   let paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
       orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
-  void $ SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
+  void $ SPayment.orderStatusHandler False paymentServiceType paymentOrder orderStatusCall

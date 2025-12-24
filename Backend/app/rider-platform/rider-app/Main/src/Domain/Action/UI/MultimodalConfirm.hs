@@ -276,7 +276,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
                       let paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
                           merchantOperatingCityId = fromMaybe booking.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
                           orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
-                      void $ SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
+                      void $ SPayment.orderStatusHandler False paymentServiceType paymentOrder orderStatusCall
                       createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode
                       return (createOrderResp, Just paymentBooking.status)
                     Nothing -> return (Nothing, Nothing)

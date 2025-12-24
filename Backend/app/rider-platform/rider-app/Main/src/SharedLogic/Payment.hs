@@ -79,11 +79,12 @@ orderStatusHandler ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
+  Bool ->
   DOrder.PaymentServiceType ->
   DOrder.PaymentOrder ->
   (Payment.OrderStatusReq -> m Payment.OrderStatusResp) ->
   m DPayment.PaymentStatusResp
-orderStatusHandler paymentService paymentOrder orderStatusCall = do
+orderStatusHandler isWebhook paymentService paymentOrder orderStatusCall = do
   Redis.withWaitAndLockCrossAppRedis
     makePaymentOrderStatusHandlerLockKey
     60
@@ -92,7 +93,7 @@ orderStatusHandler paymentService paymentOrder orderStatusCall = do
         orderStatusResponse <- DPayment.orderStatusService paymentOrder.personId paymentOrder.id orderStatusCall
         mbUpdatedPaymentOrder <- QPaymentOrder.findById paymentOrder.id
         let updatedPaymentOrder = fromMaybe paymentOrder mbUpdatedPaymentOrder
-        orderStatusHandlerWithRefunds paymentService paymentOrder updatedPaymentOrder orderStatusResponse
+        orderStatusHandlerWithRefunds isWebhook paymentService paymentOrder updatedPaymentOrder orderStatusResponse
     )
   where
     makePaymentOrderStatusHandlerLockKey :: Text
@@ -114,12 +115,13 @@ orderStatusHandlerWithRefunds ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
+  Bool ->
   DOrder.PaymentServiceType ->
   DOrder.PaymentOrder ->
   DOrder.PaymentOrder ->
   DPayment.PaymentStatusResp ->
   m DPayment.PaymentStatusResp
-orderStatusHandlerWithRefunds paymentService paymentOrder updatedPaymentOrder paymentStatusResponse = do
+orderStatusHandlerWithRefunds isWebhook paymentService paymentOrder updatedPaymentOrder paymentStatusResponse = do
   refundStatusHandler paymentOrder paymentService
   eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId <-
     withTryCatch "orderStatusHandler:orderStatusHandler" $
@@ -203,13 +205,23 @@ orderStatusHandlerWithRefunds paymentService paymentOrder updatedPaymentOrder pa
     Right (_, _, domainTransactionId) -> do
       QPaymentOrder.updatePaymentFulfillmentStatus paymentOrder.id finalPaymentStatusResponse.paymentFulfillmentStatus finalPaymentStatusResponse.domainEntityId domainTransactionId
     _ -> pure ()
-  return finalPaymentStatusResponse
+  case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
+    Right _ -> return finalPaymentStatusResponse
+    Left err -> do
+      if isWebhook
+        then someExceptionToAPIErrorThrow err
+        else return finalPaymentStatusResponse
   where
     mkPaymentStatusResp :: DPayment.PaymentStatusResp -> Maybe DPayment.PaymentFulfillmentStatus -> Maybe Text -> DPayment.PaymentStatusResp
     mkPaymentStatusResp paymentStatusResponse' paymentFulfillmentStatus' domainEntityId' = do
       case paymentStatusResponse' of
         DPayment.PaymentStatus {..} -> DPayment.PaymentStatus {DPayment.paymentFulfillmentStatus = paymentFulfillmentStatus', DPayment.domainEntityId = domainEntityId', ..}
         _ -> paymentStatusResponse'
+    someExceptionToAPIErrorThrow exc
+      | Just (HTTPException err) <- fromException exc = throwError err
+      | Just (BaseException err) <- fromException exc =
+        throwError . InternalError . fromMaybe (show err) $ toMessage err
+      | otherwise = throwError . InternalError $ show exc
 
 refundStatusHandler ::
   ( EncFlow m r,

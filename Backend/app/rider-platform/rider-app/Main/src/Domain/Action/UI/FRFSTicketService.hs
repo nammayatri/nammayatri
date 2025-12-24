@@ -810,7 +810,8 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
           booking <- QFRFSTicketBooking.findById bookingPayment.frfsTicketBookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
           person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
           paymentOrder <- QPaymentOrder.findById bookingPayment.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found")
-          bookingStatus <- frfsBookingStatus (booking.riderId, merchantId) False (withPaymentStatusResponseHandler bookingPayment paymentOrder) booking person switchFRFSQuoteTier
+          integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+          bookingStatus <- frfsBookingStatus (booking.riderId, merchantId) (integratedBPPConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler bookingPayment paymentOrder) booking person switchFRFSQuoteTier
           return (bookingStatus, booking)
       )
       bookingPayments

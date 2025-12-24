@@ -131,7 +131,7 @@ getStatus (personId, merchantId) orderId = do
         return $ ticketBooking <&> (.ticketPlaceId)
       _ -> return Nothing
   let orderStatusCall = Payment.orderStatus merchantId (cast mocId) ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion
-  SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
+  SPayment.orderStatusHandler False paymentServiceType paymentOrder orderStatusCall
 
 -- order status s2s -----------------------------------------------------
 getStatusS2S :: Id DOrder.PaymentOrder -> Id DP.Person -> Id DM.Merchant -> Maybe Data.Text.Text -> Flow DPayment.PaymentStatusResp
@@ -241,7 +241,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
     callWebhookHandlerWithOrderStatus paymentServiceType' orderShortId orderStatusCall = do
       paymentOrder <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
       let paymentServiceType = fromMaybe paymentServiceType' paymentOrder.paymentServiceType
-      SPayment.orderStatusHandler paymentServiceType paymentOrder orderStatusCall
+      SPayment.orderStatusHandler True paymentServiceType paymentOrder orderStatusCall
 
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text
 mkOrderStatusCheckKey orderId status = "lockKey:orderId:" <> orderId <> ":status" <> show status
