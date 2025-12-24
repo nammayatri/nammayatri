@@ -111,6 +111,15 @@ updateMediaFiles issueMessageId mediaFiles = do
     ]
     [Is BeamIM.id $ Eq $ getId issueMessageId]
 
+updateIsActive :: BeamFlow m r => Id IssueMessage -> Bool -> m ()
+updateIsActive issueMessageId isActive = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Set BeamIM.isActive isActive,
+      Set BeamIM.updatedAt now
+    ]
+    [Is BeamIM.id $ Eq (getId issueMessageId)]
+
 mkDetailedTranslation :: [IssueTranslation] -> IssueMessage -> DetailedTranslation
 mkDetailedTranslation iTranslations issueMessage =
   DetailedTranslation

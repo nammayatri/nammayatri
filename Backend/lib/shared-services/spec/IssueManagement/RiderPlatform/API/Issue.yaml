@@ -4,6 +4,7 @@ imports:
   IssueMessage: IssueManagement.Domain.Types.Issue.IssueMessage
   IssueReport: IssueManagement.Domain.Types.Issue.IssueReport
   IssueOption: IssueManagement.Domain.Types.Issue.IssueOption
+  IssueConfig: IssueManagement.Domain.Types.Issue.IssueConfig
   Seconds: Kernel.Types.Time
   RideStatus: IssueManagement.Common
   IssueStatus: IssueManagement.Common
@@ -16,6 +17,8 @@ imports:
   Value: Data.Aeson
   VehicleVariant: Domain.Types.VehicleVariant
   IssueSubCategory: IGM.Enums
+  Language: Kernel.External.Types
+  # Old types
   IssueCategoryRes: IssueManagement.Common.Dashboard.Issue
   IssueCategoryListRes: IssueManagement.Common.Dashboard.Issue
   IssueReportListResponse: IssueManagement.Common.Dashboard.Issue
@@ -38,6 +41,25 @@ imports:
   UpsertIssueMessageReq: IssueManagement.Common.Dashboard.Issue
   UpsertIssueMessageRes: IssueManagement.Common.Dashboard.Issue
   IssueReportReqV2: IssueManagement.Common.Dashboard.Issue
+  # New Admin Content Management types
+  IssueCategoryDetailRes: IssueManagement.Common.Dashboard.Issue
+  IssueMessageDetailRes: IssueManagement.Common.Dashboard.Issue
+  IssueOptionDetailRes: IssueManagement.Common.Dashboard.Issue
+  IssueMessageListRes: IssueManagement.Common.Dashboard.Issue
+  IssueOptionListRes: IssueManagement.Common.Dashboard.Issue
+  IssueCategoryFlowPreviewRes: IssueManagement.Common.Dashboard.Issue
+  MessageFlowNode: IssueManagement.Common.Dashboard.Issue
+  MessagePreview: IssueManagement.Common.Dashboard.Issue
+  OptionFlowNode: IssueManagement.Common.Dashboard.Issue
+  IssueTranslationListRes: IssueManagement.Common.Dashboard.Issue
+  IssueTranslationItem: IssueManagement.Common.Dashboard.Issue
+  BulkUpsertTranslationsReq: IssueManagement.Common.Dashboard.Issue
+  IssueConfigRes: IssueManagement.Common.Dashboard.Issue
+  UpdateIssueConfigReq: IssueManagement.Common.Dashboard.Issue
+  ReorderIssueCategoryReq: IssueManagement.Common.Dashboard.Issue
+  ReorderIssueOptionReq: IssueManagement.Common.Dashboard.Issue
+  ReorderIssueMessageReq: IssueManagement.Common.Dashboard.Issue
+  DetailedTranslationRes: IssueManagement.Common.Dashboard.Issue
 
 module: Issue
 apiPrefix: issueV2
@@ -217,6 +239,162 @@ apis:
       migrate:
         endpoint: IssueAPI CreateIssueReportV2Endpoint
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE CREATE_ISSUE_REPORT_V2
+
+  - GET: # GetCategoryDetailAPI
+      endpoint: /category/{categoryId}/detail
+      name: GetIssueCategoryDetail
+      auth: ApiAuthV2
+      params:
+        categoryId: Id IssueCategory
+      query:
+        - language: Language
+      response:
+        type: IssueCategoryDetailRes
+
+  - GET: # GetOptionDetailAPI
+      endpoint: /option/{optionId}/detail
+      name: GetIssueOptionDetail
+      auth: ApiAuthV2
+      params:
+        optionId: Id IssueOption
+      query:
+        - language: Language
+      response:
+        type: IssueOptionDetailRes
+
+  - GET: # GetMessageDetailAPI
+      endpoint: /message/{messageId}/detail
+      name: GetIssueMessageDetail
+      auth: ApiAuthV2
+      params:
+        messageId: Id IssueMessage
+      query:
+        - language: Language
+      response:
+        type: IssueMessageDetailRes
+
+  - GET: # ListMessagesAPI
+      endpoint: /message/list
+      name: GetIssueMessageList
+      auth: ApiAuthV2
+      query:
+        - categoryId: (Id IssueCategory)
+        - optionId: (Id IssueOption)
+        - isActive: Bool
+        - language: Language
+      response:
+        type: IssueMessageListRes
+
+  - GET: # ListOptionsAPI
+      endpoint: /option/list
+      name: GetIssueOptionList
+      auth: ApiAuthV2
+      query:
+        - categoryId: (Id IssueCategory)
+        - messageId: (Id IssueMessage)
+        - isActive: Bool
+        - language: Language
+      response:
+        type: IssueOptionListRes
+
+  - DELETE: # DeleteCategoryAPI
+      endpoint: /category/{categoryId}/delete
+      name: DeleteIssueCategory
+      auth: ApiAuthV2
+      params:
+        categoryId: Id IssueCategory
+      response:
+        type: APISuccess
+
+  - DELETE: # DeleteOptionAPI
+      endpoint: /option/{optionId}/delete
+      name: DeleteIssueOption
+      auth: ApiAuthV2
+      params:
+        optionId: Id IssueOption
+      response:
+        type: APISuccess
+
+  - DELETE: # DeleteMessageAPI
+      endpoint: /message/{messageId}/delete
+      name: DeleteIssueMessage
+      auth: ApiAuthV2
+      params:
+        messageId: Id IssueMessage
+      response:
+        type: APISuccess
+
+  - GET: # PreviewCategoryFlowAPI
+      endpoint: /category/{categoryId}/preview
+      name: GetIssueCategoryFlowPreview
+      auth: ApiAuthV2
+      params:
+        categoryId: Id IssueCategory
+      query:
+        - language: Language
+      response:
+        type: IssueCategoryFlowPreviewRes
+
+  - GET: # GetTranslationsAPI
+      endpoint: /translation/list
+      name: GetIssueTranslations
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - sentence: Text
+      response:
+        type: IssueTranslationListRes
+
+  - POST: # BulkUpsertTranslationsAPI
+      endpoint: /translation/bulk
+      name: PostIssueBulkUpsertTranslations
+      auth: ApiAuthV2
+      request:
+        type: BulkUpsertTranslationsReq
+      response:
+        type: APISuccess
+
+  - GET: # GetIssueConfigAPI
+      endpoint: /config
+      name: GetIssueConfig
+      auth: ApiAuthV2
+      response:
+        type: IssueConfigRes
+
+  - POST: # UpdateIssueConfigAPI
+      endpoint: /config/update
+      name: PostIssueConfigUpdate
+      auth: ApiAuthV2
+      request:
+        type: UpdateIssueConfigReq
+      response:
+        type: APISuccess
+
+  - POST: # ReorderCategoriesAPI
+      endpoint: /category/reorder
+      name: PostIssueCategoryReorder
+      auth: ApiAuthV2
+      request:
+        type: ReorderIssueCategoryReq
+      response:
+        type: APISuccess
+
+  - POST: # ReorderOptionsAPI
+      endpoint: /option/reorder
+      name: PostIssueOptionReorder
+      auth: ApiAuthV2
+      request:
+        type: ReorderIssueOptionReq
+      response:
+        type: APISuccess
+
+  - POST: # ReorderMessagesAPI
+      endpoint: /message/reorder
+      name: PostIssueMessageReorder
+      auth: ApiAuthV2
+      request:
+        type: ReorderIssueMessageReq
+      response:
+        type: APISuccess
 
 # Did not generated any types because we need to use common types for rider and provider dashboard
 types: {}

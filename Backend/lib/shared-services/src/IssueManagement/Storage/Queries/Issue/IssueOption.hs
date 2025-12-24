@@ -93,6 +93,15 @@ updatePriority issueOptionId priority =
     ]
     [Is BeamIO.id $ Eq (getId issueOptionId)]
 
+updateIsActive :: BeamFlow m r => Id IssueOption -> Bool -> m ()
+updateIsActive issueOptionId isActive = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Set BeamIO.isActive isActive,
+      Set BeamIO.updatedAt now
+    ]
+    [Is BeamIO.id $ Eq (getId issueOptionId)]
+
 instance FromTType' BeamIO.IssueOption IssueOption where
   fromTType' BeamIO.IssueOptionT {..} = do
     pure $
