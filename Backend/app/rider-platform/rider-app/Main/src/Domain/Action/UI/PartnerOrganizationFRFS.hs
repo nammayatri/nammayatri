@@ -43,7 +43,6 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Data.OpenApi hiding (description, email, info, name, title)
 import qualified Data.Text as T
-import qualified Domain.Action.UI.FRFSTicketService as DFRFSTicketService
 import qualified Domain.Action.UI.Registration as DReg
 import Domain.Types.Extra.FRFSCachedQuote as CachedQuote
 import Domain.Types.FRFSConfig
@@ -81,6 +80,7 @@ import Kernel.Utils.Common as Kernel
 import Kernel.Utils.JSON (removeNullFields)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import SharedLogic.FRFSConfirm
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -775,7 +775,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
               ( \quoteCategory -> FRFSTypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity = quoteCategory.selectedQuantity}
               )
               updatedQuoteCategories
-      bookingRes <- DFRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing integratedBPPConfig
+      bookingRes <- postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing integratedBPPConfig
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return

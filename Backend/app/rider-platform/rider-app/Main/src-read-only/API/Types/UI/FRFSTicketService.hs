@@ -52,6 +52,10 @@ data CategoryInfoResponse = CategoryInfoResponse
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data CrisSdkResponse = CrisSdkResponse {bookAuthCode :: Data.Text.Text, latency :: Data.Maybe.Maybe Kernel.Prelude.Int, osBuildVersion :: Data.Text.Text, osType :: Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSBookingFeedbackReq
   = BookingFareAccepted BookingFareAcceptedReq
   | BookingFeedback BookingFeedbackReq
@@ -161,7 +165,13 @@ data FRFSQuoteCategoryAPIEntity = FRFSQuoteCategoryAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq {childTicketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int, offered :: Data.Maybe.Maybe [FRFSCategorySelectionReq], ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int}
+data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq
+  { childTicketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    crisSdkResponse :: Data.Maybe.Maybe CrisSdkResponse,
+    enableOffer :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    offered :: Data.Maybe.Maybe [FRFSCategorySelectionReq],
+    ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -19,6 +19,7 @@ imports:
   UnifiedTicketQR: Lib.JourneyModule.Types
   UnifiedTicketQRV2: Lib.JourneyModule.Types
   FRFSBookingPaymentStatusAPI: API.Types.UI.FRFSTicketService
+  CrisSdkResponse: API.Types.UI.FRFSTicketService
   CreateOrderResp: Kernel.External.Payment.Juspay.Types
   ExtendLegStartPoint: Lib.JourneyModule.Types
   GetFareResponse: Lib.JourneyModule.Types
@@ -195,13 +196,6 @@ types:
     result: Text
     orderSdkPayload: Maybe CreateOrderResp
     gatewayReferenceId: Maybe Text
-
-  CrisSdkResponse:
-    osType: Text
-    osBuildVersion: Text
-    bookAuthCode: Text
-    latency: Maybe Int
-    derive: "Show"
 
   LegServiceTierOptionsResp:
     options: "[AvailableRoutesByTier]"

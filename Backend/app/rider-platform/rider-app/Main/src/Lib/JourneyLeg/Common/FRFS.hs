@@ -12,8 +12,6 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Domain.Action.Beckn.FRFS.Common
-import qualified Domain.Action.Beckn.FRFS.OnSelect as DOnSelect
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
@@ -54,6 +52,7 @@ import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JT
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.FRFSConfirm
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -436,7 +435,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
         )
         routeDetails
 
-confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Maybe (Id FRFSQuote) -> Bool -> Bool -> Maybe APITypes.CrisSdkResponse -> Spec.VehicleCategory -> [API.FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> m ()
+confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Maybe (Id FRFSQuote) -> Bool -> Bool -> Maybe API.CrisSdkResponse -> Spec.VehicleCategory -> [API.FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> m ()
 confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse vehicleType categorySelectionReq isSingleMode mbEnableOffer = do
   when (not bookLater && bookingAllowed) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
@@ -447,14 +446,9 @@ confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse v
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
         merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
         bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
-        FRFSTicketService.select (processOnSelect integratedBppConfig) merchant merchantOperatingCity bapConfig quote categorySelectionReq isSingleMode mbEnableOffer
+        FRFSTicketService.select merchant merchantOperatingCity bapConfig quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer
       _ -> do
-        void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer integratedBppConfig
-  where
-    processOnSelect :: (FRFSConfirmFlow m r c) => DIBC.IntegratedBPPConfig -> DOnSelect -> Maybe Bool -> Maybe Bool -> m ()
-    processOnSelect integratedBppConfig onSelectReq mbSingleMode enableOffer = do
-      (merchant', quote', _) <- DOnSelect.validateRequest onSelectReq
-      DOnSelect.onSelect onSelectReq merchant' quote' mbSingleMode enableOffer crisSdkResponse integratedBppConfig
+        void $ postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer integratedBppConfig
 
 cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> m ()
 cancel searchId cancellationType = do

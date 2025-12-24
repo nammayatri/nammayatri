@@ -14,9 +14,7 @@
 module Domain.Action.Beckn.FRFS.OnSelect where
 
 import API.Types.UI.FRFSTicketService
-import qualified API.Types.UI.MultimodalConfirm as APITypes
 import Domain.Action.Beckn.FRFS.Common (DOnSelect (..))
-import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.FRFSQuote as DQuote
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
@@ -30,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.CallFRFSBPP
+import SharedLogic.FRFSConfirm
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -65,7 +64,7 @@ validateRequest DOnSelect {..} = do
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   return (merchant, quote, integratedBppConfig)
 
-onSelect :: (FRFSConfirmFlow m r c) => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> Maybe Bool -> Maybe APITypes.CrisSdkResponse -> DIBC.IntegratedBPPConfig -> m ()
+onSelect :: (FRFSConfirmFlow m r c) => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> Maybe Bool -> Maybe CrisSdkResponse -> DIBC.IntegratedBPPConfig -> m ()
 onSelect onSelectReq merchant quote isSingleMode mbEnableOffer crisSdkResponse integratedBppConfig = do
   logDebug $ "onSelect isSingleMode: " <> show isSingleMode <> " mbEnableOffer: " <> show mbEnableOffer <> " crisSdkResponse: " <> show crisSdkResponse
   Metrics.finishMetrics Metrics.SELECT_FRFS merchant.name onSelectReq.transactionId quote.merchantOperatingCityId.getId
@@ -78,4 +77,4 @@ onSelect onSelectReq merchant quote isSingleMode mbEnableOffer crisSdkResponse i
                 <&> (\category' -> (FRFSCategorySelectionReq {quantity = category.quantity, quoteCategoryId = category'.id}))
           )
           onSelectReq.categories
-  void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer integratedBppConfig
+  void $ postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer integratedBppConfig

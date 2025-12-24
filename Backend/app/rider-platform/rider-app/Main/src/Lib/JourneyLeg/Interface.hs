@@ -1,7 +1,6 @@
 module Lib.JourneyLeg.Interface where
 
 import API.Types.UI.FRFSTicketService
-import API.Types.UI.MultimodalConfirm
 import qualified BecknV2.FRFS.Enums as Spec
 import Control.Applicative ((<|>))
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
