@@ -37,113 +37,113 @@ handler merchantId city = getIssueCategoryList merchantId city :<|> getIssueList
 
 type GetIssueCategoryList =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.GET_ISSUE_CATEGORY_LIST)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.GET_ISSUE_CATEGORY_LIST))
       :> API.Types.RiderPlatform.IssueManagement.Issue.GetIssueCategoryList
   )
 
 type GetIssueList =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.GET_ISSUE_LIST)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.GET_ISSUE_LIST))
       :> API.Types.RiderPlatform.IssueManagement.Issue.GetIssueList
   )
 
 type GetIssueInfo =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.GET_ISSUE_INFO)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.GET_ISSUE_INFO))
       :> API.Types.RiderPlatform.IssueManagement.Issue.GetIssueInfo
   )
 
 type GetIssueInfoV2 =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.GET_ISSUE_INFO_V2)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.GET_ISSUE_INFO_V2))
       :> API.Types.RiderPlatform.IssueManagement.Issue.GetIssueInfoV2
   )
 
 type PutIssueUpdate =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.PUT_ISSUE_UPDATE)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.PUT_ISSUE_UPDATE))
       :> API.Types.RiderPlatform.IssueManagement.Issue.PutIssueUpdate
   )
 
 type PostIssueComment =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_COMMENT)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_COMMENT))
       :> API.Types.RiderPlatform.IssueManagement.Issue.PostIssueComment
   )
 
 type GetIssueMedia =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.GET_ISSUE_MEDIA)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.GET_ISSUE_MEDIA))
       :> API.Types.RiderPlatform.IssueManagement.Issue.GetIssueMedia
   )
 
 type PostIssueTicketStatusCallBack =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_TICKET_STATUS_CALL_BACK)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_TICKET_STATUS_CALL_BACK))
       :> API.Types.RiderPlatform.IssueManagement.Issue.PostIssueTicketStatusCallBack
   )
 
 type PostIssueCategoryCreate =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_CATEGORY_CREATE)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_CATEGORY_CREATE))
       :> API.Types.RiderPlatform.IssueManagement.Issue.PostIssueCategoryCreate
   )
 
 type PostIssueCategoryUpdate =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_CATEGORY_UPDATE)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_CATEGORY_UPDATE))
       :> API.Types.RiderPlatform.IssueManagement.Issue.PostIssueCategoryUpdate
   )
 
 type PostIssueOptionCreate =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_OPTION_CREATE)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_OPTION_CREATE))
       :> API.Types.RiderPlatform.IssueManagement.Issue.PostIssueOptionCreate
   )
 
 type PostIssueOptionUpdate =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_OPTION_UPDATE)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_OPTION_UPDATE))
       :> API.Types.RiderPlatform.IssueManagement.Issue.PostIssueOptionUpdate
   )
 
 type PostIssueMessageUpsert =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_MESSAGE_UPSERT)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_MESSAGE_UPSERT))
       :> API.Types.RiderPlatform.IssueManagement.Issue.PostIssueMessageUpsert
   )
 
 type PostIssueKaptureCreate =
   ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_KAPTURE_CREATE)
+      ('APP_BACKEND_MANAGEMENT)
+      ('DSL)
+      (('RIDER_ISSUE_MANAGEMENT) / ('API.Types.RiderPlatform.IssueManagement.ISSUE) / ('API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_KAPTURE_CREATE))
       :> API.Types.RiderPlatform.IssueManagement.Issue.PostIssueKaptureCreate
   )
 
@@ -278,13 +278,13 @@ type PostIssueMessageReorder =
 getIssueCategoryList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueCategoryListRes)
 getIssueCategoryList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.getIssueCategoryList merchantShortId opCity apiTokenInfo
 
-getIssueList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe IssueManagement.Common.IssueStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Common.Ride) -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueReportListResponse)
-getIssueList merchantShortId opCity apiTokenInfo limit offset status category assignee countryCode phoneNumber rideShortId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.getIssueList merchantShortId opCity apiTokenInfo limit offset status category assignee countryCode phoneNumber rideShortId
+getIssueList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (IssueManagement.Common.IssueStatus) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory)) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueReportListResponse)
+getIssueList merchantShortId opCity apiTokenInfo limit offset status category categoryName assignee countryCode phoneNumber rideShortId descriptionSearch = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.getIssueList merchantShortId opCity apiTokenInfo limit offset status category categoryName assignee countryCode phoneNumber rideShortId descriptionSearch
 
 getIssueInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueInfoRes)
 getIssueInfo merchantShortId opCity apiTokenInfo issueId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.getIssueInfo merchantShortId opCity apiTokenInfo issueId
 
-getIssueInfoV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueInfoRes)
+getIssueInfoV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport)) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport)) -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueInfoRes)
 getIssueInfoV2 merchantShortId opCity apiTokenInfo issueId issueShortId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.getIssueInfoV2 merchantShortId opCity apiTokenInfo issueId issueShortId
 
 putIssueUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.IssueUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

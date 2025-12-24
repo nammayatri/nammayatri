@@ -81,10 +81,12 @@ apis:
         - offset: Int
         - status: IssueStatus
         - category: (Id IssueCategory)
+        - categoryName: Text
         - assignee: Text
         - countryCode: Text
         - phoneNumber: Text
         - rideShortId: ShortId Ride
+        - descriptionSearch: Text
       response:
         type: IssueReportListResponse
       migrate:
