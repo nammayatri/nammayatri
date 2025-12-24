@@ -50,6 +50,8 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigUpsertPlanAndConfigSubscription,
     postMerchantConfigOperatingCityWhiteList,
     postMerchantConfigMerchantCreate,
+    getMerchantConfigVehicleServiceTier,
+    postMerchantConfigVehicleServiceTierUpdate,
   )
 where
 
@@ -192,6 +194,7 @@ import qualified Storage.Queries.PlanTranslation as SQPT
 import qualified Storage.Queries.RegistryMapFallback as QRMF
 import qualified Storage.Queries.SubscriptionConfig as QSC
 import qualified Storage.Queries.ValueAddNP as SQVNP
+import qualified Storage.Queries.VehicleServiceTier as QVST
 import qualified Storage.Queries.WhiteListOrg as QWLO
 import Tools.Error
 
@@ -3448,3 +3451,146 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
 
 postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
 postMerchantConfigMerchantCreate = postMerchantConfigOperatingCityCreate
+
+---------------------------------------------------------------------
+-- VehicleServiceTier APIs
+---------------------------------------------------------------------
+
+getMerchantConfigVehicleServiceTier ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe ServiceTierType ->
+  Flow Common.VehicleServiceTierRes
+getMerchantConfigVehicleServiceTier merchantShortId opCity mbServiceTierType = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  configs <- case mbServiceTierType of
+    Nothing -> CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+    Just serviceTierType ->
+      maybeToList <$> CQVST.findByServiceTierTypeAndCityId serviceTierType merchantOpCityId Nothing
+  pure $ mkVehicleServiceTierItem <$> configs
+
+mkVehicleServiceTierItem :: DVST.VehicleServiceTier -> Common.VehicleServiceTierItem
+mkVehicleServiceTierItem DVST.VehicleServiceTier {..} =
+  Common.VehicleServiceTierItem
+    { vehicleIconUrl = fmap showBaseUrl vehicleIconUrl,
+      ..
+    }
+
+postMerchantConfigVehicleServiceTierUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  ServiceTierType ->
+  Common.VehicleServiceTierConfigUpdateReq ->
+  Flow APISuccess
+postMerchantConfigVehicleServiceTierUpdate merchantShortId opCity serviceTierType req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  -- 1. Find existing config
+  existingConfig <-
+    CQVST.findByServiceTierTypeAndCityId serviceTierType merchantOpCityId Nothing
+      >>= fromMaybeM (VehicleServiceTierNotFound $ show serviceTierType)
+
+  -- 2. Validate update request
+  validateVehicleServiceTierUpdate merchantOpCityId existingConfig req
+
+  -- 3. Build updated config
+  let updatedConfig = applyVehicleServiceTierUpdate existingConfig req
+
+  -- 4. Update DB
+  QVST.updateByPrimaryKey updatedConfig
+
+  -- 5. Clear cache
+  CQVST.clearCache merchantOpCityId
+  CQVST.clearCacheByServiceTier merchantOpCityId serviceTierType
+  whenJust existingConfig.vehicleCategory $ \cat ->
+    CQVST.clearCacheByVehicleCategory merchantOpCityId (Just cat)
+
+  logTagInfo "dashboard -> postMerchantConfigVehicleServiceTierUpdate : " $
+    show merchant.id <> " serviceTierType: " <> show serviceTierType
+
+  pure Success
+
+validateVehicleServiceTierUpdate ::
+  Id DMOC.MerchantOperatingCity ->
+  DVST.VehicleServiceTier ->
+  Common.VehicleServiceTierConfigUpdateReq ->
+  Flow ()
+validateVehicleServiceTierUpdate merchantOpCityId existing req = do
+  -- 1. Name cannot be empty or whitespace-only
+  whenJust req.name $ \n ->
+    when (T.null (T.strip n)) $ throwError $ InvalidRequest "name cannot be empty"
+
+  -- 2. Seating capacity validation
+  whenJust req.seatingCapacity $ \cap ->
+    when (cap <= 0 || cap > 100) $
+      throwError $ InvalidRequest "seatingCapacity must be between 1 and 100"
+
+
+  -- 4. Allowed variants cannot be empty
+  whenJust req.allowedVehicleVariant $ \vars ->
+    when (null vars) $
+      throwError $ InvalidRequest "allowedVehicleVariant cannot be empty"
+
+  -- 5. Base tier uniqueness check
+  whenJust req.baseVehicleServiceTier $ \isBase ->
+    when isBase $ do
+      existingBaseTier <-
+        CQVST.findBaseServiceTierTypeByCategoryAndCityId
+          existing.vehicleCategory
+          merchantOpCityId
+          Nothing
+      case existingBaseTier of
+        Just base
+          | base.id /= existing.id ->
+            throwError $
+              InvalidRequest $
+                "Another tier ("
+                  <> show base.serviceTierType
+                  <> ") is already base for category "
+                  <> show existing.vehicleCategory
+                  <> ". Set that to false first."
+        _ -> pure ()
+
+  -- 6. Non-negative thresholds
+  whenJust req.stopFcmThreshold $ \v ->
+    when (v < 0) $
+      throwError $ InvalidRequest "stopFcmThreshold cannot be negative"
+
+  whenJust req.stopFcmSuppressCount $ \v ->
+    when (v < 0) $
+      throwError $ InvalidRequest "stopFcmSuppressCount cannot be negative"
+
+applyVehicleServiceTierUpdate ::
+  DVST.VehicleServiceTier ->
+  Common.VehicleServiceTierConfigUpdateReq ->
+  DVST.VehicleServiceTier
+applyVehicleServiceTierUpdate existing req =
+  existing
+    { DVST.name = fromMaybe existing.name req.name,
+      DVST.shortDescription = req.shortDescription <|> existing.shortDescription,
+      DVST.longDescription = req.longDescription <|> existing.longDescription,
+      DVST.seatingCapacity = req.seatingCapacity <|> existing.seatingCapacity,
+      DVST.airConditionedThreshold = req.airConditionedThreshold <|> existing.airConditionedThreshold,
+      DVST.isAirConditioned = req.isAirConditioned <|> existing.isAirConditioned,
+      DVST.isIntercityEnabled = req.isIntercityEnabled <|> existing.isIntercityEnabled,
+      DVST.isRentalsEnabled = req.isRentalsEnabled <|> existing.isRentalsEnabled,
+      DVST.oxygen = req.oxygen <|> existing.oxygen,
+      DVST.ventilator = req.ventilator <|> existing.ventilator,
+      DVST.luggageCapacity = req.luggageCapacity <|> existing.luggageCapacity,
+      DVST.driverRating = req.driverRating <|> existing.driverRating,
+      DVST.baseVehicleServiceTier = req.baseVehicleServiceTier <|> existing.baseVehicleServiceTier,
+      DVST.fareAdditionPerKmOverBaseServiceTier = req.fareAdditionPerKmOverBaseServiceTier <|> existing.fareAdditionPerKmOverBaseServiceTier,
+      DVST.vehicleRating = req.vehicleRating <|> existing.vehicleRating,
+      DVST.allowedVehicleVariant = fromMaybe existing.allowedVehicleVariant req.allowedVehicleVariant,
+      DVST.autoSelectedVehicleVariant = fromMaybe existing.autoSelectedVehicleVariant req.autoSelectedVehicleVariant,
+      DVST.defaultForVehicleVariant = fromMaybe existing.defaultForVehicleVariant req.defaultForVehicleVariant,
+      DVST.vehicleIconUrl = case req.vehicleIconUrl of
+        Nothing -> existing.vehicleIconUrl
+        Just urlText -> parseBaseUrl urlText,
+      DVST.priority = fromMaybe existing.priority req.priority,
+      DVST.stopFcmThreshold = req.stopFcmThreshold <|> existing.stopFcmThreshold,
+      DVST.stopFcmSuppressCount = req.stopFcmSuppressCount <|> existing.stopFcmSuppressCount,
+      DVST.scheduleBookingListEligibilityTags = req.scheduleBookingListEligibilityTags <|> existing.scheduleBookingListEligibilityTags
+    }
