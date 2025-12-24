@@ -57,30 +57,45 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       applicationFeeAmount = jobData.applicationFeeAmount
   Redis.withWaitOnLockRedisWithExpiry (DRidePayment.paymentJobExecLockKey rideId.getId) 10 20 $ do
     logDebug "Executing payment intent"
-    QRide.markPaymentStatus DRide.Initiated rideId
-    person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    -- Check if payment is already completed (idempotent check)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-    fareWithTip <- case ride.tipAmount of
-      Nothing -> return fare
-      Just tipAmount -> fare `addPrice` tipAmount
-    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-    (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
-    driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
-    email <- mapM decrypt person.email
-    let createPaymentIntentReq =
-          Payment.CreatePaymentIntentReq
-            { orderShortId = ride.shortId.getShortId,
-              amount = fareWithTip.amount,
-              applicationFeeAmount,
-              currency = fareWithTip.currency,
-              customer = customerPaymentId,
-              paymentMethod = paymentMethodId,
-              receiptEmail = email,
-              driverAccountId
-            }
-    paymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id ride createPaymentIntentReq
-    paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode paymentIntentResp.paymentIntentId
-    when paymentCharged $ QRide.markPaymentStatus DRide.Completed ride.id
+    if ride.paymentStatus == DRide.Completed
+      then do
+        logInfo $ "Payment already completed for ride: " <> rideId.getId <> ", skipping"
+        pure ()
+      else do
+        -- Also check if order is already charged
+        let paymentOrderId = cast rideId
+        mbOrder <- QOrder.findById paymentOrderId
+        case mbOrder of
+          Just order | order.status == Payment.CHARGED -> do
+            logInfo $ "Payment order already charged for ride: " <> rideId.getId <> ", marking payment as completed"
+            QRide.markPaymentStatus DRide.Completed rideId
+          _ -> do
+            -- Proceed with payment capture
+            QRide.markPaymentStatus DRide.Initiated rideId
+            person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+            fareWithTip <- case ride.tipAmount of
+              Nothing -> return fare
+              Just tipAmount -> fare `addPrice` tipAmount
+            booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+            (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
+            driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+            email <- mapM decrypt person.email
+            let createPaymentIntentReq =
+                  Payment.CreatePaymentIntentReq
+                    { orderShortId = ride.shortId.getShortId,
+                      amount = fareWithTip.amount,
+                      applicationFeeAmount,
+                      currency = fareWithTip.currency,
+                      customer = customerPaymentId,
+                      paymentMethod = paymentMethodId,
+                      receiptEmail = email,
+                      driverAccountId
+                    }
+            paymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id ride createPaymentIntentReq
+            paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode paymentIntentResp.paymentIntentId
+            when paymentCharged $ QRide.markPaymentStatus DRide.Completed ride.id
   return Complete
 
 cancelExecutePaymentIntentJob ::

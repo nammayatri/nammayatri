@@ -87,6 +87,15 @@ findNewTransactionByOrderId (Id orderId) =
     Nothing
     <&> listToMaybe
 
+findLatestByOrderId :: BeamFlow m r => Id PaymentOrder -> m (Maybe PaymentTransaction)
+findLatestByOrderId (Id orderId) =
+  findAllWithOptionsKV
+    [Se.Is BeamPT.orderId $ Se.Eq orderId]
+    (Se.Desc BeamPT.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
+
 updateStatusAndError :: BeamFlow m r => Id PaymentTransaction -> TransactionStatus -> Maybe Text -> Maybe Text -> m ()
 updateStatusAndError transactionId status errorCode errorMessage = do
   now <- getCurrentTime

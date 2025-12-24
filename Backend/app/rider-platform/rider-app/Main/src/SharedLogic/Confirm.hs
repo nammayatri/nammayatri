@@ -34,6 +34,7 @@ import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
@@ -44,10 +45,14 @@ import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as DPaymentTransaction
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
@@ -68,6 +73,7 @@ import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.ParcelDetails as QParcel
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import qualified Storage.Queries.Transformers.Booking as QTB
@@ -118,6 +124,65 @@ tryInitTriggerLock searchRequestId = do
       lockExpiryTime = 10 -- Note: this value should be decided based on the delay between consecutive quotes in on_select api & also considering reallocation.
   Redis.tryLockRedis initTriggerLockKey lockExpiryTime
 
+-- | Capture pending payment before allowing new ride
+-- If rider has a pending payment from a previous ride, capture it immediately
+-- If capture fails, block the new ride creation
+capturePendingPaymentIfExists ::
+  ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasKafkaProducer r
+  ) =>
+  DP.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+capturePendingPaymentIfExists person merchantOperatingCityId = do
+  -- Find rides with payment status Initiated for this person (should be at most 1)
+  ridesWithInitiatedPayment <- QRide.findRidesWithPaymentStatusInitiated person.id
+  case ridesWithInitiatedPayment of
+    [] -> pure () -- No pending payment
+    (ride : _) -> do
+      -- Check if there's a pending payment order for this ride
+      let paymentOrderId = cast ride.id
+      mbOrder <- QPaymentOrder.findById paymentOrderId
+      case mbOrder of
+        Nothing -> pure () -- No payment order, nothing to capture
+        Just order -> do
+          -- Skip if already charged
+          when (order.status /= Payment.CHARGED) $ do
+            -- Get the latest transaction to check if payment is actually pending
+            mbLatestTransaction <- QPaymentTransaction.findLatestByOrderId order.id
+            when (isPaymentPending mbLatestTransaction) $ do
+              -- Use Redis lock to prevent concurrent execution with scheduler
+              let lockKey = "PaymentJobExec:RideId-" <> ride.id.getId
+              Redis.withWaitOnLockRedisWithExpiry lockKey 10 20 $ do
+                -- Try to capture the payment
+                captureResult <- try $ SPayment.chargePaymentIntent person.merchantId merchantOperatingCityId person.paymentMode order.paymentServiceOrderId
+                case captureResult of
+                  Right True -> do
+                    -- Payment captured successfully
+                    QPaymentOrder.updateStatus order.id order.paymentServiceOrderId Payment.CHARGED
+                    QRide.markPaymentStatus DRide.Completed ride.id
+                    logInfo $ "Successfully captured pending payment for ride: " <> ride.id.getId
+                  Right False -> do
+                    -- Payment capture returned false (failed but not exception)
+                    logError $ "Failed to capture pending payment for ride: " <> ride.id.getId
+                    throwError $ InvalidRequest "Previous ride payment failed. Please clear your pending dues before booking a new ride."
+                  Left (err :: SomeException) -> do
+                    -- Payment capture threw an exception
+                    logError $ "Exception capturing pending payment for ride: " <> ride.id.getId <> " error: " <> show err
+                    throwError $ InvalidRequest "Previous ride payment failed. Please clear your pending dues before booking a new ride."
+  where
+    -- Check if the payment is pending/failed
+    isPaymentPending :: Maybe DPaymentTransaction.PaymentTransaction -> Bool
+    isPaymentPending Nothing = True -- No transaction exists
+    isPaymentPending (Just latestTxn) =
+      latestTxn.status == Payment.CANCELLED
+        && latestTxn.retryCount >= 2
+        && isJust latestTxn.bankErrorCode
+
 confirm ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -145,6 +210,8 @@ confirm DConfirmReq {..} = do
   when (merchant.onlinePayment && paymentInstrument /= Just DMPM.Cash) $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
     SPayment.updateDefaultPersonPaymentMethodId person paymentMethodId -- Make payment method as default payment method for customer
+    -- Capture any pending payment before allowing new ride
+    capturePendingPaymentIfExists person searchRequest.merchantOperatingCityId
   activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
   case activeBooking of
     Just booking | not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking OnConfirm
