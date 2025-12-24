@@ -3539,7 +3539,6 @@ validateVehicleServiceTierUpdate merchantOpCityId existing req = do
     when (cap <= 0 || cap > 100) $
       throwError $ InvalidRequest "seatingCapacity must be between 1 and 100"
 
-
   -- 4. Allowed variants cannot be empty
   whenJust req.allowedVehicleVariant $ \vars ->
     when (null vars) $
