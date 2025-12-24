@@ -14,10 +14,13 @@ import qualified Data.Text.Encoding as DTE
 import qualified IGM.Enums as Spec
 import IssueManagement.Common as Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
-import IssueManagement.Domain.Types.Issue.IssueMessage
+import IssueManagement.Domain.Types.Issue.IssueConfig (IssueConfig)
+import IssueManagement.Domain.Types.Issue.IssueMessage (IssueMessage)
+import qualified IssueManagement.Domain.Types.Issue.IssueMessage as IssueMessage
 import IssueManagement.Domain.Types.Issue.IssueOption
 import IssueManagement.Domain.Types.Issue.IssueReport
 import IssueManagement.Domain.Types.MediaFile (MediaFile)
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Types.CacheFlow as Reexport
@@ -38,12 +41,14 @@ data IssueCategoryRes = IssueCategoryRes
     maxAllowedRideAge :: Maybe Seconds,
     allowedRideStatuses :: Maybe [RideStatus]
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 newtype IssueCategoryListRes = IssueCategoryListRes
   { categories :: [IssueCategoryRes]
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
 -- issues list --------------------------------------
@@ -447,4 +452,199 @@ data IssueReportReqV2 = IssueReportReqV2
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets IssueReportReqV2 where
+  hideSecrets = identity
+
+-----------------------------------------------------------
+-- Get Category Detail API ---------------------------------
+
+data IssueCategoryDetailRes = IssueCategoryDetailRes
+  { category :: IssueCategoryRes,
+    translations :: [Translation],
+    messages :: [IssueMessageDetailRes],
+    options :: [IssueOptionDetailRes]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data IssueMessageDetailRes = IssueMessageDetailRes
+  { messageId :: Id IssueMessage,
+    message :: Text,
+    messageTitle :: Maybe Text,
+    messageAction :: Maybe Text,
+    label :: Maybe Text,
+    priority :: Int,
+    messageType :: IssueMessage.IssueMessageType,
+    isActive :: Bool,
+    mediaFiles :: [MediaFile],
+    translations :: DetailedTranslationRes,
+    childOptions :: [IssueOptionDetailRes]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DetailedTranslationRes = DetailedTranslationRes
+  { titleTranslation :: [Translation],
+    contentTranslation :: [Translation],
+    actionTranslation :: [Translation]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data IssueOptionDetailRes = IssueOptionDetailRes
+  { optionId :: Id IssueOption,
+    option :: Text,
+    label :: Maybe Text,
+    priority :: Int,
+    isActive :: Bool,
+    translations :: [Translation],
+    childMessages :: [IssueMessageDetailRes]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-----------------------------------------------------------
+-- List Options API ----------------------------------------
+
+data IssueOptionListRes = IssueOptionListRes
+  { options :: [IssueOptionDetailRes]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-----------------------------------------------------------
+-- List Messages API ---------------------------------------
+
+data IssueMessageListRes = IssueMessageListRes
+  { messages :: [IssueMessageDetailRes]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-----------------------------------------------------------
+-- Preview Category Flow API -------------------------------
+
+data IssueCategoryFlowPreviewRes = IssueCategoryFlowPreviewRes
+  { category :: IssueCategoryRes,
+    flowNodes :: [MessageFlowNode]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MessageFlowNode = MessageFlowNode
+  { message :: MessagePreview,
+    options :: [OptionFlowNode],
+    nextMessage :: Maybe MessageFlowNode
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MessagePreview = MessagePreview
+  { messageId :: Id IssueMessage,
+    message :: Text,
+    messageTitle :: Maybe Text,
+    messageAction :: Maybe Text,
+    label :: Maybe Text,
+    messageType :: IssueMessage.IssueMessageType
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OptionFlowNode = OptionFlowNode
+  { optionId :: Id IssueOption,
+    option :: Text,
+    label :: Maybe Text,
+    childNodes :: [MessageFlowNode]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-----------------------------------------------------------
+-- Translation APIs ----------------------------------------
+
+data IssueTranslationListRes = IssueTranslationListRes
+  { translations :: [IssueTranslationItem]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data IssueTranslationItem = IssueTranslationItem
+  { sentence :: Text,
+    language :: Language,
+    translation :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BulkUpsertTranslationsReq = BulkUpsertTranslationsReq
+  { translations :: [IssueTranslationItem]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets BulkUpsertTranslationsReq where
+  hideSecrets = identity
+
+-----------------------------------------------------------
+-- IssueConfig APIs ----------------------------------------
+
+data IssueConfigRes = IssueConfigRes
+  { issueConfigId :: Id IssueConfig,
+    autoMarkIssueClosedDuration :: Double,
+    onCreateIssueMsgs :: [Id IssueMessage],
+    onIssueReopenMsgs :: [Id IssueMessage],
+    onAutoMarkIssueClsMsgs :: [Id IssueMessage],
+    onKaptMarkIssueResMsgs :: [Id IssueMessage],
+    onIssueCloseMsgs :: [Id IssueMessage],
+    reopenCount :: Int,
+    merchantName :: Maybe Text,
+    supportEmail :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdateIssueConfigReq = UpdateIssueConfigReq
+  { autoMarkIssueClosedDuration :: Maybe Double,
+    onCreateIssueMsgs :: Maybe [Id IssueMessage],
+    onIssueReopenMsgs :: Maybe [Id IssueMessage],
+    onAutoMarkIssueClsMsgs :: Maybe [Id IssueMessage],
+    onKaptMarkIssueResMsgs :: Maybe [Id IssueMessage],
+    onIssueCloseMsgs :: Maybe [Id IssueMessage],
+    reopenCount :: Maybe Int,
+    merchantName :: Maybe Text,
+    supportEmail :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateIssueConfigReq where
+  hideSecrets = identity
+
+-----------------------------------------------------------
+-- Reorder Priority APIs -----------------------------------
+
+newtype ReorderIssueCategoryReq = ReorderIssueCategoryReq
+  { categoryOrder :: [(Id IssueCategory, Int)]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets ReorderIssueCategoryReq where
+  hideSecrets = identity
+
+newtype ReorderIssueOptionReq = ReorderIssueOptionReq
+  { optionOrder :: [(Id IssueOption, Int)]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets ReorderIssueOptionReq where
+  hideSecrets = identity
+
+newtype ReorderIssueMessageReq = ReorderIssueMessageReq
+  { messageOrder :: [(Id IssueMessage, Int)]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets ReorderIssueMessageReq where
   hideSecrets = identity
