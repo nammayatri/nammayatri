@@ -67,6 +67,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import SharedLogic.Analytics as Analytics
@@ -328,7 +329,7 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
   driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber, mbEmail, mbPersonId') of
     (Just mobileNumber, Nothing, Nothing, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
-      let mobileCountryCode = fromMaybe DCommon.mobileIndianCode (DCommon.appendPlusInMobileCountryCode mbMobileCountryCode)
+      let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) (DCommon.appendPlusInMobileCountryCode mbMobileCountryCode)
       B.runInReplica $
         QDriverStats.fetchDriverInfoWithRidesCount merchant merchantOpCity (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing Nothing Nothing
           >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
@@ -372,10 +373,11 @@ getDriverFeedbackList ::
   Maybe Text ->
   Maybe Text ->
   Flow Common.GetFeedbackListRes
-getDriverFeedbackList merchantShortId _opCity mbPersonId mbMobileNumber mbMobileCountryCode = do
+getDriverFeedbackList merchantShortId opCity mbPersonId mbMobileNumber mbMobileCountryCode = do
   when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
     throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let mbPersonId' = cast @Common.Driver @DP.Person <$> mbPersonId
   driverId <- case (mbPersonId', mbMobileNumber) of
     (Just personId, _) -> do
@@ -384,7 +386,7 @@ getDriverFeedbackList merchantShortId _opCity mbPersonId mbMobileNumber mbMobile
       pure personId
     (Nothing, Just mobileNumber) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
-      let mobileCountryCode = fromMaybe DCommon.mobileIndianCode (DCommon.appendPlusInMobileCountryCode (T.strip <$> mbMobileCountryCode))
+      let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) (DCommon.appendPlusInMobileCountryCode (T.strip <$> mbMobileCountryCode))
       person <-
         B.runInReplica $
           QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberDbHash merchant.id DP.DRIVER

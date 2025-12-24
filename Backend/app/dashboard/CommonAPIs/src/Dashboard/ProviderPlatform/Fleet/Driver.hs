@@ -25,6 +25,7 @@ import Dashboard.Common.Driver as Reexport
 import Data.Text as T
 import Kernel.Prelude
 import Kernel.ServantMultipart
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
@@ -105,12 +106,12 @@ instance ToMultipart Tmp CreateDriverBusRouteMappingReq where
           Just id -> [Input "fleetOwnerId" id]
     MultipartData inputArr [FileData "file" (T.pack form.file) "" (form.file)]
 
-validateUpdateFleetOwnerInfoReq :: Validate UpdateFleetOwnerInfoReq
-validateUpdateFleetOwnerInfoReq UpdateFleetOwnerInfoReq {..} =
+validateUpdateFleetOwnerInfoReq :: Context.Country -> Validate UpdateFleetOwnerInfoReq
+validateUpdateFleetOwnerInfoReq country UpdateFleetOwnerInfoReq {..} =
   sequenceA_
     [ validateField "firstName" firstName $ InMaybe $ MinLength 1 `And` MaxLength 50 `And` P.name,
       validateField "lastName" lastName $ InMaybe (MaxLength 50 `And` P.name),
-      validateField "mobileNo" mobileNo $ InMaybe $ P.indianMobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode $ InMaybe P.mobileIndianCode,
+      validateField "mobileNo" mobileNo $ InMaybe $ P.getMobileNumberPredicate country,
+      validateField "mobileCountryCode" mobileCountryCode $ InMaybe $ P.getMobileCountryCodePredicate country,
       validateField "email" email $ InMaybe P.email
     ]

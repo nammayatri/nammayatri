@@ -45,13 +45,6 @@ validateUpdateDriverNameReq UpdateDriverNameReq {..} =
       validateField "lastName" lastName $ InMaybe (MaxLength 50 `And` P.name)
     ]
 
-validateIndianMobileNumber :: Validate UpdatePhoneNumberReq
-validateIndianMobileNumber UpdatePhoneNumberReq {..} =
-  sequenceA_
-    [ validateField "newPhoneNumber" newPhoneNumber P.indianMobileNumber,
-      validateField "newCountryCode" newCountryCode P.mobileIndianCode
-    ]
-
 instance HideSecrets ClearDriverFeeReq where
   hideSecrets = identity
 

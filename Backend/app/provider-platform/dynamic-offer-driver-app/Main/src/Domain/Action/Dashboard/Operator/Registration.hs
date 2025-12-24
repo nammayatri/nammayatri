@@ -1,6 +1,7 @@
 module Domain.Action.Dashboard.Operator.Registration (postOperatorRegister) where
 
 import qualified API.Types.ProviderPlatform.Operator.Registration as Common
+import qualified Dashboard.ProviderPlatform.Operator.Registration as DashboardCommon
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.Merchant as DM
@@ -12,6 +13,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Validation
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -31,13 +33,14 @@ postOperatorRegister merchantShortId opCity req = do
     QMerchant.findByShortId merchantShortId
       >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
 
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  runRequestValidation (DashboardCommon.validateOperatorRegisterReq merchantOpCity.country) req
   let personAuth = buildOperatorAuthReq merchant.id opCity req
   personOpt <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.OPERATOR, DP.FLEET_OWNER]
   case personOpt of
     Just pData -> throwError $ UserAlreadyExists pData.id.getId
     Nothing -> do
-      person <- createOperatorDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion
+      person <- createOperatorDetails personAuth merchant.id merchantOpCity.id True deploymentVersion.getDeploymentVersion
       return $ Common.OperatorRegisterResp {personId = cast @DP.Person @Common.Operator person.id}
 
 createOperatorDetails :: Registration.AuthReq -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Flow DP.Person

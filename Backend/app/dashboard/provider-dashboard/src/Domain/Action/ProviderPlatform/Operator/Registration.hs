@@ -16,10 +16,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.Predicate
 import Kernel.Utils.Common
-import qualified Kernel.Utils.Predicates as P
-import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as ST
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
@@ -37,11 +34,10 @@ postOperatorRegister ::
   Common.OperatorRegisterReq ->
   Flow APISuccess
 postOperatorRegister merchantShortId opCity apiTokenInfo req = do
-  runRequestValidation validateOperator req
-  unlessM (null <$> QP.findByEmailOrMobile req.email req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone or Email already registered")
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   void $ merchantServerAccessCheck merchant
+  unlessM (null <$> QP.findByEmailOrMobile req.email req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone or Email already registered")
   transaction <- ST.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   res <- ST.withTransactionStoring transaction do
     Client.callOperatorAPI checkedMerchantId opCity (.registrationDSL.postOperatorRegister) req
@@ -88,13 +84,3 @@ buildOperator req operatorId role = do
         approvedBy = Nothing,
         rejectedBy = Nothing
       }
-
-validateOperator :: Validate Common.OperatorRegisterReq
-validateOperator Common.OperatorRegisterReq {..} =
-  sequenceA_
-    [ validateField "firstName" firstName $ MinLength 1 `And` MaxLength 50 `And` P.name,
-      validateField "lastName" lastName $ (MaxLength 50 `And` P.name),
-      validateField "mobileNumber" mobileNumber P.indianMobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode,
-      validateField "email" email $ InMaybe P.email
-    ]
