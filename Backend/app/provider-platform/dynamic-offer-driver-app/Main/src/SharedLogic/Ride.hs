@@ -327,7 +327,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         driverCancellationPenaltyFeeId = Nothing,
         driverCancellationPenaltyAmount = Nothing,
         cancellationChargesOnCancel = Nothing,
-        driverCancellationPenaltyWaivedReason = Nothing
+        driverCancellationPenaltyWaivedReason = Nothing,
+        finalFarePolicyId = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
