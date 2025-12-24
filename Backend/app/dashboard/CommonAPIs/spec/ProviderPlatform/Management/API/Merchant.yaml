@@ -38,6 +38,8 @@ imports:
   Value: Data.Aeson
   WhiteListOperatingCityReq: Dashboard.Common.Merchant
   WhiteListOperatingCityRes: Dashboard.Common.Merchant
+  ServiceTierType: Dashboard.Common
+  Centesimal: Kernel.Types.Common
 
 module: Merchant
 
@@ -532,6 +534,22 @@ apis:
             response:
               type: CreateMerchantOperatingCityRes
       userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+  - GET: # VehicleServiceTierConfigAPI
+      endpoint: /config/vehicleServiceTier
+      auth: ApiAuthV2
+      query:
+        - serviceTierType: ServiceTierType
+      response:
+        type: VehicleServiceTierRes
+  - POST: # VehicleServiceTierConfigUpdateAPI
+      endpoint: /config/vehicleServiceTier/update
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - serviceTierType: ServiceTierType
+      request:
+        type: VehicleServiceTierConfigUpdateReq
+      response:
+        type: APISuccess
 
 
 types:
@@ -921,6 +939,61 @@ types:
     - state: IndianState
     - city: City
     - geom: Maybe Text
+  VehicleServiceTierRes:
+    - recordType: Type
+    - type: [VehicleServiceTierItem]
+  VehicleServiceTierItem:
+    - serviceTierType: ServiceTierType
+    - name: Text
+    - shortDescription: Maybe Text
+    - longDescription: Maybe Text
+    - seatingCapacity: Maybe Int
+    - airConditionedThreshold: Maybe Double
+    - isAirConditioned: Maybe Bool
+    - isIntercityEnabled: Maybe Bool
+    - isRentalsEnabled: Maybe Bool
+    - allowedVehicleVariant: [VehicleVariant]
+    - autoSelectedVehicleVariant: [VehicleVariant]
+    - defaultForVehicleVariant: [VehicleVariant]
+    - vehicleCategory: Maybe VehicleCategory
+    - vehicleIconUrl: Maybe Text
+    - driverRating: Maybe Centesimal
+    - vehicleRating: Maybe Double
+    - priority: Int
+    - baseVehicleServiceTier: Maybe Bool
+    - fareAdditionPerKmOverBaseServiceTier: Maybe Int
+    - oxygen: Maybe Double
+    - ventilator: Maybe Int
+    - luggageCapacity: Maybe Int
+    - stopFcmThreshold: Maybe Int
+    - stopFcmSuppressCount: Maybe Int
+    - scheduleBookingListEligibilityTags: Maybe [Text]
+  VehicleServiceTierConfigUpdateReq:
+    - name: Maybe Text
+    - shortDescription: Maybe Text
+    - longDescription: Maybe Text
+    - seatingCapacity: Maybe Int
+    - airConditionedThreshold: Maybe Double
+    - isAirConditioned: Maybe Bool
+    - isIntercityEnabled: Maybe Bool
+    - isRentalsEnabled: Maybe Bool
+    - allowedVehicleVariant: Maybe [VehicleVariant]
+    - autoSelectedVehicleVariant: Maybe [VehicleVariant]
+    - defaultForVehicleVariant: Maybe [VehicleVariant]
+    - vehicleIconUrl: Maybe Text
+    - driverRating: Maybe Centesimal
+    - vehicleRating: Maybe Double
+    - priority: Maybe Int
+    - baseVehicleServiceTier: Maybe Bool
+    - fareAdditionPerKmOverBaseServiceTier: Maybe Int
+    - oxygen: Maybe Double
+    - ventilator: Maybe Int
+    - luggageCapacity: Maybe Int
+    - stopFcmThreshold: Maybe Int
+    - stopFcmSuppressCount: Maybe Int
+    - scheduleBookingListEligibilityTags: Maybe [Text]
+    - derive: "'HideSecrets"
+
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
