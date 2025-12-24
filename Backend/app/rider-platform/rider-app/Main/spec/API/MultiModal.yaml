@@ -362,6 +362,23 @@ types:
   OnboardedVehicleDetailsReq:
     vehicleNumber: Text
 
+  TowerInfoData:
+    networkType: Text
+    cellId: Text
+    areaCode: Text
+    signalStrength: Int
+
+  TowerInfoReq:
+    userLat: Double
+    userLng: Double
+    latLngAccuracy: Double
+    timeStamp: UTCTime
+    towerInfo: TowerInfoData
+
+  TowerInfoResp:
+    success: Bool
+    message: Text
+
 apis:
   - POST:
       endpoint: /multimodal/routeServiceability
@@ -679,3 +696,11 @@ apis:
         type: SetRouteNameReq
       response:
         type: JourneyInfoResp
+
+  - POST:
+      endpoint: /getTowerInfo
+      auth: TokenAuth
+      request:
+        type: TowerInfoReq
+      response:
+        type: TowerInfoResp

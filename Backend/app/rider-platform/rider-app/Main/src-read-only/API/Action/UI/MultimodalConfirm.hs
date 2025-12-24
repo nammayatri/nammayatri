@@ -28,16 +28,9 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "updateBusLocation" :> ReqBody '[JSON] API.Types.UI.MultimodalConfirm.UpdateBusLocationReq :> QueryParam "busOTP" Kernel.Prelude.Text
+  ( TokenAuth :> "multimodal" :> "routeServiceability" :> ReqBody ('[JSON]) API.Types.UI.MultimodalConfirm.RouteServiceabilityReq
       :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-      :<|> TokenAuth
-      :> "multimodal"
-      :> "routeServiceability"
-      :> ReqBody '[JSON] API.Types.UI.MultimodalConfirm.RouteServiceabilityReq
-      :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
       :<|> TokenAuth
       :> "multimodal"
@@ -46,7 +39,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "initiate"
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyInfoResp
       :<|> TokenAuth
       :> "multimodal"
@@ -58,10 +51,10 @@ type API =
            "forceBookLegOrder"
            Kernel.Prelude.Int
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyConfirmReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyConfirmResp
       :<|> TokenAuth
       :> "multimodal"
@@ -71,7 +64,7 @@ type API =
       :> "booking"
       :> "info"
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyInfoResp
       :<|> TokenAuth
       :> "multimodal"
@@ -81,7 +74,7 @@ type API =
       :> "booking"
       :> "paymentStatus"
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyBookingPaymentStatus
       :<|> TokenAuth
       :> "multimodal"
@@ -91,10 +84,10 @@ type API =
       :> "payment"
       :> "updateOrder"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.UpdatePaymentOrderReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.UpdatePaymentOrderResp
       :<|> TokenAuth
       :> "multimodal"
@@ -103,10 +96,10 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "switch"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.SwitchLegReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyInfoResp
       :<|> TokenAuth
       :> "multimodal"
@@ -120,7 +113,7 @@ type API =
            Kernel.Prelude.Int
       :> "skip"
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
@@ -134,7 +127,7 @@ type API =
            Kernel.Prelude.Int
       :> "addSkippedLeg"
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
@@ -144,10 +137,10 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "leg"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.ExtendLegReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
@@ -158,10 +151,10 @@ type API =
       :> "leg"
       :> "getfare"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.ExtendLegGetFareReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.ExtendLegGetFareResp
       :<|> TokenAuth
       :> "multimodal"
@@ -171,7 +164,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "status"
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyStatusResp
       :<|> TokenAuth
       :> "multimodal"
@@ -181,7 +174,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "cancel"
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
@@ -191,10 +184,10 @@ type API =
       :> "rider"
       :> "location"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.RiderLocationReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyStatusResp
       :<|> TokenAuth
       :> "multimodal"
@@ -207,10 +200,10 @@ type API =
            Kernel.Prelude.Int
       :> "switchTaxi"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.SwitchTaxiReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyInfoResp
       :<|> TokenAuth
       :> "multimodal"
@@ -223,10 +216,10 @@ type API =
            Kernel.Prelude.Int
       :> "switchFRFSTier"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.SwitchFRFSTierReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyInfoResp
       :<|> TokenAuth
       :> "multimodal"
@@ -239,7 +232,7 @@ type API =
            Kernel.Prelude.Int
       :> "similarJourneyLegs"
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.SimilarJourneyLegsResp
       :<|> TokenAuth
       :> "multimodal"
@@ -252,10 +245,10 @@ type API =
            Kernel.Prelude.Int
       :> "switchJourneyLeg"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.SwitchJourneyLegReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyInfoResp
       :<|> TokenAuth
       :> "multimodal"
@@ -264,10 +257,10 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "journeyFeedback"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyFeedBackForm
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
@@ -276,34 +269,34 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "feedback"
       :> Get
-           '[JSON]
-           (Kernel.Prelude.Maybe API.Types.UI.MultimodalConfirm.JourneyFeedBackForm)
+           ('[JSON])
+           ((Kernel.Prelude.Maybe API.Types.UI.MultimodalConfirm.JourneyFeedBackForm))
       :<|> TokenAuth
       :> "multimodal"
       :> "user"
       :> "preferences"
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.MultimodalUserPreferences
       :<|> TokenAuth
       :> "multimodal"
       :> "user"
       :> "preferences"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.MultimodalUserPreferences
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
       :> "transitOptions"
       :> "lite"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.MultimodalTransitOptionsResp
       :<|> TokenAuth
       :> "publicTransport"
@@ -324,7 +317,7 @@ type API =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.PublicTransportData
       :<|> TokenAuth
       :> "publicTransport"
@@ -336,7 +329,7 @@ type API =
            "vehicleNumber"
            Kernel.Prelude.Text
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.PublicTransportData
       :<|> TokenAuth
       :> "multimodal"
@@ -352,7 +345,7 @@ type API =
            "enableSuburbanRoundTrip"
            Kernel.Prelude.Bool
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.LegServiceTierOptionsResp
       :<|> TokenAuth
       :> "multimodal"
@@ -369,10 +362,10 @@ type API =
            Kernel.Prelude.Int
       :> "setOnboardedVehicleDetails"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.OnboardedVehicleDetailsReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyInfoResp
       :<|> TokenAuth
       :> "multimodal"
@@ -392,7 +385,7 @@ type API =
            "status"
            Lib.JourneyLeg.Types.JourneyLegStatus
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyStatusResp
       :<|> TokenAuth
       :> "multimodal"
@@ -415,7 +408,7 @@ type API =
            "trackingStatusLastUpdatedAt"
            Kernel.Prelude.UTCTime
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyStatusResp
       :<|> TokenAuth
       :> "multimodal"
@@ -424,7 +417,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "complete"
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyStatusResp
       :<|> TokenAuth
       :> "multimodal"
@@ -434,10 +427,10 @@ type API =
            "city"
            Kernel.Types.Beckn.Context.City
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
       :<|> TokenAuth
       :> "multimodal"
@@ -450,7 +443,7 @@ type API =
            Kernel.Prelude.Int
       :> "softCancel"
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
@@ -464,7 +457,7 @@ type API =
       :> "cancel"
       :> "status"
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.MultimodalCancelStatusResp
       :<|> TokenAuth
       :> "multimodal"
@@ -477,7 +470,7 @@ type API =
            Kernel.Prelude.Int
       :> "cancel"
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "multimodal"
@@ -490,53 +483,52 @@ type API =
            Kernel.Prelude.Int
       :> "changeStops"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.ChangeStopsReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.ChangeStopsResp
       :<|> TokenAuth
       :> "multimodal"
       :> "routeAvailability"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.RouteAvailabilityReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.RouteAvailabilityResp
       :<|> TokenAuth
       :> "multimodal"
       :> "switch"
       :> "route"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.SwitchRouteReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyInfoResp
       :<|> TokenAuth
       :> "multimodal"
       :> "set"
       :> "routeName"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.SetRouteNameReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.MultimodalConfirm.JourneyInfoResp
+      :<|> TokenAuth
+      :> "getTowerInfo"
+      :> ReqBody
+           ('[JSON])
+           API.Types.UI.MultimodalConfirm.TowerInfoReq
+      :> Post
+           ('[JSON])
+           API.Types.UI.MultimodalConfirm.TowerInfoResp
   )
 
 handler :: Environment.FlowServer API
-handler = updateBusLocationHandler :<|> postMultimodalRouteServiceability :<|> postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> getMultimodalOrderSimilarJourneyLegs :<|> postMultimodalOrderSwitchJourneyLeg :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getPublicTransportVehicleData :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSublegSetOnboardedVehicleDetails :<|> postMultimodalOrderSublegSetStatus :<|> postMultimodalOrderSublegSetTrackingStatus :<|> postMultimodalComplete :<|> postMultimodalTicketVerify :<|> postMultimodalOrderSoftCancel :<|> getMultimodalOrderCancelStatus :<|> postMultimodalOrderCancel :<|> postMultimodalOrderChangeStops :<|> postMultimodalRouteAvailability :<|> postMultimodalSwitchRoute :<|> postMultimodalSetRouteName
-
-updateBusLocationHandler ::
-  ( Kernel.Types.Id.Id Domain.Types.Person.Person,
-    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
-  ) ->
-  API.Types.UI.MultimodalConfirm.UpdateBusLocationReq ->
-  Maybe Kernel.Prelude.Text ->
-  Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
-updateBusLocationHandler _ req busOTP = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.updateBusLocation req (maybeToList busOTP)
+handler = postMultimodalRouteServiceability :<|> postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> getMultimodalOrderSimilarJourneyLegs :<|> postMultimodalOrderSwitchJourneyLeg :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getPublicTransportVehicleData :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSublegSetOnboardedVehicleDetails :<|> postMultimodalOrderSublegSetStatus :<|> postMultimodalOrderSublegSetTrackingStatus :<|> postMultimodalComplete :<|> postMultimodalTicketVerify :<|> postMultimodalOrderSoftCancel :<|> getMultimodalOrderCancelStatus :<|> postMultimodalOrderCancel :<|> postMultimodalOrderChangeStops :<|> postMultimodalRouteAvailability :<|> postMultimodalSwitchRoute :<|> postMultimodalSetRouteName :<|> postGetTowerInfo
 
 postMultimodalRouteServiceability ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -561,7 +553,7 @@ postMultimodalConfirm ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyConfirmResp
   )
@@ -765,11 +757,11 @@ getPublicTransportData ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
+    Kernel.Prelude.Maybe (Kernel.Types.Beckn.Context.City) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+    Kernel.Prelude.Maybe (BecknV2.FRFS.Enums.VehicleCategory) ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.PublicTransportData
   )
 getPublicTransportData a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
@@ -790,7 +782,7 @@ getMultimodalOrderGetLegTierOptions ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.LegServiceTierOptionsResp
   )
 getMultimodalOrderGetLegTierOptions a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalOrderGetLegTierOptions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
@@ -827,7 +819,7 @@ postMultimodalOrderSublegSetTrackingStatus ::
     Kernel.Prelude.Int ->
     Kernel.Prelude.Int ->
     Lib.JourneyModule.State.Types.TrackingStatus ->
-    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
 postMultimodalOrderSublegSetTrackingStatus a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetTrackingStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
@@ -918,3 +910,12 @@ postMultimodalSetRouteName ::
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
 postMultimodalSetRouteName a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalSetRouteName (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postGetTowerInfo ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.MultimodalConfirm.TowerInfoReq ->
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.TowerInfoResp
+  )
+postGetTowerInfo a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postGetTowerInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

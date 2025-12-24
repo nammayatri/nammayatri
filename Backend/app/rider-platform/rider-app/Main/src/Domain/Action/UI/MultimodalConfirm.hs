@@ -40,7 +40,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalSwitchRoute,
     postMultimodalOrderSublegSetOnboardedVehicleDetails,
     postMultimodalSetRouteName,
-    updateBusLocation,
+    postGetTowerInfo,
   )
 where
 
@@ -62,7 +62,7 @@ import Data.List (nub, nubBy, partition)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.CancellationReason as SCR
@@ -130,7 +130,6 @@ import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Booking as QBooking
-import qualified Storage.Queries.DeviceVehicleMapping as QDeviceVehicleMapping
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -2115,66 +2114,58 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
           logError $ "SetOnboarding OTPRest failed: " <> show err
           return Nothing
 
-updateBusLocation ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Log m,
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
-  ) =>
-  ApiTypes.UpdateBusLocationReq ->
-  [Kernel.Prelude.Text] ->
-  m Kernel.Types.APISuccess.APISuccess
-updateBusLocation req busOTPList = do
-  let busOTP =
-        fromMaybe
-          (error "busOTP query parameter is required")
-          (listToMaybe busOTPList)
+postGetTowerInfo ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  ApiTypes.TowerInfoReq ->
+  Flow ApiTypes.TowerInfoResp
+postGetTowerInfo (mbPersonId, _) req = do
+  -- Extract person ID for logging logic (optional, for text logs)
+  let personIdStr = maybe "Unknown" (.getId) mbPersonId
 
-  deviceMappings <- QDeviceVehicleMapping.findByVehicleNo busOTP
-  deviceMapping <-
-    fromMaybeM
-      (InvalidRequest "Device not found for provided busOTP")
-      (listToMaybe deviceMappings)
+  -- 1. Log to text/console (standard logging)
+  logInfo $
+    "Received tower info from person: " <> personIdStr
+      <> " | Location: ("
+      <> show req.userLat
+      <> ", "
+      <> show req.userLng
+      <> ") | Network: "
+      <> req.towerInfo.networkType
+      <> " | Cell ID: "
+      <> req.towerInfo.cellId
+      <> " | Signal: "
+      <> show req.towerInfo.signalStrength
 
-  now <- getCurrentTime
+  -- 2. Validate Request
+  validateCoordinates req.userLat req.userLng
+  validateSignalStrength req.towerInfo.signalStrength
 
-  let serverTimeEpoch :: Int64
-      serverTimeEpoch =
-        floor (utcTimeToPOSIXSeconds now)
-
-  let requestTimestampSeconds :: Int64
-      requestTimestampSeconds =
-        floor (req.timestamp :: Double)
-
-  let kafkaPacket =
-        ApiTypes.KafKaPacket
-          { lat = req.lat,
-            long = req.long,
-            timestamp = requestTimestampSeconds,
-            deviceId = deviceMapping.deviceId,
-            vehicleNumber = busOTP,
-            speed = 0.0,
-            pushedToKafkaAt = serverTimeEpoch,
-            dataState = "L",
-            serverTime = serverTimeEpoch,
-            provider = "amnex",
-            raw = "",
-            client_ip = "0.0.0.0",
-            ign_status = "ON",
-            routeNumber = "101",
-            signalQuality = "Good"
+  -- 3. Construct Response
+  let response =
+        ApiTypes.TowerInfoResp
+          { success = True,
+            message = "Tower information received successfully"
           }
 
-  logInfo $ "Kafka packet: " <> show kafkaPacket
-
-  let topicName = "gps_live_data"
-  let key = deviceMapping.deviceId
-
-  fork "Pushing bus location to Kafka" $ do
-    produceMessage (topicName, Just (TE.encodeUtf8 key)) kafkaPacket
+  -- 4. Push to Kafka
+  let topicName = "tower_info_data"
+  let key = personIdStr
+  fork "Logging TowerInfo to Kafka" $ do
+    produceMessage (topicName, Just (TE.encodeUtf8 key)) req
       `catch` \(e :: SomeException) ->
         logError $
-          "Failed to push bus location to Kafka: " <> show e
+          "Failed to push tower info to Kafka: " <> show e
 
-  pure Kernel.Types.APISuccess.Success
+  return response
+  where
+    validateCoordinates lat lng = do
+      when (lat < -90 || lat > 90) $
+        throwError $ InvalidRequest "Invalid latitude: must be between -90 and 90"
+      when (lng < -180 || lng > 180) $
+        throwError $ InvalidRequest "Invalid longitude: must be between -180 and 180"
+
+    validateSignalStrength strength = do
+      when (strength < -150 || strength > 0) $
+        logWarning $ "Unusual signal strength value: " <> show strength
