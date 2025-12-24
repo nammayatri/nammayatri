@@ -280,7 +280,8 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             merchantOperatingCityId = mbMerchantOpCityId,
             paymentFulfillmentStatus = Just FulfillmentPending,
             domainEntityId = Nothing,
-            domainTransactionId = Nothing
+            domainTransactionId = Nothing,
+            effectAmount = Nothing
           }
 
     buildTransaction ::
@@ -571,7 +572,8 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity 
             merchantOperatingCityId = mbMerchantOpCityId,
             paymentFulfillmentStatus = Just FulfillmentPending,
             domainEntityId = Nothing,
-            domainTransactionId = Nothing
+            domainTransactionId = Nothing,
+            effectAmount = Nothing
           }
   buildPaymentSplit req.orderId mkPaymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
   pure mkPaymentOrder
@@ -1108,7 +1110,8 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             merchantOperatingCityId = mbMerchantOpCityId,
             paymentFulfillmentStatus = Just FulfillmentPending,
             domainEntityId = Nothing,
-            domainTransactionId = Nothing
+            domainTransactionId = Nothing,
+            effectAmount = Nothing
           }
 
 --- refunds api ----
@@ -1123,6 +1126,7 @@ createRefundService ::
 createRefundService orderShortId refundsCall =
   do
     order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderDoesNotExist orderShortId.getShortId)
+    logDebug $ "Payment order: " <> show order
     Redis.whenWithLockRedisAndReturnValue (refundProccessingKey orderShortId.getShortId) 60 $ do
       processRefund order
     >>= \case
@@ -1135,7 +1139,10 @@ createRefundService orderShortId refundsCall =
       if null exisitingOrderRefunds
         then do
           paymentSplits <- QPaymentOrderSplit.findByPaymentOrder order.id
-          splitSettlementDetails <- mkSplitSettlementDetails paymentSplits
+          splitSettlementDetails <-
+            case order.effectAmount of
+              Just effectAmount | effectAmount /= order.amount -> return Nothing
+              _ -> mkSplitSettlementDetails paymentSplits
           refundId <- generateGUID
           let refundReq =
                 PInterface.AutoRefundReq
