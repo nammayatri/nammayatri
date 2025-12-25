@@ -1,0 +1,21 @@
+imports:
+  DriverFee: Domain.Types.DriverFee
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+
+VendorFee:
+  tableName: vendor_fee
+
+  fields:
+    driverFeeId : Id DriverFee
+    vendorId : Text
+    amount : HighPrecMoney
+
+  constraints:
+    driverFeeId: PrimaryKey
+    vendorId: PrimaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -21,9 +21,16 @@ import Effect.Uncurried
 import Engineering.Helpers.Commons
 
 foreign import waitingCountdownTimerV2Impl :: forall action. EffectFn5 Int String String (action -> Effect Unit) (String -> String -> Int -> action) Unit
-foreign import countDownImpl :: forall action. EffectFn4 Int String (action -> Effect Unit) (Int -> String -> String-> action) Unit
+foreign import countDownImpl :: forall action. EffectFn5 Int String String (action -> Effect Unit) (Int -> String -> String-> action) Unit
 foreign import clearTimerWithId :: String -> Unit
+foreign import timeInMinFormat :: Int -> String
+foreign import timeStringToSeconds :: String -> Int
 foreign import startTimerWithTimeV2Impl :: forall action. EffectFn5 String String String (action -> Effect Unit) (Int -> String -> String -> action) Unit
+foreign import rideDurationTimerImpl :: forall action. EffectFn5 Int String String (action -> Effect Unit) (String -> String -> Int -> action) Unit
+
+foreign import clearTimerWithIdEffect :: EffectFn1 String Unit
+
+foreign import resetAllTimers :: Effect Unit
 
 waitingCountdownTimerV2 :: forall action. Int -> String -> String -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
 waitingCountdownTimerV2 = runEffectFn5 waitingCountdownTimerV2Impl
@@ -31,11 +38,14 @@ waitingCountdownTimerV2 = runEffectFn5 waitingCountdownTimerV2Impl
 startTimerWithTimeV2 :: forall action. String -> String -> String -> (action -> Effect Unit) -> (Int -> String -> String -> action)  -> Effect Unit
 startTimerWithTimeV2 = runEffectFn5 startTimerWithTimeV2Impl 
 
-countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String-> action) -> Effect Unit
-countDown = runEffectFn4 countDownImpl
+countDown :: forall action. Int -> String -> String -> (action -> Effect Unit) -> (Int -> String -> String-> action) -> Effect Unit
+countDown = runEffectFn5 countDownImpl
 
 startTimer :: forall action. Int -> String -> String -> (action -> Effect Unit) -> (Int -> String -> String-> action) -> Effect Unit
 startTimer seconds id interval push action = 
   if os == "IOS" 
     then startTimerWithTimeV2 (show seconds) id interval push action
-    else countDown seconds id push action
+    else countDown seconds id interval push action
+
+rideDurationTimer :: forall action. Int -> String -> String -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
+rideDurationTimer = runEffectFn5 rideDurationTimerImpl

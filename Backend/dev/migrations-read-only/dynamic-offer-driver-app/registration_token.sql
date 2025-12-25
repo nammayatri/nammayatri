@@ -1,0 +1,20 @@
+CREATE TABLE atlas_driver_offer_bpp.registration_token ();
+
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN alternate_number_attempts integer NOT NULL default 5;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN attempts bigint NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN auth_expiry bigint NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN auth_medium text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN auth_type text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN auth_value_hash text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN entity_id character (36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN entity_type character (36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN info text ;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN merchant_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN merchant_operating_city_id character (36) ;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN token character varying(1024) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN token_expiry bigint NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD COLUMN verified boolean NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.registration_token ADD PRIMARY KEY ( id);

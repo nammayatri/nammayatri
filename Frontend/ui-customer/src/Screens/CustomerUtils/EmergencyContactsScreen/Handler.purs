@@ -15,6 +15,7 @@ import Components.NewContact.View as NewContact
 import Engineering.Helpers.Commons (liftFlow)
 import PrestoDOM.Core (getPushFn)
 import Data.Maybe (Maybe(..))
+import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption)
 
 
 emergencyContactsScreen:: FlowBT String EMERGECY_CONTACTS_SCREEN_OUTPUT
@@ -24,18 +25,37 @@ emergencyContactsScreen = do
   listItemm <- lift $ lift $ PrestoList.preComputeListItem $ NewContact.view push listItem1
   action <- lift $ lift $ runScreen $ EmergencyContactsScreen.screen state.emergencyContactsScreen listItemm
   case action of
-    GoToHomeScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_FROM_EMERGENCY_CONTACTS)
-    PostContacts updatedState -> do
+    GoToSafetyScreen updatedState -> do
       modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ POST_CONTACTS updatedState)
+      App.BackT $ pure  App.GoBack
+    PostContacts updatedState shouldGoToSosFlow -> do
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ POST_CONTACTS updatedState shouldGoToSosFlow)
+    PostContactsSafety updatedState shouldGoToSosFlow -> do
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ POST_CONTACTS_SAFETY updatedState shouldGoToSosFlow)
+    UpdateDefaultContacts updatedState -> do
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ UPDATE_DEFAULT_CONTACTS updatedState)
     GetContacts updatedState -> do
       modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ GET_CONTACTS updatedState)
     Refresh updatedState -> App.BackT $ App.NoBack <$> (pure $ REFRESH_EMERGECY_CONTACTS_SCREEN updatedState)
+    GoToSelectContacts updatedState -> do
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_SELECT_CONTACT updatedState)
 
 listItem1 :: NewContacts
 listItem1 = {
   name: "",
   number: "",
-  isSelected: false
+  isSelected: false,
+  enableForFollowing: false,
+  enableForShareRide: false,
+  shareTripWithEmergencyContactOption: neverShareRideOption,
+  onRide: false,
+  priority : 1,
+  contactPersonId : Nothing,
+  isFollowing: Nothing,
+  notifiedViaFCM : Nothing
 }

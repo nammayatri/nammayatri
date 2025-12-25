@@ -27,13 +27,14 @@ import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Data.Maybe (Maybe(..))
 import PrestoDOM.Core (terminateUI)
+import Helpers.PrestoUtils
 import Presto.Core.Types.Language.Flow (getLogFields)
 
 handleAppUpdatePopUp :: FlowBT String APP_UPDATE_POPUP
 handleAppUpdatePopUp  = do
   (GlobalState state) ← getState
   logField_ <-lift $ lift $ getLogFields
-  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "AppUpdatePopUpScreen" Nothing 
+  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "AppUpdatePopUpScreen" (getFragmentView "")
   act <- lift $ lift $ runScreenWithNameSpace ( AppUpdatePopUpScreen.screen state.appUpdatePopUpScreen{logField = logField_})
   _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "AppUpdatePopUpScreen"
   case act of

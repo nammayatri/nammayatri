@@ -18,7 +18,8 @@ import Data.Maybe (listToMaybe)
 import qualified Domain.Types.SpecialZone as Domain
 import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps (LatLong)
-import Kernel.Storage.Esqueleto (runTransaction)
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Transactionable as Esq
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -27,12 +28,12 @@ import Kernel.Utils.Common
 import Storage.Queries.EntryExit
 import Storage.Queries.SpecialZone
 
-lookupSpecialZone :: EsqDBFlow m r => LatLong -> m Domain.SpecialZone
-lookupSpecialZone latLon = findSpecialZoneByLatLong latLon >>= fromMaybeM SpecialZoneNotFound
+lookupSpecialZone :: (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => LatLong -> m Domain.SpecialZone
+lookupSpecialZone latLon = Esq.runInReplica $ findSpecialZoneByLatLong latLon >>= fromMaybeM SpecialZoneNotFound
 
-lookupSpecialZonesByRegion :: EsqDBFlow m r => LatLong -> LatLong -> m [Domain.SpecialZone]
+lookupSpecialZonesByRegion :: (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => LatLong -> LatLong -> m [Domain.SpecialZone]
 lookupSpecialZonesByRegion minLatLng maxLatLng = do
-  findSpecialZonesByRegion minLatLng maxLatLng
+  Esq.runInReplica $ findSpecialZonesByRegion minLatLng maxLatLng
 
 createSpecialZone :: EsqDBFlow m r => Domain.SpecialZoneAPIEntity -> m APISuccess
 createSpecialZone specialZoneReq = do

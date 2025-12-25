@@ -1,0 +1,219 @@
+imports:
+  Driver: API.Types.ProviderPlatform.Fleet.Driver
+  PlanListAPIRes: Domain.Action.UI.Plan
+  Plan: Domain.Types.Plan
+  PlanSubscribeRes: Domain.Action.UI.Plan
+  CurrentPlanRes: Domain.Action.UI.Plan
+  ServiceNames: Domain.Types.Plan
+  Invoice: Domain.Types.Invoice
+  PaymentStatusResp: Domain.Action.UI.Payment
+  HistoryEntityV2: Domain.Action.UI.Driver
+  DriverFee: Domain.Types.DriverFee
+  InvoicePaymentMode: Domain.Types.Invoice
+  HistoryEntryDetailsEntityV2: Domain.Action.UI.Driver
+  WaiveOffMode : Domain.Types.DriverPlan
+  WaiveOffEntity : Domain.Types.DriverPlan
+
+
+importPackageOverrides:
+  Domain.Action.UI.Plan: "dynamic-offer-driver-app"
+  Domain.Action.UI.Payment: "dynamic-offer-driver-app"
+
+module: Subscription
+apiPrefix: plan
+
+apis:
+  - GET: # ListPlan
+      endpoint: /{driverId}/list
+      name: GetSubscriptionListPlan
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: PlanListAPIRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION LIST_PLAN
+  - PUT: # SelectPlan
+      endpoint: /{driverId}/{planId}/select
+      name: PutSubscriptionSelectPlan
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        planId: Id Plan
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: SubscriptionAPI SelectPlanEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SELECT_PLAN
+  - PUT: # SuspendPlan
+      endpoint: /{driverId}/suspend
+      name: PutSubscriptionSuspendPlan
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: SubscriptionAPI SuspendPlanEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SUSPEND_PLAN
+  - POST: # SubscribePlan
+      endpoint: /{driverId}/{planId}/subscribe
+      name: PostSubscriptionSubscribePlan
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        planId: Id Plan
+      response:
+        type: PlanSubscribeRes
+      migrate:
+        endpoint: SubscriptionAPI SubscribePlanEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SUBSCRIBE_PLAN
+  - GET: # CurrentPlan
+      endpoint: /{driverId}
+      name: GetSubscriptionCurrentPlan
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: CurrentPlanRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION CURRENT_PLAN
+  - GET: # ListPlanV2
+      endpoint: /{driverId}/{serviceName}/v2/list
+      name: GetSubscriptionListPlanV2
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        serviceName: ServiceNames
+      response:
+        type: PlanListAPIRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION LIST_PLAN_V2
+  - PUT: # SelectPlanV2
+      endpoint: /{driverId}/{planId}/{serviceName}/v2/select
+      name: PutSubscriptionSelectPlanV2
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        planId: Id Plan
+        serviceName: ServiceNames
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: SubscriptionAPI SelectPlanEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SELECT_PLAN_V2
+  - PUT: # SuspendPlanV2
+      endpoint: /{driverId}/{serviceName}/v2/suspend
+      name: PutSubscriptionSuspendPlanV2
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        serviceName: ServiceNames
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: SubscriptionAPI SuspendPlanEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SUSPEND_PLAN_V2
+  - POST: # SubscribePlanV2
+      endpoint: /{driverId}/{planId}/{serviceName}/v2/subscribe
+      name: PostSubscriptionSubscribePlanV2
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        planId: Id Plan
+        serviceName: ServiceNames
+      request:
+        type: PlanSubscribeReq
+      response:
+        type: PlanSubscribeRes
+      migrate:
+        endpoint: SubscriptionAPI SubscribePlanEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION SUBSCRIBE_PLAN_V2
+  - GET: # CurrentPlanV2
+      endpoint: /{driverId}/{serviceName}
+      name: GetSubscriptionCurrentPlanV2
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        serviceName: ServiceNames
+      response:
+        type: CurrentPlanRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION CURRENT_PLAN_V2
+  - GET: # OrderStatus = (PaymentStatus)
+      endpoint: /{driverId}/{orderId}/status
+      name: GetSubscriptionOrderStatus
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        orderId: Id Invoice
+      response:
+        type: PaymentStatusResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION PAYMENT_STATUS
+  - GET: # DriverPaymentHistoryAPIV2
+      endpoint: /{driverId}/payments/history/v2/{serviceName}
+      name: GetSubscriptionDriverPaymentHistoryAPIV2
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        serviceName: ServiceNames
+      query:
+        - paymentMode: InvoicePaymentMode
+        - limit: Int
+        - offset: Int
+      response:
+        type: HistoryEntityV2
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION PAYMENT_HISTORY_V2
+  - GET: # DriverPaymentHistoryEntityDetailsAPIV2
+      endpoint: /{driverId}/payments/history/v2/{serviceName}/{invoiceId}/entity
+      name: GetSubscriptionDriverPaymentHistoryEntityDetailsV2
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        serviceName: ServiceNames
+        invoiceId: Id Invoice
+      response:
+        type: HistoryEntryDetailsEntityV2
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION PAYMENT_HISTORY_ENTITY_DETAILS_V2
+  - POST: # CollectManualPayments
+      endpoint: /{driverId}/{serviceName}/collect
+      name: PostSubscriptionCollectManualPayments
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        serviceName: ServiceNames
+      request:
+        type: CollectManualPaymentsReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: SubscriptionAPI CollectPaymentsEndPoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION COLLECT_MANUAL_PAYMENTS
+  - POST:
+      endpoint: /waiveOff/fee
+      name: PostSubscriptionFeeWaiveOff
+      auth: ApiAuthV2
+      request:
+        type: WaiveOffReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: SubscriptionAPI FeeWaiveOffEndPoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SUBSCRIPTION FEE_WAIVE_OFF
+
+
+types:
+  PlanSubscribeReq:
+     - recordType: NewType
+     - vehicleNumber: Maybe Text
+     - derive: "'HideSecrets"
+  CollectManualPaymentsReq:
+     - paymentIds: Maybe [Id DriverFee]
+     - derive: "'HideSecrets"
+  WaiveOffReq :
+      - recordType : NewType
+      - waiveOffEntities : [WaiveOffEntity]
+      - derive: "'HideSecrets"

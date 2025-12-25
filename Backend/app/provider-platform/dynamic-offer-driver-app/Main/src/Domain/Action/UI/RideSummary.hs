@@ -11,14 +11,13 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.UI.RideSummary where
 
 import Data.Time (Day)
 import Domain.Types.DailyStats as DDS
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DM
+import qualified Domain.Types.MerchantOperatingCity as DM
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -28,9 +27,14 @@ import qualified Storage.Queries.DailyStats as SQDS
 
 data DriverRideSummaryResp = DriverRideSummaryResp
   { earnings :: Money,
+    earningsWithCurrency :: PriceAPIEntity,
     rideDistance :: Meters,
+    rideDistanceWithUnit :: Distance,
     rideDate :: Day,
-    noOfRides :: Int
+    noOfRides :: Int,
+    tipAmount :: PriceAPIEntity,
+    cancellationCharges :: PriceAPIEntity,
+    rideDuration :: Seconds
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -50,9 +54,14 @@ mkRideSummaryList =
   map
     ( \x ->
         DriverRideSummaryResp
-          { earnings = x.totalEarnings,
+          { earnings = roundToIntegral x.totalEarnings,
+            earningsWithCurrency = PriceAPIEntity x.totalEarnings x.currency,
             rideDistance = x.totalDistance,
+            rideDistanceWithUnit = convertMetersToDistance x.distanceUnit x.totalDistance,
             rideDate = x.merchantLocalDate,
-            noOfRides = x.numRides
+            noOfRides = x.numRides,
+            tipAmount = PriceAPIEntity x.tipAmount x.currency,
+            cancellationCharges = PriceAPIEntity x.cancellationCharges x.currency,
+            rideDuration = x.totalRideTime
           }
     )

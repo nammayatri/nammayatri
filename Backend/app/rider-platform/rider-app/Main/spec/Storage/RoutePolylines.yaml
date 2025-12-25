@@ -1,0 +1,67 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  VehicleCategory: BecknV2.FRFS.Enums
+  SuggestedStations: Domain.Types.StationType
+
+RoutePolylines:
+  tableName: route_polylines
+
+  derives: "Show, Generic, ToJSON, FromJSON, Eq"
+
+  fields:
+      id: Id RoutePolylines
+      routeId: Text
+      vehicleType: VehicleCategory
+      polyline: Maybe Text
+      merchantId: Id Merchant
+      merchantOperatingCityId: Id MerchantOperatingCity
+      createdAt: UTCTime
+      updatedAt: UTCTime
+  constraints:
+      id: PrimaryKey
+
+  queries:
+    findByRouteIdAndCity:
+      kvFunction: findOneWithKV
+      where:
+        and: [routeId, merchantOperatingCityId]
+    findByRouteIdAndVehicleType:
+      kvFunction: findOneWithKV
+      where:
+        and: [routeId, vehicleType]
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+StationsExtraInformation:
+  tableName: stations_extra_information
+  fields:
+    id: Id StationsExtraInformation
+    stationId: Text
+    address: Maybe Text
+    suggestedDestinations: Maybe [SuggestedStations]
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    suggestedDestinations: Maybe Text
+
+  fromTType:
+    suggestedDestinations: (Kernel.Utils.Text.decodeFromText =<< suggestedDestinations)|E
+
+  toTType:
+    suggestedDestinations: (Kernel.Utils.Text.encodeToText <$> suggestedDestinations)|E
+
+  constraints:
+    id: PrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  queries:
+    findByStationIdAndCity:
+      kvFunction: findOneWithKV
+      where:
+        and: [stationId, merchantOperatingCityId]

@@ -1,0 +1,23 @@
+imports:
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  Text: Data.Text
+
+importPackageOverrides:
+  IssueManagement.Domain.Types.MediaFile: shared-services
+
+module: Media
+apiPrefix: media
+helperApiPrefix: ""
+
+apis:
+  - GET:
+      endpoint: /file
+      auth: ApiAuthV2
+      mandatoryQuery:
+        filePath: Text
+      response:
+        type: GetMediaFileResponse
+types:
+  GetMediaFileResponse:
+    recordType: NewType
+    content: Text

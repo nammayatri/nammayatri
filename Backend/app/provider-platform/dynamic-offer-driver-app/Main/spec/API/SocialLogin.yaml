@@ -1,0 +1,44 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  City: Kernel.Types.Beckn.Context
+
+module: SocialLogin
+
+types:
+  OAuthProvider:
+    enum: "Google, IOS"
+  SocialLoginReq:
+    name: Maybe Text
+    email: Maybe Text
+    tokenId: Text
+    oauthProvider: OAuthProvider
+    merchantOperatingCity: City
+    merchantId: Maybe (Id Merchant)
+    registrationLat: Maybe Double
+    registrationLon: Maybe Double
+    merchantShortId: Maybe (ShortId Merchant)
+  SocialLoginRes:
+    isNew: Bool
+    token: Text
+  SocialUpdateProfileReq:
+    email: Text
+    firstName: Maybe Text
+    lastName: Maybe Text
+    mobileNumber: Maybe Text
+    mobileCountryCode: Maybe Text
+apis:
+  - POST:
+      endpoint: /social/login
+      auth: NoAuth
+      request:
+        type: API.Types.UI.SocialLogin.SocialLoginReq
+      response:
+        type: API.Types.UI.SocialLogin.SocialLoginRes
+  - POST:
+      endpoint: /social/update/profile
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.SocialLogin.SocialUpdateProfileReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

@@ -32,4 +32,4 @@ handler =
   exotelHeartbeat
 
 exotelHeartbeat :: Common.ExotelHeartbeatReq -> FlowHandler APISuccess
-exotelHeartbeat = withFlowHandlerAPI . DExotel.exotelHeartbeat
+exotelHeartbeat = withDashboardFlowHandlerAPI . DExotel.exotelHeartbeat

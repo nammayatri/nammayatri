@@ -15,7 +15,7 @@
 
 module Common.Types.App where
 
-import Prelude (class Eq, class Show)
+import Prelude (class Eq, class Show, ($))
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 
 import Data.Generic.Rep (class Generic)
@@ -32,11 +32,17 @@ import Control.Monad.Except.Trans (ExceptT)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
 import Control.Transformers.Back.Trans (BackT)
 import Data.Maybe (Maybe(..))
+import DecodeUtil (parseJSON)
 
 type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
 
-data VehicalTypes = Sedan | Hatchback | SUV | Auto
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_Taxi_Oxy | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Ventilator | SUV_PLUS | EV_Auto | HERITAGE_CAB
 data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers | FunctionCall | Config | Language
+
+data TicketType = ONE_WAY_TRIP | ROUND_TRIP
+
+derive instance genericTicketType :: Generic TicketType _
+instance eqTicketType :: Eq TicketType where eq = genericEq
 
 newtype Place = Place {
   id :: String
@@ -64,7 +70,15 @@ instance showVehicalTypes :: Show VehicalTypes where
     show (Hatchback ) = "Hatchback"
     show (SUV ) = "SUV"
     show (Auto ) = "Auto"
-
+    show (Bike ) = "Bike"
+    show (Ambulance_AC ) = "Ambulance_AC"
+    show (Ambulance_AC_Oxy ) = "Ambulance_AC_Oxy"
+    show (Ambulance_Taxi ) = "Ambulance_Taxi"
+    show (Ambulance_Taxi_Oxy ) = "Ambulance_Taxi_Oxy"
+    show (Ambulance_Ventilator ) = "Ambulance_Ventilator"
+    show (SUV_PLUS) = "SUV_PLUS"
+    show (EV_Auto) = "EV_Auto"
+    show (HERITAGE_CAB) = "Heritage Cab"
 
 
 data NotificationType = REGISTRATION_APPROVED | SEARCH_CALLBACK | CONFIRM_CALLBACK
@@ -84,6 +98,17 @@ derive instance genericNotificationData :: Generic NotificationData _
 derive instance newtypeNotificationData :: Newtype NotificationData _
 instance encodeNotificationData :: Encode NotificationData where encode = defaultEncode
 instance decodeNotificationData :: Decode NotificationData where decode = defaultDecode
+
+newtype ChatFCMData = ChatFCMData {
+  channelId :: Maybe String,
+  personId :: Maybe String,
+  source :: Maybe String
+  }
+
+derive instance genericChatFCMData :: Generic ChatFCMData _
+derive instance newtypeChatFCMData :: Newtype ChatFCMData _
+instance encodeChatFCMData :: Encode ChatFCMData where encode = defaultEncode
+instance decodeChatFCMData :: Decode ChatFCMData where decode = defaultDecode
 
 newtype SignatureAuthData = SignatureAuthData {
   signature :: String
@@ -115,6 +140,15 @@ derive instance genericGlobalPayload :: Generic GlobalPayload _
 instance decodeGlobalPayload :: Decode GlobalPayload where decode = defaultDecode
 instance encodeGlobalPayload :: Encode GlobalPayload where encode = defaultEncode
 
+newtype FragmentViewGroup = FragmentViewGroup {
+  main :: Maybe String
+}
+
+derive instance newFragmentViewGroup :: Newtype FragmentViewGroup _
+derive instance genericFragmentViewGroup :: Generic FragmentViewGroup _
+instance decodeFragmentViewGroup :: Decode FragmentViewGroup where decode = defaultDecode
+instance encodeFragmentViewGroup :: Encode FragmentViewGroup where encode = defaultEncode
+
 newtype Payload = Payload
   { service :: Maybe String
   , environment :: Maybe String
@@ -127,7 +161,19 @@ newtype Payload = Payload
   , show_splash :: Maybe Boolean
   , view_param :: Maybe String
   , deeplinkOptions :: Maybe DeeplinkOptions
+  , deepLinkJSON :: Maybe QueryParam
+  , chatMessageData :: Maybe ChatFCMData
+  , fragmentViewGroups :: Maybe FragmentViewGroup
+  , appToken :: Maybe String
   }
+
+newtype QueryParam = QueryParam {
+  option :: Maybe String,
+  bookingId :: Maybe String,
+  rideId :: Maybe String,
+  placeId :: Maybe String,
+  messageId :: Maybe String
+}
 
 newtype DeeplinkOptions = DeeplinkOptions {
     parent_view :: Maybe Boolean
@@ -154,6 +200,11 @@ derive instance newDeeplinkOptions :: Newtype DeeplinkOptions _
 derive instance genericDeeplinkOptions :: Generic DeeplinkOptions _
 instance decodeDeeplinkOptions :: Decode DeeplinkOptions where decode = defaultDecode
 instance encodeDeeplinkOptions :: Encode DeeplinkOptions where encode = defaultEncode
+
+derive instance genericQueryParam :: Generic QueryParam _
+derive instance newQueryParam :: Newtype QueryParam _
+instance decodeQueryParam :: Decode QueryParam where decode body = defaultDecode $ parseJSON body
+instance encodeQueryParam :: Encode QueryParam where encode = defaultEncode
 
 type OptionButtonList = {
     reasonCode :: String,
@@ -197,6 +248,8 @@ type InnerPayload = {
   , screen :: Maybe String
   , exit_app :: Boolean
   , ride_status :: Maybe String
+  , delete_account_req:: Maybe Boolean
+  , call_support_req:: Maybe Boolean
 }
 
 derive instance genericEventPayload :: Generic EventPayload _
@@ -221,9 +274,21 @@ type LayoutBound =
 -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
 -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
 
-data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges
+data RateCardType = 
+    DefaultRateCard 
+  | DriverAddition 
+  | FareUpdate 
+  | PaymentFareBreakup 
+  | WaitingCharges 
+  | TollOrParkingCharges 
+  | RentalRateCard
+  | DriverAllowance
+  | NightShiftCharges
+  | TollAndParkingCharges
 derive instance genericRateCardType :: Generic RateCardType _
 instance eqRateCardType :: Eq RateCardType where eq = genericEq
+instance decodeRateCardType :: Decode RateCardType where decode = defaultEnumDecode
+instance encodeRateCardType :: Encode RateCardType where encode = defaultEnumEncode
 
 type FareList = {
   key :: String,
@@ -234,33 +299,6 @@ type ClevertapEventParams = {
   key :: String ,
   value :: Foreign
 }
-
-data PaymentStatus = Success | Pending | Failed | Scheduled
-
-derive instance genericPaymentStatus :: Generic PaymentStatus _
-instance standardEncodePaymentStatus :: StandardEncode PaymentStatus where standardEncode _ = standardEncode {}
-instance showPaymentStatus :: Show PaymentStatus where show = genericShow
-instance decodePaymentStatus :: Decode PaymentStatus where decode = defaultDecode
-instance encodePaymentStatus  :: Encode PaymentStatus where encode = defaultEncode
-instance eqPaymentStatus :: Eq PaymentStatus where eq = genericEq
-
-data APIPaymentStatus =  NEW
-                      | PENDING_VBV
-                      | CHARGED
-                      | AUTHENTICATION_FAILED 
-                      | AUTHORIZATION_FAILED
-                      | JUSPAY_DECLINED
-                      | AUTHORIZING
-                      | COD_INITIATED
-                      | STARTED
-                      | AUTO_REFUNDED
-
-derive instance genericAPIPaymentStatus :: Generic APIPaymentStatus _
-instance showAPIPaymentStatus :: Show APIPaymentStatus where show = genericShow
-instance decodeAPIPaymentStatus :: Decode APIPaymentStatus where decode = defaultEnumDecode
-instance encodeAPIPaymentStatus  :: Encode APIPaymentStatus where encode = defaultEnumEncode
-instance eqAPIPaymentStatus :: Eq APIPaymentStatus where eq = genericEq
-instance standardEncodeAPIPaymentStatus :: StandardEncode APIPaymentStatus where standardEncode _ = standardEncode {}
 
 type DateObj = {
   date :: Int
@@ -282,6 +320,11 @@ type CalendarWeek = {
   , utcEndDate :: String
   , startMonth :: String
   , endMonth :: String
+}
+
+type CalendarMonth = {
+    utcDate :: String
+  , month :: Int
 }
 
 type CountryCodeObj = {
@@ -330,6 +373,8 @@ type YoutubeData = {
   , videoId :: String
   , videoType :: String
   , videoHeight :: Int
+  , showFullScreen :: Boolean
+  , hideFullScreenButton :: Boolean
 }
 
 type FCMBundleUpdate = {
@@ -394,7 +439,8 @@ type CarouselImageConfig = {
   width :: Int,
   bgColor :: String,
   cornerRadius :: Number,
-  image :: String
+  image :: String,
+  isUrl :: Boolean
 }
 
 type CarouselTextConfig = {
@@ -412,7 +458,365 @@ type MarginConfig = {
   left :: Int
 }
 
+type ReelModal = {
+  reelData :: Array ReelItem,
+  titleConfig :: ReelTextConfig,
+  descriptionConfig :: ReelTextConfig,
+  reelExtraConfig :: Maybe ReelExtraConfig
+}
+
+type ReelVideoThresholdConfig = {
+  isThresholdEnabled :: Maybe Boolean,
+  isStartThresholdEnabled :: Maybe Boolean,
+  isEndThresholdEnabled :: Maybe Boolean,
+  startThreshold :: Maybe Int,
+  endThreshold :: Maybe Int,
+  sendCallbackAfterEverySecondEnabled :: Maybe Boolean -- by default it is taken as false
+}
+
+type ReelExtraConfig = {
+  bounceAnimationEnabled :: Maybe Boolean, -- bounce animation will not work if autoSwipeToNext is enabled
+  bounceAnimationCount :: Maybe Int,
+  bounceAnimationDuration :: Maybe Int,
+  progressBarColor :: Maybe String,
+  progressBarVisible :: Maybe Boolean,
+  autoSwipeToNext :: Maybe Boolean,
+  seekEnabled :: Maybe Boolean
+}
+
+type ReelButtonConfig = {
+    prefixImage :: Maybe String,
+    suffixImage :: Maybe String,
+    actions :: Maybe (Array String),
+    shareLink :: Maybe String,
+    shareText :: Maybe String,
+    shareMessageTitle :: Maybe String,
+    buttonColor :: Maybe String,
+    cornerRadius :: Maybe Int,
+    text :: Maybe String,
+    textSize :: Maybe Int,
+    textColor :: Maybe String,
+    prefixImageHeight :: Maybe Int,
+    prefixImageWidth :: Maybe Int,
+    suffixImageHeight :: Maybe Int,
+    suffixImageWidth :: Maybe Int,
+    activeIndex :: Maybe String,
+    inActiveIndex :: Maybe String,
+    activeIndexWidth :: Maybe Int,
+    activeIndexHeight :: Maybe Int,
+    inActiveIndexWidth :: Maybe Int,
+    inActiveIndexHeight :: Maybe Int
+}
+
+type ReelItem = {
+  title :: String,
+  description :: Maybe String,
+  id :: String,
+  shareLink :: Maybe String,
+  thumbnailImageUrl :: Maybe String,
+  videoUrl :: String,
+  carouselBigImageUrl :: Maybe String,
+  carouselSmallImageUrl :: Maybe String,
+  carouselTextString :: Maybe String,
+  carouselTextColor :: Maybe String,
+  bottomButtonConfig :: Maybe (Array (Array ReelButtonConfig)),
+  sideButtonConfig :: Maybe (Array (Array ReelButtonConfig)),
+  thresholdConfig :: Maybe ReelVideoThresholdConfig
+}
+
+type ReelTextConfig = {
+  size :: Int,
+  color :: String,
+  maxLines :: Int
+}
+
 type CarouselHolderData = {
   id :: Int
 , shouldPush :: Boolean
 }
+
+type CategoryListType = {
+    categoryName :: String
+  , categoryImageUrl :: Maybe String
+  , categoryAction :: Maybe String
+  , categoryId :: String
+  , isRideRequired :: Boolean
+  , maxAllowedRideAge :: Maybe Int
+  , allowedRideStatuses :: Maybe (Array String)
+  , categoryType :: String 
+  }
+
+type DisplayBase64ImageConig = {
+    source :: String
+  , id :: String
+  , scaleType :: String
+  , inSampleSize :: Int -- reduce image qulaity by this factor (highValue = low quality)
+  , adjustViewBounds :: Boolean  
+}
+
+type CircleRippleConfig = {
+  delay :: Int
+, duration :: Int
+, pause :: Int
+, repeatMode :: Int
+, count :: Int
+, radius :: Number
+, maxRadius :: Number
+, strokeWidth :: Number
+, maxStrokeWidth :: Number
+, fromStrokeColor :: String
+, toStrokeColor :: String
+, prefix :: String
+, center :: Paths
+, fillColor :: String
+}
+
+type GroundOverlayConfig = {
+  id :: String
+, height :: Int
+, width :: Int
+, imageUrl :: String
+, fetchFromView :: Boolean
+, viewId :: String
+, center :: Paths
+}
+
+type MarkerLabelConfig = {
+  id :: String
+, title :: String
+, actionImage :: String
+, actionCallBack :: String
+, position :: Paths
+, markerImage :: String
+}
+
+
+type Paths = {
+    lat :: Number
+  , lng :: Number
+}
+
+data SosStatus = Pending | Resolved | NotResolved | MockPending | MockResolved
+
+derive instance genericSosStatus :: Generic SosStatus _
+instance standardEncodeSosStatus :: StandardEncode SosStatus where standardEncode _ = standardEncode {}
+instance showSosStatus :: Show SosStatus where show = genericShow
+instance decodeSosStatus :: Decode SosStatus where decode = defaultEnumDecode
+instance encodeSosStatus  :: Encode SosStatus where encode = defaultEnumEncode
+instance eqSosStatus :: Eq SosStatus where eq = genericEq
+
+data ProviderType = ONUS | OFFUS
+
+derive instance genericProviderType :: Generic ProviderType _
+instance eqProviderType :: Eq ProviderType where eq = genericEq
+instance showProviderType :: Show ProviderType where show = genericShow
+instance encodeProviderType :: Encode ProviderType where encode = defaultEnumEncode
+instance decodeProviderType :: Decode ProviderType where decode = defaultEnumDecode
+
+type Price = {
+    amount :: Number
+  , currency :: String
+}
+
+type WaitingTimeInfo = {
+  freeMinutes :: String,
+  charge :: String
+}
+
+type RentalBookingConfig = {
+    startTimeUTC :: String
+  , baseDuration :: Int
+  , baseDistance :: Int
+  , finalDuration :: Int
+  , finalDistance :: Int
+  , startOdometer :: String
+  , endOdometer :: String
+  , nightCharge :: String
+  , rideStartedAt :: String 
+  , rideEndedAt :: String
+  , extraDistanceFare :: String 
+  , extraTimeFare :: String
+}
+
+
+
+
+data CustomerIssueTypes = TollCharge | NightSafety | Accessibility | NoIssue | MoreIssues | DemandExtraTollAmount
+derive instance genericCustomerIssueTypes :: Generic CustomerIssueTypes _
+instance eqCustomerIssueTypes :: Eq CustomerIssueTypes where eq = genericEq
+instance priorityCustomerIssueTypes :: Priority CustomerIssueTypes where 
+  priority = case _ of
+    TollCharge -> 1
+    NightSafety -> 0
+    Accessibility -> 2
+    DemandExtraTollAmount -> 3
+    NoIssue -> 10
+    MoreIssues -> 20
+
+
+class Priority a where
+  priority :: a -> Int
+
+data Confidence = Sure | Neutral | Unsure
+derive instance genericConfidence :: Generic Confidence _
+instance standardEncodeConfidence :: StandardEncode Confidence where standardEncode _ = standardEncode {}
+instance eqConfidence :: Eq Confidence where eq = genericEq
+instance showConfidence :: Show Confidence where show = genericShow
+instance decodeConfidence :: Decode Confidence where decode = defaultEnumDecode
+instance encodeConfidence  :: Encode Confidence where encode =  defaultEnumEncode
+
+newtype EstimateFares = EstimateFares {
+  priceWithCurrency :: Price,
+  title :: String
+}
+
+derive instance genericEstimateFares :: Generic EstimateFares _
+derive instance newtypeEstimateFares :: Newtype EstimateFares _
+instance standardEncodeEstimateFares :: StandardEncode EstimateFares where standardEncode (EstimateFares body) = standardEncode body
+instance showEstimateFares :: Show EstimateFares where show = genericShow
+instance decodeEstimateFares :: Decode EstimateFares where decode = defaultDecode
+instance encodeEstimateFares  :: Encode EstimateFares where encode = defaultEncode
+
+type BreakupList = {
+  fareList :: Array FareList,
+  fareInfo :: Array String,
+  driverAdditions :: Array FareList,
+  nightChargeStart :: String,
+  nightChargeEnd :: String,
+  isNightShift :: Boolean,
+  waitingTimeInfo :: WaitingTimeInfo
+}
+
+type RateCard =
+  {
+    baseFare :: Int,
+    driverAdditions :: Array FareList,
+    fareInfoDescription :: Array String,
+    additionalFare :: Int,
+    isNightShift :: Boolean,
+    nightChargeTill :: String,
+    nightChargeFrom :: String,
+    currentRateCardType :: RateCardType,
+    onFirstPage :: Boolean,
+    createdTime :: String,
+    extraFare :: Array FareList,
+    waitingTimeInfo :: WaitingTimeInfo,
+    serviceTierName :: Maybe String
+  }
+
+data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED | RECORDED
+
+derive instance genericRecordingState :: Generic RecordingState _
+instance eqRecordingState :: Eq RecordingState where eq = genericEq
+instance showRecordingState :: Show RecordingState where show = genericShow
+
+
+type FaqCardDropDownInfo = {
+  title :: String,
+  description :: String,
+  isExpanded :: Boolean,
+  label :: Maybe String,
+  id :: String, 
+  action :: Maybe String, 
+  referenceCategoryId :: Maybe String,
+  referenceOptionId :: Maybe String
+}
+
+type FaqStringType = {
+  value :: String,
+  messageStringType :: String
+}
+newtype TripCategory = TripCategory {
+  contents :: Maybe String,
+  tag :: TripCategoryTag
+}
+data TripCategoryTag  = OneWay | Rental | RideShare | InterCity | CrossCity | Delivery
+
+
+derive instance genericTripCategoryTag  :: Generic TripCategoryTag   _
+instance showTripCategoryTag :: Show TripCategoryTag  where show = genericShow
+instance decodeTripCategoryTag :: Decode TripCategoryTag  where decode = defaultEnumDecode
+instance encodeTripCategoryTag :: Encode TripCategoryTag  where encode = defaultEnumEncode
+instance eqTripCategoryTag :: Eq TripCategoryTag  where eq = genericEq
+instance standardTripCategoryTag :: StandardEncode TripCategoryTag   where standardEncode _ = standardEncode {}
+
+derive instance genericTripCategory :: Generic TripCategory  _
+instance showTripCategory:: Show TripCategory where show = genericShow
+instance decodeTripCategory:: Decode TripCategory where decode = defaultDecode
+instance encodeTripCategory:: Encode TripCategory where encode = defaultEncode
+instance eqTripCategory:: Eq TripCategory where eq = genericEq
+instance standardTripCategory:: StandardEncode TripCategory where standardEncode _ = standardEncode {}
+
+
+data BookingStatus = UPCOMING |UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLETED | CANCELLED | NEW    
+
+derive instance genericBookingStatus :: Generic BookingStatus  _
+instance showBookingStatus:: Show BookingStatus where show = genericShow
+instance decodeBookingStatus :: Decode BookingStatus where decode = defaultEnumDecode
+instance encodeBookingStatus :: Encode BookingStatus where encode = defaultEnumEncode
+instance eqBookingStatus:: Eq BookingStatus where eq = genericEq
+instance standardEncodeBookingStatus :: StandardEncode BookingStatus where standardEncode _ = standardEncode {}
+
+data DateTime = DATE | TIME 
+
+derive instance genericDateTime :: Generic DateTime _
+instance eqDateTime :: Eq DateTime where eq = genericEq
+
+newtype UploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio :: Boolean,
+  imageAspectHeight :: Int,
+  imageAspectWidth :: Int
+}
+
+data City
+  = Bangalore
+  | Kolkata
+  | Paris
+  | Kochi
+  | Delhi
+  | Hyderabad
+  | Mumbai
+  | Chennai
+  | Coimbatore
+  | Pondicherry
+  | Goa
+  | Pune
+  | Mysore
+  | Tumakuru
+  | Siliguri
+  | AnyCity
+  | Gurugram
+  | Noida
+  | Thrissur
+  | Trivandrum
+  | Kozhikode
+  | Vellore
+  | Hosur
+  | Madurai
+  | Thanjavur
+  | Tirunelveli
+  | Salem
+  | Trichy
+  | Davanagere
+  | Shivamogga
+  | Hubli
+  | Mangalore
+  | Gulbarga
+  | Udupi
+  | Odisha
+  | Bhubaneswar
+  | Cuttack
+  | Nalgonda
+  | Puri
+  | Pudukkottai
+  | Bidar
+  | Asansol
+  | Durgapur
+  | Petrapole
+  | Srinagar
+
+derive instance genericCity :: Generic City _
+instance showCity :: Show City where show = genericShow
+instance eqCity :: Eq City where eq = genericEq
+instance encodeCity :: Encode City where encode = defaultEnumEncode
+instance decodeCity :: Decode City where decode = defaultEnumDecode

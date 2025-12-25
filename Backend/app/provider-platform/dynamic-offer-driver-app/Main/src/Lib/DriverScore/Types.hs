@@ -19,17 +19,20 @@ module Lib.DriverScore.Types
 where
 
 import Data.Time
+import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.Common as SRD
+import qualified Domain.Types.DriverInformation as DI
+import Domain.Types.FareParameters
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequestForDriver as SRD
 import qualified Domain.Types.SearchTry as DST
-import EulerHS.Prelude hiding (Show)
-import Kernel.Prelude (Show)
+import EulerHS.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool as DP
 
 data DriverRideRequest
@@ -37,12 +40,15 @@ data DriverRideRequest
       { merchantId :: Id DM.Merchant,
         driverId :: Id DP.Person,
         searchTryId :: Id DST.SearchTry,
+        searchReqId :: Id DSR.SearchRequest,
         restDriverIds :: [Id DP.Person],
         response :: SRD.SearchRequestForDriverResponse
       }
   | OnNewRideAssigned
       { merchantId :: Id DM.Merchant,
-        driverId :: Id DP.Person
+        driverId :: Id DP.Person,
+        currency :: Currency,
+        distanceUnit :: DistanceUnit
       }
   | OnNewSearchRequestForDrivers
       { driverPool :: [DP.DriverPoolWithActualDistResult],
@@ -54,12 +60,18 @@ data DriverRideRequest
       }
   | OnDriverCancellation
       { merchantId :: Id DM.Merchant,
-        driverId :: Id DP.Person,
-        rideFare :: Maybe Money
+        driver :: DP.Person,
+        rideFare :: Maybe HighPrecMoney,
+        currency :: Currency,
+        distanceUnit :: DistanceUnit,
+        doCancellationRateBasedBlocking :: Maybe Bool,
+        rideTags :: [LYT.TagNameValue]
       }
   | OnRideCompletion
       { merchantId :: Id DM.Merchant,
         driverId :: Id DP.Person,
-        ride :: DR.Ride
+        ride :: DR.Ride,
+        booking :: DB.Booking,
+        driverInfo :: DI.DriverInformation,
+        fareParameter :: Maybe FareParameters
       }
-  deriving (Show)

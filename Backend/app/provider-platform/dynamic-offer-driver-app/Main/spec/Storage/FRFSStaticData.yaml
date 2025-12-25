@@ -1,0 +1,227 @@
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Seconds: Kernel.Types.Time
+  ShortId: Kernel.Types.Id
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  VehicleCategory: Domain.Types.VehicleCategory
+  ServiceTierType: Domain.Types.Common
+  FRFSSearch: Domain.Types.FRFSSearch
+  FRFSQuote: Domain.Types.FRFSQuote
+  FRFSTicketBooking: Domain.Types.FRFSTicketBooking
+  FRFSTicket: Domain.Types.FRFSTicket
+  FRFSTicketBookingPayment: Domain.Types.FRFSTicketBookingPayment
+  Station: Domain.Types.Station
+  FRFSRoutes: Domain.Types.FRFSQuote
+  City: Kernel.Types.Beckn.Context
+  TimeBound: Kernel.Types.TimeBound
+  LatLong: Kernel.External.Maps.Types
+  StationType: Domain.Types.StationType
+  DayOfWeek: Data.Time
+  TimeOfDay: Data.Time
+  Person: Domain.Types.Person
+
+Station:
+  tableName: station
+
+  fields:
+    id: Id Station
+    vehicleType: VehicleCategory|NoRelation
+    name: Text
+    code: Text
+    lat: Maybe Double
+    lon: Maybe Double
+    address: Maybe Text
+    timeBounds: TimeBound
+    possibleTypes: Maybe [StationType]
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  default:
+    timeBounds: "'Unbounded'"
+
+  beamType:
+    timeBounds: Maybe TimeBound
+
+  constraints:
+    id: PrimaryKey
+    code: SecondaryKey
+
+  fromTType:
+    timeBounds: fromMaybe Kernel.Types.TimeBound.Unbounded timeBounds|E
+
+  toTType:
+    timeBounds: Kernel.Prelude.Just|I
+
+  queries:
+    findByMerchantOperatingCityIdAndVehicleType:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [merchantOperatingCityId, vehicleType]
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByStationCode:
+      kvFunction: findOneWithKV
+      where: code
+    deleteByStationCode:
+      kvFunction: deleteWithKV
+      where: code
+    findByStationCodeAndMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where:
+        and: [code, merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+Route:
+  tableName: route
+  derives: "Generic,Show,FromJSON,ToJSON"
+  fields:
+    id: Id Route
+    code: Text
+    shortName: Text
+    longName: Text
+    startPoint: LatLong
+    endPoint: LatLong
+    vehicleType: VehicleCategory|NoRelation
+    color: Maybe Text
+    polyline: Maybe Text
+    timeBounds: TimeBound
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    roundRouteCode: Maybe Text
+  default:
+    timeBounds: "'Unbounded'"
+  sqlType:
+    lat: double precision
+    lon: double precision
+  beamFields:
+    startPoint:
+      startLat: Double
+      startLon: Double
+    endPoint:
+      endLat: Double
+      endLon: Double
+  toTType:
+    startLat: (.lat) startPoint|E
+    startLon: (.lon) startPoint|E
+    endLat: (.lat) endPoint|E
+    endLon: (.lon) endPoint|E
+  fromTType:
+    startPoint: Kernel.External.Maps.Types.LatLong startLat startLon|E
+    endPoint: Kernel.External.Maps.Types.LatLong endLat endLon|E
+
+  constraints:
+    id: PrimaryKey
+    code: SecondaryKey
+
+  queries:
+    findByRouteCode:
+      kvFunction: findOneWithKV
+      where: code
+    findByRouteId:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByMerchantOperatingCityAndVehicleType:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - eq: [merchantOperatingCityId, vehicleType]
+          - in: [code]
+    findByRouteCodes:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [code]
+    deleteByRouteCode:
+      kvFunction: deleteWithKV
+      where: code
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+RouteTripStopMapping:
+  tableName: route_trip_stop_mapping
+  derives: "Generic,Show,FromJSON,ToJSON"
+  fields:
+    tripCode: Text
+    routeCode: Text
+    stopCode: Text
+    tripSequenceNum: Int
+    providerCode: Text
+    stopName: Text
+    stopPoint: LatLong
+    stopSequenceNum: Int
+    scheduledDeparture: TimeOfDay
+    scheduledArrival: TimeOfDay
+    scheduledDay: DayOfWeek
+    vehicleType: VehicleCategory|NoRelation
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    enabled: Bool
+
+  sqlType:
+    scheduledDay: text
+
+  beamFields:
+    stopPoint:
+      stopLat: Double
+      stopLon: Double
+
+  toTType:
+    stopLat: (.lat)|I
+    stopLon: (.lon)|I
+
+  fromTType:
+    stopPoint: Kernel.External.Maps.Types.LatLong stopLat stopLon|E
+
+  constraints:
+    tripCode: PrimaryKey
+    routeCode: PrimaryKey
+    stopCode: PrimaryKey
+    tripSequenceNum: PrimaryKey
+    scheduledDay: PrimaryKey
+  queries:
+    findByLocation:
+      kvFunction: findOneWithKV
+      where: stopPoint
+    findAllRTSMappingByRouteAndDay:
+      kvFunction: findAllWithKV
+      where:
+        and: [routeCode, scheduledDay]
+    findByRouteCode:
+      kvFunction: findAllWithKV
+      where: routeCode
+    findAllByRouteCodeForStops:
+      kvFunction: findAllWithKV
+      where:
+        and: [routeCode, tripSequenceNum, scheduledDay]
+    findAllByStopCodeAndStopSequenceAndRoutes:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - eq: [stopCode, stopSequenceNum, tripSequenceNum, scheduledDay]
+          - in: [routeCode]
+
+FleetRouteAssociation:
+  tableName: fleet_route_association
+  derives: "Generic,Show,FromJSON,ToJSON"
+  fields:
+    id: Id FleetRouteAssociation
+    routeCode: Text
+    fleetOwnerId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+  queries:
+    findAllByFleetOwnerIdAndCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [fleetOwnerId, merchantOperatingCityId]

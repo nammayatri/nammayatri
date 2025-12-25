@@ -1,0 +1,287 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  TravelMode: Domain.Types.Common
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Version: Kernel.Types.Version
+  Price: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
+  Person: Domain.Types.Person
+  Client: Domain.Types.Client
+  Location: Domain.Types.Location
+  Language: Kernel.External.Maps
+  Currency: Kernel.Utils.Common
+  Money: Kernel.Utils.Common
+  Centesimal: Kernel.Utils.Common
+  Distance: Kernel.Types.Common
+  DistanceUnit: Kernel.Types.Common
+  HighPrecDistance: Kernel.Types.Common
+  Device: Kernel.Types.Version
+  DeviceType: Kernel.Types.Version
+  PaymentMethodId: Kernel.External.Payment.Interface.Types
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
+  EncryptedHashedField: Kernel.External.Encryption
+  DeliveryInitiation: BecknV2.OnDemand.Enums
+  DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
+  DbHash: Kernel.External.Encryption
+  TripParty: Domain.Types.Trip
+  DriverIdentifierType: Domain.Types.RefereeLink
+  DriverIdentifier: Domain.Types.RefereeLink
+  ConfigVersionMap: Lib.Yudhishthira.Types
+  JourneyLeg: Domain.Types.JourneyLeg
+  Value: Data.Aeson
+  RecentLocation: Domain.Types.RecentLocation
+  VehicleCategory: BecknV2.OnDemand.Enums
+  BusLocation: API.Types.UI.RiderLocation
+
+SearchRequest:
+  tableName: search_request
+
+  derives: "Generic, Show"
+
+  fields:
+    id: Id SearchRequest
+    recentLocationId: Maybe (Id RecentLocation)
+    startTime: UTCTime
+    returnTime: Maybe UTCTime
+    roundTrip: Maybe Bool
+    validTill: UTCTime
+    hasStops : Maybe Bool
+    riderId: Id Person
+    clientId: Maybe (Id Client)
+    fromLocation: Location
+    toLocation: Maybe Location
+    stops: "[Location]"
+    distance: Maybe Distance
+    maxDistance: Maybe Distance
+    distanceUnit: DistanceUnit
+    estimatedRideDuration: Maybe Seconds
+    estimatedRideStaticDuration: Maybe Seconds
+    device: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity #
+    language: Maybe Language
+    disabilityTag: Maybe Text
+    customerExtraFee: Maybe Price
+    isPetRide: Maybe Bool
+    autoAssignEnabled: Maybe Bool
+    autoAssignEnabledV2: Maybe Bool
+    selectedPaymentMethodId: Maybe PaymentMethodId
+    selectedPaymentInstrument: Maybe PaymentInstrument
+    riderPreferredOption: RiderPreferredOption
+    createdAt: UTCTime
+    clientBundleVersion: Maybe Version
+    clientSdkVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    clientReactNativeVersion: Maybe Text
+    clientDevice: Maybe Device
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
+    totalRidesCount: Maybe Int
+    isAdvanceBookingEnabled: Maybe Bool
+    isMeterRideSearch: Maybe Bool
+    isDashboardRequest: Maybe Bool
+    availablePaymentMethods: "[Id MerchantPaymentMethod]"
+    placeNameSource:  Maybe Text
+    initiatedBy: Maybe TripParty
+    onSearchFailed: Maybe Bool
+    driverIdentifier: Maybe DriverIdentifier
+    hasMultimodalSearch: Maybe Bool
+    routeCode: Maybe Text
+    originStopCode: Maybe Text
+    destinationStopCode: Maybe Text
+    vehicleCategory: Maybe VehicleCategory
+    configInExperimentVersions: "[ConfigVersionMap]"
+    allJourneysLoaded: Maybe Bool
+    searchMode: Maybe SearchMode
+    isMultimodalSearch: Maybe Bool
+    multimodalSearchRequestId: Maybe Text
+    busLocationData: "[BusLocation]"
+
+
+  default:
+    hasMultimodalSearch: "false"
+
+  types:
+    SearchRequestStatus:
+      enum: "NEW, INPROGRESS, CONFIRMED, COMPLETED, CLOSED"
+      derive: "HttpInstance"
+    RiderPreferredOption:
+      enum: "Rental, OneWay, InterCity, Ambulance, Delivery, PublicTransport"
+      derive: "HttpInstance"
+    SearchMode:
+      enum: "NORMAL, RESERVE"
+      derive: "HttpInstance"
+
+  beamType:
+    merchantOperatingCityId: Maybe Text
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    riderPreferredOption: Maybe RiderPreferredOption
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
+    configInExperimentVersions: Maybe Value
+    busLocationData: Maybe Value
+
+  sqlType:
+    toLocationId : character varying(36)
+    distance: numeric(30,2)
+    language: character varying(255)
+    maxDistance: double precision
+    disabilityTag: character(255)
+    currency: character varying(255)
+    fromLocationId: character varying(36)
+    configInExperimentVersions: "json"
+    busLocationData: "json"
+
+  beamFields:
+    distance:
+      distance: Maybe Centesimal
+      distanceValue: Maybe HighPrecDistance
+    stops: {}
+    # createdAt:
+    #   createdAt: UTCTime
+    #   stops: Maybe [Location]
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
+    maxDistance:
+      maxDistance: Maybe Centesimal
+      maxDistanceValue: Maybe HighPrecDistance
+    fromLocation:
+      fromLocationId: Maybe Text
+    toLocation:
+      toLocationId: Maybe Text
+    customerExtraFee:
+      customerExtraFee: Maybe Money
+      customerExtraFeeAmount: Maybe HighPrecMoney
+      currency: Maybe Currency
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
+    driverIdentifier:
+      driverIdentifierType: Maybe DriverIdentifierType
+      driverIdentifierValue: Maybe Text
+
+  # distanceUnit should be the same for all fields
+  toTType:
+    fromLocationId: (Just $ Kernel.Types.Id.getId ((.id) fromLocation))|E
+    toLocationId: (Kernel.Types.Id.getId <$> (toLocation <&> (.id)))|E
+    distance: (Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> distance)|E
+    distanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance)|E
+    maxDistance: (Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> maxDistance)|E
+    maxDistanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit) <$> maxDistance|E
+    merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
+    customerExtraFee: (customerExtraFee <&> (.amountInt))|E
+    customerExtraFeeAmount: (customerExtraFee <&> (.amount))|E
+    currency: (customerExtraFee <&> (.currency))|E
+    riderPreferredOption: (Just riderPreferredOption)|E
+    clientOsType: clientDevice <&> (.deviceType)|E
+    clientOsVersion: clientDevice <&> (.deviceVersion)|E
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    clientBundleVersion: Kernel.Utils.Version.versionToText <$> clientBundleVersion|E
+    clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
+    clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
+    backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
+    distanceUnit: Kernel.Prelude.Just|I
+    driverIdentifierType: driverIdentifier <&> (._type)|E
+    driverIdentifierValue: driverIdentifier <&> (.value)|E
+    configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
+    busLocationData: Just $ toJSON busLocationData|E
+
+  fromTType:
+    merchantOperatingCityId: Storage.Queries.Transformers.SearchRequest.backfillMOCId merchantId merchantOperatingCityId|EM
+    distance: (Kernel.Utils.Common.mkDistanceWithDefault distanceUnit distanceValue . Kernel.Types.Common.HighPrecMeters <$> distance)|E
+    maxDistance: (Kernel.Utils.Common.mkDistanceWithDefault distanceUnit maxDistanceValue . Kernel.Types.Common.HighPrecMeters <$> maxDistance)|E
+    riderPreferredOption: fromMaybe Domain.Types.SearchRequest.OneWay riderPreferredOption|E
+    customerExtraFee: Kernel.Utils.Common.mkPriceWithDefault customerExtraFeeAmount currency <$> customerExtraFee|E
+    fromLocation: Storage.Queries.Transformers.SearchRequest.getFromLocation id|EM
+    stops: Storage.Queries.Transformers.SearchRequest.getStops id hasStops|EM
+    toLocation: Storage.Queries.Transformers.SearchRequest.getToLocation id|EM
+    clientBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)|EM
+    clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
+    clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
+    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer|E
+    backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
+    driverIdentifier: Domain.Types.RefereeLink.mkDriverIdentifier
+    configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
+    busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
+
+  excludedFields: [updatedAt]
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  queries:
+    updateAdvancedBookingEnabled:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [isAdvanceBookingEnabled]
+
+    updateRiderPreferredOption:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [riderPreferredOption]
+
+    updateTotalRidesCount:
+      kvFunction: updateOneWithKV
+      params: [id, totalRidesCount]
+      where: riderId
+
+    updateAllJourneysLoaded:
+      kvFunction: updateOneWithKV
+      params: [allJourneysLoaded]
+      where: id
+
+    updateInitiatedBy:
+      kvFunction: updateOneWithKV
+      params: [initiatedBy]
+      where: id
+
+    updateHasMultimodalSearch:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [hasMultimodalSearch]
+
+    updatePetRide:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [isPetRide]
+
+  constraints:
+    id: PrimaryKey
+    riderId: SecondaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+SearchRequestPartiesLink:
+  fields:
+    id: Id SearchRequestPartiesLink
+    searchRequestId: Id SearchRequest
+    partyId: Id Person
+    partyType: TripParty|NoRelation
+    partyName: Text
+
+  constraints:
+    id: PrimaryKey
+    searchRequestId: SecondaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  queries:
+    findAllBySearchRequestId:
+      kvFunction: findAllWithKV
+      where: searchRequestId

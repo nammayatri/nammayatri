@@ -10,3 +10,20 @@ ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN merchant_operati
 ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.ticket_booking_people_category ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN currency text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN people_category_id character varying(36) ;
+ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN number_of_units_cancelled integer ;
+ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN amount_to_refund double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN vendor_split_details json ;

@@ -1,0 +1,785 @@
+imports:
+  Driver: Dashboard.Common
+  Summary: Dashboard.Common
+  DriverIds: Dashboard.Common.Driver
+  Ride: Dashboard.Common
+  Image: Dashboard.Common
+  VehicleCategory: Dashboard.Common
+  VehicleVariant: Dashboard.Common
+  DriverGoHomeRequest: Dashboard.Common
+  DriverHomeLocation: Dashboard.Common
+  VerificationStatus: Dashboard.Common
+  DriverDocumentsInfoRes: Dashboard.Common.Driver
+  DriverActivityRes: Dashboard.Common.Driver
+  DriverLicense: Dashboard.Common.Driver
+  VehicleRegistrationCertificate: Dashboard.Common.Driver
+  ReasonForDisablingServiceCharge: Dashboard.Common.Driver
+  ServiceNames: Dashboard.Common.Driver
+  EarningType: Dashboard.Common.Driver
+  Version: Kernel.Types.Version
+  LatLong: Kernel.External.Maps.Types
+  City: Kernel.Types.Beckn.Context
+  Currency: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  PersonIdsReq: Dashboard.Common
+  PersonMobileNoReq: Dashboard.Common
+  PersonRes: Dashboard.Common
+  MandatoryQueryParam: Kernel.Utils.Common
+  DriverFeeStatus: Dashboard.Common.Driver
+  TagNameValue: Lib.Yudhishthira.Types
+  UpdateTagBulkReq: Dashboard.Common
+  UpdateTagBulkRes: Dashboard.Common
+  Merchant: Dashboard.Common
+  MerchantOperatingCity: Dashboard.Common
+
+module: Driver
+
+apis:
+  - GET: # DriverDocumentsInfoAPI
+      endpoint: /documents/info
+      auth: ApiAuthV2
+      response:
+        type: DriverDocumentsInfoRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DOCUMENTS_INFO
+  - POST: # PersonNumbersAPI
+      endpoint: /personNumbers
+      auth: ApiAuthV2
+      multipart:
+        type: PersonIdsReq
+      response:
+        type: "[PersonRes]"
+      migrate:
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PERSON_NUMBERS
+  - POST:
+      endpoint: /updateTagBulk
+      auth: ApiAuthV2
+      multipart:
+        type: UpdateTagBulkReq
+      response:
+        type: "[UpdateTagBulkRes]"
+      migrate:
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_TAG_BULK
+  - POST: # PersonMobileNoAPI
+      endpoint: /driverDataDecryption
+      auth: ApiAuthV2
+      request:
+        type: "[DriverEncDataReq]"
+      response:
+        type: "[DriverDecDataResp]"
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_DECRYPTION
+  - POST: # PersonIDAPI
+      endpoint: /personId
+      auth: ApiAuthV2
+      multipart:
+        type: PersonMobileNoReq
+      response:
+        type: "[PersonRes]"
+      migrate:
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS FETCH_PERSON_ID
+
+  - GET: # DriverAadhaarInfoAPI
+      endpoint: /{driverId}/aadhaarInfo
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: DriverAadhaarInfoRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS AADHAAR_INFO
+  - GET: # DriverAadhaarInfoByPhoneAPI
+      endpoint: /{mobileNo}/aadhaarInfobyMobileNumber
+      auth: ApiAuthV2
+      params:
+        mobileNo: Text
+      response:
+        type: DriverAadhaarInfoByPhoneReq
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS AADHAAR_INFO_PHONE
+  - GET: # DriverListAPI
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - verified: Bool
+        - enabled: Bool
+        - blocked: Bool
+        - subscribed: Bool
+        - phone: Text
+        - vehicleNumberSearchString: Text
+        - mbNameSearchString: Text
+      response:
+        type: DriverListRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS LIST
+  - GET: # DriverActivityAPI
+      endpoint: /activity
+      auth: ApiAuthV2
+      response:
+        type: DriverActivityRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS ACTIVITY
+  - POST: # DisableDriverAPI
+      endpoint: /{driverId}/disable
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI DisableDriverEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DISABLE
+  - POST: # UpdateACUsageRestrictionAPI
+      endpoint: /{driverId}/acRestriction/update
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdateACUsageRestrictionReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI RemoveACUsageRestrictionEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REMOVE_AC_USAGE_RESTRICTION
+  - POST: # BlockDriverWithReasonAPI
+      endpoint: /{driverId}/blockWithReason
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: BlockDriverWithReasonReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/blockWithReason/{dashboardUserName}
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              dashboardUserName: Text
+            request:
+              type: BlockDriverWithReasonReq
+            response:
+              type: APISuccess
+      migrate:
+        endpoint: DriverAPI BlockDriverWithReasonEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BLOCK_WITH_REASON
+  - POST: # BlockDriverAPI
+      endpoint: /{driverId}/block
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI BlockDriverEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BLOCK
+  - GET: # BlockReasonListAPI
+      endpoint: /blockReasonList
+      auth: ApiAuthV2
+      response:
+        type: "[BlockReason]"
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BLOCK_REASON_LIST
+  - POST: # UnblockDriverAPI
+      endpoint: /{driverId}/unblock
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        - preventWeeklyCancellationRateBlockingTill: UTCTime
+        - preventDailyCancellationRateBlockingTill: UTCTime
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/unblock/{dashboardUserName}
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              dashboardUserName: Text
+            query:
+              - preventWeeklyCancellationRateBlockingTill: UTCTime
+              - preventDailyCancellationRateBlockingTill: UTCTime
+            response:
+              type: APISuccess
+      migrate:
+        endpoint: DriverAPI UnblockDriverEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNBLOCK
+  - GET: # DriverLocationAPI
+      endpoint: /location
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      request:
+        type: DriverIds
+      response:
+        type: DriverLocationRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS LOCATION
+  - DELETE: # DeleteDriverAPI
+      endpoint: /{driverId}/permanentlyDelete
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI DeleteDriverEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DELETE_DRIVER
+  - POST: # UnlinkDLAPI
+      endpoint: /{driverId}/unlinkDL
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI UnlinkDLEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNLINK_DL
+  - POST: # UnlinkAadhaarAPI
+      endpoint: /{driverId}/unlinkAadhaar
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI UnlinkAadhaarEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNLINK_AADHAAR
+  - POST: # UpdatePhoneNumberAPI
+      endpoint: /{driverId}/updatePhoneNumber
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdatePhoneNumberReq
+      validation: Dashboard.ProviderPlatform.Management.Driver.validateUpdatePhoneNumberReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI UpdatePhoneNumberEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_PHONE_NUMBER
+  - POST: # UpdateDriverAadhaarAPI
+      endpoint: /{mobileNo}/updateByPhoneNumber
+      auth: ApiAuthV2
+      params:
+        mobileNo: Text
+      request:
+        type: UpdateDriverDataReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS AADHAAR_UPDATE
+  - POST: # UpdateDriverNameAPI
+      endpoint: /{driverId}/updateName
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdateDriverNameReq
+      response:
+        type: APISuccess
+      # validation: Dashboard.ProviderPlatform.Management.Driver.validateUpdateDriverNameReq
+      migrate:
+        endpoint: DriverAPI UpdateDriverNameEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DRIVER_NAME
+  - POST: # DeleteRCAPI
+      endpoint: /{driverId}/deleteRC
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: DeleteRCReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI DeleteRCEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DELETE_RC
+  - GET: # ClearOnRideStuckDriversAPI
+      endpoint: /clearStuck/onRide
+      auth: ApiAuthV2
+      query:
+        - dbSyncTime: Int
+      response:
+        type: ClearOnRideStuckDriversRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS CLEAR_ON_RIDE_STUCK_DRIVER_IDS
+  - POST: # SendDummyRideRequestToDriverViaDashboardAPI
+      endpoint: /{driverId}/sendDummyNotification # TODO: refactor to sendDummyRideRequestToDriver
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI SendDummyRideRequestToDriverViaDashboardEndPoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SEND_DUMMY_NOTIFICATION
+  - POST: # ChangeOperatingCityAPI
+      endpoint: /{driverId}/changeOperatingCity
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: ChangeOperatingCityReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI ChangeOperatingCityEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS CHANGE_OPERATING_CITY
+  - GET: # GetOperatingCityAPI
+      endpoint: /getOperatingCity
+      auth: ApiAuthV2
+      query:
+        - mobileCountryCode: Text
+        - mobileNumber: Text
+        - rideId: Id Ride
+      response:
+        type: GetOperatingCityResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_OPERATING_CITY
+  - POST: # PauseOrResumeServiceChargesAPI
+      endpoint: /{driverId}/pauseOrResumeServiceCharges
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: PauseOrResumeServiceChargesReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI PauseOrResumeServiceChargesEndPoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS TOGGLE_SERVICE_USAGE_CHARGE
+  - POST: # UpdateRCInvalidStatusAPI
+      endpoint: /updateRCInvalidStatus/{driverId}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdateRCInvalidStatusReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI UpdateRCInvalidStatusEndPoint65454
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_RC_INVALID_STATUS
+  - POST: # UpdateVehicleVariantAPI
+      endpoint: /updateVehicleVariant/{driverId}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdateVehicleVariantReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI UpdateVehicleVariantEndPoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_VEHICLE_VARIANT
+  - POST: # BulkReviewRCVariantAPI
+      endpoint: /bulkReviewRCVariant
+      auth: ApiAuthV2
+      request:
+        type: "[ReviewRCVariantReq]"
+      response:
+        type: "[ReviewRCVariantRes]"
+      migrate:
+        endpoint: DriverAPI BulkReviewRCVariantEndPoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BULK_REVIEW_RC_VARIANT
+  - POST: # UpdateDriverTagAPI
+      endpoint: /{driverId}/updateDriverTag
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdateDriverTagReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI UpdateDriverTagEndPoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DRIVER_TAG
+  - POST:
+      endpoint: /clearFee
+      auth: ApiAuthV2
+      mandatoryQuery:
+        driverId: Id Driver
+      request:
+        type: ClearDriverFeeReq
+      response:
+        type: APISuccess
+      migrate:
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS CLEAR_FEE
+  - GET:
+      endpoint: /panAadharSelfieDetails
+      mandatoryQuery:
+        phoneNo: Text
+        countryCode: Text
+      auth: ApiAuthV2
+      response:
+        type: PanAadharSelfieDetailsResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAN_AADHAAR_SELFIE_DETAILS
+  - POST:
+      endpoint: /syncDocAadharPan
+      request:
+        type: AadharPanSyncReq
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      migrate:
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SYNC_DOC_AADHAR_PAN
+  - POST:
+      endpoint: /updateVehicleManufacturing/{driverId}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdateVehicleManufacturingReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_VEHICLE_MANUFACTURING
+
+  - POST:
+      endpoint: /{driverId}/refundByPayout
+      params:
+        driverId: Id Driver
+      request:
+        type: RefundByPayoutReq
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REFUND_BY_PAYOUT
+  - GET:
+      endpoint: /{driverId}/securityDepositStatus
+      params:
+        driverId: Id Driver
+      query:
+        - serviceName: ServiceNames
+      auth: ApiAuthV2
+      response:
+        type: ([SecurityDepositDfStatusRes])
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SECURITY_DEPOSIT_STATUS
+  - GET:
+      endpoint: /panAadharSelfieDetailsList
+      mandatoryQuery:
+        docType: Text
+        driverId: Id Driver
+      auth: ApiAuthV2
+      response:
+        type: ([PanAadharSelfieDetailsListResp])
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAN_AADHAAR_SELFIE_DETAILS_LIST
+  - POST:
+      endpoint: /bulk/subscriptionServiceUpdate
+      auth: ApiAuthV2
+      request:
+        type: BulkServiceUpdateReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BULK_SERVICE_UPDATE
+
+  - GET: # DriverStatsAPI
+      endpoint: /stats
+      auth: ApiAuthV2
+      query:
+        - entityId: Id Driver
+        - fromDate: Day
+        - toDate: Day
+      response:
+        type: DriverStatsRes
+      helperApi:
+        - GET:
+            endpoint: /stats
+            auth: ApiAuthV2
+            query:
+              - entityId: Id Driver
+              - fromDate: Day
+              - toDate: Day
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: DriverStatsRes
+
+  - GET: # DriverEarningsArrayAPI
+      endpoint: /earnings
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - from: Day
+        - to: Day
+        - earningType: EarningType
+        - driverId: Id Driver
+      response:
+        type: EarningPeriodStatsRes
+      helperApi:
+        - GET:
+            endpoint: /earnings
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - from: Day
+              - to: Day
+              - earningType: EarningType
+              - driverId: Id Driver
+              - requestorId: Text
+            response:
+              type: EarningPeriodStatsRes
+
+  - POST: # UpdateDriverMerchantAPI
+      endpoint: /{driverId}/updateMerchant
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdateDriverMerchantReq
+      response:
+        type: APISuccess
+
+types:
+  DriverListRes:
+    - totalItems: Int # for backward compatibility
+    - summary: Summary
+    - drivers: [DriverListItem]
+  DriverListItem:
+    - driverId: Id Driver
+    - firstName: Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
+    - vehicleNo: Maybe Text
+    - phoneNo: Maybe Text
+    - enabled: Bool
+    - blocked: Bool
+    - subscribed: Bool
+    - verified: Bool
+    - onRide: Bool
+    - active: Bool
+    - onboardingDate: Maybe UTCTime
+  LicDetails:
+    - licExpiry: UTCTime
+    - vehicleClass: [Text]
+  RCDetails:
+    - vehicleRegistrationCertNumber: Text
+    - vehicleClass: Text
+    - fitnessExpiry: UTCTime
+    - insuranceExpiry: Maybe UTCTime
+    - failedRules: [Text]
+    - verificationStatus: Maybe VerificationStatus
+  DriverAadhaarInfoRes:
+    - driverName: Text
+    - driverGender: Text
+    - driverDob: Text
+    - driverImage: Maybe Text
+  DriverAadhaarInfoByPhoneReq:
+    - recordType: Type
+    - type: DriverAadhaarInfoRes
+  UpdateACUsageRestrictionReq:
+    # - recordType: NewType
+    - isWorking: Bool
+    - derive: "'HideSecrets"
+    - downgradeReason: Maybe Text
+  BlockDriverWithReasonReq:
+    - reasonCode: Text
+    - blockReason: Maybe Text
+    - blockTimeInHours: Maybe Int
+  BlockReason:
+    - reasonCode: Id BlockReason
+    - blockReason: Maybe Text
+    - blockTimeInHours: Maybe Int
+  DriverLocationRes:
+    - driverLocationsNotFound: Maybe (NonEmpty (Id Driver))
+    - driverLocations: [DriverLocationItem]
+  DriverLocationItem:
+    - driverId: Id Driver
+    - firstName: Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
+    - vehicleNo: Text
+    - phoneNo: Text
+    - active: Bool
+    - onRide: Bool
+    - location: LatLong
+    - lastLocationTimestamp: UTCTime
+  DeleteRCReq:
+    - recordType: NewType
+    - rcNo: Text
+    - derive: "'HideSecrets"
+  DriverEncDataReq:
+    - driverIdReq: Id Driver
+    - driverDataReq: Text
+    - derive: "'HideSecrets"
+  DriverDecDataResp:
+    - driverIdResp: Id Driver
+    - driverDataResp: Maybe Text
+    - derive: "'HideSecrets"
+  UpdatePhoneNumberReq:
+    - newPhoneNumber: Text
+    - newCountryCode: Text
+    - derive: "'HideSecrets"
+  UpdateDriverDataReq:
+    - driverName: Text
+    - driverGender: Text
+    - driverDob: Text
+    - driverAadhaarNumber: Text
+    - isVerified: Bool
+  UpdateDriverNameReq:
+    - firstName: Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
+    - derive: "'HideSecrets"
+  ClearOnRideStuckDriversRes:
+    - recordType: NewType
+    - driverIds: [Id Driver]
+  ChangeOperatingCityReq:
+    - recordType: NewType
+    - operatingCity: City
+    - derive: "'HideSecrets"
+  GetOperatingCityResp:
+    - recordType: NewType
+    - operatingCity: City
+    - derive: "'HideSecrets"
+  PauseOrResumeServiceChargesReq:
+    - serviceChargeEligibility: Bool
+    - vehicleId: Maybe Text
+    - serviceName: ServiceNames
+    - reason: Maybe ReasonForDisablingServiceCharge
+    - planId: Maybe Text
+    - derive: "'HideSecrets"
+  UpdateRCInvalidStatusReq:
+    - rcId: Text
+    - vehicleVariant: VehicleVariant
+    - derive: "'HideSecrets"
+  UpdateVehicleVariantReq:
+    - rcId: Text
+    - vehicleVariant: VehicleVariant
+    - derive: "'HideSecrets"
+  UpdateVehicleManufacturingReq:
+    - rcId: Text
+    - manufacturing: Day
+    - derive: "'HideSecrets"
+  ReviewRCVariantReq:
+    - rcId: Text
+    - vehicleVariant: Maybe VehicleVariant
+    - markReviewed: Maybe Bool
+  ReviewRCVariantRes:
+    - rcId: Text
+    - status: Text
+  UpdateDriverTagReq:
+    - driverTag: TagNameValue
+    - isAddingTag: Bool
+    - derive: "'HideSecrets"
+  ClearDriverFeeReq:
+    - serviceName: ServiceNames
+    - feeType: DriverFeeType
+    - platformFee: HighPrecMoney
+    - sgstPercentage: Maybe HighPrecMoney
+    - cgstPercentage: Maybe HighPrecMoney
+    - currency: Maybe Currency
+    - sendManualLink: Bool
+  DriverFeeType:
+    - enum: "PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
+  PanAadharSelfieDetailsResp:
+    - personName: Text
+    - personId: Text
+    - selfieDetails: Maybe SelfieDetails
+    - aadhaarDetails: Maybe AadhaarDetails
+    - panDetails: Maybe PanDetails
+  SelfieDetails:
+    - latestStatus: Maybe Text
+    - latestStatusTime: UTCTime
+    - latestTransactionId: Maybe Text
+  AadhaarDetails:
+    - aadhaarStatus: Maybe Text
+    - aadhaarStatusTime: UTCTime
+    - aadhaarTransactionId: Maybe Text
+  PanDetails:
+    - panStatus: Maybe Text
+    - panStatusTime: UTCTime
+    - panTransactionId: Maybe Text
+  SyncDocType:
+    - enum: "Aadhaar, Pan"
+  AadharPanSyncReq:
+    - phoneNo: Text
+    - countryCode: Text
+    - documentType: SyncDocType
+    - derive: "'HideSecrets"
+  SecurityDepositDfStatusRes:
+    - securityDepositStatus: DriverFeeStatus
+    - securityDepositAmountWithCurrency: Maybe PriceAPIEntity
+    - driverFeeId: Text
+    - refundedAmount: Maybe HighPrecMoney
+    - createdAt: UTCTime
+  RefundByPayoutReq:
+    - serviceName: ServiceNames
+    - refundAmountDeduction: HighPrecMoney
+    - payerVpa: Maybe Text
+    - driverFeeType: DriverFeeType
+    - refundAmountSegregation: Maybe Text
+    - derive: "'HideSecrets"
+  PanAadharSelfieDetailsListResp:
+    - transactionId: Text
+    - verificationStatus: Maybe Text
+    - failureReason: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - imageId1: Maybe Text
+    - imageId2: Maybe Text
+  BulkServiceUpdateReq:
+    - driverIds : [Text]
+    - serviceNames : [ServiceNames]
+    - derive: "'HideSecrets"
+  DriverStatsRes:
+    - numDriversOnboarded: Int
+    - numFleetsOnboarded: Int
+    - totalRides: Int
+    - totalEarnings: Money
+    - totalDistance: Meters
+    - bonusEarnings: Money
+    - totalEarningsWithCurrency: PriceAPIEntity
+    - totalEarningsPerKm: Money
+    - totalEarningsPerKmWithCurrency: PriceAPIEntity
+    - bonusEarningsWithCurrency: PriceAPIEntity
+    - onlineDuration: Seconds
+  EarningPeriodStatsRes:
+    - earnings: [EarningPeriodStats]
+  EarningPeriodStats:
+    - periodStart: Day
+    - totalEarnings: Money
+    - totalDistance: Meters
+    - totalRides: Int
+    - cancellationCharges: Money
+    - tipAmount: Money
+  UpdateDriverMerchantReq:
+    - newMerchantId: Id Merchant
+    - newMerchantOperatingCityId: Id MerchantOperatingCity
+    - derive: "'HideSecrets"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE

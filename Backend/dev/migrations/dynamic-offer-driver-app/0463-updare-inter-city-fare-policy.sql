@@ -1,0 +1,1 @@
+update atlas_driver_offer_bpp.fare_policy_inter_city_details set per_km_rate_one_way = per_km_rate_round_trip, per_km_rate_round_trip = per_km_rate_one_way;

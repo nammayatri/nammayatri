@@ -22,10 +22,15 @@ import Data.Time (diffUTCTime)
 import GHC.Records.Extra
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.AppMetrics (shouldPushLatencyMetrics)
 import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion)
 import Kernel.Types.Common
 import Prometheus as P
 import Tools.Metrics.BAPMetrics.Types as Reexport
+
+data MetricsAction = INIT | CONFIRM | SEARCH_FRFS | SELECT_FRFS | INIT_FRFS | CONFIRM_FRFS | CANCEL_FRFS | CREATE_ORDER_FRFS
+
+deriving instance Show MetricsAction
 
 startSearchMetrics :: (Redis.HedisFlow m r, HasBAPMetrics m r) => Text -> Text -> m ()
 startSearchMetrics merchantName txnId = do
@@ -39,6 +44,28 @@ finishSearchMetrics merchantName txnId = do
   version <- asks (.version)
   finishSearchMetrics' bmContainer merchantName version txnId
 
+startMetrics :: (Redis.HedisFlow m r, HasBAPMetrics m r) => MetricsAction -> Text -> Text -> Text -> m ()
+startMetrics action merchantName txnId merchantOperatingCityId = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  startMetrics' bmContainer action merchantName version txnId merchantOperatingCityId
+
+startMetricsBap :: (Redis.HedisFlow m r, HasBAPMetrics m r) => MetricsAction -> Text -> Text -> Text -> m ()
+startMetricsBap action merchantName txnId merchantOperatingCityId = do
+  shouldPush <- liftIO shouldPushLatencyMetrics
+  when shouldPush $ startMetrics action merchantName txnId merchantOperatingCityId
+
+finishMetricsBap :: (Redis.HedisFlow m r, HasBAPMetrics m r) => MetricsAction -> Text -> Text -> Text -> m ()
+finishMetricsBap action merchantName txnId merchantOperatingCityId = do
+  shouldPush <- liftIO shouldPushLatencyMetrics
+  when shouldPush $ finishMetrics action merchantName txnId merchantOperatingCityId
+
+finishMetrics :: (Redis.HedisFlow m r, HasBAPMetrics m r) => MetricsAction -> Text -> Text -> Text -> m ()
+finishMetrics action merchantName txnId merchantOperatingCityId = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  finishMetrics' bmContainer action merchantName version txnId merchantOperatingCityId
+
 incrementRideCreatedRequestCount :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
 incrementRideCreatedRequestCount merchantId merchantOperatingCityId category = do
   bmContainer <- asks (.bapMetrics)
@@ -50,16 +77,30 @@ incrementRideCreatedRequestCount' bmContainer merchantId merchantOperatingCityId
   let rideCreatedCounter = bmContainer.rideCreatedCounter
   liftIO $ P.withLabel rideCreatedCounter (merchantId, version.getDeploymentVersion, category, merchantOperatingCityId) P.incCounter
 
-incrementSearchRequestCount :: HasBAPMetrics m r => Text -> m ()
-incrementSearchRequestCount merchantName = do
+incrementSearchRequestCount :: HasBAPMetrics m r => Text -> Text -> m ()
+incrementSearchRequestCount merchantName merchantOperatingCityId = do
   bmContainer <- asks (.bapMetrics)
   version <- asks (.version)
-  incrementSearchRequestCount' bmContainer merchantName version
+  incrementSearchRequestCount' bmContainer merchantName merchantOperatingCityId version
 
-incrementSearchRequestCount' :: MonadIO m => BAPMetricsContainer -> Text -> DeploymentVersion -> m ()
-incrementSearchRequestCount' bmContainer merchantName version = do
+incrementSearchRequestCount' :: MonadIO m => BAPMetricsContainer -> Text -> Text -> DeploymentVersion -> m ()
+incrementSearchRequestCount' bmContainer merchantName merchantOperatingCityId version = do
   let searchRequestCounter = bmContainer.searchRequestCounter
-  liftIO $ P.withLabel searchRequestCounter (merchantName, version.getDeploymentVersion) P.incCounter
+  liftIO $ P.withLabel searchRequestCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId) P.incCounter
+
+incrementBusScanSearchRequestCount :: HasBAPMetrics m r => Text -> Text -> m ()
+incrementBusScanSearchRequestCount merchantName merchantOperatingCityId = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let busScanSearchRequestCounter = bmContainer.busScanSearchRequestCounter
+  liftIO $ P.withLabel busScanSearchRequestCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId) P.incCounter
+
+incrementBusScannetCounterMetric :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
+incrementBusScannetCounterMetric merchantName merchantOperatingCityId vehicleNumber = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let busScannerCounter = bmContainer.busScannerCounter
+  liftIO $ P.withLabel busScannerCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, vehicleNumber) P.incCounter
 
 putSearchDuration :: MonadIO m => P.Vector P.Label2 P.Histogram -> Text -> DeploymentVersion -> Double -> m ()
 putSearchDuration searchDurationHistogram merchantName version duration = liftIO $ P.withLabel searchDurationHistogram (merchantName, version.getDeploymentVersion) (`P.observe` duration)
@@ -69,6 +110,15 @@ searchDurationKey txnId = "beckn:" <> txnId <> ":on_search:received"
 
 searchDurationLockKey :: Text -> Text
 searchDurationLockKey txnId = txnId <> ":on_search"
+
+putDuration :: MonadIO m => P.Vector P.Label3 P.Histogram -> Text -> DeploymentVersion -> Text -> Double -> m ()
+putDuration durationHistogram merchantName version merchantOperatingCityId duration = liftIO $ P.withLabel durationHistogram (merchantName, version.getDeploymentVersion, merchantOperatingCityId) (`P.observe` duration)
+
+durationKey :: Text -> MetricsAction -> Text
+durationKey txnId action = "beckn:" <> txnId <> ":on_" <> show action <> ":received"
+
+durationLockKey :: Text -> MetricsAction -> Text
+durationLockKey txnId action = txnId <> ":on_" <> show action
 
 startSearchMetrics' :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => BAPMetricsContainer -> Text -> DeploymentVersion -> Text -> m ()
 startSearchMetrics' bmContainer merchantName version txnId = do
@@ -96,4 +146,48 @@ finishSearchMetrics' bmContainer merchantName version txnId = do
       Just startTime -> do
         void $ Redis.del (searchDurationKey txnId)
         putSearchDuration searchDurationHistogram merchantName version . realToFrac . diffUTCTime endTime $ startTime
+      Nothing -> return ()
+
+startMetrics' :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => BAPMetricsContainer -> MetricsAction -> Text -> DeploymentVersion -> Text -> Text -> m ()
+startMetrics' bmContainer action merchantName version txnId merchantOperatingCityId = do
+  let (_, failureCounter) = case action of
+        INIT -> bmContainer.initDuration
+        CONFIRM -> bmContainer.confirmDuration
+        SEARCH_FRFS -> bmContainer.searchDurationFRFS
+        SELECT_FRFS -> bmContainer.selectDurationFRFS
+        INIT_FRFS -> bmContainer.initDurationFRFS
+        CONFIRM_FRFS -> bmContainer.confirmDurationFRFS
+        CANCEL_FRFS -> bmContainer.cancelDurationFRFS
+        CREATE_ORDER_FRFS -> bmContainer.createOrderDurationFRFS
+      redisExTime = getSeconds bmContainer.searchDurationTimeout
+  startTime <- getCurrentTime
+  Redis.setExp (durationKey txnId action) startTime (redisExTime + 1) -- a bit more time to
+  -- allow forked thread to handle failure
+  fork "Gateway Search Metrics" $ do
+    liftIO $ threadDelay $ redisExTime * 1000000
+    Redis.whenWithLockRedis (durationLockKey txnId action) redisExTime $ do
+      Redis.get (durationKey txnId action) >>= \case
+        Just (_ :: UTCTime) -> do
+          void $ Redis.del (durationKey txnId action)
+          liftIO $ P.withLabel failureCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId) P.incCounter
+        Nothing -> return ()
+
+finishMetrics' :: (Redis.HedisFlow m r, MonadTime m, MonadMask m) => BAPMetricsContainer -> MetricsAction -> Text -> DeploymentVersion -> Text -> Text -> m ()
+finishMetrics' bmContainer action merchantName version txnId merchantOperatingCityId = do
+  let (durationHistogram, _) = case action of
+        INIT -> bmContainer.initDuration
+        CONFIRM -> bmContainer.confirmDuration
+        SEARCH_FRFS -> bmContainer.searchDurationFRFS
+        SELECT_FRFS -> bmContainer.selectDurationFRFS
+        INIT_FRFS -> bmContainer.initDurationFRFS
+        CONFIRM_FRFS -> bmContainer.confirmDurationFRFS
+        CANCEL_FRFS -> bmContainer.cancelDurationFRFS
+        CREATE_ORDER_FRFS -> bmContainer.createOrderDurationFRFS
+      redisExTime = getSeconds bmContainer.searchDurationTimeout
+  endTime <- getCurrentTime
+  Redis.whenWithLockRedis (durationLockKey txnId action) redisExTime $ do
+    Redis.get (durationKey txnId action) >>= \case
+      Just startTime -> do
+        void $ Redis.del (durationKey txnId action)
+        putDuration durationHistogram merchantName version merchantOperatingCityId . realToFrac . diffUTCTime endTime $ startTime
       Nothing -> return ()

@@ -31,7 +31,7 @@ import Components.PrimaryEditText as PrimaryEditText
 import Data.Array as DA
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
-import Effect.Uncurried (runEffectFn1)
+import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -41,7 +41,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (||), (>))
+import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (||), (>), void)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibility)
 import Screens.AddNewAddressScreen.Controller (Action(..), ScreenOutput, eval, validTag)
 import Screens.Types as ST
@@ -51,6 +51,7 @@ import Data.String as DS
 import Styles.Colors as Color
 import Common.Resources.Constants (pickupZoomLevel)
 import Locale.Utils
+import Mobility.Prelude
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
 screen initialState =
@@ -61,7 +62,7 @@ screen initialState =
                       if initialState.props.isLocateOnMap then do
                         pure (pure unit)
                       else do
-                        _ <- JB.storeCallBackLocateOnMap push UpdateLocation
+                        void $ runEffectFn2 JB.storeCallBackLocateOnMap (\key lat lon -> push $ UpdateLocation key lat lon) (JB.handleLocateOnMapCallback "AddNewAddressScreen")
                         pure (pure unit))]
   , eval : \action state -> do
         let _ = spy "AddNewAddressScreenState action " action
@@ -81,10 +82,10 @@ view push state =
   , accessibility DISABLE
   , afterRender
     (\action -> do
-          _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" pickupZoomLevel push MAPREADY)
+          _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" pickupZoomLevel 0.0 0.0 push MAPREADY)
           pure $ HU.setText (EHC.getNewIDWithTag "SavedLocationEditText") (state.data.address)
           pure $ HU.setText (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
-          _ <- runEffectFn1 JB.locateOnMap JB.locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = pickupZoomLevel, labelId = EHC.getNewIDWithTag "AddAddressPin"}
+          -- _ <- runEffectFn1 JB.locateOnMap JB.locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = pickupZoomLevel, labelId = EHC.getNewIDWithTag "AddAddressPin"}
           _ <- if (state.data.activeIndex == Just 2 && state.props.showSavePlaceView) then JB.requestKeyboardShow (EHC.getNewIDWithTag ("SaveAsEditText")) else pure unit
           pure unit
           ) (const AfterRender)
@@ -102,35 +103,70 @@ view push state =
       , accessibility DISABLE_DESCENDANT
       , id (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap")
       ][]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height MATCH_PARENT
-      , background Color.transparent
-      , accessibility DISABLE_DESCENDANT
-      , padding $ PaddingBottom 80
-      , gravity CENTER
-      , orientation VERTICAL
-      ][ textView
-         [ width WRAP_CONTENT
-         , height WRAP_CONTENT
-         , background Color.black900
-         , color Color.white900
-         , text if DS.length state.props.defaultPickUpPoint > state.data.config.mapConfig.labelTextSize then
-                     (DS.take (state.data.config.mapConfig.labelTextSize - 3) state.props.defaultPickUpPoint) <> "..."
-                  else
-                     state.props.defaultPickUpPoint
-         , padding (Padding 7 7 7 7)
-         , margin (MarginBottom 5)
-         , cornerRadius 5.0
-         , visibility if showLabel then VISIBLE else INVISIBLE
-         , id (EHC.getNewIDWithTag "AddAddressPin")
-         ]
-       , imageView
-         [ width $ V 60
-         , height $ V 60 
-         , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> "," <> (getAssetLink FunctionCall) <> "ny_ic_customer_current_location.png"
-         ]
-       ]
+    , if not state.data.config.feature.enableSpecialPickup then
+        linearLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , background Color.transparent
+        , accessibility DISABLE_DESCENDANT
+        , padding $ PaddingBottom $ if EHC.os == "IOS" then 40 else 80
+        , gravity CENTER
+        , orientation VERTICAL
+        ][ textView
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , background Color.black900
+          , color Color.white900
+          , text if DS.length state.props.defaultPickUpPoint > state.data.config.mapConfig.labelTextSize then
+                      (DS.take (state.data.config.mapConfig.labelTextSize - 3) state.props.defaultPickUpPoint) <> "..."
+                    else
+                      state.props.defaultPickUpPoint
+          , padding (Padding 7 7 7 7)
+          , margin (MarginBottom 5)
+          , cornerRadius 5.0
+          , visibility $ boolToInvisibility showLabel
+          , id (EHC.getNewIDWithTag "AddAddressPin")
+          ]
+        , imageView
+          [ width $ V 60
+          , height $ V 60 
+          , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> "," <> (getAssetLink FunctionCall) <> "ny_ic_customer_current_location.png"
+          ]
+        ]
+      else
+          linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , background Color.transparent
+          , accessibility DISABLE_DESCENDANT
+          , padding $ PaddingBottom if EHC.os == "IOS" then 70 else 110
+          , gravity CENTER
+          , orientation VERTICAL
+          ][ imageView
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , accessibility DISABLE_DESCENDANT
+              , visibility $ boolToVisibility showLabel
+              , id (EHC.getNewIDWithTag "AddAddressPin")
+              ]
+          ]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , background Color.transparent
+          , padding $ PaddingBottom if EHC.os == "IOS" then 0 else 46
+          , gravity CENTER
+          , accessibility DISABLE
+          , orientation VERTICAL
+          , visibility $ boolToVisibility state.data.config.feature.enableSpecialPickup
+          ]
+          [ imageView
+              [ width $ V 60
+              , height $ V 60
+              , accessibility DISABLE
+              , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> "," <> (getAssetLink FunctionCall) <> "ny_ic_customer_current_location.png"
+              ]
+          ]
     , relativeLayout
       [ background (if state.props.isLocateOnMap then Color.transparent else "#F5F5F5")
       , height MATCH_PARENT
@@ -451,6 +487,8 @@ bottomBtnsData state =
     , frequencyCount : Nothing
     , recencyDate : Nothing
     , locationScore : Nothing
+    , dynamicAction : Nothing
+    , types : Nothing
     }
   , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_current_location"
     , title :  (getString USE_CURRENT_LOCATION)
@@ -479,7 +517,8 @@ bottomBtnsData state =
     , frequencyCount : Nothing
   , recencyDate : Nothing
   , locationScore : Nothing
-
+  , dynamicAction : Nothing
+  , types : Nothing
     }
 
   ]
@@ -562,8 +601,7 @@ savePlaceView state push =
           , width MATCH_PARENT
           , margin (MarginTop 24)
           , padding (PaddingBottom 2)
-          , visibility if state.data.activeIndex == Just 2 then VISIBLE else GONE
-          ](if state.data.activeIndex == Just 2 then [PrimaryEditText.view (push <<< PrimaryEditTextAC ) (primaryEditTextConfig state)] else [] )
+          ][PrimaryEditText.view (push <<< PrimaryEditTextAC ) (primaryEditTextConfig state)]
         ]]
     , linearLayout
       [ alignParentBottom "true,-1"

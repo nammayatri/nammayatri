@@ -17,7 +17,7 @@ module Components.PrimaryButton.Controller where
 
 import Font.Size as FontSize
 import Font.Style (Style(..))
-import Prelude ((<>), (==))
+import Prelude ((<>), (==), class Show)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Gradient(..), height, width)
 import Common.Styles.Colors as Color
 import Common.Types.App
@@ -27,6 +27,9 @@ import ConfigProvider
 
 data Action = OnClick | NoAction
 
+instance showAction :: Show Action where
+  show (OnClick) = "OnClick"
+  show (NoAction) = "NoAction"
 
 type Config =
   {
@@ -53,6 +56,10 @@ type Config =
     , lottieConfig :: LottieConfig
     , weight :: Maybe Number
     , enableButtonLayoutId :: Boolean
+    , underlineConfig :: UnderLineConfig 
+    , enableRipple :: Boolean
+    , rippleColor :: String
+    , viewbackground :: String
   }
 
 type TextConfig =
@@ -66,6 +73,7 @@ type TextConfig =
   , accessibilityHint :: String
   , weight :: Maybe Number
   , textFromHtml :: Maybe String
+  , id :: String
   }
 
 
@@ -86,23 +94,35 @@ type LottieConfig =
   , autoDisableLoader :: Boolean
   }
 
+type UnderLineConfig = 
+  { color :: String
+  , margin :: Margin
+  , padding :: Padding
+  , visibility :: Visibility
+  , height :: Length
+  }
+
 config :: Config
 config = 
   let 
-    btnConfig = (getAppConfig appConfig).primaryButtonConfig
+    appConfigVal = getAppConfig appConfig
+    btnConfig = appConfigVal.primaryButtonConfig
   in {
     textConfig  :
     { text : ""
     , textStyle : SubHeading1
     , gravity : CENTER
     , visibility : VISIBLE
-    , color : Color.yellow900
+    , color : appConfigVal.primaryTextColor
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
     , accessibilityHint : ""
     , weight : Nothing
     , textFromHtml : Nothing
+    , id : ""
     }
+  , enableRipple : false
+  , rippleColor : Color.rippleShade
   , width: MATCH_PARENT
   , height: V 50
   , cornerRadius: 8.0
@@ -111,11 +131,12 @@ config =
   , alpha: 1.0
   , isClickable: true
   , visibility: VISIBLE
-  , background : Color.black900
+  , background : appConfigVal.primaryBackground
   , gravity : CENTER
   , isSuffixImage : false
   , weight : Nothing
   , enableButtonLayoutId : false
+  , viewbackground : Color.white900
   , suffixImageConfig :
     {
       height : V 20
@@ -147,4 +168,11 @@ config =
   , lottieURL : btnConfig.loaderUrl
   , autoDisableLoader : true
   }
+  , underlineConfig : {
+    color : Color.grey900
+  , margin : Margin 0 0 0 0
+  , padding : Padding 0 0 0 0
+  , visibility : GONE
+  , height : V 0
   }
+}

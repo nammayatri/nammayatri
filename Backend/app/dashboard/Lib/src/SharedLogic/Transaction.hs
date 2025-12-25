@@ -18,6 +18,7 @@ module SharedLogic.Transaction
     buildTransaction,
     withTransactionStoring,
     withResponseTransactionStoring,
+    buildTransactionForSafetyDashboard,
   )
 where
 
@@ -25,11 +26,11 @@ import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified Data.Text as Text
 import qualified Domain.Types.Transaction as DT
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (encodeToText, throwError)
+import Kernel.Utils.Common (encodeToText, logError, throwError)
+import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Transaction as QT
 import Tools.Auth
 import qualified Tools.Error as E
@@ -79,7 +80,7 @@ buildTransaction endpoint serverName apiTokenInfo commonDriverId commonRideId re
 --
 -- If client call fails, then write error code to transaction.
 withTransactionStoring ::
-  ( Esq.EsqDBFlow m r,
+  ( BeamFlow m r,
     MonadCatch m
   ) =>
   DT.Transaction ->
@@ -93,7 +94,7 @@ withTransactionStoring =
 -- If client call successed, then write response to transaction, with secrets hiding
 -- Else write error code to transaction.
 withResponseTransactionStoring ::
-  ( Esq.EsqDBFlow m r,
+  ( BeamFlow m r,
     MonadCatch m,
     Common.HideSecrets response
   ) =>
@@ -104,7 +105,7 @@ withResponseTransactionStoring =
   withResponseTransactionStoring' (Just . Common.hideSecrets)
 
 withResponseTransactionStoring' ::
-  ( Esq.EsqDBFlow m r,
+  ( BeamFlow m r,
     MonadCatch m,
     ToJSON transactionResponse
   ) =>
@@ -113,13 +114,38 @@ withResponseTransactionStoring' ::
   m response ->
   m response
 withResponseTransactionStoring' responseModifier transaction clientCall = handle errorHandler $ do
+  when (transaction.endpoint == DT.UnknownEndpoint) $
+    logError $ "Unknown endpoint: transactionId: " <> transaction.id.getId
   response <- clientCall
-  Esq.runTransaction $
-    QT.create $ transaction{response = encodeToText <$> responseModifier response}
+  QT.create $ transaction{response = encodeToText <$> responseModifier response}
   pure response
   where
     -- This code do not handle ExternalAPICallError, only E.Error
     errorHandler (err :: E.Error) = do
-      Esq.runTransaction $
-        QT.create transaction{responseError = Just $ show err}
+      QT.create transaction{responseError = Just $ show err}
       throwError err
+
+buildTransactionForSafetyDashboard ::
+  ( MonadFlow m
+  ) =>
+  DT.Endpoint ->
+  Maybe TokenInfo ->
+  Text ->
+  m DT.Transaction
+buildTransactionForSafetyDashboard endpoint apiTokenInfo request = do
+  uid <- generateGUID
+  now <- getCurrentTime
+  pure
+    DT.Transaction
+      { id = uid,
+        requestorId = apiTokenInfo <&> (.personId),
+        merchantId = apiTokenInfo <&> (.merchantId),
+        request = Just request, -- here i will send encoded request
+        response = Nothing,
+        responseError = Nothing,
+        createdAt = now,
+        commonDriverId = Nothing,
+        commonRideId = Nothing,
+        serverName = Nothing,
+        endpoint = endpoint
+      }

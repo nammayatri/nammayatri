@@ -17,10 +17,12 @@ module Screens.RideSelectionScreen.ScreenData where
 
 import Screens.Types (AnimationState(..), RideSelectionScreenState)
 import Data.Maybe (Maybe(..))
+import ConfigProvider
 
 initData :: RideSelectionScreenState
 initData =
   { rideList      : []
+  , config : getAppConfig appConfig
   , offsetValue   : 0
   , selectedItem  : Nothing
   , shimmerLoader : AnimatingIn
@@ -29,8 +31,12 @@ initData =
   , selectedCategory :
     { categoryId     : ""
     , categoryName   : ""
-    , categoryAction : ""
-    , categoryImageUrl : ""
+    , categoryAction : Nothing
+    , categoryImageUrl : Nothing
+    , isRideRequired : false
+    , maxAllowedRideAge : Nothing
+    , allowedRideStatuses : Nothing
+    , categoryType : "Category"
     }
   , prestoListArrayItems   : []
   , loaderButtonVisibility : false

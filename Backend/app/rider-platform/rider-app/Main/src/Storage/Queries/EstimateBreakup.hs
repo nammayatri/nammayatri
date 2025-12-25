@@ -25,18 +25,17 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.EstimateBreakup as BeamEB
 
-create :: MonadFlow m => EstimateBreakup -> m ()
+create :: (MonadFlow m, EsqDBFlow m r) => EstimateBreakup -> m ()
 create = createWithKV
 
 findAllByEstimateIdT :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m [EstimateBreakup]
-findAllByEstimateIdT (Id estimateId) = findAllWithKV [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
+findAllByEstimateIdT (Id estimateId) = findAllWithKVAndConditionalDB [Se.Is BeamEB.estimateId $ Se.Eq estimateId] Nothing
 
 instance FromTType' BeamEB.EstimateBreakup EstimateBreakup where
   fromTType' BeamEB.EstimateBreakupT {..} = do
     let price =
           DEB.EstimateBreakupPrice
-            { currency = priceCurrency,
-              value = roundToIntegral priceValue
+            { value = mkPrice (Just priceCurrency) priceValue
             }
     pure $
       Just
@@ -53,6 +52,6 @@ instance ToTType' BeamEB.EstimateBreakup EstimateBreakup where
       { BeamEB.id = getId id,
         BeamEB.estimateId = getId estimateId,
         BeamEB.title = title,
-        BeamEB.priceCurrency = price.currency,
-        BeamEB.priceValue = realToFrac price.value
+        BeamEB.priceCurrency = price.value.currency,
+        BeamEB.priceValue = price.value.amount
       }

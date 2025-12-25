@@ -15,17 +15,22 @@
 module Storage.CachedQueries.Person
   ( findCityInfoById,
     updateCityInfoById,
+    findPersonStatsById,
+    clearPSCache,
   )
 where
 
+import Domain.Action.UI.Person
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
+import Domain.Types.PersonStats
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Person as Queries
+import qualified Storage.Queries.PersonStats as QPS
 
 findCityInfoById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Person -> m (Maybe PersonCityInformation)
 findCityInfoById personId = do
@@ -50,3 +55,22 @@ clearCache personId = do
 
 makeIdKey :: Id Person -> Text
 makeIdKey personId = "CachedQueries:Person:PersonCityInformation-" <> personId.getId
+
+findPersonStatsById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Person -> m (Maybe PersonStats)
+findPersonStatsById personId = do
+  Hedis.safeGet (makePSIdKey personId) >>= \case
+    Just a -> pure a
+    Nothing -> flip whenJust cachePersonStats /=<< QPS.findByPersonId personId
+
+cachePersonStats :: (CacheFlow m r, MonadFlow m) => PersonStats -> m ()
+cachePersonStats personStats = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let idKey = makePSIdKey personStats.personId
+  Hedis.setExp idKey personStats expTime
+
+clearPSCache :: (CacheFlow m r, MonadFlow m) => Id Person -> m ()
+clearPSCache personId = do
+  Hedis.del (makePSIdKey personId)
+
+makePSIdKey :: Id Person -> Text
+makePSIdKey personId = "CachedQueries:Person:PersonStats-" <> personId.getId

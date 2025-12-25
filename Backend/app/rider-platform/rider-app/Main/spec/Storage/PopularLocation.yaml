@@ -1,0 +1,34 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Text: Data.Text
+  Id: Kernel.Types.Id
+  UTCTime: Data.Time.Clock
+  Value: Data.Aeson
+
+PopularLocation:
+  tableName: popular_location
+
+  derives: "Generic,Show"
+
+  fields:
+    id: Text
+    merchantOperatingCityId: Id MerchantOperatingCity
+    name: Text
+    address: Text
+    lat: Double
+    lon: Double
+    type_: Text
+    rating: Maybe Double
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  beamInstance:
+    - MakeTableInstances
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

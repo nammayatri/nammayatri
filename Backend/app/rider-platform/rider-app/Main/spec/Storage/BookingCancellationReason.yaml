@@ -1,0 +1,87 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  CancellationReasonCode: Domain.Types.CancellationReason
+  CancellationStage: Domain.Types.CancellationReason
+  Booking:  Domain.Types.Booking
+  Ride: Domain.Types.Ride
+  LatLong: Kernel.External.Maps
+  Person: Domain.Types.Person
+
+BookingCancellationReason:
+  tableName: booking_cancellation_reason
+
+  types:
+    CancellationSource:
+      enum: "ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication"
+
+
+  fields:
+    bookingId : Id Booking
+    rideId : Maybe (Id Ride)
+    merchantId : Maybe (Id Merchant)
+    source : CancellationSource
+    reasonCode : Maybe CancellationReasonCode
+    reasonStage : Maybe CancellationStage
+    additionalInfo : Maybe Text
+    driverCancellationLocation : Maybe LatLong
+    driverDistToPickup : Maybe Distance
+    distanceUnit : DistanceUnit
+    riderId: Maybe (Id Person)
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    createdAt: Maybe UTCTime
+    updatedAt: Maybe UTCTime
+
+  beamFields:
+    driverCancellationLocation:
+      driverCancellationLocationLat: Maybe Double
+      driverCancellationLocationLon: Maybe Double
+    driverDistToPickup:
+      driverDistToPickup: Maybe Meters
+      driverDistToPickupValue : Maybe HighPrecDistance
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
+
+  fromTType:
+    driverCancellationLocation: Kernel.External.Maps.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon|E
+    createdAt: getCreatedAt|M
+    updatedAt: getUpdatedAt|M
+    driverDistToPickup: Kernel.Types.Common.mkDistanceWithDefaultMeters distanceUnit driverDistToPickupValue <$> driverDistToPickup|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+
+  # distanceUnit should be the same for all fields
+  toTType:
+    driverCancellationLocationLat: (driverCancellationLocation <&> (.lat))|E
+    driverCancellationLocationLon: (driverCancellationLocation <&> (.lon))|E
+    createdAt: Kernel.Prelude.Just|I
+    updatedAt: Kernel.Prelude.Just|I
+    driverDistToPickup: (Kernel.Types.Common.distanceToMeters <$> driverDistToPickup)|E
+    driverDistToPickupValue: (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> driverDistToPickup)|E
+    distanceUnit: Kernel.Prelude.Just|I
+
+  constraints:
+    bookingId: PrimaryKey
+
+  sqlType:
+    source: character varying(255)
+    reasonCode: character varying(255)
+    addtionalInfo: character varying(255)
+    reasonStage: character varying(255)
+    driverDistToPickup: bigint
+
+  queries:
+    findByRideBookingId:
+      kvFunction: findOneWithKV
+      where: bookingId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+
+
+

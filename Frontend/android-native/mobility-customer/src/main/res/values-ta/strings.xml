@@ -13,7 +13,6 @@
     <string name="please_allow_permission_to_capture_the_image">படத்தைப் பிடிக்க அனுமதிகளை அனுமதிக்கவும்</string>
     <string name="we_have_updated_your_app_kindly_relaunch">உங்கள் பயன்பாட்டை நாங்கள் புதுப்பித்துள்ளோம், பயன்பாடு இப்போது மீண்டும் ஏற்றப்படும்.</string>
     <string name="okay_got_it">சரி, புரிந்தது</string>
-    <string name="upload_image">படத்தை பதிவேற்றம் செய்யவும்</string>
     <string name="not_interested">ஆர்வம் இல்லை</string>
     <string name="too_far">மற்றொரு சவாரி</string>
     <string name="on_another_ride">மிக தொலைவில்</string>
@@ -26,7 +25,7 @@
     <string name="tap_on">3. Tap on </string>
     <string name="location">Location</string>
     <string name="phone">Phone</string>
-    <string name="includes_pickup_charges_10">பிக்அப் கட்டணங்கள் ₹10 அடங்கும்</string>
+    <string name="includes_pickup_charges_10">பிக்அப் கட்டணங்கள் ₹{#amount#} அடங்கும்</string>
     <string name="away">தொலைவில்</string>
     <string name="we_made_you_online">நாங்கள் உங்களை ஆன்லைனில் உருவாக்கினோம்</string>
     <string name="location_is_turned_on">இருப்பிடம் இயக்கப்பட்டது</string>
@@ -50,4 +49,5 @@
     <string name="driver_receipt_for_your_ride_is_downloaded">உங்கள் சவாரிக்கான ஓட்டுனர் ரசீது பதிவிறக்கப்பட்டது!!!</string>
     <string name="invoice_for_your_ride_is_downloaded">உங்கள் சவாரிக்கான விலைப்பட்டியல் பதிவிறக்கப்பட்டது!!!</string>
     <string name="qr_downloaded">QR பதிவிறக்கம் !!!</string>
+    <string name="upload_image">Upload Image</string>
 </resources>

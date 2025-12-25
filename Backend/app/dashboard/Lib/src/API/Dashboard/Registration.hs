@@ -17,9 +17,9 @@ module API.Dashboard.Registration where
 import qualified Domain.Action.Dashboard.Registration as DReg
 import Environment
 import Kernel.Prelude
-import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.BeamFlow
 import Tools.Auth
 
 type API =
@@ -44,13 +44,9 @@ type API =
              :> DashboardAuth 'DASHBOARD_USER
              :> ReqBody '[JSON] DReg.SwitchMerchantAndCityReq
              :> Post '[JSON] DReg.LoginRes
-           :<|> "fleet"
-             :> "register"
-             :> ReqBody '[JSON] DReg.FleetRegisterReq
-             :> Post '[JSON] APISuccess
        )
 
-handler :: FlowServer API
+handler :: BeamFlow' => FlowServer API
 handler =
   login
     :<|> logout
@@ -58,25 +54,21 @@ handler =
     :<|> enable2fa
     :<|> switchMerchant
     :<|> switchMerchantAndCity
-    :<|> registerFleetOwner
 
-login :: DReg.LoginReq -> FlowHandler DReg.LoginRes
+login :: BeamFlow' => DReg.LoginReq -> FlowHandler DReg.LoginRes
 login = withFlowHandlerAPI' . DReg.login
 
-logout :: TokenInfo -> FlowHandler DReg.LogoutRes
+logout :: BeamFlow' => TokenInfo -> FlowHandler DReg.LogoutRes
 logout = withFlowHandlerAPI' . DReg.logout
 
-logoutAllMerchants :: TokenInfo -> FlowHandler DReg.LogoutRes
+logoutAllMerchants :: BeamFlow' => TokenInfo -> FlowHandler DReg.LogoutRes
 logoutAllMerchants = withFlowHandlerAPI' . DReg.logoutAllMerchants
 
-enable2fa :: DReg.Enable2FAReq -> FlowHandler DReg.Enable2FARes
+enable2fa :: BeamFlow' => DReg.Enable2FAReq -> FlowHandler DReg.Enable2FARes
 enable2fa = withFlowHandlerAPI' . DReg.enable2fa
 
-switchMerchant :: TokenInfo -> DReg.SwitchMerchantReq -> FlowHandler DReg.LoginRes
+switchMerchant :: BeamFlow' => TokenInfo -> DReg.SwitchMerchantReq -> FlowHandler DReg.LoginRes
 switchMerchant token = withFlowHandlerAPI' . DReg.switchMerchant token
 
-switchMerchantAndCity :: TokenInfo -> DReg.SwitchMerchantAndCityReq -> FlowHandler DReg.LoginRes
+switchMerchantAndCity :: BeamFlow' => TokenInfo -> DReg.SwitchMerchantAndCityReq -> FlowHandler DReg.LoginRes
 switchMerchantAndCity token = withFlowHandlerAPI' . DReg.switchMerchantAndCity token
-
-registerFleetOwner :: DReg.FleetRegisterReq -> FlowHandler APISuccess
-registerFleetOwner = withFlowHandlerAPI' . DReg.registerFleetOwner

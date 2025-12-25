@@ -1,6 +1,8 @@
 module MerchantConfig.Types where
 
 import Common.Types.Config
+import Common.Types.App
+import Foreign.Object (Object)
 
 type AppConfig = AppConfigCustomer CommonAppConfig
 
@@ -8,6 +10,7 @@ type AppConfigCustomer a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
+    submitIssueBtnColor :: String,
     estimateConfirmText :: String,
     autoConfirmingLoaderColor :: String,
     quoteListModelBackground :: String,
@@ -54,9 +57,11 @@ type AppConfigCustomer a =
   , autoVariantEnabled :: Boolean
   , showDisabilityBanner :: Boolean
   , mapConfig :: MapConfig
+  , metroTicketingConfig :: Array MetroConfig
   , enableWhatsappOTP :: Array String
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
   , estimateAndQuoteConfig :: EstimateAndQuoteConfig
+  , isAdvancedBookingEnabled :: Boolean
   , customerTip :: CustomerTip
   , feature :: Features
   , rideCompletedCardConfig :: RideCompletedCardConfig
@@ -65,8 +70,30 @@ type AppConfigCustomer a =
   , shareAppConfig :: ShareAppConfig
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
+  , cityConfig :: Array CityConfig
+  , driverLocationPolling :: DriverLocationPollingConfig
+  , banners :: Banners
+  , tipDisplayDuration :: Int
+  , tipsEnabled :: Boolean
+  , tipEnabledCities :: Array String
+  , maxVehicleIconsToShowOnMap :: Int
+  , referral :: ReferalConfig
+  , safety :: Safety
+  , enableBookAny :: Boolean
+  , acPopupConfig :: AcPopupConfig
+  , showCheckoutRentalBanner :: Boolean
+  , riderRideCompletedCard :: RiderRideCompletedCard
+  , enableDeliveryService :: Boolean
+  , ambulanceConfig :: GeoCodeConfig
+  , showRecommendedText :: Boolean
+  , showFasterText :: Boolean
   | a
   }
+
+type ReferalConfig = {
+  domain :: String,
+  customerAppId :: String
+}
 
 type GeoCoderConfig = {
   enableLLtoAddress :: Boolean,
@@ -95,7 +122,8 @@ type RatingConfig = {
 type CancelReasonConfig = {
   secondaryButtonTextColor :: String,
   secondaryButtonStroke :: String,
-  buttonCornerRadius :: Number
+  buttonCornerRadius :: Number,
+  shuffleCancelReasons :: Boolean
 }
 
 type DriverInfoConfig = {
@@ -121,8 +149,8 @@ type DriverInfoConfig = {
 }
 
 type SearchLocationConfig = {
-  searchLocationTheme :: String, 
-  setLocationOnMapColor :: String, 
+  searchLocationTheme :: String,
+  setLocationOnMapColor :: String,
   strokeColor :: String,
   enableLocationTagbar :: String,
   resultsCardCornerRadius :: Number,
@@ -131,10 +159,12 @@ type SearchLocationConfig = {
   separatorColor :: String,
   editTextColor :: String,
   showAdditionalChargesText :: Boolean,
+  showDriverAdditions :: Boolean,
   lottieHeight :: Int,
   lottieWidth :: Int,
   primaryButtonHeight :: Int
 , backArrow :: String
+, crossIcon :: String
 , editTextBackground :: String
 , editTextDefaultColor :: String
 , hintColor :: String
@@ -176,13 +206,16 @@ type SuggestedDestinationAndTripsConfig = {
   frequencyWeight :: Number,
   tripDistanceThreshold :: Number,
   repeatRideTime :: Int,
-  autoScrollTime :: Int
+  autoScrollTime :: Int,
+  tripWithinXDist :: Number,
+  locationWithinXDist :: Number,
+  destinationGeohashPrecision :: Int
 }
 
 type Language =  {
   name :: String,
   value :: String,
-  subTitle :: String
+  subtitle :: String
  }
 
 type BannerViewState = {
@@ -194,7 +227,7 @@ type BannerViewState = {
   imageUrl :: String
 }
 type TerminateBtnConfig = {
-    visibility :: Boolean, 
+    visibility :: Boolean,
     title :: String,
     imageUrl :: String,
     backgroundColor :: String
@@ -208,7 +241,8 @@ type EstimateAndQuoteConfig = {
   enableBookingPreference :: Boolean, 
   textColor :: String,
   showInfoIcon :: Boolean,
-  variantInfo :: VariantConfig
+  variantInfo :: VariantConfig,
+  genericLoaderLottie :: String
 }
 
 type CustomerTip = {
@@ -228,7 +262,21 @@ type Features = {
   enableSupport :: Boolean,
   enableShareApp:: Boolean,
   enableReAllocation :: Boolean,
-  forceLogReferrerUrl :: Boolean
+  forceLogReferrerUrl :: Boolean,
+  enableSelfServe :: Boolean,
+  enableAdditionalServices :: Boolean,
+  enableSafetyFlow :: Boolean,
+  shareWithEmergencyContacts :: Boolean,
+  enableAutoReferral :: Boolean,
+  enableRepeatTripBackfilling :: Boolean,
+  enableEditPickupLocation :: Boolean,
+  enableCustomerSupportForSafety :: Boolean,
+  enableSpecialPickup :: Boolean,
+  enableAcPopup :: Boolean,
+  enableRentalReallocation :: Boolean,
+  enableEditDestination :: Boolean,
+  enableHelpAndSupport :: Boolean,
+  enableBusBooking :: Boolean
   }
 
 type RideCompletedCardConfig = {
@@ -242,6 +290,7 @@ type TopCardConfig = {
 , background :: String
 , titleColor :: String
 , rideDescription :: RideDescriptionConfig
+, horizontalLineColor :: String
 }
 
 type RideDescriptionConfig = {
@@ -253,13 +302,32 @@ type MapConfig = {
   locateOnMapConfig :: LocateOnMapConfigs,
   labelTextSize :: Int,
   animationDuration :: Int,
-  vehicleMarkerSize :: Int
+  vehicleMarkerSize :: Int,
+  labelTheme :: String
+}
+
+type MetroConfig = {
+  cityName :: String
+, cityCode :: String
+, customEndTime :: String
+, customDates :: Array String 
+, metroStationTtl :: Int
+, metroHomeBannerImage :: String
+, metroBookingBannerImage :: String
+, bookingStartTime :: String
+, bookingEndTime :: String
+, ticketLimit :: {
+    roundTrip :: Int
+  , oneWay :: Int
+}
 }
 
 type LocateOnMapConfigs = {
   dottedLineConfig :: DottedLineConfig
 , apiTriggerRadius :: Number
 , pickUpToSourceThreshold :: Number
+, hotSpotConfig :: HotSpotConfig
+, editPickUpThreshold :: Number
 }
 
 type DottedLineConfig = {
@@ -282,7 +350,9 @@ type HomeScreen = {
   bannerViewVisibility :: Boolean,
   whereToButton :: WhereToButton,
   pickupLocationTextColor :: String,
-  isServiceablePopupFullScreen :: Boolean
+  isServiceablePopupFullScreen :: Boolean,
+  showAdditionalServicesNew :: Boolean,
+  shimmerTimer :: Int
 }
 
 type HomeScreenHeader = {
@@ -328,11 +398,109 @@ type VariantConfig = {
   sedan :: VariantInfo,
   suv :: VariantInfo,
   autoRickshaw :: VariantInfo,
+  evAutoRickshaw :: VariantInfo,
   taxi :: VariantInfo,
-  taxiPlus :: VariantInfo
+  taxiPlus :: VariantInfo,
+  bookAny :: VariantInfo,
+  bike :: VariantInfo,
+  suvPlus :: VariantInfo,
+  deliveryBike :: VariantInfo,
+  ambulanceTaxi :: VariantInfo,
+  ambulanceTaxiOxy :: VariantInfo,
+  ambulanceAc :: VariantInfo,
+  ambulanceAcOxy :: VariantInfo,
+  ambulanceVentilator :: VariantInfo,
+  heritageCab :: VariantInfo
 }
 
 type VariantInfo = {
   name :: String,
-  image :: String
+  image :: String,
+  leftViewImage :: String
+}
+
+type HotSpotConfig = {
+  goToNearestPointWithinRadius :: Number,
+  showHotSpotsWithinRadius :: Number,
+  enableHotSpot :: Boolean,
+  updateHotSpotOutSideRange :: Number
+}
+
+type CityConfig = {
+  cityName :: String,
+  cityCode :: String,
+  geoCodeConfig :: GeoCodeConfig,
+  enableRentals :: Boolean,
+  enableIntercity :: Boolean,
+  enableScheduling :: Boolean,
+  enableCabs :: Boolean,
+  iopConfig :: InteroperabilityConfig,
+  estimateAndQuoteConfig :: EstimateConfig,
+  featureConfig :: CityBasedFeatures,
+  referral :: ReferalConfig,
+  dashboardUrl :: String,
+  appLogo :: String,
+  appLogoLight :: String,
+  enableAcViews :: Boolean,
+  waitingChargeConfig :: WaitingChargeConfig,
+  rentalWaitingChargeConfig :: WaitingChargeConfig,
+  intercityWaitingChargeConfig :: WaitingChargeConfig,
+  enableWaitingConfig :: Boolean,
+  allowBlockedUserLogin :: Boolean
+, enableIntercityBus :: Boolean
+}
+
+type CityBasedFeatures = {
+  enableCabBanner :: Boolean
+}
+
+type EstimateConfig = {
+  showInfoIcon :: Boolean
+}
+
+type GeoCodeConfig = {
+  radius :: Int,
+  strictBounds :: Boolean
+}
+
+type DriverLocationPollingConfig = {
+  retryExpFactor :: Int
+}
+
+type Banners = {
+  homeScreenSafety :: Boolean,
+  homeScreenCabLaunch :: Boolean
+}
+
+type Safety = {
+  pastRideInterval :: Int,
+  followingInterval :: Int,
+  safetyTeamNumber :: String
+}
+
+type InteroperabilityConfig = {
+  enable :: Boolean,
+  autoSelectTime :: Int
+}
+
+type AcPopupConfig = {
+  enableAcPopup :: Boolean,
+  enableNonAcPopup :: Boolean,
+  showAfterTime :: Int
+}
+
+type WaitingChargeConfig = {
+  auto :: WaitingCharge,
+  cabs :: WaitingCharge,
+  bike :: WaitingCharge,
+  ambulance :: WaitingCharge
+}
+
+type WaitingCharge = {
+  freeMinutes :: Number,
+  perMinCharges :: Number
+}
+
+type RiderRideCompletedCard = {
+  showDriverProfile :: Boolean
 }

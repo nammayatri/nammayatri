@@ -20,8 +20,8 @@ import Components.PrimaryEditText.Controllers as PrimaryEditText
 import Data.String (length)
 import JBridge (hideKeyboardOnNavigation, firebaseLogEvent, toggleBtnLoader)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), ($), discard, bind, (>=))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), ($), discard, bind, (>=), show, (<>))
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (EnterOTPScreenState)
@@ -29,7 +29,15 @@ import Storage (setValueToLocalNativeStore, KeyStore(..))
 import Storage (setValueToLocalNativeStore, setValueToLocalStore, KeyStore(..))
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed ) = "BackPressed"
+  show (ResendOTP ) = "ResendOTP"
+  show (PrimaryEditTextAction var1) = "PrimaryEditTextAction_" <> show var1
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (NoAction ) = "NoAction"
+  show (AutoFill _) = "AutoFill"
+  show (SetToken _) = "SetToken"
+  show (TIMERACTION _) = "TIMERACTION"
+  show (AfterRender ) = "AfterRender"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -97,4 +105,4 @@ eval (SetToken id )state = do
   _ <-  pure $ setValueToLocalStore FCM_TOKEN  id
   continue state
 
-eval _ state = continue state
+eval _ state = update state

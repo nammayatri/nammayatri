@@ -1,0 +1,61 @@
+imports:
+  UTCTime: Kernel.Prelude
+  ShortId: Kernel.Types.Id
+  Merchant: Domain.Types.Merchant
+  HighPrecMoney: Kernel.Types.Common
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  RefundStatus: Kernel.External.Payment.Interface
+  Value: Data.Aeson
+
+Refunds:
+  tableName: refunds
+  fields:
+    id : Id Refunds
+    shortId : ShortId Refunds
+    orderId : ShortId PaymentOrder
+    refundAmount : HighPrecMoney
+    idAssignedByServiceProvider : Maybe Text
+    merchantId : Text
+    status : RefundStatus
+    errorMessage : Maybe Text
+    errorCode : Maybe Text
+    initiatedBy : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    isApiCallSuccess: Maybe Bool
+
+  constraints:
+    orderId: SecondaryKey
+
+  sqlType:
+    id: character varying(36)
+    refund_amount: double precision
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+    split: "json"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByShortId:
+      kvFunction: findOneWithKV
+      where: shortId
+    findAllByOrderId:
+      kvFunction: findAllWithKV
+      where: orderId
+    updateRefundsEntryByResponse:
+      kvFunction: updateWithKV
+      params: [initiatedBy, idAssignedByServiceProvider, errorMessage, errorCode, status]
+      where: id
+    updateIsApiCallSuccess:
+      kvFunction: updateWithKV
+      params: [isApiCallSuccess]
+      where: id
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+
+  beamInstance: MakeTableInstancesGenericSchema

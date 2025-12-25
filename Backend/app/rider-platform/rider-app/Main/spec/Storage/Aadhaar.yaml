@@ -1,0 +1,118 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  DbHash: Kernel.External.Encryption
+
+AadhaarOtpReq:
+  tableName: aadhaar_otp_req
+
+  fields:
+    id : Id AadhaarOtpReq
+    personId : Id Person
+    requestId : Text
+    statusCode : Text
+    transactionId : Maybe Text
+    requestMessage : Text
+    createdAt : UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+      updatedAt: Maybe UTCTime
+
+  fromTType:
+      updatedAt: Kernel.Prelude.fromMaybe createdAt|I
+
+  toTType:
+      updatedAt: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    personId: SecondaryKey
+
+  queries:
+    deleteByPersonIdForGenerate:
+      kvFunction: deleteWithKV
+      where: personId
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+
+AadhaarOtpVerify:
+  tableName: aadhaar_otp_verify
+
+  fields:
+    id : Id AadhaarOtpVerify
+    personId : Id Person
+    requestId : Text
+    statusCode : Text
+    transactionId : Text
+    requestMessage : Text
+    createdAt : UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+      updatedAt: Maybe UTCTime
+
+  fromTType:
+      updatedAt: Kernel.Prelude.fromMaybe createdAt|I
+
+  toTType:
+      updatedAt: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    personId: SecondaryKey
+
+  queries:
+    deleteByPersonIdForVerify:
+      kvFunction: deleteWithKV
+      where: personId
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+
+AadhaarVerification:
+  tableName: aadhaar_verification
+
+  derives: "Generic, ToJSON, FromJSON, Show"
+
+  fields:
+    personName : Text
+    personId : Id Person
+    personGender : Text
+    personDob : Text
+    personImagePath : Maybe Text
+    aadhaarNumberHash : Maybe DbHash
+    isVerified : Bool
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  queries:
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where: personId
+
+    findByAadhaarNumberHash:
+      kvFunction: findOneWithKV
+      where: aadhaarNumberHash
+
+    findByPhoneNumberAndUpdate:
+      kvFunction: updateWithKV
+      params: [personName, personGender, personDob, aadhaarNumberHash, isVerified, updatedAt]
+      where: personId
+
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: personId
+
+    updatePersonImagePath:
+      kvFunction: updateOneWithKV
+      params: [personImagePath]
+      where: personId
+
+  constraints:
+    personId: PrimaryKey
+    aadhaarNumberHash: SecondaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]

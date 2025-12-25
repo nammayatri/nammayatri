@@ -21,15 +21,16 @@ import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.State as S
-import Common.Types.App (Version(..), DateObj, CalendarDate, CalendarWeek, YoutubeData, CarouselHolderData)
+import Common.Types.App (Version(..),GlobalPayload(..), DateObj, CalendarDate, CalendarWeek, YoutubeData, CarouselHolderData, CalendarMonth)
 import Data.Either (Either(..))
-import Data.Function.Uncurried (Fn2)
+import Data.Function.Uncurried (Fn2, Fn3, runFn3)
 import Data.Int as INT
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String (Pattern(..),split)
 import Data.Int (fromString, toNumber)
 import Data.Number.Format (toStringWith, fixed) as Number
 import Data.String as DS
+import DecodeUtil
 import Effect (Effect)
 import Effect.Aff (Aff, makeAff, nonCanceler, attempt, launchAff)
 import Effect.Aff.AVar (new)
@@ -37,7 +38,7 @@ import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import Effect.Ref (Ref, read, write)
-import Effect.Uncurried (EffectFn2, EffectFn8, EffectFn7, mkEffectFn2, mkEffectFn6, mkEffectFn7, runEffectFn2, runEffectFn6, runEffectFn7, runEffectFn8, EffectFn1)
+import Effect.Uncurried (EffectFn2, EffectFn8, EffectFn7, mkEffectFn2, mkEffectFn6, mkEffectFn7, runEffectFn2, runEffectFn6, runEffectFn7, runEffectFn8, EffectFn1, EffectFn6)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (empty, insert, lookup, Object, foldM, delete)
 import JSURI (decodeURIComponent)
@@ -85,20 +86,46 @@ foreign import getCurrentUTC :: String -> String
 foreign import convertUTCtoISC :: String -> String -> String
 foreign import convertUTCTimeToISTTimeinHHMMSS :: String -> String
 foreign import getCurrentTimeStamp :: Unit -> Number
+foreign import markPerformance :: String -> Effect Unit
 foreign import getDateFromObj :: Fn1 DateObj String
 foreign import getFormattedDate :: Fn1 String String
 foreign import formatCurrencyWithCommas :: String -> String
 foreign import camelCaseToSentenceCase :: String -> String
 foreign import getVideoID :: String -> String
-foreign import getImageUrl :: String -> String
+foreign import getImageUrl :: String -> String -> String
 foreign import getPastDays :: Int -> Array CalendarDate
+foreign import getPastYears :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
+foreign import getPastMonths :: Int -> Array CalendarMonth
+foreign import getDayName :: String -> String
+foreign import getFutureDate :: String -> Int -> String
 foreign import setEventTimestamp :: String -> Effect Unit
 foreign import getTimeStampObject :: Unit -> Effect (Array ClevertapEventParams)
 foreign import updateIdMap :: EffectFn1 String CarouselHolderData
+foreign import resetIdMap :: EffectFn1 String Unit
 foreign import updatePushInIdMap :: Fn2 String Boolean Unit
 foreign import getValueFromIdMap :: EffectFn1 String CarouselHolderData
+foreign import getRandomID :: Int -> String
+foreign import toStringJSON :: forall a. a -> String
+foreign import getMarkerCallback :: forall action. Fn2 (action -> Effect Unit) (String -> action) String
+foreign import splitString :: Fn3 String String Int String
 
+foreign import isTrue :: forall a. a -> Boolean 
+foreign import convertTo2DArray :: forall w. Array String -> Array(Array String)
+foreign import parseSecondsOfDayToUTC :: Int -> String
+foreign import getMidnightUTC :: Unit -> String
+foreign import convertDateTimeConfigToUTCImpl :: EffectFn6 Int Int Int Int Int Int String
+foreign import getUTCAfterNSecondsImpl :: Fn2 String Int String
+foreign import getUTCAfterNHoursImpl :: Fn2 String Int String
+foreign import compareUTCDateImpl :: Fn2 String String Int
+foreign import jBridgeMethodExists :: String -> Boolean
+foreign import getDateMinusNDays :: Fn2 String Int String
+
+foreign import getUTCBeforeNSecondsImpl :: Fn2 String Int String
+
+foreign import loadWebViewWithURL :: EffectFn2 String String Unit
+
+foreign import addBenchMark :: Fn2 String Boolean Unit
 
 os :: String
 os = getOs unit
@@ -142,13 +169,6 @@ mkNativeRequest (API.Request request@{headers: API.Headers hs}) = NativeRequest
 mkNativeHeader :: API.Header -> NativeHeader
 mkNativeHeader (API.Header field val) = { field: field, value: val}
 
-trackerIcon :: String -> String
-trackerIcon vehicleType = case vehicleType of
-                            "SEDAN" -> "tracker_sedan"
-                            "SUV" -> "tracker_suv"
-                            "HATCHBACK" -> "tracker_hatchback"
-                            _ -> "map_car"
-
 liftFlow :: forall val st. (Effect val)  -> Flow st val
 liftFlow effVal = doAff do liftEffect (effVal)
 
@@ -164,27 +184,32 @@ setWindowVariable key value = liftFlow (setWindowVariableImpl key value)
 flowRunner :: ∀ return st. st -> Flow st return -> Aff (Either Error return)
 flowRunner state flow = do
   let
-    freeFlow = S.evalStateT $ run standardRunTime flow
+    freeFlow = S.evalStateT $ run (standardRunTime 1) flow
   attempt $ new (defaultState state) >>= freeFlow
 
-permissionCheckRunner :: PermissionCheckRunner
-permissionCheckRunner = checkIfPermissionsGranted
+permissionCheckRunner :: Int -> PermissionCheckRunner
+permissionCheckRunner _ = checkIfPermissionsGranted
 
-permissionTakeRunner :: PermissionTakeRunner
-permissionTakeRunner = requestPermissions
+permissionTakeRunner :: Int -> PermissionTakeRunner
+permissionTakeRunner _ = requestPermissions
 
-permissionRunner :: PermissionRunner
-permissionRunner = PermissionRunner permissionCheckRunner permissionTakeRunner
+permissionRunner :: Int -> PermissionRunner
+permissionRunner _ = PermissionRunner (permissionCheckRunner 1) (permissionTakeRunner 2)
 
-standardRunTime :: Runtime
-standardRunTime =
+standardRunTime :: Int -> Runtime
+standardRunTime _ =
   Runtime
     pure
-    permissionRunner
+    (permissionRunner 1)
     apiRunner
 
 readFromRef :: forall st. Ref st → FlowBT String st st
 readFromRef ref = lift $ lift $ doAff $ liftEffect $ read ref
+
+getGlobalPayload :: String -> Maybe GlobalPayload
+getGlobalPayload key = do
+  let mBPayload = runFn3 getFromWindow key Nothing Just
+  maybe (Nothing) (\payload -> decodeForeignAnyImpl payload) mBPayload
 
 writeToRef :: forall st. st → Ref st → FlowBT String st Unit
 writeToRef d ref = lift $ lift $ doAff $ liftEffect $ write d ref
@@ -197,6 +222,16 @@ modifyEpassRef f ref = do
 
 safeMarginTop :: Int
 safeMarginTop = safeMarginTopImpl unit
+
+safeMarginTopWithDefault :: Int -> Int
+safeMarginTopWithDefault def = 
+  let safeMargin = safeMarginTop
+  in if safeMargin == 0 then def else safeMargin
+
+safeMarginBottomWithDefault :: Int -> Int
+safeMarginBottomWithDefault def = 
+  let safeMargin = safeMarginBottom
+  in if safeMargin == 0 then def else safeMargin
 
 safeMarginBottom :: Int
 safeMarginBottom = safeMarginBottomImpl unit
@@ -239,6 +274,7 @@ apiRunner :: APIRunner
 apiRunner (API.Request request@{headers: API.Headers hs}) =
   makeAff
     ( \cb -> do
+        let _ = runFn2 addBenchMark ("apiRunner_" <> request.url) false
         void $ pure $ printLog "callAPI request" request   
         case request.options of
           Nothing -> do
@@ -252,6 +288,7 @@ apiRunner (API.Request request@{headers: API.Headers hs}) =
     callback cb = callbackMapper $
         mkEffectFn6 $
           \status response statusCode url responseHeaders urlEncodedResponse -> do
+            let _ = runFn2 addBenchMark ("apiRunner_" <> atobImpl url) true
             let formattedResponse = { status : status,
               response : extractResponse response urlEncodedResponse,
               code : fromMaybe (-3) (fromString statusCode),
@@ -279,19 +316,37 @@ getMapsLanguageFormat key =
     "TE_IN" -> "TELUGU"
     _       -> "ENGLISH"
 
-getYoutubeData :: String -> String -> Int -> YoutubeData
-getYoutubeData videoId videoType videoHeight = {
+
+getYoutubeData :: YoutubeData
+getYoutubeData  = {
   videoTitle : "title",
   setVideoTitle : false,
   showMenuButton : false,
   showDuration : true,
   showSeekBar : true,
-  videoId : videoId,
-  videoType : videoType,
-  videoHeight : videoHeight
+  videoId : "videoId",
+  videoType : "PORTRAIT_VIDEO",
+  videoHeight : 0,
+  showFullScreen : false,
+  hideFullScreenButton : false
 }
 
 isInvalidUrl :: String -> Boolean
 isInvalidUrl url = do
   let strippedUrl = DS.stripPrefix (DS.Pattern "https://") url
   maybe false (\val ->  DS.contains (DS.Pattern "(null)") val || DS.contains (DS.Pattern "__failed") val || DS.contains (DS.Pattern "//") val) strippedUrl
+
+convertDateTimeConfigToUTC :: Int -> Int -> Int -> Int -> Int -> Int -> Effect String
+convertDateTimeConfigToUTC = runEffectFn6 convertDateTimeConfigToUTCImpl
+
+getUTCAfterNSeconds :: String -> Int -> String
+getUTCAfterNSeconds = runFn2 getUTCAfterNSecondsImpl
+
+getUTCAfterNHours :: String -> Int -> String
+getUTCAfterNHours = runFn2 getUTCAfterNHoursImpl
+
+compareUTCDate :: String -> String -> Int
+compareUTCDate = runFn2 compareUTCDateImpl
+
+getUTCBeforeNSeconds :: String -> Int -> String 
+getUTCBeforeNSeconds = runFn2 getUTCBeforeNSecondsImpl

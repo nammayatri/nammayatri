@@ -1,0 +1,22 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  ReelsData: Domain.Types.ReelsData
+  Language: Kernel.External.Types
+
+module: Reels
+
+types:
+  ReelsResp:
+    reels: "[ReelsData]"
+
+apis:
+  - GET:
+      endpoint: /reels/getAllReelVideos
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        reelsKey: Text
+      query:
+        language: Language
+      response:
+        type: API.Types.UI.Reels.ReelsResp

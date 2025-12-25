@@ -1,0 +1,41 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  HighPrecMoney: Kernel.Types.Common
+
+ParkingTransaction:
+  tableName: parking_transaction
+
+  types:
+    StatusType:
+      enum: "Pending,Booked,Failed,RefundInitiated,RefundPending,Refunded,RefundFailed"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <StatusType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <StatusType>
+
+  fields:
+    id: Id ParkingTransaction
+    status: StatusType
+    paymentOrderId: Id PaymentOrder
+    parkingLotId: Text
+    vehicleNumber: Text
+    startTime: UTCTime
+    endTime: UTCTime
+    amount: HighPrecMoney
+
+  constraints:
+    id: PrimaryKey
+    paymentOrderId: !SecondaryKey
+
+  queries:
+    findByPaymentOrderId:
+      kvFunction: findOneWithKV
+      where: paymentOrderId
+
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: [status]
+      where: id

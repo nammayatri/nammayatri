@@ -1,0 +1,138 @@
+imports:
+  Text: Data.Text
+  APISuccess: Kernel.Types.APISuccess
+  VehicleCategory: BecknV2.FRFS.Enums
+  LatLong: Kernel.External.Maps.Types
+  FilePath: EulerHS.Prelude
+  TimeBound: Kernel.Types.TimeBound
+  StationType: Domain.Types.StationType
+  IntegratedBPPConfig: Dashboard.Common
+
+module: FRFSTicket
+types:
+  FRFSDashboardRouteAPI:
+    code: Text
+    shortName: Text
+    longName: Text
+    startPoint: LatLong
+    endPoint: LatLong
+    integratedBppConfigId: Id IntegratedBPPConfig
+
+  FRFSRouteReq:
+    shortName: Text
+    longName: Text
+    color: Maybe Text
+    startPoint: LatLong
+    endPoint: LatLong
+    timeBounds: TimeBound
+    polyline: Maybe Text
+    derive: "'HideSecrets"
+
+  FRFSStartStopsAPI:
+    name: Text
+    code: Text
+    lat: Maybe Double
+    lon: Maybe Double
+
+  FRFSEndStopsFareAPI:
+    name: Text
+    code: Text
+    amount: HighPrecMoney
+    currency: Currency
+    lat: Maybe Double
+    lon: Maybe Double
+
+  FRFSStopFareMatrixAPI:
+    startStop: "FRFSStartStopsAPI"
+    endStops: "[FRFSEndStopsFareAPI]"
+
+  FRFSRouteFareAPI:
+    code: Text
+    shortName: Text
+    longName: Text
+    fares: "[FRFSStopFareMatrixAPI]"
+
+  FRFSStationAPI:
+    name: Text
+    code: Text
+    lat: Maybe Double
+    lon: Maybe Double
+    address: Maybe Text
+    regionalName: Maybe Text
+    hindiName: Maybe Text
+    integratedBppConfigId: Id IntegratedBPPConfig
+    derive: "Show"
+
+  FRFSStationReq:
+    name: Text
+    lat: Double
+    lon: Double
+    address: Maybe Text
+    possibleTypes: Maybe [StationType]
+    derive: "'HideSecrets"
+
+  UpsertRouteFareReq:
+    recordType: NewType
+    file: FilePath
+    derive: "'HideSecrets"
+
+  UpsertRouteFareResp:
+    unprocessedRouteFares: [Text]
+    success: Text
+
+apis:
+  - GET: # Get list of all the FRFS routes
+      endpoint: /frfs/routes
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+        limit: Int
+        offset: Int
+      query:
+        searchStr: Text
+      response:
+        type: "[FRFSDashboardRouteAPI]"
+      migrate:
+        userActionType: ApiAuth APP_BACKEND FRFS LIST_FRFS_ROUTES
+  - GET: # Get list of stop fares for a Route
+      endpoint: /frfs/route/fare/{routeCode}/list
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+        integratedBppConfigId: Id IntegratedBPPConfig
+      params:
+        routeCode: Text
+      auth: ApiAuthV2
+      response:
+        type: "FRFSRouteFareAPI"
+      migrate:
+        userActionType: ApiAuth APP_BACKEND FRFS LIST_FRFS_ROUTE_FARE
+  - PUT: # Upsert fares for Route through CSV
+      endpoint: /frfs/route/fare/{routeCode}/upsert
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+        integratedBppConfigId: Id IntegratedBPPConfig
+      params:
+        routeCode: Text
+      multipart:
+        type: UpsertRouteFareReq
+      auth: ApiAuthV2
+      response:
+        type: UpsertRouteFareResp
+      migrate:
+        userActionType: ApiAuth APP_BACKEND FRFS UPSERT_FRFS_ROUTE_FARE
+  - GET: # List all stations
+      endpoint: /frfs/route/stations
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+        limit: Int
+        offset: Int
+      query:
+        searchStr: Text
+      auth: ApiAuthV2
+      response:
+        type: "[FRFSStationAPI]"
+      migrate:
+        userActionType: ApiAuth APP_BACKEND FRFS LIST_FRFS_STATION
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

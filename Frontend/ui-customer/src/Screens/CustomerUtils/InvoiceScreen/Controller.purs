@@ -18,7 +18,7 @@ module Screens.InvoiceScreen.Controller where
 import Prelude (class Show, bind, pure, unit, ($), discard, void)
 import Screens.Types (InvoiceScreenState)
 import PrestoDOM.Types.Core (class Loggable)
-import PrestoDOM (Eval, exit, continue, continueWithCmd)
+import PrestoDOM (Eval, update, exit, continue, continueWithCmd)
 import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader as GenericHeaderController
 import Foreign (unsafeToForeign)
@@ -80,4 +80,4 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
         pure NoAction
     ]
 
-eval _ state = continue state
+eval _ state = update state

@@ -14,6 +14,7 @@
 
 module API.Beckn (API, APIV2, handler) where
 
+import qualified API.Beckn.OnCancel as OnCancel
 import qualified API.Beckn.OnConfirm as OnConfirm
 import qualified API.Beckn.OnInit as OnInit
 import qualified API.Beckn.OnSearch as OnSearch
@@ -23,12 +24,13 @@ import qualified API.Beckn.OnTrack as OnTrack
 import qualified API.Beckn.OnUpdate as OnUpdate
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 
 type API =
-  "cab" :> "v1" :> SignatureAuth "Authorization"
+  "cab" :> "v1" :> SignatureAuth 'Domain.MOBILITY "Authorization"
     :> ( OnSearch.API
            :<|> OnSelect.API
            :<|> OnInit.API
@@ -36,12 +38,13 @@ type API =
            :<|> OnUpdate.API
            :<|> OnStatus.API
            :<|> OnTrack.API
+           :<|> OnCancel.API
        )
 
 type APIV2 =
   "beckn" :> "cab" :> "v1"
     :> Capture "merchantId" (Id DM.Merchant)
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth 'Domain.MOBILITY "Authorization"
     :> ( OnSearch.API
            :<|> OnSelect.API
            :<|> OnInit.API
@@ -49,6 +52,7 @@ type APIV2 =
            :<|> OnUpdate.API
            :<|> OnStatus.API
            :<|> OnTrack.API
+           :<|> OnCancel.API
        )
 
 handler :: FlowServer API
@@ -60,3 +64,4 @@ handler auth =
     :<|> OnUpdate.handler auth
     :<|> OnStatus.handler auth
     :<|> OnTrack.handler auth
+    :<|> OnCancel.handler auth

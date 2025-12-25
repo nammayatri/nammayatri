@@ -29,7 +29,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, (<>), (/=), (==), (<<<), (||), (&&), discard, bind, pure, unit, not, void)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, visibility, afterRender, lineHeight, stroke, cornerRadius, alignParentRight, onBackPressed, imageWithFallback,relativeLayout)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, visibility, afterRender, lineHeight, stroke, cornerRadius, alignParentRight, onBackPressed, imageWithFallback,relativeLayout)
 import Screens.ApplicationStatusScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.API (DriverRegistrationStatusResp(..), DriverRegistrationStatusReq(..))
@@ -50,7 +50,7 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Effect.Uncurried (runEffectFn1)
 
-screen :: ST.ApplicationStatusScreenState -> String -> Screen Action ST.ApplicationStatusScreenState ScreenOutput
+screen :: ST.ApplicationStatusScreenState -> String -> LoggableScreen Action ST.ApplicationStatusScreenState ScreenOutput
 screen initialState screenType =
   { initialState
   , view : view screenType
@@ -61,7 +61,7 @@ screen initialState screenType =
           void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
             if(initialState.props.enterMobileNumberView || initialState.props.enterOtp) then pure unit
               else do
-              (DriverRegistrationStatusResp driverRegistrationStatusResp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
+              (DriverRegistrationStatusResp driverRegistrationStatusResp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
               lift $ lift $ doAff do liftEffect $ push $ DriverRegistrationStatusAction (DriverRegistrationStatusResp driverRegistrationStatusResp)
           else pure unit
         if initialState.props.isAlternateMobileNumberExists then do
@@ -72,7 +72,13 @@ screen initialState screenType =
       )
   ]
   , eval
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.applicationStatusScreenLogWhitelist
   }
+
+logWhitelist :: Array String
+logWhitelist = []
+
 
 view :: forall w . String -> (Action -> Effect Unit) -> ST.ApplicationStatusScreenState -> PrestoDOM (Effect Unit) w
 view screenType push state =
@@ -95,7 +101,7 @@ view screenType push state =
       , text (getString LOGOUT)
       , onClick push (const Logout)
       , alignParentRight "true,-1"
-      , color Color.blueBtn
+      , color Color.brightBlue
       ] <> FontStyle.body1 TypoGraphy
       )
     , if screenType == "ApprovedScreen" then applicationApprovedView state push else applicationStatusView state push

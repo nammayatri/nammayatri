@@ -8,17 +8,18 @@
 -}
 module Screens.MyProfileScreen.Controller where
 import Components.GenericHeader as GenericHeader
+import Debug (spy)
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.GenericRadioButton as GenericRadioButton
 import Components.SelectListModal as SelectListModal
 import Resources.Constants as Constants
-import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
-import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent, pauseYoutubeVideo)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
+import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent, pauseYoutubeVideo, toggleBtnLoader)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, ($), discard, bind, not, void, (<>), (<), (==), (&&), (/=), (||), (>=))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (MyProfileScreenState, DeleteStatus(..), FieldType(..), ErrorType(..), Gender(..), DisabilityT(..), DisabilityData(..))
@@ -32,6 +33,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Data.Array as DA
 import Data.Lens ((^.))
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.Events as EHE
 
 instance showAction :: Show Action where
   show _ = ""
@@ -61,9 +63,11 @@ instance loggableAction :: Loggable Action where
     NameEditTextAction act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "edit_name_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "edit_name_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "name_text_image_click"
     EmailIDEditTextAction act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "edit_email_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "edit_email_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "email_text_image_click"
     SpecialAssistanceListAC _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "special_assistance_list_click"
     GenericRadioButtonAC _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "disability_radio_btn_click"
     MoreInfo _ ->  trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "learn_more_button_click"
@@ -102,7 +106,7 @@ eval (BackPressed backpressState) state = do
         else 
           if isParentView FunctionCall 
             then do 
-              void $ pure $ emitTerminateApp Nothing true
+              void $ pure $ emitTerminateApp (Just "Profile") true
               continue state
             else exit $ GoToHome state
 
@@ -172,7 +176,9 @@ eval (GenericRadioButtonAC (GenericRadioButton.OnSelect idx)) state = do
 eval (SpecialAssistanceListAC action) state = do 
   let editedDisabilityOptions = state.data.editedDisabilityOptions
   case action of
-    SelectListModal.OnGoBack -> continue state{props{isSpecialAssistList = false}}
+    SelectListModal.OnGoBack -> do
+      void $ pure $ toggleBtnLoader "" false
+      continue state{props{isSpecialAssistList = false}}
     SelectListModal.UpdateIndex idx -> continue state { data{editedDisabilityOptions{specialAssistActiveIndex = idx , editedDisabilityReason = fromMaybe "" editedDisabilityOptions.otherDisabilityReason } }}
     SelectListModal.TextChanged id input -> continue state {data{editedDisabilityOptions{otherDisabilityReason = Just input}}}
     SelectListModal.Button2 (PrimaryButton.OnClick) -> do 
@@ -194,7 +200,7 @@ eval (AccessibilityPopUpAC (PopUpModal.OnButton1Click)) state = do
   _ <- pure $ pauseYoutubeVideo unit
   continue state {props{showAccessibilityPopUp = false}}
 
-eval _ state = continue state
+eval _ state = update state
 
 
 checkError :: String -> Maybe String -> String -> Maybe ErrorType
@@ -222,14 +228,9 @@ isInputValid state = state.data.nameErrorMessage == Nothing && state.data.emailE
 
 updateProfile :: GetProfileRes -> MyProfileScreenState -> Eval Action ScreenOutput MyProfileScreenState
 updateProfile (GetProfileRes profile) state = do
-  let middleName = case profile.middleName of
-                    Just ""  -> ""
-                    Just name -> (" " <> name)
-                    Nothing -> ""
-      lastName   = case profile.lastName of
-                    Just "" -> ""
-                    Just name -> (" " <> name)
-                    Nothing -> ""
+  let middleName = maybe "" (\name -> " " <> name) profile.middleName
+      lastName = maybe "" (\name -> " " <> name) profile.lastName
+      mobileNumber = fromMaybe "" profile.maskedMobileNumber
       name = (fromMaybe "" profile.firstName) <> middleName <> lastName
       gender = case (profile.gender) of
         Just "MALE" -> Just MALE
@@ -246,8 +247,11 @@ updateProfile (GetProfileRes profile) state = do
                                               , specialAssistActiveIndex = getActiveIndex disability state.data.disabilityOptions.disabilityOptionList}
   _ <- pure $ setValueToLocalStore DISABILITY_UPDATED if (isJust hasDisability) then  "true" else "false"
   _ <- pure $ setValueToLocalStore DISABILITY_NAME if (isJust disability) then  (fromMaybe "" profile.disability) else ""
+  _ <- pure $ setValueToLocalStore MOBILE_NUMBER mobileNumber
   continue state { data { name = name, editedName = name, gender = gender,editedGender = gender, emailId = profile.email
                         , hasDisability = hasDisability
                         , disabilityType = disability
+                        , mobileNumber = mobileNumber
                         , editedDisabilityOptions = disabilityOptions
-                        , disabilityOptions = disabilityOptions } }
+                        , disabilityOptions = disabilityOptions } 
+                , props { profileLoaded = true }}

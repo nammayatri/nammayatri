@@ -14,26 +14,35 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.TransporterConfig
-  ( findByMerchantOpCityId,
+  {-# WARNING
+    "This module contains direct calls to the table and redis. \
+  \ But most likely you need a version from Cac with inMem results feature."
+    #-}
+  ( create,
     clearCache,
     update,
     updateFCMConfig,
     updateReferralLinkPassword,
+    getTransporterConfigFromDB,
   )
 where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant.MerchantOperatingCity
-import Domain.Types.Merchant.TransporterConfig
-import Kernel.Prelude
+import Domain.Types.MerchantOperatingCity
+import Domain.Types.TransporterConfig
+import Kernel.Prelude as KP
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Merchant.TransporterConfig as Queries
+import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.TransporterConfig as Queries
 
-findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
-findByMerchantOpCityId id =
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
+create = Queries.create
+
+getTransporterConfigFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
+getTransporterConfigFromDB id = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
     Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantOpCityId id

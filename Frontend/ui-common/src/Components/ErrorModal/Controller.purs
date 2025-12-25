@@ -22,8 +22,13 @@ import Font.Size as FontSize
 import Font.Style (Style(..))
 import Common.Styles.Colors as Color
 import Common.Types.App
+import Prelude (class Show, show, (<>))
+
+instance showAction :: Show Action where
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
 
 data Action = PrimaryButtonActionController PrimaryButtonController.Action
+
 
 type Config =
   {
@@ -66,6 +71,7 @@ type ButtonConfig =
   , stroke :: String
   , background :: String
   , visibility :: Visibility
+  , enableRipple :: Boolean
   }
 
 config :: Config
@@ -109,6 +115,7 @@ config =
     , stroke : "0,#ffffff"
     , background : Color.black
     , visibility : VISIBLE
+    , enableRipple : false
     }
 
   }

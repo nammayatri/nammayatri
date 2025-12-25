@@ -72,6 +72,12 @@ translateYAnimHomeConfig direction = animConfig {
             _          -> 0
 }
 
+chooseRideAnimConfig :: Common.AnimConfig
+chooseRideAnimConfig = animConfig {
+  duration = 200
+, fromY = if os == "IOS" then (screenHeight unit) else (80)
+}
+
 translateYAnimMapConfig :: Int -> Common.AnimConfig
 translateYAnimMapConfig index = animConfig {
   duration = (300 + (index*50))
@@ -92,22 +98,32 @@ messageInAnimConfig :: Boolean -> Common.AnimConfig
 messageInAnimConfig ifAnim = animConfig {
   duration = 1000
 , fromY = 0
-, toY = (-140)
+, toY = (-196)
 , ifAnim = ifAnim
 }
 
 messageOutAnimConfig :: Boolean -> Common.AnimConfig
 messageOutAnimConfig ifAnim = animConfig {
   duration = 1000
-, fromY = (-140)
+, fromY = (-196)
 , toY = 0
 , ifAnim = ifAnim
 }
 
-translateFullYAnimWithDurationConfig :: Int -> Common.AnimConfig
-translateFullYAnimWithDurationConfig duration = animConfig {
+translateFullYAnimWithDurationConfig :: Int-> Boolean  -> Common.AnimConfig
+translateFullYAnimWithDurationConfig duration ifAnim = animConfig {
   duration = duration
-, fromY = screenHeight unit
+, fromY = 500 --screenHeight unit
 , toY = 0
 , interpolator = PrestoAnim.EaseInOut
+, ifAnim = ifAnim
+}
+
+rotateAnimConfig :: Boolean -> Common.AnimConfig
+rotateAnimConfig rotate = animConfig {
+  fromRotation = 0
+, toRotation = 360
+, delay = 0
+, duration = 800
+, ifAnim = rotate
 }

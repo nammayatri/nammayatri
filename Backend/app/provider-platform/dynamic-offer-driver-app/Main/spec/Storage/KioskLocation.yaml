@@ -1,0 +1,35 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+KioskLocation:
+  tableName: kiosk_location
+
+
+  fields:
+    id : Id KioskLocation
+    merchantId : Id Merchant
+    address : Text
+    landmark : Text
+    contact : Text
+    longitude : Double
+    latitude : Double
+
+
+  constraints:
+    id: PrimaryKey
+
+
+
+
+
+  sqlType:
+    contact: character varying (15)
+
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

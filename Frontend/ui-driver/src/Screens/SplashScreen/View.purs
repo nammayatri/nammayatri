@@ -15,78 +15,88 @@
 
 module Screens.SplashScreen.View where
 
-import Data.Int (round, toNumber)
 import Engineering.Helpers.Commons as EHC
-import Prelude (Unit, const, pure, unit, ($), (*))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, Screen, background, clickable, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, weight, width, afterRender, imageWithFallback)
+import Prelude
+import PrestoDOM
 import Effect (Effect)
-import Screens.SplashScreen.Controller (Action(..), eval)
+import Screens.SplashScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
-import Styles.Colors as Color
-import Log
+import Log (printLog)
+import Helpers.Utils as HU
+import JBridge as JB
+import Common.Types.App as CTA
+import Data.Maybe (Maybe(..))
+import RemoteConfig as RemoteConfig
+import Animation as Anim
+import PrestoDOM.Animation as PrestoAnim
 
-screen :: ST.SplashScreenState -> Screen Action ST.SplashScreenState Unit
+screen :: ST.SplashScreenState -> LoggableScreen Action ST.SplashScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
-  , name : "SplashScreen"
-  , globalEvents : [(\push -> do
-                      let _ = printLog "SplashScreen " "view "
-                      pure (pure unit))]
+  , name: "SplashScreen"
+  , globalEvents: globalEvents'
   , eval
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.splashScreenLogWhitelist
   }
-view
-  :: forall w
-  . (Action -> Effect Unit)
-  -> ST.SplashScreenState
-  -> PrestoDOM (Effect Unit) w
-view push state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , background Color.darkBlue
+  where 
+    globalEvents' = [
+        (\push -> do
+          let _ = printLog "SplashScreen " "view "
+          pure $ push AfterRender)
+      ]
+
+view ::forall w. (Action -> Effect Unit) -> ST.SplashScreenState -> PrestoDOM (Effect Unit) w
+view push _ =
+  PrestoAnim.exitAnimationSetForward [ Anim.translateOutXForwardAnim true, Anim.fadeOut true]
+  $ PrestoAnim.exitAnimationSetBackward [Anim.translateOutXBackwardAnim true, Anim.fadeOut true] 
+  $ relativeLayout
+    [ height $ MATCH_PARENT
+    , width $ MATCH_PARENT
+    , background "#111112"
+    , gravity CENTER
     , clickable true
-    , onClick push (const (OnClick))
-    , afterRender push (const AfterRender)
-    ][ linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        , gravity CENTER
-        , background Color.darkBlue
-        , margin (Margin 0 0 0 0)
-        , onClick push (const (OnClick))
-        ][ imageView
-            [ width MATCH_PARENT
-            , height $ V $ round (0.41 * (toNumber (EHC.screenWidth unit)))
-            , gravity CENTER
-            , imageWithFallback ""
-            ]
+    ]
+    [ 
+      relativeLayout
+      [ height $ MATCH_PARENT
+      , width $ MATCH_PARENT
+      ][
+        imageView[
+          height $ V $ EHC.screenHeight unit
+        , width $ V $ EHC.screenWidth unit
+        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_splash_bg_trans"
         ]
-      , linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , background Color.darkBlue
-        , weight 1.0
-        , gravity CENTER
-        ][ imageView
-            [ width ( V 210)
-            , height ( V 120)
-            , gravity CENTER
-            , imageWithFallback ""
-            ]
+      , linearLayout [
+          height $ MATCH_PARENT
+        , width $ MATCH_PARENT
+        , gravity BOTTOM
+        , padding $ PaddingBottom 50
+        ][
+          imageView[
+            height $ V $ 48
+          , width MATCH_PARENT
+          , gravity CENTER
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_powered_by"
+          ]
         ]
-      , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , gravity CENTER
-        , background Color.darkBlue
-        , margin (Margin 0 0 0 25)
-        ][ imageView
-            [ width ( V 325)
-            , height ( V 30)
-            , imageWithFallback ""
-            ]
+      ]
+    , lottieAnimationView
+        [ height $ V $ EHC.screenHeight unit
+        , width $ V $ EHC.screenWidth unit
+        , id $ EHC.getNewIDWithTag "splashLottieAnimation"
+        , afterRender
+            ( \action -> do
+                let bundleSplashConfig = RemoteConfig.getBundleSplashConfig "lazy"
+                void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig { 
+                  rawJson = bundleSplashConfig.lottieUrl, 
+                  lottieId = EHC.getNewIDWithTag "splashLottieAnimation", 
+                  speed = 1.8,
+                  cacheEnabled = false 
+                }
+                push action
+            )
+            (const AfterRender)
         ]
     ]

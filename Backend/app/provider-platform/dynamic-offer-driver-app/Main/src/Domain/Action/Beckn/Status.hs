@@ -11,109 +11,108 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Domain.Action.Beckn.Status
   ( handler,
     DStatusReq (..),
     DStatusRes (..),
-    OnStatusBuildReq (..),
   )
 where
 
+import Data.Either.Extra (eitherToMaybe)
+import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as Aadhaar
+import Domain.Types.Beckn.Status
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude
 import Kernel.Beam.Functions as B
+import Kernel.Tools.Logging
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Beckn.Common as Common
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
-
-newtype DStatusReq = StatusReq
-  { bookingId :: Id DBooking.Booking
-  }
-
-data DStatusRes = DStatusRes
-  { transporter :: DM.Merchant,
-    info :: OnStatusBuildReq
-  }
-
-data OnStatusBuildReq
-  = NewBookingBuildReq
-      { bookingId :: Id DBooking.Booking
-      }
-  | RideAssignedBuildReq
-      { bookingId :: Id DBooking.Booking,
-        newRideInfo :: SyncRide.NewRideInfo
-      }
-  | RideStartedBuildReq
-      { newRideInfo :: SyncRide.NewRideInfo
-      }
-  | RideCompletedBuildReq
-      { newRideInfo :: SyncRide.NewRideInfo,
-        rideCompletedInfo :: SyncRide.RideCompletedInfo
-      }
-  | BookingCancelledBuildReq
-      { bookingCancelledInfo :: SyncRide.BookingCancelledInfo,
-        mbNewRideInfo :: Maybe SyncRide.NewRideInfo
-      }
-  | BookingReallocationBuildReq
-      { bookingReallocationInfo :: SyncRide.BookingReallocationInfo,
-        newRideInfo :: SyncRide.NewRideInfo
-      }
+import qualified Storage.Queries.RideDetails as QRideDetails
+import Tools.Error
 
 handler ::
   Id DM.Merchant ->
   DStatusReq ->
   Flow DStatusRes
-handler transporterId req = do
+handler transporterId req = withDynamicLogLevel "bpp-status-domain" $ do
+  logDebug $ "BPP_STATUS_DEBUG: Searching for transactionId: " <> req.transactionId
   transporter <-
     CQM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
-  booking <- B.runInReplica $ QRB.findById req.bookingId >>= fromMaybeM (BookingNotFound req.bookingId.getId)
+  booking <- B.runInReplica $ QRB.findByTransactionId req.transactionId >>= fromMaybeM (BookingNotFound req.transactionId)
+  logDebug $ "BPP_STATUS_DEBUG: Found booking: " <> booking.id.getId <> " with status: " <> show booking.status
   mbRide <- B.runInReplica $ QRide.findOneByBookingId booking.id
+  case mbRide of
+    Just ride -> logDebug $ "BPP_STATUS_DEBUG: Found ride: " <> ride.id.getId <> " with status: " <> show ride.status
+    Nothing -> logDebug $ "BPP_STATUS_DEBUG: No ride found for booking: " <> booking.id.getId
   let transporterId' = booking.providerId
+      estimateId = booking.estimateId <&> getId
   unless (transporterId' == transporterId) $ throwError AccessDenied
   info <- case mbRide of
     Just ride -> do
       case ride.status of
-        DRide.NEW -> do
-          newRideInfo <- SyncRide.fetchNewRideInfo ride booking
-          pure $ RideAssignedBuildReq {bookingId = booking.id, newRideInfo = newRideInfo}
+        DRide.UPCOMING -> syncAssignedReq ride booking estimateId
+        DRide.NEW -> syncAssignedReq ride booking estimateId
         DRide.INPROGRESS -> do
-          newRideInfo <- SyncRide.fetchNewRideInfo ride booking
-          pure $ RideStartedBuildReq {newRideInfo}
+          bookingDetails <- SyncRide.fetchBookingDetails ride booking
+          let tripStartLocation = bookingDetails.ride.tripStartPos
+          pure $ RideStartedReq DRideStartedReq {..}
         DRide.COMPLETED -> do
-          newRideInfo <- SyncRide.fetchNewRideInfo ride booking
-          rideCompletedInfo <- SyncRide.fetchRideCompletedInfo ride booking
-          pure $ RideCompletedBuildReq {newRideInfo, rideCompletedInfo}
+          logDebug $ "BPP_STATUS_DEBUG: Processing COMPLETED ride for booking: " <> booking.id.getId
+          bookingDetails <- SyncRide.fetchBookingDetails ride booking
+          SyncRide.RideCompletedInfo {..} <- SyncRide.fetchRideCompletedInfo ride booking
+          let tripEndLocation = bookingDetails.ride.tripEndPos
+          pure $ RideCompletedReq DRideCompletedReq {..}
         DRide.CANCELLED -> do
           case booking.status of
             DBooking.REALLOCATED -> do
-              newRideInfo <- SyncRide.fetchNewRideInfo ride booking
+              bookingDetails <- SyncRide.fetchBookingDetails ride booking
               bookingReallocationInfo <- SyncRide.fetchBookingReallocationInfo (Just ride) booking
-              pure $ BookingReallocationBuildReq {newRideInfo, bookingReallocationInfo}
+              pure $ BookingReallocationBuildReq DBookingReallocationBuildReq {bookingDetails, bookingReallocationInfo}
             _ -> do
-              newRideInfo <- SyncRide.fetchNewRideInfo ride booking
-              bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo (Just ride) booking
-              pure $ BookingCancelledBuildReq {mbNewRideInfo = Just newRideInfo, bookingCancelledInfo}
+              bookingDetails <- SyncRide.fetchBookingDetails ride booking
+              SyncRide.BookingCancelledInfo {..} <- SyncRide.fetchBookingCancelledInfo (Just ride)
+              pure $ BookingCancelledReq DBookingCancelledReq {bookingDetails = Just bookingDetails, cancellationFee = Nothing, ..}
     Nothing -> do
       case booking.status of
         DBooking.NEW -> do
-          pure $ NewBookingBuildReq {bookingId = booking.id}
+          pure $ NewBookingBuildReq (DNewBookingBuildReq booking.id)
         DBooking.TRIP_ASSIGNED -> do
+          logDebug $ "BPP_STATUS_DEBUG: ERROR: TRIP_ASSIGNED booking without ride record: " <> booking.id.getId
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
         DBooking.COMPLETED -> do
+          logDebug $ "BPP_STATUS_DEBUG: ERROR: COMPLETED booking without ride record: " <> booking.id.getId
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
         DBooking.CANCELLED -> do
-          bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo Nothing booking
-          pure $ BookingCancelledBuildReq {mbNewRideInfo = Nothing, bookingCancelledInfo}
+          bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo Nothing
+          pure $ BookingCancelledReq DBookingCancelledReq {bookingDetails = Nothing, cancellationFee = Nothing, cancellationSource = bookingCancelledInfo.cancellationSource, ..}
         DBooking.REALLOCATED -> do
+          logDebug $ "BPP_STATUS_DEBUG: ERROR: REALLOCATED booking without ride record: " <> booking.id.getId
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
-  pure DStatusRes {transporter, info}
+  logDebug $ "BPP_STATUS_DEBUG: Sending response for booking: " <> booking.id.getId
+  pure DStatusRes {transporter, booking, info}
+  where
+    syncAssignedReq ride booking estimateId = do
+      bookingDetails <- SyncRide.fetchBookingDetails ride booking
+      driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
+      rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
+      resp <- withTryCatch "fetchAndCacheAadhaarImage" (Aadhaar.fetchAndCacheAadhaarImage bookingDetails.driver driverInfo)
+      let image = join (eitherToMaybe resp)
+      let isDriverBirthDay = False
+      let isFreeRide = False
+      let driverAccountId = Nothing
+      let isAlreadyFav = False
+      let favCount = 0
+      let isSafetyPlus = booking.isSafetyPlus
+      pure $ RideAssignedReq DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}

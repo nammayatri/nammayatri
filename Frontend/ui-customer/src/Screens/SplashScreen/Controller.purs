@@ -15,7 +15,7 @@
 module Screens.SplashScreen.Controller where
 
 import Prelude (class Show)
-import PrestoDOM (Eval, defaultPerformLog, exit)
+import PrestoDOM (Eval, update, defaultPerformLog, exit, update)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (SplashScreenState)
 
@@ -26,7 +26,7 @@ instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog
 
 data ScreenOutput
-  = Exit
+  = Exit 
 
 data Action
   = AfterRender

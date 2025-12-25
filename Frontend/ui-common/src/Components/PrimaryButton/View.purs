@@ -15,10 +15,10 @@
 module Components.PrimaryButton.View where
 
 import Effect (Effect)
-import Prelude (Unit, bind, const, discard, pure, unit, void, ($), (&&), (==), (<>))
+import Prelude (Unit, bind, const, discard, pure, unit, void, when, ($), (&&), (==), (<>))
 import Components.PrimaryButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibility, weight, onAnimationEnd, textFromHtml)
-import JBridge (toggleBtnLoader, getKeyInSharedPrefKeys, startLottieProcess, lottieAnimationConfig)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..),afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient, accessibilityHint, accessibility, weight, onAnimationEnd, textFromHtml, rippleColor, enableRoundedRipple)
+import JBridge (toggleBtnLoader, getKeyInSharedPrefKeys, startLottieProcess, lottieAnimationConfig, getLayoutBounds)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import Font.Style as FontStyle
 import Common.Styles.Colors as Color
@@ -26,6 +26,7 @@ import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..), isNothing, fromMaybe)
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
+import Data.Function.Uncurried (runFn1)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -34,7 +35,7 @@ view push config =
     , width config.width
     , margin config.margin
     , visibility config.visibility
-    , background Color.white900
+    , background config.viewbackground
     , cornerRadius config.cornerRadius
     ]
     [ relativeLayout
@@ -61,10 +62,10 @@ view push config =
                 (const OnClick)
             , orientation HORIZONTAL
             , onAnimationEnd
-                ( \action -> do
-                    _ <- pure $ if config.lottieConfig.autoDisableLoader then (toggleBtnLoader config.id false) else unit
-                    push action
-                )
+                ( \action -> when config.lottieConfig.autoDisableLoader $ 
+                                  do 
+                                    let _ = (toggleBtnLoader config.id false)
+                                    push action)
                 (const NoAction)
             , alpha if config.enableLoader then 0.5 else config.alpha
             , stroke config.stroke
@@ -72,7 +73,8 @@ view push config =
               <> (case config.weight of
                 Nothing -> [width config.width]
                 Just value ->  [weight value])
-              <> (if config.enableButtonLayoutId then [id $ getNewIDWithTag (config.id <> "_buttonLayout")] else []))
+              <> (if config.enableButtonLayoutId then [id $ getNewIDWithTag (config.id <> "_buttonLayout")] else [])
+              <> (if config.enableRipple then [rippleColor config.rippleColor] else []))
             [ linearLayout
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
@@ -80,25 +82,32 @@ view push config =
                 , accessibility DISABLE
                 , gravity config.gravity
                 , visibility if config.enableLoader then INVISIBLE else VISIBLE
-                , afterRender push (const NoAction)
                 ]
                 [ prefixImageLayout config
-                , textView
-                    $ [ height config.textConfig.height
-                      , accessibilityHint config.textConfig.accessibilityHint
-                      , accessibility ENABLE
-                      , color config.textConfig.color
-                      , gravity config.textConfig.gravity
-                      , lineHeight "20"
-                      , weight 1.0
-                      ]
-                    <> case config.textConfig.textFromHtml of 
-                        Just htmlText -> [textFromHtml htmlText]
-                        Nothing -> [text config.textConfig.text]
-                    <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
-                    <> (case config.textConfig.weight of
-                          Nothing -> [width config.textConfig.width]
-                          Just val -> [weight val])
+                , linearLayout [
+                    width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , orientation VERTICAL
+                  ][
+                    textView
+                      $ [ height config.textConfig.height
+                        , accessibilityHint config.textConfig.accessibilityHint
+                        , accessibility ENABLE
+                        , color config.textConfig.color
+                        , gravity config.textConfig.gravity
+                        , lineHeight "20"
+                        , id $ getNewIDWithTag $ config.id <> "_textView"
+                        , weight 1.0
+                        ]
+                      <> case config.textConfig.textFromHtml of 
+                          Just htmlText -> [textFromHtml htmlText]
+                          Nothing -> [text config.textConfig.text]
+                      <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
+                      <> (case config.textConfig.weight of
+                            Nothing -> [width config.textConfig.width]
+                            Just val -> [weight val])
+                  , underLineView config
+                  ]
                 , suffixImageLayout config
                 ]
             ]
@@ -139,3 +148,15 @@ suffixImageLayout config =
     , visibility if config.isSuffixImage then VISIBLE else GONE
     , margin config.suffixImageConfig.margin
     ]
+
+underLineView :: forall w. Config -> PrestoDOM (Effect Unit) w
+underLineView config =
+  linearLayout[
+    width $ V (runFn1 getLayoutBounds $ getNewIDWithTag  $ config.id <> "_textView").width
+  , height  config.underlineConfig.height
+  , background config.underlineConfig.color
+  , gravity CENTER
+  , visibility config.underlineConfig.visibility
+  , padding config.underlineConfig.padding
+  , margin config.underlineConfig.margin
+  ][]

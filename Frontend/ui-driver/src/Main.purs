@@ -15,19 +15,21 @@
 
 module Main where
 
-import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), (==), void, discard, identity)
+import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), (==), void, discard, identity, map)
 import Data.Either (Either(..))
-import Effect (Effect)
+import Effect (Effect, foreachE)
 import Effect.Aff (killFiber, launchAff, launchAff_)
-import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable, setEventTimestamp)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable, markPerformance, setEventTimestamp)
 import AssetsProvider (fetchAssets)
 import Flow as Flow
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import PrestoDOM.Core (processEvent) as PrestoDom
+import PrestoDOM.Core (processEvent, terminateUI) as PrestoDom
 import Log
+import Presto.Core.Types.API (ErrorResponse(..))
 import Presto.Core.Types.Language.Flow (throwErr)
-import Foreign (MultipleErrors, unsafeToForeign)
+import Foreign (Foreign, MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
 import Common.Types.App (GlobalPayload, Event, FCMBundleUpdate)
 import Types.App (defaultGlobalState)
@@ -40,24 +42,49 @@ import Types.App (FlowBT, ScreenType(..))
 import JBridge as JBridge
 import Helpers.Utils as Utils
 import Effect.Exception (error)
-import Data.Function.Uncurried (runFn2)
+import Data.Function.Uncurried (runFn2, runFn3)
 import Screens (ScreenName(..)) as ScreenNames
+import Engineering.Helpers.Events as Events
 import Data.Array as DA
 import Effect.Uncurried (runEffectFn1)
 import Screens.Types as ST
 import Common.Types.App as Common
+import Storage (KeyStore(..), setValueToLocalStore)
+import Services.API (GetDriverInfoResp(..))
+import DecodeUtil (getFromWindow, removeFromWindow, storeFiber, getFibers, resetFibers)
+import Debug
 
 main :: Event -> Effect Unit
 main event = do
+  void $ markPerformance "MAIN_START"
+  void $ Events.initMeasuringDuration "Flow.mainFlow"
+  void $ Events.initMeasuringDuration "mainToHomeScreenDuration"
+  let profile = runFn3 getFromWindow "Profile" Nothing Just
+      _ = removeFromWindow "Profile"
+  let driverInfoResp = case profile of
+                        Just driverInfoRespFiber -> 
+                          case runExcept (decode driverInfoRespFiber) of
+                            Right (driverInfoRes :: GetDriverInfoResp) -> Just (Right driverInfoRes)
+                            Left _ -> case runExcept (decode driverInfoRespFiber) of
+                              Right (errorRes :: ErrorResponse) ->
+                                if (DA.any (\error -> Utils.decodeErrorCode errorRes.response.errorMessage == error) ["VEHICLE_NOT_FOUND", "DRIVER_INFORMATON_NOT_FOUND"]) 
+                                  then Just (Left errorRes)
+                                  else Nothing
+                              Left err -> Nothing
+                        Nothing -> Nothing
+  let _ = spy "driverInfoResp =>" driverInfoResp
   mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
-    liftFlow $ setEventTimestamp "main_purs"
+    liftFlow $ setEventTimestamp "main_purs" 
     _ <- runExceptT $ runBackT $ updateEventData event
-    resp ← runExceptT $ runBackT $ Flow.baseAppFlow true Nothing
+    resp ← runExceptT $ runBackT $ Flow.baseAppFlow true Nothing driverInfoResp
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
       Left error -> liftFlow $ main event
-  JBridge.storeMainFiberOb mainFiber
-  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
+  assetsFiber <- launchAff $ flowRunner defaultGlobalState $ fetchAssets
+  void $ storeFiber $ mainFiber
+  void $ storeFiber $ assetsFiber
+  void $ markPerformance "MAIN_END"
+
   pure unit
 
 mainAllocationPop :: String -> AllocationData -> Effect Unit
@@ -90,44 +117,44 @@ onEvent event = do
   case event of 
     "onBackPressed" -> do
       PrestoDom.processEvent "onBackPressedEvent" unit
+    "onReloadApp" -> main { type: "REFRESH", data : "" }
     _ -> pure unit
 
 onConnectivityEvent :: String -> Effect Unit
 onConnectivityEvent triggertype = do
   mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
-    _  <- case (runFn2 JBridge.getMainFiber Just Nothing) of
-      Nothing -> pure unit
-      Just fiber -> liftFlow $ launchAff_ $ killFiber (error "error in killing fiber") fiber
     _ ← runExceptT $ runBackT $ case triggertype of
       "LOCATION_DISABLED" -> Flow.noInternetScreenFlow triggertype
-      "INTERNET_ACTION" -> Flow.noInternetScreenFlow triggertype
+      "INTERNET_ACTION" -> pure unit
       "REFRESH" -> do
         void $ restorePreviousState
-        Flow.baseAppFlow false Nothing
+        Flow.baseAppFlow false Nothing Nothing
       "CHECK_NETWORK_TIME" ->  Flow.checkTimeSettings
-      _ -> Flow.baseAppFlow false Nothing
+      _ -> Flow.baseAppFlow false Nothing Nothing
     pure unit
-  JBridge.storeMainFiberOb mainFiber
+  void $ storeFiber $ mainFiber
   pure unit
 
 onBundleUpdatedEvent :: FCMBundleUpdate -> Effect Unit
-onBundleUpdatedEvent description= do 
+onBundleUpdatedEvent description = do 
   _ <- launchAff $ flowRunner defaultGlobalState $ do
     _ ← runExceptT $ runBackT $ do
-      Flow.appUpdatedFlow description
+      Flow.appUpdatedFlow description ST.NORMAL
     pure unit
   pure unit
 
 onNewIntent :: Event -> Effect Unit
 onNewIntent event = do
-  mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
-    _ ← runExceptT $ runBackT $ case event.type of
-      "DEEP_VIEW_NEW_INTENT" -> Flow.baseAppFlow false (Just event)
-      "DEEP_VIEW" -> Flow.baseAppFlow true (Just event)
-      _ -> Flow.baseAppFlow false Nothing
-    pure unit
-  _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow fetchAssets
-  JBridge.storeMainFiberOb mainFiber
+  mainFiber <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $
+    case event.type of
+      "DEEP_VIEW_NEW_INTENT" -> Flow.baseAppFlow false (Just event) Nothing
+      "DEEP_VIEW" -> Flow.baseAppFlow true (Just event) Nothing
+      "REFERRAL" -> setValueToLocalStore REFERRER_URL event.data
+      "REFERRAL_NEW_INTENT" -> do
+        setValueToLocalStore REFERRER_URL event.data
+        Flow.baseAppFlow true Nothing Nothing
+      _ -> Flow.baseAppFlow false Nothing Nothing
+  void $ storeFiber $ mainFiber
   pure unit
 
 updateEventData :: Event -> FlowBT String Unit
@@ -141,3 +168,11 @@ restorePreviousState :: FlowBT String Unit
 restorePreviousState = do
   let popupType = maybe ST.NO_POPUP_VIEW identity (runFn2 Utils.getPopupType Just Nothing)
   modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = popupType})
+
+
+onDestroy :: String -> Effect Unit
+onDestroy _ = do 
+  fibers <- getFibers ""
+  _ <- resetFibers unit
+  _ <- foreachE fibers (\fiber -> launchAff_ $ killFiber (error "error in killing fiber") fiber)
+  PrestoDom.terminateUI Nothing

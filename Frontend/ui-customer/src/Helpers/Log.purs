@@ -17,7 +17,7 @@ module Helpers.Logs where
 
 import Prelude
 import Control.Monad.Except.Trans (lift)
-import JBridge (setCleverTapUserProp, getVersionCode, getVersionName, setCleverTapUserData)
+import JBridge (setCleverTapUserProp, getVersionCode, getVersionName, metaLogEvent)
 import Foreign (unsafeToForeign)
 import Presto.Core.Types.Language.Flow (getLogFields, setLogField)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
@@ -31,6 +31,10 @@ import Services.API (GetProfileRes(..))
 import Data.Lens ((^.))
 import Accessor
 import Data.Traversable (traverse)
+import Data.Maybe (fromMaybe, Maybe(..))
+import DecodeUtil (getAnyFromWindow)
+import Data.Function.Uncurried (runFn3)
+import SessionCache (getValueFromWindow, setValueInWindow)
 
 baseAppLogs :: FlowBT String Unit
 baseAppLogs = do
@@ -61,9 +65,67 @@ baseAppLogs = do
 updateCTEventData :: GetProfileRes -> FlowBT String Unit
 updateCTEventData response = do
   let name = catMaybeStrings [ response ^. _firstName, response ^. _middleName, response ^. _lastName ]
-  void $ liftFlowBT $ setCleverTapUserData "Name" name
-  void $ liftFlowBT $ traverse (setCleverTapUserData "gender") $ response ^. _gender
-  void $ liftFlowBT $ traverse (setCleverTapUserData "preferred Language") $ response ^. _language
-  void $ liftFlowBT $ setCleverTapUserData "Identity" $ getValueToLocalStore CUSTOMER_ID
-  void $ liftFlowBT $ setCleverTapUserData "Phone" $ "+91" <> getValueToLocalStore MOBILE_NUMBER
-  void $ liftFlowBT $ traverse (setCleverTapUserData "email") $ response ^. _email
+      appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just 
+  case appName of
+    "Namma Yatri" -> do
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidCabRide) && (getValueFromWindow logEventNames.ny.cab) /= logEventNames.ny.cab) logEventNames.ny.cab
+      void $ pure $ setValueInWindow logEventNames.ny.cab logEventNames.ny.cab
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidAutoRide) && (getValueFromWindow logEventNames.ny.auto) /= logEventNames.ny.auto) logEventNames.ny.auto
+      void $ pure $ setValueInWindow logEventNames.ny.auto logEventNames.ny.auto
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidBikeRide) && (getValueFromWindow logEventNames.ny.bike) /= logEventNames.ny.bike) logEventNames.ny.bike
+      void $ pure $ setValueInWindow logEventNames.ny.bike logEventNames.ny.bike
+    "Mana Yatri" -> do
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidCabRide) && (getValueFromWindow logEventNames.my.cab) /= logEventNames.my.cab) logEventNames.my.cab
+      void $ pure $ setValueInWindow logEventNames.my.cab logEventNames.my.cab
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidAutoRide) && (getValueFromWindow logEventNames.my.auto) /= logEventNames.my.auto) logEventNames.my.auto
+      void $ pure $ setValueInWindow logEventNames.my.auto logEventNames.my.auto
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidBikeRide) && (getValueFromWindow logEventNames.my.bike) /= logEventNames.my.bike) logEventNames.my.bike
+      void $ pure $ setValueInWindow logEventNames.my.bike logEventNames.my.bike
+    "Yatri" -> do
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidCabRide) && (getValueFromWindow logEventNames.y.cab) /= logEventNames.y.cab) logEventNames.y.cab
+      void $ pure $ setValueInWindow logEventNames.y.cab logEventNames.y.cab
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidAutoRide) && (getValueFromWindow logEventNames.y.auto) /= logEventNames.y.auto) logEventNames.y.auto
+      void $ pure $ setValueInWindow logEventNames.y.auto logEventNames.y.auto
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidBikeRide) && (getValueFromWindow logEventNames.y.bike) /= logEventNames.y.bike) logEventNames.y.bike
+      void $ pure $ setValueInWindow logEventNames.y.bike logEventNames.y.bike
+    "Yatri Sathi" -> do
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidCabRide) && (getValueFromWindow logEventNames.ys.cab) /= logEventNames.ys.cab) logEventNames.ys.cab
+      void $ pure $ setValueInWindow logEventNames.ys.cab logEventNames.ys.cab
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidAutoRide) && (getValueFromWindow logEventNames.ys.auto) /= logEventNames.ys.auto) logEventNames.ys.auto
+      void $ pure $ setValueInWindow logEventNames.ys.auto logEventNames.ys.auto
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidBikeRide) && (getValueFromWindow logEventNames.ys.bike) /= logEventNames.ys.bike) logEventNames.ys.bike
+      void $ pure $ setValueInWindow logEventNames.ys.bike logEventNames.ys.bike
+    _ -> pure unit
+  where
+    logFirstRideEvent :: Boolean -> String -> FlowBT String Unit
+    logFirstRideEvent toLogEvent event = 
+      if toLogEvent
+        then do
+          logField_ <- lift $ lift $ getLogFields
+          void $ liftFlowBT $ logEvent logField_ $ event
+          void $ pure $ metaLogEvent $ event
+        else pure unit
+    
+    logEventNames = 
+      {
+        ny: {
+          cab: "ny_cab_firstride",
+          auto: "ny_auto_firstride",
+          bike: "ny_bike_firstride"
+        },
+        my: {
+          cab: "my_cab_firstride",
+          auto: "my_auto_firstride",
+          bike: "my_bike_firstride"
+        },
+        y: {
+          cab: "y_cab_firstride",
+          auto: "y_auto_firstride",
+          bike: "y_bike_firstride"
+        },
+        ys: {
+          cab: "ys_cab_firstride",
+          auto: "ys_auto_firstride",
+          bike: "ys_bike_firstride"
+        }
+      }

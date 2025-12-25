@@ -15,7 +15,7 @@
 
 module Components.MenuButton.Controller where
 
-import Prelude((<>))
+import Prelude((<>), class Show)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
 import Font.Size as FontSize
 import Font.Style (Style(..))
@@ -23,6 +23,9 @@ import Common.Styles.Colors as Color
 import Common.Types.App
 
 data Action = OnClick Config
+
+instance showAction :: Show Action where
+  show (OnClick _) = "OnClick"
 
 type Config =
   {
@@ -46,6 +49,8 @@ type Config =
     , layoutBg :: String 
     , layoutStroke :: String 
     , accessibilityHint :: String
+    , weight :: Number
+    , margin :: Margin
   }
 
 type TextConfig =
@@ -98,6 +103,8 @@ config =
           }
     , width : MATCH_PARENT
     , height : V 70
+    , weight : 0.0
+    , margin : (Margin 0 0 0 0)
     , cornerRadius : 0.0
     , padding : (Padding 0 0 0 0)
     , stroke : ""

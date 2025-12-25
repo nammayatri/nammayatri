@@ -1,0 +1,20 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+DriverBlockReason:
+  tableName: driver_block_reason
+
+  fields:
+    reasonCode : Id DriverBlockReason
+    blockReason : Maybe Text
+    blockTimeInHours : Maybe Int
+
+  constraints:
+    reasonCode: PrimaryKey
+
+  sqlType:
+    reasonCode: text
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

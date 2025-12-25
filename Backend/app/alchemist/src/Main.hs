@@ -1,73 +1,88 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
+import Data.List (dropWhileEnd, isInfixOf, isSuffixOf, sort)
+import Data.List.Extra (dropSuffix)
+import Data.Text (unpack)
 import Kernel.Prelude
 import qualified NammaDSL.App as NammaDSL
 import System.Directory
+import System.Environment (getArgs, setEnv)
 import System.FilePath
+import Turtle (ExitCode (..), shellStrict)
 
-findGitRoot :: FilePath -> IO (Maybe FilePath)
-findGitRoot dir = do
-  let gitPath = dir </> ".git"
-  exists <- doesDirectoryExist gitPath
-  if exists
-    then return (Just dir)
-    else
-      let parent = takeDirectory dir
-       in if parent == dir
-            then return Nothing -- No more directories to check
-            else findGitRoot parent
+findGitRoot :: IO (Maybe FilePath)
+findGitRoot = do
+  (exitStatus, rootpath') <- shellStrict "git rev-parse --show-toplevel" mempty
+  return $ case exitStatus of
+    ExitSuccess -> Just (dropWhileEnd (== '\n') $ unpack rootpath')
+    ExitFailure _ -> Nothing
 
-sqlOutputPathPrefix :: FilePath
-sqlOutputPathPrefix = "Backend" </> "dev" </> "migrations-read-only"
+processSpecFolders :: Bool -> Bool -> FilePath -> IO ()
+processSpecFolders isGenAll insideOfSpecFolder specFolderPath =
+  if ".direnv" `isInfixOf` specFolderPath
+    then putStrLn $ ("ignore folder: " :: String) <> show specFolderPath <> " containing: \".direnv\""
+    else processSpecFolders' isGenAll insideOfSpecFolder specFolderPath
 
-rideAppName :: FilePath
-rideAppName = "rider-app"
+processSpecFolders' :: Bool -> Bool -> FilePath -> IO ()
+processSpecFolders' isGenAll insideOfSpecDir specFolderPath = do
+  contents <- listDirectory specFolderPath
+  forM_ contents $ \entry -> do
+    let entryPath = specFolderPath </> entry
+    isDirectory <- doesDirectoryExist entryPath
+    when isDirectory $ do
+      let isSpecDir = "/spec" `isSuffixOf` entryPath || insideOfSpecDir
+      if isSpecDir
+        then do
+          let apiFolderPath = entryPath </> "API"
+              storageFolderPath = entryPath </> "Storage"
+              configPath = entryPath </> "dsl-config.dhall"
+          apiContents <- doesDirectoryExist apiFolderPath >>= bool (pure []) (listDirectory apiFolderPath)
+          storageContents <- doesDirectoryExist storageFolderPath >>= bool (pure []) (listDirectory storageFolderPath)
+          isConfigExists <- doesFileExist configPath
+          if not isConfigExists
+            then do
+              putStrLn' "33" ("Skipping as Config file not found at " ++ configPath)
+              processSpecFolders isGenAll isSpecDir entryPath
+            else do
+              shouldRunApiGenerators <- forM apiContents $
+                \inputFile -> do
+                  if ".yaml" `isSuffixOf` inputFile
+                    then do
+                      let inputFilePath = apiFolderPath </> inputFile
+                      fileState <- NammaDSL.getFileState inputFilePath
+                      -- putStrLn $ show fileState ++ " " ++ inputFilePath
+                      let shouldRunApiGenerator = isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED
+                      when shouldRunApiGenerator $
+                        NammaDSL.runApiGenerator configPath inputFilePath
+                      return shouldRunApiGenerator
+                    else return False
 
-driverAppName :: FilePath
-driverAppName = "dynamic-offer-driver-app"
+              when (or shouldRunApiGenerators && insideOfSpecDir) $ do
+                let specModules = map (dropSuffix ".yaml") $ filter (".yaml" `isSuffixOf`) apiContents
+                putStrLn $ "run api tree generator for spec modules: " <> (show specModules :: String)
+                NammaDSL.runApiTreeGenerator configPath $ sort specModules
 
-riderAppPath :: FilePath
-riderAppPath = "Backend" </> "app" </> "rider-platform" </> rideAppName </> "Main"
+              forM_ storageContents $
+                \inputFile -> do
+                  when (".yaml" `isSuffixOf` inputFile) $ do
+                    let inputFilePath = storageFolderPath </> inputFile
+                    fileState <- NammaDSL.getFileState inputFilePath
+                    -- putStrLn $ show fileState ++ " " ++ inputFilePath
+                    when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
+                      NammaDSL.runStorageGenerator configPath inputFilePath
+        else processSpecFolders isGenAll isSpecDir entryPath
 
-driverAppPath :: FilePath
-driverAppPath = "Backend" </> "app" </> "provider-platform" </> driverAppName </> "Main"
-
-applyDirectory :: FilePath -> (FilePath -> IO ()) -> IO ()
-applyDirectory dirPath processFile = do
-  exists <- doesDirectoryExist dirPath
-  when exists $ do
-    files <- listDirectory dirPath
-    let yamlFiles = filter (\file -> takeExtension file `elem` [".yaml", ".yml"]) files
-    mapM_ (processFile . (dirPath </>)) yamlFiles
+putStrLn' :: String -> String -> IO ()
+putStrLn' colorCode text = putStrLn $ "\x1b[" ++ colorCode ++ "m" ++ text ++ "\x1b[0m"
 
 main :: IO ()
 main = do
-  currentDir <- getCurrentDirectory
-  maybeGitRoot <- findGitRoot currentDir
+  putStrLn ("Version " ++ NammaDSL.version)
+  generateAllSpecs <- ("--all" `elem`) <$> getArgs
+  maybeGitRoot <- findGitRoot
   let rootDir = fromMaybe (error "Could not find git root") maybeGitRoot
-
-  processApp rootDir riderAppPath rideAppName
-  processApp rootDir driverAppPath driverAppName
-  where
-    processApp :: FilePath -> FilePath -> FilePath -> IO ()
-    processApp rootDir appPath appName = do
-      applyDirectory (rootDir </> appPath </> "spec" </> "Storage") (processStorageDSL rootDir appPath appName)
-      applyDirectory (rootDir </> appPath </> "spec" </> "API") (processAPIDSL rootDir appPath)
-
-    processStorageDSL rootDir appPath appName inputFile = do
-      let readOnlySrc = rootDir </> appPath </> "src-read-only/"
-      let readOnlyMigration = rootDir </> sqlOutputPathPrefix </> appName
-
-      NammaDSL.mkBeamTable (readOnlySrc </> "Storage/Beam") inputFile
-      NammaDSL.mkBeamQueries (readOnlySrc </> "Storage/Queries") inputFile
-      NammaDSL.mkDomainType (readOnlySrc </> "Domain/Types") inputFile
-      NammaDSL.mkSQLFile readOnlyMigration inputFile
-
-    processAPIDSL rootDir appPath inputFile = do
-      let readOnlySrc = rootDir </> appPath </> "src-read-only/"
-      let src = rootDir </> appPath </> "src"
-
-      -- NammaDSL.mkFrontendAPIIntegration (readOnlySrc </> "Domain/Action") inputFile
-      NammaDSL.mkServantAPI (readOnlySrc </> "API/Action/UI") inputFile
-      NammaDSL.mkApiTypes (readOnlySrc </> "API/Types/UI") inputFile
-      NammaDSL.mkDomainHandler (src </> "Domain/Action/UI") inputFile
+  setEnv "GIT_ROOT_PATH" (show rootDir)
+  putStrLn' "32" ("Root dir: " ++ rootDir)
+  processSpecFolders generateAllSpecs False rootDir

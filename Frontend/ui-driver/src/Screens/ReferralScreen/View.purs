@@ -24,16 +24,16 @@ import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Data.Array (mapWithIndex, (!!), length, index, drop, (..), last, any)
 import Data.Int (toNumber, ceil)
-import Data.String (take, length) as DS
+import Data.String (take, length, null) as DS
 import Effect (Effect)
-import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, getNewIDWithTag, flowRunner, screenWidth, getCurrentUTC)
+import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, getNewIDWithTag, flowRunner, screenWidth, getCurrentUTC, getPastMonths)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge (openUrlInApp, toast)
-import Language.Strings (getString)
+import Language.Strings 
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, discard, show, (>), void, (/=), (/), (*), (+), not, (||), negate, (<=), (&&), (-), (<))
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, alpha, relativeLayout, scrollView, alignParentRight, alignParentBottom, imageWithFallback, frameLayout, horizontalScrollView, scrollBarX, scrollBarY, id, gradient, rotation, rotationY, shimmerFrameLayout, onRefresh,  swipeRefreshLayout, layoutGravity, textFromHtml)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), Gradient(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, alpha, relativeLayout, scrollView, alignParentRight, alignParentBottom, imageWithFallback, frameLayout, horizontalScrollView, scrollBarX, scrollBarY, id, gradient, rotation, rotationY, shimmerFrameLayout, onRefresh,  swipeRefreshLayout, layoutGravity, textFromHtml, Orientation, Length)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -54,7 +54,7 @@ import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Helpers.Utils (setRefreshing, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (setRefreshing, getPastWeeks, convertUTCtoISC, getPastDays, getcurrentdate, fetchImage, FetchImageFrom(..))
 import Screens.ReferralScreen.ComponentConfig
 import Screens as ScreenNames
 import Data.Either (Either(..))
@@ -62,8 +62,10 @@ import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import Debug (spy)
 import Timers (startTimer)
+import Mobility.Prelude(boolToVisibility)
+import Common.Types.App as CT
 
-screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
+screen :: ST.ReferralScreenState -> LoggableScreen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -73,30 +75,28 @@ screen initialState =
                 void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
                   case initialState.props.stage of 
                     ST.LeaderBoard -> do
-                        case initialState.props.leaderBoardType of
-                          ST.Daily  -> do
-                            let selectedDay =  if initialState.props.selectedDay.utcDate == "" then
-                                                  case last (getPastDays 1) of
-                                                    Just day -> day
-                                                    Nothing -> initialState.props.selectedDay
-                                                else initialState.props.selectedDay
-
-                            leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ DailyRequest (convertUTCtoISC selectedDay.utcDate "YYYY-MM-DD")
-                            case leaderBoardRes of
-                              Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
-                              Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
-                            pure unit
-                          ST.Weekly -> do
-                            let selectedWeek =  if any (_ == "") [initialState.props.selectedWeek.utcStartDate, initialState.props.selectedWeek.utcEndDate] then
-                                                  case last (getPastWeeks 1) of
-                                                    Just week -> week
-                                                    Nothing -> initialState.props.selectedWeek
-                                                else initialState.props.selectedWeek
-                            leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ WeeklyRequest (convertUTCtoISC selectedWeek.utcStartDate "YYYY-MM-DD") (convertUTCtoISC selectedWeek.utcEndDate "YYYY-MM-DD")
-                            case leaderBoardRes of
-                              Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
-                              Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
-                            pure unit
+                        leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ 
+                          case initialState.props.leaderBoardType of
+                            ST.Daily  ->
+                              let selectedDay =  if DS.null initialState.props.selectedDay.utcDate then
+                                                    fromMaybe initialState.props.selectedDay $ last $ getPastDays 1
+                                                  else initialState.props.selectedDay
+                              in DailyRequest $ convertUTCtoISC selectedDay.utcDate "YYYY-MM-DD"
+                            ST.Weekly ->
+                              let selectedWeek =  if any DS.null [initialState.props.selectedWeek.utcStartDate, initialState.props.selectedWeek.utcEndDate] then
+                                                    fromMaybe initialState.props.selectedWeek $ last $ getPastWeeks 1
+                                                  else initialState.props.selectedWeek
+                              in WeeklyRequest (convertUTCtoISC selectedWeek.utcStartDate "YYYY-MM-DD") $ convertUTCtoISC selectedWeek.utcEndDate "YYYY-MM-DD"
+                            ST.Monthly ->
+                              let initialSelectedMonth = initialState.props.selectedMonth
+                                  selectedMonth = if DS.null initialSelectedMonth.utcDate then
+                                                    fromMaybe initialSelectedMonth $ last $ getPastMonths 1
+                                                  else initialSelectedMonth
+                              in MonthlyRequest selectedMonth.month
+                        lift $ lift $ doAff do liftEffect $ push $ case leaderBoardRes of
+                                                                    Right res -> UpdateLeaderBoard res
+                                                                    Left err  -> UpdateLeaderBoardFailed
+                        pure unit
                     ST.QRScreen -> do 
                       let refCode = getValueToLocalStore REFERRAL_CODE
                       (GetPerformanceRes getPerformanceres) <- Remote.getPerformanceBT (GetPerformanceReq {} )
@@ -115,6 +115,8 @@ screen initialState =
       let _ = spy "Referral state -----" state
       let _ = spy "Referral--------action" action
       eval action state)
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.referralScreenLogWhitelist
   }
 
 
@@ -243,9 +245,9 @@ leaderBoard push state =
       , background Color.grey800
       , cornerRadius 30.0
       , gravity CENTER
-      ][ leaderBoardTab (getString DAILY) ST.Daily push state
-       , leaderBoardTab (getString WEEKLY) ST.Weekly push state
-       ]
+      ]([ leaderBoardTab (getStringEnToHi DAILY) ST.Daily push state
+       , leaderBoardTab (getStringEnToHi WEEKLY) ST.Weekly push state
+       ] <> if state.data.config.showMonthlyLeaderBoard then [leaderBoardTab (getStringEnToHi MONTHLY) ST.Monthly push state] else [])
     , dateAndTime push state
     , relativeLayout
       [ width MATCH_PARENT
@@ -285,7 +287,7 @@ noDataView state =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , margin (Margin 24 0 24 4)
-            , text (getString GETTING_THE_LEADERBOARD_READY)
+            , text (getStringEnToHi GETTING_THE_LEADERBOARD_READY)
             , color Color.black800
             , fontStyle $ FontStyle.bold LanguageStyle
             , textSize FontSize.a_18
@@ -295,7 +297,7 @@ noDataView state =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , margin (Margin 24 0 24 30)
-            , text (getString PLEASE_WAIT_WHILE_WE_UPDATE_THE_DETAILS)
+            , text (getStringEnToHi PLEASE_WAIT_WHILE_WE_UPDATE_THE_DETAILS)
             , color Color.black700
             , textSize FontSize.a_14
             , gravity CENTER_HORIZONTAL
@@ -319,49 +321,53 @@ currentDriverRank state =
 
 dateAndTime :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 dateAndTime push state =
-  let date = state.props.selectedDay
-      week = state.props.selectedWeek
-  in
-    linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation HORIZONTAL
-    , margin (MarginHorizontal 16 16)
-    , padding (Padding 8 15 8 15)
-    , gravity CENTER_VERTICAL
-    ][  linearLayout
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , gravity CENTER_VERTICAL
-        , weight 1.0
-        , onClick push (const $ DateSelectorAction)
-        ][  textView
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , text $  if state.props.leaderBoardType == ST.Daily then
-                        (show date.date) <> " " <> date.month <> ", " <> (show date.year)
-                      else
-                        (show week.startDate) <> " " <> week.startMonth <> " - " <> (show week.endDate) <> " " <> week.endMonth
-            , textSize FontSize.a_16
-            , color Color.black800
-            ]
-          , imageView
-            [ width (V 24)
-            , height (V 24)
-            , margin (MarginLeft 12)
-            , imageWithFallback $ fetchImage FF_ASSET $ if state.props.showDateSelector then "ny_ic_chevron_up_blue" else "ny_ic_calendar_blue"
-            ]
-        ]
-      , textView
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , text $ (getString LAST_UPDATED) <> state.props.lastUpdatedAt
-        , textSize FontSize.a_12
-        , color Color.black700
-        , gravity RIGHT
-        , weight 1.0
-        ]
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , margin $ MarginHorizontal 16 16
+  , padding $ Padding 8 15 8 15
+  , gravity CENTER_VERTICAL
   ]
+  [ linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , gravity CENTER_VERTICAL
+    , weight 1.0
+    , onClick push $ const $ DateSelectorAction
+    ]
+    [ textView $
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , text marginDateText
+      , color Color.black800
+      ] <> FontStyle.body32 LanguageStyle
+    , imageView
+      [ width $ V 24
+      , height $ V 24
+      , margin $ MarginLeft 12
+      , imageWithFallback $ fetchImage FF_ASSET $ if state.props.showDateSelector then "ny_ic_chevron_up_blue" else "ny_ic_calendar_blue"
+      ]
+    ]
+  , textView $
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , text $ getStringEnToHi LAST_UPDATED <> state.props.lastUpdatedAt
+    , color Color.black700
+    , gravity RIGHT
+    , weight 1.0
+    ] <> FontStyle.body9 LanguageStyle
+  ]
+  where
+    marginDateText :: String
+    marginDateText = 
+      let date = state.props.selectedDay
+          week = state.props.selectedWeek
+          month = state.props.selectedMonth
+      in case state.props.leaderBoardType of
+          ST.Daily -> show date.date <> " " <> date.month <> ", " <> show date.year
+          ST.Weekly -> show week.startDate <> " " <> week.startMonth <> " - " <> show week.endDate <> " " <> week.endMonth
+          ST.Monthly -> convertUTCtoISC month.utcDate "MMMM" <> ", " <> convertUTCtoISC month.utcDate "YYYY"
 
 leaderBoardRanksCover :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 leaderBoardRanksCover push state = 
@@ -417,9 +423,9 @@ congratsBar state =
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text  if rank == 1 then
-                        (getString CONGRATULATIONS_YOU_ARE_RANK) <> (show rank) <> " 🏆"
+                        (getStringEnToHi CONGRATULATIONS_YOU_ARE_RANK) <> (show rank) <> " 🏆"
                       else
-                        (getString CONGRATULATIONS_YOU_ARE_RANK) <> (show rank) <> " 🎉"
+                        (getStringEnToHi CONGRATULATIONS_YOU_ARE_RANK) <> (show rank) <> " 🎉"
               , color Color.white900
               , textSize FontSize.a_18
               ]
@@ -535,7 +541,7 @@ rankCard item aboveThreshold state =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity CENTER_VERTICAL
-          , text $ if checkDriverWithZeroRides item aboveThreshold state then  getString ACCEPT_RIDES_TO_ENTER_RANKINGS else (show item.rides) <> " " <> (getString RIDES)
+          , text $ if checkDriverWithZeroRides item aboveThreshold state then  getStringEnToHi ACCEPT_RIDES_TO_ENTER_RANKINGS else (show item.rides) <> " " <> (getStringEnToHi RIDES)
           , textSize FontSize.a_16
           , fontStyle  $ FontStyle.semiBold LanguageStyle
           , color if aboveThreshold || (item == currentDriverData && currentDriverData.rank > 0) then Color.white900 else Color.black800
@@ -646,7 +652,7 @@ rankers size rank themeColor showCrown fontSize detail imageUrl =
         ][ textView
            [ width MATCH_PARENT
            , height MATCH_PARENT
-           , text $ (show detail.rides) <> " " <> (getString RIDES)
+           , text $ (show detail.rides) <> " " <> (getStringEnToHi RIDES)
            , gravity CENTER
            , textSize FontSize.a_18
            , fontStyle  $ FontStyle.bold LanguageStyle
@@ -671,7 +677,7 @@ dateSelector push state =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , background Color.blackLessTrans
-    , visibility if state.props.showDateSelector then VISIBLE else GONE
+    , visibility $ boolToVisibility state.props.showDateSelector
     , onClick push (const $ DateSelectorAction)
     ][horizontalScrollView
       [ width MATCH_PARENT
@@ -686,53 +692,56 @@ dateSelector push state =
           , height WRAP_CONTENT
           , orientation HORIZONTAL
           , padding (Padding 12 18 12 20)
-          ] if leaderBoardType == ST.Daily then
-              (mapWithIndex (\index item ->
-                    linearLayout
-                    [ width (V 50)
-                    , height (V 50)
-                    , cornerRadius 50.0
-                    , background if item == state.props.selectedDay then Color.blue600 else Color.grey700
-                    , margin (MarginHorizontal 4 4)
-                    , gravity CENTER
-                    , orientation VERTICAL
-                    , stroke $ "1," <> if item == state.props.selectedDay then Color.blue800 else Color.grey700
-                    , onClick push (const $ ChangeDate (ST.DaySelector item))
-                    ][  textView
-                        [ text $ show item.date
-                        , textSize FontSize.a_16
-                        , color if item == state.props.selectedDay then Color.blue800 else Color.black700
-                        ]
-                      , textView
-                        [ text item.month
-                        , textSize FontSize.a_10
-                        , color if item == state.props.selectedDay then Color.blue800 else Color.black700
-                        ]
-                    ]
-                ) state.props.days
-              )
-            else
-              (mapWithIndex (\index item ->
-                    linearLayout
-                    [ width (V 140)
-                    , height (V 50)
-                    , cornerRadius 50.0
-                    , background if item == state.props.selectedWeek then Color.blue600 else Color.grey700
-                    , margin (MarginHorizontal 4 4)
-                    , gravity CENTER
-                    , orientation HORIZONTAL
-                    , stroke $ "1," <> if item == state.props.selectedWeek then Color.blue800 else Color.grey700
-                    , onClick push (const $ ChangeDate (ST.WeekSelector item))
-                    ][  textView
-                        [ text $ (show item.startDate) <> " " <> item.startMonth <> " - " <> (show item.endDate) <> " " <> item.endMonth
-                        , textSize FontSize.a_16
-                        , color if item == state.props.selectedWeek then Color.blue800 else Color.black700
-                        ]
-                    ]
-                ) state.props.weeks
-              )
+          ] $ 
+            case leaderBoardType of
+              ST.Daily -> mapWithIndex dailyDateSelectorView state.props.days
+              ST.Weekly -> mapWithIndex weeklyDateSelectorView state.props.weeks
+              ST.Monthly -> mapWithIndex monthlyDateSelectorView state.props.months
       ]
     ]
+  where
+    dailyDateSelectorView :: forall w . Int -> CT.CalendarDate -> PrestoDOM (Effect Unit) w
+    dailyDateSelectorView index item =
+      let isSelected = item == state.props.selectedDay
+          selectorText = show item.date
+          maybeSuffixText = Just item.month
+      in commonDateSelectorView (V 50) (V 50) VERTICAL isSelected selectorText maybeSuffixText $ ChangeDate $ ST.DaySelector item
+    
+    weeklyDateSelectorView :: forall w . Int -> CT.CalendarWeek -> PrestoDOM (Effect Unit) w
+    weeklyDateSelectorView index item =
+      let isSelected = item == state.props.selectedWeek
+          selectorText = show item.startDate <> " " <> item.startMonth <> " - " <> show item.endDate <> " " <> item.endMonth
+      in commonDateSelectorView (V 140) (V 50) HORIZONTAL isSelected selectorText Nothing $ ChangeDate $ ST.WeekSelector item
+    
+    monthlyDateSelectorView :: forall w . Int -> CT.CalendarMonth -> PrestoDOM (Effect Unit) w
+    monthlyDateSelectorView index item =
+      let isSelected = item == state.props.selectedMonth
+          selectorText = convertUTCtoISC item.utcDate "MMMM"
+      in commonDateSelectorView (V 140) (V 50) HORIZONTAL isSelected selectorText Nothing $ ChangeDate $ ST.MonthSelector item
+
+    commonDateSelectorView :: forall w . Length -> Length -> Orientation -> Boolean -> String -> Maybe String -> Action -> PrestoDOM (Effect Unit) w
+    commonDateSelectorView layoutWidth layoutheight layoutOrientation isSelected selectorText maybeSuffixText action =
+      linearLayout
+      [ width layoutWidth
+      , height layoutheight
+      , cornerRadius 50.0
+      , background if isSelected then Color.blue600 else Color.grey700
+      , margin $ MarginHorizontal 4 4
+      , gravity CENTER
+      , orientation layoutOrientation
+      , stroke $ "1," <> if isSelected then Color.blue800 else Color.grey700
+      , onClick push $ const action
+      ]
+      [ textView $
+        [ text selectorText
+        , color if isSelected then Color.blue800 else Color.black700
+        ] <> FontStyle.body32 LanguageStyle
+      , textView $
+        [ text $ fromMaybe "" maybeSuffixText
+        , visibility $ boolToVisibility $ isJust maybeSuffixText
+        , color if isSelected then Color.blue800 else Color.black700
+        ] <> FontStyle.body16 LanguageStyle
+      ]
 
 leaderBoardTab :: forall w . String -> ST.LeaderBoardType -> (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 leaderBoardTab _text leaderBoardType push state =

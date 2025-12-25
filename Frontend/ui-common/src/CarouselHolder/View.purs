@@ -41,35 +41,43 @@ type Layout w = PrestoDOM (Effect Unit) w
 carouselView :: forall w a action. Homogeneous a PropValue => (action -> Effect Unit) -> CarouselHolderConfig a action -> Layout w
 carouselView push config =
   let itemsLen = length config.items
+      layoutHeight = if os == "IOS" then config.layoutHeight else WRAP_CONTENT
+      indicatorLayoutHeight =  if os /= "IOS" then MATCH_PARENT else if config.overlayScrollIndicator then  config.layoutHeight else WRAP_CONTENT
   in
-  frameLayout
-  [ height WRAP_CONTENT
+  (if config.overlayScrollIndicator then frameLayout else linearLayout )
+  [ height layoutHeight
   , width MATCH_PARENT
+  , gravity BOTTOM
   , visibility $ boolToVisibility $ itemsLen  > 0
-  ][ animationSet
-  [ scaleYAnimWithDelay 50
-  ]$ viewPager2
+  , orientation VERTICAL
+  ]$[ animationSet[ scaleYAnimWithDelay 50 ]$ 
+    viewPager2
       $ [ listItem  $ config.view
       , listDataV2 $ config.items
-      , height WRAP_CONTENT
+      , height layoutHeight
       , width MATCH_PARENT
       , currentItem config.currentPage
-      , afterRender (\_ -> when (itemsLen > 1) $ checkAndStartAutoLoop push config) (pure unit)
       , registerEvent "RestartAutoScroll" (\_ -> when (itemsLen > 1) $ checkAndStartAutoLoop push config) (pure unit)
       ] <> addPageCallBack itemsLen onPageSelected config.onPageSelected
         <> addPageCallBack itemsLen onPageScrollStateChanged config.onPageScrollStateChanged
         <> addPageCallBack itemsLen onPageScrolled config.onPageScrolled
-    , linearLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , padding $ PaddingBottom 8
-      ][ linearLayout [weight 1.0, orientation VERTICAL] []
-      , scrollIndicator itemsLen config
-      ]
-    ]
+    ] <> if config.showScrollIndicator && itemsLen > 1 then
+          [ linearLayout
+              [ height indicatorLayoutHeight
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , padding $ if config.overlayScrollIndicator then PaddingBottom 8 else PaddingTop 4 
+              , afterRender (\_ -> when (itemsLen > 1) $ checkAndStartAutoLoop push config) (pure unit)
+              ]
+              [ linearLayout [ weight 1.0, orientation VERTICAL ] []
+              , scrollIndicator itemsLen config
+              ]
+          ]
+        else
+          []
   where
-    addPageCallBack itemsLen prop = maybe [] (\action -> if (itemsLen > 1) then [prop push action] else [])
+    addPageCallBack itemsLen prop = maybe [] (\action -> [prop (getPush itemsLen) action])
+    getPush itemsLen = (\action -> when (itemsLen > 1) $ push action)
 
 
 scrollIndicator :: forall w a action. Homogeneous a PropValue => Int -> CarouselHolderConfig a action -> Layout w
@@ -77,24 +85,23 @@ scrollIndicator itemsLen config =
   let indicators = getArray $ itemsLen
   in
   relativeLayout
-  [ height $ V 13
+  [ height $ V 14
   , width MATCH_PARENT
   , orientation VERTICAL
   , gravity CENTER
-  , visibility  $ boolToVisibility $ itemsLen  > 1
   ][  linearLayout
-      [ height $ V 13
+      [ height $ V 14
       , width WRAP_CONTENT
-      , padding $ Padding 4 3 4 3
+      , padding $ Padding 5 4 5 4
       , gravity CENTER
       , background Color.black900
-      , cornerRadius 10.0
+      , cornerRadius 8.0
       , alpha 0.2
       ] $ mapWithIndex (\idx _ -> indicatorDot (getDotSize config.currentIndex idx) INVISIBLE (if idx == (itemsLen - 1) then MarginLeft 0 else MarginRight 2)) $ indicators
     , linearLayout
-      [ height $ V 13
+      [ height $ V 14
       , width WRAP_CONTENT
-      , padding $ Padding 4 3 4 3
+      , padding $ Padding 5 4 5 4
       , gravity CENTER
       ] $ mapWithIndex (\idx _ -> indicatorDot (getDotSize config.currentIndex idx) VISIBLE (if idx == (itemsLen - 1) then MarginLeft 0 else MarginRight 2)) $ indicators
   ]

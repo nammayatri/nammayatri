@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.search_request ALTER COLUMN auto_assign_enabled DROP NOT NULL;

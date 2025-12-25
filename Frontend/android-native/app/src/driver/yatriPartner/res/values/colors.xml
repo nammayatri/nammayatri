@@ -14,5 +14,6 @@
     <color name="colorIconBackground">#d3f0ea</color>
     <color name="colorApprovalText">#38a398</color>
     <color name="colorBodyText">#8e8e8e</color>
+    <color name="colorVoipBackground">#14171F</color>
 
 </resources>

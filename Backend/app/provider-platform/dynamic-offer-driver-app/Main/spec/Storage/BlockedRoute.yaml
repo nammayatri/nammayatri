@@ -1,0 +1,26 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  UTCTime: Kernel.Prelude
+  LineSegment: Kernel.Utils.ComputeIntersection
+
+BlockedRoute:
+  tableName: blocked_route
+  derives: "Generic,Show,Read,FromJSON,ToJSON"
+  fields:
+    id : Id BlockedRoute
+    name: Text
+    startSegment : LineSegment
+    endSegment : LineSegment
+    enabled: Bool
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findAllBlockedRoutesByMerchantOperatingCity:
+      kvFunction: findAllWithKV
+      where:
+        eq: [merchantOperatingCityId]

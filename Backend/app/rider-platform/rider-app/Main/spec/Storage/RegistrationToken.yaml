@@ -1,0 +1,60 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  PartnerOrganization: Domain.Types.PartnerOrganization
+
+RegistrationToken:
+  tableName: registration_token
+
+  types:
+    Medium:
+      enum: "SMS, WHATSAPP, EMAIL, SIGNATURE, PARTNER_ORG, MOBILE_NUMBER"
+
+    RTEntityType:
+      enum: "CUSTOMER, USER"
+
+    LoginType:
+      enum: "OTP,PASSWORD,DIRECT,OAUTH"
+
+  fields:
+    id : Id RegistrationToken
+    token : Text
+    attempts : Int
+    authMedium : Medium
+    authType : LoginType
+    authValueHash : Text
+    verified : Bool
+    authExpiry : Int
+    tokenExpiry : Int
+    entityId : Text
+    merchantId : Text
+    entityType : RTEntityType
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    info : Maybe Text
+    createdViaPartnerOrgId : Maybe (Id PartnerOrganization)
+
+  excludedFields: [merchantOperatingCityId]
+  constraints:
+    id: PrimaryKey
+    token: "!SecondaryKey" # forcing to be a secondary key
+    entityId: "!SecondaryKey" # forcing to be a secondary key
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    setVerified:
+      kvFunction: updateOneWithKV
+      params: [verified]
+      where: id
+
+    updateAttempts:
+      kvFunction: updateOneWithKV
+      params: [attempts]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

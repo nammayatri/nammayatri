@@ -1,0 +1,666 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  MerchantMessageDefaultDataJSON: Domain.Types.Extra.MerchantMessage
+  CallService: Kernel.External.Call.Types
+  MapsService: Kernel.External.Maps.Types
+  NotificationService: Kernel.External.Notification.Types
+  AadhaarVerificationService: Kernel.External.AadhaarVerification
+  SmsService: Kernel.External.SMS.Types
+  WhatsappService: Kernel.External.Whatsapp.Types
+  IssueTicketService: Kernel.External.Ticket.Types
+  Subscriber: Kernel.Types.Registry
+  ShortId: Kernel.Types.Id
+  City: Kernel.Types.Beckn.Context
+  IndianState: Kernel.Types.Beckn.Context
+  Country: Kernel.Types.Beckn.Context
+  GeofencingConfig: Kernel.Types.Geofencing
+  BaseUrl: Kernel.Types.Common
+  Base64: Kernel.Types.Base64
+  NominalDiffTime: Kernel.Prelude
+  Seconds: Kernel.Types.Common
+  GeoRestriction: Kernel.Types.Geofencing
+  Distance: Kernel.Types.Common
+  HighPrecDistance: Kernel.Types.Common
+  DistanceUnit: Kernel.Types.Common
+  BookingStatus: Domain.Types.BookingStatus
+  Language: Kernel.External.Types
+  Category: Kernel.External.Notification.Interface.Types
+  SubCategory: Kernel.External.Notification.Interface.Types
+  PaymentService: Kernel.External.Payment.Types
+  TripCategory: Domain.Types.Trip
+  MultiModalService: Kernel.External.MultiModal.Types
+  GatewayAndRegistryService: Domain.Types
+  VehicleCategory: Domain.Types.VehicleCategory
+  Expand: Kernel.External.Payout.Interface.Types
+  InsuranceService: Kernel.External.Insurance.Types
+
+Merchant:
+  derives: "Generic,Show,'UsageSafety"
+
+  fields:
+    id: Id Merchant
+    subscriberId: ShortId Subscriber
+    shortId: ShortId Merchant
+    name: Text
+    defaultCity: City
+    defaultState: IndianState
+    country: Country
+    geofencingConfig: GeofencingConfig
+    gatewayUrl: BaseUrl
+    registryUrl: BaseUrl
+    fallbackShortId: ShortId Merchant
+    bapId: Text
+    bapUniqueKeyId: Text
+    driverOfferBaseUrl: BaseUrl
+    driverOfferApiKey: Text
+    driverOfferMerchantId: Text
+    geoHashPrecisionValue: Int
+    minimumDriverRatesCount: Int
+    signingPublicKey: Base64
+    signingPrivateKey: Maybe Base64
+    cipherText: Maybe Base64
+    signatureExpiry: Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    isAvoidToll: Bool
+    aadhaarVerificationTryLimit: Int
+    aadhaarKeyExpiryTime: Seconds
+    mediaFileSizeUpperLimit: Int
+    mediaFileUrlPattern: Text
+    editPickupDistanceThreshold: Distance
+    driverDistanceThresholdFromPickup: Distance
+    numOfAllowedEditPickupLocationAttemptsThreshold: Int
+    numOfAllowedEditLocationAttemptsThreshold : Int
+    publicMediaFileUrlPattern: Text
+    scheduleRideBufferTime: NominalDiffTime
+    fakeOtpMobileNumbers: "[Text]"
+    fakeOtpEmails: "[Text]"
+    kaptureDisposition: Text # deprecated
+    arrivedPickupThreshold: Distance
+    arrivingPickupThreshold: Distance
+    driverOnTheWayNotifyExpiry: Seconds
+    onlinePayment: Bool
+    gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
+    stuckRideAutoCancellationBuffer: Maybe Seconds
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+  beamFields:
+    defaultCity:
+      city: City
+    defaultState:
+      state: IndianState
+    geofencingConfig:
+      originRestriction: GeoRestriction
+      destinationRestriction: GeoRestriction
+    editPickupDistanceThreshold:
+      editPickupDistanceThreshold: HighPrecMeters
+      editPickupDistanceThresholdValue: Maybe HighPrecDistance
+      distanceUnit: Maybe DistanceUnit
+    driverDistanceThresholdFromPickup:
+      driverDistanceThresholdFromPickup: HighPrecMeters
+      driverDistanceThresholdFromPickupValue: Maybe HighPrecDistance
+    arrivedPickupThreshold:
+      arrivedPickupThreshold: Maybe Meters
+      arrivedPickupThresholdValue: Maybe HighPrecDistance
+  beamType:
+    gatewayUrl: Text
+    registryUrl: Text
+    driverOfferBaseUrl: Text
+    scheduleRideBufferTime: Seconds
+    driverOnTheWayNotifyExpiry: Maybe Seconds
+    arrivingPickupThreshold: HighPrecDistance
+    gatewayAndRegistryPriorityList: Maybe [GatewayAndRegistryService]
+    stuckRideAutoCancellationBuffer: Maybe Seconds
+
+  toTType:
+    city: defaultCity|E
+    state: defaultState|E
+    originRestriction: (.origin)|I
+    destinationRestriction: (.destination)|I
+    gatewayUrl: Kernel.Prelude.showBaseUrl|I
+    registryUrl: Kernel.Prelude.showBaseUrl|I
+    driverOfferBaseUrl: Kernel.Prelude.showBaseUrl|I
+    scheduleRideBufferTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    driverOnTheWayNotifyExpiry: (Just driverOnTheWayNotifyExpiry)|E
+    distanceUnit: (Just $ (.unit) editPickupDistanceThreshold)|E
+    editPickupDistanceThreshold: Kernel.Utils.Common.distanceToHighPrecMeters|I
+    editPickupDistanceThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) editPickupDistanceThreshold)|E
+    driverDistanceThresholdFromPickup: (Kernel.Utils.Common.distanceToHighPrecMeters driverDistanceThresholdFromPickup)|E
+    driverDistanceThresholdFromPickupValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) driverDistanceThresholdFromPickup)|E
+    arrivedPickupThreshold: (Just $ Kernel.Utils.Common.distanceToMeters arrivedPickupThreshold)|E
+    arrivedPickupThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivedPickupThreshold)|E
+    arrivingPickupThreshold: (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivingPickupThreshold)|E
+    gatewayAndRegistryPriorityList: Kernel.Prelude.Just|I
+
+  fromTType:
+    defaultCity: city|E
+    defaultState: state|E
+    geofencingConfig: mkGeofencingConfig
+    gatewayUrl: Kernel.Prelude.parseBaseUrl|IM
+    registryUrl: Kernel.Prelude.parseBaseUrl|IM
+    driverOfferBaseUrl: Kernel.Prelude.parseBaseUrl|IM
+    scheduleRideBufferTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
+    arrivedPickupThreshold: maybe (Kernel.Types.Common.Distance 50 Kernel.Types.Common.Meter) (Kernel.Utils.Common.mkDistanceWithDefaultMeters distanceUnit arrivedPickupThresholdValue) arrivedPickupThreshold|E
+    arrivingPickupThreshold: Kernel.Types.Common.Distance arrivingPickupThreshold (fromMaybe Kernel.Types.Common.Meter distanceUnit)|E
+    editPickupDistanceThreshold: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit editPickupDistanceThresholdValue editPickupDistanceThreshold|E
+    driverDistanceThresholdFromPickup: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit driverDistanceThresholdFromPickupValue driverDistanceThresholdFromPickup|E
+    driverOnTheWayNotifyExpiry: (fromMaybe 3600 driverOnTheWayNotifyExpiry)|E
+    gatewayAndRegistryPriorityList: fromMaybe [Domain.Types.ONDC, Domain.Types.NY] gatewayAndRegistryPriorityList|E
+
+  sqlType:
+    editPickupDistanceThreshold: double precision
+    driverDistanceThresholdFromPickup: double precision
+    numOfAllowedEditPickupLocationAttemptsThreshold: int
+    numOfAllowedEditLocationAttemptsThreshold: int
+    signingPublicKey: text
+    signingPrivateKey: text
+    signatureExpiry: int
+    state: text
+    fallbackShortId: text
+    originRestriction: text[]
+    destinationRestriction: text[]
+    distanceWeightage: int
+    exoPhones: text[]
+    country: text
+    name: character varying(255)
+    aadhaarVerificationTryLimit: integer
+    aadhaarKeyExpiryTime: integer
+    subscriberId: character(36)
+    city: text
+    timeDiffFromUtc: int
+    publicMediaFileUrlPattern: text
+    kaptureDisposition: text
+    mediaFileUrlPattern: text
+    mediaFileSizeUpperLimit: int
+    fakeOtpMobileNumbers: text[]
+    fakeOtpEmails: text[]
+    driverOfferBaseUrl: text
+    driverOfferApiKey: varchar(128)
+    driverOfferMerchantId: varchar(255)
+    geoHashPrecisionValue: INT
+    cipherText: text
+    scheduleRideBufferTime: integer
+    trackingShortUrlPattern: text
+    bapUniqueKeyId: text
+    bapId: text
+    isAvoidToll: boolean
+    minimumDriverRatesCount: int
+    fcmUrl: text
+    fcmJsonPath: text
+    fcmRedisTokenKeyPrefix: text
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+    arrivedPickupThreshold: double precision
+    arrivingPickupThreshold: double precision
+    driverOnTheWayNotifyExpiry: integer
+    gatewayAndRegistryPriorityList: "text[]"
+
+  default:
+    arrivedPickupThreshold: "50"
+    arrivingPickupThreshold: "100"
+    driverOnTheWayNotifyExpiry: "3600"
+    scheduleRideBufferTime: "1800"
+    numOfAllowedEditPickupLocationAttemptsThreshold: "2"
+    numOfAllowedEditLocationAttemptsThreshold : "3"
+    driverDistanceThresholdFromPickup: "100"
+    editPickupDistanceThreshold: "100"
+    publicMediaFileUrlPattern: "'http://localhost:8013/v2/<DOMAIN>/media?filePath=<FILE_PATH>'"
+    mediaFileSizeUpperLimit: "10000000"
+    mediaFileUrlPattern: "'http://localhost:8013/v2/<DOMAIN>/media?filePath=<FILE_PATH>'"
+    isAvoidToll: "true"
+    country: "'India'"
+    cipherText: "'TXlTZWNyZXRLZXkxMjM0NQo='"
+    geoHashPrecisionValue: "9"
+    fakeOtpEmails: "'{}'"
+    city: "'Kochi'"
+    onlinePayment: "false"
+    gatewayAndRegistryPriorityList: "'{\"NY\"}'"
+
+  constraints:
+    shortId: SecondaryKey
+    subscriberId: SecondaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByShortId:
+      kvFunction: findOneWithKV
+      where: shortId
+    findBySubscriberId:
+      kvFunction: findOneWithKV
+      where: subscriberId
+    updateGatewayAndRegistryPriorityList:
+      kvFunction: updateWithKV
+      where: id
+      params: [gatewayAndRegistryPriorityList]
+
+  excludedDefaultQueries:
+    - createMany
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+MerchantServiceConfig:
+  derives: "Generic,'UsageSafety"
+
+  fields:
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    serviceConfig: Domain.Types.Extra.MerchantServiceConfig.ServiceConfigD s
+    updatedAt: UTCTime
+    createdAt: UTCTime
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  beamFields:
+    serviceConfig:
+      serviceName: Domain.Types.MerchantServiceConfig.ServiceName
+      configJSON: Data.Aeson.Value
+  sqlType:
+    serviceName: character varying(50)
+    configJSON: json
+  constraints:
+    merchantId: PrimaryKey
+    serviceName: PrimaryKey
+  fromTType:
+    serviceConfig: Storage.Queries.Transformers.MerchantServiceConfig.getServiceConfigFromDomain serviceName configJSON|EM
+
+  toTType:
+    serviceName: (fst $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig)|E
+    configJSON: (snd $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig)|E
+
+  queries:
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+MerchantServiceUsageConfig:
+
+  derives: "Generic,Show,'UsageSafety"
+
+  fields:
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    initiateCall: CallService
+    notifyPerson: NotificationService
+    getDistances: MapsService
+    getRoutes: MapsService
+    getFrfsAutocompleteDistances: MapsService
+    snapToRoad: MapsService
+    getPlaceName: MapsService
+    getPickupRoutes: MapsService
+    getFirstPickupRoute: Maybe MapsService
+    getTripRoutes: MapsService
+    getPlaceDetails: MapsService
+    autoComplete: MapsService
+    aadhaarVerificationService: AadhaarVerificationService
+    getDistancesForCancelRide: MapsService
+    getDistancesForScheduledRides: MapsService
+    smsProvidersPriorityList: "[SmsService]"
+    whatsappProvidersPriorityList: "[WhatsappService]"
+    issueTicketService: IssueTicketService
+    useFraudDetection: Bool
+    enableDashboardSms: Bool
+    getExophone: CallService
+    createPaymentCustomer: PaymentService
+    createEphemeralKeys: PaymentService
+    getCardList: PaymentService
+    createPaymentIntent: PaymentService
+    updatePaymentMethodInIntent: PaymentService
+    capturePaymentIntent: PaymentService
+    updateAmountInPaymentIntent: PaymentService
+    createSetupIntent: PaymentService
+    deleteCard: PaymentService
+    cancelPaymentIntent: PaymentService
+    updatedAt: UTCTime
+    createdAt: UTCTime
+    getMultiModalService: MultiModalService
+    getMultimodalWalkDistance: MapsService
+    insuranceService: InsuranceService
+
+  beamType:
+    cancelPaymentIntent: Maybe PaymentService
+    getFrfsAutocompleteDistances: Maybe MapsService
+    getMultiModalService: Maybe MultiModalService
+    getMultimodalWalkDistance: Maybe MapsService
+    insuranceService: Maybe InsuranceService
+  fromTType:
+    cancelPaymentIntent: fromMaybe (Kernel.External.Payment.Types.Stripe) cancelPaymentIntent|E
+    getFrfsAutocompleteDistances: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
+    getMultiModalService: fromMaybe (Kernel.External.MultiModal.Types.OTPTransit)|I
+    getMultimodalWalkDistance: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
+    insuranceService: fromMaybe (Kernel.External.Insurance.Types.Acko) insuranceService|E
+  toTType:
+    cancelPaymentIntent: Kernel.Prelude.Just|I
+    getFrfsAutocompleteDistances: Kernel.Prelude.Just|I
+    getMultiModalService: Kernel.Prelude.Just|I
+    getMultimodalWalkDistance: Kernel.Prelude.Just|I
+    insuranceService: Kernel.Prelude.Just|I
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance <MerchantServiceUsageConfigT>
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+
+  queries:
+    findByMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId
+    updateSmsProvidersPriorityList:
+      kvFunction: updateWithKV
+      where: merchantOperatingCityId
+      params: [smsProvidersPriorityList]
+    updateWhatsappProvidersPriorityList:
+      kvFunction: updateWithKV
+      where: merchantOperatingCityId
+      params: [whatsappProvidersPriorityList]
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  sqlType:
+    getDistances: character varying(30)
+    getRoutes: character varying(30)
+    snapToRoad: character varying(30)
+    getPlaceName: character varying(30)
+    getPlaceDetails: character varying(30)
+    autoComplete: character varying(30)
+    smsProvidersPriorityList: "text[]"
+    whatsappProvidersPriorityList: "text[]"
+    initiateCall: character varying(30)
+    issueTicketService: character varying(30)
+    getExophone: character varying (255)
+    aadhaarVerificationService: character varying(30)
+    insuranceService: character varying(30)
+  default:
+    getPickupRoutes: "'Google'"
+    getTripRoutes: "'Google'"
+    useFraudDetection: "False"
+    issueTicketService: "'Kapture'"
+    getExophone: "'Exotel'"
+    createPaymentCustomer: "'Stripe'"
+    createEphemeralKeys: "'Stripe'"
+    getCardList: "'Stripe'"
+    createPaymentIntent: "'Stripe'"
+    updatePaymentMethodInIntent: "'Stripe'"
+    capturePaymentIntent: "'Stripe'"
+    updateAmountInPaymentIntent: "'Stripe'"
+    cancelPaymentIntent: "'Stripe'"
+    createSetupIntent: "'Stripe'"
+    deleteCard: "'Stripe'"
+    getDistancesForScheduledRides: "'OSRM'"
+    getFrfsAutocompleteDistances: "'OSRM'"
+    getMultiModalService: "'OTPTransit'"
+    getMultimodalWalkDistance: "'OSRM'"
+    insuranceService: "'Acko'"
+
+MerchantPaymentMethod:
+  derives: "Generic,'UsageSafety"
+  fields:
+    id: Id MerchantPaymentMethod
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    paymentType: Domain.Types.Extra.MerchantPaymentMethod.PaymentType
+    paymentInstrument: Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument
+    collectedBy: Domain.Types.Extra.MerchantPaymentMethod.PaymentCollector
+    priority: Int
+    updatedAt: UTCTime
+    createdAt: UTCTime
+
+  default: {}
+  sqlType:
+    paymentType: character varying(30)
+    paymentInstrument: character varying(255)
+    collectedBy: character varying(30)
+    priority: int
+
+
+  fromTType:
+    paymentType: paymentTypeTrans
+
+
+  excludedDefaultQueries:
+   - findByPrimaryKey
+   - updateByPrimaryKey
+
+  extraOperations:
+   - EXTRA_DOMAIN_TYPE_FILE
+   - EXTRA_QUERY_FILE
+
+
+
+MerchantMessage:
+  tableName: merchant_message
+
+  derives: "Generic,'UsageSafety"
+
+  types:
+    MessageKey:
+      enum: "INVITE_TO_UNEXISTENT_EMERGENCY_NUMBER,SET_AS_RIDE_EMERGENCY_NUMBER,SET_AS_DEFAULT_EMERGENCY_NUMBER,SEND_OTP,SEND_BOOKING_OTP,SEND_RIDE_END_OTP,SEND_SOS_ALERT,MARK_RIDE_AS_SAFE,FOLLOW_RIDE,ADDED_AS_EMERGENCY_CONTACT,TICKET_BOOKING_CANCELLED,POST_RIDE_SOS,SMS_DELIVERY_DETAILS_SENDER,SMS_DELIVERY_DETAILS_RECEIVER,POST_DELIVERY_SENDER,PRE_PICKUP_DELIVERY_RECEIVER,SEND_SCHEDULED_RIDE_DETAILS,SCHEDULED_RIDE_OTP,WHATSAPP_CALL_BOOKING_FLOW_DETAILS_MESSAGE,WHATSAPP_CALL_BOOKING_REALLOCATED_RIDE_DETAILS_MESSAGE,WHATSAPP_CALL_BOOKING_CANCELLED_RIDE_MESSAGE,METRO_TICKET_BOOKING_CANCELLED,METRO_TICKET_BOOKED,TICKET_MERCHANT_AGREEMENT_TEMPLATE,TICKET_MERCHANT_SNLTR_TEMPLATE,PARTNER_ORG_FRFS_TICKET_CANCEL_OTP,PASS_PURCHASED_MESSAGE"
+
+  fields:
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    messageKey: MessageKey
+    message: Text
+    templateId: Text
+    jsonData: MerchantMessageDefaultDataJSON
+    containsUrlButton: Bool
+    senderHeader: Maybe Text
+    updatedAt: UTCTime
+    createdAt: UTCTime
+
+  beamType:
+    templateId: Maybe Text
+    jsonData: Maybe Data.Aeson.Value
+
+  default:
+    containsUrlButton: "False"
+  sqlType:
+    templateId: character varying(255)
+    jsonData: json
+    messageKey: character varying(255)
+
+  fromTType:
+    templateId: fromMaybe "" templateId|E
+    jsonData: valueToJsonData
+  toTType:
+    templateId: (Just templateId)|E
+    jsonData: (Just $ toJSON jsonData)|E
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    messageKey: PrimaryKey
+
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findByMerchantOperatingCityIdAndMessageKey:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, messageKey]
+  excludedDefaultQueries:
+   - findByPrimaryKey
+   - updateByPrimaryKey
+
+  extraOperations:
+   - EXTRA_DOMAIN_TYPE_FILE
+
+RideRelatedNotificationConfig:
+  tableName : ride_related_notification_config
+  derives: "Generic,Show,ToJSON,FromJSON,Eq"
+  types:
+    NotificationType:
+      enum: "SMS,PN,WHATSAPP,CALL"
+    TimeDiffEvent:
+      enum: "RIDE_ASSIGNED,PICKUP_TIME,START_TIME,END_TIME"
+    EventTime:
+      enum: "PreEvent,PostEvent,OnEvent"
+  fields:
+    id: Id RideRelatedNotificationConfig
+    timeDiff : NominalDiffTime
+    timeDiffEvent: TimeDiffEvent
+    onBookingStatus: BookingStatus|NoRelation
+    notificationType: NotificationType
+    notificationKey: Text
+    onScheduledBooking: Bool
+    eventTime: EventTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  beamType:
+    timeDiff: Seconds
+  toTType:
+    timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+  fromTType:
+    timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
+  constraints:
+    key: PrimaryKey
+    merchantOperatingCityId: PrimaryKey
+  queries:
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findAllByMerchantOperatingCityIdAndTimeDiffEvent:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, timeDiffEvent]
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+MerchantPushNotification:
+  tableName: merchant_push_notification
+  derives: "Generic,Show,ToJSON,FromJSON,Eq"
+  fields:
+    id: Id MerchantPushNotification
+    key: Text
+    title: Text
+    body: Text
+    language: Language
+    fcmNotificationType: Category
+    fcmSubCategory: Maybe SubCategory
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    tripCategory: Maybe TripCategory
+    shouldTrigger: Bool
+  beamType:
+    shouldTrigger: Maybe Bool
+  fromTType:
+    shouldTrigger: Kernel.Prelude.fromMaybe True|I
+  toTType:
+    shouldTrigger: Kernel.Prelude.Just|I
+  default:
+    id: "md5(random()::text || clock_timestamp()::text)::uuid"
+  constraints:
+    id: PrimaryKey
+    # key: PrimaryKey
+    # merchantOperatingCityId: PrimaryKey
+    # language: PrimaryKey
+    # tripCategory: PrimaryKey
+    # fcmSubCategory: PrimaryKey
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findAllByMerchantOpCityIdAndMessageKey:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, key]
+    findAllByMerchantOpCityAndMessageKeyAndTripCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, key, tripCategory]
+
+PayoutConfig:
+  tableName : payout_config
+  derives: "Generic,Show,ToJSON,FromJSON,Eq"
+  fields:
+    id: Id PayoutConfig
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    timeDiff: NominalDiffTime
+    isPayoutEnabled: Bool
+    batchLimit: Int
+    maxRetryCount: Int
+    remark: Text
+    orderType: Text
+    payoutEntity: PayoutEntity
+    expand: Maybe Expand
+    vehicleCategory: Maybe VehicleCategory|NoRelation
+    referralRewardAmountPerRide: HighPrecMoney
+    thresholdPayoutAmountPerPerson: HighPrecMoney
+    referredByRewardAmount: HighPrecMoney
+    maxPayoutReferralForADay: Int
+  beamType:
+    timeDiff: Seconds
+    referralRewardAmountPerRide: Maybe HighPrecMoney
+    thresholdPayoutAmountPerPerson: Maybe HighPrecMoney
+    referredByRewardAmount: Maybe HighPrecMoney
+    maxPayoutReferralForADay: Maybe Int
+  toTType:
+    timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    referralRewardAmountPerRide: Just referralRewardAmountPerRide|E
+    thresholdPayoutAmountPerPerson: Just thresholdPayoutAmountPerPerson|E
+    referredByRewardAmount: Just referredByRewardAmount|E
+    maxPayoutReferralForADay: Just maxPayoutReferralForADay|E
+  fromTType:
+    timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
+    referralRewardAmountPerRide: fromMaybe 0 referralRewardAmountPerRide|E
+    thresholdPayoutAmountPerPerson:  fromMaybe 0 thresholdPayoutAmountPerPerson|E
+    referredByRewardAmount:  fromMaybe 0 referredByRewardAmount|E
+    maxPayoutReferralForADay: fromMaybe 10 maxPayoutReferralForADay|E
+
+  default:
+    timeDiff: "86400"
+    isPayoutEnabled: "False"
+    batchLimit: "10"
+    maxRetryCount: "5"
+    remark: "'Cashback for metro ticket booking with NammaYatri'"
+    orderType: "'FULFILL_ONLY'"
+    payoutEntity: "'PAYOUT_AWARD'"
+  constraints:
+    id: PrimaryKey
+  queries:
+    findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, isPayoutEnabled, payoutEntity]
+    findByCityIdAndVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleCategory]
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId]
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  types:
+    PayoutEntity:
+      enum: "METRO_TICKET_CASHBACK,PAYOUT_AWARD"
+

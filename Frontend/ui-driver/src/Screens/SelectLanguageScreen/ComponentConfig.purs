@@ -29,13 +29,14 @@ import Prelude ((==))
 
 primaryButtonConfig :: ST.SelectLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = PrimaryButton.config { textConfig
-      { text = (getString UPDATE)
+      { text = if state.props.onlyGetTheSelectedLanguage then (getString CONFIRM_LANGUAGE) else (getString UPDATE)
       , color = Color.primaryButtonColor}
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
       , background = Color.black900
       , height = (V 60)
       , id = "SelectLanguageScreenPrimaryButton"
+      , enableRipple = true
       }
   
 
@@ -50,7 +51,7 @@ menuButtonConfig state language index = MenuButton.config
     , isSelected = (state.props.selectedLanguage == language.value)
     , index = index
     , lineVisibility = false
-    , activeStrokeColor = Color.white900
-    , activeBgColor = Color.white900
-    , inactiveStrokeColor = Color.white900
+    , activeStrokeColor = if state.props.onlyGetTheSelectedLanguage then Color.blue900 else Color.white900
+    , activeBgColor =  if state.props.onlyGetTheSelectedLanguage then Color.blue9000 else Color.white900
+    , inactiveStrokeColor =  if state.props.onlyGetTheSelectedLanguage then Color.grey900 else Color.white900
     }

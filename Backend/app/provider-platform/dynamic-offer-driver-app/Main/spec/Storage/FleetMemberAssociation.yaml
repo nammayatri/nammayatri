@@ -1,0 +1,61 @@
+FleetMemberAssociation:
+  tableName: fleet_member_association
+
+  fields:
+    fleetMemberId: Text
+    fleetOwnerId: Text
+    level: Maybe Int
+    parentGroupCode: Maybe Text
+    groupCode: Maybe Text
+    order: Maybe Int
+    isFleetOwner: Bool
+    enabled: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    fleetMemberId: PrimaryKey
+    fleetOwnerId: PrimaryKey
+
+  queries:
+    findAllByfleetMemberId:
+      kvFunction: findAllWithKV
+      where:
+        and: [fleetMemberId]
+
+    findAllActiveByfleetMemberId:
+      kvFunction: findAllWithKV
+      where:
+        and: [fleetMemberId, enabled]
+
+    updateFleetMemberActiveStatus:
+      kvFunction: updateOneWithKV
+      params: [enabled]
+      where:
+        and: [fleetMemberId, fleetOwnerId]
+
+    updateFleetMembersActiveStatus:
+      kvFunction: updateWithKV
+      params: [enabled]
+      where:
+        and:
+          - eq: [fleetMemberId]
+          - in: [fleetOwnerId]
+
+    updateFleetMembersActiveStatusByGroupCode:
+      kvFunction: updateWithKV
+      params: [enabled]
+      where:
+        and:
+          - eq: [fleetMemberId, groupCode]
+
+    findAllWithOwnerIds:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [fleetOwnerId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

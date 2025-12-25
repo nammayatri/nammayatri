@@ -1,0 +1,69 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  CancellationReasonCode: Domain.Types.CancellationReason
+  CancellationStage: Domain.Types.CancellationReason
+  Booking:  Domain.Types.Booking
+  Ride: Domain.Types.Ride
+  LatLong: Kernel.External.Maps
+  Person: Domain.Types.Person
+
+BookingCancellationReason:
+  tableName: booking_cancellation_reason
+
+  types:
+    CancellationSource:
+      enum: "ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication"
+
+  fields:
+    driverId : Maybe (Id Person)
+    bookingId : Id Booking
+    rideId : Maybe (Id Ride)
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    source : CancellationSource
+    reasonCode : Maybe CancellationReasonCode
+    additionalInfo : Maybe Text
+    driverCancellationLocation : Maybe LatLong
+    driverDistToPickup : Maybe Meters
+    distanceUnit : DistanceUnit
+
+  beamType:
+    reasonCode: Maybe Text
+    distanceUnit: Maybe DistanceUnit
+
+  beamFields:
+    driverCancellationLocation:
+      driverCancellationLocationLat: Maybe Double
+      driverCancellationLocationLon: Maybe Double
+
+  fromTType:
+    reasonCode: Domain.Types.CancellationReason.CancellationReasonCode <$> reasonCode|E
+    driverCancellationLocation: Kernel.External.Maps.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+
+  toTType:
+    reasonCode: (\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> reasonCode|E
+    driverCancellationLocationLat: (driverCancellationLocation <&> (.lat))|E
+    driverCancellationLocationLon: (driverCancellationLocation <&> (.lon))|E
+    distanceUnit: Kernel.Prelude.Just|I
+
+  constraints:
+    bookingId: PrimaryKey
+    rideId: SecondaryKey
+
+  queries:
+    findByBookingId:
+      kvFunction: findOneWithKV
+      where: bookingId
+
+    findByRideId:
+      kvFunction: findOneWithKV
+      where: rideId
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantId, createdAt, updatedAt]
+

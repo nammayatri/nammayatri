@@ -1,0 +1,17 @@
+imports:
+  InsuranceAPIEntity: API.Types.UI.Insurance
+
+module: InsuranceInternal
+
+types: {}
+
+apis:
+  - GET:
+      endpoint: /insurance/{bppRideId}
+      headers:
+        token: Text
+      params:
+        bppRideId: Text
+      auth: NoAuth
+      response:
+        type: "API.Types.UI.Insurance.InsuranceAPIEntity"

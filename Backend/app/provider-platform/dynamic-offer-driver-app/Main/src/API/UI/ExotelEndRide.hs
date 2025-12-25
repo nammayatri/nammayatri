@@ -54,7 +54,7 @@ callBasedEndRide callFrom_ callTo_ = withFlowHandlerAPI $ do
   let callTo = dropFirstZero callTo_
   mobileNumberHash <- getDbHash callFrom
   exophone <- CQExophone.findByEndRidePhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
-  shandle <- EndRide.buildEndRideHandle exophone.merchantId exophone.merchantOperatingCityId
+  shandle <- EndRide.buildEndRideHandle exophone.merchantId exophone.merchantOperatingCityId Nothing
   DExotelEndRide.callBasedEndRide shandle exophone.merchantId mobileNumberHash callFrom
   where
     dropFirstZero = T.dropWhile (== '0')

@@ -1,0 +1,67 @@
+imports:
+  Text: Data.Text
+  TicketType: Kernel.External.Ticket.Interface.Types
+  ChatMessage: Kernel.External.Ticket.Kapture.Types
+  FileAttachment: Kernel.External.Ticket.Kapture.Types
+  TaggedChatMessage: Domain.Types.TicketKapture
+  APISuccess: Kernel.Types.APISuccess
+  Ride: Domain.Types.Ride
+  UTCTime: Kernel.Prelude
+
+module: TicketKapture
+
+types:
+  TicketKaptureResp:
+    encryptedCc: Text
+    encryptedIv: Text
+
+  ActiveTicketsRes:
+    rideId: Maybe (Id Ride)
+    ticketId: Text
+
+  CloseTicketResp:
+    ticketId: Text
+    rideId: Maybe (Id Ride)
+    updatedAt: UTCTime
+
+  GetAllActiveTicketsRes:
+    activeTickets: [ActiveTicketsRes]
+
+  GetClosedTicketIdsRes:
+    closedTicketIds: [CloseTicketResp]
+
+  GetClosedTicketDetailsRes:
+    chatMessages: [TaggedChatMessage]
+
+apis:
+  - POST:
+      endpoint: /kaptureCustomerLogin
+      auth: TokenAuth
+      mandatoryQuery:
+        ticketType: TicketType
+      response:
+        type: TicketKaptureResp
+  - POST:
+      endpoint: /kaptureCloseTicket
+      auth: TokenAuth
+      mandatoryQuery:
+        ticketId: Text
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /getAllActiveTickets
+      auth: TokenAuth
+      response:
+        type: "GetAllActiveTicketsRes"
+  - GET:
+      endpoint: /getClosedTicketIds
+      auth: TokenAuth
+      response:
+        type: "GetClosedTicketIdsRes"
+  - GET:
+      endpoint: /getClosedTicketDetails
+      auth: TokenAuth
+      mandatoryQuery:
+        ticketId: Text
+      response:
+        type: "GetClosedTicketDetailsRes"

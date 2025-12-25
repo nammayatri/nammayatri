@@ -15,13 +15,40 @@
 module SharedLogic.Merchant where
 
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
 
 findMerchantByShortId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => ShortId DM.Merchant -> m DM.Merchant
 findMerchantByShortId merchantShortId = do
   CQM.findByShortId merchantShortId
     >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+
+findById :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id DM.Merchant -> m DM.Merchant
+findById merchantId = do
+  CQM.findById merchantId
+    >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+
+getCurrencyByMerchantOpCity :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m Currency
+getCurrencyByMerchantOpCity merchantOpCityId = do
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  pure merchantOperatingCity.currency
+
+checkCurrencies :: (MonadThrow m, Log m) => Currency -> [Maybe PriceAPIEntity] -> m ()
+checkCurrencies currency fields =
+  unless (all (\field -> field.currency == currency) (catMaybes fields)) $
+    throwError (InvalidRequest "Invalid currency")
+
+getDistanceUnitByMerchantOpCity :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DistanceUnit
+getDistanceUnitByMerchantOpCity merchantOpCityId = do
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  pure merchantOperatingCity.distanceUnit
+
+getCurrencyAndDistanceUnitByMerchantOpCity :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m (Currency, DistanceUnit)
+getCurrencyAndDistanceUnitByMerchantOpCity merchantOpCityId = do
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  pure (merchantOperatingCity.currency, merchantOperatingCity.distanceUnit)

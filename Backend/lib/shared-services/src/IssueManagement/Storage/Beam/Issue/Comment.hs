@@ -11,8 +11,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module IssueManagement.Storage.Beam.Issue.Comment where
 
@@ -26,7 +24,8 @@ data CommentT f = CommentT
     issueReportId :: B.C f Text,
     authorId :: B.C f Text,
     comment :: B.C f Text,
-    createdAt :: B.C f LocalTime
+    createdAt :: B.C f LocalTime,
+    merchantId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

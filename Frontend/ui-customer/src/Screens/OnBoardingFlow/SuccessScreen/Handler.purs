@@ -24,10 +24,11 @@ import Types.App (FlowBT)
 import Screens.SuccessScreen.View as SuccessScreen
 import Data.Maybe (Maybe(..))
 import PrestoDOM.Core (terminateUI)
+import Helpers.PrestoUtils
 
 successScreen :: String -> String -> FlowBT String Unit
 successScreen title subTitle = do
-  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "SuccessScreen" Nothing
+  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "SuccessScreen" (getFragmentView "")
   act <- lift $ lift $ runScreenWithNameSpace (SuccessScreen.screen { title: title, subTitle: subTitle })
   _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "SuccessScreen"
   pure unit

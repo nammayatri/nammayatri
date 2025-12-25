@@ -75,15 +75,16 @@ primaryButtonConfig state = let
       , margin = (Margin 16 0 16 if EHC.os == "IOS" then 0 else 24)
       , height = V 52
       , id = "AddNewAddressSavedLocationScreen"
-      , enableLoader = (JB.getBtnLoader "AddNewAddressSavedLocationScreen")
+      -- , enableLoader = (JB.getBtnLoader "AddNewAddressSavedLocationScreen") -- TODO :: can be enabled once painting DOM even without state change PR is merged. 
       , background = state.data.config.primaryBackground
+      , enableRipple = true
       }
   in primaryButtonConfig'
 
 genericHeaderConfig :: ST.SavedLocationScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
-  btnVisibility =  if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  btnVisibility =   config.prefixImageConfig.visibility
   titleVisibility = if showTitle FunctionCall then config.visibility else GONE
   genericHeaderConfig' = config 
     {
@@ -95,6 +96,9 @@ genericHeaderConfig state = let
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , visibility = btnVisibility
+      , margin = Margin 8 8 8 8
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       } 
     , textConfig {
         text = (getString FAVOURITES)
@@ -133,6 +137,7 @@ errorModalConfig state = let
       , height = V 52
       , color = state.data.config.primaryTextColor
       , background = state.data.config.primaryBackground
+      , enableRipple = true
       }
     }
   in errorModalConfig' 

@@ -20,25 +20,31 @@ import Screens.CustomerUtils.AboutUsScreen.ComponentConfig
 
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
-import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
 import Components.ComplaintsModel as ComplaintsModel
 import Components.GenericHeader as GenericHeader
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityConfig)
 import JBridge as JB
-import Language.Strings (getString)
+import Language.Strings (getString, getVarString)
+import Components.MenuButton as MenuButton
+import Components.PrimaryButton as PrimaryButton
+import RemoteConfig as RemoteConfig
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), not)
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), not, (&&))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, accessibility, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarY, scrollView, text, textSize, textView, visibility, weight, width, accessibilityHint)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
+import Data.Function.Uncurried (runFn3)
+import DecodeUtil (getAnyFromWindow)
+import Data.String as DS
+import Data.Array as DA
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -75,59 +81,112 @@ view push state =
       , scrollView
         [ width MATCH_PARENT
         , scrollBarY false
-        ][  linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            ][ topTextView push state
-              , linearLayout
-                [ orientation VERTICAL
-                , weight 1.0
-                ][]
-              , bottomLinksView state
-              ]
+        ][  
+          if state.props.demoModePopup then toggleCityView push state else aboutUsView push state
+          ]
+      ]
+
+toggleCityView :: forall w . (Action -> Effect Unit) -> ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
+toggleCityView push state = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , padding (Padding 16 0 16 0)
+    , background Color.white900
+    ][ logoView state push
+     , menuButtonsView state push
+    ] 
+
+aboutUsView :: forall w . (Action -> Effect Unit) -> ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
+aboutUsView push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ][ topTextView push state
+     , linearLayout
+      [ orientation VERTICAL
+      , weight 1.0
+      ][]
+    , bottomLinksView state
+    ]
+
+------------------------------ menuButtonsView ------------------------------
+menuButtonsView :: ST.AboutUsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+menuButtonsView state push = 
+  let userCities = RemoteConfig.getSwitchCityConfigs FunctionCall
+      userCurrCity = getValueToLocalStore CUSTOMER_LOCATION
+  in scrollView
+      [ width MATCH_PARENT
+      , weight 1.0
+      ][  linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , margin $ Margin 1 0 1 0
+          , background Color.white900
+          ][  textView $ 
+              [ text "Choose city from the list to toggle configs"
+              , color $ Color.black800
+              , margin $ MarginTop 16
+              ] <> FontStyle.subHeading1 TypoGraphy
+          ,  linearLayout
+              [   height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                , margin $ Margin 1 16 1 0
+                , background Color.white900
+              ](DA.mapWithIndex
+                  (\ index city ->
+                  MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state city userCurrCity)) userCities.cities
+              )
           ]
       ]
 
 --------------------------------------------------- topTextView -----------------------------------------------------
 topTextView :: (Action -> Effect Unit)  -> ST.AboutUsScreenState -> forall w . PrestoDOM (Effect Unit) w
 topTextView push state =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , padding (Padding 20 0 20 10)
-    ][  logoView state
-      , textView $
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , text (getString $ ABOUT_APP_DESCRIPTION "ABOUT_APP_DESCRIPTION")
-        , color Color.black800
-        , gravity LEFT
-        , lineHeight "22"
-        , margin (Margin 0 40 0 32)
-        ] <> FontStyle.body5 LanguageStyle
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , visibility if state.appConfig.showCorporateAddress then VISIBLE else GONE
-        ][ ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})]
-      , linearLayout
-        [ gravity LEFT
-        , width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        , visibility if state.appConfig.nyBrandingVisibility then GONE else VISIBLE
-        ][  softwareLicenseView state
-          , termsAndConditionsView state
-          , privacyPolicyView state
-          ]
-      ]
+  let appName = fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+  in  linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , padding (Padding 20 0 20 10)
+      ][  logoView state push
+        , textView $
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , text $ getVarString ABOUT_APP_DESCRIPTION [appName]
+          , color Color.black800
+          , gravity LEFT
+          , lineHeight "22"
+          , margin (Margin 0 40 0 32)
+          ] <> FontStyle.body5 LanguageStyle
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , visibility if state.appConfig.showCorporateAddress then VISIBLE else GONE
+          ][ ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})]
+        , linearLayout
+          [ gravity LEFT
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          , visibility if state.appConfig.nyBrandingVisibility then GONE else VISIBLE
+          ][  softwareLicenseView state
+            , termsAndConditionsView state
+            , privacyPolicyView state
+            ]
+        ]
 
 --------------------------------------------------- logoView -----------------------------------------------------
-logoView :: forall w . ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
-logoView state = 
-  linearLayout
+logoView :: forall w . ST.AboutUsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+logoView state push = 
+  let 
+    cityConfig = getCityConfig state.appConfig.cityConfig $ getValueToLocalStore CUSTOMER_LOCATION
+    appLogo = if DS.null cityConfig.appLogo then state.appConfig.merchantLogo else cityConfig.appLogo
+  in linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , gravity CENTER
@@ -135,7 +194,8 @@ logoView state =
         ][  imageView
               [ height $ V 52
               , width $ V 176
-              , imageWithFallback state.appConfig.merchantLogo
+              , imageWithFallback appLogo
+              , onClick push (const ShowDemoPopUp)
               ]
           ]
 
@@ -293,3 +353,31 @@ contactUsData state = [
   , addtionalData : Just (getString $ REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL")
   }
 ]
+
+
+primaryButtonConfig :: ST.AboutUsScreenState -> PrimaryButton.Config
+primaryButtonConfig state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      {   textConfig
+         { text = (getString UPDATE)
+         } 
+        , margin = (Margin 0 0 0 0)
+        , id = "UpdateLanguageButton"
+      }
+  in primaryButtonConfig'
+
+menuButtonConfig :: ST.AboutUsScreenState -> RemoteConfig.UserCity -> String -> MenuButton.Config
+menuButtonConfig state userCity currCity = MenuButton.config {
+      titleConfig{
+          text = userCity.name
+        , selectedTextStyle = FontStyle.ParagraphText
+        , unselectedTextStyle = FontStyle.ParagraphText
+       }
+      ,subTitleConfig
+      {
+        text = userCity.title
+      }
+      , id = userCity.value
+      , isSelected = (userCity.value == currCity)
+    }

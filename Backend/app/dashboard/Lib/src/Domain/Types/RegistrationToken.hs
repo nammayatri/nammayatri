@@ -26,6 +26,7 @@ data RegistrationToken = RegistrationToken
     personId :: Id DP.Person,
     createdAt :: UTCTime,
     merchantId :: Id DMerchant.Merchant,
-    operatingCity :: City.City
+    operatingCity :: City.City,
+    enabled :: Bool
   }
   deriving (Generic, Show)

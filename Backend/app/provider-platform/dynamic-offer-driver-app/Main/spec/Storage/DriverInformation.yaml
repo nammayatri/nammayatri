@@ -1,0 +1,455 @@
+imports:
+  Money: Kernel.Types.Common
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  LatLong: Kernel.External.Maps
+  DriverMode: Domain.Types.Common
+  DriverFlowStatus: Domain.Types.DriverFlowStatus
+  TripCategory: Domain.Types.Common
+  BlockReasonFlag: Tools.Error
+  SpecialLocationWarrior: Lib.Queries.SpecialLocation
+  SpecialLocation: Lib.Types.SpecialLocation
+  IssueBreachCooldownTime: SharedLogic.BehaviourManagement.IssueBreach
+  ServiceTierType: Domain.Types.ServiceTierType
+  Value: Data.Aeson
+  VehicleCategory: Domain.Types.VehicleCategory
+  ServiceNames : Domain.Types.Extra.Plan
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+  Meters: Kernel.Types.Common
+  UpgradedTier: Domain.Types.UpgradedTier
+DriverInformation:
+  tableName: driver_information
+  types:
+    AirConditionedRestrictionType:
+      enum: "NoRestriction, ToggleAllowed, ToggleNotAllowed"
+    DriverAutoPayStatus:
+      enum: "PENDING,ACTIVE,SUSPENDED,PAUSED_PSP,CANCELLED_PSP,MANDATE_FAILED,MANDATE_EXPIRED"
+      derive: "HttpInstance"
+    PayoutVpaStatus:
+      enum: "VIA_WEBHOOK, MANUALLY_ADDED, VERIFIED_BY_USER"
+    OnboardingAs:
+      enum: "FLEET_DRIVER, INDIVIDUAL"
+    DriverSummary:
+      totalEarnings: Money
+      bonusEarned: Money
+      totalEarningsWithCurrency: PriceAPIEntity
+      bonusEarnedWithCurrency: PriceAPIEntity
+      totalCompletedTrips: Int
+      lateNightTrips: Int
+      lastRegistered: UTCTime
+    DriverMissedOpp:
+      cancellationRate: Int
+      ridesCancelled: Int
+      totalRides: Int
+      missedEarnings: Money
+      missedEarningsWithCurrency: PriceAPIEntity
+    Badges:
+      badgeName: Text
+      badgeCount: Int
+    DriverBadges:
+      recordType: NewType
+      driverBadges: "[Badges]"
+
+  fields:
+    driverId: Id Person
+    adminId: Maybe (Id Person)
+    active: Bool
+    onRide: Bool
+    enabled: Bool
+    blocked: Bool
+    numOfLocks: Int
+    verified: Bool
+    subscribed: Bool
+    paymentPending: Bool
+    isSpecialLocWarrior: Bool
+    specialLocWarriorEnabledAt: Maybe UTCTime
+    preferredPrimarySpecialLocId: Maybe (Id SpecialLocation)
+    preferredSecondarySpecialLocIds: "[(Id SpecialLocation)]"
+    referralCode: Maybe Text
+    referredByDriverId: Maybe (Id Person)
+    referredByFleetOwnerId: Maybe Text
+    referredByOperatorId: Maybe Text
+    totalReferred: Maybe Int
+    lastEnabledOn: Maybe UTCTime
+    lastOfflineTime: Maybe UTCTime
+    canDowngradeToSedan: Bool
+    canDowngradeToHatchback: Bool
+    isPetModeEnabled: Bool
+    canDowngradeToTaxi: Bool
+    canSwitchToRental: Bool
+    canSwitchToInterCity: Bool
+    canSwitchToIntraCity: Bool
+    mode: Maybe DriverMode
+    aadhaarVerified: Bool
+    autoPayStatus: Maybe DriverAutoPayStatus
+    prepaidSubscriptionBalance: Maybe HighPrecMoney
+    planExpiryDate: Maybe UTCTime
+    blockedReason: Maybe Text
+    blockExpiryTime: Maybe UTCTime
+    payerVpa: Maybe Text
+    enabledAt: Maybe UTCTime
+    compAadhaarImagePath: Maybe Text
+    availableUpiApps: Maybe Text
+    blockStateModifier: Maybe Text
+    driverDob: Maybe UTCTime
+    airConditionScore: Maybe Double
+    acUsageRestrictionType: AirConditionedRestrictionType
+    acRestrictionLiftCount: Int
+    lastACStatusCheckedAt: Maybe UTCTime
+    hasAdvanceBooking: Bool
+    tollRelatedIssueCount: Maybe Int
+    drunkAndDriveViolationCount: Maybe Int
+    extraFareMitigationFlag: Maybe Bool
+    forwardBatchingEnabled: Bool
+    payoutVpa: Maybe Text
+    isInteroperable: Bool
+    payoutRegistrationOrderId: Maybe Text
+    latestScheduledPickup: Maybe LatLong
+    latestScheduledBooking: Maybe UTCTime
+    payoutVpaStatus: Maybe PayoutVpaStatus
+    payoutVpaBankAccount: Maybe Text
+    dailyCancellationRateBlockingCooldown: Maybe UTCTime
+    weeklyCancellationRateBlockingCooldown: Maybe UTCTime
+    blockReasonFlag: Maybe BlockReasonFlag
+    payoutRegAmountRefunded: Maybe HighPrecMoney
+    driverTripEndLocation: Maybe LatLong
+    onRideTripCategory: Maybe TripCategory
+    hasRideStarted: Maybe Bool
+    issueBreachCooldownTimes: Maybe [IssueBreachCooldownTime]
+    softBlockStiers: "Maybe [ServiceTierType]"
+    softBlockExpiryTime: Maybe UTCTime
+    softBlockReasonFlag: Maybe Text
+    tollRouteBlockedTill: Maybe UTCTime
+    isBlockedForReferralPayout: Maybe Bool
+    onboardingVehicleCategory: Maybe VehicleCategory
+    servicesEnabledForSubscription: "[ServiceNames]"
+    panNumber: Maybe (EncryptedHashedField e Text)
+    aadhaarNumber: Maybe (EncryptedHashedField e Text)
+    dlNumber: Maybe (EncryptedHashedField e Text)
+    driverFlowStatus: Maybe DriverFlowStatus
+    walletBalance: Maybe HighPrecMoney
+    onlineDurationRefreshedAt: Maybe UTCTime
+    maxPickupRadius: Maybe Meters
+    tripDistanceMaxThreshold: Maybe Meters
+    tripDistanceMinThreshold: Maybe Meters
+    rideRequestVolume: Maybe Int
+    isSilentModeEnabled: Maybe Bool
+    isTTSEnabled: Maybe Bool
+    isHighAccuracyLocationEnabled: Maybe Bool
+    rideRequestVolumeEnabled: Maybe Bool
+    ruleBasedUpgradeTiers: Maybe [UpgradedTier]
+    dailyExtraKms: Maybe HighPrecMeters
+    weeklyExtraKms: Maybe HighPrecMeters
+    onboardingAs: Maybe OnboardingAs
+
+  default:
+    active: "false"
+    verified: "false"
+    onRide: "false"
+    numOfLocks: "0"
+    enabled: "false"
+    blocked: "false"
+    totalReferred: "0"
+    paymentPending: "false"
+    subscribed: "true"
+    canDowngradeToSedan: "false"
+    canDowngradeToHatchback: "false"
+    isPetModeEnabled: "false"
+    canDowngradeToTaxi: "false"
+    canSwitchToRental: "false"
+    canSwitchToInterCity: "false"
+    canSwitchToIntraCity: "true"
+    aadhaarVerified: "false"
+    acRestrictionLiftCount: "0"
+    hasAdvanceBooking: "false"
+    isInteroperable: "false"
+    onlineDurationRefreshedAt: 'CURRENT_TIMESTAMP'
+  constraints:
+    driverId: PrimaryKey
+
+  beamFields:
+    latestScheduledPickup:
+      latestScheduledPickupLat: Maybe Double
+      latestScheduledPickupLon: Maybe Double
+    preferredPrimarySpecialLoc:
+      preferredPrimarySpecialLocId: Maybe (Id SpecialLocation)
+    driverTripEndLocation:
+      driverTripEndLocationLat: Maybe Double
+      driverTripEndLocationLon: Maybe Double
+    panNumber:
+      panNumberEncrypted: Maybe Text
+      panNumberHash: Maybe DbHash
+    aadhaarNumber:
+      aadhaarNumberEncrypted: Maybe Text
+      aadhaarNumberHash: Maybe DbHash
+    dlNumber:
+      dlNumberEncrypted: Maybe Text
+      dlNumberHash: Maybe DbHash
+
+  beamType:
+    canSwitchToRental: Maybe Bool
+    canSwitchToInterCity: Maybe Bool
+    canSwitchToIntraCity: Maybe Bool
+    isPetModeEnabled: Maybe Bool
+    acUsageRestrictionType: Maybe AirConditionedRestrictionType
+    hasAdvanceBooking: Maybe Bool
+    forwardBatchingEnabled: Maybe Bool
+    isInteroperable: Maybe Bool
+    isSpecialLocWarrior: Maybe Bool
+    preferredSecondarySpecialLocIds: "Maybe [Text]"
+    issueBreachCooldownTimes: Maybe Value
+    servicesEnabledForSubscription: Maybe [ServiceNames]
+    ruleBasedUpgradeTiers: Maybe Value
+
+  sqlType:
+    preferredSecondarySpecialLocIds: "text[]"
+    issueBreachCooldownTimes: "json"
+    softBlockStiers: "text[]"
+    servicesEnabledForSubscription: "text[]"
+    ruleBasedUpgradeTiers: "json"
+    onboardingAs: character varying (255)
+
+  fromTType:
+    canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    canSwitchToInterCity: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    canSwitchToIntraCity: Kernel.Prelude.fromMaybe Kernel.Prelude.True|I
+    isSpecialLocWarrior: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    isPetModeEnabled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    acUsageRestrictionType: Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.NoRestriction|I
+    hasAdvanceBooking: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    forwardBatchingEnabled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    isInteroperable: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    latestScheduledPickup: Storage.Queries.Transformers.Ride.mkLatLong|I
+    driverTripEndLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
+    preferredSecondarySpecialLocIds: Kernel.Prelude.maybe [] (map Kernel.Types.Id.Id) preferredSecondarySpecialLocIds|E
+    issueBreachCooldownTimes: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachCooldownTimes|E
+    servicesEnabledForSubscription: Storage.Queries.Transformers.DriverInformation.backfillServiceEnabledForSubscription driverId servicesEnabledForSubscription| EM
+    panNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem panNumberEncrypted panNumberHash|E
+    aadhaarNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem aadhaarNumberEncrypted aadhaarNumberHash|E
+    dlNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem dlNumberEncrypted dlNumberHash|E
+    ruleBasedUpgradeTiers: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< ruleBasedUpgradeTiers|E
+
+  toTType:
+    canSwitchToRental: Kernel.Prelude.Just|I
+    canSwitchToInterCity: Kernel.Prelude.Just|I
+    canSwitchToIntraCity: Kernel.Prelude.Just|I
+    isPetModeEnabled: Kernel.Prelude.Just|I
+    isSpecialLocWarrior: Kernel.Prelude.Just|I
+    acUsageRestrictionType: Kernel.Prelude.Just|I
+    hasAdvanceBooking: Kernel.Prelude.Just|I
+    forwardBatchingEnabled: Kernel.Prelude.Just|I
+    isInteroperable: Kernel.Prelude.Just|I
+    latestScheduledPickupLat: Kernel.Prelude.fmap (.lat)|I
+    latestScheduledPickupLon: Kernel.Prelude.fmap (.lon)|I
+    preferredSecondarySpecialLocIds: Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)|E
+    driverTripEndLocationLat: Kernel.Prelude.fmap (.lat)|I
+    driverTripEndLocationLon: Kernel.Prelude.fmap (.lon)|I
+    issueBreachCooldownTimes: Kernel.Prelude.toJSON <$> issueBreachCooldownTimes|E
+    servicesEnabledForSubscription: Kernel.Prelude.Just|I
+    panNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+    panNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+    aadhaarNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+    aadhaarNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+    dlNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+    dlNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+    ruleBasedUpgradeTiers: Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers|E
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  queries:
+    updateSubscription:
+      kvFunction: updateOneWithKV
+      params: [subscribed]
+      where: driverId
+    updateAadhaarVerifiedState:
+      kvFunction: updateOneWithKV
+      params: [aadhaarVerified]
+      where: driverId
+    updatePendingPayment:
+      kvFunction: updateOneWithKV
+      params: [paymentPending]
+      where: driverId
+    updateCompAadhaarImagePath:
+      kvFunction: updateOneWithKV
+      params: [compAadhaarImagePath]
+      where: driverId
+    updateDriverDob:
+      kvFunction: updateOneWithKV
+      params: [driverDob]
+      where: driverId
+    updateDriverDowngradeForSuv: #check
+      kvFunction: updateOneWithKV
+      params: [canDowngradeToHatchback, canDowngradeToTaxi]
+      where: driverId
+    updateDriverInformation: #check
+      kvFunction: updateOneWithKV
+      params:
+        [
+          canDowngradeToSedan,
+          canDowngradeToHatchback,
+          canDowngradeToTaxi,
+          canSwitchToRental,
+          canSwitchToInterCity,
+          canSwitchToIntraCity,
+          availableUpiApps,
+          isPetModeEnabled,
+          tripDistanceMaxThreshold,
+          tripDistanceMinThreshold,
+          maxPickupRadius,
+          isSilentModeEnabled,
+          rideRequestVolume,
+          isTTSEnabled,
+          isHighAccuracyLocationEnabled,
+          rideRequestVolumeEnabled,
+          onboardingAs,
+        ]
+      where: driverId
+    updateRentalInterCityAndIntraCitySwitch:
+      kvFunction: updateOneWithKV
+      params: [canSwitchToRental, canSwitchToInterCity, canSwitchToIntraCity]
+      where: driverId
+    updateAirConditionScore:
+      kvFunction: updateOneWithKV
+      params: [airConditionScore]
+      where: driverId
+    updateAcUsageRestrictionAndScore:
+      kvFunction: updateOneWithKV
+      params: [acUsageRestrictionType, airConditionScore]
+      where: driverId
+    removeAcUsageRestriction:
+      kvFunction: updateOneWithKV
+      params:
+        [airConditionScore, acUsageRestrictionType, acRestrictionLiftCount]
+      where: driverId
+    updateOnRide:
+      kvFunction: updateOneWithKV
+      params: [onRide]
+      where: driverId
+    addReferralCode: #check
+      kvFunction: updateOneWithKV
+      params: [referralCode, referredByDriverId]
+      where: driverId
+    incrementReferralCountByPersonId:
+      kvFunction: updateOneWithKV
+      params: [totalReferred]
+      where: driverId
+    updateLastACStatusCheckedAt:
+      kvFunction: updateOneWithKV
+      params: [lastACStatusCheckedAt]
+      where: driverId
+    updateTollRelatedIssueCount:
+      kvFunction: updateOneWithKV
+      params: [tollRelatedIssueCount]
+      where: driverId
+    updateExtraFareMitigation:
+      kvFunction: updateOneWithKV
+      params: [extraFareMitigationFlag]
+      where: driverId
+    updateForwardBatchingEnabled:
+      kvFunction: updateOneWithKV
+      params: [forwardBatchingEnabled]
+      where: driverId
+    updatePayoutVpaAndStatus:
+      kvFunction: updateOneWithKV
+      params: [payoutVpa, payoutVpaStatus]
+      where: driverId
+    updateIsInteroperable:
+      kvFunction: updateOneWithKV
+      params: [isInteroperable]
+      where: driverId
+    updatePayoutRegistrationOrderId:
+      kvFunction: updateOneWithKV
+      params: [payoutRegistrationOrderId]
+      where: driverId
+    updateLatestScheduledBookingAndPickup:
+      kvFunction: updateOneWithKV
+      params: [latestScheduledBooking, latestScheduledPickup]
+      where: driverId
+    updateOnRideAndLatestScheduledBookingAndPickup:
+      kvFunction: updateOneWithKV
+      params: [onRide, latestScheduledBooking, latestScheduledPickup]
+      where: driverId
+    updatePayoutVpaStatus:
+      kvFunction: updateOneWithKV
+      params: [payoutVpaStatus]
+      where: driverId
+    updateDailyCancellationRateBlockingCooldown:
+      kvFunction: updateOneWithKV
+      params: [dailyCancellationRateBlockingCooldown]
+      where: driverId
+    updateWeeklyCancellationRateBlockingCooldown:
+      kvFunction: updateOneWithKV
+      params: [weeklyCancellationRateBlockingCooldown]
+      where: driverId
+    updateTollRouteBlockedTill:
+      kvFunction: updateOneWithKV
+      params: [tollRouteBlockedTill]
+      where: driverId
+    updateDailyAndWeeklyCancellationRateBlockingCooldown:
+      kvFunction: updateOneWithKV
+      params:
+        [
+          dailyCancellationRateBlockingCooldown,
+          weeklyCancellationRateBlockingCooldown,
+        ]
+      where: driverId
+    updatePayoutRegAmountRefunded:
+      kvFunction: updateOneWithKV
+      params: [payoutRegAmountRefunded]
+      where: driverId
+    updateSpecialLocWarriorInfo:
+      kvFunction: updateOneWithKV
+      params:
+        [
+          isSpecialLocWarrior,
+          preferredPrimarySpecialLocId,
+          preferredSecondarySpecialLocIds,
+          specialLocWarriorEnabledAt,
+        ]
+      where: driverId
+    updateTripEndLocation:
+      kvFunction: updateOneWithKV
+      params: [driverTripEndLocation]
+      where: driverId
+    updateIssueBreachCooldownTimes:
+      kvFunction: updateOneWithKV
+      params: [issueBreachCooldownTimes]
+      where: driverId
+    updateSoftBlock:
+      kvFunction: updateOneWithKV
+      params: [softBlockStiers, softBlockExpiryTime, softBlockReasonFlag]
+      where: driverId
+    updateServicesEnabledForSubscription:
+      kvFunction: updateOneWithKV
+      params: [servicesEnabledForSubscription]
+      where: driverId
+    updateReferredByOperatorId:
+      kvFunction: updateOneWithKV
+      params: [referredByOperatorId]
+      where: driverId
+    updateReferredByFleetOwnerId:
+      kvFunction: updateOneWithKV
+      params: [referredByFleetOwnerId]
+      where: driverId
+    updateDrunkAndDriveViolationCount:
+      kvFunction: updateOneWithKV
+      params: [drunkAndDriveViolationCount]
+      where: driverId
+    updateWalletBalance:
+      kvFunction: updateOneWithKV
+      params: [walletBalance]
+      where: driverId
+    updateUpgradedTiers:
+      kvFunction: updateOneWithKV
+      params: [ruleBasedUpgradeTiers]
+      where: driverId
+    updateDailyAndWeeklyExtraKms:
+      kvFunction: updateOneWithKV
+      params: [dailyExtraKms, weeklyExtraKms]
+      where: driverId

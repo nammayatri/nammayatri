@@ -224,3 +224,14 @@ token: {{yatriCustomerToken}}
 POST {{bap-dashboard-host}}/user/logoutAllMerchants
 content-type: application/json
 token: {{arduCustomerToken}}
+
+###
+
+# @name listTransactions
+
+GET {{bap-dashboard-host}}/listTransactions
+  ?limit=10
+  &offset=0
+  &endpoint=RIDER_MANAGEMENT/BOOKING/POST_BOOKING_CANCEL_ALL_STUCK
+content-type: application/json
+token: {{arduCustomerToken}}

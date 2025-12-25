@@ -17,7 +17,6 @@ module Screens.EnterMobileNumberScreen.View where
 
 import Common.Types.App
 import Screens.OnBoardingFlow.EnterMobileNumberScreen.ComponentConfig
-
 import Animation as Anim
 import Animation.Config (translateYAnimConfig)
 import Components.GenericHeader as GenericHeader
@@ -52,6 +51,7 @@ import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Timers
 import Locale.Utils
+import Engineering.Helpers.Events as EHE
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -150,17 +150,17 @@ enterMobileNumberView  state lang push =
             , width MATCH_PARENT
             , visibility  if state.props.countryCodeOptionExpanded then GONE else VISIBLE
             ][PrimaryButton.view (push <<< MobileNumberButtonAction) (mobileNumberButtonConfig state)]
-        , if (not state.props.countryCodeOptionExpanded) && (elem state.data.countryObj.countryShortCode state.data.config.enableWhatsappOTP) then whatsAppOTPButtonView state push else dummyView push
+        , if (not state.props.countryCodeOptionExpanded) && (elem state.data.countryObj.countryShortCode state.data.config.enableWhatsappOTP) then whatsAppOTPButtonView state push "PrimaryButtonWhatsAppOTP" true else dummyView push
     ]
 
-whatsAppOTPButtonView  :: ST.EnterMobileNumberScreenState  -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
-whatsAppOTPButtonView state push = 
+whatsAppOTPButtonView  :: ST.EnterMobileNumberScreenState  -> (Action -> Effect Unit) -> String -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+whatsAppOTPButtonView state push id enableLoader = 
   linearLayout [
     height WRAP_CONTENT,
     width MATCH_PARENT, 
     orientation VERTICAL,
     gravity CENTER
-  ][PrestoAnim.animationSet [Anim.fadeOut state.props.countryCodeOptionExpanded] $ 
+  ][ PrestoAnim.animationSet [Anim.fadeOut state.props.countryCodeOptionExpanded] $ 
     textView $ [
       height WRAP_CONTENT
     , width MATCH_PARENT
@@ -170,14 +170,14 @@ whatsAppOTPButtonView state push =
     , color Color.black500
     ] <> FontStyle.tags TypoGraphy
   , PrestoAnim.animationSet
-    [ Anim.fadeIn $ not state.props.enterOTP
-    , Anim.fadeOut $ state.props.countryCodeOptionExpanded || state.props.enterOTP
+    [ Anim.fadeIn true
+    , Anim.fadeOut $ state.props.countryCodeOptionExpanded
     ] $
     linearLayout
       [ height WRAP_CONTENT
       , width $ V (EHC.screenWidth unit - 32)
       , gravity CENTER
-      ][PrimaryButton.view (push <<< WhatsAppOTPButtonAction) (whatsAppOTPButtonConfig state)]
+      ][PrimaryButton.view (push <<< WhatsAppOTPButtonAction) (whatsAppOTPButtonConfig state id enableLoader)]
     ]
 
 
@@ -191,7 +191,9 @@ commonTextView state textValue isLink link push isTextFromHtml enableAccessibili
     , accessibility $ if enableAccessibilityHint then ENABLE else DISABLE
     , accessibilityHint accessibilityText
     , onClick (\action -> do
-                when isLink $ JB.openUrlInApp (fromMaybe "www.nammayatri.in" link)--"https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing"
+                when isLink $ do
+                  let _ = EHE.addEvent (EHE.defaultEventObject "tnc_clicked") { module = "onboarding"}
+                  JB.openUrlInApp (fromMaybe "www.nammayatri.in" link)--"https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing"
                 pure unit
               ) (const TermsAndConditions)
     ] <> FontStyle.tags TypoGraphy
@@ -241,6 +243,7 @@ enterOTPView state lang push =
         , accessibility DISABLE
         , visibility if state.props.resendEnable then GONE else VISIBLE
         ] <> FontStyle.body9 TypoGraphy]
+    , if state.props.resendEnable then whatsAppOTPButtonView state push "ResendButtonViaWhatsapp" false else dummyView push
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT

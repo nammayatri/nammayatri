@@ -2,23 +2,25 @@ module Screens.TicketInfoScreen.Controller where
 
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (void, class Show, discard, pure, unit, bind, ($), not, (+), (-), (==), (*), (<>), show, (+), (==), (-), show)
-import PrestoDOM (Eval, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
+import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (TicketInfoScreenState)
-import Helpers.Utils (compareDate, getCurrentDate)
+import Helpers.Utils (getCurrentDate)
+import Engineering.Helpers.Utils(compareDate)
 import Effect.Uncurried (runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
 import Debug (spy)
-import Helpers.Utils (generateQR)
+import Helpers.Utils (generateQR, emitTerminateApp, isParentView)
 import Data.Array (length, (!!))
 import Data.Maybe (Maybe(..), maybe)
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Components.GenericHeader as GenericHeader
-import JBridge (shareImageMessage, copyToClipboard, toast)
+import JBridge (shareImageMessage, copyToClipboard)
+import Engineering.Helpers.Utils as EHU
 import Common.Types.App as Common
 import Services.API (TicketPlaceResp(..))
 import Language.Strings (getString)
@@ -79,15 +81,20 @@ eval (ShareTicketQR serviceName) state = do
   void $ pure $ shareImageMessage textMessage (shareImageMessageConfig serviceName)
   continue state
 
-eval GoHome state = exit GoToHomeScreen
+eval GoHome state = 
+  if isParentView Common.FunctionCall
+    then do
+        void $ pure $ emitTerminateApp Nothing true
+        continue state
+  else exit GoToHomeScreen
 
 eval (Copy text) state = continueWithCmd state [ do 
     void $ pure $ copyToClipboard text
-    void $ pure $ toast (getString COPIED)
+    void $ pure $ EHU.showToast (getString COPIED)
     pure NoAction
   ]
 
-eval _ state = continue state
+eval _ state = update state
 
 shareImageMessageConfig :: String -> Common.ShareImageConfig
 shareImageMessageConfig serviceName = {

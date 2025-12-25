@@ -4,11 +4,11 @@ plugins {
 
 android {
     namespace 'in.juspay.mobility.driver'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
-        minSdk 23
-        targetSdk 33
+        minSdk 24
+        targetSdk 34
         versionName "1.2.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -22,6 +22,7 @@ android {
         qa {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            matchingFallbacks = ['debug']
         }
         debug {
             minifyEnabled false
@@ -44,8 +45,8 @@ dependencies {
     implementation 'com.google.android.material:material:1.6.0'
 
     implementation project(':mobility-common')
-    implementation 'in.juspay:hyper:2.1.20-nammayatri.13'
     compileOnly project(':mobility-app')
+    implementation 'in.juspay:hyper:2.1.33-nammayatri.17'
     implementation 'androidx.work:work-runtime:2.8.1'
     implementation "androidx.camera:camera-core:$cameraxVersion"
     implementation "androidx.camera:camera-camera2:$cameraxVersion"
@@ -60,4 +61,10 @@ dependencies {
     compileOnly 'com.google.maps.android:android-maps-utils:2.4.0'
     compileOnly 'com.google.android.gms:play-services-maps:18.1.0'
     compileOnly 'com.google.android.gms:play-services-location:21.0.1'
+    implementation("co.hyperverge:hyperkyc:0.26.0") {
+        transitive = true
+        exclude group: 'co.hyperverge', module: 'hyperdocdetect'
+        exclude group: 'co.hyperverge', module: 'face-detection-preview-frame'
+    }
+
 }

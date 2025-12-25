@@ -6,8 +6,9 @@ module IssueManagement.Common.UI.Issue
   )
 where
 
+import AWS.S3 (FileType (..))
 import Data.Aeson
-import Data.OpenApi (ToSchema)
+import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T hiding (count, map)
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Common as Reexport hiding (Audio, Image)
@@ -35,12 +36,15 @@ data IssueReportReq = IssueReportReq
     optionId :: Maybe (Id IssueOption),
     categoryId :: Id IssueCategory,
     description :: Text,
-    chats :: Maybe [Chat]
+    chats :: Maybe [Chat],
+    createTicket :: Maybe Bool,
+    ticketBookingId :: Maybe (Id FRFSTicketBooking)
   }
   deriving (Generic, FromJSON, ToSchema, Show)
 
 data IssueReportRes = IssueReportRes
   { issueReportId :: Id IssueReport,
+    issueReportShortId :: Maybe (ShortId IssueReport),
     messages :: [Message]
   }
   deriving stock (Eq, Show, Generic)
@@ -60,8 +64,11 @@ newtype IssueReportListRes = IssueReportListRes
 
 data IssueReportListItem = IssueReportListItem
   { issueReportId :: Id IssueReport,
+    issueReportShortId :: Maybe (ShortId IssueReport),
     status :: IssueStatus,
     category :: Text,
+    optionLabel :: Maybe Text,
+    rideId :: Maybe (Id Ride),
     createdAt :: UTCTime
   }
   deriving stock (Eq, Show, Generic)
@@ -75,7 +82,8 @@ type IssueInfoAPI =
 
 data IssueInfoRes = IssueInfoRes
   { issueReportId :: Id IssueReport,
-    categoryLabel :: Text,
+    issueReportShortId :: Maybe (ShortId IssueReport),
+    categoryLabel :: Maybe Text,
     option :: Maybe Text,
     assignee :: Maybe Text,
     description :: Text,
@@ -84,7 +92,7 @@ data IssueInfoRes = IssueInfoRes
     createdAt :: UTCTime,
     chats :: [ChatDetail],
     options :: [IssueOptionRes],
-    categoryId :: Id IssueCategory
+    categoryId :: Maybe (Id IssueCategory)
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -92,21 +100,6 @@ data IssueInfoRes = IssueInfoRes
 data MediaFile_ = MediaFile_
   { _type :: FileType,
     url :: Text
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data FileType = Audio | Image
-  deriving stock (Eq, Show, Read, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data ChatDetail = ChatDetail
-  { timestamp :: UTCTime,
-    content :: Maybe Text,
-    id :: Text,
-    chatType :: MessageType,
-    sender :: Sender,
-    label :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -144,11 +137,6 @@ newtype IssueMediaUploadRes = IssueMediaUploadRes
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data IssueMediaUploadConfig = IssueMediaUploadConfig
-  { mediaFileSizeUpperLimit :: Int,
-    mediaFileUrlPattern :: Text
-  }
-
 -------------------------------------------------------------------------
 
 type IssueFetchMediaAPI =
@@ -182,7 +170,11 @@ data IssueCategoryRes = IssueCategoryRes
   { issueCategoryId :: Id IssueCategory,
     label :: Text,
     category :: Text,
-    logoUrl :: Text
+    logoUrl :: Text,
+    categoryType :: CategoryType,
+    isRideRequired :: Bool,
+    maxAllowedRideAge :: Maybe Seconds,
+    allowedRideStatuses :: Maybe [RideStatus]
   }
   deriving (Generic, Show, ToJSON, ToSchema)
 
@@ -197,19 +189,26 @@ type IssueOptionAPI =
   MandatoryQueryParam "categoryId" (Id IssueCategory)
     :> QueryParam "optionId" (Id IssueOption)
     :> QueryParam "issueReportId" (Id IssueReport)
+    :> QueryParam "rideId" (Id Ride)
     :> QueryParam "language" Language
     :> Get '[JSON] IssueOptionListRes
 
 data IssueOptionRes = IssueOptionRes
   { issueOptionId :: Id IssueOption,
     label :: Text,
-    option :: Text
+    option :: Text,
+    mandatoryUploads :: Maybe [MandatoryUploads]
   }
   deriving (Generic, Show, ToJSON, ToSchema, Eq, FromJSON)
 
 data Message = Message
   { id :: Id IssueMessage,
     message :: Text,
+    messageTitle :: Maybe Text,
+    messageAction :: Maybe Text,
+    mediaFileUrls :: [Text],
+    referenceCategoryId :: Maybe (Id IssueCategory),
+    referenceOptionId :: Maybe (Id IssueOption),
     label :: Text
   }
   deriving (Generic, Show, ToJSON, ToSchema, Eq, FromJSON)
@@ -227,8 +226,10 @@ type IssueStatusUpdateAPI =
     :> ReqBody '[JSON] IssueStatusUpdateReq
     :> Put '[JSON] IssueStatusUpdateRes
 
-newtype IssueStatusUpdateReq = IssueStatusUpdateReq
-  { status :: IssueStatus
+data IssueStatusUpdateReq = IssueStatusUpdateReq
+  { status :: IssueStatus,
+    customerResponse :: Maybe CustomerResponse,
+    customerRating :: Maybe CustomerRating
   }
   deriving (Generic, Show, ToJSON, ToSchema, Eq, FromJSON)
 
@@ -236,3 +237,38 @@ newtype IssueStatusUpdateRes = IssueStatusUpdateRes
   { messages :: [Message]
   }
   deriving (Generic, Show, ToJSON, ToSchema, Eq, FromJSON)
+
+-------------------------------------------------------------------------
+
+type IgmStatusAPI =
+  Post '[JSON] APISuccess
+
+-------------------------------------------------------------------------
+
+data CustomerResponse
+  = ACCEPT
+  | ESCALATE
+  deriving (Eq, Show, Ord, Read, Generic, ToJSON, FromJSON, ToParamSchema, ToSchema)
+
+instance FromHttpApiData CustomerResponse where
+  parseUrlPiece "accept" = pure ACCEPT
+  parseUrlPiece "escalate" = pure ESCALATE
+  parseUrlPiece _ = Left "Unable to parse customer response"
+
+instance ToHttpApiData CustomerResponse where
+  toUrlPiece ACCEPT = "accept"
+  toUrlPiece ESCALATE = "escalate"
+
+data CustomerRating
+  = THUMBS_UP
+  | THUMBS_DOWN
+  deriving (Eq, Show, Ord, Read, Generic, ToJSON, FromJSON, ToParamSchema, ToSchema)
+
+instance FromHttpApiData CustomerRating where
+  parseUrlPiece "thumbsup" = pure THUMBS_UP
+  parseUrlPiece "thumbsdown" = pure THUMBS_DOWN
+  parseUrlPiece _ = Left "Unable to parse customer rating"
+
+instance ToHttpApiData CustomerRating where
+  toUrlPiece THUMBS_UP = "thumbsup"
+  toUrlPiece THUMBS_DOWN = "thumbsdown"

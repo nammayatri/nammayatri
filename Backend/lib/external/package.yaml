@@ -1,0 +1,181 @@
+# hpack defaults
+# Ref: https://github.com/sol/hpack#defaults
+
+# Workaround for segfault on macOS
+# https://github.com/NixOS/nixpkgs/issues/149692#issuecomment-1587564664
+name: external
+version: 0.1.0.0
+github: "nammayatri/nammayatri"
+license: AllRightsReserved
+author: "nammayatri"
+maintainer: "nammayatri"
+copyright: "2024 Juspay Technologies Private Limited"
+
+flags:
+  Local:
+    description: Enable this flag for faster compile times
+    manual: true
+    default: false
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description: Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+
+default-extensions:
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveAnyClass
+  - DeriveFunctor
+  - DeriveGeneric
+  - DuplicateRecordFields
+  - ExplicitNamespaces
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedLabels
+  - OverloadedStrings
+  - PatternSynonyms
+  - PolyKinds
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - TemplateHaskell
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+  - ViewPatterns
+  - BlockArguments
+  - TypeSynonymInstances
+  - UndecidableInstances
+
+dependencies:
+  - aeson
+  - deriving-aeson
+  - aeson-casing
+  - base >= 4.7 && < 5
+  - mobility-core
+  - binary
+  - bytestring
+  - clock
+  - case-insensitive
+  - containers
+  - cryptonite
+  - data-default-class
+  - directory
+  - double-conversion
+  - exceptions
+  - euler-hs
+  - hex-text
+  - hspec
+  - http-media
+  - kleene
+  - lattices
+  - prometheus-client
+  - prometheus-proc
+  - wai-middleware-prometheus
+  - prometheus-metrics-ghc
+  - jwt
+  - lens
+  - memory
+  - network
+  - parsec
+  - passetto-client
+  - pureMD5
+  - regex-applicative
+  - safe-exceptions
+  - servant
+  - servant-client
+  - servant-client-core
+  - servant-multipart
+  - servant-server
+  - servant-openapi3
+  - syb
+  - text
+  - wai
+  - warp
+  - time
+  - time-units
+  - template-haskell
+  - generic-lens
+  - base64-bytestring
+  - unordered-containers
+  - utf8-string
+  - beckn-spec
+  - geojson
+  - safe-money
+  - dhall
+  - tasty
+  - tasty-hunit
+  - either
+  - uuid
+  - stm
+  - unix
+  - record-hasfield
+  - record-dot-preprocessor
+  - openapi3
+  - fast-logger
+  - persistent
+  - persistent-postgresql
+  - esqueleto
+  - monad-logger
+  - resourcet
+  - resource-pool
+  - universum
+  - scientific
+  - vector
+  - relude
+  - unliftio
+  - string-conversions
+  - hedis
+  - transformers
+  - extra
+  - hw-kafka-client
+  - amazonka
+  - amazonka-core
+  - amazonka-ses
+  - amazonka-sns
+  - beam-core
+  - beam-postgres
+  - postgresql-simple
+
+ghc-options:
+  - -fwrite-ide-info
+  - -hiedir=.hie
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -fhide-source-paths
+  - -Werror
+  - -fplugin=RecordDotPreprocessor
+  - -Wwarn=ambiguous-fields
+
+library:
+  source-dirs:
+    - src
+  when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -O0
+          - -funfolding-use-threshold20
+          - -fno-cse
+          - -fmax-simplifier-iterations1
+          - -fno-specialise-aggressively
+          - -j4
+      else:
+        ghc-options:
+          - -O2
+          - -j4

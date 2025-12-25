@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Dashboard.Common.SpecialZone
   ( module Dashboard.Common.SpecialZone,
@@ -28,6 +27,6 @@ data SpecialZoneEndpoint
   = CreateSpecialZoneEndpoint
   | UpdateSpecialZoneEndpoint
   | DeleteSpecialZoneEndpoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "SpecialZoneEndpoint"

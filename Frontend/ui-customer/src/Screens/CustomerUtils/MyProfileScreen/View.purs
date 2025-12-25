@@ -47,7 +47,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Screens.MyProfileScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.Backend as Remote
-import Storage (KeyStore(..), getValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalStore, getValueFromLocalStoreMb)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Engineering.Helpers.Utils (toggleLoader, loaderText)
@@ -55,6 +55,7 @@ import Data.String as DS
 import PrestoDOM.Types.DomAttributes as PTD
 import Debug(spy)
 import Components.CommonComponentConfig as CommonComponentConfig
+import Mobility.Prelude (boolToVisibility)
 
 
 screen :: ST.MyProfileScreenState -> Screen Action ST.MyProfileScreenState ScreenOutput
@@ -64,13 +65,8 @@ screen initialState =
   , name : "MyProfileScreen"
   , globalEvents : [(\push -> do
                       _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-                        lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-                        lift $ lift $ toggleLoader true
                         response <- Remote.getProfileBT ""
-                        lift $ lift $ toggleLoader false
-                        if initialState.props.isEmailValid then
-                          lift $ lift $ doAff do liftEffect $ push $ UserProfile response
-                          else pure unit
+                        lift $ lift $ doAff do liftEffect $ push $ UserProfile response
                         pure unit
                       pure $ pure unit
                     )
@@ -189,10 +185,12 @@ personalDetails state push =
                           , color Color.black700
                           , margin $ MarginBottom 8
                           ] <> FontStyle.body3 LanguageStyle
-                        , textView $
+                        , PrestoAnim.animationSet [Anim.fadeIn state.props.profileLoaded] $
+                          textView $
                           [ height WRAP_CONTENT
                           , width MATCH_PARENT
                           , text item.text
+                          , visibility $ boolToVisibility state.props.profileLoaded
                           , accessibilityHint $ case item.fieldType of
                               ST.MOBILE ->  (DS.replaceAll (DS.Pattern "") (DS.Replacement " ") item.text) 
                               _ -> item.text
@@ -213,16 +211,16 @@ personalDetails state push =
                               ST.DISABILITY_TYPE -> isNothing state.data.hasDisability
                               _ -> false
                             ] <> FontStyle.body6 LanguageStyle
-                        , textView
-                          ([ height WRAP_CONTENT
+                        , PrestoAnim.animationSet [Anim.fadeIn state.props.profileLoaded] $ textView $
+                          [ height WRAP_CONTENT
                           , width MATCH_PARENT
                           , text $ fromMaybe "" item.supportText
                           , margin $ MarginTop 4
-                          , visibility if (isNothing item.supportText ) then GONE else VISIBLE
+                          , visibility if (isJust item.supportText && state.props.profileLoaded ) then VISIBLE else GONE
                           , color Color.blue900 
                           , onClick push $ const $ MoreInfo $ item.fieldType
                           , clickable true
-                          ] <> FontStyle.body6 LanguageStyle)
+                          ] <> FontStyle.body6 LanguageStyle
                         ]
                     , horizontalLineView state (index /= (length (personalDetailsArray state)) - 1)
                   ] ) (personalDetailsArray state))
@@ -233,7 +231,7 @@ personalDetails state push =
 personalDetailsArray :: ST.MyProfileScreenState ->  Array {title :: String, text :: String, fieldType :: ST.FieldType, supportText :: (Maybe String)}
 personalDetailsArray state =
   [ {title : (getString NAME), text : state.data.name, fieldType : ST.NAME, supportText : Nothing}
-  , {title : (getString MOBILE_NUMBER_STR) , text : (getValueToLocalStore MOBILE_NUMBER), fieldType : ST.MOBILE, supportText : Nothing}
+  , {title : (getString MOBILE_NUMBER_STR) , text : fromMaybe state.data.mobileNumber (getValueFromLocalStoreMb MOBILE_NUMBER), fieldType : ST.MOBILE, supportText : Nothing}
   , {title : (getString EMAIL_ID) , text :fromMaybe (getString ADD_NOW) state.data.emailId , fieldType : ST.EMAILID_ , supportText : Nothing }
   , {title : (getString GENDER_STR), text : (RSRC.getGender state.data.gender (getString SET_NOW)), fieldType : ST.GENDER_ , supportText : Nothing}
   , {title : (getString ASSISTANCE_REQUIRED) , text : case state.data.hasDisability of 
@@ -293,7 +291,7 @@ headerView state push =
         , height MATCH_PARENT
         , gravity RIGHT
         , margin (Margin 0 0 25 0)
-        , visibility if not state.props.updateProfile then VISIBLE else GONE
+        , visibility if (not state.props.updateProfile && state.props.profileLoaded) then VISIBLE else GONE
         ][ linearLayout
           [ width WRAP_CONTENT
           , height MATCH_PARENT

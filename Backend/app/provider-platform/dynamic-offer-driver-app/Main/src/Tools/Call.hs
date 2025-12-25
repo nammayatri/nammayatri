@@ -18,9 +18,9 @@ module Tools.Call
 where
 
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
+import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantServiceConfig as DMSC
+import Domain.Types.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Kernel.External.Call as Reexport hiding
   ( initiateCall,
   )
@@ -29,8 +29,8 @@ import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Cac.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import Tools.Error
 
 initiateCall ::
@@ -51,10 +51,10 @@ runWithServiceConfig ::
   Id MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
-  merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
+  merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantCallServiceConfig <-
-    QMSC.findByMerchantIdAndService merchantId (DMSC.CallService $ getCfg merchantConfig)
+    QMSC.findByServiceAndCity (DMSC.CallService $ getCfg merchantConfig) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "call" (show $ getCfg merchantConfig))
   case merchantCallServiceConfig.serviceConfig of
     DMSC.CallServiceConfig msc -> func msc req

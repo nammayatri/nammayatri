@@ -1,0 +1,59 @@
+imports:
+  Route: Domain.Types.Route
+  RouteStopMapping: Domain.Types.RouteStopMapping
+  LatLong: Kernel.External.Maps.Types
+  UTCTime: Kernel.Prelude
+  Double: Kernel.Prelude
+  VehicleCategory: BecknV2.FRFS.Enums
+  ServiceTierType: BecknV2.FRFS.Enums
+  PlatformType: Domain.Types.IntegratedBPPConfig
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  RouteState: Storage.CachedQueries.Merchant.MultiModalBus
+
+module: TrackRoute
+
+types:
+  TrackingResp:
+    vehicleTrackingInfo: "[VehicleTrackingInfo]"
+
+  VehicleInfoForRoute:
+    startTime: Maybe UTCTime
+    startDate: Maybe Text
+    scheduleRelationship: Maybe Text
+    routeState: Maybe RouteState
+    tripId: Maybe Text
+    latitude: Maybe Double
+    longitude: Maybe Double
+    speed: Maybe Double
+    timestamp: Maybe Text
+    upcomingStops: Maybe [SharedLogic.External.LocationTrackingService.Types.UpcomingStop]
+    derive: "Show"
+
+  VehicleTrackingInfo:
+    nextStop: Maybe RouteStopMapping
+    nextStopTravelTime: Maybe Seconds
+    nextStopTravelDistance: Maybe Meters
+    vehicleId: Text
+    routeCode: Text
+    vehicleInfo: VehicleInfoForRoute
+    upcomingStops: [SharedLogic.FRFSUtils.UpcomingStop]
+    delay: Maybe Seconds
+    routeShortName: Maybe Text
+    serviceTierType: Maybe ServiceTierType
+
+apis:
+  - GET:
+      endpoint: /track/{routeCode}/vehicles
+      query:
+        vehicleType: VehicleCategory
+        platformType: PlatformType
+        integratedBppConfigId: Id IntegratedBPPConfig
+        currentLat: Double
+        currentLon: Double
+        selectedSourceStopCode: Text
+        selectedDestinationStopCode: Text
+        maxBuses: Int
+      params:
+        routeCode: Text
+      response:
+        type: "TrackingResp"

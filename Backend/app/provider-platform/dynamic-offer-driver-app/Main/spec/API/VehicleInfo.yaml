@@ -1,0 +1,22 @@
+imports: {}
+
+module: VehicleInfo
+
+apis:
+  - GET:
+      endpoint: /vehicleInfo/{rcNo}/list
+      params:
+        rcNo: Text
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: VehicleExtraInformation
+
+types:
+  VehicleInfoAPIEntity:
+    - questionId: Text
+    - question: Text
+    - answer: Text
+  VehicleExtraInformation:
+    - rcNo: Text
+    - mediaUploaded: Bool
+    - vehicleInfo: "[VehicleInfoAPIEntity]"

@@ -20,15 +20,19 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
   )
 where
 
+import qualified Data.HashMap.Strict as HM
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Person (Driver)
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import Lib.Scheduler.Types (ExecutionResult (..))
+import SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.DriverPool
 
-type HandleMonad m = (MonadClock m, Log m)
+type HandleMonad m r = (MonadClock m, Log m, CoreMetrics m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasRequestId r)
 
 data MetricsHandle m = MetricsHandle
   { incrementTaskCounter :: m (),
@@ -36,58 +40,60 @@ data MetricsHandle m = MetricsHandle
     putTaskDuration :: Milliseconds -> m ()
   }
 
-data Handle m = Handle
+data Handle m r = Handle
   { isBatchNumExceedLimit :: m Bool,
     isReceivedMaxDriverQuotes :: m Bool,
     getNextDriverPoolBatch :: GoHomeConfig -> m DriverPoolWithActualDistResultWithFlags,
     sendSearchRequestToDrivers :: [DriverPoolWithActualDistResult] -> [Id Driver] -> GoHomeConfig -> m (),
     getRescheduleTime :: m UTCTime,
     metrics :: MetricsHandle m,
-    setBatchDurationLock :: m (Maybe UTCTime),
-    createRescheduleTime :: UTCTime -> m UTCTime,
     isSearchTryValid :: m Bool,
-    cancelSearchTry :: m ()
+    isBookingValid :: Bool,
+    initiateDriverSearchBatch :: m (),
+    cancelSearchTry :: m (),
+    cancelBookingIfApplies :: m (),
+    isScheduledBooking :: Bool
   }
 
-handler :: HandleMonad m => Handle m -> GoHomeConfig -> m (ExecutionResult, Bool)
-handler h@Handle {..} goHomeCfg = do
+handler :: HandleMonad m r => Handle m r -> GoHomeConfig -> Text -> m (ExecutionResult, PoolType, Maybe Seconds)
+handler h@Handle {..} goHomeCfg transactionId = do
   logInfo "Starting job execution"
   metrics.incrementTaskCounter
-  measuringDuration (\ms (_, _) -> metrics.putTaskDuration ms) $ do
+  measuringDuration (\ms (_, _, _) -> metrics.putTaskDuration ms) $ do
     isSearchTryValid' <- isSearchTryValid
-    if not isSearchTryValid'
+    if not isSearchTryValid' || not isBookingValid
       then do
         logInfo "Search request is either assigned, cancelled or expired."
-        return (Complete, False)
+        return (Complete, NormalPool, Nothing)
       else do
         isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
         if isReceivedMaxDriverQuotes'
           then do
             logInfo "Received enough quotes from drivers."
-            return (Complete, False)
-          else processRequestSending h goHomeCfg
+            return (Complete, NormalPool, Nothing)
+          else processRequestSending h goHomeCfg transactionId
 
-processRequestSending :: HandleMonad m => Handle m -> GoHomeConfig -> m (ExecutionResult, Bool)
-processRequestSending Handle {..} goHomeCfg = do
-  mLastProcTime <- setBatchDurationLock
-  case mLastProcTime of
-    Just lastProcTime -> ReSchedule <$> createRescheduleTime lastProcTime <&> (,False)
-    Nothing -> do
-      isBatchNumExceedLimit' <- isBatchNumExceedLimit
-      if isBatchNumExceedLimit'
+processRequestSending :: HandleMonad m r => Handle m r -> GoHomeConfig -> Text -> m (ExecutionResult, PoolType, Maybe Seconds)
+processRequestSending Handle {..} goHomeCfg transactionId = do
+  isBatchNumExceedLimit' <- isBatchNumExceedLimit
+  logInfo $ "processRequestSending isBatchNumExceedLimit: " <> show isBatchNumExceedLimit'
+  if isBatchNumExceedLimit'
+    then do
+      if isScheduledBooking
         then do
+          initiateDriverSearchBatch
+          return (Complete, NormalPool, Nothing)
+        else do
           metrics.incrementFailedTaskCounter
           logInfo "No driver accepted"
+          appBackendBapInternal <- asks (.appBackendBapInternal)
+          let request = CallBAPInternal.RideSearchExpiredReq {transactionId = transactionId}
+          void $ CallBAPInternal.rideSearchExpired appBackendBapInternal.apiKey appBackendBapInternal.url request
           cancelSearchTry
-          return (Complete, False)
-        else do
-          driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
-          if null driverPoolWithFlags.driverPoolWithActualDistResult
-            then do
-              metrics.incrementFailedTaskCounter
-              logInfo "No driver available"
-              cancelSearchTry
-              return (Complete, driverPoolWithFlags.isGoHomeBatch)
-            else do
-              sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
-              ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.isGoHomeBatch)
+          cancelBookingIfApplies
+          return (Complete, NormalPool, Nothing)
+    else do
+      driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
+      when (not $ null driverPoolWithFlags.driverPoolWithActualDistResult) $
+        sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
+      ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.poolType,driverPoolWithFlags.nextScheduleTime)

@@ -13,6 +13,11 @@ driver_peek_db_command_error =
   counter #driver_peek_db_command_error
     .& build
 
+driver_kv_config_decode_failure :: PromRep 'Counter "driver_kv_config_decode_failure" '[]
+driver_kv_config_decode_failure =
+  counter #driver_kv_config_decode_failure
+    .& build
+
 driver_drop_db_command_error :: PromRep 'Counter "driver_drop_db_command_error" '[]
 driver_drop_db_command_error =
   counter #driver_drop_db_command_error
@@ -50,6 +55,12 @@ driver_drainer_query_executes =
     .& lbl @"action" @Text
     .& build
 
+driver_process_latency :: PromRep 'Histogram "driver_process_latency" '[ '("process_name", Text)]
+driver_process_latency =
+  histogram #driver_process_latency
+    .& lbl @"process_name" @Text
+    .& build
+
 driver_drainer_stop_status :: PromRep 'Gauge "driver_drainer_stop_status" '[]
 driver_drainer_stop_status =
   gauge #driver_drainer_stop_status
@@ -65,4 +76,27 @@ driver_kafka_push_failure =
 driver_kafka_update_missing :: PromRep 'Counter "driver_kafka_update_missing" '[]
 driver_kafka_update_missing =
   counter #driver_kafka_update_missing
+    .& build
+
+driver_batch_fallback_used :: PromRep 'Counter "driver_batch_fallback_used" '[]
+driver_batch_fallback_used =
+  counter #driver_batch_fallback_used
+    .& build
+
+driver_batch_execution_time :: PromRep 'Histogram "driver_batch_execution_time" '[ '("model", Text)]
+driver_batch_execution_time =
+  histogram #driver_batch_execution_time
+    .& lbl @"model" @Text
+    .& build
+
+driver_batch_entries_processed :: PromRep 'Counter "driver_batch_entries_processed" '[ '("model", Text)]
+driver_batch_entries_processed =
+  counter #driver_batch_entries_processed
+    .& lbl @"model" @Text
+    .& build
+
+driver_schema_variation_alert :: PromRep 'Counter "driver_schema_variation_alert" '[ '("model", Text)]
+driver_schema_variation_alert =
+  counter #driver_schema_variation_alert
+    .& lbl @"model" @Text
     .& build

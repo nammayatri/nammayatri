@@ -7,31 +7,73 @@ import Components.PrimaryButton.Controller as PB
 import Components.SelectListModal.Controller as SL
 import Data.Int (toNumber)
 import Helpers.Utils (parseFloat)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd)
+import PrestoDOM 
 import Prim.TypeError as String
 import Common.Styles.Colors as Color
 import Font.Style (Style (..))
 import Components.PopUpModal as PopUpModal
+import Halogen.VDom.DOM.Prop (Prop)
+import Common.Types.App 
+import Font.Style as FontStyle
+import Styles.Types (FontStyle)
 import Data.Eq.Generic (genericEq)
 import Foreign.Generic (class Decode, class Encode)
 import Data.Generic.Rep (class Generic)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
+import Data.Maybe
+import Styles.Types
+import Common.Types.App (RentalBookingConfig)
+import CarouselHolder as CarouselHolder
+import PrestoDOM.List
+import Halogen.VDom.DOM.Prop
+import Debug
+import Data.Maybe (Maybe(..))
+import Engineering.Helpers.Commons 
+
+instance showAction :: Show Action where
+  show (Support) = "Support"
+  show (RideDetails) = "RideDetails"
+  show (SelectButton _ _) = "SelectButton"
+  show (RateClick _) = "RateClick"
+  show (SkipButtonActionController var1) = "SkipButtonActionController_" <> show var1
+  show (ContactSupportPopUpAC var1) = "ContactSupportPopUpAC_" <> show var1
+  show (UpiQrRendered _) = "UpiQrRendered"
+  show (BannerAction var1) = "BannerAction_" <> show var1
+  show (HelpAndSupportAC) = "HelpAndSupportAC"
+  show (GoToSOS) = "GoToSOS"
+  show (NoAction) = "NoAction"
+  show (BannerChanged _) = "BannerChanged"
+  show (BannerMoving _) = "BannerMoving"
 
 data Action = Support
             | RideDetails
-            | SelectButton Int
-            | IssueReportIndex Int
+            | SelectButton Boolean Int
             | RateClick Int
-            | IssueReportPopUpAC SL.Action
             | SkipButtonActionController PB.Action
             | ContactSupportPopUpAC PopUpModal.Action
             | UpiQrRendered String
-            | BannerAction Banner.Action
-            
+            | BannerAction Banner.Action 
+            | HelpAndSupportAC
+            | GoToSOS
+            | NoAction
+            | BannerChanged String
+            | BannerMoving String
+
+
+type RentalRideTextConfig = {
+  rideTime :: String,
+  rideDistance :: String,
+  rideStart :: String,
+  rideStartedAt :: String,
+  rideEnd :: String,
+  rideEndedAt :: String,
+  odometerReading :: String
+}
+
 type Config = {
   isDriver :: Boolean,
   topCard :: TopCard,
-  customerIssueCard :: CustomerIssueCard,
+  customerIssue :: CustomerIssue,
   customerBottomCard :: CustomerBottomCard,
   driverBottomCard :: DriverBottomCard,
   contactSupportPopUpConfig :: PopUpModal.Config,
@@ -47,7 +89,27 @@ type Config = {
   viewsByOrder :: Array RideCompletedElements,
   enableContactSupport :: Boolean,
   isFreeRide :: Boolean,
-  lottieQRAnim :: Boolean
+  needHelpText :: String,
+  lottieQRAnim :: LottieQRAnim,
+  showSafetyCenter :: Boolean,
+  safetyTitle :: String,
+  rentalRideConfig :: RentalRideConfig,
+  rentalRideTextConfig :: RentalRideTextConfig,
+  capacity :: Maybe Int,
+  serviceTierAndAC :: String,
+  additionalCharges :: Array AdditionalCharges,
+  rentalRowDetails :: RentalRowConfig,
+  rentalBookingData :: RentalBookingConfig,
+  showRentalRideDetails :: Boolean,
+  coinsEarned :: CoinsEarnedConfigType,
+  showIntercityDetails :: Boolean ,
+  parkingCharges :: ParkingChargesConfig,
+  showIntercityRideDetails :: Boolean,
+  interCityTextConfig :: IntercityRideTextConfig,
+  variant :: String,
+  driverCity :: String,
+  driverInvoiceText :: String,
+  coinsRewardedOnGoldTierRide :: Maybe Int
 }
 
 data Theme = DARK | LIGHT
@@ -57,28 +119,49 @@ instance decodeTheme :: Decode Theme where decode = defaultEnumDecode
 instance encodeTheme :: Encode Theme where encode = defaultEnumEncode
 instance eqTheme :: Eq Theme where eq = genericEq
 
-data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVER_BOTTOM_VIEW
+data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVER_BOTTOM_VIEW | RENTAL_RIDE_VIEW | COINS_EARNED_VIEW
 
 derive instance genericRideCompletedElements :: Generic RideCompletedElements _
 instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericEq
 
+data RentalRowView = RideTime | RideDistance | RideStartedAt | RideEndedAt | EstimatedFare | ExtraTimeFare | ExtraDistanceFare | TotalFare | Surcharges
+
+derive instance genericRentalRowView :: Generic RentalRowView _
+instance eqRentalRowView :: Eq RentalRowView where eq = genericEq
+
+
+type ParkingChargesConfig ={
+  parkingChargesTitle :: String,
+  parkingChargesDescription :: String
+} 
+type RentalTextConfig = {
+  title :: String,
+  subTitle :: String,
+  estimatedValue :: String,
+  actualValue :: String,
+  color :: String
+}
 
 config :: Config 
 config = {
   isDriver : true,
   isFreeRide : false,
+  capacity : Nothing,
+  serviceTierAndAC : "",
+  showSafetyCenter : false,
   topCard : {
     title : "",
     titleColor : Color.grey900,
     finalAmount : 0,
-    initalAmount : 0,
+    initialAmount : 0,
     fareUpdatedVisiblity : false,
     gradient : [Color.black900, Color.black900, Color.pickledBlue, Color.black900],
     topPill : {
       text : "",
       background : Color.black900,
       textColor : Color.white900,
-      visible : false
+      visible : false,
+      icon : Nothing
     },
     infoPill : {
       image : "",
@@ -89,34 +172,29 @@ config = {
       stroke : "1," <> Color.black700,
       cornerRadius : 8.0, 
       padding :  Padding 16 12 16 12,
-      margin : MarginVertical 10 20,
+      margin : Margin 15 16 15 0,
       alpha : 1.0,
       fontStyle : Tags,
       visible : VISIBLE
     },
-    bottomText : ""
-  },
-  customerIssueCard : {
-    issueFaced : false, 
-    reportIssueView : false,
-    selectedYesNoButton : 0,
-    reportIssuePopUpConfig : SL.config,
-    title : "",
-    subTitle : "",
-    option1Text : "",
-    option2Text : "",
-    yesText : "",
-    noText : "",
-    isNightRide : false,
-    showCallSupport : false,
-    wasOfferedAssistanceCardView : false
-  },
-  customerBottomCard : {
+    bottomText : "",
+    horizontalLineColor : Color.white900
+  }
+, customerIssue: {
+    currentIndex : 0
+  , currentPageIndex : 0
+  , bannerComputedView : Nothing
+  , customerIssueCards : []
+  , showIssueBanners : true
+
+  }
+, customerBottomCard : {
     visible : false,
     title : "",
     subTitle : "",
     driverImage : "",
-    selectedRating : 0
+    selectedRating : 0,
+    actionPills : []
   },
   driverBottomCard : {
     visible : false,
@@ -139,7 +217,8 @@ config = {
     id : "",
     vpa : "",
     vpaIcon : "",
-    collectCashText : ""
+    collectCashText : "",
+    paymentVpa : ""
   },
   noVpaCard : {
     title : "",
@@ -153,36 +232,83 @@ config = {
   isPrimaryButtonSticky : false,
   bannerConfig : Banner.config,
   viewsByOrder : [],
+  rentalRideConfig : {
+    showRideOdometerReading : false,
+    rideStartODOReading : "",
+    rideEndODOReading : "",
+    baseRideDuration : "",
+    baseRideDistance : "",
+    actualRideDuration : "",
+    actualRideDistance : "",
+    startRideOdometerImage: "",
+    endRideOdometerImage: "",
+    rideStartedAt : "",
+    rideEndedAt : ""
+  },
+  rentalRideTextConfig : {
+    rideTime : "Ride Time",
+    rideDistance : "Ride Distance",
+    rideStart : "Ride Start",
+    rideStartedAt : "Ride Started At",
+    rideEnd : "Ride End",
+    rideEndedAt : "Ride Ended At",
+    odometerReading : "Odometer Reading"
+  },
   enableContactSupport : true,
-  lottieQRAnim : false
+  lottieQRAnim : {
+    visible : false,
+    url : ""
+  },
+  needHelpText : "",
+  safetyTitle : "",
+  additionalCharges : [],
+  rentalRowDetails : dummyRentalRowConfig,
+  rentalBookingData : dummyRentalBookingConfig,
+  showRentalRideDetails : false,
+  coinsEarned : initialConinsEarnedConfig,
+  showIntercityRideDetails : false,
+  interCityTextConfig : dummyInterCityRideTextConfig,
+  showIntercityDetails : false,
+  parkingCharges : {
+    parkingChargesTitle : "",
+    parkingChargesDescription :""
+  },
+  variant : "",
+  driverCity : "",
+  driverInvoiceText : "",
+  coinsRewardedOnGoldTierRide : Nothing
+}
+
+type CustomerIssue = {
+  currentIndex :: Int
+, currentPageIndex :: Int
+, bannerComputedView :: Maybe ListItem
+, customerIssueCards :: Array CustomerIssueCard
+, showIssueBanners :: Boolean
+
 }
 
 type CustomerIssueCard = {
-  issueFaced :: Boolean, 
-  reportIssueView :: Boolean,
-  selectedYesNoButton :: Int,
-  reportIssuePopUpConfig :: SL.Config,
+  selectedYes :: Maybe Boolean,
   title :: String,
   subTitle :: String,
-  option1Text :: String,
-  option2Text :: String,
   yesText :: String,
-  noText :: String,
-  showCallSupport :: Boolean,
-  isNightRide :: Boolean,
-  wasOfferedAssistanceCardView :: Boolean
+  noText :: String
+, issueType :: CustomerIssueTypes
 }
+
 
 type TopCard = {
   title :: String,
   titleColor :: String,
   finalAmount :: Int,
-  initalAmount :: Int,
+  initialAmount :: Int,
   fareUpdatedVisiblity :: Boolean,
   gradient :: Array String,
   topPill :: TopPill,
   infoPill :: InfoPill, 
-  bottomText :: String
+  bottomText :: String,
+  horizontalLineColor :: String
 }
 
 type InfoPill = {
@@ -205,7 +331,8 @@ type CustomerBottomCard = {
   title :: String,
   subTitle :: String,
   driverImage :: String, 
-  selectedRating :: Int
+  selectedRating :: Int,
+  actionPills :: Array PillActionConfig
 }
 
 type DriverBottomCard = {
@@ -236,7 +363,8 @@ type DriverUpiQrCard = {
   id :: String,
   vpa :: String,
   vpaIcon :: String,
-  collectCashText :: String
+  collectCashText :: String,
+  paymentVpa :: String
 }
 
 type NoVpaCard = {
@@ -248,5 +376,199 @@ type TopPill = {
   visible :: Boolean,
   background :: String,
   text :: String,
-  textColor :: String
+  textColor :: String,
+  icon :: Maybe String
+}
+
+type LottieQRAnim = {
+  visible :: Boolean,
+  url :: String
+}
+
+type InfoCardConfig = {
+  height :: Length,
+  width :: Length,
+  margin :: Margin,
+  image :: InfoCardImageConfig , 
+  heading :: InfocardTextConfig,
+  headingInfo :: InfocardTextConfig,
+  subHeading1 :: InfocardTextConfig,
+  subHeading2 :: InfocardTextConfig,
+  id :: String
+}
+
+type InfoCardImageConfig = {
+  width :: Length,
+  height :: Length,
+  visibility :: Visibility,
+  renderImage :: String
+}
+
+type InfocardTextConfig = {
+  text :: String,
+  color :: String,
+  fontStyle :: forall properties. (Array (Prop properties)),
+  visibility :: Visibility
+}
+
+type RentalRideConfig = {
+  showRideOdometerReading :: Boolean,
+  rideStartODOReading :: String,
+  rideEndODOReading :: String,
+  baseRideDuration :: String,
+  baseRideDistance :: String,
+  actualRideDuration :: String,
+  actualRideDistance :: String,
+  startRideOdometerImage:: String,
+  endRideOdometerImage:: String,
+  rideStartedAt :: String,
+  rideEndedAt :: String
+}
+
+type AdditionalCharges = {
+  text :: String
+, visibility :: Visibility
+, textColor :: Color
+, image :: String
+}
+
+type IntercityRideTextConfig ={
+  headerText :: String,
+  bottomText :: String
+}
+
+type RentalRowConfig = {
+    rideTime :: String
+  , rideDistance :: String
+  , rideDistanceInfo :: String
+  , rideStartedAt :: String
+  , rideEndedAt :: String
+  , estimatedFare :: String
+  , extraTimeFare :: String
+  , extraDistanceFare :: String
+  , totalFare :: String
+  , rideDetailsTitle :: String
+  , fareUpdateTitle :: String
+  , surcharges :: String
+}
+
+dummyRentalRowConfig :: RentalRowConfig
+dummyRentalRowConfig = {
+    rideTime : ""
+  , rideDistance : ""
+  , rideDistanceInfo : ""
+  , rideStartedAt : ""
+  , rideEndedAt : ""
+  , estimatedFare : ""
+  , extraTimeFare : ""
+  , extraDistanceFare : ""
+  , totalFare : ""
+  , rideDetailsTitle : ""
+  , fareUpdateTitle : ""
+  , surcharges : ""
+}
+
+dummyRentalBookingConfig :: RentalBookingConfig
+dummyRentalBookingConfig = 
+  { startTimeUTC : ""
+  , baseDuration : 0
+  , baseDistance : 0
+  , startOdometer : ""
+  , endOdometer : ""
+  , nightCharge : ""
+  , finalDuration : 0
+  , finalDistance : 0
+  , rideStartedAt : "" 
+  , rideEndedAt : ""
+  , extraDistanceFare : ""
+  , extraTimeFare : ""
+  }
+
+dummyInterCityRideTextConfig :: IntercityRideTextConfig
+dummyInterCityRideTextConfig = {
+  headerText : "",
+  bottomText : ""
+}
+
+  
+
+type IssueReportBannerProps =(
+  layoutStroke :: PropValue
+, cornerRadius :: PropValue
+, background :: PropValue
+, visibility :: PropValue
+, title :: PropValue
+, titleColor :: PropValue
+, subTitle :: PropValue
+, subTitleColor :: PropValue
+, yesBackground :: PropValue
+, yesText :: PropValue
+, yesTextColor :: PropValue
+, yesStroke :: PropValue
+, noBackground :: PropValue
+, noText :: PropValue
+, noTextColor :: PropValue
+, noStroke :: PropValue
+)
+
+issueReportBannersTransformer  :: Array CustomerIssueCard -> Array (Record IssueReportBannerProps)
+issueReportBannersTransformer arr =
+  let _ = spy "ARRRR" arr
+  in map (
+  \item -> {
+    layoutStroke : toPropValue $ "1," <> Color.grey800,
+    background : toPropValue Color.white900,
+    visibility : toPropValue "visible",
+    title : toPropValue item.title,
+    titleColor : toPropValue Color.black800,
+    subTitle : toPropValue item.subTitle,
+    subTitleColor : toPropValue Color.black700,
+    yesBackground : toPropValue if item.selectedYes == Just true then Color.blue600 else Color.white900,
+    yesText : toPropValue item.yesText,
+    yesStroke : toPropValue $ if item.selectedYes == Just true then Color.blue900 else Color.grey800,
+    yesTextColor : toPropValue Color.black800,
+    noBackground : toPropValue if item.selectedYes == Just false then Color.blue600 else Color.white900,
+    noText : toPropValue item.noText,
+    noTextColor : toPropValue Color.black800,
+    noStroke : toPropValue $ if item.selectedYes == Just false then Color.blue900 else Color.grey800,
+    cornerRadius : toPropValue if os == "IOS" then "12.0" else "20.0"
+  }
+) arr
+
+
+getCarouselConfig ∷ ListItem → CustomerIssue → CarouselHolder.CarouselHolderConfig IssueReportBannerProps Action
+getCarouselConfig view customerIssueConfig = {
+    view
+  , items : issueReportBannersTransformer customerIssueConfig.customerIssueCards
+  , orientation : HORIZONTAL
+  , currentPage: customerIssueConfig.currentPageIndex
+  , autoScroll : false
+  , autoScrollDelay : 0.0
+  , id : "bannerCarousel"
+  , autoScrollAction : Nothing 
+  , onPageSelected : Just BannerChanged
+  , onPageScrollStateChanged : Just BannerMoving
+  , onPageScrolled : Nothing
+  , currentIndex : customerIssueConfig.currentIndex
+  , showScrollIndicator : false
+  , layoutHeight : V 180
+  , overlayScrollIndicator : false
+}
+
+type PillActionConfig = {
+  text :: String,
+  action :: Action,
+  useMarginRight :: Boolean,
+  image :: String
+}
+
+type CoinsEarnedConfigType = {
+  title :: String,
+  subTitle :: String
+}
+
+initialConinsEarnedConfig :: CoinsEarnedConfigType 
+initialConinsEarnedConfig = {
+  title : "",
+  subTitle : ""
 }

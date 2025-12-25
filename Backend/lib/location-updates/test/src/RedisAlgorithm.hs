@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module RedisAlgorithm where
@@ -158,7 +157,7 @@ processPointsGroup ih driverId pointsGroup = do
   pointsBefore <- run $ ih.getWaypointsNumber driverId
   let currentLength = fromIntegral $ length pointsGroup :: Integer
 
-  run $ processWaypoints ih driverId False 0 True $ NE.fromList pointsGroup
+  run $ processWaypoints ih driverId False 0 Nothing True True False False $ NE.fromList pointsGroup
 
   distanceAfter <- run $ checkTraveledDistance driverId
   pointsAfter <- run $ ih.getWaypointsNumber driverId

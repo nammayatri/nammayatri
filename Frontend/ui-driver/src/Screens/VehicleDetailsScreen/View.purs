@@ -16,7 +16,7 @@
 module Screens.VehicleDetailsScreen.View where
 
 import Prelude (Unit, const, map, not, ($), (<<<), (==), (<>), bind, pure, unit)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, cornerRadius, visibility, stroke, onBackPressed, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, cornerRadius, visibility, stroke, onBackPressed, afterRender, imageWithFallback)
 import Effect (Effect)
 import Screens.VehicleDetailsScreen.Controller (Action(..), ScreenOutput, eval, getTitle, getValue)
 import Screens.Types as ST
@@ -38,7 +38,7 @@ import Screens.VehicleDetailsScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
-screen :: ST.VehicleDetailsScreenState -> Screen Action ST.VehicleDetailsScreenState ScreenOutput
+screen :: ST.VehicleDetailsScreenState -> LoggableScreen Action ST.VehicleDetailsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -47,6 +47,8 @@ screen initialState =
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     pure $ pure unit)]
   , eval
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.vehicleDetailsScreenLogWhitelist
   }
 
 view
@@ -132,7 +134,7 @@ headerLayout state push heading =
         , height WRAP_CONTENT
         , text (getString EDIT)
         , margin (MarginRight 10)
-        , color Color.blueBtn
+        , color Color.brightBlue
         , gravity RIGHT
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , visibility GONE -- if state.props.isInEditVehicleDetailsView then GONE else VISIBLE  TILL 15AUG
@@ -367,7 +369,7 @@ uploadRCView state push =
                [ width WRAP_CONTENT
                , height MATCH_PARENT
                , text (getString PREVIEW)
-               , color Color.blueBtn
+               , color Color.brightBlue
                , onClick push (const PreviewImage)
                , visibility if state.props.deleteButtonVisibility then VISIBLE else GONE
                ] <> FontStyle.body5 TypoGraphy

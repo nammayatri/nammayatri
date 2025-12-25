@@ -1,0 +1,45 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  VehicleCategory: Domain.Types.VehicleCategory
+
+FleetDriverAssociation:
+  tableName: fleet_driver_association
+
+  fields:
+    id: Id FleetDriverAssociation
+    driverId: Id Person
+    isActive: Bool
+    fleetOwnerId: Text
+    associatedOn: Maybe UTCTime
+    associatedTill: Maybe UTCTime
+    onboardingVehicleCategory: Maybe VehicleCategory
+    onboardedOperatorId: Maybe (Id Person)
+    requestReason: Maybe Text
+    responseReason: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    driverId: "!SecondaryKey"
+    fleetOwnerId: "!SecondaryKey"
+
+  queries:
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
+    deleteByFleetOwnerId:
+      kvFunction: deleteWithKV
+      where: fleetOwnerId
+
+  sqlType:
+    id: text
+    driverId: text
+    fleetOwnerId: text
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

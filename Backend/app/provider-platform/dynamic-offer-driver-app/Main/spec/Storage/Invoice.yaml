@@ -1,0 +1,112 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  ServiceNames: Domain.Types.Plan
+  DriverFee: Domain.Types.DriverFee
+
+Invoice:
+  tableName: invoice
+
+  types:
+    InvoiceStatus:
+      enum: "ACTIVE_INVOICE, INACTIVE, SUCCESS, FAILED, EXPIRED, CLEARED_BY_YATRI_COINS"
+
+    InvoicePaymentMode:
+      enum: "MANUAL_INVOICE, AUTOPAY_INVOICE, MANDATE_SETUP_INVOICE, CASH_COLLECTED_INVOICE, PAYOUT_REGISTRATION_INVOICE, ONE_TIME_SECURITY_INVOICE, ONE_TIME_SECURITY_ADJUSTED_INVOICE, PREPAID_INVOICE, WALLET_TOPUP_INVOICE"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+  fields:
+    id : Id Invoice
+    invoiceShortId : Text
+    driverFeeId : Id DriverFee
+    driverId : Id Person
+    invoiceStatus : InvoiceStatus
+    paymentMode : InvoicePaymentMode
+    bankErrorMessage : Maybe Text
+    bankErrorCode : Maybe Text
+    bankErrorUpdatedAt : Maybe UTCTime
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId : Id MerchantOperatingCity
+    lastStatusCheckedAt : Maybe UTCTime
+    maxMandateAmount : Maybe HighPrecMoney
+    serviceName : ServiceNames
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <InvoiceStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <InvoicePaymentMode>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <InvoicePaymentMode>
+
+
+  beamType:
+    serviceName: Maybe ServiceNames
+    merchantOperatingCityId: Maybe Text
+
+
+  constraints:
+    id: PrimaryKey
+    driverFeeId: SecondaryKey
+    driverId: "!SecondaryKey" # forcing to be a secondary key
+    invoiceShortId: SecondaryKey
+
+  fromTType:
+    merchantOperatingCityId: Storage.Queries.Transformers.Invoice.getMerchantOperatingCityId merchantOperatingCityId driverFeeId id|EM
+    serviceName: fromMaybe Domain.Types.Plan.YATRI_SUBSCRIPTION serviceName|E
+
+  toTType:
+    serviceName: (Just serviceName)|E
+    merchantOperatingCityId: (Just (Kernel.Types.Id.getId merchantOperatingCityId))|E
+
+  queries:
+    findById:
+      kvFunction: findAllWithKV
+      where: id
+
+    findAllByInvoiceId:
+      kvFunction: findAllWithKV
+      where: id
+
+    findAllByInvoiceShortId:
+      kvFunction: findAllWithKV
+      where: invoiceShortId
+
+    findByIdWithPaymenModeAndStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [id, paymentMode, invoiceStatus]
+
+    findActiveManualInvoiceByFeeId:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverFeeId, paymentMode, invoiceStatus]
+
+    findByDriverFeePaymentModeAndInvoiceStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverFeeId, paymentMode, invoiceStatus]
+
+    updateBankErrorsByInvoiceId:
+      kvFunction: updateWithKV
+      params: [bankErrorMessage, bankErrorCode, bankErrorUpdatedAt]
+      where: id
+
+
+
+  sqlType:
+    maxMandateAmount: integer
+
+
+  default:
+    invoiceStatus: "'ACTIVE_INVOICE'"
+    paymentMode: "'MANUAL_INVOICE'"
+    serviceName: "'YATRI_SUBSCRIPTION'"
+
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
+  excludedFields: [merchantOperatingCityId, createdAt, updatedAt]

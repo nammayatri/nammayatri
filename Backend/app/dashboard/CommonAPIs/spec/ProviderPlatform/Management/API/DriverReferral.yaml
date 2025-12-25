@@ -1,0 +1,47 @@
+imports:
+
+module: DriverReferral
+
+apis:
+  - POST: # ReferralProgramPasswordUpdateAPI
+      endpoint: /referralOpsPassword
+      auth: ApiAuthV2
+      request:
+        type: ReferralLinkPasswordUpdateAPIReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverReferralAPI ReferralProgramUpdateOpsPasswordEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT REFERRAL REFERRAL_PROGRAM_PASSWORD_UPDATE
+  - POST: # ReferralProgramLinkCodeAPI
+      endpoint: /linkReferral
+      auth: ApiAuthV2
+      multipart:
+        type: ReferralLinkReq
+      response:
+        type: LinkReport
+      migrate:
+        endpoint: DriverReferralAPI ReferralProgramUpdateOpsPasswordEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT REFERRAL REFERRAL_PROGRAM_LINK_CODE
+
+types:
+  LinkReport:
+    - successFullyLinked: Int
+    - failures: [FailureReasons]
+  FailureReasons:
+    - driverId: Text
+    - failureReason: Text
+    - derive: "Show"
+  ReferralLinkReq:
+    - recordType: NewType
+    - file: FilePath
+    - derive: "'HideSecrets"
+  ReferralLinkPasswordUpdateAPIReq:
+    - recordType: NewType
+    - referralLinkPassword: Text
+    - derive: "'HideSecrets" # Should we hide password?
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

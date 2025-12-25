@@ -96,7 +96,7 @@ view push state =
 
 savedLocationListView :: forall w. (Action -> Effect Unit) -> Array LocationListItemState -> PrestoDOM (Effect Unit) w
 savedLocationListView push state =
-  PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 400 ] $
+  PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 400 true] $
   scrollView
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -113,6 +113,7 @@ savedLocationListView push state =
 
 noSavedLocationView :: forall w. (Action -> Effect Unit) -> Array LocationListItemState -> PrestoDOM (Effect Unit) w
 noSavedLocationView push state =
+  PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 400 true] $
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -160,7 +161,9 @@ genericHeaderConfig state = let
         height = V 25
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-      , margin = (Margin 12 12 12 12)
+      , margin = Margin 8 8 8 8 
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       }
     , textConfig {
         text = (getString SELECT_FAVOURITE)
@@ -214,4 +217,6 @@ getFavouritesItem item = {
   , frequencyCount : Nothing
   , recencyDate : Nothing
   , locationScore : Nothing
+  , dynamicAction : Nothing
+  , types : Nothing
 }

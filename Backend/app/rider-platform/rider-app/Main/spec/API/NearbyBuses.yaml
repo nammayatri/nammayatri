@@ -1,0 +1,92 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+  Text: Data.Text
+  Id: Kernel.Types.Id
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  RideStatus: Domain.Types.RideStatus
+  PlatformType: Domain.Types.IntegratedBPPConfig
+  Price: Kernel.Types.Price
+  ServiceTierType: BecknV2.FRFS.Enums
+  VehicleCategory: BecknV2.FRFS.Enums
+  UpcomingTripInfo: Lib.JourneyModule.Utils
+  RouteState: Storage.CachedQueries.Merchant.MultiModalBus
+  Seconds: Kernel.Types.Time
+  SourceType: Domain.Types.RouteStopTimeTable
+module: NearbyBuses
+
+types:
+  RouteCodes:
+      routeCodes: [Text]
+  NearbyBus:
+      vehicleNumber: Maybe Text
+      routeCode: Text
+      currentLocation: LatLong
+      distance: Maybe Double
+      serviceType: Maybe ServiceTierType
+      serviceTierName: Maybe Text
+      routeState: Maybe RouteState
+      shortName: Maybe Text
+      bearing: Maybe Int
+
+  RecentRide:
+      fromStopCode: Text
+      toStopCode: Text
+      fare: Price
+      routeCode: Maybe Text
+
+  NearbyBusesRequest:
+      userLat: Double
+      userLon: Double
+      platformType: PlatformType
+      vehicleType: VehicleCategory
+      requireRecentRide: Bool
+      requireNearbyBuses: Bool
+
+  NearbyBusesResponse:
+      nearbyBuses: [NearbyBus]
+      recentRides: [RecentRide]
+
+  TimetableEntry:
+    timeOfArrival: TimeOfDay
+    timeOfDeparture: TimeOfDay
+    serviceTierType: ServiceTierType
+    platformCode: Maybe Text
+    tripId: Text
+    delay: Maybe Seconds
+    source: SourceType
+
+  TimetableResponse:
+    timetable: [TimetableEntry]
+
+apis:
+  - POST:
+      endpoint: /nearbyBusBooking
+      auth: TokenAuth
+      request:
+        type: NearbyBusesRequest
+      response:
+        type: NearbyBusesResponse
+
+  - GET:
+      endpoint: /nextVehicleDetails/{routeCode}/{stopCode}
+      auth: TokenAuth
+      params:
+        routeCode: Text
+        stopCode: Text
+      query:
+        vehicleType: VehicleCategory
+      response:
+        type: UpcomingTripInfo
+
+  - GET:
+      endpoint: /timetable/{routeCode}/stop/{stopCode}
+      auth: TokenAuth
+      params:
+        routeCode: Text
+        stopCode: Text
+      query:
+        vehicleType: VehicleCategory
+        toCode: Text
+      response:
+        type: TimetableResponse

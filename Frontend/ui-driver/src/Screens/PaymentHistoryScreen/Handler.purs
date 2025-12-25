@@ -19,7 +19,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Types.App (FlowBT, GlobalState(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Screens.PaymentHistoryScreen.Controller (ScreenOutput(..))
@@ -28,7 +28,7 @@ import Screens.PaymentHistoryScreen.View as PaymentHistoryScreen
 paymentHistory :: FlowBT String  PAYMENT_HISTORY_SCREEN_OUTPUT
 paymentHistory = do 
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ PaymentHistoryScreen.screen state.paymentHistoryScreen
+  act <- lift $ lift $ runLoggableScreen $ PaymentHistoryScreen.screen state.paymentHistoryScreen
   case act of
     GoBack -> do
       App.BackT $ pure App.GoBack

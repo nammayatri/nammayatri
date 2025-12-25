@@ -11,15 +11,13 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Coins.CoinHistory where
 
-import "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin as DCoins
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
 import qualified Database.Beam as B
-import qualified Domain.Types.Coins.CoinHistory as Domain
+import Domain.Types.VehicleCategory as DTV
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common ()
@@ -35,9 +33,11 @@ data CoinHistoryT f = CoinHistoryT
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     expirationAt :: B.C f (Maybe UTCTime),
-    status :: B.C f Domain.CoinStatus,
+    status :: B.C f DCT.CoinStatus,
     coinsUsed :: B.C f Int,
-    bulkUploadTitle :: B.C f (Maybe DCoins.Translations)
+    bulkUploadTitle :: B.C f (Maybe DCoins.Translations),
+    entityId :: B.C f (Maybe Text),
+    vehicleCategory :: B.C f (Maybe DTV.VehicleCategory)
   }
   deriving (Generic, B.Beamable)
 
@@ -49,6 +49,6 @@ instance B.Table CoinHistoryT where
 
 type CoinHistory = CoinHistoryT Identity
 
-$(enableKVPG ''CoinHistoryT ['id] [])
+$(enableKVPG ''CoinHistoryT ['id] [['driverId]])
 
 $(mkTableInstances ''CoinHistoryT "coin_history" "atlas_driver_offer_bpp")

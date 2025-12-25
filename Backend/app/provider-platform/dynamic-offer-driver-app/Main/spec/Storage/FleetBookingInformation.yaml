@@ -1,0 +1,106 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Vehicle: Domain.Types.Vehicle
+  HighPrecMoney: Kernel.Types.Common
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+  UTCTime: Kernel.Prelude
+  Day: Data.Time
+
+FleetBookingInformation:
+  tableName: fleet_booking_information
+  fields:
+    id: Id FleetBookingInformation
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    bookingId: Text
+    serviceId: Maybe Text
+    placeName: Maybe Text
+    serviceName: Maybe Text
+    fleetOwnerId: Maybe (Id Person) # This will be deprecated like my sleep
+    vehicleNo: Maybe Text  # This will be deprecated like my sleep
+    personId: Maybe (Id Person)
+    ticketPlaceId: Maybe Text
+    ticketBookingShortId: Maybe Text
+    ticketBookingServiceShortId: Maybe Text
+    amount: Maybe HighPrecMoney
+    visitDate: Maybe Day
+    bookedSeats: Maybe Int
+    status: Maybe Text
+    paymentMethod: Maybe Text
+    customerName: Maybe Text
+    customerMobileNumber: Maybe (EncryptedHashedField e Text)
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  beamFields:
+    customerMobileNumber:
+      customerMobileNumberEncrypted: Maybe Text
+      customerMobileNumberHash: Maybe DbHash
+
+  fromTType:
+    customerMobileNumber: EncryptedHashed <$> (Encrypted <$> customerMobileNumberEncrypted) <*> customerMobileNumberHash|E
+
+  toTType:
+    customerMobileNumberEncrypted: (customerMobileNumber <&> unEncrypted . (.encrypted))|E
+    customerMobileNumberHash: (customerMobileNumber <&> (.hash))|E
+
+  sqlType:
+    customerMobileNumberEncrypted: character varying(255)
+    customerMobileNumberHash: bytea
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByServiceId:
+      kvFunction: findOneWithKV
+      where: serviceId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+FleetBookingAssignments:
+  tableName: fleet_booking_assignments
+  fields:
+    id: Id FleetBookingAssignments
+    mainAssignmentId: Id FleetBookingInformation
+    bookingId: Text
+    serviceId: Maybe Text
+    placeName: Maybe Text
+    serviceName: Maybe Text
+    visitDate: Maybe Day
+    fleetOwnerId: Text
+    vehicleNo: Text
+    paymentMethod: Maybe Text
+    amount: Maybe HighPrecMoney
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    assignmentStartTime: Maybe UTCTime
+    assignmentEndTime: Maybe UTCTime
+    skuDurationMins: Maybe Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    mainAssignmentId: SecondaryKey
+
+  queries:
+    findAllByMainAssignmentId:
+      kvFunction: findAllWithKV
+      where: mainAssignmentId
+    updateAssignmentTiming:
+      kvFunction: updateOneWithKV
+      params: [assignmentStartTime, assignmentEndTime, skuDurationMins, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES

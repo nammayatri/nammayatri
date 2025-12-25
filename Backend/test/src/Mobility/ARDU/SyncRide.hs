@@ -16,7 +16,7 @@ module Mobility.ARDU.SyncRide where
 
 import Common (getAppBaseUrl)
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as DDriverOfferRide
-import qualified "rider-app" Domain.Types.Ride as DAppBackendRide
+import qualified "beckn-spec" Domain.Types.RideStatus as DAppBackendRide
 import EulerHS.Prelude
 import HSpec
 import Mobility.ARDU.APICalls (getDriverOfferBppBaseUrl)

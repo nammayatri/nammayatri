@@ -1,0 +1,81 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Area: Lib.Types.SpecialLocation
+  TimeBound: Kernel.Types.TimeBound
+  FarePolicy: Domain.Types.FarePolicy
+  ServiceTierType: Domain.Types.Common
+  TripCategory: Domain.Types.Common
+
+
+FareProduct:
+  tableName: fare_product
+
+  types:
+    SearchSource:
+      enum: "ALL,DASHBOARD,MOBILE_APP"
+  fields:
+    id : Id FareProduct
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+    farePolicyId : Id FarePolicy
+    vehicleServiceTier : ServiceTierType
+    area : Area
+    tripCategory : TripCategory
+    timeBounds : TimeBound|NoRelation
+    searchSource: SearchSource
+    enabled : Bool
+    disableRecompute : Maybe Bool
+
+  beamFields:
+    vehicleServiceTier:
+      vehicleVariant: ServiceTierType
+
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findUnboundedByMerchantOpCityIdVariantArea:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - eq: [merchantOperatingCityId, area, tripCategory, vehicleServiceTier, timeBounds, enabled]
+          - in: [searchSource]
+
+    findAllUnboundedByMerchantOpCityIdVariantArea:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - eq: [merchantOperatingCityId, area, tripCategory, vehicleServiceTier, timeBounds, enabled]
+          - in: [searchSource]
+
+    findAllUnboundedFareProductForArea:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - eq: [merchantOperatingCityId, area, timeBounds, enabled]
+          - in: [searchSource]
+
+    findAllFareProductByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, enabled]
+
+    findAllFareProductByFarePolicyId:
+      kvFunction: findAllWithKV
+      where:
+        and: [farePolicyId]
+
+  sqlType:
+    vehicleVariant: character varying (60)
+    merchantOperatingCityId: character (36)
+  default:
+    timeBounds: "'Unbounded'"
+    enabled: "true"
+    searchSource: "'ALL'"
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+

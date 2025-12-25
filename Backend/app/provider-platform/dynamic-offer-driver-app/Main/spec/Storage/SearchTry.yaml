@@ -1,0 +1,145 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  SearchRequest: Domain.Types.SearchRequest
+  ServiceTierType: Domain.Types.Common
+  TripCategory: Domain.Types.Common
+  Money: Kernel.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
+  BillingCategory: SharedLogic.Type
+
+SearchTry:
+  tableName: search_try
+
+  types:
+    SearchTryStatus:
+      enum: "ACTIVE, CANCELLED, COMPLETED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    SearchRepeatType:
+      enum: "INITIAL, RETRIED, REALLOCATION, CANCELLED_AND_RETRIED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id : Id SearchTry
+    requestId : Id SearchRequest
+    estimateId : Text
+    estimateIds : "[Text]"
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Id MerchantOperatingCity
+    messageId : Text
+    startTime : UTCTime
+    validTill : UTCTime
+    vehicleServiceTier : ServiceTierType|NoRelation
+    vehicleServiceTierName : Text
+    vehicleCategory: Maybe VehicleCategory
+    baseFare : HighPrecMoney
+    customerExtraFee : Maybe HighPrecMoney
+    petCharges : Maybe HighPrecMoney
+    currency: Currency
+    status: SearchTryStatus
+    billingCategory: BillingCategory
+    searchRepeatCounter: Int
+    searchRepeatType: SearchRepeatType
+    tripCategory: TripCategory
+    isAdvancedBookingEnabled: Bool
+    isScheduled: Bool
+    preferSafetyPlus: Bool
+    serviceTierArray: "[Text]"
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    estimateIds: "Maybe [Text]"
+    merchantOperatingCityId: Maybe Text
+    tripCategory: Maybe TripCategory
+    isScheduled: Maybe Bool
+    vehicleServiceTierName: Maybe Text
+    currency: Maybe Currency
+    isAdvancedBookingEnabled: Maybe Bool
+    serviceTierArray: "Maybe [Text]"
+    preferSafetyPlus: Maybe Bool
+    billingCategory: Maybe BillingCategory
+
+  beamFields:
+    vehicleServiceTier:
+      vehicleVariant: ServiceTierType
+
+    baseFare:
+      baseFare: Money
+      baseFareAmount: Maybe HighPrecMoney
+
+    customerExtraFee:
+      customerExtraFee: Maybe Money
+      customerExtraFeeAmount: Maybe HighPrecMoney
+
+    petCharges:
+      petCharges: Maybe Money
+      petChargesAmount: Maybe HighPrecMoney
+
+  domainInstance:
+  - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SearchTryStatus>
+  - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SearchTryStatus>
+  - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <SearchRepeatType>
+
+  fromTType:
+    estimateIds: fromMaybe [estimateId] estimateIds|E
+    merchantOperatingCityId: Storage.Queries.Transformers.SearchRequestForDriver.getMerchantOpCId merchantOperatingCityId merchantId requestId|EM
+    tripCategory: getTripCategory
+    isScheduled: fromMaybe Kernel.Prelude.False isScheduled|E
+    vehicleServiceTier: vehicleVariant|E
+    vehicleServiceTierName: fromMaybe (Kernel.Prelude.show vehicleVariant) vehicleServiceTierName|E
+    baseFare: Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare|E
+    customerExtraFee: Kernel.Types.Common.mkAmountWithDefault customerExtraFeeAmount <$> customerExtraFee|E
+    petCharges: Kernel.Types.Common.mkAmountWithDefault petChargesAmount <$> petCharges|E
+    currency: fromMaybe Kernel.Types.Common.INR currency|E
+    isAdvancedBookingEnabled: fromMaybe False isAdvancedBookingEnabled|E
+    serviceTierArray: fromMaybe (catMaybes [vehicleServiceTierName]) serviceTierArray|E
+    preferSafetyPlus: fromMaybe False preferSafetyPlus|E
+    billingCategory: fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
+
+  toTType:
+    estimateIds: Kernel.Prelude.Just|I
+    merchantOperatingCityId: Kernel.Prelude.Just $ Kernel.Types.Id.getId merchantOperatingCityId|E
+    vehicleVariant: vehicleServiceTier|E
+    vehicleServiceTierName: Kernel.Prelude.Just|I
+    tripCategory: Kernel.Prelude.Just|I
+    isScheduled: Kernel.Prelude.Just|I
+    baseFare: Kernel.Prelude.roundToIntegral baseFare|E
+    baseFareAmount: Kernel.Prelude.Just baseFare|E
+    currency: Kernel.Prelude.Just|I
+    customerExtraFee: Kernel.Prelude.roundToIntegral <$> customerExtraFee|E
+    customerExtraFeeAmount: customerExtraFee|E
+    petCharges: Kernel.Prelude.roundToIntegral <$> petCharges|E
+    petChargesAmount: petCharges|E
+    isAdvancedBookingEnabled: Kernel.Prelude.Just|I
+    serviceTierArray: Kernel.Prelude.Just|I
+    preferSafetyPlus: Kernel.Prelude.Just|I
+    billingCategory: Kernel.Prelude.Just|I
+
+
+  constraints:
+    id: PrimaryKey
+    requestId: "!SecondaryKey" # forcing to be a secondary key
+    estimateId: "!SecondaryKey" # forcing to be a secondary key
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [ status ]
+      where: id
+
+  sqlType:
+    messageId: character (36)
+    vehicleVariant: character varying (255)
+    estimateId: character (36)
+    searchRepeatType: character varying (255)
+
+  excludedFields: [ merchantOperatingCityId, merchantId, createdAt, updatedAt ]
+
+  extraOperations:
+  - EXTRA_QUERY_FILE

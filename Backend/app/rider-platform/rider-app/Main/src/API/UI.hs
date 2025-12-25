@@ -18,16 +18,47 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.AttractionRecommend as AttractionRecommend
+import qualified API.Action.UI.BBPS as BBPS
+import qualified API.Action.UI.CRIS as CRIS
+import qualified API.Action.UI.Cac as Cac
+import qualified API.Action.UI.CustomerReferral as CustomerReferral
+import qualified API.Action.UI.DeletedPerson as DeletedPerson
+import qualified API.Action.UI.Dispatcher as Dispatcher
+import qualified API.Action.UI.EditLocation as EditLocation
+import qualified API.Action.UI.EstimateBP as EstimateBP
+import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
+import qualified API.Action.UI.FollowRide as FollowRide
+import qualified API.Action.UI.Insurance as Insurance
+import qualified API.Action.UI.Invoice as Invoice
+import qualified API.Action.UI.Metrics as Metrics
+import qualified API.Action.UI.Miscellaneous as Miscellaneous
+import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
+import qualified API.Action.UI.NearbyBuses as NearbyBuses
+import qualified API.Action.UI.NearbyDrivers as NearbyDrivers
+import qualified API.Action.UI.NyRegularSubscription as NYRegular
+import qualified API.Action.UI.PartnerBookingStatement as PartnerBookingStatement
+import qualified API.Action.UI.PickupInstructions as PickupInstructions
+import qualified API.Action.UI.Places as Places
+import qualified API.Action.UI.PriceBreakup as PriceBreakup
+import qualified API.Action.UI.RidePayment as RidePayment
+import qualified API.Action.UI.RiderLocation as RiderLocation
+import qualified API.Action.UI.SocialLogin as SocialLogin
+import qualified API.Action.UI.Sos as SosApi
+import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.TicketService as TicketService
+import qualified API.Action.UI.TrackRoute as TrackRoute
+import qualified API.Action.UI.TriggerFCM as TriggerFCM
 import qualified API.UI.AadhaarVerification as AadhaarVerification
 import qualified API.UI.AppInstalls as AppInstalls
 import qualified API.UI.Booking as Booking
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.Cancel as Cancel
+import qualified API.UI.CancelSearch as CancelSearch
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
-import qualified API.UI.CustomerSupport as CustomerSupport
 import qualified API.UI.Disability as Disability
 import qualified API.UI.FeedbackForm as FeedbackForm
 import qualified API.UI.Frontend as Frontend
@@ -35,12 +66,16 @@ import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
 import qualified API.UI.HotSpot as HotSpot
 import qualified API.UI.Issue as Issue
 import qualified API.UI.Maps as MapsProxy
+import qualified API.UI.ParkingBooking as ParkingBooking
+import qualified API.UI.PartnerOrganizationFRFS as PartnerOrgFRFS
+import qualified API.UI.Pass as Pass
 import qualified API.UI.Payment as Payment
 import qualified API.UI.PersonStats as PersonStats
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
 import qualified API.UI.Rating as Rating
 import qualified API.UI.Registration as Registration
+import qualified API.UI.RentalsIntercityCache as RentalsIntercityCache
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
 import qualified API.UI.SavedReqLocation as SavedReqLocation
@@ -49,8 +84,6 @@ import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
-import qualified API.UI.Webengage.InfoBIPWebhook as InfoBIPWebhook
-import qualified API.UI.Webengage.Webengage as Webengage
 import qualified API.UI.Whatsapp as Whatsapp
 import Environment
 import EulerHS.Prelude
@@ -61,13 +94,16 @@ type API =
     :> ( Get '[JSON] Text
            :<|> Registration.API
            :<|> Profile.API
+           :<|> RidePayment.API
            :<|> Payment.API
+           :<|> Payment.S2SAPI
            :<|> Search.API
            :<|> Select.API
            :<|> Quote.API
            :<|> Confirm.API
            :<|> Booking.API
            :<|> Cancel.API
+           :<|> CancelSearch.API
            :<|> Ride.API
            :<|> Call.API
            :<|> Support.API
@@ -75,13 +111,10 @@ type API =
            :<|> Serviceability.API
            :<|> Rating.API
            :<|> FeedbackForm.API
-           :<|> CustomerSupport.API
            :<|> MapsProxy.API
            :<|> GoogleTranslateProxy.API
            :<|> CancellationReason.API
            :<|> SavedReqLocation.API
-           :<|> Webengage.API
-           :<|> InfoBIPWebhook.API
            :<|> Frontend.API
            :<|> Whatsapp.API
            :<|> Sos.API
@@ -93,6 +126,40 @@ type API =
            :<|> AadhaarVerification.API
            :<|> Issue.API
            :<|> TicketService.API
+           :<|> Invoice.API
+           :<|> PriceBreakup.API
+           :<|> FollowRide.API
+           :<|> SosApi.API
+           :<|> FRFSTicketService.API
+           :<|> Cac.API
+           :<|> CustomerReferral.API
+           :<|> DeletedPerson.API
+           :<|> EditLocation.API
+           :<|> SocialLogin.API
+           :<|> EstimateBP.API
+           :<|> FavouriteDriver.API
+           :<|> PartnerOrgFRFS.API
+           :<|> TriggerFCM.API
+           :<|> MultimodalConfirm.API
+           :<|> TrackRoute.API
+           :<|> BBPS.API
+           :<|> RentalsIntercityCache.API
+           :<|> Miscellaneous.API
+           :<|> NearbyDrivers.API
+           :<|> NearbyBuses.API
+           :<|> Places.API
+           :<|> CRIS.API
+           :<|> TicketKapture.API
+           :<|> Insurance.API
+           :<|> Metrics.API
+           :<|> PickupInstructions.API
+           :<|> NYRegular.API
+           :<|> AttractionRecommend.API
+           :<|> RiderLocation.API
+           :<|> Pass.API
+           :<|> ParkingBooking.API
+           :<|> Dispatcher.API
+           :<|> PartnerBookingStatement.API
        )
 
 handler :: FlowServer API
@@ -100,13 +167,16 @@ handler =
   pure "App is UP"
     :<|> Registration.handler
     :<|> Profile.handler
+    :<|> RidePayment.handler
     :<|> Payment.handler
+    :<|> Payment.handlerS2S
     :<|> Search.handler
     :<|> Select.handler
     :<|> Quote.handler
     :<|> Confirm.handler
     :<|> Booking.handler
     :<|> Cancel.handler
+    :<|> CancelSearch.handler
     :<|> Ride.handler
     :<|> Call.handler
     :<|> Support.handler
@@ -114,13 +184,10 @@ handler =
     :<|> Serviceability.handler
     :<|> Rating.handler
     :<|> FeedbackForm.handler
-    :<|> CustomerSupport.handler
     :<|> MapsProxy.handler
     :<|> GoogleTranslateProxy.handler
     :<|> CancellationReason.handler
     :<|> SavedReqLocation.handler
-    :<|> Webengage.handler
-    :<|> InfoBIPWebhook.handler
     :<|> Frontend.handler
     :<|> Whatsapp.handler
     :<|> Sos.handler
@@ -132,3 +199,37 @@ handler =
     :<|> AadhaarVerification.handler
     :<|> Issue.handler
     :<|> TicketService.handler
+    :<|> Invoice.handler
+    :<|> PriceBreakup.handler
+    :<|> FollowRide.handler
+    :<|> SosApi.handler
+    :<|> FRFSTicketService.handler
+    :<|> Cac.handler
+    :<|> CustomerReferral.handler
+    :<|> DeletedPerson.handler
+    :<|> EditLocation.handler
+    :<|> SocialLogin.handler
+    :<|> EstimateBP.handler
+    :<|> FavouriteDriver.handler
+    :<|> PartnerOrgFRFS.handler
+    :<|> TriggerFCM.handler
+    :<|> MultimodalConfirm.handler
+    :<|> TrackRoute.handler
+    :<|> BBPS.handler
+    :<|> RentalsIntercityCache.handler
+    :<|> Miscellaneous.handler
+    :<|> NearbyDrivers.handler
+    :<|> NearbyBuses.handler
+    :<|> Places.handler
+    :<|> CRIS.handler
+    :<|> TicketKapture.handler
+    :<|> Insurance.handler
+    :<|> Metrics.handler
+    :<|> PickupInstructions.handler
+    :<|> NYRegular.handler
+    :<|> AttractionRecommend.handler
+    :<|> RiderLocation.handler
+    :<|> Pass.handler
+    :<|> ParkingBooking.handler
+    :<|> Dispatcher.handler
+    :<|> PartnerBookingStatement.handler

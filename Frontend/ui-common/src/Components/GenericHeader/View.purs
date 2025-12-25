@@ -20,7 +20,8 @@ import Effect (Effect)
 import Prelude (Unit, const, ($), (==), (<>))
 import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageView, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, width, imageWithFallback, accessibilityHint, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageView, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, width, imageWithFallback, accessibilityHint, accessibility, rippleColor, cornerRadius)
+import Common.Styles.Colors as Color
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -36,7 +37,7 @@ view push config =
   , clickable config.isClickable
   , visibility config.visibility
   ][  linearLayout
-      [ height WRAP_CONTENT
+      ([ height WRAP_CONTENT
       , width WRAP_CONTENT
       , gravity CENTER
       , accessibility config.prefixImageConfig.accessibility
@@ -44,7 +45,10 @@ view push config =
       , onClick push $ const PrefixImgOnClick
       , accessibilityHint config.prefixImageConfig.accessibilityHint
       , accessibility ENABLE
-      ][ imageView
+      , cornerRadius config.prefixImageConfig.cornerRadius
+      , margin $ config.prefixImageConfig.layoutMargin
+      ] <> (if config.prefixImageConfig.enableRipple then [rippleColor config.prefixImageConfig.rippleColor] else []))
+      [ imageView
         [ imageWithFallback config.prefixImageConfig.imageUrl
         , height config.prefixImageConfig.height
         , width config.prefixImageConfig.width
@@ -72,10 +76,11 @@ view push config =
 suffixImageLayout :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 suffixImageLayout config push =
   linearLayout
-  [ height WRAP_CONTENT
+  ([ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity RIGHT
-  ][  imageView
+  ] <> (if config.suffixImageConfig.enableRipple then [rippleColor config.suffixImageConfig.rippleColor] else []))
+  [  imageView
       [
         imageWithFallback config.suffixImageConfig.imageUrl
       , height config.suffixImageConfig.height

@@ -1,0 +1,41 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  HighPrecMoney: Kernel.Types.Common
+
+PaymentTransactionOfferPayout:
+  tableName: payment_transaction_offer_payout
+
+  fields:
+    id: Id PaymentTransactionOfferPayout
+    networkOrderId: Text
+    bookingCreatedAt: UTCTime
+    providerAgency: Text
+    orderAmount: HighPrecMoney
+    amountPaidByUser: HighPrecMoney
+    settledAmount: HighPrecMoney
+    paymentTxnId: Text
+    paymentRRN: Text
+    offerCode: Text
+    offerId: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    isConsumedByCron: Bool
+    settlementReference: Maybe Text
+    settlementTs: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    networkOrderId: '!SecondaryKey'
+
+  sqlType:
+    orderAmount: double precision
+    amountPaidByUser: double precision
+    settledAmount: double precision
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey

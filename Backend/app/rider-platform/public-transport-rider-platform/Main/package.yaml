@@ -49,6 +49,7 @@ default-extensions:
   - RecordWildCards
   - ScopedTypeVariables
   - StandaloneDeriving
+  - TemplateHaskell
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -83,7 +84,7 @@ dependencies:
   - relude
   - wai
   - servant
-  - hashmap
+  - unordered-containers
   - containers
 
 ghc-options:

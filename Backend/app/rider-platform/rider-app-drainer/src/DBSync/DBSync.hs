@@ -1,23 +1,32 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-
 module DBSync.DBSync where
 
 import qualified Config.Env as Env
 import qualified Constants as C
 import Control.Monad.Trans.Except
+import DBSync.BatchCreate
 import DBSync.Create
 import DBSync.Delete
 import DBSync.Update
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString.Lazy as BL
+import Data.Pool (withResource)
 import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as DTE
-import qualified Data.Vector as V
+import Data.Time.Clock hiding (getCurrentTime)
+import Database.PostgreSQL.Simple as PG
+import Database.PostgreSQL.Simple.Types as PGS
 import qualified Database.Redis as R
+import qualified EulerHS.KVConnector.Compression as C
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (fail, id, succ)
 import qualified EulerHS.Types as ET
+import GHC.Float (int2Double)
+import Kafka.Producer as KafkaProd
+import qualified Kernel.Beam.Types as KBT
+import Kernel.Types.Common
+import Kernel.Types.Error
+import Kernel.Utils.Text
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 import Types.DBSync
 import qualified Types.Event as Event
@@ -37,10 +46,26 @@ peekDBCommand dbStreamKey count = do
     parseReadStreams = (>>= (\(R.XReadResponse _ entries) -> Just $ entryToTuple <$> entries))
     entryToTuple (R.StreamsRecord recordId items) = (parseStreamEntryId recordId, first decodeToText <$> items)
 
+getDecompressedValue :: ByteString -> Flow ByteString
+getDecompressedValue val = do
+  if C.isCompressionAllowed
+    then do
+      decompressedObject <- EL.runIO $ C.decompress val
+      case decompressedObject of
+        Left err -> do
+          EL.logError ("DECOMPRESSION_ERROR" :: Text) $ "Error while decompressing " <> show err
+          pure val
+        Right decompressedObject' -> do
+          EL.logDebug ("DECOMPRESSION_RESULT_SUCCESS" :: Text) $ "Original Decompressed value size: " <> show (length decompressedObject') <> " compressed value size: " <> show (length val)
+          pure decompressedObject'
+    else do
+      pure val
+
 parseDBCommand :: Text -> (EL.KVDBStreamEntryID, [(Text, ByteString)]) -> Flow (Maybe (EL.KVDBStreamEntryID, DBCommand, ByteString))
 parseDBCommand dbStreamKey entries =
   case entries of
-    (id, [("command", val)]) ->
+    (id, [("command", val')]) -> do
+      val <- getDecompressedValue val'
       case A.eitherDecode $ BL.fromStrict val of
         Right cmd -> do
           pure $ Just (id, cmd, val)
@@ -77,9 +102,9 @@ parseDBCommand dbStreamKey entries =
           let mbAction = case AKM.lookup "tag" o of
                 Just (A.String actionTag) -> return actionTag
                 _ -> Nothing
-              mbModel = case AKM.lookup "contents" o of
-                Just _commandArray@(A.Array a) -> case V.last a of
-                  A.Object command -> case AKM.lookup "tag" command of
+              mbModel = case AKM.lookup "contents_v2" o of
+                Just (A.Object commandObject) -> case AKM.lookup "command" commandObject of
+                  Just (A.Object command) -> case AKM.lookup "tag" command of
                     Just (A.String modelTag) -> return modelTag
                     _ -> Nothing
                   _ -> Nothing
@@ -99,12 +124,14 @@ dropDBCommand dbStreamKey entryId = do
       void $ publishDBSyncMetric Event.DropDBCommandError
       EL.logError ("DROP_DB_COMMAND_ERROR" :: Text) $ ("entryId : " :: Text) <> show entryId <> (", Error : " :: Text) <> show e
 
-runCriticalDBSyncOperations :: Text -> [(CreateDBCommand, ByteString)] -> [(UpdateDBCommand, ByteString)] -> [(DeleteDBCommand, ByteString)] -> ExceptT Int Flow Int
-runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntries = do
+runCriticalDBSyncOperations :: Text -> [(EL.KVDBStreamEntryID, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> ExceptT Int Flow Int
+runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEntries = do
+  getBatchCreateEnabled <- EL.runIO Env.getBatchCreateEnabled
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
-  (cSucc, cFail) <- pureRightExceptT $ foldM runCreateCommandsAndMergeOutput ([], []) =<< runCreateCommands createEntries dbStreamKey
+  -- (cSucc, cFail) <- pureRightExceptT $ executeInSequence runCreate ([], []) dbStreamKey createDataEntries
+  (cSucc, cFail) <- pureRightExceptT $ if isForcePushEnabled || not getBatchCreateEnabled then executeInSequence runCreate ([], []) dbStreamKey createDataEntries else executeBatchedCreate dbStreamKey createDataEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
-  void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
+  when getBatchCreateEnabled $ void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
   void $
     if null cSucc
       then pureRightExceptT $ publishDBSyncMetric $ Event.QueryDrainLatency "Create" 0
@@ -117,7 +144,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
         if isForcePushEnabled
           then do
             EL.logError ("CREATE FAILED: Force Sync is enabled" :: Text) (show cFail :: Text)
-            void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(CreateDBCommand id _ _ _ _ _, _) -> id `elem` cFail) createEntries)
+            void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(id, _) -> id `elem` cFail) createDataEntries)
             pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) cFail
             pure (length cSucc)
           else do
@@ -125,7 +152,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
             throwE (length cSucc)
       else pure (length cSucc)
 
-  (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdateCommands ([], []) dbStreamKey updateEntries
+  (uSucc, uFail) <- pureRightExceptT $ executeInSequence runUpdate ([], []) dbStreamKey updateEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Update" (fromIntegral $ length uSucc)
   void $
     if null uSucc
@@ -139,7 +166,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
         if isForcePushEnabled
           then do
             EL.logError ("UPDATE FAILED: Force Sync is enabled" :: Text) (show uFail :: Text)
-            void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(UpdateDBCommand id _ _ _ _ _, _) -> id `elem` uFail) updateEntries)
+            void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(id, _) -> id `elem` uFail) updateEntries)
             pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) uFail
             pure (length cSucc + length uSucc)
           else do
@@ -147,7 +174,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
             throwE (length cSucc + length uSucc)
       else pure (length cSucc + length uSucc)
 
-  (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDeleteCommands ([], []) dbStreamKey deleteEntries
+  (dSucc, dFail) <- pureRightExceptT $ executeInSequence runDelete ([], []) dbStreamKey deleteEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Delete" (fromIntegral $ length dSucc)
   void $
     if null dSucc
@@ -160,7 +187,7 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
       if isForcePushEnabled
         then do
           EL.logError ("DELETE FAILED: Force Sync is enabled" :: Text) (show dFail :: Text)
-          void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(DeleteDBCommand id _ _ _ _ _, _) -> id `elem` dFail) deleteEntries)
+          void $ pureRightExceptT $ addValueToErrorQueue (T.pack C.ecRedisFailedStream) ((\(_, bts) -> ("command", bts)) <$> filter (\(id, _) -> id `elem` dFail) deleteEntries)
           pureRightExceptT $ traverse_ (dropDBCommand dbStreamKey) dFail
           pure (length cSucc + length uSucc + length dSucc)
         else do
@@ -168,11 +195,6 @@ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntrie
           throwE (length cSucc + length uSucc + length dSucc)
     else pure (length cSucc + length uSucc + length dSucc)
   where
-    runCreateCommandsAndMergeOutput (succ, fail) resp = do
-      pure $ case resp of
-        Right createIds -> (succ <> createIds, fail)
-        Left createIds -> (succ, fail <> createIds)
-
     pureRightExceptT = ExceptT . (Right <$>)
 
 process :: Text -> Integer -> Flow Int
@@ -188,16 +210,20 @@ process dbStreamKey count = do
     Right Nothing -> do
       pure 0
     Right (Just c) -> do
-      run c
+      res <- run c
+      _afterProcess <- EL.getCurrentDateInMillis
+      void $ publishProcessLatency "QueryExecutionTime" (int2Double (_afterProcess - _beforeProcess))
+      void flushKafkaProducerAndPublishMetrics
+      pure res
   where
     run :: [(EL.KVDBStreamEntryID, [(Text, ByteString)])] -> Flow Int
     run entries = do
       commands <- catMaybes <$> traverse (parseDBCommand dbStreamKey) entries
-      let createEntries = mapMaybe filterCreateCommands commands
-          updateEntries = mapMaybe filterUpdateCommands commands
+      let updateEntries = mapMaybe filterUpdateCommands commands
           deleteEntries = mapMaybe filterDeleteCommands commands
+          createDataEntries = mapMaybe filterCreateCommands commands
 
-      dbsyncOperationsOutput <- runExceptT $ runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntries
+      dbsyncOperationsOutput <- runExceptT $ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEntries
       case dbsyncOperationsOutput of
         Left cnt -> do
           stopDrainer
@@ -235,8 +261,13 @@ startDBSync = do
             _history = C.emptyHistory
           }
   forever $ do
+    getAndSetKvConfigs
     stopRequested <- EL.runIO $ isJust <$> tryTakeMVar readinessFlag
-    EL.runIO $ when stopRequested shutDownHandler
+    -- EL.runIO $ when stopRequested (shutDownHandler)
+    when stopRequested $ do
+      EL.logInfo ("RECEIVED SIGINT/SIGTERM" :: Text) "Stopping the rider drainer after flushing the kafka producer"
+      void flushKafkaProducerAndPublishMetrics
+      EL.runIO shutDownHandler
 
     StateRef
       { _config = config,
@@ -275,3 +306,45 @@ startDBSync = do
           then pure ()
           else EL.runIO $ delay waitTime
       pure history'
+
+getAndSetKvConfigs :: Flow ()
+getAndSetKvConfigs = do
+  now <- EL.runIO getCurrentTime
+  kvConfigLastUpdatedTime <- EL.getOption KBT.KvConfigLastUpdatedTime >>= maybe (EL.setOption KBT.KvConfigLastUpdatedTime now >> pure now) pure
+  kvConfigUpdateFrequency <- EL.getOption KBT.KvConfigUpdateFrequency >>= maybe (pure 10) pure
+  when (round (diffUTCTime now kvConfigLastUpdatedTime) > kvConfigUpdateFrequency) $ do
+    fetchAndSetKvConfigs
+    EL.setOption KBT.KvConfigLastUpdatedTime now
+  pure ()
+
+fetchAndSetKvConfigs :: Flow ()
+fetchAndSetKvConfigs = do
+  Env {..} <- ask
+  let kvConfigsQuery = "SELECT config_value FROM " <> _esqDBCfg.connectSchemaName <> ".system_configs WHERE id = 'kv_configs'" :: T.Text
+  res <- EL.runIO $ withResource _connectionPool $ \conn -> PG.query_ conn (PGS.Query $ DTE.encodeUtf8 kvConfigsQuery) :: IO [Only T.Text]
+  case res of
+    [Only kvConfigs] -> do
+      let decodedKVConfigs = decodeFromText' @Tables (Just kvConfigs)
+      case decodedKVConfigs of
+        Just decodedKVConfigs' -> EL.setOption KBT.Tables decodedKVConfigs'
+        Nothing -> do
+          EL.logError ("KV_CONFIG_DECODE_FAILURE" :: Text) ("Failed to decode kv configs" :: Text)
+          publishDBSyncMetric Event.KvConfigDecodeFailure >> stopDrainer
+    err -> do
+      EL.logError ("KV_CONFIG_DECODE_FAILURE" :: Text) ("Failed to fetch kv configs" <> show err :: Text)
+      publishDBSyncMetric Event.KvConfigDecodeFailure >> stopDrainer
+      EL.throwException (InternalError "Failed to fetch kv configs")
+
+flushKafkaProducerAndPublishMetrics :: Flow ()
+flushKafkaProducerAndPublishMetrics = do
+  Env {..} <- ask
+  _beforeFlush <- EL.getCurrentDateInMillis
+  flushResult <- try @_ @SomeException $ EL.runIO $ KafkaProd.flushProducer _kafkaConnection
+  case flushResult of
+    Left err -> do
+      EL.logError ("KAFKA_FLUSH_ERROR" :: Text) (T.pack $ show err)
+      stopDrainer
+    Right _ -> do
+      _afterFlush <- EL.getCurrentDateInMillis
+      EL.logDebug ("KafkaFlushTime : " :: Text) ("Time taken to flush kafka producer in rider-drainer : " <> show (int2Double (_afterFlush - _beforeFlush)) <> "ms")
+      void $ publishProcessLatency "KafkaFlushTime" (int2Double (_afterFlush - _beforeFlush))

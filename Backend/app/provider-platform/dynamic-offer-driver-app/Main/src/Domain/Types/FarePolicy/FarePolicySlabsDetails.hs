@@ -18,6 +18,7 @@ module Domain.Types.FarePolicy.FarePolicySlabsDetails
   )
 where
 
+import Data.Aeson.Types
 import qualified Data.List.NonEmpty as NE
 import Data.Ord
 import Domain.Types.Common
@@ -28,31 +29,22 @@ import Kernel.Types.Common
 newtype FPSlabsDetailsD (s :: UsageSafety) = FPSlabsDetails
   { slabs :: NonEmpty (FPSlabsDetailsSlabD s)
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToSchema)
 
 type FPSlabsDetails = FPSlabsDetailsD 'Safe
 
+instance ToJSON (FPSlabsDetailsD 'Unsafe)
+
 instance FromJSON (FPSlabsDetailsD 'Unsafe)
 
-instance ToJSON (FPSlabsDetailsD 'Unsafe)
+-- FIXME remove
+instance FromJSON (FPSlabsDetailsD 'Safe)
+
+-- FIXME remove
+instance ToJSON (FPSlabsDetailsD 'Safe)
 
 findFPSlabsDetailsSlabByDistance :: Meters -> NonEmpty (FPSlabsDetailsSlabD s) -> FPSlabsDetailsSlabD s
 findFPSlabsDetailsSlabByDistance dist slabList = do
   case NE.filter (\slab -> slab.startDistance <= dist) $ NE.sortBy (comparing (.startDistance)) slabList of
     [] -> error $ "Slab for dist = " <> show dist <> " not found. Non-emptiness supposed to be guaranteed by app logic."
     a -> last a
-
------------------------------------------------------------------------------------------------------------------------------------------
-------------------------------------------------APIEntity--------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------------
-
-newtype FPSlabsDetailsAPIEntity = FPSlabsDetailsAPIEntity
-  { slabs :: NonEmpty FPSlabsDetailsSlabAPIEntity
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-makeFPSlabsDetailsAPIEntity :: FPSlabsDetails -> FPSlabsDetailsAPIEntity
-makeFPSlabsDetailsAPIEntity FPSlabsDetails {..} =
-  FPSlabsDetailsAPIEntity
-    { slabs = makeFPSlabsDetailsSlabAPIEntity <$> slabs
-    }

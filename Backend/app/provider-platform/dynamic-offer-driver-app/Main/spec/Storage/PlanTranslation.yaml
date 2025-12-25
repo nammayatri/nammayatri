@@ -1,0 +1,34 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+  Plan: Domain.Types.Plan
+  Language: Kernel.External.Types
+
+PlanTranslation:
+  tableName: plan_translation
+
+  fields:
+    planId : Id Plan
+    language : Language
+    name : Text
+    description : Text
+
+  constraints:
+    planId: PrimaryKey
+    language: PrimaryKey
+
+  queries:
+    findByPlanIdAndLanguage:
+      kvFunction: findOneWithKV
+      where:
+        eq: [planId, language]
+    findAllByPlanId:
+      kvFunction: findAllWithKV
+      where:
+        eq: [planId]
+
+  excludedFields: [merchantId, merchantOperatingCityId]

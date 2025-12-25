@@ -11,13 +11,12 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Coins.CoinsConfig where
 
 import qualified Database.Beam as B
+import Domain.Types.VehicleCategory as DTV
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common ()
@@ -31,7 +30,8 @@ data CoinsConfigT f = CoinsConfigT
     merchantOptCityId :: B.C f Text,
     coins :: B.C f Int,
     expirationAt :: B.C f (Maybe Int),
-    active :: B.C f Bool
+    active :: B.C f Bool,
+    vehicleCategory :: B.C f (Maybe DTV.VehicleCategory)
   }
   deriving (Generic, B.Beamable)
 
@@ -43,6 +43,6 @@ instance B.Table CoinsConfigT where
 
 type CoinsConfig = CoinsConfigT Identity
 
-$(enableKVPG ''CoinsConfigT ['id] [])
+$(enableKVPG ''CoinsConfigT ['id] [['merchantId]])
 
 $(mkTableInstances ''CoinsConfigT "coin_config" "atlas_driver_offer_bpp")

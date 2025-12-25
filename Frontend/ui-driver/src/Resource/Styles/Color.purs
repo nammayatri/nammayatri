@@ -33,9 +33,6 @@ textListItemDescription = "#999999"
 textDanger :: Color
 textDanger = "#fa6259"
 
-greyBackDarkColor :: Color
-greyBackDarkColor = "#D3D3D3"
-
 blueTextColor :: Color
 blueTextColor = "#2172FF"
 
@@ -116,9 +113,6 @@ lightRed = "#16D76893"
 
 blueBack :: Color
 blueBack = "#F6FAFF"
-
-greyDark :: Color
-greyDark = "#D8D8D8"
 
 greyDarker :: Color
 greyDarker = "#D6D6D6"
@@ -350,9 +344,6 @@ darkGrey = "#B9B8B8"
 lightGreyShade :: Color
 lightGreyShade = "#DDDDDD"
 
-blueBtn :: Color
-blueBtn = "#0066FF"
-
 lightWhite :: Color
 lightWhite = "#f7f5f5"
 
@@ -409,11 +400,8 @@ golden = "#E9BE4D"
 greenGrey :: Color
 greenGrey = "#268C6E"
 
-transparentGrey :: Color
-transparentGrey = "#66888888"
-
-green200 :: Color
-green200 = "#2053BB6F"
+greenGrey100 :: Color
+greenGrey100 = "#29268C6E"
 
 greenDull :: Color
 greenDull = "#5FAF9E"
@@ -421,14 +409,8 @@ greenDull = "#5FAF9E"
 greenDisabled :: Color
 greenDisabled = "#B2D6D5"
 
-transparentWhite :: Color
-transparentWhite = "#30FFFFFF"
-
 lightGradientBlue :: Color
 lightGradientBlue = "#F5F8FF"
-
-darkGradientBlue :: Color
-darkGradientBlue = "#E2EAFF"
 
 lightPurple :: Color
 lightPurple = "#F4ECFF"
@@ -441,3 +423,36 @@ peacoat = "#33394A"
 
 mangolia :: Color 
 mangolia = "#F4ECFF"
+
+athensGray :: Color
+athensGray = "#F4F4F6"
+
+cyanBlue :: Color
+cyanBlue = "#1A42B8BA"
+
+lightGray :: Color
+lightGray = "#A7A7A7"
+
+turquoiseBlue :: Color
+turquoiseBlue = "#42B8BA"
+
+lightGreyBlue1 :: Color
+lightGreyBlue1 = "#383B46"
+
+lightGrey1 :: Color
+lightGrey1 = "#F3F3F3"
+
+lightGreyBlue2 :: Color
+lightGreyBlue2 = "#6C7393"
+
+mayaBlue :: Color
+mayaBlue  = "#80B2FF"
+
+verySoftOrange :: Color
+verySoftOrange  = "#feebb9"
+
+seaGreen :: Color
+seaGreen = "#288B43"
+
+gunMetalBlue:: Color
+gunMetalBlue = "#2C2F3A"

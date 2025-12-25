@@ -19,7 +19,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.RegistrationScreen.Controller (ScreenOutput(..))
 import Screens.RegistrationScreen.View as RegistrationScreen
 import Types.App (FlowBT, GlobalState(..), REGISTRATION_SCREEN_OUTPUT(..), ScreenType(..))
@@ -29,22 +29,38 @@ import Types.ModifyScreenState (modifyScreenState)
 registration :: FlowBT String REGISTRATION_SCREEN_OUTPUT
 registration = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ RegistrationScreen.screen state.registrationScreen
+  action <- lift $ lift $ runLoggableScreen $ RegistrationScreen.screen state.registrationScreen
   case action of
     GoBack -> App.BackT $ pure App.GoBack
     GoToUploadDriverLicense updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ UPLOAD_DRIVER_LICENSE updatedState)
-    GoToUploadVehicleRegistration updatedState -> do
+    GoToUploadVehicleRegistration updatedState rcNumberPrefixList -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ UPLOAD_VEHICLE_DETAILS updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ UPLOAD_VEHICLE_DETAILS updatedState rcNumberPrefixList)
     GoToPermissionScreen updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ PERMISSION_SCREEN updatedState)
+    GoToAadhaarPANSelfieUpload updatedState result -> do
+      modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ AADHAAR_PAN_SELFIE_UPLOAD updatedState result)
     LogoutAccount -> App.BackT $ App.BackPoint <$> (pure LOGOUT_FROM_REGISTERATION_SCREEN)
-    GoToOnboardSubscription -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_ONBOARD_SUBSCRIPTION)
-    GoToHomeScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN)
+    GoToOnboardSubscription updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_ONBOARD_SUBSCRIPTION updatedState)
+    GoToHomeScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN updatedState)
     RefreshPage -> App.BackT $ App.BackPoint <$> (pure $ REFRESH_REGISTERATION_SCREEN)
     ReferralCode updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFERRAL_CODE_SUBMIT updatedState)
+    DocCapture updatedState doctype -> do
+      modifyScreenState $ RegisterScreenStateType (\registerScreen -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ DOCUMENT_CAPTURE_FLOW updatedState doctype)
+    SelectLang updatedState -> do
+      modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SELECT_LANG_FROM_REGISTRATION)
+    GoToAppUpdatePopUpScreen updatedState -> do
+      modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_APP_UPDATE_POPUP_SCREEN updatedState)
+    
+    
+    
+    

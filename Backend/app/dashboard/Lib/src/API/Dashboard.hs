@@ -21,6 +21,7 @@ import qualified API.Dashboard.Registration as Registration
 import qualified API.Dashboard.Roles as Roles
 import Environment
 import Servant
+import Storage.Beam.BeamFlow
 
 type API =
   Person.API
@@ -29,7 +30,7 @@ type API =
     :<|> Roles.API
     :<|> Merchant.API
 
-handler :: FlowServer API
+handler :: BeamFlow' => FlowServer API
 handler =
   Person.handler
     :<|> Registration.handler

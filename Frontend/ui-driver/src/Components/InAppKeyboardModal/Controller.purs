@@ -17,13 +17,26 @@ module Components.InAppKeyboardModal.Controller where
 
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
-import Prelude ((<>), class Eq)
+import Prelude ((<>), class Eq, class Show, show)
 import Font.Size as FontSize
 import Font.Style (Style (..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), height, width)
 import Styles.Colors as Color
 import Common.Types.App(LazyCheck(..))
 import Screens.Types(KeyboardModalType(..))
+
+instance showAction :: Show Action where
+  show (OnSelection _ _) = "OnSelection"
+  show (OnClickDone _) = "OnClickDone"
+  show (AfterRender) = "AfterRender"
+  show (OnClickBack _) = "OnClickBack"
+  show (OnclickTextBox _) = "OnclickTextBox"
+  show (BackPressed) = "BackPressed"
+  show (OnClickResendOtp) = "OnClickResendOtp"
+  show (OnClickTextCross) = "OnClickTextCross"
+  show (NoAction) = "NoAction"
+  show (OnTextViewClick _) = "OnTextViewClick"
+  show (RetakeParcelImage) = "RetakeParcelImage"
 
 data Action = OnSelection String Int
             | OnClickDone String
@@ -34,6 +47,8 @@ data Action = OnSelection String Int
             | OnClickResendOtp
             | OnClickTextCross
             | NoAction
+            | OnTextViewClick String 
+            | RetakeParcelImage
 
 ----------------------------------------------- InAppKeyboardModalState ---------------------------------------------
 type InAppKeyboardModalState = {
@@ -51,12 +66,16 @@ type InAppKeyboardModalState = {
     , showResendOtpButton :: Boolean
     , textBoxConfig :: TextBoxConfig
     , enableDeviceKeyboard :: Boolean
+    , confirmBtnColor :: String
+    , isDismissable :: Boolean
+    , showRetakeParcelImage :: Boolean
 }
 
 type TextBoxConfig = {
   textBoxesArray :: Array Int
   , width :: Length
   , height :: Length
+  , margin :: Margin
 }
 
 type TextConfig =
@@ -100,6 +119,23 @@ type ButtonConfig =
 type Keys = {
   keys :: Array String
 }
+
+type SingleElementTextBoxConfig = {
+  height :: Length,
+  width :: Length,
+  margin :: Margin,
+  numberOfBoxes :: Int
+  }
+
+
+type InputFieldConfig = 
+  { isAdjustable :: Boolean,
+    textVal :: String ,
+    letterSpacing :: Number,
+    width :: Length,
+    isActive :: Boolean,
+    unitVal :: String
+  }
 
 config :: InAppKeyboardModalState
 config = {
@@ -201,7 +237,11 @@ config = {
   , textBoxConfig : {
       textBoxesArray : [1,2,3,4],
       width : V 48,
-      height : V 56
+      height : V 56,
+      margin : (Margin 0 0 0 0)
   }
+  , isDismissable : true
+  , confirmBtnColor : Color.darkMint
   , enableDeviceKeyboard : false
+  , showRetakeParcelImage : false
   }

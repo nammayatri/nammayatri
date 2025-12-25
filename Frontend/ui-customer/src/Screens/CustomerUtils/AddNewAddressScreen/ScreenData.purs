@@ -18,9 +18,11 @@ module Screens.AddNewAddressScreen.ScreenData where
 import Data.Maybe (Maybe(..))
 import PrestoDOM (Visibility(..))
 import Screens.HomeScreen.ScreenData (dummyAddress)
-import Screens.Types (AddNewAddressScreenState, CardType(..), Location)
+import Screens.Types (AddNewAddressScreenState, CardType(..))
 import Services.API (Prediction(..))
 import ConfigProvider
+import Screens(ScreenName(..), getScreen)
+import JBridge (Location)
  
 initData :: AddNewAddressScreenState
 initData = {
@@ -54,6 +56,8 @@ initData = {
     , frequencyCount : Nothing
     , recencyDate : Nothing
     , locationScore : Nothing
+    , dynamicAction : Nothing
+    , types : Nothing
   }
   , address : ""
   , activeIndex : (Just 2)
@@ -87,6 +91,7 @@ initData = {
   , isLocateOnMap : false
   , isLocationServiceable : true
   , fromHome : false
+  , fromScreen : getScreen HOME_SCREEN
   , selectFromCurrentOrMap : true
   , isSearchedLocationServiceable : true
   , editSavedLocation : false
@@ -103,5 +108,6 @@ dummyLocation = {
    lat : 0.0,
    lng : 0.0,
    address : Nothing,
-   city : Nothing
+   city : Nothing,
+   isSpecialPickUp : Nothing
  }

@@ -1,0 +1,187 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Plan: Domain.Types.Plan
+  PaymentMode: Domain.Types.Plan
+  Mandate: Domain.Types.Mandate
+  DriverAutoPayStatus: Domain.Types.DriverInformation
+  SubscriptionServiceRelatedData: Domain.Types.Extra.DriverPlan
+  VehicleCategory: Domain.Types.VehicleCategory
+  ServiceNames:  Domain.Types.Extra.Plan
+  Integer: Kernel.Prelude
+
+
+
+DriverPlan:
+  tableName: driver_plan
+  derives: "Generic, Show, Eq, Ord"
+  types:
+    WaiveOffMode :
+      enum: "WITH_OFFER,WITHOUT_OFFER,NO_WAIVE_OFF"
+    WaiveOffEntity:
+      driverId : Text
+      percentage : HighPrecMoney
+      waiveOfMode: WaiveOffMode
+      daysValidFor : Integer
+      serviceName : ServiceNames
+  fields:
+    driverId : Id Person
+    planId : Id Plan
+    planType : PaymentMode
+    mandateId : Maybe (Id Mandate)
+    mandateSetupDate : Maybe UTCTime
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    coinCovertedToCashLeft : HighPrecMoney
+    totalCoinsConvertedCash : HighPrecMoney
+    payerVpa : Maybe Text
+    autoPayStatus : Maybe DriverAutoPayStatus
+    serviceName : ServiceNames
+    lastPaymentLinkSentAtIstDate : Maybe UTCTime
+    enableServiceUsageCharge : Bool
+    merchantId : Id Merchant
+    merchantOpCityId : Id MerchantOperatingCity
+    subscriptionServiceRelatedData : SubscriptionServiceRelatedData
+    vehicleCategory : Maybe VehicleCategory|NoRelation
+    isOnFreeTrial : Bool
+    isCategoryLevelSubscriptionEnabled : Maybe Bool
+    totalAmountChargedForService: Int
+    lastBillGeneratedAt: Maybe UTCTime
+    waiverOffPercentage : HighPrecMoney
+    waiveOfMode : WaiveOffMode
+    waiveOffEnabledOn : Maybe UTCTime
+    waiveOffValidTill : Maybe UTCTime
+  beamFields:
+    subscriptionServiceRelatedData:
+      rentedVehicleNumber: Maybe Text
+
+  beamType:
+    enableServiceUsageCharge: Maybe Bool
+    merchantId: Maybe Text
+    merchantOpCityId: Maybe Text
+    serviceName: Maybe ServiceNames
+    isOnFreeTrial : Maybe Bool
+    isCategoryLevelSubscriptionEnabled : Maybe Bool
+    totalAmountChargedForService: Maybe Int
+    waiverOffPercentage: Maybe HighPrecMoney
+    waiveOfMode: Maybe WaiveOffMode
+
+  fromTType:
+    enableServiceUsageCharge: Kernel.Prelude.fromMaybe False enableServiceUsageCharge|E
+    isOnFreeTrial : Kernel.Prelude.fromMaybe True isOnFreeTrial|E
+    serviceName: Kernel.Prelude.fromMaybe Domain.Types.Plan.YATRI_SUBSCRIPTION serviceName|E
+    subscriptionServiceRelatedData: Storage.Queries.Transformers.DriverPlan.getSubscriptionServiceRelatedData rentedVehicleNumber|EM
+    merchantOpCityId: Storage.Queries.Transformers.DriverPlan.getMerchantOpCityId merchantOpCityId driverId serviceName|EM
+    merchantId: Storage.Queries.Transformers.DriverPlan.getMerchantId merchantId driverId serviceName|EM
+    vehicleCategory: Storage.Queries.Transformers.DriverPlan.backfillVehicleCategoryByDriverIdAndServiceName vehicleCategory driverId serviceName planType planId|EM
+    isCategoryLevelSubscriptionEnabled: Storage.Queries.Transformers.DriverPlan.backfillIsSubscriptionEnabledAtCategory isCategoryLevelSubscriptionEnabled driverId serviceName| EM
+    totalAmountChargedForService:  Kernel.Prelude.fromMaybe 0 totalAmountChargedForService|E
+    waiverOffPercentage:  Kernel.Prelude.fromMaybe 0 waiverOffPercentage|E
+    waiveOfMode: Kernel.Prelude.fromMaybe Domain.Types.DriverPlan.NO_WAIVE_OFF waiveOfMode|E
+
+  toTType:
+    enableServiceUsageCharge: Kernel.Prelude.Just|I
+    isOnFreeTrial : Kernel.Prelude.Just|I
+    serviceName: Kernel.Prelude.Just|I
+    merchantId: Kernel.Prelude.Just (Kernel.Types.Id.getId merchantId)|E
+    merchantOpCityId: Kernel.Prelude.Just (Kernel.Types.Id.getId merchantOpCityId)|E
+    rentedVehicleNumber: Storage.Queries.Transformers.DriverPlan.getCommodityData subscriptionServiceRelatedData|E
+    totalAmountChargedForService: Kernel.Prelude.Just|I
+    waiverOffPercentage: Kernel.Prelude.Just|I
+    waiveOfMode: Kernel.Prelude.Just|I
+  constraints:
+    driverId: PrimaryKey
+    mandateId: SecondaryKey
+
+
+
+  queries:
+
+    findByDriverIdWithServiceName:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, serviceName]
+
+    # findAllByDriverIdsPaymentModeAndServiceName:
+    #   kvFunction: findAllWithKV
+    #   where:
+    #     and:
+    #      -  eq: [planType, enableServiceUsageCharge, autoPayStatus, serviceName]
+    #      -  in: [driverId]
+
+    findByMandateIdAndServiceName:
+      kvFunction: findOneWithKV
+      where:
+        and: [mandateId, serviceName]
+
+    # findAllDriversEligibleForService:
+    #   kvFunction: findAllWithKV
+    #   where:
+    #     and: [merchantId, merchantOpCityId, serviceName, enableServiceUsageCharge]
+
+    updateLastPaymentLinkSentAtDateByDriverIdAndServiceName:
+      kvFunction: updateOneWithKV
+      params: [lastPaymentLinkSentAtIstDate, updatedAt]
+      where:
+        and: [driverId, serviceName]
+
+    updateEnableServiceUsageChargeByDriverIdAndServiceName:
+      kvFunction: updateOneWithKV
+      params: [enableServiceUsageCharge, updatedAt]
+      where:
+        and: [driverId, serviceName]
+
+    # updatePlanIdByDriverIdAndServiceName:
+    #   kvFunction: updateOneWithKV
+    #   params: [planId, updatedAt]
+    #   where:
+    #     and: [driverId, serviceName]
+
+    updateMandateIdByDriverIdAndServiceName:
+      kvFunction: updateOneWithKV
+      params: [mandateId, updatedAt]
+      where:
+        and: [driverId, serviceName]
+
+    updatePaymentModeByDriverIdAndServiceName:
+      kvFunction: updateOneWithKV
+      params: [planType, updatedAt]
+      where:
+        and: [driverId, serviceName]
+
+    updateMandateSetupDateByDriverIdAndServiceName:
+      kvFunction: updateOneWithKV
+      params: [mandateSetupDate, updatedAt]
+      where:
+        and: [driverId, serviceName]
+
+    updateFreeTrialByDriverIdAndServiceName:
+      kvFunction: updateOneWithKV
+      params: [isOnFreeTrial, updatedAt]
+      where:
+        and: [driverId, serviceName]
+    updateMerchantIdAndCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOpCityId]
+      where: driverId
+
+  sqlType:
+    mandateId: text
+    merchantId:  text
+    merchantOpCityId: text
+
+
+  default:
+    coinCovertedToCashLeft: "0"
+    totalCoinsConvertedCash: "0"
+    serviceName: "'YATRI_SUBSCRIPTION'"
+    enableServiceUsageCharge: "true"
+
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

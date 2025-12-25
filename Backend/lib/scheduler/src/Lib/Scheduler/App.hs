@@ -17,10 +17,13 @@ module Lib.Scheduler.App
   )
 where
 
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (mask, throwIO)
 import Kernel.Randomizer
+import Kernel.Storage.Beam.SystemConfigs
 import Kernel.Storage.Esqueleto.Config (prepareEsqDBEnv)
 import Kernel.Storage.Hedis (connectHedis, connectHedisCluster)
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Tools.Metrics.Init as Metrics
@@ -41,19 +44,22 @@ import System.Exit
 import UnliftIO
 
 runSchedulerService ::
-  (JobProcessor t, FromJSON t) =>
+  (JobProcessor t, FromJSON t, HasSchemaName SystemConfigsT) =>
   SchedulerConfig ->
   JobInfoMap ->
   Int ->
+  Int ->
   SchedulerHandle t ->
   IO ()
-runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency handle_ = do
+runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency maxShards handle_ = do
   hostname <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- Metrics.registerCoreMetricsContainer
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
+  let kafkaProducerForART = Just kafkaProducerTools
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalClusterEnv <-
@@ -67,8 +73,13 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ha
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
   consumerId <- G.generateGUIDTextIO
+  let requestId = Nothing
+      sessionId = Nothing
+      shouldLogRequestId = False
   let cacheConfig = CacheConfig {configsExpTime = 0}
-  let schedulerEnv = SchedulerEnv {cacheConfig, ..}
+  inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  let url = Nothing
+  let schedulerEnv = SchedulerEnv {cacheConfig, esqDBReplicaEnv, ..}
   when (tasksPerIteration <= 0) $ do
     hPutStrLn stderr ("tasksPerIteration should be greater than 0" :: Text)
     exitFailure

@@ -11,21 +11,23 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.FareParameters.FareParametersProgressiveDetails where
 
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
 import Kernel.Prelude
-import Kernel.Types.Common (Money)
+import Kernel.Types.Common (Currency, HighPrecMoney, Money)
 import Tools.Beam.UtilsTH
 
 data FareParametersProgressiveDetailsT f = FareParametersProgressiveDetailsT
   { fareParametersId :: B.C f Text,
     deadKmFare :: B.C f Money,
-    extraKmFare :: B.C f (Maybe Money)
+    extraKmFare :: B.C f (Maybe Money),
+    deadKmFareAmount :: B.C f (Maybe HighPrecMoney),
+    extraKmFareAmount :: B.C f (Maybe HighPrecMoney),
+    rideDurationFare :: B.C f (Maybe HighPrecMoney),
+    currency :: B.C f (Maybe Currency)
   }
   deriving (Generic, B.Beamable)
 

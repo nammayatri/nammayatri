@@ -1,0 +1,91 @@
+imports:
+  Language: Kernel.External.Types
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Value: Data.Aeson
+
+ReelsData:
+  tableName : reels_data
+
+  fields:
+    id: Id ReelsData
+    language: Language
+    reelKey: Text
+    title: Maybe Text
+    description: Maybe Text
+    shareLink: Maybe Text
+    thumbnailImageUrl: Maybe Text
+    videoUrl: Text
+    carouselBigImageUrl: Maybe Text
+    carouselSmallImageUrl: Maybe Text
+    carouselTextString: Maybe Text
+    carouselTextColor: Maybe Text
+    bottomButtonConfig: "[ReelRowButtonConfig]"
+    sideButtonConfig: "[ReelRowButtonConfig]"
+    thresholdConfig: Maybe ReelVideoThresholdConfig
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    rank: Int
+
+  beamType:
+    sideButtonConfig: Value
+    bottomButtonConfig: Value
+
+  sqlType:
+    sideButtonConfig: "json"
+    bottomButtonConfig: "json"
+
+  fromTType:
+    sideButtonConfig : getSideButtonConfigFromTable
+    bottomButtonConfig : getBottomButtonConfigFromTable
+
+  toTType:
+    sideButtonConfig : convertSideButtonConfigToTable
+    bottomButtonConfig : convertBottomButtonConfigToTable
+
+  types:
+    ReelRowButtonConfig:
+      row: "[ReelButtonConfig]"
+      derive: "'ListInstance, Eq, Ord, Read"
+    ReelButtonConfig:
+      prefixImage : Maybe Text
+      suffixImage : Maybe Text
+      actions : Maybe [Text]
+      shareLink : Maybe Text
+      shareText : Maybe Text
+      buttonColor : Maybe Text
+      cornerRadius : Maybe Int
+      text : Maybe Text
+      textSize : Maybe Int
+      textColor : Maybe Text
+      prefixImageHeight : Maybe Int
+      prefixImageWidth : Maybe Int
+      suffixImageHeight : Maybe Int
+      suffixImageWidth : Maybe Int
+      activeIndex : Maybe Text
+      inActiveIndex : Maybe Text
+      activeIndexWidth : Maybe Int
+      activeIndexHeight : Maybe Int
+      inActiveIndexWidth : Maybe Int
+      inActiveIndexHeight : Maybe Int
+      derive: "'ListInstance, Eq, Ord, Read"
+    ReelVideoThresholdConfig:
+      isThresholdEnabled : Maybe Bool
+      isStartThresholdEnabled : Maybe Bool
+      isEndThresholdEnabled : Maybe Bool
+      startThreshold : Maybe Int
+      endThreshold : Maybe Int
+      sendCallbackAfterEverySecondEnabled : Maybe Bool
+      derive: "'ListInstance, Eq, Ord, Read"
+
+  default:
+    bottomButtonConfig: "'{}'"
+    sideButtonConfig: "'{}'"
+
+  queries:
+    findAllByMerchantOpCityIdLanguageAndKey:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, language, reelKey]
+
+

@@ -15,25 +15,26 @@
 
 module Components.StatsModel.View where
 
-import Prelude (Unit, const, map, ($),(-),unit, (*),(/), (+), (<>), (==), show)
-import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width, visibility, stroke, imageWithFallback)
-import PrestoDOM.Animation as PrestoAnim
+import Common.Types.App
+import ConfigProvider
+import Mobility.Prelude (boolToVisibility)
 import Animation (translateYAnim)
 import Animation.Config (translateYAnimConfig)
 import Components.StatsModel.Controller (Action(..), Config)
-import Font.Style as FontStyle
-import Styles.Colors as Color
-import Font.Size as FontSize
-import Screens.Types (VehicalTypes(..))
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM.Properties(cornerRadii)
-import Language.Strings (getString)
-import Language.Types(STR(..))
+import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth)
-import Common.Types.App
-import Helpers.Utils(fetchImage, FetchImageFrom(..))
-import ConfigProvider
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import MerchantConfig.DefaultConfig (config)
+import Prelude (Unit, const, map, ($), (-), unit, (*), (/), (+), (<>), (==), show, (&&))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width, visibility, stroke, imageWithFallback)
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -105,14 +106,14 @@ earningsView config push =
       [ width (V 1)
       , height (V 42)
       , background Color.grey900
-      , visibility if feature.enableBonus then VISIBLE else GONE
+      , visibility $ boolToVisibility $ feature.enableBonus && config.showBonus
       ][]
     , linearLayout
       [ height WRAP_CONTENT
       , orientation VERTICAL
       , gravity CENTER
       , weight 1.0
-      , visibility if feature.enableBonus then VISIBLE else GONE
+      , visibility $ boolToVisibility $ feature.enableBonus && config.showBonus
       ][ textView $ 
          [ height config.bonusTextConfig.height
          , text config.bonusTextConfig.text

@@ -21,8 +21,13 @@ import Font.Style (Style(..))
 import Common.Styles.Colors as Color
 import Common.Types.App
 import Data.Maybe (Maybe(..))
+import Prelude (class Show)
 
-data Action = Dummy
+instance showAction :: Show Action where
+  show (DestinationClicked) = "DestinationClicked"
+  show (AfterRender) = "AfterRender"
+
+data Action = DestinationClicked | AfterRender
 type Config =
   {
     margin :: Margin
@@ -43,7 +48,24 @@ type Config =
   , id :: Maybe String
   , overrideSeparatorCount :: Int
   , horizontalSeperatorConfig :: SeparatorConfig
+  , pillsConfig :: PillsConfig
+  , showDestination :: Boolean
+  , separatorLayoutMargin :: Margin
+  , stops :: Array String
+  , stopsImageConfig :: ImageConfig
+  , showSourceDestWithStops :: Boolean
   }
+
+type PillsConfig = {
+    visibility :: Visibility
+  , pillList :: Array PillInfo
+}
+
+type PillInfo = {
+    text :: String
+  , imageUrl :: String
+  , imageVisibility :: Visibility
+}
 
 type SeparatorConfig = {
     visibility :: Visibility
@@ -78,6 +100,8 @@ type TextConfig =
   , ellipsize :: Boolean
   , maxLines :: Int
   , textStyle :: Style
+  , isEditable :: Boolean
+  , isClickable :: Boolean
   }
 
 type TimeConfig =
@@ -113,6 +137,8 @@ config = {
     , ellipsize : false  
     , maxLines : 10
     , textStyle : Body3
+    , isEditable : false
+    , isClickable :false
   }
   , rideStartedAtConfig : {
       text : ""
@@ -140,6 +166,8 @@ config = {
     , ellipsize : false
     , maxLines : 10
     , textStyle : Body3
+    , isEditable : false
+    , isClickable : false
     }
   , rideEndedAtConfig : {
       text : ""
@@ -164,7 +192,21 @@ config = {
     , padding : Padding 0 0 0 0
     , width : MATCH_PARENT
     , height : V 1
+  },
+  pillsConfig : {
+      visibility : GONE 
+    , pillList : []
   }
   , id : Nothing
   , overrideSeparatorCount : 0
+  , showDestination : true
+  , separatorLayoutMargin : Margin 0 0 0 0
+  , stops : [] 
+  , stopsImageConfig : {
+      width : V 10
+    , height : V 10
+    , imageUrl : ""
+    , margin : MarginTop 0
+    }
+  , showSourceDestWithStops : false
   }

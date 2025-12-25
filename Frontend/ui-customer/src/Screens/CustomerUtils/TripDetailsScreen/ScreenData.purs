@@ -35,7 +35,8 @@ initData = {
       tripId : "",
       selectedItem : dummyIndividualCard,
       vehicleVariant : Nothing,
-      config : getAppConfig appConfig
+      config : getAppConfig appConfig,
+      categories : []
   },
   props: {
     reportIssue : true,
@@ -43,7 +44,10 @@ initData = {
     activateSubmit : false,
     fromMyRides : Home,
     showConfirmationPopUp : false,
-    canConnectWithDriver : true
+    canConnectWithDriver : true,
+    triggerUIUpdate : true,
+    showIssueOptions : true,
+    isContactSupportPopUp : false
   }
 }
 

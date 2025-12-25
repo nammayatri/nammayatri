@@ -31,8 +31,8 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, pure, show, unit, bind, void, ($), discard, (==), (&&), (||), not, (<=), (>=), (/))
-import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
+import Prelude (class Show, pure, show, unit, bind, void, ($), discard, (==), (&&), (||), not, (<=), (>=), (/), (<>))
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (ApplicationStatusScreenState)
@@ -43,7 +43,19 @@ import Helpers.Utils as HU
 import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (PrimaryButtonActionController) = "PrimaryButtonActionController"
+  show (Logout) = "Logout"
+  show (SupportCall) = "SupportCall"
+  show (Dummy) = "Dummy"
+  show (AfterRender) = "AfterRender"
+  show (DriverRegistrationStatusAction var1) = "DriverRegistrationStatusAction_" <> show var1
+  show (ReTry _) = "ReTry"
+  show (PopUpModalAction var1) = "PopUpModalAction_" <> show var1
+  show (CompleteOnBoardingAction var1) = "CompleteOnBoardingAction_" <> show var1
+  show (AlternateMobileNumberAction var1) = "AlternateMobileNumberAction_" <> show var1
+  show (ExitGoToEnterOtp) = "ExitGoToEnterOtp"
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen APPLICATION_STATUS_SCREEN)
@@ -63,15 +75,16 @@ instance loggableAction :: Loggable Action where
       _ -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "retry_on_click"
     PopUpModalAction act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "on_goback"
-      PopUpModal.Tipbtnclick _ _ -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "tip_button_click"
       PopUpModal.DismissPopup -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "dismiss_popup"
       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal" "call_support"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "image"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "primary_edit_text"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen APPLICATION_STATUS_SCREEN) "popup_modal_action" "countdown_updated"
+      _ -> pure unit
     ExitGoToEnterOtp ->  trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "enter_otp"
     CompleteOnBoardingAction PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "onboardingview"
     CompleteOnBoardingAction PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "in_screen" "na_action"
@@ -83,6 +96,7 @@ instance loggableAction :: Loggable Action where
       ReferralMobileNumberController.PrimaryEditTextActionController act -> case act of
         PrimaryEditTextController.TextChanged valId newVal -> trackAppTextInput appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number_text_changed" "primary_edit_text"
         PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number_text_focus_changed" "primary_edit_text"
+        PrimaryEditTextController.TextImageClicked -> trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number" "text_image_onclick"
       ReferralMobileNumberController.OnSubTextClick ->  trackAppActionClick appId (getScreen APPLICATION_STATUS_SCREEN) "referral_mobile_number" "otpResent"
 
 data ScreenOutput = GoToHomeScreen | LogoutAccount | GoToDlScreen | GoToVehicleDetailScreen | GoToEnterOtp ApplicationStatusScreenState | AddMobileNumber ApplicationStatusScreenState | ResendOtp ApplicationStatusScreenState
@@ -124,6 +138,7 @@ eval SupportCall  state = continueWithCmd state [do
   let merchant = getMerchant FunctionCall
   _ <- case merchant of
     NAMMAYATRI -> HU.contactSupportNumber "WHATSAPP" 
+    YATRI -> HU.contactSupportNumber "WHATSAPP"
     YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
     _ -> pure $ showDialer (getSupportNumber "") false
   pure Dummy
@@ -178,4 +193,4 @@ eval (AlternateMobileNumberAction (ReferralMobileNumberController.PrimaryEditTex
       else continue state {props{isValidAlternateNumber =  not isValidMobileNumber,buttonVisibilty = false,isAlternateMobileNumberExists=false}
       }
 eval (AlternateMobileNumberAction (ReferralMobileNumberController.OnSubTextClick)) state = exit $ ResendOtp state
-eval _ state = continue state
+eval _ state = update state

@@ -20,7 +20,8 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (getCurrentTime)
+import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
@@ -80,6 +81,55 @@ updateStatus orderId paymentServiceOrderId status = do
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
 
+updateAmountAndPaymentIntentId :: BeamFlow m r => Id DOrder.PaymentOrder -> HighPrecMoney -> Text -> m ()
+updateAmountAndPaymentIntentId orderId amount paymentServiceOrderId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.amount amount,
+      Se.Set BeamPO.paymentServiceOrderId paymentServiceOrderId,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
+
+updateAmount :: BeamFlow m r => Id DOrder.PaymentOrder -> HighPrecMoney -> m ()
+updateAmount orderId amount = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.amount amount,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
+
+updateEffectiveAmount :: BeamFlow m r => Id DOrder.PaymentOrder -> Maybe HighPrecMoney -> m ()
+updateEffectiveAmount orderId effectAmount = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.effectAmount effectAmount,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
+
+findAllByStatusAndCreatedAtAfter :: BeamFlow m r => [Payment.TransactionStatus] -> UTCTime -> m [DOrder.PaymentOrder]
+findAllByStatusAndCreatedAtAfter statuses createdAtAfter =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamPO.createdAt $ Se.GreaterThanOrEq createdAtAfter,
+          Se.Is BeamPO.status $ Se.In statuses
+        ]
+    ]
+    (Se.Desc BeamPO.createdAt)
+    Nothing
+    Nothing
+
+findAllNonTerminalOrders :: BeamFlow m r => UTCTime -> m [DOrder.PaymentOrder]
+findAllNonTerminalOrders duration = do
+  findAllWithKV
+    [ Se.Is BeamPO.validTill $ Se.GreaterThanOrEq (Just duration),
+      Se.Is BeamPO.validTill $ Se.Not $ Se.Eq Nothing,
+      Se.Is BeamPO.status $ Se.In [Payment.NEW, Payment.PENDING_VBV, Payment.CHARGED, Payment.AUTHORIZING, Payment.COD_INITIATED, Payment.STARTED, Payment.AUTO_REFUNDED],
+      Se.Is BeamPO.paymentFulfillmentStatus $ Se.In [Just DPayment.FulfillmentPending, Just DPayment.FulfillmentFailed, Just DPayment.FulfillmentRefundPending, Just DPayment.FulfillmentRefundInitiated, Nothing]
+    ]
+
 instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
   fromTType' orderT@BeamPO.PaymentOrderT {..} = do
     paymentLinks <- parsePaymentLinks orderT
@@ -90,9 +140,12 @@ instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
             shortId = ShortId shortId,
             personId = Id personId,
             merchantId = Id merchantId,
+            entityName = entityName,
+            serviceProvider = fromMaybe Payment.Juspay serviceProvider,
             clientAuthToken = case (clientAuthTokenEncrypted, clientAuthTokenHash) of
               (Just encryptedToken, Just hash) -> Just $ EncryptedHashed (Encrypted encryptedToken) hash
               (_, _) -> Nothing,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId,
             ..
           }
     where
@@ -101,6 +154,7 @@ instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
         web <- parseBaseUrl `mapM` paymentOrder.webPaymentLink
         iframe <- parseBaseUrl `mapM` paymentOrder.iframePaymentLink
         mobile <- parseBaseUrl `mapM` paymentOrder.mobilePaymentLink
+        let deep_link = paymentOrder.deepLink
         pure Payment.PaymentLinks {..}
 
 instance ToTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
@@ -110,10 +164,26 @@ instance ToTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
         shortId = getShortId shortId,
         personId = personId.getId,
         merchantId = merchantId.getId,
+        entityName = entityName,
         webPaymentLink = showBaseUrl <$> paymentLinks.web,
         iframePaymentLink = showBaseUrl <$> paymentLinks.iframe,
         mobilePaymentLink = showBaseUrl <$> paymentLinks.mobile,
+        deepLink = paymentLinks.deep_link,
         clientAuthTokenEncrypted = clientAuthToken <&> unEncrypted . (.encrypted),
         clientAuthTokenHash = clientAuthToken <&> (.hash),
+        serviceProvider = Just serviceProvider,
+        merchantOperatingCityId = getId <$> merchantOperatingCityId,
+        effectAmount = Nothing,
         ..
       }
+
+updatePaymentFulfillmentStatus :: BeamFlow m r => Id DOrder.PaymentOrder -> Maybe DPayment.PaymentFulfillmentStatus -> Maybe Text -> Maybe Text -> m ()
+updatePaymentFulfillmentStatus orderId paymentFulfillmentStatus domainEntityId domainTransactionId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.paymentFulfillmentStatus paymentFulfillmentStatus,
+      Se.Set BeamPO.domainEntityId domainEntityId,
+      Se.Set BeamPO.domainTransactionId domainTransactionId,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]

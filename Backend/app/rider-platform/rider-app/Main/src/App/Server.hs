@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module App.Server where
 
@@ -28,9 +27,9 @@ import Servant
 import Tools.Auth
 
 run :: Env -> Application
-run = withModifiedEnv $ \modifiedEnv ->
+run = withModifiedEnv' $ \modifiedEnv ->
   BU.run appAPI API.handler context modifiedEnv
-    & logRequestAndResponse modifiedEnv
+    & logRequestAndResponse' modifiedEnv
     -- & logBecknRequest modifiedEnv
     & addServantInfo modifiedEnv.appEnv.version appAPI
     & hashBodyForSignature
@@ -40,4 +39,5 @@ run = withModifiedEnv $ \modifiedEnv ->
     context =
       verifyPersonAction @(FlowR AppEnv)
         :. verifyDashboardAction @(FlowR AppEnv)
+        :. verifyPartnerOrganizationAction @(FlowR AppEnv)
         :. EmptyContext

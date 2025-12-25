@@ -23,6 +23,10 @@ import Styles.Colors as Color
 import Prelude
 import Effect (Effect)
 
+instance showAction :: Show Action where
+  show (NoAction) = "NoAction"
+  show (OnIconClick) = "OnIconClick"
+
 data Action = NoAction | OnIconClick
 
 type Config =
@@ -33,7 +37,8 @@ type Config =
     totalRidesOfDay :: Int,
     totalEarningsOfDay :: Int,
     bonusEarned :: Int,
-    visibility :: Visibility
+    visibility :: Visibility,
+    showBonus :: Boolean
   }
 
 type TextConfig =
@@ -87,5 +92,6 @@ config =
     totalRidesOfDay : 2,
     totalEarningsOfDay : 2,
     bonusEarned : 0,
-    visibility : VISIBLE
+    visibility : VISIBLE,
+    showBonus : true
   }

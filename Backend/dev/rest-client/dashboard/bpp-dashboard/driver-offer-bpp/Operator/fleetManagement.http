@@ -1,0 +1,37 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+@operator = favorit-operator-token0-000000000000
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name postFleetManagementFleetLinkSendOtp
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/operator/fleet/link/sendOtp
+token: {{operator}}
+content-type: application/json
+
+{   "mobileNumber": "3223345684",
+    "mobileCountryCode": "+91"
+}
+
+###
+
+# @name postFleetManagementFleetLinkVerifyOtp
+
+@personId = {{postFleetManagementFleetLinkSendOtp.response.body.fleetOwnerId}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/operator/fleet/link/verifyOtp
+token: {{operator}}
+content-type: application/json
+
+{   "fleetOwnerId": "{{personId}}",
+    "otp": "7891"
+}

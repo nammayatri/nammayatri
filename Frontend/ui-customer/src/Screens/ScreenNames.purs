@@ -40,9 +40,26 @@ data ScreenName = SPLASH_SCREEN
                 | ENTER_OTP_NUMBER_SCREEN
                 | WELCOME_SCREEN
                 | TICKET_BOOKING_SCREEN
+                | RIDE_SCHEDULED_SCREEN
+                | RIDE_SELECTION_SCREEN
+                | REPORT_ISSUE_CHAT_SCREEN
+                | SEARCH_LOCATION_SCREEN
+                | NAMMASAFETY_SCREEN
+                | METRO_TICKET_BOOKING_SCREEN
+                | RENTAL_SCREEN
+                | RIDE_SUMMARY_SCREEN
+                | PARCEL_SCREEN
+                | BUS_TICKET_BOOKING_SCREEN
+                | BUS_ROUTE_STOPS_SEARCH_SCREEN
+                | AADHAAR_VERIFICATION_SCREEN
+                | BUS_TRACKING_SCREEN
+                | SELECT_BUS_ROUTE_SCREEN
+                | METRO_MY_TICKETS_SCREEN
 
 getScreen :: ScreenName -> String
 getScreen str = case str of 
+        REPORT_ISSUE_CHAT_SCREEN      -> "report_issue_chat_screen"
+        RIDE_SELECTION_SCREEN         -> "ride_selection_screen"
         SPLASH_SCREEN                 -> "splash_screen"
         CHOOSE_LANGUAGE_SCREEN        -> "choose_language_screen"
         ENTER_MOBILE_NUMBER_SCREEN    -> "enter_mobile_number_screen"
@@ -68,3 +85,16 @@ getScreen str = case str of
         ENTER_OTP_NUMBER_SCREEN       -> "enter_otp_number_screen"
         WELCOME_SCREEN                -> "welcome_screen"
         TICKET_BOOKING_SCREEN         -> "ticket_booking_screen"
+        RIDE_SCHEDULED_SCREEN         -> "ride_scheduled_screen" 
+        SEARCH_LOCATION_SCREEN        -> "search_location_screen"
+        NAMMASAFETY_SCREEN            -> "nammasafety_screen"
+        METRO_TICKET_BOOKING_SCREEN   -> "metro_ticket_booking_screen"
+        RENTAL_SCREEN                 -> "rental_screen"
+        RIDE_SUMMARY_SCREEN           -> "ride_summary_screen"        
+        PARCEL_SCREEN                 -> "parcel_screen"
+        BUS_TICKET_BOOKING_SCREEN     -> "bus_ticket_booking_screen"
+        BUS_ROUTE_STOPS_SEARCH_SCREEN -> "bus_route_stops_search_screen"
+        AADHAAR_VERIFICATION_SCREEN   -> "aadhaar_verification_screen"
+        BUS_TRACKING_SCREEN           -> "bus_tracking_screen"
+        SELECT_BUS_ROUTE_SCREEN       -> "select_bus_route_screen"
+        METRO_MY_TICKETS_SCREEN       -> "metro_my_tickets_screen"

@@ -1,0 +1,1 @@
+update atlas_driver_offer_bpp.vehicle_service_tier set auto_selected_vehicle_variant = allowed_vehicle_variant;

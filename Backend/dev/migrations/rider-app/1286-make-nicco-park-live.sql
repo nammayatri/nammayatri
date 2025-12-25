@@ -1,0 +1,8 @@
+-- DON'T RUN IN MASTER OR PROD ENVIRONMENT ONLY FOR LOCAL
+
+update atlas_app.ticket_service set short_desc = '<h1>Details</h1><li>Grants entry to one person only</li><li>Includes 14 specific rides/attractions in the main park only</li>' where ticket_service.id = '46a39cad-ad26-4770-9733-8ed469a4225f';
+update atlas_app.ticket_service set short_desc = '<h1>Details</h1><li>Grants entry to one person only</li><li>Includes 14 specific rides/attractions in the main park only</li><li>Includes Chinese Combo Meal for one person only</li>' where ticket_service.id = 'dd3c1103-1b3e-4030-903a-275e32e35389';
+update atlas_app.ticket_service set short_desc = '<h1>Details</h1><li>Grants entry to one person only</li><li>Includes all rides/attractions in the main park & water park</li>' where ticket_service.id = '661cbf65-b754-4da2-b573-94e46fda04a6';
+update atlas_app.ticket_service set short_desc = '<h1>Details</h1><li>Grants entry to one person only</li><li>Includes all rides/attractions in the main park & water park</li><li>Includes Chinese Combo Meal for one person only</li>' where ticket_service.id = 'aae4e108-a35c-446a-84e8-c5e3c7aea0d3';
+update atlas_app.ticket_service set short_desc = '<h1>Shipping Jetty</h1>' where ticket_service.id = 'ffaee967-8598-0a73-6b90-bee9b7f3f42b';
+update atlas_app.ticket_service set short_desc = '<h1>Shipping Jetty</h1>' where ticket_service.id = 'efaee967-8598-0a73-6b90-bee9b7f3f42b';

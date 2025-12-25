@@ -1,0 +1,213 @@
+imports:
+  IssueCategory: IssueManagement.Domain.Types.Issue.IssueCategory
+  CategoryType: IssueManagement.Domain.Types.Issue.IssueCategory
+  IssueMessage: IssueManagement.Domain.Types.Issue.IssueMessage
+  IssueReport: IssueManagement.Domain.Types.Issue.IssueReport
+  IssueOption: IssueManagement.Domain.Types.Issue.IssueOption
+  Seconds: Kernel.Types.Time
+  RideStatus: IssueManagement.Common
+  IssueStatus: IssueManagement.Common
+  Person: IssueManagement.Common
+  Ride: IssueManagement.Common
+  ChatDetail: IssueManagement.Common
+  Translation: IssueManagement.Common
+  User: IssueManagement.Common
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  Value: Data.Aeson
+  VehicleVariant: Domain.Types.VehicleVariant
+  IssueSubCategory: IGM.Enums
+  IssueCategoryRes: IssueManagement.Common.Dashboard.Issue
+  IssueCategoryListRes: IssueManagement.Common.Dashboard.Issue
+  IssueReportListResponse: IssueManagement.Common.Dashboard.Issue
+  Summary: IssueManagement.Common.Dashboard.Issue
+  IssueReportListItem: IssueManagement.Common.Dashboard.Issue
+  IssueInfoRes: IssueManagement.Common.Dashboard.Issue
+  PersonDetail: IssueManagement.Common.Dashboard.Issue
+  IssueReportCommentItem: IssueManagement.Common.Dashboard.Issue
+  AuthorDetail: IssueManagement.Common.Dashboard.Issue
+  IssueUpdateReq: IssueManagement.Common.Dashboard.Issue
+  IssueUpdateByUserReq: IssueManagement.Common.Dashboard.Issue
+  IssueAddCommentReq: IssueManagement.Common.Dashboard.Issue
+  IssueAddCommentByUserReq: IssueManagement.Common.Dashboard.Issue
+  CreateIssueCategoryReq: IssueManagement.Common.Dashboard.Issue
+  CreateIssueCategoryRes: IssueManagement.Common.Dashboard.Issue
+  UpdateIssueCategoryReq: IssueManagement.Common.Dashboard.Issue
+  CreateIssueOptionReq: IssueManagement.Common.Dashboard.Issue
+  CreateIssueOptionRes: IssueManagement.Common.Dashboard.Issue
+  UpdateIssueOptionReq: IssueManagement.Common.Dashboard.Issue
+  UpsertIssueMessageReq: IssueManagement.Common.Dashboard.Issue
+  UpsertIssueMessageRes: IssueManagement.Common.Dashboard.Issue
+
+module: Issue
+
+apis:
+  - GET: # IssueCategoryListAPI
+      endpoint: /category
+      name: GetIssueCategoryList
+      auth: ApiAuthV2
+      response:
+        type: IssueCategoryListRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_CATEGORY_LIST
+  - GET: # IssueListAPI
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - status: IssueStatus
+        - category: (Id IssueCategory)
+        - assignee: Text
+        - countryCode: Text
+        - phoneNumber: Text
+        - rideShortId: ShortId Ride
+      response:
+        type: IssueReportListResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_LIST
+  - GET: # IssueInfoAPI
+      endpoint: /{issueId}/info
+      auth: ApiAuthV2
+      params:
+        issueId: Id IssueReport
+      response:
+        type: IssueInfoRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_INFO
+  - GET: # IssueInfoAPIV2
+      endpoint: /info
+      name: GetIssueInfoV2
+      auth: ApiAuthV2
+      query:
+        - issueId: (Id IssueReport)
+        - issueShortId: (ShortId IssueReport)
+      response:
+        type: IssueInfoRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_INFO
+  - PUT:  # IssueUpdateAPI
+      endpoint: /{issueId}/update
+      auth: ApiAuthV2
+      params:
+        issueId: Id IssueReport
+      request:
+        type: IssueUpdateReq
+      response:
+        type: APISuccess
+      helperApi:
+        - PUT:  # IssueUpdateByUserAPI
+            endpoint: /{issueId}/update
+            auth: ApiAuthV2
+            params:
+              issueId: Id IssueReport
+            request:
+              type: IssueUpdateByUserReq
+            response:
+              type: APISuccess
+      migrate:
+        endpoint: IssueAPI IssueUpdateEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_UPDATE
+  - POST:  # IssueAddCommentAPI
+      endpoint: /{issueId}/comment
+      auth: ApiAuthV2
+      params:
+        issueId: Id IssueReport
+      request:
+        type: IssueAddCommentReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:  # IssueAddCommentByUserAPI
+            endpoint: /{issueId}/comment
+            auth: ApiAuthV2
+            params:
+              issueId: Id IssueReport
+            request:
+              type: IssueAddCommentByUserReq
+            response:
+              type: APISuccess
+      migrate:
+        endpoint: IssueAPI IssueAddCommentEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_ADD_COMMENT
+  - GET: # IssueFetchMediaAPI
+      endpoint: /media
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - filePath: Text
+      response:
+        type: Text
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_FETCH_MEDIA
+  - POST:  # TicketStatusCallBackAPI
+      endpoint: /kapture/ticketStatus
+      name: PostIssueTicketStatusCallBack
+      auth: ApiAuthV2
+      request:
+        type: Value
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE TICKET_STATUS_CALL_BACK
+  - POST:  # CreateIssueCategoryAPI
+      endpoint: /category/create
+      auth: ApiAuthV2
+      request:
+        type: CreateIssueCategoryReq
+      response:
+        type: CreateIssueCategoryRes
+      migrate:
+        endpoint: IssueAPI CreateIssueCategoryEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE CREATE_ISSUE_CATEGORY
+  - POST:  # UpdateIssueCategoryAPI
+      endpoint: /category/update
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - issueCategoryId: Id IssueCategory
+      request:
+        type: UpdateIssueCategoryReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: IssueAPI UpdateIssueCategoryEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE UPDATE_ISSUE_CATEGORY
+  - POST:  # CreateIssueOptionAPI
+      endpoint: /option/create
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - issueCategoryId: Id IssueCategory
+        - issueMessageId: Id IssueMessage
+      request:
+        type: CreateIssueOptionReq
+      response:
+        type: CreateIssueOptionRes
+      migrate:
+        endpoint: IssueAPI CreateIssueOptionEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE CREATE_ISSUE_OPTION
+  - POST:  # UpdateIssueOptionAPI
+      endpoint: /option/update
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - issueOptionid: Id IssueOption
+      request:
+        type: UpdateIssueOptionReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: IssueAPI UpdateIssueOptionEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE UPDATE_ISSUE_OPTION
+  - POST:  # UpsertIssueMessageAPI
+      endpoint: /message/upsert
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertIssueMessageReq
+      response:
+        type: UpsertIssueMessageRes
+      migrate:
+        endpoint: IssueAPI UpsertIssueMessageEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE UPSERT_ISSUE_MESSAGE
+
+# Did not generated any types because we need to use common types for rider and provider dashboard
+types: {}
+
+extraOperations:
+  - EXTRA_API_COMMON_TYPES_FILE

@@ -28,6 +28,7 @@ import Types.App (FlowBT, GlobalState(..), ScreenType(..), ScreenStage(..))
 modifyScreenState :: ScreenType -> FlowBT String Unit
 modifyScreenState st =
   case st of
+    DocumentCaptureScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state{ documentCaptureScreen = a state.documentCaptureScreen})
     SplashScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { splashScreen = a state.splashScreen})
     ChooseLanguageScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { chooseLanguageScreen = a state.chooseLanguageScreen})
     DriverProfileScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { driverProfileScreen = a state.driverProfileScreen})
@@ -68,8 +69,26 @@ modifyScreenState st =
     DriverSavedLocationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {driverSavedLocationScreen = a state.driverSavedLocationScreen})
     ChooseCityScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {chooseCityScreen = a state.chooseCityScreen})
     WelcomeScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {welcomeScreen = a state.welcomeScreen})
-    DriverReferralScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {driverReferralScreen = a state.driverReferralScreen})
+    BenefitsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {benefitsScreen = a state.benefitsScreen})
     RegistrationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {registrationScreen = a state.registrationScreen})
+    DriverEarningsScreenStateType a ->  modifyState (\(GlobalState state) -> GlobalState $ state { driverEarningsScreen = a state.driverEarningsScreen })
+    LmsVideoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {lmsVideoScreen = a state.lmsVideoScreen})
+    LmsQuizScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {lmsQuizScreen = a state.lmsQuizScreen})
+    DocumentDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {documentDetailsScreen = a state.documentDetailsScreen})
+    DriverClaimRewardScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {driverClaimRewardScreen = a state.driverClaimRewardScreen})
+    DriverCompleteProfileScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {driverCompleteProfileScreen = a state.driverCompleteProfileScreen})
+    RateCardScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rateCardScreen = a state.rateCardScreen})
+    CustomerReferralTrackerScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {customerReferralTrackerScreen = a state.customerReferralTrackerScreen})
+    CancellationRateScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {cancellationRateScreen = a state.cancellationRateScreen})
+    HotspotScreenStateType a ->  modifyState (\(GlobalState state) -> GlobalState $ state { hotspotScreen = a state.hotspotScreen })
+    RideRequestScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideRequestScreen = a state.rideRequestScreen})
+    RideSummaryScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSummaryScreen = a state.rideSummaryScreen})
+    ScheduleRideAcceptedScreenStateType a  -> modifyState (\(GlobalState state) -> GlobalState $ state {scheduledRideAcceptedScreen = a state.scheduledRideAcceptedScreen})
+    UploadParcelImageScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {uploadParcelImageScreen = a state.uploadParcelImageScreen})
+    MetroWarriorsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroWarriorsScreen = a state.metroWarriorsScreen})
+    MeterScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {meterScreen = a state.meterScreen})
+    MeterRideScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {meterRideScreen = a state.meterRideScreen})
+    ExtraChargeInfoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {extraChargeInfoScreen = a state.extraChargeInfoScreen})
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do
@@ -135,7 +154,7 @@ updateStage stage = do
         HomeScreen -> do
           _ <- pure $ removeAllPolylines ""
           _ <- pure $ spy "Inside HomeScreen" "removeAllPolyLines"
-          modifyScreenState $ HomeScreenStateType (\state -> HomeScreenData.initData)
+          modifyScreenState $ HomeScreenStateType (\state -> HomeScreenData.initData { props { showParcelIntroductionPopup = state.props.showParcelIntroductionPopup } })
         ChatWithCustomer -> do
           pure unit
         _ -> modifyScreenState $ HomeScreenStateType (\state -> state { props { currentStage = stage'} })

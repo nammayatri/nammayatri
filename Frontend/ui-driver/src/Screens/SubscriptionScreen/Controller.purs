@@ -2,7 +2,8 @@ module Screens.SubscriptionScreen.Controller where
 
 import Debug
 
-import Common.Types.App (APIPaymentStatus, LazyCheck(..))
+import Common.Types.App (LazyCheck(..))
+import Domain.Payments (APIPaymentStatus)
 import Components.Banner as Banner
 import Components.BottomNavBar as BottomNavBar
 import Components.DueDetailsList.Controller (Action(..)) as DueDetailsListController
@@ -20,30 +21,95 @@ import Data.Number.Format (fixed, toStringWith)
 import Data.String (toLower)
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
-import Engineering.Helpers.Utils (saveObject)
+import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC, liftFlow, getNewIDWithTag)
+import Engineering.Helpers.Utils (saveObject, getFixedTwoDecimals)
 import Foreign (unsafeToForeign)
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getDistanceBwCordinates, getFixedTwoDecimals)
-import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getDistanceBwCordinates, getCityConfig)
+import JBridge (openUrlInApp, shareTextMessage, addReels, cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare, (<=), (>), (>=), (||), (<>))
+import Prelude (void, class Show, Unit, bind, map, negate, not, pure, show, unit, ($), (&&), (*), (-), (/=), (==), discard, Ordering, compare, (<=), (>), (>=), (||), (<>))
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants as Const
 import Screens (getScreen, ScreenName(..))
-import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, constructDues, getAutoPayDetailsList, getSelectedId, getSelectedPlan, introductoryPlanConfig, myPlanListTransformer, planListTransformer)
+import Screens.SubscriptionScreen.Transformer (transformReelsPurescriptDataToNativeData, alternatePlansTransformer, constructDues, getAutoPayDetailsList, getSelectedId, getSelectedPlan, introductoryPlanConfig, myPlanListTransformer, planListTransformer, fetchIntroductoryPlans)
 import Screens.Types (AutoPayStatus(..), KioskLocation(..), OptionsMenuState(..), PlanCardConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocationRes(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..), LastPaymentType(..))
+import Services.API (ReelsResp, BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocationRes(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..), LastPaymentType(..))
 import Services.Backend (getCorrespondingErrorMessage)
 import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore, getValueToLocalStore)
+import PrestoDOM.Core (getPushFn)
+import Effect.Uncurried (runEffectFn5, runEffectFn1)
+import RemoteConfig (ReelItem(..))
+import Foreign (Foreign)
+import DecodeUtil(decodeForeignObject, decodeForeignAny)
+import RemoteConfig as RC
+import Foreign.Generic (encodeJSON)
+import Components.PlanCard as PlanCard
+import Components.SelectPlansModal as SelectPlansModal
+import Services.API as APITypes
+import Screens.Types as ST 
+import Screens.SubscriptionScreen.Transformer as Transformer
+import Common.RemoteConfig.Utils as RC
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (AfterRender) = "AfterRender"
+  show (BottomNavBarAction var1) = "BottomNavBarAction_" <> show var1
+  show (OneTimeSettlement var1) = "OneTimeSettlement_" <> show var1
+  show (SwitchPlan var1) = "SwitchPlan_" <> show var1
+  show (JoinPlanAC var1) = "JoinPlanAC_" <> show var1
+  show (ManagePlanAC) = "ManagePlanAC"
+  show (SelectPlan _) = "SelectPlan"
+  show (ChoosePlan _) = "ChoosePlan"
+  show (ToggleDueDetails) = "ToggleDueDetails"
+  show (ToggleDueDetailsView) = "ToggleDueDetailsView"
+  show (NoAction) = "NoAction"
+  show (ViewPaymentHistory) = "ViewPaymentHistory"
+  show (ViewHelpCentre) = "ViewHelpCentre"
+  show (PopUpModalAC var1) = "PopUpModalAC_" <> show var1
+  show (HeaderRightClick _) = "HeaderRightClick"
+  show (CancelAutoPayAC) = "CancelAutoPayAC"
+  show (ViewAutopayDetails) = "ViewAutopayDetails"
+  show (ResumeAutoPay var1) = "ResumeAutoPay_" <> show var1
+  show (LoadPlans _) = "LoadPlans"
+  show (LoadHelpCentre _ _ _) = "LoadHelpCentre"
+  show (LoadMyPlans _) = "LoadMyPlans"
+  show (ShowError _) = "ShowError"
+  show (PaymentStatusAction _) = "PaymentStatusAction"
+  show (CheckPaymentStatus) = "CheckPaymentStatus"
+  show (LoadAlternatePlans _) = "LoadAlternatePlans"
+  show (ConfirmCancelPopup var1) = "ConfirmCancelPopup_" <> show var1
+  show (TryAgainButtonAC var1) = "TryAgainButtonAC_" <> show var1
+  show (RetryPaymentAC var1) = "RetryPaymentAC_" <> show var1
+  show (RefreshPage) = "RefreshPage"
+  show (OptionsMenuAction var1) = "OptionsMenuAction_" <> show var1
+  show (CallSupport) = "CallSupport"
+  show (CallHelpCenter _) = "CallHelpCenter"
+  show (OpenGoogleMap _ _) = "OpenGoogleMap"
+  show (CheckPaymentStatusButton var1) = "CheckPaymentStatusButton_" <> show var1
+  show (ViewDuesOverView) = "ViewDuesOverView"
+  show (ViewDueDetails _) = "ViewDueDetails"
+  show (ClearManualDues var1) = "ClearManualDues_" <> show var1
+  show (DueDetailsListAction var1) = "DueDetailsListAction_" <> show var1
+  show (OfferCardBanner var1) = "OfferCardBanner_" <> show var1
+  show (TogglePlanDescription _) = "TogglePlanDescription"
+  show (EnableIntroductoryView) = "EnableIntroductoryView"
+  show (OpenReelsView _) = "OpenReelsView"
+  show (GetCurrentPosition _ _ _ _) = "GetCurrentPosition"
+  show (PlanCardAction var1) = "PlanCardAction_" <> show var1
+  show (SelectPlanAction var1) = "SelectPlanAction_" <> show var1
+  show (ChoosePlanAction var1) = "ChoosePlanAction_" <> show var1
+  show (TogglePlanAction var1) = "TogglePlanAction_" <> show var1
+  show (SelectPlansModalAction var1) = "SelectPlansModalAction_" <> show var1
+  show (OnCityOrVehicleChange _) = "OnCityOrVehicleChange"
+  show (PaymentUnderMaintenanceModalAC _) = "PaymentUnderMaintenanceModalAC"
+
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" "SubscriptionScreen"
@@ -92,6 +158,15 @@ data Action = BackPressed
             | OfferCardBanner Banner.Action
             | TogglePlanDescription PlanCardConfig
             | EnableIntroductoryView
+            | OpenReelsView Int
+            | GetCurrentPosition String String Foreign Foreign
+            | PlanCardAction PlanCard.Action
+            | SelectPlanAction PlanCard.Action
+            | ChoosePlanAction PlanCard.Action
+            | TogglePlanAction PlanCard.Action
+            | SelectPlansModalAction SelectPlansModal.Action
+            | OnCityOrVehicleChange APITypes.UiPlansResp
+            | PaymentUnderMaintenanceModalAC PopUpModal.Action
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
                     | RideHistory SubscriptionScreenState
@@ -111,9 +186,11 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | RetryPayment SubscriptionScreenState String
                     | ClearDues SubscriptionScreenState
                     | SubscribeAPI SubscriptionScreenState
+                    | EarningsScreen SubscriptionScreenState 
+                    | SwitchPlanOnCityOrVehicleChange ST.PlanCardState ST.SubscriptionScreenState
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
-eval BackPressed state = 
+eval BackPressed state =
   if state.props.popUpState == Mb.Just SupportPopup then updateAndExit state{props{popUpState = Mb.Nothing}} $ HomeScreen state{props{popUpState = Mb.Nothing}}
   else if ( not Mb.isNothing state.props.popUpState && not (state.props.popUpState == Mb.Just SuccessPopup)) then continue state{props { popUpState = Mb.Nothing}}
   else if state.props.optionsMenuState /= ALL_COLLAPSED then continue state{props{optionsMenuState = ALL_COLLAPSED}}
@@ -126,7 +203,7 @@ eval BackPressed state =
   else if state.props.subView == PlanDetails then continue state{props { subView = if state.data.config.subscriptionConfig.optionsMenuItems.managePlan then ManagePlan else MyPlan}}
   else if state.props.subView == FindHelpCentre then continue state {props { subView = state.props.prevSubView, kioskLocation = [], noKioskLocation = false, showError = false}}
   else if state.props.myPlanProps.isDueViewExpanded then continue state{props { myPlanProps{isDueViewExpanded = false}}}
-  else if state.data.myPlanData.autoPayStatus == MANDATE_FAILED && not state.props.isEndRideModal && not state.data.config.subscriptionConfig.enableIntroductoryView && state.data.config.subscriptionConfig.enableSubscriptionSupportPopup then continue state{props { popUpState = Mb.Just SupportPopup}}
+  else if state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && not state.props.isEndRideModal && not state.data.config.subscriptionConfig.enableIntroductoryView && (Mb.fromMaybe false state.data.vehicleAndCityConfig.enableSubscriptionSupportPopup) then continue state{props { popUpState = Mb.Just SupportPopup}}
   else exit $ HomeScreen state
 
 eval ToggleDueDetails state = continue state {props {myPlanProps { isDuesExpanded = not state.props.myPlanProps.isDuesExpanded}}}
@@ -168,9 +245,9 @@ eval ManagePlanAC state = do
   let _ = unsafePerformEffect $ firebaseLogEvent "ny_driver_manage_plan_clicked"
   updateAndExit state { props{showShimmer = true, subView = ManagePlan, optionsMenuState = ALL_COLLAPSED}} $ GotoManagePlan state {props {showShimmer = true, subView = ManagePlan, managePlanProps { selectedPlanItem = state.data.myPlanData.planEntity }, optionsMenuState = ALL_COLLAPSED }, data { managePlanData {currentPlan = state.data.myPlanData.planEntity }}}
 
-eval (SelectPlan config ) state = continue state {props {managePlanProps { selectedPlanItem = config}}}
+eval (SelectPlanAction (PlanCard.OnClick config) ) state = continue state {props {managePlanProps { selectedPlanItem = config}}}
 
-eval (ChoosePlan config ) state = continue state {props {joinPlanProps { selectedPlanItem = Mb.Just config}}}
+eval (ChoosePlanAction (PlanCard.OnClick config) ) state = continue state {props {joinPlanProps { selectedPlanItem = Mb.Just config}}}
 
 eval (JoinPlanAC PrimaryButton.OnClick) state = updateAndExit state $ JoinPlanExit state
 
@@ -194,6 +271,7 @@ eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpSt
 eval (PopUpModalAC (PopUpModal.OnButton2Click)) state = case state.props.redirectToNav of
             "Home" -> exit $ HomeScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
             "Rides" -> exit $ RideHistory state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+            "Earnings" -> exit $ EarningsScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
             "Alert" -> do
               _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
               _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
@@ -240,6 +318,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen, optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
   else do case screen of
             "Home" -> exit $ HomeScreen newState
+            "Earnings" -> exit $ EarningsScreen newState
             "Rides" -> exit $ RideHistory newState
             "Alert" -> do
               _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
@@ -262,12 +341,13 @@ eval RefreshPage state = exit $ Refresh
 
 eval (LoadPlans plans) state = do
   let (UiPlansResp planResp) = plans
+      cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
   _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
   continue state {
-      data{ joinPlanData {allPlans = planListTransformer plans state.data.config.subscriptionConfig.enableIntroductoryView state.data.config.subscriptionConfig.gradientConfig,
+      data{ joinPlanData {allPlans = planListTransformer plans state.data.config.subscriptionConfig.enableIntroductoryView state.data.config.subscriptionConfig cityConfig,
                             subscriptionStartDate = (convertUTCtoISC planResp.subscriptionStartTime "Do MMM")}},
       props{showShimmer = false, subView = JoinPlan,  
-            joinPlanProps { selectedPlanItem = if (Mb.isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans state.data.config.subscriptionConfig.gradientConfig else state.props.joinPlanProps.selectedPlanItem}} }
+            joinPlanProps { selectedPlanItem = if (Mb.isNothing state.props.joinPlanProps.selectedPlanItem) then getSelectedPlan plans state.data.config.subscriptionConfig else state.props.joinPlanProps.selectedPlanItem}} }
 
 eval (LoadHelpCentre lat lon kioskLocationList) state = do
   let transformedKioskList = transformKioskLocations kioskLocationList lat lon
@@ -293,7 +373,7 @@ eval (LoadMyPlans plans) state = do
                             data{ orderId = currentPlanResp.orderId, 
                                   planId = planEntity.id, 
                                   myPlanData {
-                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig.gradientConfig,
+                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig,
                                       maxDueAmount = planEntity.totalPlanCreditLimit,
                                       totalDueAmount = planEntity.currentDues,
                                       manualDueAmount = planEntity.currentDues - planEntity.autopayDues,
@@ -301,7 +381,8 @@ eval (LoadMyPlans plans) state = do
                                       autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus, 
                                       lowAccountBalance = requiredBalance,
                                       dueItems = constructDues planEntity.dues state.data.config.subscriptionConfig.showFeeBreakup,
-                                      dueBoothCharges = if planEntity.dueBoothCharges == Mb.Just 0.0 then Mb.Nothing else planEntity.dueBoothCharges
+                                      dueBoothCharges = if planEntity.dueBoothCharges == Mb.Just 0.0 then Mb.Nothing else planEntity.dueBoothCharges,
+                                      coinEntity = planEntity.coinEntity
                                   }}
                          }
                      else state{ 
@@ -309,7 +390,7 @@ eval (LoadMyPlans plans) state = do
                             data{ orderId = currentPlanResp.orderId, 
                                   planId = planEntity.id, 
                                   myPlanData {
-                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig.gradientConfig,
+                                      planEntity = myPlanListTransformer planEntity' currentPlanResp.isLocalized state.data.config.subscriptionConfig,
                                       maxDueAmount = planEntity.totalPlanCreditLimit,
                                       autoPayStatus = getAutopayStatus currentPlanResp.autoPayStatus
                                   }}
@@ -356,12 +437,13 @@ eval (ShowError errorPayload )state = continue state{props{showError = true, sho
 eval (LoadAlternatePlans plansArray) state = continue state { data { managePlanData { alternatePlans = alternatePlansTransformer plansArray state}}, props {subView = ManagePlan, showShimmer = false}}
 
 eval (TryAgainButtonAC PrimaryButton.OnClick) state = 
-  let updateState = state { props{showShimmer = true}}
-    in if state.props.subView == FindHelpCentre then updateAndExit updateState $ RefreshHelpCentre updateState
-      else updateAndExit updateState $ Refresh
+  let update = state { props{showShimmer = true}}
+    in if state.props.subView == FindHelpCentre then updateAndExit update $ RefreshHelpCentre update
+      else updateAndExit update $ Refresh
 
 eval CallSupport state = do
-  _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
+  let cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
+  void $ pure $ showDialer cityConfig.supportNumber false
   continue state
 
 eval (CallHelpCenter phone) state = do
@@ -380,22 +462,63 @@ eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state =
 
 -- eval (TogglePlanDescription _) state = continue state{data{myPlanData{planEntity{isSelected = not state.data.myPlanData.planEntity.isSelected}}}} --Always expended
 
-eval EnableIntroductoryView state = continue state{props{subView = JoinPlan, showShimmer = false, joinPlanProps{isIntroductory = true}}, data{joinPlanData {allPlans = [introductoryPlanConfig Language]}}}
+eval EnableIntroductoryView state = do
+  let cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
+  continue state{props{subView = JoinPlan, showShimmer = false, joinPlanProps{isIntroductory = true}}, data{joinPlanData {allPlans = fetchIntroductoryPlans state.data.config.subscriptionConfig cityConfig}}}
 
-eval _ state = continue state
+eval (OpenReelsView index) state = do
+  void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "true"
+  continueWithCmd state [ do
+    push <-  getPushFn Mb.Nothing "SubscriptionScreen"
+    _ <- runEffectFn5 addReels (encodeJSON (transformReelsPurescriptDataToNativeData state.data.reelsData)) index (getNewIDWithTag "ReelsView") push $ GetCurrentPosition
+    pure NoAction
+  ]
 
-getPlanPrice :: Array PaymentBreakUp -> String -> String
-getPlanPrice fares priceType = do
-  let price = (DA.filter(\(PaymentBreakUp item) -> item.component == priceType) fares)
-  case price DA.!! 0 of
-    Mb.Just (PaymentBreakUp element) -> getFixedTwoDecimals element.amount
-    Mb.Nothing -> ""
+eval (GetCurrentPosition label stringData reelItemData buttonData) state = case label of
+  "CURRENT_POSITION" -> continue state
+  "ACTION" -> 
+      let  currentButtonConfig = decodeForeignAny buttonData RC.defaultReelButtonConfig
+           shareMessageTitle = Mb.maybe Mb.Nothing (\rButtonData -> rButtonData.shareMessageTitle) currentButtonConfig
+           shareText = Mb.maybe Mb.Nothing (\rButtonData -> rButtonData.shareText) currentButtonConfig
+           shareLink = Mb.maybe Mb.Nothing (\rButtonData -> rButtonData.shareLink) currentButtonConfig
+      in   case stringData of
+                "CHOOSE_A_PLAN" -> do
+                    void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
+                    continue state
+                "SHARE" -> do 
+                  _ <- pure $ shareTextMessage (Mb.fromMaybe "" shareMessageTitle) (Mb.fromMaybe "" shareText)
+                  continue state
+                "OPEN_LINK" -> do
+                  _ <- pure $ openUrlInApp (Mb.fromMaybe "www.nammayatri.in" shareLink)
+                  continue state
+                "DESTROY_REEL" -> do
+                  void $ pure $ setValueToLocalStore ANOTHER_ACTIVITY_LAUNCHED "false"
+                  continue state
+                _ -> continue state
+  _ -> continue state
 
-getAllFareFromArray :: Array PaymentBreakUp -> Array String -> Number
-getAllFareFromArray fares titles = do
-  let matchingFares = (DA.filter (\(PaymentBreakUp fare) -> DA.elem fare.component titles) fares)
-  let price = (DA.foldl (\acc (PaymentBreakUp fare) -> fare.amount - acc) 0.0 matchingFares)
-  price * -1.0
+eval (OnCityOrVehicleChange (APITypes.UiPlansResp plansListResp)) state = do
+  let plans = map (\plan -> Transformer.transformPlan state.props.isSelectedLangTamil $ Transformer.getPlanCardConfig plan false false state.data.config.subscriptionConfig) plansListResp.list
+  continue state { data { switchPlanModalState { plansList = plans, selectedPlan = DA.head plans, showSwitchPlanModal = true }}}
+
+eval (SelectPlansModalAction SelectPlansModal.Dismiss) state = exit $ HomeScreen state
+
+eval (SelectPlansModalAction SelectPlansModal.Support) state = continueWithCmd state [pure CallSupport]
+
+eval (SelectPlansModalAction (SelectPlansModal.PlanCardAction item _)) state = continue state {data {switchPlanModalState {selectedPlan = Mb.Just item}}}
+
+eval (SelectPlansModalAction (SelectPlansModal.PrimaryButtonAC PrimaryButton.OnClick)) state = 
+  case state.data.switchPlanModalState.selectedPlan of
+    Mb.Nothing -> continue state
+    Mb.Just plan -> exit $ SwitchPlanOnCityOrVehicleChange plan state
+
+eval (PaymentUnderMaintenanceModalAC popUpModalAC) state = do
+  let newState = state{data{subscriptionDown = Mb.Nothing}}
+  case popUpModalAC of
+      PopUpModal.OnButton2Click -> exit $ HomeScreen newState
+      _ -> continue state
+
+eval _ state = update state
 
 getAutopayStatus :: Mb.Maybe String -> AutoPayStatus
 getAutopayStatus autoPayStatus = 

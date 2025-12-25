@@ -15,12 +15,16 @@
 module Tools.Ticket
   ( createTicket,
     updateTicket,
+    addAndUpdateKaptureCustomer,
+    kaptureEncryption,
+    kapturePullTicket,
+    kaptureGetTicket,
   )
 where
 
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import EulerHS.Prelude
 import qualified Kernel.External.Ticket.Interface as TI
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
@@ -37,6 +41,18 @@ createTicket = runWithServiceConfig TI.createTicket
 updateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
 updateTicket = runWithServiceConfig TI.updateTicket
 
+addAndUpdateKaptureCustomer :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.KaptureCustomerReq -> m Ticket.KaptureCustomerResp
+addAndUpdateKaptureCustomer = runWithServiceConfig TI.addAndUpdateKaptureCustomer
+
+kaptureEncryption :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.KaptureEncryptionReq -> m Ticket.KaptureEncryptionResp
+kaptureEncryption = runWithServiceConfig TI.kaptureEncryption
+
+kapturePullTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.KapturePullTicketReq -> m Ticket.KapturePullTicketResp
+kapturePullTicket = runWithServiceConfig TI.kapturePullTicket
+
+kaptureGetTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.GetTicketReq -> m [Ticket.GetTicketResp]
+kaptureGetTicket = runWithServiceConfig TI.kaptureGetTicket
+
 runWithServiceConfig ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   (Ticket.IssueTicketServiceConfig -> req -> m resp) ->
@@ -49,7 +65,7 @@ runWithServiceConfig func merchantId merchantOperatingCityId req = do
     QMSUC.findByMerchantOperatingCityId merchantOperatingCityId
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantIssueTicketServiceConfig <-
-    QMSC.findByMerchantIdAndService merchantId (DMSC.IssueTicketService merchantConfig.issueTicketService)
+    QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.IssueTicketService merchantConfig.issueTicketService)
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   case merchantIssueTicketServiceConfig.serviceConfig of
     DMSC.IssueTicketServiceConfig msc -> func msc req

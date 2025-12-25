@@ -22,6 +22,8 @@ module Domain.Action.UI.OrgAdmin
 where
 
 import Control.Applicative
+import qualified Domain.Action.UI.Merchant as DM
+import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Kernel.External.Encryption (decrypt)
@@ -30,7 +32,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QM
-import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.PersonExtra as QPerson
 import Tools.Error
 
 data OrgAdminProfileRes = OrgAdminProfileRes

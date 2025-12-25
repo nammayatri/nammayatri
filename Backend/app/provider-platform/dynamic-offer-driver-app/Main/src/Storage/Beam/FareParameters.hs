@@ -11,13 +11,12 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.FareParameters where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FareParameters as Domain
+import qualified Domain.Types.FarePolicy as FP
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -30,11 +29,49 @@ data FareParametersT f = FareParametersT
     waitingCharge :: B.C f (Maybe Money),
     rideExtraTimeFare :: B.C f (Maybe Money),
     nightShiftCharge :: B.C f (Maybe Money),
+    baseFareAmount :: B.C f (Maybe HighPrecMoney),
+    petCharges :: B.C f (Maybe HighPrecMoney),
+    businessDiscount :: B.C f (Maybe HighPrecMoney),
+    shouldApplyBusinessDiscount :: B.C f (Maybe Bool),
+    priorityCharges :: B.C f (Maybe HighPrecMoney),
+    driverSelectedFareAmount :: B.C f (Maybe HighPrecMoney),
+    customerExtraFeeAmount :: B.C f (Maybe HighPrecMoney),
+    waitingChargeAmount :: B.C f (Maybe HighPrecMoney),
+    rideExtraTimeFareAmount :: B.C f (Maybe HighPrecMoney),
+    nightShiftChargeAmount :: B.C f (Maybe HighPrecMoney),
     nightShiftRateIfApplies :: B.C f (Maybe Double),
     serviceCharge :: B.C f (Maybe Money),
+    stopCharges :: B.C f (Maybe HighPrecMoney),
+    serviceChargeAmount :: B.C f (Maybe HighPrecMoney),
+    parkingCharge :: B.C f (Maybe HighPrecMoney),
     fareParametersType :: B.C f Domain.FareParametersType,
     govtCharges :: B.C f (Maybe Money),
-    customerCancellationDues :: B.C f (Maybe HighPrecMoney)
+    govtChargesAmount :: B.C f (Maybe HighPrecMoney),
+    customerCancellationDues :: B.C f (Maybe HighPrecMoney),
+    tollCharges :: B.C f (Maybe HighPrecMoney),
+    congestionCharge :: B.C f (Maybe Money),
+    congestionChargeViaDp :: B.C f (Maybe HighPrecMoney),
+    congestionChargeAmount :: B.C f (Maybe HighPrecMoney),
+    insuranceCharge :: B.C f (Maybe HighPrecMoney),
+    cardChargeOnFare :: B.C f (Maybe HighPrecMoney),
+    fixedCardCharge :: B.C f (Maybe HighPrecMoney),
+    luggageCharge :: B.C f (Maybe HighPrecMoney),
+    returnFeeCharge :: B.C f (Maybe HighPrecMoney),
+    boothCharge :: B.C f (Maybe HighPrecMoney),
+    platformFee :: B.C f (Maybe HighPrecMoney),
+    sgst :: B.C f (Maybe HighPrecMoney),
+    cgst :: B.C f (Maybe HighPrecMoney),
+    platformFeeChargesBy :: B.C f (Maybe FP.PlatformFeeMethods),
+    conditionalCharges :: B.C f (Maybe Value),
+    currency :: B.C f (Maybe Currency),
+    driverCancellationPenaltyAmount :: B.C f (Maybe HighPrecMoney),
+    updatedAt :: B.C f (Maybe UTCTime),
+    merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text),
+    paymentProcessingFee :: B.C f (Maybe HighPrecMoney),
+    rideVat :: B.C f (Maybe HighPrecMoney),
+    tollVat :: B.C f (Maybe HighPrecMoney),
+    commission :: B.C f (Maybe HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 

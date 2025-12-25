@@ -1,0 +1,134 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  Value: Data.Aeson
+  FCMMediaLink: Kernel.External.Notification.FCM.Types
+  FCMActions: Kernel.External.Notification.FCM.Types
+  Language: Kernel.External.Types
+  VehicleCategory: Domain.Types.VehicleCategory
+  OverlayCondition: Domain.Types.Overlay
+
+module: Overlay
+
+apis:
+  - POST: # CreateOverlayAPI
+      endpoint: /createOverlay
+      name: postOverlayCreate
+      auth: ApiAuthV2
+      request:
+        type: CreateOverlayReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: OverlayAPI CreateOverlayEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT OVERLAY CREATE_OVERLAY
+  - POST: # DeleteOverlayAPI
+      endpoint: /deleteOverlay
+      name: postOverlayDelete
+      auth: ApiAuthV2
+      request:
+        type: DeleteOverlayReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: OverlayAPI DeleteOverlayEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT OVERLAY DELETE_OVERLAY
+  - GET: # ListOverlayAPI
+      endpoint: /listOverlay
+      name: getOverlayList
+      auth: ApiAuthV2
+      response:
+        type: ListOverlayResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT OVERLAY LIST_OVERLAY
+  - GET: # OverlayInfoAPI
+      endpoint: /overlayInfo
+      name: getOverlayInfo
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - overlayKey: Text
+      query:
+        - udf1: Text
+      response:
+        type: OverlayInfoResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT OVERLAY OVERLAY_INFO
+  - POST: # ScheduleOverlayAPI
+      endpoint: /scheduleOverlay
+      name: postOverlaySchedule
+      auth: ApiAuthV2
+      request:
+        type: ScheduleOverlay
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: OverlayAPI ScheduleOverlayEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT OVERLAY SCHEDULE_OVERLAY
+
+types:
+  CreateOverlayReq:
+    - overlayKey: Text
+    - udf1: Maybe Text
+    - actions: [Text]
+    - link: Maybe Text
+    - imageUrl: Maybe Text
+    - reqBody: Value
+    - method: Maybe Text
+    - endPoint: Maybe Text
+    - contents: [OverlayContent]
+    - delay: Maybe Int
+    - contactSupportNumber: Maybe Text
+    - toastMessage: Maybe Text
+    - secondaryActions: Maybe [Text]
+    - actions2: Maybe [FCMActions]
+    - socialMediaLinks: Maybe [FCMMediaLink]
+    - secondaryActions2: Maybe [FCMActions]
+    - showPushNotification: Maybe Bool
+    - vehicleCategory: Maybe VehicleCategory
+    - derive: "'HideSecrets"
+  OverlayContent:
+    - language: Language
+    - title: Maybe Text
+    - description: Maybe Text
+    - okButtonText: Maybe Text
+    - cancelButtonText: Maybe Text
+    - derive: "'HideSecrets"
+  DeleteOverlayReq:
+    - overlayKey: Text
+    - udf1: Maybe Text
+    - vehicleCategory : Maybe VehicleCategory
+    - derive: "'HideSecrets"
+  ListOverlayResp:
+    - recordType: Type
+    - type: [OverlayItem]
+  OverlayItem:
+    - overlayKey: Text
+    - udf1: Maybe Text
+    - actions: [Text]
+    - link: Maybe Text
+    - imageUrl: Maybe Text
+    - title: Maybe Text
+    - description: Maybe Text
+    - okButtonText: Maybe Text
+    - cancelButtonText: Maybe Text
+    - reqBody: Value
+    - method: Maybe Text
+    - endPoint: Maybe Text
+    - delay: Maybe Int
+    - contactSupportNumber: Maybe Text
+    - toastMessage: Maybe Text
+    - secondaryActions: Maybe [Text]
+    - socialMediaLinks: Maybe [FCMMediaLink]
+    - showPushNotification: Maybe Bool
+    - derive: "'HideSecrets"
+  OverlayInfoResp:
+    - recordType: Type
+    - type: CreateOverlayReq
+  ScheduleOverlay:
+    - scheduleTime: TimeOfDay
+    - rescheduleInterval: Maybe Seconds
+    - condition: OverlayCondition
+    - overlayKey: Text
+    - vehicleCategory: Maybe VehicleCategory
+    - udf1: Maybe Text
+    - derive: "'HideSecrets"
+

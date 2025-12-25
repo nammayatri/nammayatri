@@ -28,14 +28,26 @@ import Engineering.Helpers.Commons (getNewIDWithTag, setText)
 import JBridge (requestKeyboardShow, hideKeyboardOnNavigation, minimizeApp)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (&&), (<=), (==), (>), (||), (<>), (+), show)
-import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.AddVehicleDetailsScreen.Controller (dateFormat)
 import Screens.Types (AadhaarStage(..), AadhaarVerificationScreenState)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (AadhaarNumberEditText _) = "AadhaarNumberEditText"
+  show (AadhaarOtpEditText _) = "AadhaarOtpEditText"
+  show (AadhaarNameEditText _) = "AadhaarNameEditText"
+  show (AadhaarGenderEditText _) = "AadhaarGenderEditText"
+  show (PrimaryButtonAC _) = "PrimaryButtonAC"
+  show (ResendOTP) = "ResendOTP"
+  show (AfterRender) = "AfterRender"
+  show (ResendTimer _) = "ResendTimer"
+  show (Logout) = "Logout"
+  show (PopUpModalAC _) = "PopUpModalAC"
+  show (SelectDateOfBirthAction) = "SelectDateOfBirthAction"
+  show (DatePicker _ _ _ _ _) = "DatePicker"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -46,15 +58,19 @@ instance loggableAction :: Loggable Action where
     AadhaarNumberEditText act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked-> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_image_clicked" "primary_edit_text"
     AadhaarOtpEditText act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked-> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_image_clicked" "primary_edit_text"
     AadhaarNameEditText act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked-> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_image_clicked" "primary_edit_text"
     AadhaarGenderEditText act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked-> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_image_clicked" "primary_edit_text"
     PrimaryButtonAC act -> case act of
       PrimaryButton.OnClick -> do
         trackAppActionClick appId (getScreen AADHAAR_VERIFICATION_SCREEN) "primary_button" "next_on_click"
@@ -93,7 +109,9 @@ eval :: Action -> AadhaarVerificationScreenState -> Eval Action ScreenOutput Aad
 eval action state = case action of
   AfterRender -> continue state
   BackPressed ->  if state.props.currentStage == VerifyAadhaar then continue state{props{currentStage = EnterAadhaar}}
-                  else exit $ GoBack
+                  else do
+                    pure $ hideKeyboardOnNavigation true
+                    exit $ GoBack
 
   (PrimaryButtonAC (PrimaryButton.OnClick)) ->
     case state.props.currentStage of

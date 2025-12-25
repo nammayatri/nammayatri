@@ -1,0 +1,74 @@
+# access tokens with different roles
+@operator = favorit-operator-token0-000000000000
+@fleet = 88ef2a2a-b014-4a86-b1c0-e453e8b0b688
+@rentalFleet = favorit-rental_fleet-token-000000000
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name fleetLogin
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/fleet/v2/login/otp
+content-type: application/json
+
+{ "mobileCountryCode": "+91",
+  "mobileNumber": "3222345679"
+}
+
+###
+
+# @name fleetVerify
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/fleet/v2/verify/otp
+content-type: application/json
+
+{ "mobileCountryCode": "+91",
+  "mobileNumber": "3222345679",
+  "otp": "7891"
+}
+
+###
+
+# @name profile
+
+@newFleetToken = {{fleetVerify.response.body.authToken}}
+
+GET {{bpp-dashboard-host}}/user/profile
+content-type: application/json
+token: {{newFleetToken}}
+
+###
+
+# @name fleetRegister
+
+@personId = {{profile.response.body.id}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/fleet/v2/register
+content-type: application/json
+token: {{newFleetToken}}
+# token: {{operator}}
+# token: {{fleet}}
+
+{ "businessLicenseImage": null,
+  "businessLicenseNumber": null,
+  "email": null,
+  "firstName": "Eric",
+  "fleetType": "NORMAL_FLEET",
+  "gstNumber": null,
+  "lastName": "Williams",
+  "operatorReferralCode": null,
+  "personId": "{{personId}}"
+}
+
+###
+
+# @name getDriverFleetOwnerInfo
+
+@fleetId = favorit-fleet-owner-0000000000000000
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{fleetId}}/fleetOwnerInfo
+token: {{juspay_admin}}

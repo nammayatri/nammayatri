@@ -14,7 +14,8 @@
 
 module Domain.Action.UI.Rating where
 
-import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as Text
 import Domain.Types.Ride as Ride
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -27,12 +28,12 @@ import SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
-rating :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal], CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]) => CallBAPInternal.FeedbackReq -> m APISuccess
+rating :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal], CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => CallBAPInternal.FeedbackReq -> m APISuccess
 rating request = do
   appBackendBapInternal <- asks (.appBackendBapInternal)
   unless (request.ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let rideId = request.rideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  unless (ride.status == COMPLETED) $ throwError (RideInvalidStatus "Feedback available only for completed rides.")
+  unless (ride.status == COMPLETED) $ throwError (RideInvalidStatus ("Feedback available only for completed rides." <> Text.pack (show ride.status)))
   void $ CallBAPInternal.feedback appBackendBapInternal.apiKey appBackendBapInternal.url request
   pure Success

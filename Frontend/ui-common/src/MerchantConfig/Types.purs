@@ -14,7 +14,7 @@
 -}
 module Common.Types.Config where
 
-
+import Common.Types.App
 type CommonAppConfig = (
     colors :: Colors
   , primaryButtonConfig :: PrimaryButtonConfig
@@ -25,12 +25,16 @@ type CommonAppConfig = (
   , navigationAppConfig :: NavigationConfig
   , genericHeaderConfig :: GenericHeaderConfig
   , showCorporateAddress :: Boolean
+  , showRegisteredAddress :: Boolean
   , appData :: AppDatas
   , otpRegex :: String
   , termsLink :: String
+  , termsVersion :: Number
   , privacyLink :: String
   , dashboard :: DashboardConfig
   , logFunctionCalls :: Boolean
+  , bannerCarousel :: BannerCarousalConfig 
+  , countryCodeConfig ::  Array CountryCodeObj
   , defaultLanguage :: String)
   
 type Colors = {
@@ -48,6 +52,7 @@ type PrimaryButtonConfig = {
 type FontConfig = {
     default :: String
   , kannada :: String
+  , telugu :: String
   , type :: String
 }
 
@@ -70,6 +75,8 @@ type NavigationAppConfig = {
   query :: String
 , packageName :: String
 , walkQuery :: String
+, directionQuery :: String
+, twoWheelerQuery :: String
 }
 
 type GenericHeaderConfig = {
@@ -80,22 +87,57 @@ type AppDatas = {
     link :: String
   , supportMail :: String
   , name :: String
+  , website :: String
+  , logoLight :: String
 }
 
-type CityConfig = {
-  cityName :: String,
-  mapImage :: String,
-  cityCode :: String,
-  showSubscriptions :: Boolean,
-  cityLat :: Number,
-  cityLong :: Number,
-  supportNumber :: String,
-  languageKey :: String,
-  showDriverReferral :: Boolean,
-  uploadRCandDL :: Boolean
+type Referral = {
+    domain :: String
+  , customerAppId :: String
+  , driverAppId :: String
+}
+
+type WaitingChargesConfig = {
+  cab :: ChargesEntity,
+  auto :: ChargesEntity,
+  bike :: ChargesEntity,
+  ambulance :: ChargesEntity
+}
+
+type ChargesEntity = {
+  freeSeconds :: Int,
+  perMinCharges :: Number
 }
 
 type DashboardConfig = {
     url :: String
   , enable :: Boolean
+}
+
+type BannerCarousalConfig = {
+  autoScrollDelay :: Number
+, enableAutoScroll :: Boolean
+}
+
+type GeoJson = {
+    type :: String
+  , features :: Array GeoJsonFeature
+}
+
+type GeoJsonFeature = {
+    type :: String
+  , properties :: GeoJsonProperties
+  , geometry :: GeoJsonGeometry
+}
+
+type GeoJsonProperties = {
+    name :: String
+  , id :: String
+  , defaultDriverExtra :: Int
+  , canQueueUpOnGate :: Boolean
+}
+
+type GeoJsonGeometry = {
+    type :: String
+  , coordinates :: Array (Array (Array (Array Number)))
 }

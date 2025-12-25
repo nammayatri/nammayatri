@@ -19,6 +19,7 @@ import Prelude
 import Control.Monad.Trans.Class (lift)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
+import Data.Maybe (Maybe(..))
 import JBridge as JBridge
 import Screens.Types (Stage)
 import Types.App (FlowBT)
@@ -37,6 +38,7 @@ data KeyStore
   | TRACKING_DRIVER
   | TRACKING_ENABLED
   | TRACKING_ID
+  | EDIT_DEST_POLLING_ID
   | BUNDLE_VERSION
   | AUTO_SELECTING
   | GOT_ONE_QUOTE
@@ -48,16 +50,19 @@ data KeyStore
   | REGISTRATION_APPROVED
   | PREVIOUS_CURRENT_LOCATION
   | READ_MESSAGES
-  | CHAT_CHANNEL_ID 
+  | CHAT_CHANNEL_ID
   | MERCHANT_ID
   | BASE_URL
   | CONTACTS
   | TEST_MINIMUM_POLLING_COUNT
   | TEST_POLLING_INTERVAL
+  | EDIT_DEST_POLLING_COUNT
+  | EDIT_DEST_POLLING_INTERVAL
   | TEST_POLLING_COUNT
   | LIVE_DASHBOARD
   | FINDING_QUOTES_START_TIME
   | FINDING_QUOTES_POLLING
+  | FINDING_EDIT_LOC_RESULTS
   | FLOW_STATUS_DATA
   | RATING_SKIPPED
   | POINTS_FACTOR
@@ -80,8 +85,7 @@ data KeyStore
   | DISABILITY_POPUP_TRIGGERED
   | BUNDLE_TIME_OUT
   | NOTIFIED_CUSTOMER
-  | DISABILITY_NAME 
-  | ESTIMATE_DATA
+  | DISABILITY_NAME
   | REFERRER_URL
   | PAYMENT_STATUS_POOLING
   | CONFIG_VERSION
@@ -91,6 +95,43 @@ data KeyStore
   | REALLOCATE_PRODUCT_ENABLED
   | UPDATE_REPEAT_TRIPS
   | CUSTOMER_LOCATION
+  | IS_SOS_ACTIVE
+  | SAFETY_ALERT_TYPE
+  | SOS_ALARM_STATUS
+  | T_AND_C_VERSION
+  | METRO_PAYMENT_STATUS_POOLING
+  | METRO_STATIONS
+  | METRO_PAYMENT_SDK_POLLING
+  | MOCK_SOS_FOR_RIDES
+  | CUSTOMER_REFERRAL_CODE
+  | CUSTOMER_CLIENT_ID
+  | CUSTOMER_FIRST_RIDE
+  | DRIVER_WITHIN_PICKUP_THRESHOLD
+  | ADVANCED_ROUTE_DISTANCE
+  | AC_POPUP_SHOWN_FOR_RIDE
+  | STARTED_ESTIMATE_SEARCH
+  | RATE_CARD_INFO
+  | CONFIRM_QUOTES_POLLING
+  | CONFIRM_QUOTES_POLLING_COUNT
+  | CONFIRM_QUOTES_START_TIME
+  | BOOKING_TIME_LIST
+  | TICKETS_BOOKED_IN_EVENT
+  | POST_RIDE_CHECK_SETTINGS
+  | INTERCITY_BUS_PHONE_NUMBER_PERMISSION
+  | PARCEL_INSTRUCTIONS_VISITED
+  | DRIVER_REACHED_DESTINATION_ACTION
+  | LOCAL_ESTIMATES
+  | BOOSTED_SEARCH
+  | RECENT_BUS_STOPS
+  | RECENT_BUS_ROUTES
+  | MapViewLottie
+  | LOCATION_MANUALLY_UPDATED
+  | ShowedEnquiryPopup
+  | CUSTOMER_FIRST_SIGNUP
+  | ONBOARDED_VEHICLE_INFO
+  | CAN_HAVE_ACTIVE_TICKETS
+  | PUSH_SDK_TS
+  | LAST_SHOWN_BIKE_BANNER_IN_BUS
 
 derive instance genericKeyStore :: Generic KeyStore _
 
@@ -102,6 +143,20 @@ setValueToLocalStore keyStore val = void $ lift $ lift $ pure $ JBridge.setKeyIn
 
 getValueToLocalStore :: KeyStore -> String
 getValueToLocalStore = JBridge.getKeyInSharedPrefKeys <<< show
+
+setUserCity :: KeyStore -> String -> FlowBT String Unit
+setUserCity keyStore newVal = do
+  let manualUpdate = getValueToLocalStore LOCATION_MANUALLY_UPDATED
+  if manualUpdate == "true"
+    then pure unit
+    else setValueToLocalStore keyStore newVal
+
+getValueFromLocalStoreMb :: KeyStore -> Maybe String
+getValueFromLocalStoreMb key = do
+  let val = getValueToLocalStore key
+  if val == "(null)" || val == "__failed"
+    then Nothing
+    else Just val
 
 deleteValueFromLocalStore :: KeyStore -> FlowBT String Unit
 deleteValueFromLocalStore = void <<< lift <<< lift <<< pure <<< JBridge.removeKeysInSharedPrefs <<< show
@@ -115,8 +170,13 @@ getValueToLocalNativeStore = JBridge.getKeyInNativeSharedPrefKeys <<< show
 deleteValueFromLocalNativeStore :: KeyStore -> FlowBT String Unit
 deleteValueFromLocalNativeStore = void <<< lift <<< lift <<< pure <<< JBridge.removeKeysInNativeSharedPrefs <<< show
 
+-- TODO:: Make sure caching works before enabling it here
 updateLocalStage :: Stage -> FlowBT String Unit
+-- updateLocalStage stage = void $ pure $ setValueToCache "LOCAL_STAGE" stage show
 updateLocalStage = setValueToLocalStore LOCAL_STAGE <<< show
 
+
 isLocalStageOn :: Stage -> Boolean
+-- isLocalStageOn stage = show stage == getValueFromCache "LOCAL_STAGE" JBridge.getKeyInSharedPrefKeys
 isLocalStageOn stage = (getValueToLocalStore LOCAL_STAGE) == show stage
+

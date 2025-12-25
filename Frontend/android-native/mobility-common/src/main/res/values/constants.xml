@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="LANGUAGE_KEY" translatable="false">LANGUAGE_KEY</string>
+    <string name="preference_file_key" translatable="false">godel</string>
 </resources>

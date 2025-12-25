@@ -8,9 +8,9 @@
  */
 
 package in.juspay.mobility.app;
-import static android.graphics.Color.rgb;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -18,9 +18,14 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.location.Address;
+import android.location.Geocoder;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -34,8 +39,14 @@ import android.widget.Toast;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.work.BackoffPolicy;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
 
+import com.bumptech.glide.Glide;
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -48,19 +59,46 @@ import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
+import in.juspay.mobility.app.dataModel.VariantConfig;
+import in.juspay.mobility.common.services.TLSSocketFactory;
+import static in.juspay.mobility.common.MobilityCommonBridge.isServiceRunning;
 
 public class RideRequestUtils {
     private final static int rideReqNotificationId = 5032023;
     private final static String RIDE_REQUEST_CHANNEL = "in.juspay.mobility.riderequest";
     private final static int rideReqNotificationReqCode = 6032023;
     private static final String LOG_TAG = "RideRequestUtils";
+    private static final String KOLKATA = "kolkata";
+    private static final String KOCHI = "kochi";
+    private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
 
-    public static Boolean driverRespondApi(String searchRequestId, double offeredPrice, boolean isAccept, Context context, int slotNumber) {
+    public static Boolean driverRespondApi(SheetModel model, boolean isAccept, Context context, int slotNumber) {
+        String searchRequestId = model.getSearchRequestId();
+        double offeredPrice = model.getOfferedPrice();
+        String notificationSource = model.getNotificationSource();
         Handler mainLooper = new Handler(Looper.getMainLooper());
         StringBuilder result = new StringBuilder();
         SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -88,6 +126,9 @@ public class RideRequestUtils {
                 payload.put(context.getResources().getString(R.string.OFFERED_FARE), (offeredPrice));
             }
             payload.put(context.getResources().getString(R.string.SEARCH_REQUEST_ID), searchRequestId);
+            payload.put("notificationSource", notificationSource);
+            payload.put("renderedAt", model.getRenderedAt());
+            payload.put("respondedAt", RideRequestUtils.getCurrentUTC());
             if (isAccept) payload.put("response", "Accept");
             else payload.put("response", "Reject");
             payload.put("slotNumber", slotNumber);
@@ -176,6 +217,7 @@ public class RideRequestUtils {
             channel.setVibrationPattern(vibrationPattern);
             channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
             channel.setImportance(NotificationManager.IMPORTANCE_HIGH);
+            channel.setGroup("2_ride_related");
             NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
         }
@@ -218,28 +260,62 @@ public class RideRequestUtils {
         mFirebaseAnalytics.logEvent(event, params);
     }
 
-    public static void restartLocationService(Context context) {
-        Intent locationService = new Intent(context, LocationUpdateService.class);
-        locationService.putExtra("StartingSource", "TRIGGER_SERVICE");
-        locationService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(locationService);
-        } else {
-            context.startService(locationService);
-        }
-        Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-        restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        if(Settings.canDrawOverlays(context)){
-            try{
-                Handler handler = new Handler();
-                handler.postDelayed(() -> {
-                    context.startActivity(restartIntent);
-                    Utils.minimizeApp(context);
-                }, 5000);
-            } catch (Exception e) {
-                Log.e("BootUpReceiver", "Unable to Start Widget Service");
+    public static String getPinCodeFromRR(double latitude, double longitude, Context context) {
+        try {
+            Geocoder geocoder = new Geocoder(context.getApplicationContext(), Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+            if ( geocoder.isPresent() && addresses != null && addresses.size() > 0) {
+                Address address = addresses.get(0);
+                return matchRegex(address.getAddressLine(0), "\\b\\d{6}\\b");
+            } else {
+                return null;
             }
+        } catch (Exception e) {
+            Exception exception = new Exception("Error in FetchingPinCode " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
+            e.printStackTrace();
+            return null;
+        }
+    };
+
+    private static String matchRegex(String input, String regexPattern) {
+        Pattern pattern = Pattern.compile(regexPattern);
+        Matcher matcher = pattern.matcher(input);
+        if (matcher.find()) {
+            return matcher.group();
+        } else {
+            return null;
+        }
+    }
+    public static void restartLocationService(Context context) {
+        try {
+            OneTimeWorkRequest oneTimeWorkRequest = new OneTimeWorkRequest.Builder(LocationUpdateWorker.class).setBackoffCriteria(
+                    BackoffPolicy.EXPONENTIAL, // Use exponential backoff strategy
+                    1, // Minimum delay before retrying (in minutes)
+                    TimeUnit.MINUTES // Time unit for delay
+            ).build();
+            WorkManager.getInstance(context).enqueue(oneTimeWorkRequest);
+            Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            SharedPreferences sharedPrefs = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String activityStatus = sharedPrefs.getString("ACTIVITY_STATUS", "null");
+            if (sharedPrefs.getString("LOCATION_SERVICE_VERSION","V2").equals("V1")) {
+                 if(Settings.canDrawOverlays(context) && activityStatus.equals("onDestroy")){
+                     new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                         context.startActivity(restartIntent);
+                         Utils.minimizeApp(context);
+                     }, 5000);
+                 }
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error in restartLocationService : " + e);
+            String driverId = "empty";
+            if(context != null) {
+                SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                if (sharedPref != null) driverId = sharedPref.getString("DRIVER_ID", "null");
+            }
+            Exception exception = new Exception("Exception in restartLocationService for ID : " + driverId + " $ Error : " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
         }
     }
 
@@ -321,15 +397,14 @@ public class RideRequestUtils {
             } else {
                 return new JSONObject();
             }
-            InputStream is = context.getAssets().open("juspay/zone_config.json");
-            int size = is.available();
-            byte[] buffer = new byte[size];
-            is.read(buffer);
-            is.close();
-            String json = new String(buffer, StandardCharsets.UTF_8);
-            return new JSONObject(json).getJSONObject(key);
+            if (remoteConfigs.hasKey("zone_config")){
+                String zoneConfStr = remoteConfigs.getString("zone_config");
+                return new JSONObject(zoneConfStr).getJSONObject(key);
+            }else {
+                return new JSONObject();
+            }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            FirebaseCrashlytics.getInstance().recordException(ex);
             return new JSONObject();
         }
     }
@@ -337,12 +412,12 @@ public class RideRequestUtils {
     public static void setSpecialZoneAttrs(SheetAdapter.SheetViewHolder holder, String specialLocationTag, Context context) {
         try{
             JSONObject zoneConfig = getZoneConfig(specialLocationTag,context);
-            holder.assetZonePickup.setImageURI(Uri.parse("android.resource://"+ context.getPackageName() +"/drawable/"+ zoneConfig.get("imageUrl")));
-            holder.assetZoneDrop.setImageURI(Uri.parse("android.resource://"+ context.getPackageName() +"/drawable/"+ zoneConfig.get("imageUrl")));
+            Glide.with(context).load(zoneConfig.get("imageUrl")).into(holder.assetZonePickup);
+            Glide.with(context).load(zoneConfig.get("imageUrl")).into(holder.assetZoneDrop);
             holder.assetZonePickup.setVisibility(zoneConfig.getInt("assetZonePickupVisibility"));
             holder.assetZoneDrop.setVisibility(zoneConfig.getInt("assetZoneDropVisibility"));
         }catch (Exception e){
-            e.printStackTrace();
+            FirebaseCrashlytics.getInstance().recordException(e);
         }
     }
 
@@ -384,7 +459,7 @@ public class RideRequestUtils {
                     respReader = new InputStreamReader(connection.getErrorStream());
                     Log.d(LOG_TAG, "in error "+ respReader);
                 } else {
-                    if (startWidget && Settings.canDrawOverlays(context)  && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+                    if (startWidget && Settings.canDrawOverlays(context)  && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && !sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "false").equals("true") && (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
                             Intent widgetService = new Intent(context, WidgetService.class);
                             context.startService(widgetService);
                     }
@@ -405,5 +480,436 @@ public class RideRequestUtils {
                 Log.d(LOG_TAG, "Catch in updateDriverStatus : "+error);
             }
         });
+    }
+
+    public static void addRideReceivedEvent(JSONObject entity_payload, Bundle rideRequestBundle, SheetModel model, String event, Context context) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            try {
+                if (!remoteConfigs.hasKey("enable_clevertap_events")) return;
+                String merchantId = context.getResources().getString(R.string.merchant_id);
+                System.out.println("testing: " + merchantId);
+                JSONObject clevertapConfig = new JSONObject(remoteConfigs.getString("enable_clevertap_events"));
+                SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                if (clevertapConfig.has(merchantId)) {
+                    boolean enableCleverTapEvents = clevertapConfig.getBoolean(merchantId);
+                    if (enableCleverTapEvents) {
+                        HashMap<String, Object> cleverTapParams = new HashMap<>();
+                        if (entity_payload != null) {
+                            cleverTapParams.put("searchRequestId", entity_payload.getString("searchRequestId"));
+                            cleverTapParams.put("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
+                            cleverTapParams.put("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
+                            cleverTapParams.put("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? NotificationUtils.getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NotificationUtils.NO_VARIANT);
+                        } else if (rideRequestBundle != null) {
+                            cleverTapParams.put("searchRequestId", rideRequestBundle.getString("searchRequestId"));
+                            cleverTapParams.put("rideRequestPopupDelayDuration", rideRequestBundle.getInt("rideRequestPopupDelayDuration"));
+                            cleverTapParams.put("keepHiddenForSeconds", rideRequestBundle.getInt("keepHiddenForSeconds", 0));
+                            cleverTapParams.put("requestedVehicleVariant", rideRequestBundle.getString("requestedVehicleVariant"));
+                        } else if (model != null) {
+                            cleverTapParams.put("searchRequestId", model.getSearchRequestId());
+                            cleverTapParams.put("rideRequestPopupDelayDuration", model.getRideRequestPopupDelayDuration());
+                            cleverTapParams.put("vehicleVariant", sharedPref.getString("VEHICLE_VARIANT", "null"));
+                        }
+                        cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
+                        clevertapConfig.put("driverMode", sharedPref.getString("DRIVER_STATUS_N", ""));
+                        clevertapConfig.put("overlayNotAvailable", NotificationUtils.overlayFeatureNotAvailable(context));
+                        CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                            LocalDateTime utcDateTime = LocalDateTime.now(ZoneOffset.UTC);
+                            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+                            String formattedDateTime = utcDateTime.format(formatter);
+                            long millisecondsSinceEpoch = Instant.now().toEpochMilli();
+                            cleverTapParams.put("timeStampString", formattedDateTime);
+                            cleverTapParams.put("timeStamp", millisecondsSinceEpoch);
+                        }
+                        if (clevertapDefaultInstance != null) {
+                            clevertapDefaultInstance.pushEvent(event, cleverTapParams);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                firebaseLogEventWithParams("exception_in_logging_ride_req_event", "exception", Objects.requireNonNull(e.getMessage()).substring(0, 40), context);
+            }
+        });
+    }
+
+    public static String calculateDp(String durationToPickup, DecimalFormat df) {
+        try {
+            return df.format(Integer.parseInt(durationToPickup) / 60);
+        } catch (NumberFormatException e) {
+            Log.e("ParseInt Error", e.toString());
+            return "";
+        }
+    }
+
+    public static String getCityWithFallback (Context context){
+        SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String city = sharedPref.getString("DRIVER_LOCATION", "null").toLowerCase();
+        if (!city.equals("null")){
+            return city;
+        }else {
+            // fallback
+            String buildType = context.getResources().getString(R.string.service);
+            if (buildType.equals("yatrisathiprovider")){
+                return KOLKATA;
+            } else if (buildType.equals("yatriprovider")) {
+                return KOCHI;
+            }else {
+                return city;
+            }
+        }
+
+    }
+
+    public static VariantConfig getVariantConfig(String myVariant, Context context) throws JSONException {
+        JSONObject myCityVariantConfig = currentCityObject("variant_config", context);
+        if (myCityVariantConfig.has(myVariant)){
+            JSONObject myVariantConfig = myCityVariantConfig.getJSONObject(myVariant);
+            String text = myVariantConfig.optString("text", "");
+            String textColor = myVariantConfig.optString("textColor", "");
+            String background = myVariantConfig.optString("background", "");
+            String icon = myVariantConfig.optString("icon", "");
+            boolean visible = myVariantConfig.optBoolean("visible", false);
+            return new VariantConfig(text, textColor, background, icon, visible);
+        }
+        return new VariantConfig("","","","",false);
+    }
+
+    public static int dpToPx(int dp, Context context) {
+        float density = context.getResources().getDisplayMetrics().density;
+        return Math.round(dp * density);
+    }
+
+    private static GradientDrawable getGradientDrawable(String background, Context context){
+        // Create a new shape drawable
+        GradientDrawable shapeDrawable = new GradientDrawable();
+        shapeDrawable.setShape(GradientDrawable.RECTANGLE);
+        int cornerVal = dpToPx(13, context );
+        shapeDrawable.setCornerRadii(new float[]{cornerVal,cornerVal,cornerVal,cornerVal,cornerVal,cornerVal,cornerVal,cornerVal}); // setting corners
+        shapeDrawable.setStroke(1, Color.parseColor(background)); // setting stroke color and width
+        shapeDrawable.setColor(Color.parseColor(background)); // setting solid color
+        return shapeDrawable;
+    }
+
+    public static boolean handleVariant(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context){
+        String vehicleVariant = model.getRequestedVehicleVariant();
+        try {
+            VariantConfig variantConfig = getVariantConfig(vehicleVariant, context);
+            holder.rideTypeTag.setBackground(getGradientDrawable(variantConfig.getBackground(), context));
+            holder.rideTypeText.setText(variantConfig.getText());
+            holder.rideTypeImage.setVisibility(variantConfig.getIcon().isEmpty() ? View.GONE : View.VISIBLE);
+            holder.rideTypeImage.setImageURI(Uri.parse("android.resource://"+ context.getPackageName() +"/drawable/"+ variantConfig.getIcon()));
+            holder.rideTypeText.setTextColor(Color.parseColor(variantConfig.getTextColor()));
+            return variantConfig.isVisible();
+        }catch (Exception e){
+            holder.rideTypeTag.setVisibility(View.GONE);
+            return false;
+        }
+    }
+
+    public static String getUptoDecStr(float val, int digit) {
+        DecimalFormat df = new DecimalFormat("###.##", new DecimalFormatSymbols(new Locale("en", "us")));
+        df.setMaximumFractionDigits(digit);
+        return df.format(val);
+    }
+
+    public static void updateTierAndAC(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
+        
+        String tripCategory = model.getRideProductType() != null ? model.getRideProductType() : "";
+        boolean showTier = model.getVehicleServiceTier() != null;
+        int airConditioned = model.isAirConditioned();
+        boolean ventilator = model.getRequestedVehicleVariant().equals("AMBULANCE_VENTILATOR");
+        boolean showAC = airConditioned == 1 && showAcConfig(context);
+        boolean showNonAC = airConditioned == 0 && showAcConfig(context);
+        if (ventilator) {
+            holder.ventilator.setVisibility(View.VISIBLE);
+        }
+        else if (showAC) {
+            holder.acView.setVisibility(View.VISIBLE);
+        }else if (showNonAC){
+            holder.nonAcView.setVisibility(View.VISIBLE);
+        }else {
+            holder.acView.setVisibility(View.GONE);
+            holder.nonAcView.setVisibility(View.GONE);
+        }
+        
+        if(tripCategory.equals(NotificationUtils.DELIVERY)) holder.vcTierAndACView.setRadius(dpToPx(8,context));
+
+        holder.vcTierAndACView.setVisibility((showTier || showAC || showNonAC) ? View.VISIBLE : View.GONE);
+        holder.vcTierAndACView.setCardBackgroundColor(getVcTierAndACBg(tripCategory, showNonAC, context));
+        holder.vehicleServiceTier.setText(model.getVehicleServiceTier() != null ? getSTMapping (model.getVehicleServiceTier(), context) : "");
+        holder.vehicleServiceTier.setTextColor(getVehicleServiceTierTextColor(tripCategory, showNonAC, context));
+        holder.vehicleServiceTier.setVisibility(showTier ? View.VISIBLE : View.GONE);
+        holder.acNonAcView.setVisibility( showAC || showNonAC ? View.VISIBLE : View.GONE);
+    }
+
+    @SuppressLint("SetTextI18n")
+    public static void updateRateView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
+        double baseFare = model.getBaseFare() + model.getOfferedPrice() - model.getTollCharges();
+        float dist = model.getDistanceToBeCovFloat() / 1000;
+        String rate;
+
+        if (dist == 0.0f) {
+            rate = "NA";
+        } else {
+            rate = RideRequestUtils.getUptoDecStr((float) (baseFare / dist), 1);
+        }
+
+        String currency = model.getCurrency();
+        holder.rateText.setText("Rate: " + currency + rate + "/km");
+    }
+
+
+    public static void updateRentalView(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
+        Handler mainLooper = new Handler(Looper.getMainLooper());
+        mainLooper.post(() -> {
+            if(!model.getRideProductType().equals(NotificationUtils.RENTAL)){
+                return;
+            }
+            holder.tagsBlock.setVisibility(View.VISIBLE);
+            holder.reqButton.setTextColor(context.getColor(R.color.white));
+//            holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.turquoise)));
+            holder.rentalRideTypeTag.setVisibility(View.VISIBLE);
+            holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
+            holder.rideStartTime.setText(model.getRideStartTime());
+            holder.rideStartDate.setVisibility(View.VISIBLE);
+            holder.rideStartDate.setText(model.getRideStartDate());
+            holder.rentalDurationDistanceTag.setVisibility(View.VISIBLE);
+            holder.rideDuration.setText(model.getRideDuration());
+            holder.rideDistance.setText(model.getRideDistance());
+            holder.destinationArea.setVisibility(View.GONE);
+            holder.destinationAddress.setVisibility(View.GONE);
+            holder.distanceToBeCovered.setVisibility(View.GONE);
+            holder.destinationPinCode.setVisibility(View.GONE);
+            holder.locationDashedLine.setVisibility(View.GONE);
+            holder.locationDestinationPinTag.setVisibility(View.GONE);
+            holder.gotoTag.setVisibility(View.GONE);
+        });
+    }
+
+    public static void updateIntercityView(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
+        Handler mainLooper = new Handler(Looper.getMainLooper());
+        mainLooper.post(() -> {
+            if (!model.getRideProductType().equals(NotificationUtils.INTERCITY)) {
+                return;
+            }
+            holder.tagsBlock.setVisibility(View.VISIBLE);
+            holder.reqButton.setTextColor(context.getColor(R.color.white));
+//            holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.blue800)));
+            holder.intercityRideTypeTag.setVisibility(View.VISIBLE);
+            holder.gotoTag.setVisibility(View.GONE);
+            holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
+            holder.rideStartTime.setText(model.getRideStartTime());
+            holder.rideStartDate.setVisibility(View.VISIBLE);
+            holder.rideStartDate.setText(model.getRideStartDate());
+            holder.buttonIncreasePrice.setVisibility(View.GONE);
+            holder.buttonDecreasePrice.setVisibility(View.GONE);
+        });
+    }
+
+    public static void updateExtraChargesString(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
+        if (model.isThirdPartyBooking()) {
+            holder.thirdPartyTag.setVisibility(View.VISIBLE);
+            holder.thirdPartyTagText.setText(context.getString(R.string.third_party_booking));
+            holder.rateText.setVisibility(View.GONE);
+            holder.rateViewDot.setVisibility(View.GONE);
+            holder.textIncludesCharges.setText(context.getString(R.string.no_additional_fare_tips_and_waiting_charges));
+            holder.textIncludesCharges.setTextColor(context.getColor(R.color.red900));
+            return ;
+        }
+
+        boolean showPickupCharges = false;
+        boolean hideZeroPickupCharges = true;
+        int pickUpCharges = model.getDriverPickUpCharges();
+        try {
+            JSONObject currentCityConfig = currentCityObject("views_config", context);
+            if (currentCityConfig.has("show_pickup_charges")){
+                showPickupCharges = currentCityConfig.getBoolean("show_pickup_charges");
+            }
+            if (currentCityConfig.has("hide_zero_pickup_charges")){
+                hideZeroPickupCharges = currentCityConfig.getBoolean("hide_zero_pickup_charges");
+            }
+        }catch (JSONException e){
+            firebaseLogEventWithParams("exception_in_update_extra_charges", "exception", String.valueOf(e), context);
+        }
+        showPickupCharges = pickUpCharges > 0 && !hideZeroPickupCharges && showPickupCharges;
+
+        double parkingCharge = model.getParkingCharges();
+        boolean showParkingCharges = Double.compare(parkingCharge, 0.0) > 0;
+
+        if(!showPickupCharges && !showParkingCharges){
+            holder.textIncludesCharges.setVisibility(View.GONE);
+            holder.rateViewDot.setVisibility(View.GONE);
+            return;
+        }
+
+        String pickupChargesText = showPickupCharges ? context.getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(pickUpCharges)) : "";
+        String parkingChargesText = showParkingCharges ? context.getString(R.string.parking_charges, parkingCharge) : "";
+        String includesText = context.getString(R.string.includes);
+        String fullText =includesText + " " + pickupChargesText + (showPickupCharges && showParkingCharges ? " & " : "")  + parkingChargesText;
+
+        holder.textIncludesCharges.setText(fullText);
+        holder.textIncludesCharges.setVisibility(View.VISIBLE);
+        holder.rateViewDot.setVisibility(View.VISIBLE);
+    }
+
+    private static boolean showAcConfig(Context context) {
+        JSONObject myCityOb = currentCityObject("service_tier_mapping", context);
+        if (myCityOb.has("ac_tag")){
+            return myCityOb.optBoolean("ac_tag", true);
+        }
+        return true;
+    }
+
+    public static String getSTMapping (String serviceTier, Context context) {
+        JSONObject myCityOb = currentCityObject("service_tier_mapping", context);
+        try {
+            if (myCityOb.has("mapping")){
+                JSONObject mappingOb = myCityOb.getJSONObject("mapping");
+                if(mappingOb.has(serviceTier)){
+                    return mappingOb.getString(serviceTier);
+                }
+            }
+        }catch (Exception e){
+            firebaseLogEventWithParams("exception_in_get_st_mapping", "exception", String.valueOf(e), context);
+        }
+        return serviceTier;
+    }
+
+    public static int getVehicleServiceTierTextColor (String tripCategory, Boolean showNonAC, Context context){
+        try {
+                JSONObject tagOb = getRRCityStyleConfig(tripCategory, showNonAC, context);
+                if (tagOb.has("textColor")){
+                    return Color.parseColor(tagOb.getString("textColor"));
+                }
+            }
+        catch (Exception e){
+            firebaseLogEventWithParams("exception_in_get_st_text_color", "exception", String.valueOf(e), context);
+        }
+        return context.getColor(showNonAC ? R.color.black650 : R.color.blue800);
+    }
+
+    public static int getVcTierAndACBg (String tripCategory, Boolean showNonAC, Context context){
+        JSONObject myCityOb = currentCityObject("ride_request_popup_style_config", context);
+        try{
+            JSONObject tagOb = getRRCityStyleConfig(tripCategory, showNonAC, context);
+            if (tagOb.has("cardBG")){
+                return Color.parseColor(tagOb.getString("cardBG"));
+            }
+        }
+        catch (Exception e){
+            firebaseLogEventWithParams("exception_in_get_st_text_color", "exception", String.valueOf(e), context);
+        }
+        return Color.parseColor(showNonAC ? "#F4F7FF" : "#1A0066FF");
+    }
+
+    public static JSONObject getRRCityStyleConfig (String tripCategory, Boolean showNonAC, Context context)
+    {
+        JSONObject myCityOb = currentCityObject("ride_request_popup_style_config", context);
+        try {
+            if (myCityOb.has(tripCategory)) {
+                JSONObject tripCategoryOb = myCityOb.getJSONObject(tripCategory);
+
+                if (tripCategoryOb.has(showNonAC ? "nonAcTag" : "acTag")) {
+
+                    return tripCategoryOb.getJSONObject(showNonAC ? "nonAcTag" : "acTag");
+                }
+            }
+        }
+        catch (Exception e){
+            firebaseLogEventWithParams("exception_in_get_rr_city_style_config", "exception", String.valueOf(e), context);
+    }
+        return new JSONObject();
+    }
+
+    public static JSONObject currentCityObject (String keyName, Context context){
+        String city = getCityWithFallback(context);
+        String allCities = remoteConfigs.getString(keyName);
+        try {
+            JSONObject allCitiesOb = new JSONObject(allCities);
+            if (allCitiesOb.has(city)) {
+                return allCitiesOb.getJSONObject(city);
+            }
+        }catch (Exception e){
+            firebaseLogEventWithParams("exception_in_get_current_city_ob", "exception", String.valueOf(e), context);
+        }
+        return new JSONObject();
+    }
+
+    public static void updateStepFeeAndButtonAlpha(SheetAdapter.SheetViewHolder holder, SheetModel model, Handler mainLooper) {
+        mainLooper.post(() -> {
+            if (model.getOfferedPrice() <= 0) {
+                model.setButtonDecreasePriceAlpha(0.5f);
+                model.setButtonDecreasePriceClickable(false);
+                model.setButtonIncreasePriceAlpha(1.0f);
+                model.setButtonIncreasePriceClickable(true);
+            } else if (model.getOfferedPrice() >= model.getDriverMaxExtraFee()) {
+                model.setButtonIncreasePriceAlpha(0.5f);
+                model.setButtonIncreasePriceClickable(false);
+                model.setButtonDecreasePriceAlpha(1.0f);
+                model.setButtonDecreasePriceClickable(true);
+            } else { // enable both buttons
+                model.setButtonDecreasePriceAlpha(1.0f);
+                model.setButtonDecreasePriceClickable(true);
+                model.setButtonDecreasePriceAlpha(1.0f);
+                model.setButtonDecreasePriceClickable(true);
+                model.setButtonIncreasePriceAlpha(1.0f);
+                model.setButtonIncreasePriceClickable(true);
+                model.setButtonIncreasePriceAlpha(1.0f);
+                model.setButtonIncreasePriceClickable(true);
+            }
+        });
+    }
+
+    public static String getCurrentUTC(){
+        final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "us"));
+        f.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return f.format(new Date());
+    }
+    
+    @SuppressLint("SetTextI18n")
+    public static void handleDurationToPickup(SheetAdapter.SheetViewHolder holder, SheetModel model, Handler mainLooper, Context context){
+        mainLooper.post(() -> {
+            String buildType = context.getResources().getString(R.string.service);
+            if( buildType.equals("yatrisathiprovider") && !model.getDurationToPickup().isEmpty()){
+                holder.durationToPickup.setVisibility(View.GONE);
+                holder.durationToPickupImage.setVisibility(View.GONE); // Disabled it
+                holder.durationToPickup.setText(model.getDurationToPickup() + " min");
+            } else {
+                holder.durationToPickup.setVisibility(View.GONE);
+                holder.durationToPickupImage.setVisibility(View.GONE);
+            }
+        });
+    }
+
+    public static void increaseVolume(Context context) {
+        AudioManager audio = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        float currentVolume = (float) audio.getStreamVolume(AudioManager.STREAM_MUSIC);
+        int maxVolume = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        if (currentVolume / maxVolume < 0.7) {
+            try{
+                audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (maxVolume * 0.9), AudioManager.ADJUST_SAME);
+            }catch (Exception e){
+                Exception exception = new Exception("Error in increaseVolume " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
+                RideRequestUtils.firebaseLogEventWithParams("exception_in_increase_volume", "increase_volume", String.valueOf(e), context);
+            }
+        }
+    }
+
+    public static int getRideRequestSound(Context context, int i) {
+        switch (i) {
+            case 1: return context.getResources().getIdentifier("ic_rental_ride","raw",context.getPackageName());
+            case 2: return context.getResources().getIdentifier("ic_outstation_ride","raw",context.getPackageName());
+            case 0:
+            default:return context.getResources().getIdentifier("allocation_request","raw",context.getPackageName());
+        }
+    }
+
+    public static int getRideRequestSoundId(String rideType) {
+        switch (rideType) {
+            case NotificationUtils.RENTAL: return  1;
+            case NotificationUtils.INTERCITY: return 2;
+            default:return 0;
+        }
     }
 }

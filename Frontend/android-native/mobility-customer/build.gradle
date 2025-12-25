@@ -4,11 +4,11 @@ plugins {
 
 android {
     namespace 'in.juspay.mobility.customer'
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
-        minSdk 21
-        targetSdk 33
+        minSdk 24
+        targetSdk 34
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -45,8 +45,7 @@ dependencies {
     compileOnly 'com.google.android.material:material:1.6.0'
 
     implementation project(':mobility-common')
-    api 'in.juspay:hyper:2.1.20-nammayatri.13'
-    compileOnly project(':mobility-app')
+    implementation 'in.juspay:hyper:2.1.33-nammayatri.17'
     compileOnly 'com.google.maps.android:android-maps-utils:2.4.0'
     compileOnly 'com.google.android.gms:play-services-maps:18.1.0'
     compileOnly 'com.google.android.gms:play-services-location:21.0.1'

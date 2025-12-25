@@ -1,0 +1,96 @@
+imports:
+  TagRule: Lib.Yudhishthira.Types
+  Chakra: Lib.Yudhishthira.Types
+  ApplicationEvent: Lib.Yudhishthira.Types
+  TagValues: Lib.Yudhishthira.Types
+  Hours: Kernel.Types.Common
+  Value: Data.Aeson
+
+NammaTag:
+  tableName: namma_tag
+  types:
+    TagInfo:
+      enum: "Application, KaalChakra KaalChakraTagInfo, Manual"
+    TagType:
+      enum: "ApplicationTag, KaalChakraTag, ManualTag"
+    KaalChakraTagInfo:
+      recordType: NewType
+      chakra: Chakra
+      derive: "Eq,Ord,Read"
+
+  fields:
+    name: Text
+    description: Maybe Text
+    category: Text
+    possibleValues: TagValues
+    rule: TagRule
+    info: TagInfo
+    validity: Maybe Hours
+    actionEngine: Maybe Value
+  constraints:
+    name: PrimaryKey
+
+  beamFields:
+    info:
+      tagType: TagType
+      chakra: Maybe Chakra
+    possibleValues:
+      tags: Maybe [Text]
+      rangeStart: Maybe Double
+      rangeEnd: Maybe Double
+    rule:
+      llmContext: Maybe Text
+      ruleEngine: Maybe Value
+
+  fromTType:
+    info: mkTagInfo
+    possibleValues: mkTagValues
+    rule: mkTagRule
+
+  toTType:
+    tagType: getTag
+    chakra: getChakra
+    tags: getTags
+    rangeStart: getRangeStart
+    rangeEnd: getRangeEnd
+    ruleEngine: getRuleEngine
+    llmContext: getLlmContext
+
+  queries:
+    deleteByPrimaryKey:
+      kvFunction: deleteWithKV
+      where: name
+    findAllByPrimaryKeys:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [name]
+
+  sqlType:
+    ruleEngine: json
+    actionEngine: json
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
+
+NammaTagTrigger:
+  tableName: namma_tag_trigger
+  fields:
+    tagName: Text
+    event: ApplicationEvent
+  constraints:
+    tagName: PrimaryKey
+    event: PrimaryKey
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
+
+  queries:
+    findAllByEvent:
+      kvFunction: findAllWithKV
+      where: event
+    deleteAllByTagName:
+      kvFunction: deleteWithKV
+      where: tagName

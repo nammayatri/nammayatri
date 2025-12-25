@@ -1,19 +1,8 @@
-CREATE TABLE atlas_app.exophone (
-    id character(36) PRIMARY KEY NOT NULL,
-    merchant_id character(36) NOT NULL REFERENCES atlas_app.merchant (id),
-    primary_phone character varying(255) NOT NULL,
-    backup_phone character varying(255) NOT NULL,
-    is_primary_down boolean NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT  exophone_unique_primary_phone UNIQUE (primary_phone),
-    CONSTRAINT  exophone_unique_backup_phone UNIQUE (backup_phone)
-);
-
-INSERT INTO atlas_app.exophone (id, merchant_id, primary_phone, backup_phone, is_primary_down)
+INSERT INTO atlas_app.exophone (id, merchant_id, merchant_operating_city_id, primary_phone, backup_phone, is_primary_down)
     (SELECT
         atlas_app.uuid_generate_v4(),
         T1.id,
+        'mOpCityId',
         unnest (T1.exo_phones),
         unnest (T1.exo_phones),
         false
@@ -22,4 +11,10 @@ INSERT INTO atlas_app.exophone (id, merchant_id, primary_phone, backup_phone, is
 
 ALTER TABLE atlas_app.merchant DROP COLUMN exo_phones;
 
-ALTER TABLE atlas_app.booking RENAME COLUMN provider_exo_phone TO primary_exophone;
+
+-- updating after dsl generated query
+ALTER TABLE atlas_app.booking ALTER COLUMN primary_exophone DROP NOT NULL;
+UPDATE atlas_app.booking
+    SET primary_exophone = 'UNKNOWN';
+ALTER TABLE atlas_app.booking ALTER COLUMN primary_exophone SET NOT NULL;
+

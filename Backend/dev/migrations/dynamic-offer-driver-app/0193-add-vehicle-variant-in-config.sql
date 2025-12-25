@@ -1,5 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN vehicle_variant character varying(255);
-
 ALTER TABLE atlas_driver_offer_bpp.onboarding_document_configs ADD COLUMN rc_number_prefix text not null default 'KA';
 
 ALTER TABLE atlas_driver_offer_bpp.onboarding_document_configs ADD COLUMN supported_vehicle_classes_json json;

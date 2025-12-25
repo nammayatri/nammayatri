@@ -24,6 +24,8 @@ primaryButtonConfig state = let
       , background = Color.black900
       , height = (V 48)
       , id = "ApplicationStatusScreenButton"
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in primaryButtonConfig'
 

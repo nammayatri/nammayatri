@@ -15,3 +15,4 @@ customer:
 
 backend:
   - 'Backend/**'
+  - '.github/workflows/nix.yaml'

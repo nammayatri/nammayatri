@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Lib.SessionizerMetrics.EventStream where
 
@@ -34,8 +33,10 @@ triggerEvent event = do
   forM_ streamNames $ \stream -> do
     case streamName stream of
       KAFKA_STREAM -> do
-        let KafkaStream matchedConfig = stream.streamConfig
-        fork "updating in kafka" $ streamUpdates event matchedConfig
+        case stream.streamConfig of
+          KafkaStream matchedConfig -> do
+            fork "updating in kafka" $ streamUpdates event matchedConfig
+          _ -> logDebug "Default stream"
       PROMETHEUS_STREAM -> do
         let merchantId = event.merchantId
         let eventType = show event.eventType
@@ -43,8 +44,8 @@ triggerEvent event = do
         fork "updating in prometheus" $ incrementCounter merchantId eventType deploymentVersion
       _ -> logDebug "Default stream"
 
-createEvent :: (MonadReader r1 m, MonadGuid m, MonadTime m, HasField "getDeploymentVersion" r2 Text, HasField "version" r1 r2) => Maybe Text -> Text -> EventType -> Service -> EventTriggeredBy -> Maybe p -> Maybe Text -> m (Event p)
-createEvent personId merchantId eventType service triggredBy payload primaryId = do
+createEvent :: (MonadReader r1 m, MonadGuid m, MonadTime m, HasField "getDeploymentVersion" r2 Text, HasField "version" r1 r2) => Maybe Text -> Text -> EventType -> Service -> EventTriggeredBy -> Maybe p -> Maybe Text -> Maybe Text -> m (Event p)
+createEvent personId merchantId eventType service triggredBy payload primaryId merchantOperatingCityId = do
   version <- asks (.version)
   uid <- generateGUID
   now <- getCurrentTime
@@ -62,6 +63,7 @@ createEvent personId merchantId eventType service triggredBy payload primaryId =
             primaryId = primaryId,
             service = service,
             triggeredBy = triggredBy,
-            payload = payload
+            payload = payload,
+            ..
           }
   return ev

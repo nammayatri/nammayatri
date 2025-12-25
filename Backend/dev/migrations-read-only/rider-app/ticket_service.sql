@@ -14,3 +14,45 @@ ALTER TABLE atlas_app.ticket_service ADD COLUMN merchant_operating_city_id chara
 ALTER TABLE atlas_app.ticket_service ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.ticket_service ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.ticket_service ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN allow_cancellation boolean NOT NULL default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN operational_start_date date ;
+ALTER TABLE atlas_app.ticket_service ADD COLUMN operational_end_date date ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN rules json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN is_closed boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN service_details json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN sub_place_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN max_selection integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN priority integer ;
+ALTER TABLE atlas_app.ticket_service ADD COLUMN note text ;

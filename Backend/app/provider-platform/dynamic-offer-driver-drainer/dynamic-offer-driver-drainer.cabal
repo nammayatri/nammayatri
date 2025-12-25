@@ -28,6 +28,9 @@ library
   exposed-modules:
       Config.Env
       Constants
+      DBQuery.Functions
+      DBQuery.Types
+      DBSync.BatchCreate
       DBSync.Create
       DBSync.DBSync
       DBSync.Delete
@@ -36,6 +39,7 @@ library
       Types.Config
       Types.DBSync
       Types.DBSync.Create
+      Types.DBSync.DBModel
       Types.DBSync.Delete
       Types.DBSync.Update
       Types.Event
@@ -55,6 +59,7 @@ library
       DefaultSignatures
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -94,11 +99,11 @@ library
     , connection
     , containers
     , directory
-    , dynamic-offer-driver-app
     , errors
     , euler-events-hs >=2.0.0 && <2.1
     , euler-hs
     , extra
+    , filepath
     , formatting
     , hedis
     , http-client
@@ -108,13 +113,14 @@ library
     , juspay-extra
     , lens
     , mobility-core
-    , payment
     , pcg-random
+    , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , resource-pool
+    , scientific
     , sequelize
     , servant-server
-    , shared-services
     , text
     , time
     , tinylog
@@ -146,6 +152,7 @@ executable dynamic-offer-driver-drainer-exe
       DefaultSignatures
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -185,12 +192,12 @@ executable dynamic-offer-driver-drainer-exe
     , connection
     , containers
     , directory
-    , dynamic-offer-driver-app
     , dynamic-offer-driver-drainer
     , errors
     , euler-events-hs >=2.0.0 && <2.1
     , euler-hs
     , extra
+    , filepath
     , formatting
     , hedis
     , http-client
@@ -201,11 +208,13 @@ executable dynamic-offer-driver-drainer-exe
     , lens
     , mobility-core
     , pcg-random
+    , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , resource-pool
+    , scientific
     , sequelize
     , servant-server
-    , shared-services
     , text
     , time
     , tinylog

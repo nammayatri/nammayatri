@@ -13,12 +13,13 @@
     <string name="please_allow_permission_to_capture_the_image">Please allow permissions to capture the image</string>
     <string name="we_have_updated_your_app_kindly_relaunch">We have updated your app , The application will re-load now.</string>
     <string name="okay_got_it">OKAY,GOT IT</string>
+    <string name="okay_got_it_smallcase">Ok,Got it</string>
+    <string name="sent">Sent</string>
     <string name="not_interested">Not Interested</string>
     <string name="too_far">Too far</string>
     <string name="on_another_ride">On Another Ride</string>
     <string name="accept_offer">Accept Offer</string>
     <string name="extra">Extra</string>
-    <string name="upload_image">Upload Image</string>
     <string name="open_settings">1. Open Settings</string>
     <string name="tap_on_permission">2. Tap on Permissions</string>
     <string name="required_permission">3. Tap on the required permission</string>
@@ -26,7 +27,7 @@
     <string name="tap_on">3. Tap on </string>
     <string name="location">Location</string>
     <string name="phone">Phone</string>
-    <string name="includes_pickup_charges_10">Includes Pickup Charges ₹10</string>
+    <string name="includes_pickup_charges_10">Pickup ₹{#amount#}</string>
     <string name="away">away</string>
     <string name="we_made_you_online">We made you Online</string>
     <string name="location_is_turned_on">Location is turned on</string>
@@ -36,19 +37,23 @@
     <string name="location_is_turned_off_permission_is_disabled">Location is turned off / permission is disabled</string>
     <string name="ride_assigned_to_another_driver">Ride assigned to another driver</string>
     <string name="select_date">Select Date</string>
-    <string name="chatting_is_enabled">Chatting is enabled</string>
-    <string name="you_can_now_chat_with_driver">You can now chat with driver</string>
-    <string name="you_can_now_chat_with_customer">You can now chat with customer</string>
-    <string name="new_ride_req">New Ride Request</string>
-    <string name="new_ride_available_for_offering">New ride available for offering</string>
-    <string name="and">and</string>
+    <string name="chatting_is_enabled" translatable="false">Chatting is enabled</string>
+    <string name="you_can_now_chat_with_driver" translatable="false">You can now chat with driver</string>
+    <string name="you_can_now_chat_with_customer" translatable="false">You can now chat with customer</string>
+    <string name="new_ride_req" translatable="false">New Ride Request</string>
+    <string name="new_ride_available_for_offering" translatable="false">New ride available for offering</string>
+    <string name="and" translatable="false">and</string>
     <string name="service" translatable="false">for_compilation</string>
-    <string name="tip_included">" tip included!"</string>
+    <string name="tip_included" translatable="false">" tip included!"</string>
     <string name="message_from_customer">Message from Customer</string>
-    <string name="assistance_required">Assistance Required</string>
+    <string name="customer_is_waiting">Customer is waiting!</string>
+    <string name="please_start_moving_towards_the_pickup_location">Please start moving towards the pickup location</string>
+    <string name="quick_chats">Quick Chats:</string>
+    <string name="assistance_required">Assisted</string>
     <string name="tip">Tip</string>
-    <string name="merchant_id">for_compilation</string>
-    <string name="client_id">for_compilation</string>
+    <string name="pet">Pet</string>
+    <string name="merchant_id" translatable="false">for_compilation</string>
+    <string name="client_id" translatable="false">for_compilation</string>
     <string name="qr_for_your_vpa_is_downloaded">QR for your vpa is downloaded!!!</string>
     <string name="invoice_downloaded">Invoice Downloaded!!!</string>
     <string name="driver_receipt_downloaded">Driver Receipt Downloaded!!!</string>
@@ -58,4 +63,46 @@
     <string name="accept_goto">Accept “Go To”</string>
     <string name="take_a_clear_selfie">Take a clear photo with your driving licence \ninside the marked area</string>
     <string name="need_help">Need Help?</string>
+    <string name="safety_deviation_alert">We noticed your ride is on a different route. Are you feeling safe on your trip?</string>
+    <string name="everything_okay">Everything Okay?</string>
+    <string name="app_name" translatable="false">for_compilation</string>
+    <string name="app_type" translatable="false">for_compilation</string>
+    <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">We noticed your driver hasn\'t moved for a while. Are you feeling safe on your trip?</string>
+    <string name="test_request_successful">Test Ride Request Successful!</string>
+    <string name="zone_pickup_extra">Zone pickup extra</string>
+    <string name="you_are_near_a_special_pickup_zone">You are near a special \npickup zone</string>
+    <string name="zone_pickup">Zone Pickup</string>
+    <string name="test_request" translatable="false">Test Request</string>
+    <string name="call_support" translatable="false">Call Support</string>
+    <string name="go_to" translatable="false">Go-To</string>
+    <string gender="female" name="com_facebook_loginview_logged_in_using_facebook_f1gender" translatable="false">Connected with Facebook</string>
+    <string name="upload_image">Upload Image</string>
+    <string name="no_enabled_browser" translatable="false">No enabled browser found in your device, please enable or install a browser</string>
+    <string name="customer_edited">Customer edited a stop!</string>
+    <string name="customer_added">Customer added a stop!</string>
+    <string name="navigate_to_location">Navigate to location</string>
+    <string name="close">Close</string>
+    <string name="today">Today</string>
+    <string name="now"> Now</string>
+    <string name="rental"> Rental</string>
+    <string name="intercity"> Intercity</string>
+    <string name="toll_text">Toll included</string>
+    <string name="new_distance">New Distance :</string>
+    <string name="new_fare">New fare :</string>
+    <string name="no_change">No Change</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"No additional fare. No tips. No waiting charges."</string>
+    <string name="third_party_booking">"Third Party Booking"</string>
+    <string name="parking_charges">%1$.0f₹ Parking</string>
+    <string name="includes">Includes</string>
+    <string name="stops_info">%1$d Stops (incl. stop charge)</string>
+    <string name="stops">%1$d Stops</string>
+    <string name="round_trip">Round Trip</string>
+    <string name="voip_logo" translatable="false">https://raw.githubusercontent.com/nammayatri/asset-store/865e27035399a315dbeda13eabba9a2a851fae29/beckn/nammayatri/nammayatricommon/images/ny_logo_and_name.png</string>
+    <string name="enable_mic_and_notifications_permissions_driver">"Please enable “Microphone” permissions from Settings > Apps to make/receive in-app calls with the customer."</string>
+    <string name="enable_mic_and_notifications_permissions_customer">"Please enable “Microphone” and “Notification” permissions from Settings > Apps to make/receive in-app calls with the driver"</string>
+    <string name="points">Points</string>
+    <string name="extra_fare_demanded">📞🚨 Extra Fare Demand Detected! 🚨</string>
+    <string name="extra_fare_demanded_desc">Select the reason(s) for asking extra</string>
+    <string name="submit">Submit</string>
+    <string name="did_not_demand_extra">I did not demand extra</string>
 </resources>

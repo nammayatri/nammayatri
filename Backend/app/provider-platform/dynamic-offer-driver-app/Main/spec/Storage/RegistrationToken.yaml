@@ -1,0 +1,101 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+
+RegistrationToken:
+  tableName: registration_token
+  derives: "Generic, Show, Eq"
+
+  types:
+    Medium:
+      enum: "SMS, EMAIL"
+
+    RTEntityType:
+      enum: "CUSTOMER, USER"
+
+    LoginType:
+      enum: "OTP, PASSWORD, OAUTH"
+
+  fields:
+    id : Id RegistrationToken
+    token : Text
+    attempts : Int
+    authMedium : Medium
+    authType : LoginType
+    authValueHash : Text
+    verified : Bool
+    authExpiry : Int
+    tokenExpiry : Int
+    entityId : Text
+    merchantId : Text
+    merchantOperatingCityId : Text
+    entityType : RTEntityType
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    info : Maybe Text
+    alternateNumberAttempts : Int
+
+  beamType:
+    merchantOperatingCityId: Maybe Text
+
+  constraints:
+    id: PrimaryKey
+    token: SecondaryKey
+    entityId: SecondaryKey
+
+  sqlType:
+    authvaluehash: character varying(1024)
+    token: character varying(1024)
+    authExpiry: bigint
+    tokenExpiry: bigint
+    attempts: bigint
+    entityId: character (36)
+    entityType: character (36)
+    merchantOperatingCityId: character (36)
+
+  default:
+    alternateNumberAttempts: "5"
+
+  fromTType:
+    merchantOperatingCityId: Storage.Queries.Transformers.RegistrationToken.getMerchantOperatingCityId merchantOperatingCityId merchantId|EM
+  toTType:
+    merchantOperatingCityId: Kernel.Prelude.Just|I
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    setVerified:
+      kvFunction: updateOneWithKV
+      params: [verified]
+      where: id
+
+    findByToken:
+      kvFunction: findOneWithKV
+      where: token
+
+    updateAttempts:
+      kvFunction: updateOneWithKV
+      params: [attempts]
+      where: id
+
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: entityId
+
+    findAllByPersonId:
+      kvFunction: findAllWithKV
+      where: entityId
+
+    updateMerchantOperatingCityId:
+      kvFunction: updateWithKV
+      params: [merchantOperatingCityId]
+      where:
+        and: [entityId, merchantId]
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

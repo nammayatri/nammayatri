@@ -18,6 +18,7 @@ import Data.ByteString
 import Kernel.Prelude
 import Kernel.Types.App
 import Kernel.Types.Beckn.Ack (AckResponse)
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Utils.Servant.JSONBS
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
@@ -34,7 +35,7 @@ type TriggerAPI =
 
 type CallbackReceiverAPI =
   "callback_receiver"
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth 'Domain.MOBILITY "Authorization"
     :> Capture "action" Text
     :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] AckResponse

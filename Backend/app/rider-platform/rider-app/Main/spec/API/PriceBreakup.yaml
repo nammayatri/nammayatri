@@ -1,0 +1,17 @@
+imports:
+  Text: Data.Text
+  Booking: Domain.Types.Booking
+  QuoteBreakupAPIEntity: Domain.Action.UI.Quote
+module: PriceBreakup
+types:
+  QuoteBreakupRes:
+    recordType: NewType
+    quoteBreakup: "[QuoteBreakupAPIEntity]"
+apis:
+  - GET:
+      endpoint: /priceBreakup
+      auth: TokenAuth
+      mandatoryQuery:
+        bookingId: Id Booking
+      response:
+        type: "QuoteBreakupRes"

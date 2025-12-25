@@ -13,7 +13,9 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.AadhaarVerificationScreen.View where
+module Screens.AadhaarVerificationScreen.View 
+
+where
 
 import Common.Types.App
 import Screens.AadhaarVerificationScreen.ComponentConfig
@@ -35,7 +37,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, unit, ($), (<<<), (<>), (==), (&&), (/=))
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textFromHtml, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textFromHtml, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.AadhaarVerificationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (AadhaarStage(..))
@@ -43,7 +45,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import ConfigProvider
 
-screen :: ST.AadhaarVerificationScreenState -> Screen Action ST.AadhaarVerificationScreenState ScreenOutput
+screen :: ST.AadhaarVerificationScreenState -> LoggableScreen Action ST.AadhaarVerificationScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -60,6 +62,8 @@ screen initialState =
       let _ = spy "AadhaarVerificationScreenState action" action
       let _ = spy "AadhaarVerificationScreenState state" state
       eval action state)
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.aadhaarVerificationScreenLogWhitelist
   }
 
 view

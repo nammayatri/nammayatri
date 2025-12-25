@@ -1,0 +1,17 @@
+imports:
+module: Tokenization
+types:
+  GetTokenRes:
+    token: Text
+    expiry: Maybe UTCTime
+
+apis:
+ # GET /driver/sdkToken
+  - GET:
+      endpoint: /driver/sdkToken
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        expiry: Int
+        service: "Kernel.External.Tokenize.TokenizationService"
+      response:
+        type: "API.Types.UI.Tokenization.GetTokenRes"

@@ -1,0 +1,39 @@
+# access tokens with different roles
+@customer = {{bap-dashboard/token/YATRI/customer}}
+@driver = {{bap-dashboard/token/YATRI/driver}}
+@juspay_ops = {{bap-dashboard/token/YATRI/juspay_ops}}
+@juspay_admin = {{bap-dashboard/token/YATRI/juspay_admin}}
+@customer_service = {{bap-dashboard/token/YATRI/customer_service}}
+
+# @name healthcheck
+GET {{bap-dashboard-host}}
+
+###
+
+# @name VerifyBookingDetailsAPI
+
+@personServiceId = 00000000-0000-0000-0000-000000000000
+@ticketBookingShortId = 00000000-0000-0000-0000-000000000001
+
+POST {{bap-dashboard-host}}/bap/YATRI/tickets/{{personServiceId}}/{{ticketBookingShortId}}/verify
+content-type: application/json
+token: {{juspay_admin}}
+###
+
+# @name UpdateSeatManagementAPI
+
+@businessHourId = 00000000-0000-0000-0000-000000000002
+@categoryId = 00000000-0000-0000-0000-000000000003
+
+@ticketServiceId = 00000000-0000-0000-0000-000000000004
+
+POST {{bap-dashboard-host}}/bap/YATRI/update
+content-type: application/json
+token: {{juspay_admin}}
+
+{ "businessHourId" : "{{businessHourId}}",
+  "categoryId" : "{{categoryId}}",
+  "date" : "2024-11-12",
+  "ticketServiceId": "{{ticketServiceId}}",
+  "updatedBookedSeats": 1
+}

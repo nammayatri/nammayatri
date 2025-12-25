@@ -21,6 +21,13 @@ in
               coreutils
               bash
               self'.packages.nammayatri
+              gdal
+              postgis
+              curl
+              htop
+              wget
+              zbar
+              wkhtmltopdf-bin
             ];
             name = "beckn-root";
             pathsToLink = [

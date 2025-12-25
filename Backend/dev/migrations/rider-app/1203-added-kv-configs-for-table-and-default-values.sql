@@ -3,6 +3,6 @@ CREATE TABLE atlas_app.system_configs (
     config_value TEXT
 );
 
-
+-- make sure ttl is in seconds and added to each table
 INSERT INTO atlas_app.system_configs (id, config_value)
-VALUES ('kv_configs', '{"enableKVForWriteAlso":[{"nameOfTable":"Table1","percentEnable":100}],"enableKVForRead":["Table2"]}');
+VALUES ('kv_configs', '{"enableKVForWriteAlso":[{"nameOfTable":"Table1","percentEnable":100,"redisTtl":18000}],"enableKVForRead":["Table2"], "useCAC":[], "useCACForFrontend":true, "readFromMasterDb":[]}');

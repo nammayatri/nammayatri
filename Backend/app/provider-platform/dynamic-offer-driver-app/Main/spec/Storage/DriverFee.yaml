@@ -1,0 +1,225 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Driver: Domain.Types.Person
+  Plan: Domain.Types.Plan
+  PaymentMode: Domain.Types.Plan
+  ServiceNames: Domain.Types.Plan
+  PlatformFee: Domain.Types.DriverFee
+  VehicleCategory : Domain.Types.VehicleCategory
+DriverFee:
+  tableName: driver_fee
+
+  types:
+    DriverFeeStatus:
+      enum: "ONGOING, PAYMENT_PENDING, PAYMENT_OVERDUE, CLEARED, EXEMPTED, COLLECTED_CASH, INACTIVE, CLEARED_BY_YATRI_COINS, MANUAL_REVIEW_NEEDED, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_MANUAL_REVIEW_REQUIRED, ONE_TIME_SECURITY_ADJUSTED, SETTLED, IN_DISPUTE_WINDOW, ADDED_TO_INVOICE"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+    FeeType:
+      enum: "MANDATE_REGISTRATION, RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE, PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT, PREPAID_RECHARGE, WALLET_TOPUP, CANCELLATION_PENALTY"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord, Enum"
+
+    RefundedBy:
+      enum: "PAYOUT, REFUNDS_API"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+    AutopayPaymentStage:
+      enum: "NOTIFICATION_SCHEDULED, NOTIFICATION_ATTEMPTING, EXECUTION_SCHEDULED, EXECUTION_ATTEMPTING, EXECUTION_SUCCESS, EXECUTION_FAILED"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+
+    PlatformFee:
+      fee: HighPrecMoney
+      cgst: HighPrecMoney
+      sgst: HighPrecMoney
+      currency : Currency
+      derive': "Generic, Eq, Show"
+
+    RefundInfo:
+      refundedBy: Maybe RefundedBy
+      refundedAt: Maybe UTCTime
+      refundedAmount: Maybe HighPrecMoney
+      refundEntityId: Maybe Text
+      status: Maybe DriverFeeStatus
+      derive': "Generic, Eq, Show"
+
+
+  fields:
+    id : Id DriverFee
+    merchantId : Id Merchant
+    driverId : Id Driver
+    govtCharges : HighPrecMoney
+    platformFee : PlatformFee
+    numRides : Int
+    payBy : UTCTime
+    totalEarnings : HighPrecMoney
+    startTime : UTCTime
+    endTime : UTCTime
+    status : DriverFeeStatus
+    collectedBy : Maybe Text
+    collectedAt : Maybe UTCTime
+    collectedAtVendorId : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    feeType : FeeType
+    offerId : Maybe Text
+    planOfferTitle : Maybe Text
+    billNumber : Maybe Int
+    autopayPaymentStage : Maybe AutopayPaymentStage
+    badDebtDeclarationDate : Maybe UTCTime
+    badDebtRecoveryDate : Maybe UTCTime
+    schedulerTryCount : Int
+    notificationRetryCount : Int
+    merchantOperatingCityId : Id MerchantOperatingCity
+    stageUpdatedAt : Maybe UTCTime
+    amountPaidByCoin : Maybe HighPrecMoney
+    feeWithoutDiscount : Maybe HighPrecMoney
+    overlaySent : Bool
+    specialZoneRideCount : Int
+    specialZoneAmount : HighPrecMoney
+    planId : Maybe (Id Plan)
+    planMode : Maybe PaymentMode
+    serviceName : ServiceNames
+    vehicleNumber : Maybe Text
+    refundedBy : Maybe RefundedBy
+    refundEntityId : Maybe Text
+    refundedAt : Maybe UTCTime
+    refundedAmount : Maybe HighPrecMoney
+    currency : Currency
+    vehicleCategory : VehicleCategory|NoRelation
+    siblingFeeId : Maybe (Id DriverFee)
+    hasSibling : Maybe Bool
+    splitOfDriverFeeId : Maybe (Id DriverFee)
+    validDays: Maybe Int
+    cancellationPenaltyAmount: Maybe HighPrecMoney
+    addedToFeeId: Maybe (Id DriverFee)
+
+  derives: "Generic, Show, Eq"
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <DriverFeeStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <FeeType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <DriverFeeStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <FeeType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <AutopayPaymentStage>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <RefundedBy>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <RefundedBy>
+
+  beamType:
+    merchantOperatingCityId: Maybe Text
+    serviceName: Maybe ServiceNames
+    vehicleCategory: Maybe VehicleCategory
+
+  beamFields:
+    platformFee:
+      platformFee: HighPrecMoney
+      cgst : HighPrecMoney
+      sgst : HighPrecMoney
+      platformFeeCgst: {}
+      platformFeeSgst: {}
+    govtCharges:
+      govtCharges: Money
+      govtChargesAmount: Maybe HighPrecMoney
+    totalEarnings:
+      totalEarnings: Money
+      totalEarningsAmount: Maybe HighPrecMoney
+    currency:
+      currency: Maybe Currency
+
+  # we should use transformer instead of constructor Domain.Types.DriverFee.PlatformFee, because constructor depends on alphabetical fields order
+  fromTType:
+    platformFee: Storage.Queries.Transformers.DriverFee.mkPlatformFee platformFee cgst sgst (Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency)|E
+    merchantOperatingCityId: Storage.Queries.Transformers.DriverFee.getMerchantOperatingCityId merchantOperatingCityId driverId id |EM
+    serviceName: fromMaybe Domain.Types.Plan.YATRI_SUBSCRIPTION serviceName|E
+    govtCharges: Kernel.Types.Common.mkAmountWithDefault govtChargesAmount govtCharges|E
+    totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    vehicleCategory : Storage.Queries.Transformers.DriverFee.getCategoryFromPlanOrSubscriptionConfig vehicleCategory planId planMode merchantOperatingCityId serviceName id driverId|EM
+
+  toTType:
+    platformFee: ((.fee) platformFee)|E
+    cgst: ((.cgst) platformFee)|E
+    sgst: ((.sgst) platformFee)|E
+    serviceName: (Just serviceName)|E
+    merchantOperatingCityId: (Just (Kernel.Types.Id.getId merchantOperatingCityId))|E
+    vehicleCategory : Kernel.Prelude.Just|I
+    govtCharges: Kernel.Prelude.roundToIntegral|I
+    totalEarnings: Kernel.Prelude.roundToIntegral|I
+    govtChargesAmount:  Kernel.Prelude.Just|I
+    totalEarningsAmount:  Kernel.Prelude.Just|I
+    currency: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    driverId: "!SecondaryKey" # forcing to be a secondary key
+
+  sqlType:
+    platformFee: numeric(30,2)
+    cgst: numeric(30,2)
+    sgst: numeric(30,2)
+    status: character varying(255)
+    offerId: character varying(100)
+    planId: text
+    merchantOperatingCityId: text
+
+  default:
+    serviceName: "'YATRI_SUBSCRIPTION'"
+    overlaySent: "false"
+    schedulerTryCount: "1"
+    specialZoneRideCount: "0"
+    specialZoneAmount: "0.0"
+    notificationRetryCount: "0"
+    feeType: "'RECURRING_INVOICE'"
+    merchantId: "'96dd7f78-787e-4a0b-8675-e9e6fe93bb8f'"
+
+  queries:
+    findAllFeeByTypeServiceStatusAndDriver:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - eq: [serviceName, driverId]
+          - in: [feeType, status]
+
+    updateOfferAndPlanDetails:
+      kvFunction: updateOneWithKV
+      params: [offerId, planOfferTitle, planId, planMode]
+      where: id
+
+    updateAutopayPaymentStageById:
+      kvFunction: updateOneWithKV
+      params: [autopayPaymentStage, stageUpdatedAt]
+      where: id
+
+    updateNotificationRetryCountById:
+      kvFunction: updateOneWithKV
+      params: [notificationRetryCount, updatedAt]
+      where: id
+
+    updateAmountPaidByCoins:
+      kvFunction: updateOneWithKV
+      params: [amountPaidByCoin]
+      where: id
+
+    updateBillNumberById:
+      kvFunction: updateWithKV
+      params: [billNumber, updatedAt]
+      where: id
+
+    updateFeeType:
+      kvFunction: updateOneWithKV
+      params: [feeType, updatedAt]
+      where: id
+
+    updateRetryCount:
+      kvFunction: updateOneWithKV
+      params: [schedulerTryCount, updatedAt]
+      where: id
+
+    updateFeeWithoutDiscount:
+      kvFunction: updateOneWithKV
+      params: [feeWithoutDiscount]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

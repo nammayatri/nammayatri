@@ -1,0 +1,84 @@
+imports:
+  Driver: Dashboard.Common
+  ServiceNames: Dashboard.Common
+  MediaChannel: Domain.Types.MerchantMessage
+  MessageKey: Domain.Types.MerchantMessage
+  VendorFee: Domain.Types.VendorFee
+
+importPackageOverrides:
+  Domain.Action.Dashboard.Driver: "dynamic-offer-driver-app"
+
+module: DriverSubscription
+
+# created separate module because of different apiPrefix
+apiPrefix: driver
+helperApiPrefix: plan
+
+apis:
+  - POST: # SendMessageToDriverViaDashboardAPI
+      endpoint: /{driverId}/sendSms
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: SendSmsReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST: # SendSmsToDriverAPI
+            endpoint: /{driverId}/{volunteerId}/sendSms
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              volunteerId: Text
+            request:
+              type: SendSmsReq
+            response:
+              type: APISuccess
+      migrate:
+        endpoint: DriverAPI SendMessageToDriverViaDashboardEndPoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SEND_DASHBOARD_MESSAGE
+  - POST: # UpdateSubscriptionDriverFeeAndInvoiceAPI
+      endpoint: /{driverId}/update/driverFeeAndInvoiceInfo/{serviceName}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        serviceName: ServiceNames
+      request:
+        type: SubscriptionDriverFeesAndInvoicesToUpdate
+      response:
+        type: SubscriptionDriverFeesAndInvoicesToUpdate
+      migrate:
+        endpoint: DriverAPI UpdateSubscriptionDriverFeeAndInvoiceEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_SUBSCRIPTION_DRIVER_FEE_AND_INVOICE_UPDATE
+types:
+  SubscriptionDriverFeesAndInvoicesToUpdate:
+    - driverFees: Maybe [DriverFeeInfoToUpdate]
+    - invoices: Maybe [InvoiceInfoToUpdate]
+    - vendorFees: Maybe [VendorFee]
+    - mkDuesToAmount: Maybe HighPrecMoney
+    - mkDuesToAmountWithCurrency: Maybe PriceAPIEntity
+    - subscribed: Maybe Bool
+    - derive: "'HideSecrets"
+  DriverFeeInfoToUpdate:
+    - driverFeeId: Text
+    - mkManualDue: Maybe Bool
+    - mkAutoPayDue: Maybe Bool
+    - mkCleared: Maybe Bool
+    - platformFee: Maybe HighPrecMoney
+    - sgst: Maybe HighPrecMoney
+    - cgst: Maybe HighPrecMoney
+    - platformFeeWithCurrency: Maybe PriceAPIEntity
+    - sgstWithCurrency: Maybe PriceAPIEntity
+    - cgstWithCurrency: Maybe PriceAPIEntity
+  InvoiceInfoToUpdate:
+    - invoiceId: Text
+    - driverFeeId: Maybe Text
+    - invoiceStatus: Maybe Text
+  SendSmsReq:
+    - channel: MediaChannel
+    - messageKey: Maybe MessageKey
+    - overlayKey: Maybe Text
+    - messageId: Maybe Text
+    - derive: "'HideSecrets"
+

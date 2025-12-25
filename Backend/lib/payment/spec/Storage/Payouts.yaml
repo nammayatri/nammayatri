@@ -1,0 +1,134 @@
+imports:
+  UTCTime: Kernel.Prelude
+  ShortId: Kernel.Types.Id
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Price: Kernel.Types.Common
+  PayoutOrderStatus : Kernel.External.Payout.Juspay.Types.Payout
+  AccountDetailsType : Kernel.External.Payout.Juspay.Types.Payout
+  EntityName : Lib.Payment.Domain.Types.Common
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+
+PayoutOrder:
+  tableName: payout_order
+  derives: "Generic"
+  fields:
+    id : Id PayoutOrder
+    shortId : Maybe (ShortId PayoutOrder)
+    customerId : Text
+    orderId : Text
+    merchantId : Text
+    merchantOperatingCityId : Maybe Text
+    city : Text
+    amount : Price
+    status : PayoutOrderStatus
+    accountDetailsType : Maybe AccountDetailsType
+    entityName : Maybe EntityName
+    vpa : Maybe Text
+    mobileNo : (EncryptedHashedField e Text)
+    customerEmail : (EncryptedHashedField e Text)
+    lastStatusCheckedAt : Maybe UTCTime
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    entityIds : Maybe [Text]
+    responseCode : Maybe Text
+    responseMessage : Maybe Text
+    retriedOrderId : Maybe Text
+  beamFields:
+    amount:
+      currency: Maybe Currency
+      price: HighPrecMoney
+  fromTType:
+    amount: Kernel.Types.Common.mkPrice currency price|E
+  toTType:
+    price: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+  sqlType:
+    id: character varying(36)
+    mobileNoEncrypted: character varying(255)
+    customerEmailEncrypted: character varying(255)
+    mobileNoHash: bytea
+    customerEmailHash: bytea
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+  constraints:
+    id: PrimaryKey
+    orderId: PrimaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByOrderId:
+      kvFunction: findOneWithKV
+      where: orderId
+    updatePayoutOrderStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: orderId
+    findAllWithStatus:
+      kvFunction: findAllWithKV
+      where: status
+    findAllByCustomerId:
+      kvFunction: findAllWithKV
+      where: customerId
+    updatePayoutOrderTxnRespInfo:
+      kvFunction: updateOneWithKV
+      params: [responseCode, responseMessage]
+      where: orderId
+    updateRetriedOrderId:
+      kvFunction: updateOneWithKV
+      params: [retriedOrderId]
+      where: orderId
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+PayoutTransaction:
+  tableName: payout_transaction
+  derives: "Generic"
+  fields:
+    id : Id PayoutTransaction
+    payoutOrderId : Id PayoutOrder
+    transactionRef : Text
+    gateWayRefId : Maybe Text
+    fulfillmentMethod : Maybe Text
+    amount : Price
+    status : Text
+    merchantId: Text
+    merchantOperatingCityId : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+  sqlType:
+    id: character varying(36)
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+  constraints:
+    id: PrimaryKey
+    transactionRef: PrimaryKey
+  beamFields:
+    amount:
+      currency: Maybe Currency
+      price: HighPrecMoney
+  fromTType:
+    amount: Kernel.Types.Common.mkPrice currency price|E
+  toTType:
+    price: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByTransactionRef:
+      kvFunction: findOneWithKV
+      where: transactionRef
+    updatePayoutTransactionStatus:
+      kvFunction: updateWithKV
+      params: [status]
+      where: transactionRef
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+

@@ -15,7 +15,6 @@
 module App.Server where
 
 import API
--- import Beckn.Core (logBecknRequest)
 import Environment
 import EulerHS.Prelude
 import Kernel.Tools.Metrics.Init
@@ -27,9 +26,9 @@ import Servant
 import Tools.Auth
 
 run :: Env -> Application
-run = withModifiedEnv $ \modifiedEnv ->
+run = withModifiedEnv' $ \modifiedEnv ->
   BU.run driverOfferAPI driverOfferServer context modifiedEnv
-    & logRequestAndResponse modifiedEnv
+    & logRequestAndResponse' modifiedEnv
     -- & logBecknRequest modifiedEnv
     & addServantInfo modifiedEnv.appEnv.version driverOfferAPI
     & hashBodyForSignature

@@ -1,0 +1,139 @@
+imports:
+  Location: Domain.Types.Location
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+LocationMapping:
+  types:
+    LocationMappingTags:
+      enum: BOOKING,SEARCH_REQUEST,RIDE,BOOKING_UPDATE_REQUEST
+  derives: Show,Eq,Generic
+  fields:
+    id: Id LocationMapping
+    tag: LocationMappingTags
+    locationId: Id Location
+    entityId: Text
+    order: Int
+    version: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+
+  sqlType:
+    entityId: character varying(36)
+    version: character varying(255)
+
+  constraints:
+    id: PrimaryKey
+    entityId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
+Location:
+  derives: Generic,Show,Eq,Kernel.External.Maps.HasCoordinates.HasCoordinates,ToJSON,FromJSON,ToSchema
+  types:
+    LocationAddress:
+      street: Maybe Text
+      door: Maybe Text
+      city: Maybe Text
+      state: Maybe Text
+      country: Maybe Text
+      building: Maybe Text
+      areaCode: Maybe Text
+      area: Maybe Text
+      fullAddress: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
+      derive': Generic,Show,Eq,ToJSON,FromJSON,Data.OpenApi.ToSchema
+    LocationAPIEntity:
+      lat: Double
+      lon: Double
+      street: Maybe Text
+      city: Maybe Text
+      state: Maybe Text
+      country: Maybe Text
+      building: Maybe Text
+      areaCode: Maybe Text
+      area: Maybe Text
+      fullAddress: Maybe Text
+      instructions: Maybe Text
+      id : Id Location
+      extras: Maybe Text
+      derive': Generic,Show,FromJSON,ToJSON,Data.OpenApi.ToSchema
+    Location': # sometimes we don't know MerchantOperatingCity, so defined this type without it
+      id: Id Location
+      lat: Double
+      lon: Double
+      address: LocationAddress
+      createdAt: UTCTime
+      updatedAt: UTCTime
+      merchantId: Maybe (Id Merchant)
+  fields:
+    id: Id Location
+    lat: Double
+    lon: Double
+    address: LocationAddress
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  toTType:
+    street: (.street)|I
+    door: (.door)|I
+    city: (.city)|I
+    state: (.state)|I
+    country: (.country)|I
+    building: (.building)|I
+    areaCode: (.areaCode)|I
+    area: (.area)|I
+    fullAddress: (.fullAddress)|I
+    instructions: (.instructions)|I
+    extras: (.extras)|I
+
+  fromTType:
+    address: mkAddress
+
+  beamFields:
+    address:
+      street: Maybe Text
+      door: Maybe Text
+      city: Maybe Text
+      state: Maybe Text
+      country: Maybe Text
+      building: Maybe Text
+      areaCode: Maybe Text
+      area: Maybe Text
+      fullAddress: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateInstructionsAndExtrasById:
+      kvFunction: updateOneWithKV
+      params:
+        - instructions|B
+        - extras|B
+      where: id
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

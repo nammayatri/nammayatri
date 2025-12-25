@@ -1,0 +1,70 @@
+imports:
+  Text: Data.Text
+  LatLong: Kernel.External.Maps.Types
+  ServiceTierType: Domain.Types.Common
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EncryptedHashedField: Kernel.External.Encryption
+  Person: Domain.Types.Person
+  EmptyDynamicParam: Domain.Types.EmptyDynamicParam
+
+AlertRequest:
+  tableName: approval_request
+
+  types:
+    RequestorType:
+      enum: "SystemGenerated, DriverGenerated"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    RequesteeType:
+      enum: "FleetOwner, Driver"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id AlertRequest
+    requestorId: Id Person
+    requestorType: RequestorType
+    requesteeId: Id Person
+    requesteeType: RequesteeType
+    requestType: Domain.Types.Alert.AlertRequestType.AlertRequestType
+    requestData: Domain.Types.Alert.AlertRequestData.AlertRequestData
+    title: Text
+    body: Text
+    status: Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus
+    reason: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  beamType:
+    requestorType: Maybe RequestorType
+    requesteeType: Maybe RequesteeType
+    requestType: Maybe Domain.Types.Alert.AlertRequestType.AlertRequestType
+
+  fromTType:
+    requestorType: Kernel.Prelude.fromMaybe Domain.Types.AlertRequest.DriverGenerated|I
+    requesteeType: Kernel.Prelude.fromMaybe Domain.Types.AlertRequest.FleetOwner|I
+    requestType: Kernel.Prelude.fromMaybe Domain.Types.Alert.AlertRequestType.EndRideApproval|I
+
+  toTType:
+    requestorType: Kernel.Prelude.Just|I
+    requesteeType: Kernel.Prelude.Just|I
+    requestType: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    requestorId: "!SecondaryKey"
+    requesteeId: "!SecondaryKey"
+
+  queries:
+    updateStatusWithReason:
+      kvFunction: updateOneWithKV
+      params: [status, reason]
+      where: id
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequestorType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RequestorType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <RequesteeType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <RequesteeType>

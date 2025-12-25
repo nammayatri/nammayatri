@@ -28,6 +28,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (throwError)
+import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Role as QRole
 import qualified Tools.Auth.Common as Common
@@ -63,12 +64,18 @@ instance VerificationMethodWithPayload VerifyDashboard where
   type VerificationPayloadType VerifyDashboard = DRole.DashboardAccessType
 
 verifyDashboardAction ::
-  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+  ( Common.AuthFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
+  ) =>
   VerificationActionWithPayload VerifyDashboard m
 verifyDashboardAction = VerificationActionWithPayload verifyDashboard
 
 verifyDashboard ::
-  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+  ( Common.AuthFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
+  ) =>
   DRole.DashboardAccessType ->
   RegToken ->
   m TokenInfo
@@ -84,9 +91,17 @@ instance
   where
   toPayloadType _ = fromSing (sing @at)
 
-verifyDashboardAccess :: EsqDBFlow m r => DRole.DashboardAccessType -> Id DP.Person -> m (Id DP.Person)
+verifyDashboardAccess ::
+  ( BeamFlow m r,
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
+  ) =>
+  DRole.DashboardAccessType ->
+  Id DP.Person ->
+  m (Id DP.Person)
 verifyDashboardAccess requiredAccessType personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  when (requiredAccessType `elem` [DRole.DASHBOARD_ADMIN, DRole.DASHBOARD_USER]) $ do
+    Common.checkPasswordExpiry person
   case requiredAccessType of
     DRole.DASHBOARD_ADMIN -> do
       role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
@@ -98,6 +113,11 @@ verifyDashboardAccess requiredAccessType personId = do
       if role.dashboardAccessType == DRole.FLEET_OWNER
         then pure person.id
         else throwError AccessDenied
+    DRole.RENTAL_FLEET_OWNER -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.RENTAL_FLEET_OWNER
+        then pure person.id
+        else throwError AccessDenied
     DRole.DASHBOARD_RELEASE_ADMIN -> do
       role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
       if role.dashboardAccessType == DRole.DASHBOARD_RELEASE_ADMIN
@@ -106,6 +126,41 @@ verifyDashboardAccess requiredAccessType personId = do
     DRole.MERCHANT_ADMIN -> do
       role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
       if role.dashboardAccessType == DRole.MERCHANT_ADMIN
+        then pure person.id
+        else throwError AccessDenied
+    DRole.MERCHANT_MAKER -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.MERCHANT_MAKER || role.dashboardAccessType == DRole.MERCHANT_ADMIN
+        then pure person.id
+        else throwError AccessDenied
+    DRole.MERCHANT_SERVER -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.MERCHANT_SERVER
+        then pure person.id
+        else throwError AccessDenied
+    DRole.DASHBOARD_OPERATOR -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.DASHBOARD_OPERATOR
+        then pure person.id
+        else throwError AccessDenied
+    DRole.TICKET_DASHBOARD_USER -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.TICKET_DASHBOARD_USER
+        then pure person.id
+        else throwError AccessDenied
+    DRole.TICKET_DASHBOARD_MERCHANT -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.TICKET_DASHBOARD_USER
+        then pure person.id
+        else throwError AccessDenied
+    DRole.TICKET_DASHBOARD_ADMIN -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.TICKET_DASHBOARD_USER
+        then pure person.id
+        else throwError AccessDenied
+    DRole.TICKET_DASHBOARD_APPROVER -> do
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      if role.dashboardAccessType == DRole.TICKET_DASHBOARD_USER
         then pure person.id
         else throwError AccessDenied
     DRole.DASHBOARD_USER ->

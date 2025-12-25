@@ -16,6 +16,7 @@ module Environment where
 
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Types.Flow
@@ -48,7 +49,12 @@ data AppEnv = AppEnv
     apiKey :: ApiKey,
     version :: DeploymentVersion,
     dashboardToken :: Text,
-    loggerEnv :: LoggerEnv
+    loggerEnv :: LoggerEnv,
+    shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
+    requestId :: Maybe Text,
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -60,7 +66,12 @@ buildAppEnv AppCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
   version <- lookupDeploymentVersion
+  let kafkaProducerForART = Nothing
   isShuttingDown <- mkShutdown
+  let requestId = Nothing
+      sessionId = Nothing
+      shouldLogRequestId = False
+  let url = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

@@ -22,6 +22,12 @@ mkDBSyncMetric = do
       DrainerStopStatus status -> setGauge (metrics </> #driver_drainer_stop_status) status
       KafkaUpdateMissing -> inc (metrics </> #driver_kafka_update_missing)
       KafkaPushFailure action model -> inc (metrics </> #driver_kafka_push_failure) action model
+      ProcessLatency processName latency -> observe (metrics </> #driver_process_latency) latency processName
+      KvConfigDecodeFailure -> inc (metrics </> #driver_kv_config_decode_failure)
+      BatchFallbackUsed _ -> inc (metrics </> #driver_batch_fallback_used)
+      BatchExecutionTime model time -> observe (metrics </> #driver_batch_execution_time) time model
+      BatchEntriesProcessed model count -> add (metrics </> #driver_batch_entries_processed) (fromIntegral count) model
+      SchemaVariationAlert model _ -> inc (metrics </> #driver_schema_variation_alert) model
   where
     collectionDBSyncMetric =
       driver_peek_db_command_error
@@ -34,4 +40,10 @@ mkDBSyncMetric = do
         .> driver_drainer_stop_status
         .> driver_kafka_update_missing
         .> driver_kafka_push_failure
+        .> driver_process_latency
+        .> driver_kv_config_decode_failure
+        .> driver_batch_fallback_used
+        .> driver_batch_execution_time
+        .> driver_batch_entries_processed
+        .> driver_schema_variation_alert
         .> MNil

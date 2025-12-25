@@ -11,8 +11,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module IssueManagement.Storage.Beam.Issue.IssueReport where
 
@@ -24,6 +22,7 @@ import IssueManagement.Tools.UtilsTH
 
 data IssueReportT f = IssueReportT
   { id :: B.C f Text,
+    shortId :: B.C f (Maybe Text),
     driverId :: B.C f (Maybe Text),
     personId :: B.C f Text,
     rideId :: B.C f (Maybe Text),
@@ -31,14 +30,17 @@ data IssueReportT f = IssueReportT
     description :: B.C f Text,
     assignee :: B.C f (Maybe Text),
     status :: B.C f Domain.IssueStatus,
-    categoryId :: B.C f Text,
+    categoryId :: B.C f (Maybe Text),
     optionId :: B.C f (Maybe Text),
     deleted :: B.C f Bool,
     mediaFiles :: B.C f [Text],
     ticketId :: B.C f (Maybe Text),
     createdAt :: B.C f Time.LocalTime,
     updatedAt :: B.C f Time.LocalTime,
-    chats :: B.C f [Domain.Chat]
+    chats :: B.C f [Domain.Chat],
+    merchantId :: B.C f (Maybe Text),
+    becknIssueId :: B.C f (Maybe Text),
+    reopenedCount :: B.C f (Maybe Int)
   }
   deriving (Generic, B.Beamable)
 

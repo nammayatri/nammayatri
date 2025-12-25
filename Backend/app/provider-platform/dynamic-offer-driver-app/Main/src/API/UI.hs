@@ -18,6 +18,35 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.Cac as Cac
+import qualified API.Action.UI.CallFeedback as CallFeedback
+import qualified API.Action.UI.DemandHotspots as DemandHotspots
+import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
+import qualified API.Action.UI.DriverProfile as DriverProfile
+import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
+import qualified API.Action.UI.DriverWallet as DriverWallet
+import qualified API.Action.UI.EditBooking as EditBooking
+import qualified API.Action.UI.FareCalculator as FareCalculator
+import qualified API.Action.UI.FleetOwnerList as FleetOwnerList
+import qualified API.Action.UI.Insurance as Insurance
+import qualified API.Action.UI.Invoice as Invoice
+import qualified API.Action.UI.LmsModule as LmsModule
+import qualified API.Action.UI.Merchant as Merchant
+import qualified API.Action.UI.MeterRide as MeterRide
+import qualified API.Action.UI.OperationHub as OH
+import qualified API.Action.UI.Operator as Operator
+import qualified API.Action.UI.Penalty as Penalty
+import qualified API.Action.UI.PickupInstructions as PickupInstructions
+import qualified API.Action.UI.PriceBreakup as PriceBreakup
+import qualified API.Action.UI.Reels as Reels
+import qualified API.Action.UI.ReferralPayout as ReferralPayout
+import qualified API.Action.UI.SocialLogin as SocialLogin
+import qualified API.Action.UI.SpecialLocation as SpecialLocation
+import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
+import qualified API.Action.UI.SubscriptionTransaction as SubscriptionTransaction
+import qualified API.Action.UI.Tokenization as Tokenization
+import qualified API.Action.UI.VehicleDetails as VehicleDetails
+import qualified API.Action.UI.WMB as WMB
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
@@ -45,7 +74,6 @@ import qualified API.UI.RideRoute as RideRoute
 import qualified API.UI.RideSummary as RideSummary
 import qualified API.UI.Route as Route
 import qualified API.UI.Transporter as Transporter
-import qualified API.UI.Vehicle as Vehicle
 import qualified API.UI.Whatsapp as Whatsapp
 import Environment
 import Kernel.Prelude
@@ -56,13 +84,17 @@ type HealthCheckAPI = Get '[JSON] Text
 type API =
   "ui"
     :> ( HealthCheckAPI
+           :<|> Merchant.API
            :<|> Registration.API
+           :<|> DemandHotspots.API
            :<|> DriverOnboarding.API
+           :<|> DriverOnboardingV2.API
+           :<|> DriverProfileQuestions.API
            :<|> OrgAdmin.API
            :<|> Payment.API
            :<|> Driver.API
+           :<|> DriverProfile.API
            :<|> DriverProfileSummary.API
-           :<|> Vehicle.API
            :<|> Transporter.API
            :<|> Route.API
            :<|> Maps.API
@@ -85,18 +117,46 @@ type API =
            :<|> DriverCoins.API
            :<|> RideSummary.API
            :<|> City.API
+           :<|> LmsModule.API
+           :<|> SpecialLocation.API
+           :<|> Reels.API
+           :<|> Cac.API
+           :<|> EditBooking.API
+           :<|> SocialLogin.API
+           :<|> VehicleDetails.API
+           :<|> PriceBreakup.API
+           :<|> MeterRide.API
+           :<|> Tokenization.API
+           :<|> FareCalculator.API
+           :<|> ReferralPayout.API
+           :<|> SpecialLocationWarrior.API
+           :<|> WMB.API
+           :<|> OH.API
+           :<|> Operator.API
+           :<|> PickupInstructions.API
+           :<|> CallFeedback.API
+           :<|> Invoice.API
+           :<|> Insurance.API
+           :<|> DriverWallet.API
+           :<|> SubscriptionTransaction.API
+           :<|> Penalty.API
+           :<|> FleetOwnerList.API
        )
 
 handler :: FlowServer API
 handler =
   pure "App is UP"
+    :<|> Merchant.handler
     :<|> Registration.handler
+    :<|> DemandHotspots.handler
     :<|> DriverOnboarding.handler
+    :<|> DriverOnboardingV2.handler
+    :<|> DriverProfileQuestions.handler
     :<|> OrgAdmin.handler
     :<|> Payment.handler
     :<|> Driver.handler
+    :<|> DriverProfile.handler
     :<|> DriverProfileSummary.handler
-    :<|> Vehicle.handler
     :<|> Transporter.handler
     :<|> Route.handler
     :<|> Maps.handler
@@ -119,3 +179,27 @@ handler =
     :<|> DriverCoins.handler
     :<|> RideSummary.handler
     :<|> City.handler
+    :<|> LmsModule.handler
+    :<|> SpecialLocation.handler
+    :<|> Reels.handler
+    :<|> Cac.handler
+    :<|> EditBooking.handler
+    :<|> SocialLogin.handler
+    :<|> VehicleDetails.handler
+    :<|> PriceBreakup.handler
+    :<|> MeterRide.handler
+    :<|> Tokenization.handler
+    :<|> FareCalculator.handler
+    :<|> ReferralPayout.handler
+    :<|> SpecialLocationWarrior.handler
+    :<|> WMB.handler
+    :<|> OH.handler
+    :<|> Operator.handler
+    :<|> PickupInstructions.handler
+    :<|> CallFeedback.handler
+    :<|> Invoice.handler
+    :<|> Insurance.handler
+    :<|> DriverWallet.handler
+    :<|> SubscriptionTransaction.handler
+    :<|> Penalty.handler
+    :<|> FleetOwnerList.handler

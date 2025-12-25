@@ -20,42 +20,47 @@ module SharedLogic.SyncRide
     fetchBookingCancelledInfo,
     BookingReallocationInfo,
     fetchBookingReallocationInfo,
-    NewRideInfo (..),
-    fetchNewRideInfo,
+    DCommon.BookingDetails (..),
+    fetchBookingDetails,
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
-import Data.Either.Extra (eitherToMaybe)
-import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as Aadhaar
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
+import qualified BecknV2.OnDemand.Utils.Common as Utils
+import Domain.Types.Beckn.Status
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.Person as DP
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import EulerHS.Prelude (whenNothing_)
 import Kernel.Beam.Functions
+import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
+import qualified SharedLogic.Beckn.Common as DCommon
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.MerchantPaymentMethod as DMPM
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
-import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFareParams
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 
 rideSync :: Maybe DBCR.CancellationSource -> Maybe DRide.Ride -> DB.Booking -> DM.Merchant -> Flow Common.RideSyncRes
 rideSync mbCancellationSource (Just ride) booking merchant =
   case ride.status of
+    DRide.UPCOMING -> syncUpcomingRide ride booking
     DRide.NEW -> syncNewRide ride booking
     DRide.INPROGRESS -> syncInProgressRide ride booking
     DRide.COMPLETED -> syncCompletedRide ride booking
@@ -63,62 +68,66 @@ rideSync mbCancellationSource (Just ride) booking merchant =
 rideSync mbCancellationSource Nothing booking merchant =
   syncCancelledRide mbCancellationSource Nothing booking merchant
 
--- NEW --
+--UPCOMING --
 
-data NewRideInfo = NewRideInfo
-  { driver :: DP.Person,
-    vehicle :: DVeh.Vehicle,
-    ride :: DRide.Ride,
-    booking :: DB.Booking,
-    image :: Maybe Text
-  }
+syncUpcomingRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
+syncUpcomingRide ride' booking' = do
+  DCommon.BookingDetails {..} <- fetchBookingDetails ride' booking'
+  handle (errHandler (Just ride.status) booking.status "scheduled ride assigned") $ do
+    CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle False
+  pure $ Common.RideSyncRes Common.RIDE_UPCOMING "Success. Sent scheduled ride started update to bap"
+
+-- NEW --
 
 syncNewRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
 syncNewRide ride' booking' = do
-  NewRideInfo {..} <- fetchNewRideInfo ride' booking'
-  handle (errHandler (Just ride.status) booking.status "ride assigned") $
-    CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle
+  DCommon.BookingDetails {..} <- fetchBookingDetails ride' booking'
+  handle (errHandler (Just ride.status) booking.status "ride assigned") $ do
+    CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle False
   pure $ Common.RideSyncRes Common.RIDE_NEW "Success. Sent ride started update to bap"
 
-fetchNewRideInfo :: DRide.Ride -> DB.Booking -> Flow NewRideInfo
-fetchNewRideInfo ride booking = do
+fetchBookingDetails :: DRide.Ride -> DB.Booking -> Flow DCommon.BookingDetails
+fetchBookingDetails ride booking = do
+  merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
-  resp <- try @_ @SomeException (Aadhaar.fetchAndCacheAadhaarImage driver driverInfo)
-  let image = join (eitherToMaybe resp)
+  driverStats <- QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
+  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+  let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+  let paymentUrl = Nothing
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-  pure NewRideInfo {..}
+  riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
+  riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
+  pure DCommon.BookingDetails {..}
 
 -- IN_PROGRESS --
 
 syncInProgressRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
 syncInProgressRide ride booking = do
   handle (errHandler (Just ride.status) booking.status "ride started") $
-    CallBAP.sendRideStartedUpdateToBAP booking ride
+    CallBAP.sendRideStartedUpdateToBAP booking ride Nothing
   pure $ Common.RideSyncRes Common.RIDE_INPROGRESS "Success. Sent ride started update to bap"
 
 -- CANCELLED --
-
-data BookingCancelledInfo = BookingCancelledInfo
-  { booking :: DB.Booking,
-    cancellationSource :: DBCR.CancellationSource
-  }
 
 syncCancelledRide :: Maybe DBCR.CancellationSource -> Maybe DRide.Ride -> DB.Booking -> DM.Merchant -> Flow Common.RideSyncRes
 syncCancelledRide mbCancellationSource mbRide booking merchant = do
   cancellationSource <- maybe (findCancellationSource mbRide) pure mbCancellationSource
   handle (errHandler (mbRide <&> (.status)) booking.status "booking cancellation") $
-    CallBAP.sendBookingCancelledUpdateToBAP booking merchant cancellationSource
+    CallBAP.sendBookingCancelledUpdateToBAP booking merchant cancellationSource Nothing
   pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
 
-fetchBookingCancelledInfo :: Maybe DRide.Ride -> DB.Booking -> Flow BookingCancelledInfo
-fetchBookingCancelledInfo mbRide booking = do
+fetchBookingCancelledInfo :: Maybe DRide.Ride -> Flow BookingCancelledInfo
+fetchBookingCancelledInfo mbRide = do
   cancellationSource <- findCancellationSource mbRide
   pure BookingCancelledInfo {..}
 
 findCancellationSource :: Maybe DRide.Ride -> Flow DBCR.CancellationSource
 findCancellationSource (Just ride) = do
-  mbBookingCReason <- runInReplica $ QBCReason.findByRideId ride.id
+  mbBookingCReason <- runInReplica $ QBCReason.findByRideId (Just ride.id)
   -- mbBookingCReason <- QBCReason.findByRideId ride.id
   case mbBookingCReason of
     Just bookingCReason -> pure bookingCReason.source
@@ -139,10 +148,8 @@ findCancellationSource Nothing = pure DBCReason.ByMerchant
 
 -- REALLOCATION --
 
-type BookingReallocationInfo = BookingCancelledInfo
-
 fetchBookingReallocationInfo :: Maybe DRide.Ride -> DB.Booking -> Flow BookingCancelledInfo
-fetchBookingReallocationInfo = fetchBookingCancelledInfo
+fetchBookingReallocationInfo ride _ = fetchBookingCancelledInfo ride
 
 -- COMPLETED --
 
@@ -157,7 +164,7 @@ syncCompletedRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
 syncCompletedRide ride booking = do
   RideCompletedInfo {..} <- fetchRideCompletedInfo ride booking
   handle (errHandler (Just ride.status) booking.status "ride completed") $
-    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl Nothing
   pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride completed update to bap"
 
 fetchRideCompletedInfo :: DRide.Ride -> DB.Booking -> Flow RideCompletedInfo
@@ -170,7 +177,7 @@ fetchRideCompletedInfo ride booking = do
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantOpCityId paymentMethodId ride.merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-  let paymentUrl = DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod
+  let paymentUrl = Nothing -- DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod -- TODO : Remove paymentUrl altogether
   let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
   pure RideCompletedInfo {..}
 

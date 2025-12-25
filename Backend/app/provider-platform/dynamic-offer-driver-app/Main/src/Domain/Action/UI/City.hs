@@ -16,22 +16,23 @@ module Domain.Action.UI.City where
 
 import qualified Domain.Types.City as DTC
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity (..))
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
 import Environment
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQMTC
+import Tools.Auth
 import Tools.Error
 
 listCities :: Id DM.Merchant -> Flow [DTC.CityRes]
 listCities mId = do
-  merchantOperatingCities <- CQMOC.findAllByMerchantId mId
+  merchantOperatingCities <- CQMOC.findAllByMerchantId (merchantIdFallback mId)
   mapM mkCityRes merchantOperatingCities
   where
     mkCityRes MerchantOperatingCity {..} = do
-      transporterConfig <- CQMTC.findByMerchantOpCityId id >>= fromMaybeM (TransporterConfigNotFound id.getId)
+      transporterConfig <- SCTC.findByMerchantOpCityId id Nothing >>= fromMaybeM (TransporterConfigNotFound id.getId)
       return $
         DTC.CityRes
           { code = city,

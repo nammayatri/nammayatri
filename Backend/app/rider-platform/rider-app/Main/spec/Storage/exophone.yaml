@@ -1,0 +1,48 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  CallService: Kernel.External.Call.Types
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+Exophone:
+  tableName: exophone
+
+  fields:
+    id : Id Exophone
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+    primaryPhone : Text
+    backupPhone : Text
+    isPrimaryDown : Bool
+    callService : CallService
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    enableAlternateNumber : Maybe Bool
+
+  constraints:
+    id: PrimaryKey
+    primaryPhone: "!SecondaryKey" # forcing to be a secondary key
+    backupPhone: "!SecondaryKey" # forcing to be a secondary key
+
+  queries:
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+    findByMerchantOperatingCityIdAndService:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, callService]
+
+    deleteByMerchantOperatingCityId:
+      kvFunction: deleteWithKV
+      where: merchantOperatingCityId
+
+  default:
+    callService: "'Exotel'"
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
+

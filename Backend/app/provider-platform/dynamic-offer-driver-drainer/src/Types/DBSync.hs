@@ -1,11 +1,9 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Types.DBSync
-  ( module X,
-    Env (..),
+  ( Env (..),
     Types.DBSync.Flow,
     History,
     StateRef (..),
@@ -14,27 +12,53 @@ module Types.DBSync
     CreateDBCommand (..),
     UpdateDBCommand (..),
     DeleteDBCommand (..),
+    AppCfg (..),
   )
 where
 
+import Data.Aeson (Object)
+import qualified Data.Aeson as A
+import Data.Pool (Pool)
+import Database.Beam.Postgres (Connection)
 import EulerHS.KVConnector.DBSync
 import EulerHS.KVConnector.Types
-import EulerHS.Language as EL
+import qualified EulerHS.Language as EL
 import EulerHS.Prelude
-import EulerHS.Types as ET hiding (Tag)
+import qualified EulerHS.Types as ET hiding (Tag)
 import Kafka.Producer as Producer
+import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Hedis.Config
+import Kernel.Streaming.Kafka.Producer.Types
+import qualified Kernel.Types.Common as KTC
+import Kernel.Types.Logging
+import Kernel.Utils.Dhall (FromDhall)
 import Types.Config
-import Types.DBSync.Create as X
-import Types.DBSync.Delete as X
-import Types.DBSync.Update as X
 import Types.Event as Event
 
 data Env = Env
   { _streamRedisInfo :: Text,
     _counterHandles :: Event.DBSyncCounterHandler,
     _kafkaConnection :: Producer.KafkaProducer,
-    _dontEnableDbTables :: [Text]
+    -- _pgConnection :: Connection,
+    _dontEnableDbTables :: [Text],
+    _dontEnableForKafka :: [Text],
+    _connectionPool :: Pool Connection,
+    _esqDBCfg :: EsqDBConfig
   }
+
+data AppCfg = AppCfg
+  { esqDBCfg :: EsqDBConfig,
+    esqDBReplicaCfg :: EsqDBConfig,
+    hedisCfg :: HedisCfg,
+    hedisClusterCfg :: HedisCfg,
+    kvConfigUpdateFrequency :: Int,
+    kafkaProducerCfg :: KafkaProducerCfg,
+    loggerConfig :: LoggerConfig,
+    dontEnableForDb :: [Text],
+    dontEnableForKafka :: [Text],
+    kafkaProperties :: [KTC.KafkaProperties]
+  }
+  deriving (Generic, FromDhall)
 
 type Flow = EL.ReaderFlow Env
 
@@ -54,16 +78,41 @@ data DBSyncException
 instance Exception DBSyncException
 
 data DBCommand
-  = Create DBCommandVersion Tag Double DBName DBCreateObject
-  | Update DBCommandVersion Tag Double DBName DBUpdateObject
-  | Delete DBCommandVersion Tag Double DBName DBDeleteObject
-  deriving (Generic, ToJSON, FromJSON)
+  = Create DBCommandObject
+  | Update DBCommandObject
+  | Delete DBCommandObject
+  deriving (Generic)
 
-data CreateDBCommand = CreateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName DBCreateObject
+instance FromJSON DBCommand where
+  parseJSON = genericParseJSON dbCommandOptions
 
-data UpdateDBCommand = UpdateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName DBUpdateObject
+dbCommandOptions :: A.Options
+dbCommandOptions =
+  A.defaultOptions
+    { A.sumEncoding = dbCommandTaggedObject
+    }
 
-data DeleteDBCommand = DeleteDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName DBDeleteObject
+dbCommandTaggedObject :: A.SumEncoding
+dbCommandTaggedObject =
+  A.TaggedObject
+    { tagFieldName = "tag",
+      contentsFieldName = "contents_v2"
+    }
+
+data DBCommandObject = DBCommandObject
+  { cmdVersion :: DBCommandVersion,
+    tag :: Tag,
+    timestamp :: Double,
+    dbName :: DBName,
+    command :: Object
+  }
+  deriving (Generic, FromJSON)
+
+data CreateDBCommand = CreateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName Object
+
+data UpdateDBCommand = UpdateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName Object
+
+data DeleteDBCommand = DeleteDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName Object
 
 deriving stock instance Show EL.KVDBStreamEntryID
 

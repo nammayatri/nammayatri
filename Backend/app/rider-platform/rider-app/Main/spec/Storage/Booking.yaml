@@ -1,0 +1,509 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Version: Kernel.Types.Version
+  Device: Kernel.Types.Version
+  DeviceType: Kernel.Types.Version
+  Price: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  Person: Domain.Types.Person
+  Client: Domain.Types.Client
+  Location: Domain.Types.Location
+  Language: Kernel.External.Maps
+  Currency: Kernel.Utils.Common
+  Money: Kernel.Utils.Common
+  Centesimal: Kernel.Utils.Common
+  LocationAddress: Domain.Types.LocationAddress
+  BookingStatus: Domain.Types.BookingStatus
+  Quote: Domain.Types.Quote
+  MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
+  TripTerms: Domain.Types.TripTerms
+  PaymentStatus: Domain.Types.Extra.Booking
+  BaseUrl: Kernel.Types.Common
+  FareProductType: Domain.Types.FarePolicy.FareProductType
+  TripCategory: Domain.Types.Common
+  HighPrecMeters: Kernel.Types.Common
+  HighPrecDistance: Kernel.Types.Common
+  Distance: Kernel.Types.Common
+  DistanceUnit: Kernel.Types.Common
+  VehicleVariant: Domain.Types.VehicleVariant
+  ServiceTierType: Domain.Types.ServiceTierType
+  HighPrecMoney: Kernel.Types.Common
+  PaymentMethodId: Kernel.External.Payment.Interface.Types
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
+  TripParty: Domain.Types.Trip
+  ConfigVersionMap: Lib.Yudhishthira.Types
+  Value: Data.Aeson
+  ParcelType: Domain.Types.ParcelType
+  JourneyLeg: Domain.Types.JourneyLeg
+  RecentLocation: Domain.Types.RecentLocation
+  BillingCategory: SharedLogic.Type
+  VehicleCategory : BecknV2.OnDemand.Enums
+  PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+
+BookingLocation:
+  tableName: booking_location
+
+  derives: "Generic, Show, Eq, Kernel.External.Maps.HasCoordinates.HasCoordinates"
+
+  fields:
+    id: Id BookingLocation
+    lat: Double
+    lon: Double
+    address: LocationAddress
+
+  types:
+    BookingLocationAPIEntity:
+      lat: Double
+      lon: Double
+      street: Maybe Text
+      door: Maybe Text
+      city: Maybe Text
+      state: Maybe Text
+      country: Maybe Text
+      building: Maybe Text
+      areaCode: Maybe Text
+      area: Maybe Text
+      ward: Maybe Text
+      placeId: Maybe Text
+      instructions: Maybe Text
+      title: Maybe Text
+      extras: Maybe Text
+
+  beamFields:
+    address:
+      street: Maybe Text
+      door: Maybe Text
+      city: Maybe Text
+      state: Maybe Text
+      country: Maybe Text
+      building: Maybe Text
+      areaCode: Maybe Text
+      area: Maybe Text
+      ward: Maybe Text
+      placeId: Maybe Text
+      instructions: Maybe Text
+      title: Maybe Text
+      extras: Maybe Text
+
+  toTType:
+    street: Domain.Types.LocationAddress.street|I
+    door: Domain.Types.LocationAddress.door|I
+    city: Domain.Types.LocationAddress.city|I
+    state: Domain.Types.LocationAddress.state|I
+    country: Domain.Types.LocationAddress.country|I
+    building: Domain.Types.LocationAddress.building|I
+    areaCode: Domain.Types.LocationAddress.areaCode|I
+    area: Domain.Types.LocationAddress.area|I
+    ward: Domain.Types.LocationAddress.ward|I
+    placeId: Domain.Types.LocationAddress.placeId|I
+    instructions: Domain.Types.LocationAddress.instructions|I
+    title: Domain.Types.LocationAddress.title|I
+    extras: Domain.Types.LocationAddress.extras|I
+
+  fromTType:
+    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId,instructions,title,extras}|E
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  sqlType:
+    street: character varying(255)
+    door: character varying(255)
+    city: character varying(255)
+    state: character varying(255)
+    country: character varying(255)
+    building: character varying(255)
+    areaCode: character varying(255)
+    area: character varying(255)
+    ward: character varying(255)
+    placeId: text
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateAddress:
+      kvFunction: updateOneWithKV
+      params: [address]
+      where: id
+
+Booking:
+  tableName: booking
+
+  derives: Generic,Show,FromJSON,ToJSON
+
+  types:
+    BPPBooking: {}
+    BookingDetails:
+      enum: OneWayDetails OneWayBookingDetails,RentalDetails RentalBookingDetails,DriverOfferDetails OneWayBookingDetails,OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails,InterCityDetails InterCityBookingDetails, AmbulanceDetails AmbulanceBookingDetails, DeliveryDetails DeliveryBookingDetails, MeterRideDetails MeterRideBookingDetails
+      derive': Generic,Show,FromJSON,ToJSON
+    OneWayBookingDetails:
+      stops: "[Location]"
+      toLocation: Location
+      distance: Distance
+      isUpgradedToCab: Maybe Bool
+      derive': Generic,Show,FromJSON,ToJSON
+    RentalBookingDetails:
+      stopLocation: Maybe Location
+      otpCode: Maybe Text
+      derive': Generic,Show,FromJSON,ToJSON
+    OneWaySpecialZoneBookingDetails:
+      toLocation: Location
+      stops: "[Location]"
+      distance: Distance
+      otpCode: Maybe Text
+      derive': Generic,Show,FromJSON,ToJSON
+    InterCityBookingDetails:
+      toLocation: Location
+      distance: Distance
+      stops: "[Location]"
+      otpCode: Maybe Text
+      derive': Generic,Show,FromJSON,ToJSON
+    AmbulanceBookingDetails:
+      toLocation: Location
+      distance: Distance
+      derive': Generic,Show,FromJSON,ToJSON
+    DeliveryBookingDetails:
+      derive': Generic,Show,FromJSON,ToJSON
+      toLocation: Location
+      distance: Distance
+      otpCode: Maybe Text
+      parcelType: ParcelType
+      parcelQuantity: Maybe Int
+    MeterRideBookingDetails:
+      derive': Generic,Show,FromJSON,ToJSON
+      distanceCovered: Maybe Distance
+      toLocation: Maybe Location
+
+  fields:
+    id: Id Booking
+    transactionId: Text
+    fulfillmentId: Maybe Text
+    clientId: Maybe (Id Client)
+    bppBookingId: Maybe (Id BPPBooking)
+    quoteId: Maybe (Id Quote)
+    paymentMethodId: Maybe PaymentMethodId
+    paymentInstrument: Maybe PaymentInstrument
+    paymentUrl: Maybe Text
+    status: BookingStatus|NoRelation
+    providerId: Text
+    providerUrl: BaseUrl
+    bppEstimateId: Text
+    primaryExophone: Text
+    isBookingUpdated: Bool
+    startTime: UTCTime
+    returnTime: Maybe UTCTime
+    roundTrip: Maybe Bool
+    hasStops: Maybe Bool
+    riderId: Id Person
+    isPetRide: Bool
+    fromLocation: Location
+    billingCategory: BillingCategory
+    initialPickupLocation: Location|NoRelation
+    estimatedFare: Price
+    estimatedDistance: Maybe Distance
+    distanceUnit: DistanceUnit
+    estimatedDuration: Maybe Seconds
+    estimatedStaticDuration: Maybe Seconds
+    discount: Maybe Price
+    estimatedTotalFare: Price
+    isScheduled: Bool
+    vehicleServiceTierType: ServiceTierType|NoRelation
+    vehicleServiceTierSeatingCapacity: Maybe Int
+    vehicleServiceTierAirConditioned: Maybe Double
+    vehicleCategory: Maybe VehicleCategory
+    vehicleIconUrl: Maybe BaseUrl
+    isAirConditioned: Maybe Bool
+    isDashboardRequest: Maybe Bool
+    bookingDetails: BookingDetails
+    tripTerms: Maybe TripTerms
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    specialLocationTag: Maybe Text
+    specialLocationName: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    serviceTierName: Maybe Text
+    serviceTierShortDesc: Maybe Text
+    paymentStatus: Maybe PaymentStatus
+    clientBundleVersion: Maybe Version
+    clientSdkVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    clientDevice: Maybe Device
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
+    tripCategory: Maybe TripCategory
+    initiatedBy: Maybe TripParty
+    isReferredRide: Maybe Bool
+    disabilityTag: Maybe Text
+    configInExperimentVersions: "[ConfigVersionMap]"
+    preferSafetyPlus: Bool
+    recentLocationId: Maybe (Id RecentLocation)
+    isInsured: Bool
+    insuredAmount: Maybe Text
+    driverInsuredAmount: Maybe Text
+    isMultimodalSearch: Maybe Bool
+    multimodalSearchRequestId: Maybe Text
+    commission: Maybe HighPrecMoney
+    paymentMode: Maybe PaymentMode
+
+  beamFields:
+    estimatedDistance:
+      estimatedDistance: Maybe HighPrecMeters
+      estimatedDistanceValue: Maybe HighPrecDistance
+      distanceValue: Maybe HighPrecDistance
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
+    vehicleServiceTierType:
+      vehicleVariant: ServiceTierType
+    transactionId:
+      riderTransactionId: Text
+    bookingDetails:
+      fareProductType: FareProductType # TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+      toLocationId: Maybe Text
+      distance: Maybe HighPrecMeters
+      stopLocationId: Maybe Text
+      otpCode: Maybe Text
+      isUpgradedToCab: Maybe Bool
+      stops: {}
+      parcelType: Maybe ParcelType
+      parcelQuantity: Maybe Int
+    fromLocation:
+      fromLocationId: Maybe Text
+    tripTerms:
+      tripTermsId: Maybe Text
+    estimatedFare:
+      currency: Maybe Currency
+      estimatedFare: HighPrecMoney
+    initialPickupLocation: {}
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
+    bppEstimateId:
+      itemId: Text
+
+  beamInstance: MakeTableInstancesWithTModifier [("bppBookingId", "bpp_ride_booking_id"), ("riderTransactionId", "transaction_id")]
+  beamType:
+    discount: Maybe HighPrecMoney
+    providerUrl: Text
+    estimatedTotalFare: HighPrecMoney
+    currency: Maybe Currency
+    tripTermsId: Maybe Text
+    isScheduled: Maybe Bool
+    isBookingUpdated: Maybe Bool
+    merchantOperatingCityId: Maybe Text
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    billingCategory: Maybe BillingCategory
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
+    vehicleIconUrl: Maybe Text
+    configInExperimentVersions: Maybe Value
+    preferSafetyPlus: Maybe Bool
+    isInsured: Maybe Bool
+    isPetRide: Maybe Bool
+
+
+  sqlType:
+    id: character(36)
+    status: character varying(255)
+    providerId: character varying(255)
+    providerMobileNumber: character varying(255)
+    startTime: timestamp with time zone
+    riderId: character(36)
+    fromLocationId: character(36)
+    toLocationId: character(36)
+    estimatedFare: numeric(30,2)
+    discount: numeric(30,2)
+    estimatedTotalFare: numeric(30,2)
+    distance: numeric(30,2)
+    vehicleVariant: character varying(60)
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+    bppRideBookingId: character(36)
+    providerName: character varying(255)
+    providerUrl: character varying(255)
+    fareProductType: character varying(255)
+    tripTermsId: character(36)
+    rentalSlabId: character(36)
+    merchantId: character(36)
+    quoteId: character(36)
+    primaryExophone: character varying(255)
+    otpCode: character(4)
+    transactionId: character(36)
+    specialLocationTag: text
+    paymentMethodId: text
+    paymentUrl: text
+    fulfillmentId: text
+    driverId: text
+    itemId: text
+    merchantOperatingCityId: character(36)
+    stopLocationId: character varying(36)
+    estimatedDistance: double precision
+    estimatedDuration: integer
+    estimatedStaticDuration: integer
+    isScheduled: boolean
+    serviceTierName: text
+    clientId: character varying(36)
+    paymentStatus: text
+    currency: character varying(255)
+    serviceTierShortDesc: text
+    distanceUnit: character varying(255)
+    distanceValue: double precision
+    estimatedDistanceValue: double precision
+    vehicleIconUrl: character varying(255)
+    configInExperimentVersions: "json"
+
+  default:
+    fareProductType: "'ONE_WAY'"
+    itemId: "''"
+    merchantId: "'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51'"
+    isBookingUpdated: "false"
+
+  # distanceUnit should be the same for all fields
+  toTType:
+    fareProductType: getFareProductType
+    toLocationId: getToLocationId
+    distance: (Kernel.Utils.Common.distanceToHighPrecMeters <$> distance)|E
+    distanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance)|E
+    distanceUnit: Kernel.Prelude.Just|I
+    estimatedDistance: (Kernel.Utils.Common.distanceToHighPrecMeters <$> estimatedDistance)|E
+    estimatedDistanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance)|E
+    stopLocationId: getStopLocationId
+    otpCode: getOtpCode
+    isUpgradedToCab: getIsUpgradedToCab
+    isBookingUpdated: (Just isBookingUpdated)|E
+    providerUrl: (showBaseUrl providerUrl)|E
+    fromLocationId: (Just $ Kernel.Types.Id.getId $ (.id) fromLocation)|E
+    estimatedFare: ((.amount) estimatedFare)|E
+    discount: (discount <&> (.amount))|E
+    estimatedTotalFare: ((.amount) estimatedTotalFare)|E
+    currency: (Just $ (.currency) estimatedFare)|E
+    tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
+    isScheduled: (Just isScheduled)|E
+    merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
+    clientOsType: clientDevice <&> (.deviceType)|E
+    clientOsVersion: clientDevice <&> (.deviceVersion)|E
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    clientBundleVersion: Kernel.Utils.Version.versionToText <$> clientBundleVersion|E
+    clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
+    clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
+    backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
+    bppEstimateId: itemId|E
+    vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+    configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
+    parcelType: getParcelType
+    parcelQuantity: getParcelQuantity
+    preferSafetyPlus : Kernel.Prelude.Just|I
+    isInsured: Kernel.Prelude.Just isInsured|E
+    isPetRide: Kernel.Prelude.Just|I
+    billingCategory: Kernel.Prelude.Just billingCategory|E
+
+  intermediateTransformers:
+    toTType:
+      - distance: getDistance bookingDetails|E
+    fromTType:
+      - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
+      - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops parcelType parcelQuantity|EM
+  fromTType:
+    providerUrl: parseBaseUrl providerUrl|EM
+    isBookingUpdated: (fromMaybe False isBookingUpdated)|E
+    fromLocation: (fst toBookingDetailsAndFromLocation')|E
+    bookingDetails: (snd toBookingDetailsAndFromLocation')|E
+    tripTerms: if isJust tripTermsId then Storage.Queries.TripTerms.findById'' (Kernel.Types.Id.Id (fromJust tripTermsId)) else pure Nothing|EM
+    merchantOperatingCityId: Storage.Queries.Transformers.Booking.backfillMOCId merchantOperatingCityId merchantId|EM
+    initialPickupLocation: Storage.Queries.Transformers.Booking.getInitialPickupLocation mappings (fst toBookingDetailsAndFromLocation')|EM
+    estimatedFare: (Kernel.Types.Common.mkPrice currency estimatedFare)|E
+    discount: (Kernel.Types.Common.mkPrice currency <$> discount)|E
+    estimatedTotalFare: (Kernel.Types.Common.mkPrice currency estimatedTotalFare)|E
+    isScheduled: (fromMaybe False isScheduled)|E
+    estimatedDistance: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit estimatedDistanceValue <$> estimatedDistance|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
+    clientBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)|EM
+    clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
+    clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
+    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer|E
+    backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
+    itemId: bppEstimateId|E
+    vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+    configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
+    isInsured: fromMaybe False isInsured|E
+    preferSafetyPlus : fromMaybe False preferSafetyPlus | E
+    isPetRide: fromMaybe False isPetRide | E
+    billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - updateByPrimaryKey
+
+  constraints:
+    bppBookingId: "!SecondaryKey" # forcing to be a secondary key
+    riderId: "!SecondaryKey" # forcing to be a secondary key
+    quoteId: "!SecondaryKey" # forcing to be a secondary key
+    riderTransactionId: "!SecondaryKey" # forcing to be a secondary key
+
+  queries:
+    updateIsBookingUpdated:
+      kvFunction: updateWithKV
+      params:
+        - isBookingUpdated
+      where: id
+    findByQuoteId:
+      kvFunction: findOneWithKV
+      where: quoteId
+
+BookingPartiesLink:
+  fields:
+    id: Id BookingPartiesLink
+    bookingId: Id Booking
+    partyId: Id Person
+    partyType: TripParty|NoRelation
+    partyName: Text
+    isActive: Bool
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  constraints:
+    id: PrimaryKey
+    partyId: "!SecondaryKey"
+    bookingId: "!SecondaryKey"
+
+  queries:
+    findAllByBookingId:
+      kvFunction: findAllWithKVAndConditionalDB
+      where: bookingId
+    findAllActiveByBookingId:
+      kvFunction: findAllWithKVAndConditionalDB
+      where:
+        and:
+          - bookingId
+          - isActive: True|CB
+    makeAllInactiveByBookingId:
+      kvFunction: updateWithKV
+      params:
+        - isActive: False|CB
+      where:
+        and:
+          - bookingId
+          - isActive: True|CB
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+    - findByPrimaryKey
+  extraOperations:
+    - EXTRA_QUERY_FILE

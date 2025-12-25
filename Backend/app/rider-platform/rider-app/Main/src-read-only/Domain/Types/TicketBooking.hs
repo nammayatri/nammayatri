@@ -1,38 +1,45 @@
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.TicketBooking where
+module Domain.Types.TicketBooking (module Domain.Types.TicketBooking, module ReExport) where
 
 import Data.Aeson
-import qualified Data.Time.Calendar
+import qualified Data.Time
+import Domain.Types.Extra.TicketBooking as ReExport
+import qualified Domain.Types.Extra.TicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.TicketPlace
+import qualified Domain.Types.TicketSubPlace
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import Kernel.Utils.TH
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH
+import qualified Tools.Payment
 
 data TicketBooking = TicketBooking
-  { amount :: Kernel.Types.Common.HighPrecMoney,
+  { amount :: Kernel.Types.Common.Price,
+    blockExpirationTime :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    bookedSeats :: Kernel.Prelude.Int,
+    cancelledSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    paymentMethod :: Kernel.Prelude.Maybe Domain.Types.Extra.TicketBooking.PaymentMethod,
+    peopleTicketQuantity :: Kernel.Prelude.Maybe [Domain.Types.TicketBooking.PeopleTicketQuantity],
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking,
-    status :: Domain.Types.TicketBooking.BookingStatus,
+    status :: Domain.Types.Extra.TicketBooking.BookingStatus,
+    ticketBookedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ticketPlaceId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
+    ticketSubPlaceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace),
     updatedAt :: Kernel.Prelude.UTCTime,
-    visitDate :: Data.Time.Calendar.Day,
+    vendorSplitDetails :: Kernel.Prelude.Maybe [Tools.Payment.VendorSplitDetails],
+    visitDate :: Data.Time.Day,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show)
 
-data BookingStatus = Pending | Failed | Booked
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-$(mkBeamInstancesForEnum ''BookingStatus)
-
-$(mkHttpInstancesForEnum ''BookingStatus)
+data PeopleTicketQuantity = PeopleTicketQuantity {bookedSeats :: Kernel.Prelude.Int, name :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

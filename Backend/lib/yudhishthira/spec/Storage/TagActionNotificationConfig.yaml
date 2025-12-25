@@ -1,0 +1,27 @@
+imports:
+  Merchant: Lib.Yudhishthira.Types
+  MerchantOperatingCity: Lib.Yudhishthira.Types
+
+TagActionNotificationConfig:
+  derives: "Generic,Show,ToJSON,FromJSON"
+  types:
+    NotificationType:
+      enum: "SMS,PN,WHATSAPP,OVERLAY,CALL"
+  fields:
+    id: Id TagActionNotificationConfig
+    notifyAt: TimeOfDay
+    notificationType: NotificationType
+    notificationKey: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  queries:
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findAllByMerchantOperatingCityIdAndNotificationKey:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, notificationKey]
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"

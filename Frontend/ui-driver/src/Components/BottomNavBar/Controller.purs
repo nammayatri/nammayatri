@@ -21,12 +21,15 @@ import Data.Maybe as Maybe
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import MerchantConfig.Types (BottomNavConfig)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (bottom, ($), (<>), (||), unit, (<>), (==), negate, (/=), (<), (&&))
+import Prelude (bottom, ($), (<>), (||), unit, (<>), (==), negate, (/=), (<), (&&), class Show)
 import Screens as ScreenNames
 import Screens.Types (BottomNavBarState, NavIcons)
 import Storage (KeyStore(..), getValueToLocalNativeStore)
 
 data Action = OnNavigate String
+
+instance showAction :: Show Action where
+  show (OnNavigate _) = "OnNavigate"
 
 navData :: ScreenNames.ScreenName -> BottomNavConfig -> BottomNavBarState
 navData screenName bottomNavConfig = do
@@ -40,6 +43,14 @@ navData screenName bottomNavConfig = do
           showNewBanner : bottomNavConfig.home.showNew,
           isVisible : bottomNavConfig.home.isVisible,
           screenName : ScreenNames.HOME_SCREEN
+        },
+        {
+          activeIcon: fetchImage FF_ASSET "ny_ic_earnings_active",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_earnings_inactive",
+          text: "Earnings",
+          isVisible : bottomNavConfig.driverEarnings.isVisible,
+          showNewBanner : bottomNavConfig.driverEarnings.showNew,
+          screenName : ScreenNames.DRIVER_EARNINGS_SCREEN
         },
         {
           activeIcon: fetchImage FF_ASSET "ny_ic_rides_tab_active",
@@ -58,8 +69,8 @@ navData screenName bottomNavConfig = do
           screenName : ScreenNames.SUBSCRIPTION_SCREEN
         },
         {
-          activeIcon: fetchImage FF_ASSET "ic_referral_active",
-          defaultIcon: fetchImage FF_ASSET $ if (getValueToLocalNativeStore REFERRAL_ACTIVATED) == "true" then  "ny_ic_contest_alert" else "ic_referral_inactive",
+          activeIcon: fetchImage FF_ASSET "ny_ic_benefits_active",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_benefits_inactive",
           isVisible : bottomNavConfig.referral.isVisible,
           showNewBanner : bottomNavConfig.referral.showNew,
           text: "Rankings",

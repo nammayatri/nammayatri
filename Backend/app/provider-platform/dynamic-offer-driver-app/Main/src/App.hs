@@ -16,11 +16,14 @@ module App where
 
 import AWS.S3
 import qualified App.Server as App
+import qualified Client.Main as CM
+import qualified Data.Bool as B
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Environment
 import EulerHS.Interpreters (runFlow)
+import qualified EulerHS.KVConnector.Metrics as KVCM
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -30,8 +33,11 @@ import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
+import Kernel.External.SharedLogic.HyperVerge.Functions (prepareHyperVergeHttpManager)
+import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.External.Verification.InternalScripts.FaceVerification (prepareInternalScriptsHttpManager)
+import Kernel.External.Verification.SafetyPortal.Config (prepareSafetyPortalHttpManager)
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Kernel.Storage.Queries.SystemConfigs
 import qualified Kernel.Tools.Metrics.Init as Metrics
@@ -40,7 +46,7 @@ import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Utils.App
 import Kernel.Utils.Common
-import Kernel.Utils.Dhall
+import Kernel.Utils.Dhall hiding (maybe)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
 import Network.HTTP.Client as Http
@@ -57,6 +63,25 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
 import System.Environment (lookupEnv)
 import "utils" Utils.Common.Events as UE
+
+createCAC :: AppCfg -> IO ()
+createCAC appCfg = do
+  when appCfg.cacConfig.enableCac $ do
+    cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacTenants appCfg.cacConfig.enablePolling
+    case cacStatus of
+      0 -> CM.startCACPolling appCfg.cacTenants
+      _ -> do
+        -- logError "CAC client failed to start"
+        threadDelay 1000000
+        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
+  when appCfg.superPositionConfig.enableSuperPosition $ do
+    superPositionStatus <- CM.initSuperPositionClient appCfg.superPositionConfig.host (fromIntegral appCfg.superPositionConfig.interval) appCfg.superPositionConfig.tenants appCfg.superPositionConfig.enablePolling
+    case superPositionStatus of
+      0 -> CM.runSuperPositionPolling appCfg.superPositionConfig.tenants
+      _ -> do
+        -- logError "CAC super position client failed to start"
+        threadDelay 1000000
+        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
 
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
@@ -88,6 +113,7 @@ runDynamicOfferDriverApp' appCfg = do
             appCfg.kvConfigUpdateFrequency
         )
           >> L.setOption KafkaConn appEnv.kafkaProducerTools
+          >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
       )
 
     flowRt' <- runFlowR flowRt appEnv $ do
@@ -99,6 +125,7 @@ runDynamicOfferDriverApp' appCfg = do
           findById "kv_configs" >>= pure . decodeFromText' @Tables
             >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
         L.setOption KBT.Tables kvConfigs
+        _ <- liftIO $ createCAC appCfg
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
@@ -111,7 +138,10 @@ runDynamicOfferDriverApp' appCfg = do
                 (Nothing,) <$> mkS3MbManager flowRt appEnv appCfg.s3Config,
                 Just (Just 20000, prepareIdfyHttpManager 20000),
                 Just (Just 10000, prepareInternalScriptsHttpManager 10000),
-                Just (Just 150000, prepareGridlineHttpManager 150000)
+                Just (Just 10000, prepareSafetyPortalHttpManager 10000),
+                Just (Just 150000, prepareGridlineHttpManager 150000),
+                Just (Just 10000, prepareHyperVergeHttpManager 10000),
+                Just (Just 10000, prepareJourneyMonitoringHttpManager 10000)
               ]
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))

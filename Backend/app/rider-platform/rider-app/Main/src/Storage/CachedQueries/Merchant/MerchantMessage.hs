@@ -14,37 +14,65 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.MerchantMessage
-  ( findByMerchantOperatingCityIdAndMessageKey,
+  ( create,
+    findAllByMerchantOpCityId,
+    findAllByMerchantOpCityIdInRideFlow,
+    findByMerchantOperatingCityIdAndMessageKey,
+    findByMerchantOperatingCityIdAndMessageKeyInRideFlow,
     clearCache,
+    clearCacheById,
   )
 where
 
-import Data.Coerce (coerce)
-import Domain.Types.Common
-import Domain.Types.Merchant.MerchantMessage
+import Domain.Types.MerchantMessage
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Merchant.MerchantMessage as Queries
+import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Yudhishthira ()
+import qualified Storage.Queries.MerchantMessage as Queries
+import qualified Tools.DynamicLogic as DynamicLogic
 
-findByMerchantOperatingCityIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> m (Maybe MerchantMessage)
-findByMerchantOperatingCityIdAndMessageKey id messageKey =
-  Hedis.safeGet (makeMerchantOperatingCityIdAndMessageKey id messageKey) >>= \case
-    Just a -> return . Just $ coerce @(MerchantMessageD 'Unsafe) @MerchantMessage a
-    Nothing -> flip whenJust cacheMerchantMessage /=<< Queries.findByMerchantOperatingCityIdAndMessageKey id messageKey
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantMessage -> m ()
+create = Queries.create
 
-cacheMerchantMessage :: CacheFlow m r => MerchantMessage -> m ()
-cacheMerchantMessage merchantMessage = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantOperatingCityIdAndMessageKey merchantMessage.merchantOperatingCityId merchantMessage.messageKey
-  Hedis.setExp idKey (coerce @MerchantMessage @(MerchantMessageD 'Unsafe) merchantMessage) expTime
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m [MerchantMessage]
+findAllByMerchantOpCityId id mbConfigVersionMap =
+  DynamicLogic.findAllConfigs (cast id) (LYT.RIDER_CONFIG LYT.MerchantMessage) mbConfigVersionMap Nothing (Queries.findAllByMerchantOpCityId id)
+
+findByMerchantOperatingCityIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
+findByMerchantOperatingCityIdAndMessageKey id messageKey mbConfigVersionMap =
+  DynamicLogic.findOneConfigWithCacheKey
+    (cast id)
+    (LYT.RIDER_CONFIG LYT.MerchantMessage)
+    mbConfigVersionMap
+    Nothing
+    (Queries.findByMerchantOperatingCityIdAndMessageKey id messageKey)
+    (makeMerchantOperatingCityIdAndMessageKey id messageKey)
+
+findAllByMerchantOpCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m [MerchantMessage]
+findAllByMerchantOpCityIdInRideFlow id configVersionMap =
+  findAllByMerchantOpCityId id (Just configVersionMap)
+
+findByMerchantOperatingCityIdAndMessageKeyInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> [LYT.ConfigVersionMap] -> m (Maybe MerchantMessage)
+findByMerchantOperatingCityIdAndMessageKeyInRideFlow id messageKey configVersionMap =
+  findByMerchantOperatingCityIdAndMessageKey id messageKey (Just configVersionMap)
 
 makeMerchantOperatingCityIdAndMessageKey :: Id MerchantOperatingCity -> MessageKey -> Text
 makeMerchantOperatingCityIdAndMessageKey id messageKey = "CachedQueries:MerchantMessage:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> show messageKey
 
--- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> MessageKey -> m ()
-clearCache merchantOperatingCityId messageKey = do
-  Hedis.del (makeMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey)
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> MessageKey -> m ()
+clearCache merchantOperatingCityId messageKey =
+  DynamicLogic.clearConfigCacheWithPrefix
+    (makeMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey)
+    (cast merchantOperatingCityId)
+    (LYT.RIDER_CONFIG LYT.MerchantMessage)
+    Nothing
+
+clearCacheById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
+clearCacheById merchantOperatingCityId =
+  DynamicLogic.clearConfigCache
+    (cast merchantOperatingCityId)
+    (LYT.RIDER_CONFIG LYT.MerchantMessage)
+    Nothing

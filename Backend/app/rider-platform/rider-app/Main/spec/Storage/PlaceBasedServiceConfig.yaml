@@ -1,0 +1,47 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  ServiceConfigD: Domain.Types.MerchantServiceConfig
+  TicketPlace: Domain.Types.TicketPlace
+  Value: Data.Aeson
+  ServiceName: Domain.Types.MerchantServiceConfig
+
+PlaceBasedServiceConfig:
+  tableName: place_based_service_config
+
+  derives: "Generic,'UsageSafety"
+
+  fields:
+    serviceConfig: ServiceConfigD s
+    placeId: Id TicketPlace
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+
+  beamFields:
+    serviceConfig:
+      serviceName: ServiceName
+      configValue: Value
+
+  constraints:
+    placeId: PrimaryKey
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  sqlType:
+    configValue: json
+
+  toTType:
+    serviceName: fst $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig|E
+    configValue: snd $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig|E
+
+  fromTType:
+    serviceConfig: Storage.Queries.Transformers.MerchantServiceConfig.getServiceConfigFromDomain serviceName configValue|EM
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

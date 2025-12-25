@@ -1,56 +1,75 @@
-<p align="center">
-  <img src="./docs/images/nammaYatrilogo.svg#gh-dark-mode-only" alt="NammaYatri-Logo" width="40%" />
-</p>
+# 🛺 Namma Yatri 🚖
 
-<p align="center">
-<i>Open Direct-to-Driver app. Zero commision. No middleman. Secure. Safe.</i>
-</p>
+**Open and Driver Centric Mobility Platform**
 
-<p align="center">
-  <a href="https://github.com/nammayatri/nammayatri/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/nammayatri/beckn-gateway" />
-  </a>
-</p>
+![Alt text](docs/images/drivers-with-vehicles.png)
 
-## Introduction
+## 🌟 Vision
+Namma Yatri aims to empower service providers with a high-tech, cost-effective app and open data platform. Our vision is centered on the following principles:
 
-Namma Yatri is a Direct-to-Driver open mobility platform, developed by Juspay, powering the next-generation of mobility applications in India.
+1. **Zero Commission**: Ensuring no commission fees for drivers, promoting fair earnings and economic empowerment for service providers.
+2. **Open**: Utilizing open data platforms, open code, and open networks to foster transparency, innovation, and collaboration within the community.
+3. **Optimize**: Achieve population scale growth with utility-like pricing by continuously optimizing maps, cloud, and development costs, all while maintaining high reliability and rich user experience.
+4. **Multimodal**: Supporting various modes of transport to provide comprehensive, integrated mobility solutions for a seamless user experience.
+5. **Shared Transport**: Promoting shared mobility options to reduce traffic congestion, lower costs, and minimize carbon emissions, contributing to a sustainable future.
 
-The code in this repository are divided into sub-projects - Backend and Frontend.
+As engineers, we often seek opportunities where one person can serve millions of others. Namma Yatri is an effort to enable the careers of those who serve one-to-one, like auto drivers who transport people each and every day. These drivers indirectly serve millions of customers over time.
 
-## Getting Started
+Here is a [video from our founder](https://www.youtube.com/watch?v=NnyoxiiZLZg) explaining the vision of Namma Yatri:
 
-You can find the instructions to build and run the project in their respective sub-project directories - [Backend](./Backend/README.md#getting-started), [Frontend](./Frontend/README.md)
+[![Namma Yatri Vision](https://img.youtube.com/vi/NnyoxiiZLZg/0.jpg)](https://www.youtube.com/watch?v=NnyoxiiZLZg)
 
+## 🌱 Core Values
 
-## Contributing
+### 👥 Community-first
+Mobility must be owned by the community of citizens and drivers who collaborate to create a thriving, equitable, and sustainable environment. Participatory development from the community helps build products to solve large-scale problems like mobility.
 
-We strongly believe in the power of open-source. The main purpose of this repository is that the development of the mobility stack happens at an open-to-all platform, where anyone can inspect and contribute. The repository should evolve, adding more features and make existing features faster, correct and easy to use.
-We welcome contributions to the repository in the form of bug-reports, code patches, documentation updates and feature requests or heads-up for breaking changes in any of the dependencies.
+### 🚗 Citizens as owners
+Drivers invest in their vehicles and work hard every day. Citizens pay for and use the service. They both should own the platform, offering quality service at a fair price, without intermediaries dictating terms or prices.
 
-We welcome contributions from the community. Please read through our
-[contributing guidelines](./docs/CONTRIBUTING.md).
+### 👐 Open Platform
+Customers shall participate in community efforts by using the open system, providing feedback, and improving drivers' lives. Our data and roadmap will be open for feedback. The team will strive to be efficient, prioritize the critical few, and do more with less.
 
-## Product Roadmap
+### 💡 Tech and People are enablers
+Mobility is an engineering problem, and technology can make it more efficient, reliable, and sustainable. We need both tech innovations and human involvement. Empathy and support for both citizens and drivers are crucial.
 
-We're excited to share our product roadmap with you, which outlines the features and improvements we plan to make to our product in the coming months. Our roadmap is dynamic and subject to change as we receive feedback from our users and as we continue to iterate on our product.
+### 🌍 Sustainable Growth
+We aim to solve complex, long-term problems sustainably, avoiding unsustainable tactics like discounts and incentives. We pursue initiatives that are financially, environmentally, and psychologically sustainable, promoting shared mobility and efficient public transportation to reduce traffic, cost, and carbon emissions.
 
-Check out our product roadmap [here](https://docs.google.com/spreadsheets/d/e/2PACX-1vRPdBJDIKyKHmAprGdLGfGb6Lt8j25xBHhV1Dr8f0kY8xhcP5DbBgAB5Fl-zvT4GjzNxwWzy81B1fDO/pubhtml?gid=685751497&single=true) to learn more about what we have planned for the future.
+## ❓ Why Solve This Problem?
+Mobility is critical to economic growth, social progress, and individual well-being. People's livelihoods depend on mobility, but current systems could be more efficient, sustainable, and accessible to the masses. To improve this, mobility should be community-driven, open, tech-enabled, and shared.
 
-If you have any suggestions or feedback on our roadmap, please don't hesitate to reach out to us through nammayatri.support@juspay.in or GitHub Issues. We'd love to hear from you!
+Join us in this endeavor to transform mobility. We look forward to your contribution and support!
 
-## Community
+## 🎯 Milestone and Growth
+With an ever-increasing number of rides facilitated, our platform is demonstrating its effectiveness and scalability. You can explore the real-time data and see the traction [here](https://nammayatri.in/open/?rides=All&tl=at).
 
-Ask and explore our [GitHub Discussions](https://github.com/orgs/nammayatri/discussions).
+Here are some snapshots of our dashboard:
 
-## Bugs and feature requests
+![Alt text](docs/images/open-data-1.png)
+*Comprehensive overview of the total rides completed, registered users, searches, and drivers' earnings.*
 
-Please read the issue guidelines and search for [existing and closed issues].
-If your problem or idea is not addressed yet, please [open a new issue].
+![Alt text](docs/images/open-data-2.png)
+*Daily trends of searches, completed trips, drivers' earnings, registered users, and enabled drivers, showing detailed metrics over time.**
 
-[existing and closed issues]: https://github.com/nammayatri/nammayatri/issues
-[open a new issue]: https://github.com/nammayatri/nammayatri/issues/new/choose
+## 🤝 Get Involved
+Explore the code, provide feedback, and contribute to the project. Together, we can create a scalable, efficient, safe, and sustainable transportation network for our city.
 
-## Copyright and License
+### Community Engagement
+Join our [GitHub Discussions](https://github.com/orgs/nammayatri/discussions) to ask questions and explore ideas.
 
-This product is licensed under the [AGPL-3.0 License](LICENSE).
+### Project Setup
+Instructions to build and run the project can be found in the sub-project directories - [Backend](https://github.com/nammayatri/nammayatri/blob/main/Backend/README.md#getting-started) and [Frontend](https://github.com/nammayatri/nammayatri/blob/main/Frontend/README.md).
+
+### Contributing Guidelines
+We believe in the power of open-source. This repository aims to foster an open development platform for the mobility stack, where anyone can inspect and contribute. We welcome contributions in the form of bug reports, code patches, documentation updates, feature requests, and notifications of breaking changes in dependencies. Please read our [contributing guidelines](https://github.com/nammayatri/nammayatri/blob/main/docs/CONTRIBUTING.md) before you start.
+
+Happy Contributing
+
+## ✨ Thanks to all contributors
+
+Thank you for your support in nammayatri's growth. Keep up the great work! 🥂
+
+<a href="https://github.com/nammayatri/nammayatri/graphs/contributors">
+  <img src="https://contributors-img.web.app/image?repo=nammayatri/nammayatri" alt="Contributors"/>
+</a>

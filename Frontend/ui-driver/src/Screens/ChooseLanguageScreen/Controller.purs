@@ -17,8 +17,8 @@ module Screens.ChooseLanguageScreen.Controller where
 
 import Components.SelectMenuButton.Controller (Action(..)) as MenuButton
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-import Prelude (class Show, bind, discard, pure, ($), unit)
-import PrestoDOM (Eval, continue, exit)
+import Prelude (class Show, bind, discard, pure, ($), unit, show, (<>))
+import PrestoDOM (Eval, update, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (ChooseLanguageScreenState)
 import Components.PrimaryButton.Controller as PrimaryButton
@@ -32,7 +32,10 @@ import Foreign (unsafeToForeign)
 import Locale.Utils
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (MenuButtonAction var1) = "MenuButtonAction_" <> show var1
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (AfterRender) = "AfterRender"
 
 -- please use ScreenNames.purs file to add and use the screen names. -
 -- Why we need the ScreenNames.purs? Consistancy for the screen names remain intact.
@@ -65,4 +68,4 @@ eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
       _ = setLanguageLocale state.props.selectedLanguage
   _ <- pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign state.props.selectedLanguage}]
   exit (GoToEnterMobileScreen state)
-eval _ state = continue state
+eval _ state = update state

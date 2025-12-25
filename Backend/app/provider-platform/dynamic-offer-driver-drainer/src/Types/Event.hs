@@ -33,5 +33,11 @@ data DBSyncMetric
   | QueryDrainLatency Action Latency
   | DrainerQueryExecutes Action Word
   | DrainerStopStatus Status
+  | KvConfigDecodeFailure
   | KafkaUpdateMissing
   | KafkaPushFailure Action ModelName
+  | ProcessLatency Text Latency
+  | BatchFallbackUsed Int
+  | BatchExecutionTime ModelName Double
+  | BatchEntriesProcessed ModelName Int
+  | SchemaVariationAlert ModelName Int

@@ -1,7 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
-// Apply the Performance Monitoring plugin
 apply plugin: 'com.google.firebase.firebase-perf'
 
 static InetAddress getLocalAddress() throws SocketException {
@@ -28,18 +27,37 @@ repositories {
     google()
 }
 
+def keystorePropertiesFile = rootProject.file("keystore.properties");
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
-    compileSdkVersion 33
-    buildToolsVersion "30.0.3"
+    compileSdk 34
     namespace "in.juspay.mobility"
 
+    buildFeatures{
+        buildConfig = true
+    }
+
     defaultConfig {
-        minSdkVersion 23
-        targetSdkVersion 33
-        versionCode 100
-        versionName "1.2.9"
+        minSdkVersion 24
+        targetSdkVersion 34
+    versionCode 192
+    versionName "3.0.39"
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    if (keystorePropertiesFile.exists()) {
+        signingConfigs {
+            release {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
     }
 
     // If you are not able to generate signed APK uncomment this
@@ -64,6 +82,8 @@ android {
             minifyEnabled false
 //            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug
+            buildConfigField "String", "buildType", "\"debug\""
+            buildConfigField "boolean", "includeDynamicFeature", includeDynamicFeature
             manifestPlaceholders = [
                     appIcon     : "@mipmap/ic_launcher_debug",
                     appIconRound: "@mipmap/ic_launcher_debug"
@@ -74,17 +94,23 @@ android {
             minifyEnabled true
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+            buildConfigField "String", "buildType", "\"release\""
+            buildConfigField "boolean", "includeDynamicFeature", includeDynamicFeature
             manifestPlaceholders = [
                     appIcon     : "@mipmap/ic_launcher",
                     appIconRound: "@mipmap/ic_launcher_round"
             ]
+
         }
     }
     Properties properties = new Properties()
     if (rootProject.file("local.properties").exists()) {
         properties.load(rootProject.file("local.properties").newDataInputStream())
     }
+
     flavorDimensions "app", "mode"
     variantFilter rootProject.ext.becknVariantFilter
     productFlavors {
@@ -92,8 +118,15 @@ android {
             buildConfigField "String", "flavor", "\"prod\""
             buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
             buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
+            buildConfigField "String", "CUSTOMER_REG_TOKEN", properties.getProperty("CUSTOMER_REG_TOKEN", "\"NA\"")
             buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
             buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
+
+            buildConfigField "String", "RS_ENC_KEY", properties.getProperty("RS_ENC_KEY", "")
+            buildConfigField "String", "RS_ALGO", properties.getProperty("RS_ALGO", "")
+            buildConfigField "String", "RS_INSTANCE_TYPE", properties.getProperty("RS_INSTANCE_TYPE", "")
+            buildConfigField "String", "RS_ALGO_PADDING", properties.getProperty("RS_ALGO_PADDING", "")
+
             manifestPlaceholders = [isUsesCleartextTraffic: "false", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
             resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")
             resValue "string", "facebook_client_token", properties.getProperty("FACEBOOK_CLIENT_TOKEN","")
@@ -108,7 +141,14 @@ android {
             buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
             buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
             buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
+            buildConfigField "String", "CUSTOMER_REG_TOKEN", properties.getProperty("CUSTOMER_REG_TOKEN", "\"NA\"")
             buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
+
+            buildConfigField "String", "RS_ENC_KEY", properties.getProperty("RS_ENC_KEY", "")
+            buildConfigField "String", "RS_ALGO", properties.getProperty("RS_ALGO", "")
+            buildConfigField "String", "RS_INSTANCE_TYPE", properties.getProperty("RS_INSTANCE_TYPE", "")
+            buildConfigField "String", "RS_ALGO_PADDING", properties.getProperty("RS_ALGO_PADDING", "")
+
             manifestPlaceholders = [isUsesCleartextTraffic: "true", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
             resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")
             resValue "string", "facebook_client_token", properties.getProperty("FACEBOOK_CLIENT_TOKEN","")
@@ -118,14 +158,62 @@ android {
             resValue "string", "clevertap_region", properties.getProperty("CLEVERTAP_REGION","")
             dimension "mode"
         }
+        oyUser {
+            applicationId "in.mobility.odishayatri"
+            buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
         nyUser {
             applicationId "in.juspay.nammayatri"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
         }
+        oyDriver {
+            applicationId "in.mobility.odishayatripartner"
+            buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
+        ksDriver {
+            applicationId "in.mobility.keralasavaari"
+            buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
+            buildConfigField "String", "MERCHANT", "\"KL\""
+            dimension "app"
+        }
         nyDriver {
             applicationId "in.juspay.nammayatripartner"
+            buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
+        myUser {
+            applicationId "in.mobility.manayatri"
+            buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
+        myDriver {
+            applicationId "in.mobility.manayatripartner"
+            buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
+        apDriver {
+            applicationId "in.mobility.aapleyatripartner"
+            buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
+        bridgeUser {
+            applicationId "com.mobility.movingtech"
+            buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
+        bridgeDriver {
+            applicationId "com.mobility.movingtechdriver"
             buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
@@ -166,19 +254,35 @@ android {
     }
     sourceSets {
         nyUser.setRoot('src/user/nammaYatri')
+        myUser.setRoot('src/user/manaYatri')
+        oyUser.setRoot('src/user/odishaYatri')
+        bridgeUser.setRoot('src/user/bridge')
         nyDriver.setRoot('src/driver/nammaYatriPartner')
+        myDriver.setRoot('src/driver/manaYatriPartner')
+        apDriver.setRoot('src/driver/aapleYatriPartner')
+        oyDriver.setRoot('src/driver/odishaYatriPartner')
+        ksDriver.setRoot('src/driver/keralaSavaariPartner')
+        bridgeDriver.setRoot('src/driver/bridgeDriver')
         ysUser.setRoot('src/user/jatriSaathi')
         ysDriver.setRoot('src/driver/jatriSaathiDriver')
         yatriUser.setRoot('src/user/yatri')
         yatriDriver.setRoot('src/driver/yatriPartner')
         passCulturePartner.setRoot('src/driver/passCulturePartner')
         nyUser.res.srcDir('src/user/common/res')
+        myUser.res.srcDir('src/user/common/res')
+        bridgeUser.res.srcDir('src/user/common/res')
         ysUser.res.srcDir('src/user/common/res')
         yatriUser.res.srcDir('src/user/common/res')
         nyDriver.res.srcDir('src/driver/common/res')
+        myDriver.res.srcDir('src/driver/common/res')
+        apDriver.res.srcDir('src/driver/common/res')
+        bridgeDriver.res.srcDir('src/driver/common/res')
         ysDriver.res.srcDir('src/driver/common/res')
         yatriDriver.res.srcDir('src/driver/common/res')
         passCulturePartner.res.srcDir('src/driver/common/res')
+        oyUser.res.srcDir('src/user/common/res')
+        oyDriver.res.srcDir('src/driver/common/res')
+        ksDriver.res.srcDir('src/driver/common/res')
     }
     sourceSets {
         dev.res.srcDir 'src/dev/res'
@@ -198,40 +302,73 @@ android {
         // To check for a certain build type, use variant.buildType.name == "<buildType>"
         def names = variant.flavors*.name
         def build = variant.buildType.name
-        if (names.contains("dev") && build.contains("release")) {
+        if ((names.contains("dev") && build.contains("release")) || names.any { it.contains("passCulture") }) {
             // Gradle ignores any variants that satisfy the conditions above.
             setIgnore(true)
         }
     }
+    // Conditionally include dynamic features
+    if (includeDynamicFeature.toBoolean()){
+        println "includeDynamicFeature " + includeDynamicFeature.toBoolean()
+        dynamicFeatures = [':dynamicfeature']
+    }
+
+//    signingConfigs {
+//        release {
+//            storeFile file(keystoreProperties['storeFile'])
+//            storePassword keystoreProperties['storePassword']
+//            keyAlias keystoreProperties['keyAlias']
+//            keyPassword keystoreProperties['keyPassword']
+//        }
+//    }
 }
 
 ext {
-    jpSDKversion = '2.1.20-nammayatri.13'
+    jpSDKversion = '2.1.33-nammayatri.17'
 }
 
+def cameraxVersion = "1.1.0-alpha05"
+
 dependencies {
+    implementation 'androidx.camera:camera-view:1.0.0-alpha25'
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    implementation 'com.google.android.material:material:1.6.0'
+    implementation "androidx.camera:camera-core:${cameraxVersion}"
+    implementation "androidx.camera:camera-camera2:${cameraxVersion}"
+    implementation "androidx.camera:camera-lifecycle:${cameraxVersion}"
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
     implementation "in.juspay:hypersdk:$jpSDKversion"
     implementation "in.juspay:hyperqr:$jpSDKversion"
+    implementation "in.juspay:hypersmshandler:$jpSDKversion"
     implementation project(path: ':mobility-app')
     compileOnly project(path: ':mobility-common')
-    implementation platform('com.google.firebase:firebase-bom:31.1.1')
     nyDriverImplementation project(path: ':mobility-driver')
+    myDriverImplementation project(path: ':mobility-driver')
+    apDriverImplementation project(path: ':mobility-driver')
+    oyDriverImplementation project(path: ':mobility-driver')
+    ksDriverImplementation project(path: ':mobility-driver')
+    bridgeDriverImplementation project(path: ':mobility-driver')
     passCulturePartnerImplementation project(path: ':mobility-driver')
     ysDriverImplementation project(path: ':mobility-driver')
     yatriDriverImplementation project(path: ':mobility-driver')
     nyUserImplementation project(path: ':mobility-customer')
+    myUserImplementation project(path: ':mobility-customer')
+    bridgeUserImplementation project(path: ':mobility-customer')
     ysUserImplementation project(path: ':mobility-customer')
     yatriUserImplementation project(path: ':mobility-customer')
+    oyUserImplementation project(path: ':mobility-customer')
+    implementation platform('com.google.firebase:firebase-bom:32.7.1')
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-analytics'
-
-    implementation 'com.google.firebase:firebase-crashlytics:18.4.3'
+    implementation "com.google.j2objc:j2objc-annotations:2.8"
+    implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.firebase:firebase-crashlytics'
     implementation 'com.google.firebase:firebase-messaging'
-    implementation 'com.google.firebase:firebase-installations:17.1.4'
+    implementation 'com.google.firebase:firebase-installations'
     implementation 'com.google.firebase:firebase-perf'
     implementation 'com.google.firebase:firebase-inappmessaging-display'
-    implementation 'com.google.android.libraries.places:places:3.1.0'
+    implementation 'com.google.android.libraries.places:places:3.3.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'com.google.android.material:material:1.6.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
@@ -240,29 +377,87 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.0-alpha01'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    implementation 'com.google.android.gms:play-services-maps:18.1.0'
-    implementation 'com.google.android.gms:play-services-location:21.0.1'
-    implementation 'com.google.android.libraries.places:places:3.1.0'
-    implementation 'com.google.android.gms:play-services-auth:20.5.0'
+    implementation 'com.google.android.gms:play-services-maps:18.2.0'
+    implementation 'com.google.android.gms:play-services-location:21.1.0'
+    implementation 'com.google.android.gms:play-services-auth:20.7.0'
     implementation 'com.google.android.gms:play-services-auth-api-phone:18.0.1'
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
-    implementation 'com.google.android.play:app-update:2.0.1'
+    implementation 'com.google.android.play:app-update:2.1.0'
     implementation 'com.airbnb.android:lottie:5.2.0'
-    implementation 'com.google.firebase:firebase-firestore'
-    implementation 'com.google.firebase:firebase-auth:22.1.2'
+    implementation 'androidx.profileinstaller:profileinstaller:1.3.1'
+
     implementation 'com.google.android.play:review:2.0.1'
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
     implementation 'com.facebook.android:facebook-android-sdk:14.0.0'
-    api 'com.theartofdev.edmodo:android-image-cropper:2.8.0'
-    implementation 'com.github.bumptech.glide:glide:4.15.1'
+    implementation 'com.github.bumptech.glide:glide:4.12.0'
     implementation 'androidx.core:core:1.4.0'
-    implementation 'com.clevertap.android:clevertap-android-sdk:5.0.0'
+    implementation 'com.clevertap.android:clevertap-android-sdk:6.0.0'
+    implementation "com.clevertap.android:clevertap-signedcall-sdk:0.0.7.7"
+    implementation('io.socket:socket.io-client:2.1.0') {
+        exclude group: 'org.json', module: 'json'
+    }
     implementation 'com.clevertap.android:push-templates:1.0.9'
     implementation 'com.android.installreferrer:installreferrer:2.2'
-    implementation 'com.google.mlkit:translate:17.0.1'
+    implementation 'com.google.mlkit:translate:17.0.2'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+    compileOnly ("co.hyperverge:hyperkyc:0.26.0") {
+        transitive = true
+        exclude group: 'co.hyperverge', module: 'hyperdocdetect'
+        exclude group: 'co.hyperverge', module: 'face-detection-preview-frame'
+    }
+
+    implementation 'com.google.android.play:feature-delivery:2.1.0'
+    implementation 'com.google.code.gson:gson:2.8.8'
+    implementation 'com.github.freshworks:freshchat-android:6.4.4'
+    api(platform("com.squareup.okhttp3:okhttp-bom:4.12.0"))
+    api("com.squareup.okhttp3:okhttp")
+    compileOnly 'com.facebook.react:react-android:0.72.3'
+
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    compileOnly 'com.facebook.soloader:soloader:0.10.5'
+    implementation files('libs/android-jsc-r250231.aar')
+    nyDriverImplementation 'com.google.code.gson:gson:2.8.8'
+    myDriverImplementation 'com.google.code.gson:gson:2.8.8'
+    apDriverImplementation 'com.google.code.gson:gson:2.8.8'
+    oyDriverImplementation 'com.google.code.gson:gson:2.8.8'
+    bridgeDriverImplementation 'com.google.code.gson:gson:2.8.8'
+    passCulturePartnerImplementation 'com.google.code.gson:gson:2.8.8'
+    ysDriverImplementation 'com.google.code.gson:gson:2.8.8'
+    yatriDriverImplementation 'com.google.code.gson:gson:2.8.8'
+    nyDriverImplementation 'com.facebook.react:react-android:0.72.3'
+    myDriverImplementation 'com.facebook.react:react-android:0.72.3'
+    apDriverImplementation 'com.facebook.react:react-android:0.72.3'
+    oyDriverImplementation 'com.facebook.react:react-android:0.72.3'
+    bridgeDriverImplementation 'com.facebook.react:react-android:0.72.3'
+    passCulturePartnerImplementation 'com.facebook.react:react-android:0.72.3'
+    ysDriverImplementation 'com.facebook.react:react-android:0.72.3'
+    yatriDriverImplementation 'com.facebook.react:react-android:0.72.3'
+    nyDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+    myDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+    apDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+    oyDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+    bridgeDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+    passCulturePartnerImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+    ysDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+    yatriDriverImplementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+    nyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    myDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    apDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    oyDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    bridgeDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    passCulturePartnerImplementation "com.facebook.soloader:soloader:0.10.5"
+    ysDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    yatriDriverImplementation "com.facebook.soloader:soloader:0.10.5"
+    nyDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
+    myDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
+    apDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
+    oyDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
+    bridgeDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
+    passCulturePartnerImplementation 'com.google.android.play:feature-delivery:2.1.0'
+    ysDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
+    yatriDriverImplementation 'com.google.android.play:feature-delivery:2.1.0'
 }
 
 def tmpSource = "/tmp/juspay"

@@ -56,6 +56,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -75,6 +76,7 @@ library
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -93,6 +95,7 @@ library
     , esqueleto
     , euler-hs
     , mobility-core
+    , passetto-client
     , persistent
     , persistent-postgresql
     , record-dot-preprocessor
@@ -122,6 +125,7 @@ executable mock-google-exe
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -141,6 +145,7 @@ executable mock-google-exe
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -160,6 +165,7 @@ executable mock-google-exe
     , euler-hs
     , mobility-core
     , mock-google
+    , passetto-client
     , persistent
     , persistent-postgresql
     , record-dot-preprocessor

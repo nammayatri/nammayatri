@@ -16,8 +16,8 @@ module API.UI.Message where
 
 import qualified Domain.Action.UI.Message as DMessage
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Message.Message as Message
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Message as Message
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)

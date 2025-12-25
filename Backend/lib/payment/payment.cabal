@@ -36,10 +36,28 @@ library
       Lib.Payment.Storage.Beam.PaymentTransaction
       Lib.Payment.Storage.Queries.PaymentOrder
       Lib.Payment.Storage.Queries.PaymentTransaction
+      Lib.Payment.Storage.Queries.PayoutOrderExtra
+      Lib.Payment.Domain.Types.PaymentOrderOffer
+      Lib.Payment.Domain.Types.PaymentOrderSplit
+      Lib.Payment.Domain.Types.PayoutOrder
+      Lib.Payment.Domain.Types.PayoutTransaction
+      Lib.Payment.Domain.Types.Refunds
+      Lib.Payment.Storage.Beam.PaymentOrderOffer
+      Lib.Payment.Storage.Beam.PaymentOrderSplit
+      Lib.Payment.Storage.Beam.PayoutOrder
+      Lib.Payment.Storage.Beam.PayoutTransaction
+      Lib.Payment.Storage.Beam.Refunds
+      Lib.Payment.Storage.Queries.OrphanInstances.PayoutOrder
+      Lib.Payment.Storage.Queries.PaymentOrderOffer
+      Lib.Payment.Storage.Queries.PaymentOrderSplit
+      Lib.Payment.Storage.Queries.PayoutOrder
+      Lib.Payment.Storage.Queries.PayoutTransaction
+      Lib.Payment.Storage.Queries.Refunds
   other-modules:
       Paths_payment
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -47,6 +65,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -66,6 +85,7 @@ library
       RecordWildCards
       ScopedTypeVariables
       StandaloneDeriving
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -74,6 +94,8 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      TemplateHaskell
+      DerivingStrategies
   ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson

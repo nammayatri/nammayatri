@@ -20,6 +20,13 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
+import Data.Maybe (Maybe(..))
+import Prelude (class Show, show)
+
+instance showAction :: Show Action where
+  show (Close) = "Close"
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
 
 data Action = Close 
             | BackPressed 
@@ -30,7 +37,13 @@ type Config = {
     primaryText :: TextConfig,
     secondaryText :: TextConfig,
     imageConfig :: ImageConfig,
-    buttonConfig :: ButtonConfig
+    buttonConfig :: ButtonConfig,
+    bulletPoints :: Array String,
+    backgroundColor :: String,
+    padding :: Padding,
+    gravity :: Gravity,
+    infoImageConfig :: ImageConfig,
+    subTitle :: TextConfig
 }
 
 type ImageConfig = {
@@ -67,6 +80,10 @@ type ButtonConfig = {
 
 config :: Config
 config = {
+    bulletPoints : [],
+    backgroundColor : Color.black9000,
+    padding : Padding 16 0 16 0,
+    gravity : CENTER,
     title : {
       text : "",
       color : Color.black800,
@@ -100,14 +117,7 @@ config = {
       width : WRAP_CONTENT,
       accessibilityHint : ""
     }
-  , imageConfig : {
-      visibility : VISIBLE,
-      imageUrl : "",
-      height : V 122,
-      width : V 116,
-      margin : Margin 0 0 0 0,
-      padding : Padding 0 0 0 0
-    }
+  , imageConfig : dummyImageConfig{visibility = VISIBLE}
   , buttonConfig : {
       text : "",
       color : Color.blue800,
@@ -118,4 +128,26 @@ config = {
       gravity : CENTER,
       accessibilityHint : ""
     }
+  , infoImageConfig : dummyImageConfig
+  , subTitle  : {
+      text : "",
+      color : Color.black700,
+      padding : Padding 16 16 0 0,
+      margin : Margin 0 0 0 0,
+      visibility : GONE,
+      textStyle : FontStyle.SubHeading1,
+      height : WRAP_CONTENT,
+      width : WRAP_CONTENT,
+      accessibilityHint : ""
+    }
+}
+
+dummyImageConfig :: ImageConfig
+dummyImageConfig = { 
+  visibility : GONE,
+  imageUrl : "",
+  height : V 122,
+  width : V 116,
+  margin : Margin 0 0 0 0,
+  padding : Padding 0 0 0 0
 }

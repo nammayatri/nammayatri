@@ -19,6 +19,17 @@ import Components.PopUpModal as PopUpModal
 import Data.String (take, drop, split, Pattern (..))
 import Prelude
 
+instance showAction :: Show Action where
+  show (BackArrow) = "BackArrow"
+  show (AddCommentModelAction var1) = "AddCommentModelAction_" <> show var1
+  show (AddCommentClick) = "AddCommentClick"
+  show (AfterRender) = "AfterRender"
+  show (LikeMessage) = "LikeMessage"
+  show (IncreaseViewCount) = "IncreaseViewCount"
+  show (NoAction) = "NoAction"
+  show (YoutubeVideoStatus _) = "YoutubeVideoStatus"
+  show (ShareMessage) = "ShareMessage"
+  
 data Action
   = BackArrow
   | AddCommentModelAction PopUpModal.Action
@@ -27,6 +38,8 @@ data Action
   | LikeMessage
   | IncreaseViewCount
   | NoAction
+  | YoutubeVideoStatus String
+  | ShareMessage
 
 
 fetchTitleAndUrl :: Int -> String -> Array String

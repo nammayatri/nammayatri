@@ -19,30 +19,44 @@ import Kernel.Prelude (Generic)
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
-import Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
 import Storage.Beam.DriverFee
+import Storage.Beam.DriverGoHomeRequest
 import Storage.Beam.DriverInformation
-import Storage.Beam.DriverOnboarding.DriverLicense
-import Storage.Beam.DriverOnboarding.DriverRCAssociation
-import Storage.Beam.DriverOnboarding.IdfyVerification
-import Storage.Beam.DriverOnboarding.Image
-import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
+import Storage.Beam.DriverLicense
+import Storage.Beam.DriverOperatorAssociation
+import Storage.Beam.DriverRCAssociation
 import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
+import Storage.Beam.FleetBadge
+import Storage.Beam.FleetBadgeAssociation
+import Storage.Beam.FleetBookingAssignments
+import Storage.Beam.FleetBookingInformation
 import Storage.Beam.FleetDriverAssociation
+import Storage.Beam.FleetOperatorAssociation
+import Storage.Beam.FleetOperatorDailyStats
+import Storage.Beam.FleetOwnerInformation
+import Storage.Beam.FleetRcDailyStats
 import Storage.Beam.Geometry
+import Storage.Beam.IdfyVerification
+import Storage.Beam.Image
+import Storage.Beam.InterCityTravelCities
 import Storage.Beam.Invoice
-import Storage.Beam.Message.Message
-import Storage.Beam.Message.MessageReport
-import Storage.Beam.Message.MessageTranslation
+import Storage.Beam.Message
+import Storage.Beam.MessageReport
+import Storage.Beam.MessageTranslation
 import Storage.Beam.Notification
+import Storage.Beam.OperationHub
+import Storage.Beam.OperationHubRequests
 import Storage.Beam.Person
-import Storage.Beam.QuoteSpecialZone
+import Storage.Beam.Quote
 import Storage.Beam.Rating (RatingT, ratingTable)
-import Storage.Beam.Ride.Table
+import Storage.Beam.Ride
 import Storage.Beam.RideDetails
 import Storage.Beam.RiderDetails
+import Storage.Beam.Route
+import Storage.Beam.TripTransaction
 import Storage.Beam.Vehicle
+import Storage.Beam.VehicleRegistrationCertificate
 
 atlasDB :: B.DatabaseSettings be AtlasDB
 atlasDB =
@@ -50,6 +64,7 @@ atlasDB =
     `B.withDbModification` B.dbModification
       { exophone = exophoneTable,
         geometry = geometryTable,
+        interCityTravelCities = interCityTravelCitiesTable,
         vehicle = vehicleTable,
         image = imageTable,
         person = personTable,
@@ -63,7 +78,7 @@ atlasDB =
         rideDetails = rideDetailsTable,
         rDetails = riderDetailsTable,
         callStatus = callStatusTable,
-        quoteSpecialZone = quoteSpecialZoneTable,
+        quote = quoteSpecialZoneTable,
         messageReport = messageReportTable,
         bookingCancellationReason = bookingCancellationReasonTable,
         driverFee = driverFeeTable,
@@ -74,12 +89,26 @@ atlasDB =
         messageTranslation = messageTranslationTable,
         driverGoHomeRequest = driverGoHomeRequestTable,
         driverReferral = driverReferralTable,
-        fleetDriverAssociation = fleetDriverAssociationTable
+        fleetDriverAssociation = fleetDriverAssociationTable,
+        fleetOperatorAssociation = fleetOperatorAssociationTable,
+        fleetOperatorDailyStats = fleetOperatorDailyStatsTable,
+        driverOperatorAssociation = driverOperatorAssociationTable,
+        route = routeTable,
+        operationHub = operationHubTable,
+        operationHubRequests = operationHubRequestsTable,
+        fleetBadge = fleetBadgeTable,
+        tripTransaction = tripTransactionTable,
+        fleetBadgeAssociation = fleetBadgeAssociationTable,
+        fleetOwnerInformation = fleetOwnerInformationTable,
+        fleetBookingAssignments = fleetBookingAssignmentsTable,
+        fleetBookingInformation = fleetBookingInformationTable,
+        fleetRcDailyStats = fleetRcDailyStatsTable
       }
 
 data AtlasDB f = AtlasDB
   { exophone :: f (B.TableEntity ExophoneT),
     geometry :: f (B.TableEntity GeometryT),
+    interCityTravelCities :: f (B.TableEntity InterCityTravelCitiesT),
     vehicle :: f (B.TableEntity VehicleT),
     image :: f (B.TableEntity ImageT),
     person :: f (B.TableEntity PersonT),
@@ -93,7 +122,7 @@ data AtlasDB f = AtlasDB
     rideDetails :: f (B.TableEntity RideDetailsT),
     rDetails :: f (B.TableEntity RiderDetailsT),
     callStatus :: f (B.TableEntity CallStatusT),
-    quoteSpecialZone :: f (B.TableEntity QuoteSpecialZoneT),
+    quote :: f (B.TableEntity QuoteSpecialZoneT),
     messageReport :: f (B.TableEntity MessageReportT),
     bookingCancellationReason :: f (B.TableEntity BookingCancellationReasonT),
     rating :: f (B.TableEntity RatingT),
@@ -104,6 +133,19 @@ data AtlasDB f = AtlasDB
     driverFee :: f (B.TableEntity DriverFeeT),
     notification :: f (B.TableEntity NotificationT),
     invoice :: f (B.TableEntity InvoiceT),
-    fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT)
+    fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT),
+    fleetOperatorAssociation :: f (B.TableEntity FleetOperatorAssociationT),
+    fleetOperatorDailyStats :: f (B.TableEntity FleetOperatorDailyStatsT),
+    driverOperatorAssociation :: f (B.TableEntity DriverOperatorAssociationT),
+    route :: f (B.TableEntity RouteT),
+    operationHub :: f (B.TableEntity OperationHubT),
+    operationHubRequests :: f (B.TableEntity OperationHubRequestsT),
+    fleetBadge :: f (B.TableEntity FleetBadgeT),
+    tripTransaction :: f (B.TableEntity TripTransactionT),
+    fleetBadgeAssociation :: f (B.TableEntity FleetBadgeAssociationT),
+    fleetOwnerInformation :: f (B.TableEntity FleetOwnerInformationT),
+    fleetBookingAssignments :: f (B.TableEntity FleetBookingAssignmentsT),
+    fleetBookingInformation :: f (B.TableEntity FleetBookingInformationT),
+    fleetRcDailyStats :: f (B.TableEntity FleetRcDailyStatsT)
   }
   deriving (Generic, B.Database be)

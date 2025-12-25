@@ -1,0 +1,265 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  SearchRequest: Domain.Types.SearchRequest
+  SearchTry: Domain.Types.SearchTry
+  Money: Kernel.Types.Common
+  VehicleVariant: Domain.Types.VehicleVariant
+  ServiceTierType: Domain.Types.Common
+  DriverGoHomeRequest: Domain.Types.DriverGoHomeRequest
+  Version: Kernel.Types.Version
+  Device: Kernel.Types.Version
+  Person: Domain.Types.Person
+  DriverMode: Domain.Types.Common
+  Seconds: Kernel.Types.Common
+  SearchRequestForDriverResponse: Domain.Types.Common
+  DeviceType: Kernel.Types.Version
+  LocalTime: Data.Time
+  Months: Kernel.Types.Time
+  Value: Data.Aeson
+  ParcelType: Domain.Types.ParcelType
+  ConditionalChargesCategories: Domain.Types.ConditionalCharges
+  VehicleCategory: Domain.Types.VehicleCategory
+
+
+SearchRequestForDriver:
+  tableName: search_request_for_driver
+  beamInstance: MakeTableInstancesWithTModifier [("requestId", "search_request_id")]
+  derives: "Generic, Show"
+
+  types:
+    DriverSearchRequestStatus:
+      enum: "Active, Inactive"
+    NotificationSource:
+      enum: "FCM, GRPC"
+
+  fields:
+    id : Id SearchRequestForDriver
+    requestId : Id SearchRequest
+    searchTryId : Id SearchTry
+    estimateId : Maybe Text
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Id MerchantOperatingCity
+    baseFare : Maybe HighPrecMoney
+    startTime : UTCTime
+    searchRequestValidTill : UTCTime
+    vehicleAge : Maybe Months
+    vehicleCategory: Maybe VehicleCategory
+    driverId : Id Person
+    fromLocGeohash : Maybe Text
+    actualDistanceToPickup : Meters
+    straightLineDistanceToPickup : Meters
+    durationToPickup : Seconds
+    vehicleVariant : VehicleVariant|NoRelation
+    vehicleServiceTier : ServiceTierType|NoRelation
+    vehicleServiceTierName : Maybe Text
+    airConditioned : Maybe Bool
+    status : DriverSearchRequestStatus
+    batchNumber : Int
+    lat : Maybe Double
+    lon : Maybe Double
+    createdAt : UTCTime
+    updatedAt: Maybe UTCTime
+    response: Maybe SearchRequestForDriverResponse
+    notificationSource: Maybe NotificationSource
+    driverMinExtraFee: Maybe HighPrecMoney
+    driverMaxExtraFee: Maybe HighPrecMoney
+    driverStepFee: Maybe HighPrecMoney
+    driverDefaultStepFee: Maybe HighPrecMoney
+    rideRequestPopupDelayDuration: Seconds
+    isPartOfIntelligentPool: Bool
+    pickupZone: Bool
+    cancellationRatio: Maybe Double
+    acceptanceRatio: Maybe Double
+    driverAvailableTime: Maybe Double
+    parallelSearchRequestCount: Maybe Int
+    driverSpeed: Maybe Double
+    keepHiddenForSeconds: Seconds
+    mode: Maybe DriverMode
+    goHomeRequestId: Maybe (Id DriverGoHomeRequest)
+    rideFrequencyScore: Maybe Double
+    customerCancellationDues: HighPrecMoney
+    clientSdkVersion: Maybe Version
+    reactBundleVersion: Maybe Text
+    clientBundleVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    clientDevice: Maybe Device
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
+    isForwardRequest: Bool
+    middleStopCount: Maybe Int
+    currency: Currency
+    distanceUnit: DistanceUnit
+    tripEstimatedDistance : Maybe Meters
+    tripEstimatedDuration : Maybe Seconds
+    totalRides: Int
+    driverTags: Maybe Value
+    customerTags: Maybe Value
+    poolingLogicVersion: Maybe Int
+    poolingConfigVersion: Maybe Int
+    previousDropGeoHash: Maybe Text
+    upgradeCabRequest: Maybe Bool
+    renderedAt: Maybe UTCTime
+    respondedAt: Maybe UTCTime
+    isFavourite: Maybe Bool
+    isSafetyPlus: Maybe Bool
+    parcelType: Maybe ParcelType
+    parcelQuantity: Maybe Int
+    driverTagScore: Maybe Value
+    conditionalCharges: "[ConditionalChargesCategories]"
+    coinsRewardedOnGoldTierRide: Maybe Int
+
+  beamType:
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    clientOsVersion: Maybe Text
+    merchantOperatingCityId: Maybe Text
+    createdAt: LocalTime
+    searchRequestValidTill: LocalTime
+    vehicleServiceTier: Maybe ServiceTierType
+    currency: Maybe Currency
+    customerCancellationDues: Maybe HighPrecMoney
+    isForwardRequest: Maybe Bool
+    distanceUnit: Maybe DistanceUnit
+    totalRides: Maybe Int
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
+    conditionalCharges: Maybe Text
+
+  beamFields:
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
+
+    baseFare:
+      baseFare: Maybe Money
+      baseFareAmount: Maybe HighPrecMoney
+
+    driverMinExtraFee:
+      driverMinExtraFee: Maybe Money
+      driverMinExtraFeeAmount: Maybe HighPrecMoney
+
+    driverMaxExtraFee:
+      driverMaxExtraFee: Maybe Money
+      driverMaxExtraFeeAmount: Maybe HighPrecMoney
+
+    driverStepFee:
+      driverStepFee: Maybe Money
+      driverStepFeeAmount: Maybe HighPrecMoney
+
+    driverDefaultStepFee:
+      driverDefaultStepFee: Maybe Money
+      driverDefaultStepFeeAmount: Maybe HighPrecMoney
+
+  fromTType:
+    merchantOperatingCityId: Storage.Queries.Transformers.SearchRequestForDriver.getMerchantOpCId merchantOperatingCityId merchantId requestId|EM
+    clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
+    clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
+    clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
+    backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
+    clientDevice: (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
+    vehicleServiceTier: Kernel.Prelude.fromMaybe (Domain.Types.VehicleVariant.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
+    createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
+    searchRequestValidTill: Data.Time.localTimeToUTC Data.Time.utc searchRequestValidTill|E
+    baseFare: Kernel.Types.Common.mkAmountWithDefault baseFareAmount <$> baseFare|E
+    driverMinExtraFee: Kernel.Types.Common.mkAmountWithDefault driverMinExtraFeeAmount <$> driverMinExtraFee|E
+    driverMaxExtraFee: Kernel.Types.Common.mkAmountWithDefault driverMaxExtraFeeAmount <$> driverMaxExtraFee|E
+    driverStepFee: Kernel.Types.Common.mkAmountWithDefault driverStepFeeAmount <$> driverStepFee|E
+    driverDefaultStepFee: Kernel.Types.Common.mkAmountWithDefault driverDefaultStepFeeAmount <$> driverDefaultStepFee|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency|E
+    customerCancellationDues: getCustomerCancellationDues
+    isForwardRequest: Kernel.Prelude.fromMaybe False isForwardRequest|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    totalRides: Kernel.Prelude.fromMaybe 0 totalRides|E
+    conditionalCharges: |-
+      Kernel.Prelude.fromMaybe [] $ Kernel.Prelude.readMaybe . Data.Text.unpack =<< conditionalCharges|E
+
+  toTType:
+    merchantOperatingCityId: Just $ Kernel.Types.Id.getId merchantOperatingCityId|E
+    clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+    clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+    clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
+    backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
+    clientOsVersion: (clientDevice <&> (.deviceVersion))|E
+    clientOsType: (clientDevice <&> (.deviceType))|E
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    vehicleServiceTier: Kernel.Prelude.Just|I
+    createdAt: Data.Time.utcToLocalTime Data.Time.utc createdAt|E
+    searchRequestValidTill: Data.Time.utcToLocalTime Data.Time.utc searchRequestValidTill|E
+    baseFare: Kernel.Prelude.roundToIntegral <$> baseFare|E
+    baseFareAmount: baseFare|E
+    driverMinExtraFee: Kernel.Prelude.roundToIntegral <$> driverMinExtraFee|E
+    driverMaxExtraFee: Kernel.Prelude.roundToIntegral <$> driverMaxExtraFee|E
+    driverMinExtraFeeAmount: driverMinExtraFee|E
+    driverMaxExtraFeeAmount: driverMaxExtraFee|E
+    driverStepFee: Kernel.Prelude.roundToIntegral <$> driverStepFee|E
+    driverDefaultStepFee: Kernel.Prelude.roundToIntegral <$> driverDefaultStepFee|E
+    driverStepFeeAmount: driverStepFee|E
+    driverDefaultStepFeeAmount: driverDefaultStepFee|E
+    estimatedFare: Kernel.Prelude.roundToIntegral estimatedFare|E
+    estimatedFareAmount: Kernel.Prelude.Just estimatedFare|E
+    currency: Kernel.Prelude.Just|I
+    customerCancellationDues: Kernel.Prelude.Just|I
+    isForwardRequest: Kernel.Prelude.Just|I
+    distanceUnit: Kernel.Prelude.Just|I
+    totalRides: Kernel.Prelude.Just|I
+    conditionalCharges: Kernel.Prelude.Just $ Kernel.Prelude.show conditionalCharges|E
+
+  constraints:
+    id: PrimaryKey
+    searchTryId: SecondaryKey
+    requestId: SecondaryKey
+
+  queries:
+    findAllActiveBySTId:
+      kvFunction: findAllWithKV
+      where:
+        and: [ searchTryId, status ]
+
+    findAllActiveBySRId:
+      kvFunction: findAllWithKV
+      where:
+        and: [ requestId, status ]
+
+    updateDriverResponse:
+      kvFunction: updateOneWithKV
+      params: [ response, status, notificationSource, renderedAt, respondedAt ]
+      where: id
+
+  sqlType:
+    actualDistanceToPickup: bigint
+    durationToPickup: bigint
+    vehicleVariant: character varying (255)
+    status: character varying (255)
+    straightLineDistanceToPickup: bigint
+    response: character varying (255)
+    driverMinExtraFee: double precision
+    driverMaxExtraFee: double precision
+    cancellationRatio: real
+    parallelSearchRequestCount: smallint
+    acceptanceRatio: real
+    driverAvailableTime: real
+    estimateId: character varying (36)
+    vehicleAge: int
+    driverTags: json
+    customerTags: json
+    driverTagScore: json
+    conditionalCharges: text
+
+  default:
+    rideRequestPopupDelayDuration: 0
+    customerCancellationDues: 0
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
+
+  excludedFields: [ merchantOperatingCityId, merchantId, createdAt, updatedAt ]
+
+  excludedDefaultQueries:
+  - create
+  - createMany

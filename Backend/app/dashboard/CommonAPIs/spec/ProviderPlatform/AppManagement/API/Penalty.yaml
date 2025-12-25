@@ -1,0 +1,15 @@
+imports:
+  ServiceNames: Dashboard.Common
+
+module: Penalty
+
+types: {}
+
+apis:
+  - POST:
+      endpoint: /trigger/job/cancellationPenalty/serviceName/{serviceName}
+      auth: ApiAuthV2
+      params:
+        serviceName: ServiceNames
+      response:
+        type: APISuccess

@@ -1,0 +1,199 @@
+imports:
+  Message: Dashboard.Common
+  File: Dashboard.Common
+  Summary: Dashboard.Common
+  Receiver: Dashboard.Common
+  FileType: AWS.S3
+  Language: Kernel.External.Types
+
+module: Message
+
+apis:
+  - POST:
+      endpoint: /uploadFile
+      multipart:
+        type: UploadFileRequest
+      auth: ApiAuthV2
+      response:
+        type: UploadFileResponse
+      migrate:
+        endpoint: MessageAPI UploadFileEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE UPLOAD_FILE
+  - POST:
+      endpoint: /addLink
+      request:
+        type: AddLinkAsMedia
+      auth: ApiAuthV2
+      response:
+        type: UploadFileResponse
+      migrate:
+        endpoint: MessageAPI AddLinkEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_LINK
+  - POST:
+      endpoint: /add
+      request:
+        type: AddMessageRequest
+      auth: ApiAuthV2
+      response:
+        type: AddMessageResponse
+      migrate:
+        endpoint: MessageAPI AddMessageEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_MESSAGE
+  - POST:
+      endpoint: /send
+      multipart:
+        type: SendMessageRequest
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MessageAPI SendMessageEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE SEND_MESSAGE
+  - POST:
+      endpoint: /edit
+      request:
+        type: EditMessageRequest
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /list
+      query:
+        - limit: Int
+        - offset: Int
+      auth: ApiAuthV2
+      response:
+        type: MessageListResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_LIST
+  - GET:
+      endpoint: /{messageId}/info
+      params:
+        messageId: Id Message
+      auth: ApiAuthV2
+      response:
+        type: MessageInfoResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_INFO
+  - GET:
+      endpoint: /{messageId}/deliveryInfo
+      params:
+        messageId: Id Message
+      auth: ApiAuthV2
+      response:
+        type: MessageDeliveryInfoResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_DELIVERY_INFO
+  - GET:
+      endpoint: /{messageId}/receiverList
+      params:
+        messageId: Id Message
+      query:
+        - number: Text
+        - status: MessageDeliveryStatus
+        - limit: Int
+        - offset: Int
+      auth: ApiAuthV2
+      response:
+        type: MessageReceiverListResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_RECEIVER_LIST
+types:
+  AddLinkAsMedia:
+    - url: Text
+    - fileType: FileType
+  UploadFileRequest:
+    - file: FilePath
+    - reqContentType: Text
+    - fileType: FileType
+    - derive: "'HideSecrets"
+  UploadFileResponse:
+    - recordType: NewType
+    - fileId: Id File
+  AddMessageRequest:
+    - _type: MessageType
+    - title: Text # max character 100
+    - description: Text # no max character limit
+    - shortDescription: Text
+    - label: Maybe Text
+    - alwaysTriggerOnOnboarding: Maybe Bool
+    - translations: [MessageTranslation]
+    - mediaFiles: [Id File]
+    - derive: "'HideSecrets"
+  MessageType:
+    - enum: "Action Text, Read"
+  MediaFile:
+    - _type: FileType
+    - link: Text
+  MessageTranslation:
+    - language: Language
+    - title: Text
+    - description: Text
+    - shortDescription: Text
+    - label: Maybe Text
+  AddMessageResponse:
+    - recordType: NewType
+    - messageId: Id Message
+  SendMessageRequest:
+    - csvFile: Maybe FilePath
+    - _type: InputType
+    - messageId: Text
+    - derive: "'HideSecrets"
+    - scheduledTime : Maybe UTCTime
+  InputType:
+    - enum: "Include, Exclude, AllEnabled"
+    - derive: "Kernel.Prelude.Read"
+  MessageListResponse:
+    - messages: [MessageListItem]
+    - summary: Summary
+  MessageListItem:
+    - messageId: Id Message
+    - title: Text
+    - _type: MessageType
+    - shareable: Bool
+  MessageInfoResponse:
+    - messageId: Id Message
+    - title: Text
+    - description: Text
+    - shortDescription: Text
+    - _type: MessageType
+    - mediaFiles: [MediaFile]
+    - shareable: Bool
+  MessageDeliveryInfoResponse:
+    - messageId: Id Message
+    - success: Int
+    - failed: Int
+    - queued: Int
+    - sending: Int
+    - seen: Int
+    - liked: Int
+    - viewed: Int
+  MessageReceiverListResponse:
+    - receivers: [MessageReceiverListItem]
+    - summary: Summary
+  MessageReceiverListItem:
+    - receiverId: Id Receiver
+    - receiverName: Text
+    - receiverNumber: Text
+    - reply: Maybe Text
+    - seen: Maybe Bool
+    - liked: Maybe Bool
+    - status: MessageDeliveryStatus
+  MessageDeliveryStatus:
+    - enum: "Failed, Success, Queued, Sending"
+    - derive: "HttpInstance"
+  EditMessageRequest:
+    - messageId: Id Message
+    - title: Maybe Text
+    - description: Maybe Text
+    - shortDescription: Maybe Text
+    - label: Maybe Text
+    - messageTranslations: [MessageTranslation]
+
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

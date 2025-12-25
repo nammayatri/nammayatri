@@ -1,0 +1,78 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  BaseUrl: Servant.Client.Core
+  showBaseUrl: Kernel.Prelude
+  parseBaseUrl: Kernel.Prelude
+  VehicleCategory: BecknV2.OnDemand.Enums
+
+BecknConfig:
+  tableName: beckn_config
+
+  fields:
+    id: Id BecknConfig
+    domain: Text
+    subscriberId: Text
+    subscriberUrl: BaseUrl
+    gatewayUrl: BaseUrl
+    registryUrl: BaseUrl
+    uniqueKeyId: Text
+    settlementType: Maybe Text
+    paymentParamsJson: Maybe Text
+    vehicleCategory: VehicleCategory|NoRelation
+    collectedBy: PaymentCollectedBy
+    staticTermsUrl: Maybe BaseUrl
+    buyerFinderFee: Maybe Text
+    settlementWindow: Maybe Text
+    multimodalOnSearchTTLSec: Maybe Int
+    onSearchTTLSec: Maybe Int
+    onSelectTTLSec: Maybe Int
+    onInitTTLSec: Maybe Int
+    onConfirmTTLSec: Maybe Int
+    onStatusTTLSec: Maybe Int
+    onUpdateTTLSec: Maybe Int
+    onTrackTTLSec: Maybe Int
+    onCancelTTLSec: Maybe Int
+
+  types:
+    PaymentCollectedBy:
+      enum: "BAP, BPP"
+
+  default:
+    vehicleCategory: "'CAB'"
+    collectedBy: "'BPP'"
+
+  queries:
+    findByMerchantIdDomainAndVehicle:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, domain, vehicleCategory]
+    findByMerchantIdAndDomain:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, domain]
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId]
+
+  beamType:
+    subscriberUrl: Text
+    gatewayUrl: Text
+    registryUrl: Text
+    staticTermsUrl: Maybe Text
+
+  toTType:
+    subscriberUrl: showBaseUrl|I
+    gatewayUrl: showBaseUrl|I
+    registryUrl: showBaseUrl|I
+    staticTermsUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+
+  fromTType:
+    subscriberUrl: parseBaseUrl|MI
+    gatewayUrl: parseBaseUrl|IM
+    registryUrl: parseBaseUrl|MI
+    staticTermsUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI

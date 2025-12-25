@@ -18,7 +18,9 @@ import androidx.core.content.FileProvider;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.facebook.appevents.AppEventsLogger;
 import com.google.firebase.analytics.FirebaseAnalytics;
-import com.theartofdev.edmodo.cropper.CropImage;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -29,107 +31,52 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 
 public class Utils {
 
     private static final String UTILS = "UTILS";
+    public static final String DRIVER_STATUS = "DRIVER_STATUS_N";
+    public static final String DRIVER_STATUS_OFFLINE = "Offline";
 
-    private static final ArrayList<CallBack> callBack = new ArrayList<>();
-
-    public static void registerCallback(CallBack notificationCallback) {
-        callBack.add(notificationCallback);
-    }
-
-    public static void deRegisterCallback(CallBack notificationCallback) {
-        callBack.remove(notificationCallback);
-    }
-
-    public static void captureImage(@Nullable Intent data, Activity activity, Context context) {
-        try {
-            Uri imageUri;
-            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            if (data == null || data.getData() == null) { //Camera
-                File image = new File(context.getFilesDir(), "IMG_" + sharedPref.getString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), "null") + ".jpg");
-                imageUri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", image);
-            } else { // storage
-                imageUri = data.getData();
-            }
-            startCropImageActivity(imageUri, activity);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void startCropImageActivity(Uri imageUri, Activity activity) {
-        CropImage.activity(imageUri)
-                .setAllowFlipping(false)
-                .start(activity);
-    }
-
-    public static void encodeImageToBase64(@Nullable Intent data, Context context, @Nullable Uri imageData) {
-        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-        try {
-            Uri fileUri;
-            if(imageData == null) {
-                CropImage.ActivityResult result = CropImage.getActivityResult(data);
-                fileUri = result.getUri();
-            }
-            else {
-                fileUri = imageData;
-            }
-            InputStream imageStream = context.getContentResolver().openInputStream(fileUri);
-            Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-            byte[] b;
-            String encImage;
-
-            selectedImage.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-            b = baos.toByteArray();
-            encImage = Base64.encodeToString(b, Base64.NO_WRAP);
-
-            Log.d(UTILS, "camera image size : " + (((encImage.length() / 4) * 3) / 1000));
-
-            if (((encImage.length() / 4) * 3) / 1000 > 400) {
-                int reduceQuality = 10;
-                selectedImage.compress(Bitmap.CompressFormat.JPEG, 100 - reduceQuality, baos);
-                b = baos.toByteArray();
-                encImage = Base64.encodeToString(b, Base64.NO_WRAP);
-                while (((encImage.length() / 4) * 3) / 1000 > 400) {
-                    if (reduceQuality >= 90) {
-                        break;
-                    }
-                    reduceQuality += 10;
-                    baos.reset();
-                    selectedImage.compress(Bitmap.CompressFormat.JPEG, 100 - reduceQuality, baos);
-                    b = baos.toByteArray();
-                    encImage = Base64.encodeToString(b, Base64.NO_WRAP);
-                }
-            }
-
-            Log.d(UTILS, "encoded image size camera : " + (((encImage.length() / 4) * 3) / 1000));
-            {
-                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                for (int i = 0; i < callBack.size(); i++) {
-                    if (fileUri != null) {
-                        callBack.get(i).imageUploadCallBack(encImage, "IMG_" + timeStamp + ".jpg", fileUri.getPath());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            Bundle params = new Bundle();
-            mFirebaseAnalytics.logEvent("exception_crop_image", params);
-        }
-    }
 
     public static void minimizeApp(Context context) {
         Intent startMain = new Intent(Intent.ACTION_MAIN);
         startMain.addCategory(Intent.CATEGORY_HOME);
         startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(startMain);
+    }
+
+    private static final Map<String, Integer> PRIORITY_MAP = Map.of(
+            "PRIORITY_BALANCED_POWER_ACCURACY", 102,
+            "PRIORITY_HIGH_ACCURACY", 100,
+            "PRIORITY_LOW_POWER", 104,
+            "PRIORITY_PASSIVE", 105
+    );
+
+    private static final int DEFAULT_PRIORITY = 102; // Default priority to PRIORITY_HIGH_ACCURACY if invalid
+
+    public static int getPriority(String priority) {
+        Integer value = PRIORITY_MAP.get(priority);
+        return (value != null) ? value : DEFAULT_PRIORITY;
+    }
+
+    public static int getLocationPriority(String priority) {
+        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, false);
+        try {
+            String priorityMap = remoteConfigs.getString("perf_config");
+            JSONObject config = new JSONObject(priorityMap);
+            int finalConfig = getPriority(config.optString(priority));
+            Log.i("RemoteConfig", "Location Update Priority: " + config + " " + finalConfig);
+            return finalConfig;
+
+        } catch (Exception e) {
+            Log.e("RemoteConfig", "Failed to parse JSON for location Update", e);
+            return getPriority("");
+        }
     }
 
     public static int getResIdentifier (Context context, String resName, String resType) {
@@ -177,7 +124,7 @@ public class Utils {
             Log.e(UTILS, "Error sending user data: " + e);
         }
     }
-    
+
     public static VariantType getVariantType(String variant) {
         if (variant.equals("Non AC Taxi")) {
             return VariantType.NON_AC;
@@ -194,6 +141,26 @@ public class Utils {
             case "TOP" :  return Gravity.TOP;
             case "BOTTOM" : return Gravity.BOTTOM;
             default: return Gravity.CENTER;}
+    }
+
+    public static JSONObject createNotificationPayload(String title, String message, String onTapAction, String action1Text, String action2Text, String action1Image, String action2Image, String channelId, int durationInMilliSeconds) throws JSONException {
+        JSONObject notificationPayload = new JSONObject();
+        notificationPayload
+                .put("title", title)
+                .put("message", message)
+                .put("channelId", channelId)
+                .put("action1Text", action1Text)
+                .put("action2Text", action2Text)
+                .put("action1Image", action1Image)
+                .put("action2Image", action2Image)
+                .put("onTapAction", onTapAction)
+                .put("durationInMilliSeconds", durationInMilliSeconds);
+        return  notificationPayload;
+    }
+
+    // method to convert dp to pixels
+    public static int dpToPx(Context context, float dp) {
+        return Math.round(dp * context.getResources().getDisplayMetrics().density);
     }
 
 }

@@ -22,13 +22,18 @@ updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 ALTER TABLE atlas_bpp_dashboard.access_matrix OWNER TO atlas_bpp_dashboard_user;
 
+-- ONLY FOR LOCAL
 INSERT INTO atlas_bpp_dashboard.role (id, name, dashboard_access_type, description, created_at, updated_at) VALUES
     ('e5a69a26-d165-455a-a711-33a41e0d47c6', 'CUSTOMER', 'DASHBOARD_USER', 'customer', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
     ('508a0bac-258d-44a6-ac55-aef57ab87a76', 'DRIVER', 'DASHBOARD_USER', 'driver', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
     ('d5644e83-ffa3-4e0d-ae81-c3155eedb8fd', 'JUSPAY_OPS', 'DASHBOARD_USER', 'Juspay OPS', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
     ('37947162-3b5d-4ed6-bcac-08841be1534d', 'JUSPAY_ADMIN', 'DASHBOARD_ADMIN', 'Juspay admin can create and assign other roles', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
-    ('a708c6a1-78b5-4e5e-9df8-468cd81dc2aa', 'CUSTOMER_SERVICE', 'DASHBOARD_USER', 'customer service', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00');
+    ('a708c6a1-78b5-4e5e-9df8-468cd81dc2aa', 'CUSTOMER_SERVICE', 'DASHBOARD_USER', 'customer service', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
+    ('e5a69a26-d165-455a-a711-33a41e0d4812', 'FLEET', 'FLEET_OWNER', 'fleetOwner', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
+    ('00000000-0000-0000-rental-fleet-role', 'RENTAL_FLEET', 'RENTAL_FLEET_OWNER', 'rentalFleetOwner', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
+    ('00000000-0000-0000-000-operator-role', 'OPERATOR', 'DASHBOARD_OPERATOR', 'dashboardOperator', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00');
 
+-- ONLY FOR LOCAL
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, created_at, updated_at) VALUES
     ('03b312b7-1899-4708-984f-e4b1e70e8a39', 'e5a69a26-d165-455a-a711-33a41e0d47c6', 'RIDES', 'USER_READ_ACCESS', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
     ('e3e73e71-6e47-4c50-9b23-1f6a6831faeb', '508a0bac-258d-44a6-ac55-aef57ab87a76', 'RIDES', 'USER_READ_ACCESS', '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
@@ -53,6 +58,7 @@ ALTER TABLE
 ADD
    CONSTRAINT person_role_id_fkey FOREIGN KEY (role_id) REFERENCES atlas_bpp_dashboard.role(id);
 
+-- ONLY FOR LOCAL
 UPDATE atlas_bpp_dashboard.person
     SET role_id = '508a0bac-258d-44a6-ac55-aef57ab87a76'
     WHERE role = 'DRIVER';
@@ -65,5 +71,14 @@ UPDATE atlas_bpp_dashboard.person
 UPDATE atlas_bpp_dashboard.person
     SET role_id = 'a708c6a1-78b5-4e5e-9df8-468cd81dc2aa'
     WHERE role = 'CUSTOMER_SERVICE';
+UPDATE atlas_bpp_dashboard.person
+    SET role_id = 'e5a69a26-d165-455a-a711-33a41e0d4812'
+    WHERE role = 'FLEET_OWNER';
+UPDATE atlas_bpp_dashboard.person
+    SET role_id = '00000000-0000-0000-rental-fleet-role'
+    WHERE role = 'RENTAL_FLEET_OWNER';
+UPDATE atlas_bpp_dashboard.person
+    SET role_id = '00000000-0000-0000-000-operator-role'
+    WHERE role = 'OPERATOR';
 ALTER TABLE atlas_bpp_dashboard.person
   DROP COLUMN role;

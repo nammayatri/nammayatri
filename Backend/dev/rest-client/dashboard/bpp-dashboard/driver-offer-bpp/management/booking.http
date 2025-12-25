@@ -1,0 +1,44 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name stuckBookingsCancel
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/booking/cancel/allStuck
+token: {{customer_service}}
+content-type: application/json
+
+{
+    "bookingIds" : [
+        "11b1a485-a23b-449a-8909-b10690b256af",
+        "74458af9-e0b0-4c89-95ae-2fdf1446750e"
+        ]
+}
+
+
+###
+
+# @name multipleBookingsSync
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/booking/sync
+content-type: application/json
+token: {{customer_service}}
+
+{
+  "bookings": [
+    {
+      "bookingId": "e89b8221-3a8d-4c11-a938-70113a7784bd"
+    },
+    {
+      "bookingId": "fakeBookingId"
+    }
+  ]
+}

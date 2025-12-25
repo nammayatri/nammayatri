@@ -39,8 +39,6 @@ library
       DataKinds
       KindSignatures
       TypeOperators
-      DeriveGeneric
-      DeriveAnyClass
       OverloadedStrings
       ConstraintKinds
       DataKinds
@@ -123,8 +121,6 @@ executable image-api-helper-exe
       DataKinds
       KindSignatures
       TypeOperators
-      DeriveGeneric
-      DeriveAnyClass
       OverloadedStrings
       ConstraintKinds
       DataKinds

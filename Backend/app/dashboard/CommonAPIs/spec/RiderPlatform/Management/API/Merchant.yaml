@@ -1,0 +1,282 @@
+imports:
+  ExophoneReq: Dashboard.Common.Merchant
+  FCMConfigUpdateReq: Dashboard.Common.Merchant
+  MapsServiceConfigUpdateReq: Dashboard.Common.Merchant
+  SmsServiceConfigUpdateReq: Dashboard.Common.Merchant
+  ServiceUsageConfigRes: Dashboard.Common.Merchant
+  MapsServiceUsageConfigUpdateReq: Dashboard.Common.Merchant
+  SmsServiceUsageConfigUpdateReq: Dashboard.Common.Merchant
+  CreateMerchantOperatingCityReq: Dashboard.Common.Merchant
+  CreateMerchantOperatingCityRes: Dashboard.Common.Merchant
+  CreateMerchantOperatingCityReqT: Dashboard.Common.Merchant
+  SpecialLocation: Lib.Types.SpecialLocation
+  UpsertSpecialLocationReq: Dashboard.Common.Merchant
+  UpsertSpecialLocationReqT: Dashboard.Common.Merchant
+  UpsertSpecialLocationGateReq: Dashboard.Common.Merchant
+  UpsertSpecialLocationGateReqT: Dashboard.Common.Merchant
+  UpsertSpecialLocationCsvReq: Dashboard.Common.Merchant
+  APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
+  City: Kernel.Types.Beckn.Context
+  ToParamSchema: Kernel.Prelude
+  FromHttpApiData: Servant
+  ToHttpApiData: Servant
+  HideSecrets: Kernel.Types.HideSecrets
+  ConfigNames: Dashboard.Common.Merchant
+  ConfigFailoverReq: Dashboard.Common.Merchant
+  WhatsappProviderEnums: Dashboard.Common.Merchant
+  NetworkEnums: Dashboard.Common.Merchant
+  PriorityListWrapperType: Dashboard.Common.Merchant
+  UpsertTicketConfigReq: Dashboard.Common.Merchant
+  UpsertTicketConfigResp: Dashboard.Common.Merchant
+  FilePath: EulerHS.Prelude
+  WhiteListOperatingCityReq: Dashboard.Common.Merchant
+  WhiteListOperatingCityRes: Dashboard.Common.Merchant
+
+module: Merchant
+
+apis:
+  - POST: # MerchantUpdateAPI
+      endpoint: /update
+      auth: ApiAuthV2
+      request:
+        type: MerchantUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.RiderPlatform.Merchant.validateMerchantUpdateReq
+      migrate:
+        endpoint: MerchantAPI MerchantUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MERCHANT_UPDATE
+  - GET: # ServiceUsageConfigAPI
+      endpoint: /serviceUsageConfig
+      auth: ApiAuthV2
+      response:
+        type: ServiceUsageConfigRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SERVICE_USAGE_CONFIG
+  - POST: # MapsServiceConfigUpdateAPI
+      endpoint: /serviceConfig/maps/update
+      auth: ApiAuthV2
+      request:
+        type: MapsServiceConfigUpdateReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI MapsServiceConfigUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MAPS_SERVICE_CONFIG_UPDATE
+  - POST: # MapsServiceUsageConfigUpdateAPI
+      endpoint: /serviceUsageConfig/maps/update
+      auth: ApiAuthV2
+      request:
+        type: MapsServiceUsageConfigUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.Common.Merchant.validateMapsServiceUsageConfigUpdateReq
+      migrate:
+        endpoint: MerchantAPI MapsServiceConfigUsageUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MAPS_SERVICE_USAGE_CONFIG_UPDATE
+  - POST: # SmsServiceConfigUpdateAPI
+      endpoint: /serviceConfig/sms/update
+      auth: ApiAuthV2
+      request:
+        type: SmsServiceConfigUpdateReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI SmsServiceConfigUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SMS_SERVICE_CONFIG_UPDATE
+  - POST: # SmsServiceUsageConfigUpdateAPI
+      endpoint: /serviceUsageConfig/sms/update
+      auth: ApiAuthV2
+      request:
+        type: SmsServiceUsageConfigUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.Common.Merchant.validateSmsServiceUsageConfigUpdateReq
+      migrate:
+        endpoint: MerchantAPI SmsServiceConfigUsageUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SMS_SERVICE_USAGE_CONFIG_UPDATE
+  - POST: # CreateMerchantOperatingCityAPI
+      endpoint: /config/operatingCity/create
+      auth: ApiAuthV2
+      multipart:
+        type: CreateMerchantOperatingCityReq
+      response:
+        type: CreateMerchantOperatingCityRes
+      helperApi:
+        - POST:
+            endpoint: /config/operatingCity/create
+            auth: ApiAuthV2 # TODO remove
+            request:
+              type: CreateMerchantOperatingCityReqT
+            response:
+              type: CreateMerchantOperatingCityRes
+      migrate:
+        endpoint: MerchantAPI CreateMerchantOperatingCityEndpoint
+        endpointV2:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+  - POST: # UpsertSpecialLocationCsvAPI
+      endpoint: /config/specialLocation/upsert/
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertSpecialLocationCsvReq
+      response:
+        type: APISuccessWithUnprocessedEntities
+      migrate:
+        endpoint: MerchantAPI UpsertSpecialLocationCsvEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_CSV
+  - POST: # UpsertSpecialLocationAPI
+      endpoint: /specialLocation/upsert
+      query:
+        specialLocationId: Id SpecialLocation
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertSpecialLocationReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /specialLocation/upsert
+            query:
+              specialLocationId: Id SpecialLocation
+            auth: ApiAuthV2 # TODO serverName move to dhall
+            request:
+              type: UpsertSpecialLocationReqT
+            response:
+              type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpsertSpecialLocationEndpoint
+        endpointV2:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
+  - DELETE: # DeleteSpecialLocationAPI
+      endpoint: /specialLocation/{specialLocationId}/delete
+      params:
+        specialLocationId: Id SpecialLocation
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI DeleteSpecialLocationEndpoint
+        endpointV2:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION
+  - POST: # UpsertSpecialLocationGateAPI
+      endpoint: /specialLocation/{specialLocationId}/gates/upsert
+      params:
+        specialLocationId: Id SpecialLocation
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertSpecialLocationGateReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /specialLocation/{specialLocationId}/gates/upsert
+            params:
+              specialLocationId: Id SpecialLocation
+            auth: ApiAuthV2
+            request:
+              type: UpsertSpecialLocationGateReqT
+            response:
+              type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpsertSpecialLocationGateEndpoint
+        endpointV2:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
+  - DELETE: # DeleteSpecialLocationGateAPI
+      endpoint: /specialLocation/{specialLocationId}/gates/delete/{gateName}
+      params:
+        specialLocationId: Id SpecialLocation
+        gateName: Text
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI DeleteSpecialLocationGateEndpoint
+        endpointV2:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE
+  - POST: #ToggleConfigPriorityAPI
+      endpoint: /config/{configName}/failover
+      params:
+        configName: ConfigNames
+      request:
+        type: ConfigFailoverReq
+      response:
+        type: APISuccess
+      auth: ApiAuthV2
+      migrate:
+        endpoint: MerchantAPI ToggleConfigPriorityEndpoint
+        endpointV2:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT TOGGLE_CONFIG_PRIORITY
+  - POST: # UpsertTicketPlaceAPI
+      endpoint: /ticket/config/upsert/
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertTicketConfigReq
+      response:
+        type: UpsertTicketConfigResp
+      migrate:
+        endpoint: MerchantAPI UpsertTicketConfigEndpoint
+        endpointV2:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_FARE_TICKET_CONFIG
+  - POST: # SchedulerTriggerAPI
+      endpoint: /scheduler/trigger
+      auth: ApiAuthV2
+      request:
+        type: SchedulerTriggerReq
+      response:
+        type: APISuccess
+  - POST: # whiteListOperatingCityAPI
+      endpoint: /config/operatingCity/whiteList
+      auth: ApiAuthV2
+      request:
+        type: WhiteListOperatingCityReq
+      response:
+        type: WhiteListOperatingCityRes
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT WHITELIST_MERCHANT_OPERATING_CITY
+  - POST: # CreateMerchantAPI
+      endpoint: /config/merchant/create
+      auth: ApiAuthV2
+      multipart:
+        type: CreateMerchantOperatingCityReq
+      response:
+        type: CreateMerchantOperatingCityRes
+      helperApi:
+        - POST:
+            endpoint: /config/merchant/create
+            auth: ApiAuthV2
+            request:
+              type: CreateMerchantOperatingCityReqT
+            response:
+              type: CreateMerchantOperatingCityRes
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+
+types:
+  MerchantUpdateReq:
+    - name: Maybe Text
+    - exoPhones: Maybe (NonEmpty ExophoneReq)
+    - fcmConfig: Maybe FCMConfigUpdateReq
+    - gatewayUrl: Maybe BaseUrl
+    - registryUrl: Maybe BaseUrl
+  UpsertTicketConfigReq:
+    - recordType: NewType
+    - file: FilePath
+    - derive: "'HideSecrets"
+  UpsertTicketConfigResp:
+    - unprocessedTicketConfigs: [Text]
+    - success: Text
+  SchedulerTriggerReq:
+    - scheduledAt: Maybe UTCTime
+    - jobName: Maybe JobName
+    - jobData: Text
+    - derive: "'HideSecrets"
+  JobName:
+    - enum: "NyRegularMasterTrigger"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE

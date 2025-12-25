@@ -1,0 +1,68 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Mandate: Domain.Types.Mandate
+  DriverFee: Domain.Types.DriverFee
+
+Notification:
+  tableName: notification
+  derives: "Generic, Eq, Show, FromJSON, ToJSON, ToSchema"
+
+  fields:
+    id : Id Notification
+    shortId : Text
+    sourceAmount : HighPrecMoney
+    mandateId : Id Mandate
+    driverFeeId : Id DriverFee
+    txnDate : UTCTime
+    juspayProvidedId : Text
+    providerName : Maybe Text
+    notificationType : Maybe Text
+    description : Text
+    status : Domain.Types.Extra.Notification.NotificationStatus
+    responseCode : Maybe Text
+    responseMessage : Maybe Text
+    dateCreated : UTCTime
+    lastUpdated : UTCTime
+    merchantOperatingCityId : Id MerchantOperatingCity
+    lastStatusCheckedAt : Maybe UTCTime
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+
+  constraints:
+    id: PrimaryKey
+
+  beamType:
+    merchantOperatingCityId: Maybe Text
+
+  fromTType:
+    merchantOperatingCityId: Storage.Queries.Transformers.Notification.getMerchantOperatingCityId merchantOperatingCityId id driverFeeId|EM
+
+  toTType:
+    merchantOperatingCityId: Kernel.Prelude.Just (Kernel.Types.Id.getId merchantOperatingCityId)|E
+
+
+  queries:
+    findByShortId:
+      kvFunction: findOneWithKV
+      where: shortId
+
+    updateNotificationStatusAndResponseInfoById:
+      kvFunction: updateWithKV
+      params: [status, responseCode, responseMessage]
+      where: id
+
+  sqlType:
+    shortId: character varying (255)
+    mandateId: character varying (255)
+    driverFeeId: character varying (255)
+    juspayProvidedId: character varying (255)
+    sourceAmount: numeric
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
+
+
+  excludedFields: [createdAt, updatedAt]

@@ -1,0 +1,145 @@
+imports:
+  Location: Domain.Types.Location
+  Price: Kernel.Types.Common
+  ServiceTierType: Domain.Types.ServiceTierType
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  DayOfWeek: Data.Time.Calendar
+  Day: Data.Time.Calendar
+  TimeOfDay: Data.Time.LocalTime
+  UTCTime: Data.Time
+  Value: Data.Aeson
+  Currency: Kernel.Types.Common # Added for Price beamFields
+  HighPrecMoney: Kernel.Types.Common # Added for Price beamFields
+  DbHash: Kernel.External.Encryption # Added for schedulingHash
+  NyRegularSubscriptionStatus : Domain.Types.Extra.NyRegularSubscription
+
+NyRegularSubscription:
+  tableName: ny_regular_subscriptions
+  derives: "Generic, Eq, Show, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id NyRegularSubscription
+    userId: Id Person
+    pickupLocation: Location
+    dropoffLocation: Location
+    vehicleServiceTier: Maybe ServiceTierType
+    startDatetime: UTCTime
+    recurrenceRuleDays: "[DayOfWeek]"
+    scheduledTimeOfDay: TimeOfDay
+    recurrenceEndDate: Maybe Day
+    fixedPrice: Maybe Price
+    fixedPriceBreakupDetails: Maybe Value
+    fixedPriceExpiryDate: Maybe UTCTime
+    initialBppQuoteId: Maybe Text
+    bppId: Text
+    status: NyRegularSubscriptionStatus
+    pauseStartDate: Maybe UTCTime
+    pauseEndDate: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    metadata: Maybe Value
+    lastProcessedAt: Maybe UTCTime
+    schedulingHash: Maybe Text # Added new field
+
+  beamFields:
+    pickupLocation:
+      pickupLocationId: Text
+    dropoffLocation:
+      dropoffLocationId: Text
+    fixedPrice:
+      fixedPrice: Maybe HighPrecMoney
+      fixedPriceCurrency: Maybe Currency
+
+  sqlType:
+    id: character(36)
+    userId: character(36)
+    pickupLocationId: character(36)
+    dropoffLocationId: character(36)
+    startDatetime: timestamp with time zone
+    recurrenceRuleDays: text[]
+    scheduledTimeOfDay: time
+    recurrenceEndDate: date
+    fixedPriceExpiryDate: timestamp with time zone
+    pauseStartDate: timestamp with time zone
+    pauseEndDate: timestamp with time zone
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+    lastProcessedAt: timestamp with time zone
+    fixedPriceBreakupDetails: json
+    metadata: json
+    status: text
+    vehicleServiceTier: text
+
+  default:
+    status: "'NEW'"
+
+  beamType:
+    recurrenceRuleDays: "[Text]"
+
+  toTType:
+    pickupLocationId: Kernel.Types.Id.getId $ (.id) pickupLocation|E
+    dropoffLocationId: Kernel.Types.Id.getId $ (.id) dropoffLocation|E
+    fixedPrice: ((.amount) <$> fixedPrice)|E
+    fixedPriceCurrency: ((.currency) <$> fixedPrice)|E
+    recurrenceRuleDays: map show recurrenceRuleDays|E
+  fromTType:
+    pickupLocation: 'Storage.Queries.Location.findById (Kernel.Types.Id.Id pickupLocationId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("Failed to get pickupLocation " <> pickupLocationId))|EM'
+    dropoffLocation: 'Storage.Queries.Location.findById (Kernel.Types.Id.Id dropoffLocationId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("Failed to get dropoffLocation " <> dropoffLocationId))|EM'
+    fixedPrice: (Kernel.Types.Common.mkPrice fixedPriceCurrency) <$> fixedPrice|E
+    recurrenceRuleDays: (read . Data.Text.unpack) <$> recurrenceRuleDays|E
+  constraints:
+    id: PrimaryKey
+    userId: SecondaryKey
+
+  extraOperations:
+  - EXTRA_DOMAIN_TYPE_FILE
+  - EXTRA_QUERY_FILE
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByUserId:
+      kvFunction: findAllWithOptionsKV
+      where: userId
+      orderBy:
+        field: createdAt
+        order: desc
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: [ status ]
+      where: id
+    confirmSubscriptionDetailsById:
+      kvFunction: updateWithKV
+      params:
+      - vehicleServiceTier
+      - fixedPrice
+      - fixedPriceBreakupDetails
+      - fixedPriceExpiryDate
+      - initialBppQuoteId
+      - status
+      where: id
+    updatePauseDetailsById:
+      kvFunction: updateWithKV
+      params:
+      - pauseStartDate
+      - pauseEndDate
+      - status
+      where: id
+    updateRecurrenceById:
+      kvFunction: updateWithKV
+      params:
+      - recurrenceRuleDays
+      - scheduledTimeOfDay
+      - recurrenceEndDate
+      where: id
+    updateLastProcessedAtById:
+      kvFunction: updateWithKV
+      params: [ lastProcessedAt ]
+      where: id
+    updateSchedulingHashById:
+      kvFunction: updateWithKV
+      params: [ schedulingHash ]
+      where: id

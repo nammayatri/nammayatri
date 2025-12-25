@@ -16,23 +16,38 @@ module Storage.CachedQueries.BapMetadata where
 import Domain.Types.BapMetadata
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.BapMetadata as Queries
 
-findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BapMetadata -> m (Maybe BapMetadata)
-findById bapMetadataId =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeBapMetadataByIdKey bapMetadataId) >>= \case
-    Just a -> pure a
-    Nothing -> flip whenJust (cacheBapMetadataById bapMetadataId) /=<< Queries.findById bapMetadataId
+type Domain = Text
 
-clearBapMetadataByIdCache :: (CacheFlow m r) => Id BapMetadata -> m ()
-clearBapMetadataByIdCache = Hedis.withCrossAppRedis . Hedis.del . makeBapMetadataByIdKey
+createIfNotPresent :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => BapMetadata -> Id BapMetadata -> Domain -> m ()
+createIfNotPresent bapMetadata subscriberId domain = do
+  maybeBapMetadata <- findBySubscriberIdAndDomain' subscriberId domain
+  whenNothing maybeBapMetadata $ do
+    void $ Queries.create bapMetadata
+    void $ cacheBapMetadata subscriberId domain bapMetadata
+  where
+    whenNothing m = when (isNothing m)
 
-cacheBapMetadataById :: (CacheFlow m r) => Id BapMetadata -> BapMetadata -> m ()
-cacheBapMetadataById bapMetadataId bapMetadata = do
+findBySubscriberIdAndDomain :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id BapMetadata -> Context.Domain -> m (Maybe BapMetadata)
+findBySubscriberIdAndDomain subscriberId domain = do
+  let domainText = show domain
+  findBySubscriberIdAndDomain' subscriberId domainText
+
+findBySubscriberIdAndDomain' :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id BapMetadata -> Domain -> m (Maybe BapMetadata)
+findBySubscriberIdAndDomain' subscriberId domain =
+  Hedis.safeGet (makeSubscriberIdKey subscriberId domain) >>= \case
+    Just a -> return $ Just a
+    Nothing -> flip whenJust (cacheBapMetadata subscriberId domain) /=<< Queries.findBySubscriberIdAndDomain subscriberId (Just domain)
+
+cacheBapMetadata :: (CacheFlow m r) => Id BapMetadata -> Domain -> BapMetadata -> m ()
+cacheBapMetadata subscriberId domain bapMetadata = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeBapMetadataByIdKey bapMetadataId) bapMetadata expTime
+  let idKey = makeSubscriberIdKey subscriberId domain
+  Hedis.setExp idKey bapMetadata expTime
 
-makeBapMetadataByIdKey :: Id BapMetadata -> Text
-makeBapMetadataByIdKey bapMetadataId = "do:CQ:BM:Id-" <> getId bapMetadataId
+makeSubscriberIdKey :: Id BapMetadata -> Text -> Text
+makeSubscriberIdKey subscriberId domain = "CachedQueries:BapMetadata:" <> domain <> ":sid-" <> subscriberId.getId

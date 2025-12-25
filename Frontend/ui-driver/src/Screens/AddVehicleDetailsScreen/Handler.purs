@@ -19,7 +19,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.AddVehicleDetailsScreen.Controller (ScreenOutput(..))
 import Screens.AddVehicleDetailsScreen.Views as AddVehicleDetailsScreen
 import Types.App (FlowBT, GlobalState(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), ScreenType(..))
@@ -29,7 +29,7 @@ import Types.ModifyScreenState (modifyScreenState)
 addVehicleDetails :: FlowBT String ADD_VEHICLE_DETAILS_SCREENOUTPUT
 addVehicleDetails = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ AddVehicleDetailsScreen.screen state.addVehicleDetailsScreen
+  action <- lift $ lift $ runLoggableScreen $ AddVehicleDetailsScreen.screen state.addVehicleDetailsScreen
   case action of
     GoBack updatedState -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> updatedState
@@ -49,3 +49,9 @@ addVehicleDetails = do
     ActivateRC updatedState -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ RC_ACTIVATION updatedState)
+    SelectLang updatedState -> do
+      modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CHANGE_LANG_FROM_RC_SCREEN)
+    ChangeVehicle updatedState -> do
+      modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CHANGE_VEHICLE_FROM_RC_SCREEN)

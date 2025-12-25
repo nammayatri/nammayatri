@@ -17,6 +17,7 @@
 import { callbackMapper } from "presto-ui";
 
 const JBridge = window.JBridge;
+const notificationCallBacks = {};
 let tracking_id = 0;
 export const getNewTrackingId = function (unit) {
   tracking_id += 1;
@@ -70,12 +71,6 @@ export const getCurrentDatev2 = function (string) {
   return today;
 }
 
-
-export const compareDate = function (date1, date2) {
-  console.log("comparing : ", date1, date2);
-  return date1 >= date2;
-}
-
 export const getNextDate = function (unit) {
   const currentDate = new Date();
   const isLastDayOfMonth = (currentDate.getDate() === new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate());
@@ -88,6 +83,8 @@ export const getNextDate = function (unit) {
   const dd = String(currentDate.getDate()).padStart(2, "0");
   const mm = String(currentDate.getMonth() + 1).padStart(2, "0"); //January is 0!
   const yyyy = currentDate.getFullYear();
+  if(unit === "yyyy-mm-dd")
+    return yyyy + "-" + mm + "-" + dd;
   return dd + "/" + mm + "/" + yyyy;
 }
 
@@ -114,13 +111,90 @@ export const secondsToHms = function (d) {
   const h = Math.floor(d / 3600);
   const m = Math.floor(d % 3600 / 60);
 
-  const hDisplay = h > 0 ? h + (h == 1 ? " hr, " : " hrs, ") : "";
   const mDisplay = m > 0 ? m + (m == 1 ? " min " : " mins ") : "--";
-  return hDisplay + mDisplay;
+  const hDisplay = h > 0 ? h + (h == 1 ? " hr" : " hrs") : "";
+  if(hDisplay != "" && mDisplay == "--") return hDisplay
+  else return hDisplay + ((hDisplay != "") ? ", " : "") + mDisplay;
 }
 
+export const toIST = function (date) {
+  const today = new Date(date);
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istTime = new Date(today.getTime() + istOffset);
+  return istTime;
+}
+
+
+export const getISTDay = function (date) {
+  const today = toIST(date);
+  return today.getDay();
+}
+
+
+export const getISTMonth = function (date) {
+  const today = toIST(date);
+  return today.getMonth();
+}
+
+export const getISTFullYear = function (date) {
+  const today = toIST(date);
+  return today.getFullYear();
+}
+
+export const getISTDate = function (date) {
+  const today = toIST(date);
+  return today.getDate();
+}
+
+export const getISTHours = function (date) {
+  const today = toIST(date);
+  return today.getHours();
+}
+
+export const getISTMinutes = function (date) {
+  const today = toIST(date);
+  return today.getMinutes();
+}
+
+export const getISTSeconds = function (date) {
+  const today = toIST(date);
+  return today.getSeconds();
+}
+
+
 export const getUTCDay = function (date) {
-  return date.getUTCDay();
+  const today = new Date(date)
+  return today.getUTCDay();
+}
+
+export const getUTCMonth = function (date) {
+  const today = new Date(date)
+  return today.getUTCMonth();
+}
+
+export const getUTCFullYear = function (date) {
+  const today = new Date(date)
+  return today.getUTCFullYear();
+}
+
+export const getUTCDate = function (date) {
+  const today = new Date(date)
+  return today.getUTCDate();
+}
+
+export const getUTCHours = function (date) {
+  const today = new Date(date)
+  return today.getUTCHours();
+}
+
+export const getUTCMinutes = function (date) {
+  const today = new Date(date)
+  return today.getUTCMinutes();
+}
+
+export const getUTCSeconds = function (date) {
+  const today = new Date(date)
+  return today.getUTCSeconds();
 }
 
 export const getTime = function (unit) {
@@ -137,26 +211,52 @@ export const requestKeyboardShow = function (id) {
 }
 
 export const storeCallBackCustomer = function (cb) {
-
   return function (action) {
-    return function () {
-      try {
-        const callback = callbackMapper.map(function (notificationType) {
-          cb(action(notificationType))();
-        });
-        const notificationCallBack = function (notificationType) {
-          cb(action(notificationType))();
-        };
-        window.callNotificationCallBack = notificationCallBack;
-        console.log("In storeCallBackCustomer ---------- + " + action);
-        JBridge.storeCallBackCustomer(callback);
-      }
-      catch (error) {
-        console.log("Error occurred in storeCallBackCustomer ------", error);
+    return function(screenName){
+      return function(just){
+        return function(nothing){
+          return function () {
+            try {
+              notificationCallBacks[screenName] = function(notificationType,notificationBody){
+                const parsedNotificationBody = JSON.parse(notificationBody || {});
+                const currentTimeUTC = new Date().toISOString();
+                const rideTimeIfAvailable = (parsedNotificationBody.rideTime) ? just (parsedNotificationBody.rideTime) : just (currentTimeUTC);
+                const bookingIdIfAvailable = (parsedNotificationBody.bookingId) ? just (parsedNotificationBody.bookingId) : nothing;
+                cb(action(notificationType)({rideTime : rideTimeIfAvailable, bookingId : bookingIdIfAvailable}))();
+              }
+              const callback = callbackMapper.map(function (notificationType, notificationBody) {
+                console.log("notificationType ->", notificationType);
+                console.log("notificationBody ->", notificationBody);
+                window.notificationType = notificationType;
+                if (window.whitelistedNotification.has(notificationType)) {
+                  Object.keys(notificationCallBacks).forEach((key) => {
+                    notificationCallBacks[key](notificationType,notificationBody);
+                  })
+                  if (notificationBody) {
+                    window.notificationBody = JSON.parse(notificationBody);
+                  }
+                }
+              });
+              const notificationCallBack = function (notificationType,notificationBody) {
+                console.log("notificationType ->", notificationType);
+                if (window.whitelistedNotification.has(notificationType)) {
+                  Object.keys(notificationCallBacks).forEach((key) => {
+                    notificationCallBacks[key](notificationType,notificationBody);
+                  })
+                }
+              };
+              window.callNotificationCallBack = notificationCallBack;
+              console.log("In storeCallBackCustomer ---------- + " + action);
+              JBridge.storeCallBackCustomer(callback);
+            }
+            catch (error) {
+              console.log("Error occurred in storeCallBackCustomer ------", error);
+            }
+          }
+        }
       }
     }
   }
-
 }
 
 export const storeCallBackContacts = function (cb) {
@@ -164,13 +264,21 @@ export const storeCallBackContacts = function (cb) {
     return function () {
       try {
         const callback = callbackMapper.map(function (contact) {
-          const json = JSON.parse(contact);
-          console.log("storeCallBackContacts js " + json);
+          const json = JSON.parse(contact.toString().replace(/\s/g, " "));
+          if (window.__OS == "IOS") {
+            json.forEach((object) => {
+              let base64regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+              if (base64regex.test(object.name)) {
+                object.name = new TextDecoder('utf-8').decode(Uint8Array.from(atob(object.name), c => c.charCodeAt(0)));
+              }
+            });
+          }
+          console.log("storeCallBackContacts js " , json);
           cb(action(json))();
         });
 
-        console.log("In storeCallBackContacts ---------- + " + action);
-        window.JBridge.storeCallBackContacts(callback);
+        console.log("In storeCallBackContacts ---------- + " , action);
+        return window.JBridge.storeCallBackContacts(callback);
       } catch (err) {
         console.log("storeCallBackContacts error " + err);
       }
@@ -209,18 +317,15 @@ export const decodeError = function (er) {
   }
 };
 
-export const toStringJSON = function (attr) {
-  return JSON.stringify(attr);
-};
-
-export const didDriverMessage = function() {
+export const didReceiverMessage = function() {
   try {
-    return window.didDriverMessage || false;
+    return window.didReceiverMessage || false;
   } catch (error) {
-    console.log("Error in didDriverMessage " + error);
+    console.log("Error in didReceiverMessage " + error);
     return false;
   }
 }
+
 
 export const setRefreshing = function (id) {
   return function (bool) {
@@ -320,6 +425,12 @@ export const withinTimeRange = function (startTime) {
       }
     }
   }
+}
+
+export const isWeekend = function (dateString) {
+  const date = new Date(dateString);
+  const dayOfWeek = date.getDay();
+  return dayOfWeek === 0 || dayOfWeek === 6; // 0 is Sunday, 6 is Saturday
 }
 
 export const adjustViewWithKeyboard = function (flag) {
@@ -427,21 +538,11 @@ export const _generateQRCode = function (data, id, size, margin, sc) {
   }
 }
 
-export const getDifferenceBetweenDates = function (date1, date2) {
-  const diffInSeconds = Math.floor((new Date(date1) - new Date(date2)) / 1000);
-  return diffInSeconds;
-}
-
 export const parseSourceHashArray = function (str) {
   return JSON.parse(str);
 }
 export const getDeviceDefaultDensity = function (){
-  if (window.JBridge.getSessionInfo) {
-    const sessionInfo = JSON.parse(window.JBridge.getSessionInfo())
-    return sessionInfo.screen_ppi;
-  } else {
-    return window.JBridge.getDensity() * 160;
-  }
+  return window.fetchCachedSessionInfo ? window.fetchCachedSessionInfo("screen_ppi") : JSON.parse(window.JBridge.getSessionInfo())["screen_ppi"];
 }
 export const getDefaultPixels = function (){
   if(window.JBridge.getDefaultPixels)return parseFloat(window.JBridge.getDefaultPixels());
@@ -481,3 +582,69 @@ export const incrOrDecrTimeFrom = function (inputTime, minutesToAddOrSubtract, i
   const newTime = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
   return newTime;
 }
+
+export const getMockFollowerName = function() {
+  let currentMockName = "User";
+  if (window.notificationBody) {
+    const msg = window.notificationBody.msg;
+    currentMockName = msg.split(" ")[0];
+  } else if (window.__payload && window.__payload.payload && window.__payload.payload.fullNotificationBody && window.__payload.payload.fullNotificationBody.msg) {
+    const msg = window.__payload.payload.fullNotificationBody.msg;
+    currentMockName = msg.split(" ")[0];
+  }
+  return currentMockName;
+}
+
+
+export const decodeErrorCode = function (a) {
+  try {
+    const errorCodee = JSON.parse(a).errorCode;
+    return  errorCodee;
+  } catch (e) {
+    console.log(e);
+    return " ";
+  }
+};
+
+export const isHybridApp = ()=>{
+  try {
+    return (window.__payload.payload.isHybrid === true);
+  } catch (unhandled){
+    return false;
+  }
+}
+
+export const decodeErrorMessage = function (a) {
+  try {
+    const errorMessagee = JSON.parse(a).errorMessage;
+    if(errorMessagee === null)
+    {
+      return "";
+    }
+    return  errorMessagee;
+  } catch (e) {
+    console.log(e);
+    return " ";
+  }
+};
+
+
+export const releaseBackpress = function (unit) {
+  const jpConsumingBackpress = {
+    event: "jp_consuming_backpress",
+    payload: { jp_consuming_backpress: false }
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
+}
+
+export const isItSameDay = (date) => {
+  if (date == "__failed" || date == "(null)") return false;
+  const dateObj = new Date(parseInt(date));
+  const today = new Date();
+  return today.getDate() == dateObj.getDate() && (today.getMonth() == dateObj.getMonth()) && (today.getFullYear() == dateObj.getFullYear())
+}
+
+export const launchAppSettings = function (unit) {
+  return JBridge.openApp(null,"package:" + JSON.parse(JBridge.getSessionInfo()).package_name,"android.settings.APPLICATION_DETAILS_SETTINGS",268435456,2000);
+};
+

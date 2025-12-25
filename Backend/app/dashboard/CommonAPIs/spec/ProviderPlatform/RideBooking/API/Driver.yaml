@@ -1,0 +1,438 @@
+imports:
+  Driver: Dashboard.Common
+  Image: Dashboard.Common
+  VehicleVariant: Dashboard.Common
+  VerificationStatus: Dashboard.Common
+  DriverLicense: Dashboard.Common.Driver
+  VehicleRegistrationCertificate: Dashboard.Common.Driver
+  ServiceNames: Dashboard.Common.Driver
+  Version: Kernel.Types.Version
+  City: Kernel.Types.Beckn.Context
+  AddVehicleReq: API.Types.ProviderPlatform.Fleet.Driver
+  RCStatusReq: API.Types.ProviderPlatform.Fleet.Driver
+  DriverFeeStatus:  Dashboard.Common.Driver
+  TagNameValue: Lib.Yudhishthira.Types
+  TagObject: Lib.Yudhishthira.Types
+  DriverMode: Domain.Types.Common
+  Feedback: Domain.Types.Feedback
+  Rating: Domain.Types.Rating
+  Ride: Domain.Types.Ride
+  VerifiedBy: Domain.Types.DriverPanCard
+module: Driver
+
+apis:
+  - GET: # DriverOutstandingBalanceAPI
+      endpoint: /paymentDue
+      auth: ApiAuthV2
+      query:
+        - countryCode: Text
+      mandatoryQuery:
+        - phone: Text
+      response:
+        type: "[DriverOutstandingBalanceResp]"
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS BALANCE_DUE
+  - POST: # EnableDriverAPI
+      endpoint: /{driverId}/enable
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI EnableDriverEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS ENABLE
+  - POST: # DriverCashCollectionAPI
+      endpoint: /{driverId}/collectCash
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        - vendorId: Text
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/collectCash
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            query:
+              - vendorId: Text
+            request:
+              type: Text
+            response:
+              type: APISuccess
+      migrate:
+        endpoint: DriverAPI CollectCashEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH
+  - POST: # DriverCashCollectionAPIV2
+      endpoint: /{driverId}/v2/collectCash/{serviceName}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        serviceName: ServiceNames
+      query:
+        - vendorId: Text
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/collectCash/v2/{token}/{serviceName}
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              token: Text
+              serviceName: ServiceNames
+            query:
+              - vendorId: Text
+            response:
+              type: APISuccess
+      migrate:
+        endpoint: DriverAPI CollectCashEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH_V2
+  - POST: # DriverCashExemptionAPI
+      endpoint: /{driverId}/exemptCash
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/exemptCash
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            request:
+              type: Text
+            response:
+              type: APISuccess
+      migrate:
+        endpoint: DriverAPI ExemptCashEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH
+  - POST: # DriverCashExemptionAPIV2
+      endpoint: /{driverId}/v2/exemptCash/{serviceName}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        serviceName: ServiceNames
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/exemptCash/v2/{token}/{serviceName}
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              token: Text
+              serviceName: ServiceNames
+            response:
+              type: APISuccess
+      migrate:
+        endpoint: DriverAPI ExemptCashEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH_V2
+  - GET: # DriverInfoAPI
+      endpoint: /info
+      auth: ApiAuthV2
+      query:
+        - mobileNumber: Text
+        - mobileCountryCode: Text
+        - vehicleNumber: Text
+        - dlNumber: Text
+        - rcNumber: Text
+        - email: Text
+        - personId: Id Driver
+      response:
+        type: DriverInfoRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS INFO
+      helperApi:
+        - GET:
+            endpoint: /info/{fleetOwnerId}/{mbFleet}
+            auth: ApiAuthV2
+            query:
+              - mobileNumber: Text
+              - mobileCountryCode: Text
+              - vehicleNumber: Text
+              - dlNumber: Text
+              - rcNumber: Text
+              - email: Text
+              - personId: Id Driver
+            params:
+              fleetOwnerId: Text
+              mbFleet: Bool
+            response:
+              type: DriverInfoRes
+  - GET:
+      endpoint: /feedback/list
+      auth: ApiAuthV2
+      query:
+        - personId: Id Driver
+        - mobileNumber: Text
+        - mobileCountryCode: Text
+      response:
+        type: GetFeedbackListRes
+  - POST: # UnlinkVehicleAPI
+      endpoint: /{driverId}/unlinkVehicle
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI UnlinkVehicleEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS UNLINK_VEHICLE
+  - POST: # EndRCAssociationAPI
+      endpoint: /{driverId}/endRCAssociation
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI EndRCAssociationEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS END_RC_ASSOCIATION
+  - POST: # DeleteAadhaarAPI
+      endpoint: /{driverId}/deleteAadhaar
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+  - POST: # DeletePanCardAPI
+      endpoint: /{driverId}/deletePanCard
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+  - POST: # AddVehicleAPI
+      endpoint: /{driverId}/addVehicle
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: AddVehicleReq
+      response:
+        type: APISuccess
+      validation: API.Types.ProviderPlatform.validateAddVehicleReq
+      migrate:
+        endpoint: DriverAPI AddVehicleEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS ADD_VEHICLE
+  - POST: # SetRCStatusAPI
+      endpoint: /{driverId}/setRCStatus
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: RCStatusReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI SetRCStatusEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS SET_RC_STATUS
+  - POST:
+      endpoint: /{driverId}/exemptDriverFee/{serviceName}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+        serviceName: ServiceNames
+      request:
+        type: ExemptionAndCashCollectionDriverFeeReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/exemptDriverFee/v2/{token}/{serviceName}
+            auth: ApiAuthV2
+            request:
+               type: ExemptionAndCashCollectionDriverFeeReq
+            params:
+              driverId: Id Driver
+              token: Text
+              serviceName: ServiceNames
+            response:
+              type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_DRIVER_FEE
+
+types:
+  DriverOutstandingBalanceResp:
+    - driverFeeId: Id DriverOutstandingBalanceResp
+    - driverId: Id Driver
+    - govtCharges: Money
+    - govtChargesWithCurrency: PriceAPIEntity
+    - platformFee: PlatformFee
+    - numRides: Int
+    - payBy: UTCTime
+    - totalFee: Money
+    - totalEarnings: Money
+    - totalFeeWithCurrency: PriceAPIEntity
+    - totalEarningsWithCurrency: PriceAPIEntity
+    - startTime: UTCTime
+    - endTime: UTCTime
+    - status: DriverFeeStatus
+  DriverInfoRes:
+    - driverId: Id Driver
+    - firstName: Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
+    - numberOfRides: Int
+    - mobileNumber: Maybe Text
+    - mobileCountryCode: Maybe Text
+    - enabled: Bool
+    - blocked: Bool
+    - blockedReason: Maybe Text
+    - verified: Bool
+    - subscribed: Bool
+    - canDowngradeToSedan: Bool
+    - canDowngradeToHatchback: Bool
+    - canDowngradeToTaxi: Bool
+    - canSwitchToRental: Bool
+    - canSwitchToInterCity: Bool
+    - canSwitchToIntraCity: Bool
+    - vehicleNumber: Maybe Text
+    - selectedServiceTiers: [Text]
+    - driverLicenseDetails: Maybe DriverLicenseAPIEntity
+    - vehicleRegistrationDetails: [DriverRCAssociationAPIEntity]
+    - aadharAssociationDetails: Maybe AadhaarAssociationAPIEntity
+    - panCardDetails: Maybe PanCardAPIEntity
+    - onboardingDate: Maybe UTCTime
+    - lastActivityDate: Maybe UTCTime
+    - createdAt: Maybe UTCTime
+    - drunkAndDriveViolationCount: Int
+    - bundleVersion: Maybe Version
+    - clientVersion: Maybe Version
+    - reactVersion: Maybe Text
+    - alternateNumber: Maybe Text
+    - rating: Maybe Centesimal
+    - availableMerchants: [Text]
+    - merchantOperatingCity: Maybe City
+    - currentAcOffReportCount: Int
+    - totalAcRestrictionUnblockCount: Int
+    - lastACStatusCheckedAt: Maybe UTCTime
+    - currentACStatus: Bool
+    - downgradeReason: Maybe Text
+    - assignedCount : Maybe Int
+    - cancelledCount : Maybe Int
+    - cancellationRate : Maybe Int
+    - windowSize : Maybe Int
+    - blockedDueToRiderComplains: Bool
+    - blockStateModifier: Maybe Text
+    - driverTag: Maybe [TagNameValue]
+    - driverTagObject: Maybe [TagObject]
+    - email: Maybe Text
+    - blockedInfo : [DriverBlockTransactions]
+    - blockCount : Maybe Int
+    - softBlockStiers: Maybe [Text]
+    - softBlockExpiryTime: Maybe UTCTime
+    - softBlockReasonFlag: Maybe Text
+    - driverMode: Maybe DriverMode
+    - lastOfflineTime: Maybe UTCTime
+    - onboardingAs: Maybe OnboardingAs
+  OnboardingAs:
+    enum: "FLEET_DRIVER, INDIVIDUAL"
+  GetFeedbackListRes:
+    - feedbacks: [DriverFeedbackAPIEntity]
+  DriverFeedbackAPIEntity:
+    - rideId: Id Ride
+    - createdAt: UTCTime
+    - feedbackText: Maybe Text
+    - feedbackDetails: Maybe Text
+  DriverLicenseAPIEntity:
+    - driverLicenseId: Id DriverLicense
+    - documentImageId1: Id Image
+    - documentImageId2: Maybe (Id Image)
+    - driverDob: Maybe UTCTime
+    - driverName: Maybe Text
+    - licenseNumber: Text
+    - licenseExpiry: UTCTime
+    - classOfVehicles: [Text]
+    - failedRules: [Text]
+    - verificationStatus: VerificationStatus
+    - consent: Bool
+    - consentTimestamp: UTCTime
+    # - createdAt: UTCTime # do we need it?
+    # - updatedAt UTCTime
+  ActionType:
+          enum: "BLOCK, UNBLOCK"
+  DriverBlockTransactions:
+    - reasonCode :  Maybe Text
+    - blockReason : Maybe Text
+    - blockTimeInHours : Maybe Int
+    - reportedAt : UTCTime
+    - blockLiftTime : Maybe UTCTime
+    - blockedBy : Text
+    - requestorId : Maybe Text
+    - blockReasonFlag : Maybe Text
+    - actionType: Maybe ActionType
+  DriverRCAssociationAPIEntity:
+    - associatedOn: UTCTime
+    - associatedTill: Maybe UTCTime
+    - isRcActive: Bool
+    - details: VehicleRegistrationCertificateAPIEntity
+    # - consent: Bool #do we need it?
+    # - consentTimestamp: UTCTime
+  AadhaarAssociationAPIEntity:
+    - nameOnCard : Maybe Text
+    - driverGender : Maybe Text
+    - driverDob : Maybe Text
+    - aadharNumber : Maybe Text
+    - address : Maybe Text
+    - verificationStatus : VerificationStatus
+    - createdAt : UTCTime
+    - updatedAt : UTCTime
+  PanCardAPIEntity:
+    - panCardNumber: Maybe Text
+    - verificationStatus: VerificationStatus
+    - driverDob: Maybe UTCTime
+    - driverName: Maybe Text
+    - driverNameOnGovtDB: Maybe Text
+    - verifiedBy: Maybe VerifiedBy
+  PlatformFee:
+    - fee: HighPrecMoney
+    - cgst: HighPrecMoney
+    - sgst: HighPrecMoney
+    - feeWithCurrency: PriceAPIEntity
+    - cgstWithCurrency: PriceAPIEntity
+    - sgstWithCurrency: PriceAPIEntity
+  VehicleRegistrationCertificateAPIEntity:
+    - registrationCertificateId: Id VehicleRegistrationCertificate
+    - documentImageId: Id Image
+    - certificateNumber: Text
+    - fitnessExpiry: UTCTime
+    - permitExpiry: Maybe UTCTime
+    - pucExpiry: Maybe UTCTime
+    - insuranceValidity: Maybe UTCTime
+    - vehicleClass: Maybe Text
+    - failedRules: [Text]
+    - vehicleManufacturer: Maybe Text
+    - vehicleCapacity: Maybe Int
+    - vehicleModel: Maybe Text
+    - vehicleColor: Maybe Text
+    - vehicleEnergyType: Maybe Text
+    - reviewRequired: Maybe Bool
+    - reviewedAt: Maybe UTCTime
+    - manufacturerModel: Maybe Text
+    - verificationStatus: VerificationStatus
+    - fleetOwnerId: Maybe Text
+    - vehicleVariant: Maybe VehicleVariant
+    # - createdAt: UTCTime # do we need it?
+    # - updatedAt UTCTime
+  ExemptionAndCashCollectionDriverFeeReq:
+    - paymentIds: [Text]
+    - isExempt: Bool
+    - derive: "'HideSecrets"
+
+extraOperations:
+  - EXTRA_API_COMMON_TYPES_FILE

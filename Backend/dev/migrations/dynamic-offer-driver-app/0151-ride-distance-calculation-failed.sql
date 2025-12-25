@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN distance_calculation_failed boolean;

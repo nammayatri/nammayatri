@@ -1,0 +1,52 @@
+imports:
+  Text: Data.Text
+  FlaggedStatus: Domain.Types.Suspect
+  Merchant: Domain.Types.Merchant
+  APISuccess: Kernel.Types.APISuccess
+  FlaggedCategory: Domain.Types.FlaggedCategory
+  Summary : API.Types.UI.Notification
+
+
+importPackageOverrides:
+    Domain.Types.Merchant: lib-dashboard
+    Tools.Auth: lib-dashboard
+    Environment: lib-dashboard
+    Domain.Types.Person : lib-dashboard
+
+
+module : FlaggedCategory
+types:
+  AddFlagCategoryReq:
+    name : Text
+  DeleteFlagCategoryReq:
+    id : Text
+
+  FlagCategoryList:
+    flagCategoryList : [FlaggedCategory]
+    summary : Summary
+
+apis:
+    - POST:
+        endpoint: /add/flagCategory/
+        auth: DashboardAuth DASHBOARD_ADMIN
+        request:
+          type: API.Types.UI.FlaggedCategory.AddFlagCategoryReq
+        response:
+          type: APISuccess
+
+    - POST:
+        endpoint: /delete/flagCategory/
+        auth: DashboardAuth DASHBOARD_ADMIN
+        request:
+          type: API.Types.UI.FlaggedCategory.DeleteFlagCategoryReq
+        response:
+          type: APISuccess
+
+    - GET:
+        endpoint: /list/flagCategory/
+        auth: DashboardAuth DASHBOARD_USER
+        query:
+          limit: Int
+          offset: Int
+        response:
+          type: API.Types.UI.FlaggedCategory.FlagCategoryList

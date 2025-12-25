@@ -1,0 +1,32 @@
+imports:
+  DriverRideListRes: Domain.Action.UI.Ride
+  Person: Domain.Types.Person
+  RideStatus: Domain.Types.Ride
+
+importPackageOverrides:
+  Domain.Action.UI.Ride: "dynamic-offer-driver-app"
+  Domain.Types.Person: "dynamic-offer-driver-app"
+  Domain.Types.Ride: "dynamic-offer-driver-app"
+
+module: Driver
+
+apis:
+  - GET: # ListDriverRidesForFleetAPI
+      endpoint: /fleet/listRides/{driverId}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Person
+      query:
+        - limit: Integer
+        - offset: Integer
+        - onlyActive: Bool
+        - status: RideStatus
+        - day: Day
+        - fleetOwnerId: Text
+        - numOfDays: Int
+      response:
+        type: DriverRideListRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET LIST_DRIVER_RIDES
+
+types: {}

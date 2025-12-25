@@ -61,6 +61,7 @@ dependencies:
   - base >= 4.7 && < 5
   - mobility-core
   - beckn-spec
+  - beckn-services
   - bytestring
   - record-dot-preprocessor
   - record-hasfield
@@ -79,6 +80,7 @@ dependencies:
   - servant-openapi3
   - dashboard-helper-api
   - unordered-containers
+  - yudhishthira
 
 ghc-options:
   - -Wall
@@ -91,7 +93,9 @@ ghc-options:
   - -hiedir=.hie
 
 library:
-  source-dirs: src
+  source-dirs:
+    - src
+    - src-read-only
   ghc-options:
     - -fhide-source-paths
     - -Wincomplete-uni-patterns
@@ -113,6 +117,8 @@ library:
     - lib-dashboard
     - rider-app
     - shared-services
+    - special-zone-a
+    - payment
 
 executables:
   rider-dashboard-exe:

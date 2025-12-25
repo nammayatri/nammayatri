@@ -61,6 +61,7 @@ library
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -72,6 +73,8 @@ library
   ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
+    , amazonka
+    , amazonka-s3
     , base >=4.7 && <5
     , base16-bytestring
     , base64-bytestring
@@ -86,6 +89,7 @@ library
     , http-client-tls
     , http-media
     , http-types
+    , lens
     , mobility-core
     , openapi3
     , process

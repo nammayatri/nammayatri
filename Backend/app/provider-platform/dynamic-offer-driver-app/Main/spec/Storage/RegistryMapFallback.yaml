@@ -1,0 +1,53 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  BaseUrl: Kernel.Prelude
+  parseBaseUrl: Kernel.Prelude
+  showBaseUrl: Kernel.Prelude
+
+RegistryMapFallback:
+  tableName: registry_map_fallback
+
+
+  fields:
+    subscriberId : Text
+    uniqueId : Text
+    registryUrl : BaseUrl
+
+  beamType:
+    registryUrl: Text
+
+  constraints:
+    subscriberId: PrimaryKey
+    uniqueId: PrimaryKey
+
+
+  fromTType:
+    registryUrl: parseBaseUrl|MI
+
+  toTType:
+    registryUrl: showBaseUrl|I
+
+  queries:
+    findBySubscriberId:
+      kvFunction: findAllWithKV
+      where: subscriberId
+
+    findByUniqueId:
+      kvFunction: findAllWithKV
+      where: uniqueId
+
+    findBySubscriberIdAndUniqueId:
+      kvFunction: findOneWithKV
+      where:
+        and: [subscriberId, uniqueId]
+
+
+
+  sqlType:
+    registryUrl: character varying(255)
+    uniqueId: character (36)
+    subscriberId: character varying(255)
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

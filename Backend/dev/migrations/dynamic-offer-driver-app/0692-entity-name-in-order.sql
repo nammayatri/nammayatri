@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.payment_order ADD COLUMN entity_name character varying(255);

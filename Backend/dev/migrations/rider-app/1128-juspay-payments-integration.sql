@@ -38,8 +38,8 @@ CREATE TABLE atlas_app.payment_transaction (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-INSERT INTO atlas_app.merchant_service_config (merchant_id, service_name, config_json)
-SELECT m.id, 'Payment_Juspay',
+INSERT INTO atlas_app.merchant_service_config (merchant_id, merchant_operating_city_id, service_name, config_json)
+SELECT m.merchant_id, m.id, 'Payment_Juspay',
   json_build_object(
       'apiKey','0.1.0|2|aH69syF+qmjP8wpjdwy5KdrHqhsTd1s7lH6TupSUYwMAS5rpi4jGDsA6Nt1uqGPWZxdMshc18cDhmQ=='
     , 'returnUrl','dummyReturnUrl'
@@ -48,4 +48,4 @@ SELECT m.id, 'Payment_Juspay',
     , 'username', 'dummyUsername'
     , 'password','0.1.0|0|MbGCmY0OMu39bi7dEokkZ4kvgN17S+whz29QJa+XXUy+mue72jMsAHfVGd4lM9AEWbCqRywCu2RTpA=='
   )
-FROM atlas_app.merchant m;
+FROM atlas_app.merchant_operating_city m;

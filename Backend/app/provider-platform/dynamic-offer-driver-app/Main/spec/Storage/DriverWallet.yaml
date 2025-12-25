@@ -1,0 +1,50 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Driver: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  HighPrecMoney: Kernel.Types.Common
+  UTCTime: Data.Time
+  PayoutOrder: Lib.Payment.Domain.Types.PayoutOrder
+
+DriverWallet:
+  tableName: driver_wallet
+  derives: "Generic,Show"
+  types:
+    TransactionType:
+      enum: "RIDE_TRANSACTION,PAYOUT,TOPUP"
+      derive: "HttpInstance"
+    PayoutStatus:
+      enum: "INITIATED,FAILED,SETTLED"
+      derive: "HttpInstance"
+  fields:
+    id: Id DriverWallet
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Id MerchantOperatingCity
+    driverId: Id Driver
+    rideId: Maybe (Id Ride)
+    transactionType: TransactionType
+    collectionAmount: Maybe HighPrecMoney
+    gstDeduction: Maybe HighPrecMoney
+    merchantPayable: Maybe HighPrecMoney
+    driverPayable: Maybe HighPrecMoney
+    runningBalance: HighPrecMoney
+    payoutOrderId: Maybe (Id PayoutOrder)
+    payoutStatus: Maybe PayoutStatus
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  constraints:
+    id: PrimaryKey
+  queries:
+    findAllByPayoutOrderId:
+      kvFunction: findAllWithKV
+      where: payoutOrderId
+  sqlType:
+    collectionAmount: numeric(30,2)
+    gstDeduction: numeric(30,2)
+    merchantPayable: numeric(30,2)
+    driverPayable: numeric(30,2)
+    runningBalance: numeric(30,2)
+    transactionType: character varying(255)
+  extraOperations:
+    - EXTRA_QUERY_FILE

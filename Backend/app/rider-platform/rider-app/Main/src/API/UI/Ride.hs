@@ -15,9 +15,10 @@
 module API.UI.Ride
   ( API,
     handler,
-    DRide.GetDriverLocResp,
+    DARide.GetDriverLocResp,
     DRide.GetRideStatusResp (..),
     DRide.EditLocationReq (..),
+    DRide.EditLocationResp (..),
   )
 where
 
@@ -28,10 +29,10 @@ import qualified Domain.Types.Person as SPerson
 import qualified Domain.Types.Ride as SRide
 import Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.Ride as DARide
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
@@ -41,7 +42,7 @@ type API =
            :> ( "driver"
                   :> "location"
                   :> TokenAuth
-                  :> Post '[JSON] DRide.GetDriverLocResp
+                  :> Post '[JSON] DARide.GetDriverLocResp
                   :<|> "status"
                   :> TokenAuth
                   :> Get '[JSON] DRide.GetRideStatusResp
@@ -49,21 +50,41 @@ type API =
                   :> "location"
                   :> TokenAuth
                   :> ReqBody '[JSON] DRide.EditLocationReq
-                  :> Post '[JSON] APISuccess
+                  :> Post '[JSON] DRide.EditLocationResp
+                  :<|> "deliveryImage"
+                  :> TokenAuth
+                  :> Get '[JSON] Text
               )
+           :<|> "driver"
+             :> "photo"
+             :> "media"
+             :> TokenAuth
+             :> MandatoryQueryParam "filePath" Text
+             :> Get '[JSON] Text
        )
 
 handler :: FlowServer API
-handler rideId =
-  getDriverLoc rideId
-    :<|> getRideStatus rideId
-    :<|> editLocation rideId
+handler =
+  rideRelatedApis
+    :<|> getDriverPhoto
+  where
+    rideRelatedApis rideId =
+      getDriverLoc rideId
+        :<|> getRideStatus rideId
+        :<|> editLocation rideId
+        :<|> getDeliveryImage rideId
 
-getDriverLoc :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetDriverLocResp
-getDriverLoc rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLoc rideId personId
+getDriverLoc :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DARide.GetDriverLocResp
+getDriverLoc rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DARide.getDriverLoc rideId
+
+getDriverPhoto :: (Id SPerson.Person, Id Merchant.Merchant) -> Text -> FlowHandler Text
+getDriverPhoto (personId, _) filePath = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverPhoto filePath
 
 getRideStatus :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetRideStatusResp
 getRideStatus rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getRideStatus rideId personId
 
-editLocation :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> DRide.EditLocationReq -> FlowHandler APISuccess
+editLocation :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> DRide.EditLocationReq -> FlowHandler DRide.EditLocationResp
 editLocation rideId (personId, merchantId) editLocationReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.editLocation rideId (personId, merchantId) editLocationReq
+
+getDeliveryImage :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler Text
+getDeliveryImage rideId (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDeliveryImage rideId (personId, merchantId)

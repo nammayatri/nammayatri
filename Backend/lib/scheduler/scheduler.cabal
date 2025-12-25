@@ -32,7 +32,6 @@ library
       Lib.Scheduler.Error
       Lib.Scheduler.Handler
       Lib.Scheduler.JobHandler
-      Lib.Scheduler.JobStorageType.DB.Lib
       Lib.Scheduler.JobStorageType.DB.Queries
       Lib.Scheduler.JobStorageType.DB.Table
       Lib.Scheduler.JobStorageType.Redis.Queries
@@ -51,6 +50,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -69,6 +69,7 @@ library
       RecordWildCards
       ScopedTypeVariables
       StandaloneDeriving
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -90,7 +91,6 @@ library
     , containers
     , euler-hs
     , exceptions
-    , hashmap
     , mobility-core
     , postgresql-simple
     , prometheus-client

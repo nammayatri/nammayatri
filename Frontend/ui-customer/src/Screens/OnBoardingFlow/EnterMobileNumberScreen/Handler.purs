@@ -25,6 +25,7 @@ import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Screens.EnterMobileNumberScreen.View as EnterMobileNumberScreen
 import Types.App (GlobalState(..), FlowBT, ScreenType(..), defaultGlobalState)
 import Presto.Core.Types.Language.Flow (getLogFields)
+import Engineering.Helpers.Events as EHE
 
 
 enterMobileNumberScreen ::FlowBT String ScreenOutput
@@ -33,6 +34,8 @@ enterMobileNumberScreen = do
   let (GlobalState defaultGlobalState') = defaultGlobalState
   logField_ <- lift $ lift $ getLogFields
   act <- lift $ lift $ runScreen $ EnterMobileNumberScreen.screen state'.enterMobileNumberScreen{data{logField = logField_}}
+  let _ = EHE.addEvent (EHE.defaultEventObject "phone_num_screen_loaded") { module = "onboarding"}
+  let _ = EHE.addEvent (EHE.defaultEventObject "isd_code_interacted") { module = "onboarding"}
   case act of
     GoToAccountSetUp state -> do 
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber ->  state) 

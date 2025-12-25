@@ -1,0 +1,39 @@
+imports:
+  StuckBookingsCancelReq: Dashboard.Common.Booking
+  StuckBookingsCancelRes: Dashboard.Common.Booking
+  MultipleBookingSyncReq: Dashboard.Common.Booking
+  MultipleBookingSyncResp: Dashboard.Common.Booking
+
+module: Booking
+
+apis:
+  - POST: # StuckBookingsCancelAPI
+      endpoint: /cancel/allStuck
+      auth: ApiAuthV2
+      request:
+        type: StuckBookingsCancelReq
+      response:
+        type: StuckBookingsCancelRes
+      migrate:
+        endpoint: BookingAPI StuckBookingsCancelEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES STUCK_BOOKING_CANCEL
+  - POST: # MultipleBookingSyncAPI
+      endpoint: /sync
+      name: PostBookingSyncMultiple
+      auth: ApiAuthV2
+      request:
+        type: MultipleBookingSyncReq
+      response:
+        type: MultipleBookingSyncResp
+      validation: Dashboard.Common.Booking.validateMultipleBookingSyncReq
+      migrate:
+        endpoint: BookingAPI MultipleBookingSyncEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES MULTIPLE_BOOKING_SYNC
+
+# types are common for rider and provider dashboard
+types: {}
+
+extraOperations:
+  - EXTRA_API_COMMON_TYPES_FILE

@@ -15,13 +15,13 @@
 
 module Screens.AppUpdatePopUpScreen.Controller where
 
-import Prelude (Unit, pure, unit, class Show, bind)
+import Prelude (Unit, pure, unit, class Show, bind, (==))
 
 import Effect (Effect)
-import PrestoDOM (Eval, Props, exit, continue, continueWithCmd)
-import Prelude (($))
+import PrestoDOM (Eval, update, Props, exit, continue, continueWithCmd)
+import Prelude (($), discard, void, class Show, show, (<>))
 import PrestoDOM.Types.Core (class Loggable)
-import Screens.Types (AppUpdatePopUpScreenState)
+import Screens.Types (AppUpdatePopUpScreenState, AppUpdatePoppupFlowType (..))
 import Components.PopUpModal as PopUpModal
 import Screens (ScreenName(..), getScreen)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
@@ -34,7 +34,15 @@ import Effect.Uncurried (runEffectFn1)
 data ScreenOutput = Decline | Accept | Exit
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (OnCloseClick) = "OnCloseClick"
+  show (OnAccept) = "OnAccept"
+  show (AfterRender) = "AfterRender"
+  show (BackPressed) = "BackPressed"
+  show (OnResumeCallBack) = "OnResumeCallBack"
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (AppUpdatedModelAction var1) = "AppUpdatedModelAction_" <> show var1
+  show (NoAction) = "NoAction"
+  show (ExitScreen) = "ExitScreen"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -74,9 +82,12 @@ eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
     ]
 
 
-eval BackPressed state = do 
-  _ <- pure $ JB.minimizeApp ""
-  continue state
+eval BackPressed state = 
+  if state.appUpdatedView.popupFlowType == REG_PROF_PAN_AADHAAR
+    then exit $ Decline
+  else do
+    _ <- pure $ JB.minimizeApp ""
+    continue state
 eval OnResumeCallBack state = do
   continueWithCmd state [do
     isEnabled <- runEffectFn1 JB.isNetworkTimeEnabled unit
@@ -84,10 +95,11 @@ eval OnResumeCallBack state = do
       pure ExitScreen
     else pure NoAction
     ]
-eval (AppUpdatedModelAction (PopUpModal.OnButton1Click)) state = exit Decline
+eval (AppUpdatedModelAction (PopUpModal.OnButton1Click)) state = exit $ if state.appUpdatedView.popupFlowType == REG_PROF_PAN_AADHAAR then Exit else Decline
 eval (AppUpdatedModelAction (PopUpModal.OnButton2Click)) state = exit Accept
+
 eval ExitScreen state = exit Exit
-eval _ state = continue state
+eval _ state = update state
 
 overrides :: String -> (Action -> Effect Unit) -> AppUpdatePopUpScreenState -> Props (Effect Unit)
 overrides _ push state = [] 

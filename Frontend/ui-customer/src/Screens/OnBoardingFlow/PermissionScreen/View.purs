@@ -19,21 +19,26 @@ import Common.Types.App (LazyCheck(..))
 import Components.ErrorModal as ErrorModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PopUpModal as PopUpModal
+import DecodeUtil as DU
+import Data.Function.Uncurried (runFn3)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
-import Language.Strings (getString)
+import Data.Maybe (fromMaybe, Maybe(..))
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==), (<>), (/=),(&&))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, orientation, padding, text, textSize, textView, width,visibility, id, accessibilityHint, accessibility)
+import PrestoDOM 
 import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig (errorModalConfig, primaryButtonConfig, getLocationBlockerPopUpConfig)
 import Screens.PermissionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
+import Effect.Uncurried (runEffectFn3)
+import Debug
 
 screen :: ST.PermissionScreenState -> Screen Action ST.PermissionScreenState ScreenOutput
 screen initialState  = 
@@ -46,10 +51,13 @@ screen initialState  =
       pure $ pure unit
     else do 
       _ <- JB.storeCallBackDriverLocationPermission push LocationPermissionCallBackCustomer
-      _ <- JB.storeCallBackInternetAction push InternetCallBackCustomer
+      _ <- runEffectFn3 JB.storeCallBackInternetAction push InternetCallBackCustomer "PermissionScreen"
       pure $ pure unit
   )]
-  , eval
+  , eval : (\action state -> do
+      let _ = spy "PermissionScreen state -----" state
+      let _ = spy "PermissionScreen action -----" action
+      eval action state)
   }
 
 view :: forall w . (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
@@ -73,50 +81,49 @@ view push state =
   
 locationAccessPermissionView :: forall w. (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
 locationAccessPermissionView push state = 
-  linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , gravity CENTER
-  , padding (Padding 16 16 16 (if EHC.safeMarginBottom == 0 then 24 else 0))
-  , background Color.blackLessTrans
-  ][ linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , gravity CENTER
-      , padding $ Padding 20 20 20 20
-      , margin $ MarginHorizontal 20 20
-      , cornerRadius 8.0
-      , background Color.white900
-      ][  imageView
-          [ imageWithFallback $ fetchImage FF_ASSET "ic_location_permission_logo"
-          , height $ V 213
-          , width $ V 240
-          , gravity CENTER
+  let appName = fromMaybe state.appConfig.appData.name $ runFn3 DU.getAnyFromWindow "appName" Nothing Just
+  in linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    , padding (Padding 16 16 16 (if EHC.safeMarginBottom == 0 then 24 else 0))
+    , background Color.blackLessTrans
+    ][ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , gravity CENTER
+        , padding $ Padding 20 16 20 20
+        , margin $ MarginHorizontal 20 20
+        , cornerRadius 8.0
+        , background Color.white900
+        ][  imageView
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_location_permission_logo"
+            , height $ V 235
+            , width MATCH_PARENT
+            , gravity CENTER
+            ]
+          , textView 
+            [ text $ "Hey " <> (getValueToLocalStore USER_NAME) <> "!"
+            , textSize FontSize.a_22
+            , color Color.black800
+            , gravity CENTER
+            , lineHeight "27"
+            , margin $ Margin 0 22 0 16
+            , fontStyle $ FontStyle.bold LanguageStyle
           ]
-        , textView 
-          [ text $ "Hey " <> (getValueToLocalStore USER_NAME) <> "!"
-          , textSize FontSize.a_22
-          , color Color.black800
-          , gravity CENTER
-          , lineHeight "27"
-          , margin $ Margin 0 22 0 16
-          , fontStyle $ FontStyle.bold LanguageStyle
+          , textView
+            [ text $ if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then getVarString LOCATION_PERMISSION_SUBTITLE_NEW_USER [appName] else getString LOCATION_PERMISSION_SUBTITLE
+            , textSize FontSize.a_16
+            , color Color.black800
+            , fontStyle $ FontStyle.regular LanguageStyle
+            , lineHeight "22"
+            , gravity CENTER
+            , margin $ MarginBottom 15
+            ]
+          , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
         ]
-        , textView
-          [ text $ getString if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then (LOCATION_PERMISSION_SUBTITLE_NEW_USER "LOCATION_PERMISSION_SUBTITLE_NEW_USER") else LOCATION_PERMISSION_SUBTITLE
-          , textSize FontSize.a_16
-          , color Color.black800
-          , fontStyle $ FontStyle.regular LanguageStyle
-          , lineHeight "22"
-          , gravity CENTER
-          , margin $ MarginBottom 15
-          ]
-        , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
-      ]
-
-      
-  ]
+    ]
 
 buttonView :: forall w. (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
 buttonView push state  = 

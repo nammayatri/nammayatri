@@ -31,9 +31,6 @@ textListItemDescription = "#999999"
 textDanger :: Color
 textDanger = "#fa6259"
 
-greyBackDarkColor :: Color
-greyBackDarkColor = "#D3D3D3"
-
 blueTextColor :: Color
 blueTextColor = "#2172FF"
 
@@ -105,9 +102,6 @@ lightRed = "#16D76893"
 
 blueBack :: Color
 blueBack = "#F6FAFF"
-
-greyDark :: Color
-greyDark = "#D8D8D8"
 
 greyDarker :: Color
 greyDarker = "#D6D6D6"
@@ -358,9 +352,6 @@ inactiveButtonTextPrimary = "#FEF2BD"
 hintText :: Color
 hintText =  "#E5E7E8"
 
-transparentGrey :: Color
-transparentGrey = "#66888888"
-
 golden :: Color
 golden = "#E9BE4D"
 
@@ -385,9 +376,6 @@ grey = "#D0D5DD"
 orange800 :: Color
 orange800 = "#FFA666"
 
-green200 :: Color
-green200 = "#2053BB6F"
-
 linearGradient :: Array (Array Color)
 linearGradient = [
   ["#26FE2D" , "#79F400", "#A6E900", "#C8DD00", "#E6CF00", "#FFBF00", "#FFAE00", "#FF9C05", "#FF8A37", "#FF7755", "#FF6670", "#FF598B", "#FF51A5", "#FF51BE", "#FF57D6", "#FF62EC", "#F66EFF"]
@@ -400,6 +388,7 @@ linearGradient = [
 
 lightMintGreen :: Color
 lightMintGreen = "#F0FAF0"
+
 
 elfGreen :: Color
 elfGreen = "#269574"
@@ -419,3 +408,68 @@ purple = "#9747FF"
 darkGreyishBlue :: Color
 darkGreyishBlue = "#313440"
 
+lightGreyBlue :: Color
+lightGreyBlue = "#E9EEF2F6"
+
+lightGreyBlue1 :: Color
+lightGreyBlue1 = "#383B46"
+
+lightGreyBlue2 :: Color
+lightGreyBlue2 = "#6C7393"
+
+lightGrey1 :: Color
+lightGrey1 = "#F3F3F3"
+
+moonCreme :: Color
+moonCreme = "#FFF5DA"
+
+manatee5 :: Color
+manatee5 = "#059A9CA1"
+
+manatee33 :: Color 
+manatee33 = "#339A9CA1"
+
+gunMetal :: Color 
+gunMetal = "#2E303A"
+
+eerieBlack :: Color 
+eerieBlack = "#1A1C24"
+
+greyBackground :: Color 
+greyBackground = "#F2F2F2"
+
+seashell :: Color
+seashell = "#FFF5EF"
+
+seashellBorder :: Color
+seashellBorder = "#FFECE1"
+
+activeTicketColor :: Color
+activeTicketColor = "#165718"
+
+expiredTicketColor :: Color 
+expiredTicketColor = "#2C2F3A"
+
+backgroundPassengerColor :: Color
+backgroundPassengerColor = "#206423"
+
+abbey :: Color
+abbey = "#47484D"
+
+cloudBurst :: Color
+cloudBurst = "#1D3449"
+
+mutedRed :: Color
+mutedRed = "#E554541A"
+
+amber :: Color
+amber = "#FF85331A"
+
+cosmicLatte :: Color 
+cosmicLatte = "#FFF9EA"
+
+darkGrey :: Color
+darkGrey = "#B9B8B8"
+
+verifiedStateColor :: Color
+verifiedStateColor = "#112F4B"

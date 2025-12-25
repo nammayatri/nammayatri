@@ -14,16 +14,21 @@
 -}
 
 module Screens.SplashScreen.Handler where
+
 import Prelude
 import Control.Monad.Except.Trans (lift)
-import PrestoDOM.Core.Types.Language.Flow (initUIWithScreen)
-import Screens.Types (SplashScreenState)
+import PrestoDOM.Core.Types.Language.Flow (initUIWithScreen, initUIWithNameSpace, runScreenWithNameSpace, runLoggableScreen)
 import Screens.SplashScreen.View as SplashScreen
-import Types.App (FlowBT)
 import Engineering.Helpers.Commons (liftFlow)
-import JBridge (initiateLocationServiceClient)
+import Engineering.Helpers.BackTrack as EHB
+import Types.App as TA
+import Presto.Core.Flow as PCF
+import Data.Maybe
+import Helpers.Utils as HU
+import DecodeUtil as DU
 
-splashScreen :: SplashScreenState → FlowBT String Unit
-splashScreen screenState = do
-    _ <- lift $ lift $ liftFlow $ initiateLocationServiceClient
-    lift $ lift $ initUIWithScreen $ SplashScreen.screen screenState
+splashScreen :: TA.FlowBT String Unit
+splashScreen = do
+  (TA.GlobalState globalState) <- EHB.getState
+  void $ lift $ lift $ runLoggableScreen $ SplashScreen.screen globalState.splashScreen
+  EHB.liftFlowBT HU.hideSplash

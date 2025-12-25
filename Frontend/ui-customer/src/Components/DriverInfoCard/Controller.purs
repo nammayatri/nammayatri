@@ -15,12 +15,20 @@
 
 module Components.DriverInfoCard.Controller where
 
+import MerchantConfig.Types
+
+import Common.Types.App (RentalBookingConfig, City(..))
 import Components.MessagingView as MessagingView
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
-import Screens.Types(Stage, ZoneType(..), SheetState(..), SearchResultType, City(..))
-import Data.Maybe(Maybe)
+import Data.Maybe (Maybe)
+import PrestoDOM
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, BannerCarousalData(..), NavigationMode(..),  FareProductType(..), SpecialTags(..), LocationType, PersonDeliveryDetails(..))
+import Components.BannerCarousel as BannerCarousel
+import Common.Types.App as CTP
 import MerchantConfig.Types
+import Screens.Types as ST
+import RemoteConfig.Types
 
 data Action = NoAction
             | PrimaryButtonAC PrimaryButtonController.Action
@@ -28,11 +36,30 @@ data Action = NoAction
             | CancelRide DriverInfoCardState
             | LocationTracking
             | MessageDriver
-            | OnNavigate
+            | OnNavigate NavigationMode Number Number
             | CallDriver
-            | OnNavigateToZone
             | ToggleBottomSheet
             | CollapseBottomSheet
+            | ShareRide
+            | RideSupport
+            | StartLocationTracking String
+            | WaitingInfo
+            | UpdateBanner
+            | BannerChanged String
+            | BannerStateChanged String
+            | BannerCarousel BannerCarousel.Action
+            | SpecialZoneInfoTag
+            | RateCardInfo
+            | RideDurationTimer String String Int
+            | AddStop
+            | RentalInfo
+            | ShowEndOTP
+            | ShowDirections Number Number
+            | EditingLocation LocationType
+            | GoToDriverProfile
+            | ShowDeliveryImageAndOtp
+            | OnEnqFirstBtnClick
+            | OnEnqSecondBtnClick
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -42,15 +69,52 @@ type DriverInfoCardState =
 type DriverInfoCardProps =
   {
     currentStage :: Stage,
-    currentSearchResultType :: SearchResultType,
     trackingEnabled :: Boolean,
     unReadMessages :: Boolean,
     showCallPopUp :: Boolean,
     isSpecialZone :: Boolean,
     estimatedTime :: String,
-    zoneType :: ZoneType,
-    merchantCity :: City
+    zoneType :: SpecialTags,
+    merchantCity :: City,
+    showBanner :: Boolean,
+    isChatWithEMEnabled :: Boolean,
+    isRateCardAvailable :: Boolean,
+    rideDurationTimer :: String,
+    rideDurationTimerId :: String,
+    endOTPShown :: Boolean,
+    showEndOTP :: Boolean,
+    stageBeforeChatScreen :: Stage,
+    isOtpRideFlow :: Boolean,
+    enquiryBannerData ::  Maybe EnquiryBannerConfig
+  , enquiryBannerUndoTimer :: Maybe Int
   }
+
+
+
+-- , backgroundColor :: String
+-- , title :: EnquiryTitleDataType
+-- , btn1 :: EnquiryBtnDataType
+-- , btn2 :: EnquiryBtnDataType
+-- , image :: EnquiryImageType
+-- }
+
+-- type EnquiryImageType = {
+--   source :: String
+-- , height :: Length
+-- , width :: Length
+-- }
+
+-- type EnquiryTitleDataType = {
+--   text :: String
+-- , color :: String
+-- }
+
+-- type EnquiryBtnDataType = {
+--   title :: String
+-- , color :: String
+-- , backgroundColor :: String
+-- }
+
 
 type DriverInfoCardData =
   { otp :: String
@@ -86,5 +150,25 @@ type DriverInfoCardData =
   , config :: AppConfig
   , vehicleVariant :: String
   , defaultPeekHeight :: Int
-  , bottomSheetState :: SheetState
+  , bottomSheetState :: BottomSheetState
+  , bannerData :: BannerCarousalData
+  , bannerArray :: Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
+  , vehicleModel :: String
+  , vehicleColor :: String
+  , serviceTierName :: Maybe String
+  , providerName :: String
+  , providerType :: CTP.ProviderType
+  , cityConfig :: CityConfig
+  , rentalData :: RentalBookingConfig
+  , fareProductType :: FareProductType
+  , spLocationName :: Maybe String
+  , addressWard :: Maybe String
+  , hasToll :: Boolean
+  , destinationReached :: Boolean
+  , destinationReachedAt :: Int
+  , senderDetails :: Maybe PersonDeliveryDetails
+  , receiverDetails :: Maybe PersonDeliveryDetails
+  , estimatedTimeToReachDestination :: Maybe String
+  , requestorPartyRoles :: Maybe (Array String)
+  , isAirConditioned :: Maybe Boolean
   }

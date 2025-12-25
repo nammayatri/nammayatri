@@ -1,33 +1,53 @@
 imports:
   Text: Data.Text
+  Seconds: Kernel.Types.Common
   TicketService: Domain.Types.TicketService
+  OperationalDate: Domain.Types.TicketService
   BusinessHour: Domain.Types.BusinessHour
   SpecialOccasion: Domain.Types.SpecialOccasion
   SpecialDayType: Domain.Types.SpecialOccasion
   ServiceCategory: Domain.Types.ServiceCategory
   ServicePeopleCategory: Domain.Types.ServicePeopleCategory
   HighPrecMoney: Kernel.Types.Common
+  PriceAPIEntity: Kernel.Types.Common
   ShortId: Kernel.Types.Id
   UTCTime: Kernel.Prelude
   TicketPlace: Domain.Types.TicketPlace
+  PlaceType: Domain.Types.TicketPlace
+  TicketSubPlace: Domain.Types.TicketSubPlace
+  SubPlaceType: Domain.Types.TicketSubPlace
   APISuccess: Kernel.Types.APISuccess
   TicketBooking: Domain.Types.TicketBooking
   BookingStatus: Domain.Types.TicketBooking
+  PaymentMethod: Domain.Types.TicketBooking
+  PeopleTicketQuantity: Domain.Types.TicketBooking
   TicketBookingService: Domain.Types.TicketBookingService
+  TicketBookingServiceCategory: Domain.Types.TicketBookingServiceCategory
+  TicketBookingPeopleCategory: Domain.Types.TicketBookingPeopleCategory
   ServiceStatus: Domain.Types.TicketBookingService
   ExpiryType: Domain.Types.TicketService
+  CancellationCharge: Domain.Types.ServicePeopleCategory
+  Refunds: Lib.Payment.Domain.Types.Refunds
+  Person: Domain.Types.Person
+  CreateOrderResp: Kernel.External.Payment.Interface.Types
+  Summary: Dashboard.Common
 
 module: TicketService
 types:
   TicketServiceResp:
     id: Id TicketService
     placesId: Id TicketPlace
+    subPlaceId: Maybe (Id TicketSubPlace)
     name: Text
     maxVerification: Int
     allowFutureBooking: Bool
     expiry: ExpiryType
     businessHours: [BusinessHourResp]
     shortDesc: Maybe Text
+    serviceDetails: "Maybe [Text]"
+    allowCancellation: Bool
+    noteInfo: Maybe Text
+    priority: Maybe Int
 
   BusinessHourResp:
     id: Id BusinessHour
@@ -37,6 +57,7 @@ types:
     specialDayDescription: Maybe Text
     specialDayType: Maybe SpecialDayType
     operationalDays: [Text]
+    operationalDate: Maybe OperationalDate
     categories: [CategoriesResp]
 
   CategoriesResp:
@@ -45,17 +66,39 @@ types:
     availableSeats: Maybe Int
     allowedSeats: Maybe Int
     bookedSeats: Int
+    maxSelection: Maybe Int
+    isClosed: Bool
+    inclusionPoints: "Maybe [Text]"
     peopleCategories: [PeopleCategoriesResp]
 
   PeopleCategoriesResp:
     id: Id ServicePeopleCategory
     name: Text
     pricePerUnit: HighPrecMoney
+    pricePerUnitWithCurrency: PriceAPIEntity
     description: Text
+    cancellationCharges: "Maybe [CancellationCharge]"
+    iconUrl: Maybe Text
 
   TicketBookingReq:
     visitDate: Day
+    ticketSubPlaceId: Maybe (Id TicketSubPlace)
     services: [TicketBookingServicesReq]
+
+  DirectTicketBookingReq:
+    visitDate: Day
+    ticketSubPlaceId: Maybe (Id TicketSubPlace)
+    services: [TicketBookingServicesReq]
+    paymentMethod: PaymentMethod
+    customerPhoneNumber: Text
+    customerPhoneCountryCode: Maybe Text
+    customerName: Maybe Text
+
+  DirectTicketBookingResp:
+    bookingShortId: ShortId TicketBooking
+    bookingStatus: BookingStatus
+    orderResponse: Maybe CreateOrderResp
+    message: Text
 
   TicketBookingServicesReq:
     serviceId: Id TicketService
@@ -73,42 +116,81 @@ types:
   TicketBookingAPIEntity:
     ticketShortId: Text
     ticketPlaceId: Text
+    ticketSubPlaceId: Maybe Text
     ticketPlaceName: Text
+    placeType: PlaceType
+    iconUrl: Maybe Text
     personId: Text
     amount: HighPrecMoney
+    amountWithCurrency: PriceAPIEntity
     visitDate: Day
     status: BookingStatus
+
+  TicketBookingAPIEntityV2:
+    ticketShortId: Text
+    ticketPlaceId: Text
+    ticketSubPlaceId: Maybe Text
+    ticketPlaceName: Text
+    placeType: PlaceType
+    iconUrl: Maybe Text
+    personId: Text
+    amount: HighPrecMoney
+    amountWithCurrency: PriceAPIEntity
+    visitDate: Day
+    status: BookingStatus
+    peopleTicketQuantity: "Maybe [PeopleTicketQuantity]"
 
   TicketBookingDetails:
     ticketShortId: Text
     ticketPlaceId: Text
     ticketPlaceName: Text
+    ticketSubPlaceId: Maybe Text
     personId: Text
+    customerName: Maybe Text
+    customerPhoneNumber: Maybe Text
     amount: HighPrecMoney
+    amountWithCurrency: PriceAPIEntity
     visitDate: Day
     status: BookingStatus
+    lat: Double
+    lon: Double
     services: [TicketBookingServiceDetails]
+    refundDetails: [Refunds]
 
   TicketBookingServiceDetails:
     ticketServiceShortId: Text
     ticketServiceName: Text
     amount : HighPrecMoney
+    allowCancellation: Bool
+    amountWithCurrency: PriceAPIEntity
     status : ServiceStatus
+    businessHourId : Maybe (Id BusinessHour)
     verificationCount : Int
     slot: Maybe TimeOfDay
     expiryDate : Maybe UTCTime
     categories : [TicketBookingCategoryDetails]
+    noteInfo: Maybe Text
 
-  TicketBookingCategoryDetails :
+  TicketBookingCategoryDetails:
+    id : Id TicketBookingServiceCategory
     name : Text
     bookedSeats: Int
+    cancelledSeats: Maybe Int
     amount: HighPrecMoney
+    amountToRefund: Maybe HighPrecMoney
+    amountWithCurrency: PriceAPIEntity
+    serviceCategoryId: Maybe (Text)
     peopleCategories : [TicketBookingPeopleCategoryDetails]
 
   TicketBookingPeopleCategoryDetails:
+    id : Id TicketBookingPeopleCategory
     name : Text
     pricePerUnit : HighPrecMoney
+    pricePerUnitWithCurrency: PriceAPIEntity
     numberOfUnits : Int
+    numberOfUnitsCancelled : Maybe Int
+    amountToRefund : Maybe HighPrecMoney
+    cancelCharges: "Maybe [CancellationCharge]"
 
   TicketBookingUpdateSeatsReq:
     ticketServiceId: Id TicketService
@@ -116,6 +198,35 @@ types:
     businessHourId: Id BusinessHour
     categoryId: Id ServiceCategory
     updatedBookedSeats: Int
+
+  TicketServiceCancelReq:
+    businessHourId : Id BusinessHour
+    date : Day
+    description : Maybe Text
+    ticketServiceId : Id TicketService
+    ticketServiceCategoryId: Id ServiceCategory
+
+  TicketBookingCancelReq:
+    ticketBookingServices: [TicketBookingServiceCancelReq]
+    ticketBookingShortId: ShortId TicketBooking
+
+  TicketBookingServiceCancelReq:
+    shortId:  ShortId TicketBookingService
+    businessHourId: Id BusinessHour
+    serviceCategory: [TicketBookingServiceCategoryCancelReq]
+
+  TicketBookingServiceCategoryCancelReq:
+    id: Id TicketBookingServiceCategory
+    visitDate: Day
+    serviceCategoryId: Id ServiceCategory
+    peopleCategory: [TicketBookingServicePeopleCategoryCancelReq]
+
+  TicketBookingServicePeopleCategoryCancelReq:
+    id: Id TicketBookingPeopleCategory
+    quantity: Int
+
+  TicketServiceVerificationReq:
+    assignments: "Maybe [SharedLogic.CallBPPInternal.BookingAssignment]"
 
   TicketServiceVerificationResp:
     ticketServiceName: Maybe Text
@@ -125,18 +236,44 @@ types:
     message: Text
     status: TicketVerificationStatus
     amount: Maybe HighPrecMoney
+    bookingShortId: Maybe Text
+    amountWithCurrency: Maybe PriceAPIEntity
     verificationCount: Maybe Int
     startTime: Maybe TimeOfDay
     endTime: Maybe TimeOfDay
     categories: [TicketBookingCategoryDetails]
 
   TicketVerificationStatus:
-    enum: "BookingSuccess,BookingExpired,BookingFuture,BookingAlreadyVerified,DifferentService,PaymentPending,InvalidBooking"
+    enum: "BookingSuccess,BookingExpired,BookingFuture,BookingAlreadyVerified,DifferentService,PaymentPending,InvalidBooking,CancelledBooking"
 
   PeopleCategoriesVerificationRes:
     id: Id ServicePeopleCategory
     name: Text
     pricePerUnit: HighPrecMoney
+    pricePerUnitWithCurrency: PriceAPIEntity
+
+  TicketPlaceAvailability:
+    month: Int
+    closedDays: [Int]
+
+
+  TicketFleetVehicleResp:
+    fleetOwnerId: Text
+    fleetOwnerName: Text
+    vehicleNo: Maybe Text
+    rcId: Text
+    vehicleType: Maybe Text
+    driverId: Maybe Text
+    driverName: Maybe Text
+    isActive: Bool
+
+  TicketPlaceResp:
+    ticketPlace: TicketPlace
+    subPlaces: "[TicketSubPlace]"
+
+  TicketPlaceBookingList:
+    - bookings: [API.Types.UI.TicketService.TicketBookingDetails]
+    - summary: Summary
 
 apis:
   # GET /ticket/places
@@ -151,6 +288,7 @@ apis:
       auth: TokenAuth
       query:
         date: Day
+        subPlaceId: Id TicketSubPlace
       params:
         placeId: Id TicketPlace
       response:
@@ -179,6 +317,17 @@ apis:
       response:
         type: "[API.Types.UI.TicketService.TicketBookingAPIEntity]"
 
+  # # GET /ticket/bookings
+  - GET:
+      endpoint: /ticket/bookings/v2
+      auth: TokenAuth
+      query:
+        limit: Int
+        offset: Int
+        status: BookingStatus
+      response:
+        type: "[API.Types.UI.TicketService.TicketBookingAPIEntityV2]"
+
   # # GET /ticket/bookings/{ticketBookingShortId}/details
   - GET:
       endpoint: /ticket/bookings/{ticketBookingShortId}/details
@@ -188,6 +337,17 @@ apis:
       response:
         type: API.Types.UI.TicketService.TicketBookingDetails
 
+  - POST:
+      endpoint: /ticket/bookings/{personServiceId}/{ticketServiceShortId}/verify/v2
+      auth: TokenAuth
+      params:
+        personServiceId: Id TicketService
+        ticketServiceShortId: ShortId TicketBookingService
+      request:
+        type: API.Types.UI.TicketService.TicketServiceVerificationReq
+      response:
+        type: API.Types.UI.TicketService.TicketServiceVerificationResp
+
   # # POST /ticket/bookings/{personServiceId}/{ticketServiceShortId}/verify
   - POST:
       endpoint: /ticket/bookings/{personServiceId}/{ticketServiceShortId}/verify
@@ -195,6 +355,9 @@ apis:
       params:
         personServiceId: Id TicketService
         ticketServiceShortId: ShortId TicketBookingService
+      query:
+        fleetOwnerId: Text
+        vehicleNo: Text
       response:
         type: API.Types.UI.TicketService.TicketServiceVerificationResp
 
@@ -207,6 +370,24 @@ apis:
       response:
         type: BookingStatus
 
+  # # POST /ticket/bookings/{ticketBookingShortId}/cashCollect
+  - POST:
+      endpoint: /ticket/bookings/{ticketBookingShortId}/cashCollect
+      auth: TokenAuth
+      params:
+        ticketBookingShortId: ShortId TicketBooking
+      response:
+        type: APISuccess
+
+  # POST /ticket/bookings/cancel
+  - POST:
+      endpoint: /ticket/booking/cancel
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.TicketService.TicketBookingCancelReq
+      response:
+        type: APISuccess
+
   # # dashboard APIs
   - POST:
       endpoint: /ticket/bookings/update/seats
@@ -215,3 +396,80 @@ apis:
         type: API.Types.UI.TicketService.TicketBookingUpdateSeatsReq
       response:
         type: APISuccess
+
+  # # cancel service /ticket/bookings/services/cancel
+  - POST:
+      endpoint: /ticket/service/cancel
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.TicketService.TicketServiceCancelReq
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /ticket/place/{placeId}/availability
+      auth: TokenAuth
+      query:
+        isClosed: Bool
+        forceFresh: Bool
+      params:
+        placeId: Id TicketPlace
+      response:
+        type: "[TicketPlaceAvailability]"
+
+  # GET /ticket/places/v2
+  - GET:
+      endpoint: /ticket/places/v2
+      name: getTicketPlacesV2
+      auth: TokenAuth
+      response:
+        type: "[TicketPlaceResp]"
+  - GET:
+      endpoint: /ticket/place/{placeId}
+      name: getTicketPlace
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      response:
+        type: "TicketPlaceResp"
+
+  # GET /ticket/bookings/{ticketServiceShortId}/fleet-vehicles
+  - GET:
+      endpoint: /ticket/places/{placeId}/fleet/VehicleAssociation/list
+      name: getTicketFleetVehicles
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      query:
+        - limit: Int
+        - offset: Int
+        - searchString: Text
+      response:
+        type: "[TicketFleetVehicleResp]"
+  - GET:
+      endpoint: /ticket/places/{placeId}/fleet/VehicleAssociation/list/v2
+      name: getTicketFleetVehiclesV2
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      query:
+        - limit: Int
+        - offset: Int
+        - searchString: Text
+      response:
+        type: "[TicketFleetVehicleResp]"
+
+  # GET /ticket/places/{placeId}/bookings/list
+  - GET:
+      endpoint: /ticket/places/{placeId}/bookings/list
+      name: getTicketPlaceBookings
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      query:
+        limit: Int
+        offset: Int
+      mandatoryQuery:
+        status: BookingStatus
+      response:
+        type: TicketPlaceBookingList

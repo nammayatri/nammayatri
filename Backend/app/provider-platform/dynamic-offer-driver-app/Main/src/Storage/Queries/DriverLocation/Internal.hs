@@ -14,8 +14,10 @@
 
 module Storage.Queries.DriverLocation.Internal where
 
+import qualified Data.List as DL
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant
+import Domain.Types.VehicleVariant
 import Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -25,11 +27,13 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 
 getDriverLocsWithCond ::
-  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) =>
   Id Merchant ->
   Maybe Seconds ->
   LatLong ->
   Meters ->
+  Maybe [VehicleVariant] ->
   m [DriverLocation]
-getDriverLocsWithCond merchantId _mbDriverPositionInfoExpiry LatLong {..} radiusMeters =
-  LF.nearBy lat lon Nothing Nothing radiusMeters.getMeters merchantId
+getDriverLocsWithCond merchantId _mbDriverPositionInfoExpiry LatLong {..} radiusMeters vehicle = do
+  locations <- LF.nearBy lat lon Nothing vehicle radiusMeters.getMeters merchantId Nothing Nothing
+  return $ DL.nubBy (\x y -> x.driverId == y.driverId) locations

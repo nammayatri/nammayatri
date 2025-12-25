@@ -13,7 +13,10 @@
     <string name="please_allow_permission_to_capture_the_image">ചിത്രം പകർത്താൻ അനുമതി അനുവദിക്കുക</string>
     <string name="we_have_updated_your_app_kindly_relaunch">ഞങ്ങൾ നിങ്ങളുടെ ആപ്പ് അപ്‌ഡേറ്റ് ചെയ്‌തു, ആപ്പ് ഇപ്പോൾ വീണ്ടും ലോഡുചെയ്യും.</string>
     <string name="okay_got_it">ശരി, മനസ്സിലായി</string>
+    <string name="okay_got_it_smallcase">ശരി, മനസ്സിലായി</string>
+    <string name="sent">അയച്ചു</string>
     <string name="not_interested">താൽപ്പര്യമില്ല</string>
+    <string name="pet">വളർത്തുമൃഗം</string>
     <string name="too_far">വളരെ ദൂരെ</string>
     <string name="on_another_ride">മറ്റൊരു യാത്രയിൽ</string>
     <string name="accept_offer">ഓഫർ സ്വീകരിക്കുക</string>
@@ -26,7 +29,7 @@
     <string name="tap_on">3. ടാപ്പ് ചെയ്യുക </string>
     <string name="location">സ്ഥാനം</string>
     <string name="phone">ഫോൺ</string>
-    <string name="includes_pickup_charges_10">പിക്കപ്പ് നിരക്കുകൾ ₹ 10 ഉൾപ്പെടുന്നു</string>
+    <string name="includes_pickup_charges_10">പുരോഗമിക്കുക ₹{#amount#}</string>
     <string name="away">ദൂരെ</string>
     <string name="we_made_you_online">ഞങ്ങൾ നിങ്ങളെ ഓൺലൈനാക്കി</string>
     <string name="location_is_turned_on">ലൊക്കേഷൻ ഓണാക്കി</string>
@@ -40,6 +43,9 @@
     <string name="new_ride_available_for_offering">ഓഫറിനായി പുതിയ റൈഡ് ലഭ്യമാണ്</string>
     <string name="no_enabled_browser">നിങ്ങളുടെ ഉപകരണത്തിൽ പ്രവർത്തനക്ഷമമാക്കിയ ബ്രൗസറൊന്നും കണ്ടെത്തിയില്ല, ദയവായി ഒരു ബ്രൗസർ പ്രവർത്തനക്ഷമമാക്കുക അല്ലെങ്കിൽ ഇൻസ്റ്റാൾ ചെയ്യുക</string>
     <string name="message_from_customer">ഉപഭോക്താവിൽ നിന്നുള്ള സന്ദേശം</string>
+    <string name="customer_is_waiting">ഉപഭോക്താവ് കാത്തിരിക്കുന്നു!</string>
+    <string name="please_start_moving_towards_the_pickup_location">ദയവായി പിക്കപ്പ് ലൊക്കേഷനിലേക്ക് നീങ്ങാൻ തുടങ്ങൂ</string>
+    <string name="quick_chats">ദ്രുത ചാറ്റുകൾ:</string>
     <string name="assistance_required">സഹായം ആവശ്യമാണ്</string>
     <string name="tip">ടിപ്പ്</string>
     <string name="qr_for_your_vpa_is_downloaded">നിങ്ങളുടെ vpa-യുടെ QR ഡൗൺലോഡ് ചെയ്തു!!!</string>
@@ -51,5 +57,30 @@
     <string name="accept_goto">Accept “Go To”</string>
     <string name="take_a_clear_selfie">അടയാളപ്പെടുത്തിയ സ്ഥലത്തിനുള്ളിൽ നിങ്ങളുടെ \n ഡ്രൈവിംഗ് ലൈസൻസിനൊപ്പം വ്യക്തമായ ഫോട്ടോ എടുക്കുക</string>
     <string name="need_help">സഹായം ആവശ്യമുണ്ടോ?</string>
-
+    <string name="safety_deviation_alert">നിനക്ക് കാണാനും ഞങ്ങള്‍ നിനക്ക് വേറെ റൂട്ടില്‍ പോയത് കണ്ടു. നിനക്ക് നിനക്ക് ആപേക്ഷികമായി അനുഭവപ്പെടുന്നുണ്ടോ?</string>
+    <string name="everything_okay">എല്ലാം ശരിയാണോ?</string>
+    <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">ഞങ്ങൾ കണ്ടുവരുന്നു, നിങ്ങളുടെ ഡ്രൈവർ ചെലവില്ലാത്തതായിരിക്കുന്നു. നിങ്ങൾക്ക് സുരക്ഷിതമായ യാത്ര അനുഭവപ്പെടുന്നുണ്ടോ?</string>
+    <string name="test_request_successful">ടെസ്റ്റ് റൈഡ് അഭ്യർത്ഥന വിജയിച്ചു!</string>    <string name="customer_edited">ഗ്രാഹകന്‍ ഒരു സ്റ്റോപ്പ് എഡിറ്റ് ചെയ്തു!</string>
+    <string name="customer_added">ഗ്രാഹകന്‍ ഒരു സ്റ്റോപ്പ് ചേർത്തു!</string>
+    <string name="navigate_to_location">സ്ഥാനത്തിലേക്ക് നാവിഗേറ്റ് ചെയ്യുക</string>
+    <string name="close">അടയ്ക്കുക</string>
+    <string name="today">ഇന്ന്</string>
+    <string name="now"> ഇപ്പോള്‍</string>
+    <string name="rental"> റെന്റൽ</string>
+    <string name="intercity"> ഇന്റർസിറ്റി </string>
+    <string name="zone_pickup_extra">വലയ പിക്കപ്പ് അതിരുകൾ</string>
+    <string name="you_are_near_a_special_pickup_zone">നിങ്ങൾ ഒരു പ്രത്യേക \n പിക്കപ്പ് വലയത്തിൽ ഉള്ളുകൾ</string>
+    <string name="zone_pickup">പിക്കപ്പ് സോണ്‍</string>
+    <string name="toll_text">ടോൾ ഉൾപ്പെടുത്തിയിട്ടുണ്ട്</string>
+    <string name="new_distance">പുതിയ ദൂരം :</string>
+    <string name="new_fare">പുതിയ തുക :</string>
+    <string name="no_change">മാറ്റമില്ല</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"അതിരിക്കുകയുമില്ല. ടിപ്സുകളുമില്ല. കാത്തിരിക്കൽ ചാർജും ഇല്ല."</string>
+    <string name="third_party_booking">"മൂന്നാംകക്ഷി ബുക്കിംഗ്"</string>
+    <string name="parking_charges">%1$.0f₹ പാർക്കിംഗ്</string>
+    <string name="includes">ഉൾപ്പെടുന്നു</string>
+    <string name="stops_info">%1$d സ്റ്റോപ്പുകൾ (സ്റ്റോപ്പ് ചാർജ് ഉൾപ്പെടെ)</string>
+    <string name="stops">%1$d സ്റ്റോപ്പുകൾ</string>
+    <string name="round_trip">റൗണ്ട് ട്രിപ്പ്</string>
+    <string name="points">പോയിന്റുകൾ</string>
 </resources>

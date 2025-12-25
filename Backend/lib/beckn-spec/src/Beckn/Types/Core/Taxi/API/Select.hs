@@ -15,19 +15,40 @@
 module Beckn.Types.Core.Taxi.API.Select where
 
 import Beckn.Types.Core.Taxi.Select (SelectMessage)
-import Kernel.Prelude
+import qualified BecknV2.OnDemand.Types as Spec
+import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type SelectReq = BecknReq SelectMessage
+
+type SelectReqV2 = Spec.SelectReq
 
 type SelectRes = AckResponse
 
 type SelectAPI =
   "select"
-    :> ReqBody '[JSON] SelectReq
+    -- :> ReqBody '[JSON] SelectReq
+    :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] SelectRes
 
 selectAPI :: Proxy SelectAPI
 selectAPI = Proxy
+
+type SelectAPIV1 =
+  "select"
+    :> ReqBody '[JSON] SelectReq
+    :> Post '[JSON] SelectRes
+
+selectAPIV1 :: Proxy SelectAPIV1
+selectAPIV1 = Proxy
+
+type SelectAPIV2 =
+  "select"
+    :> ReqBody '[JSON] SelectReqV2
+    :> Post '[JSON] SelectRes
+
+selectAPIV2 :: Proxy SelectAPIV2
+selectAPIV2 = Proxy

@@ -15,6 +15,8 @@ INSERT INTO atlas_driver_offer_bpp.restricted_extra_fare VALUES ('7d092382-7634-
 
 INSERT INTO atlas_driver_offer_bpp.restricted_extra_fare VALUES ('6d092382-7634-eb1a-b9b9-27a2ff657f48','favorit0-0000-0000-0000-00000favorit','AUTO_RICKSHAW',0,10);
 
+INSERT INTO atlas_driver_offer_bpp.restricted_extra_fare VALUES ('485b5b27-63b0-a63e-a0a5-947484416a58','favorit0-0000-0000-0000-00000favorit','BIKE',0,10);
+
 
 INSERT INTO atlas_driver_offer_bpp.restricted_extra_fare VALUES ('1d092382-7634-eb1a-b9b9-27a2ff657f48','favorit0-0000-0000-0000-00000favorit','SUV',3,20);
 
@@ -24,3 +26,4 @@ INSERT INTO atlas_driver_offer_bpp.restricted_extra_fare VALUES ('9d092382-7634-
 
 INSERT INTO atlas_driver_offer_bpp.restricted_extra_fare VALUES ('5d092382-7634-eb1a-b9b9-27a2ff657f48','favorit0-0000-0000-0000-00000favorit','AUTO_RICKSHAW',3,20);
 
+INSERT INTO atlas_driver_offer_bpp.restricted_extra_fare VALUES ('285b5b27-63b0-a63e-a0a5-947484416a58','favorit0-0000-0000-0000-00000favorit','BIKE',3,20);

@@ -1,0 +1,338 @@
+imports:
+  Booking: Dashboard.Common
+  Customer: Dashboard.Common
+  Ride: Dashboard.Common
+  Summary: Dashboard.Common
+  Distance: Kernel.Types.Distance
+  HighPrecMeters : Kernel.Types.Distance
+  ShortId: Kernel.Types.Id
+  Money: Kernel.Types.Price
+  PriceAPIEntity: Kernel.Types.Price
+  HighPrecMoney: Kernel.Types.Price
+  Seconds: Kernel.Types.Time
+  UTCTime: Kernel.Prelude
+  FareProductType: Domain.Types
+  TripCategory: Domain.Types
+  VehicleVariant: Domain.Types.VehicleVariant
+  Centesimal: Kernel.Types.Centesimal
+  BaseUrl: Kernel.Prelude
+  GetRoutesResp: Kernel.External.Maps
+  MultipleRideSyncResp: Dashboard.Common.Ride
+  CancellationReasonCode: Dashboard.Common.Booking
+  Booking: Dashboard.Common
+  BookingStatus: Dashboard.RiderPlatform.Ride
+  Classification: Kernel.External.Ticket.Interface.Types
+
+module: Ride
+
+apis:
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - bookingStatus: BookingStatus
+        - rideShortId: (ShortId Ride)
+        - customerPhoneNo: Text
+        - driverPhoneNo: Text
+        - from: UTCTime
+        - to: UTCTime
+      response:
+        type: RideListRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT RIDES RIDE_LIST
+  - GET:
+      endpoint: /rideinfo/{rideId}
+      name: GetRideInfo
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: RideInfoRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS RIDE_INFO_CUSTOMER
+  - GET:
+      endpoint: /cancellationChargesWaiveOff/{rideId}
+      name: CancellationChargesWaiveOff
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: CancellationChargesWaiveOffRes
+  - GET:
+      endpoint: /{rideId}/info
+      name: GetShareRideInfo
+      auth: NoAuth
+      params:
+        rideId: Id Ride
+      response:
+        type: ShareRideInfoRes
+  - GET:
+      endpoint: /{rideShortId}/rideInfo
+      name: GetShareRideInfoByShortId
+      auth: NoAuth
+      params:
+        rideShortId: ShortId Ride
+      response:
+        type: ShareRideInfoRes
+  - GET:
+      endpoint: /trip/route/{rideId}
+      auth: NoAuth
+      params:
+        rideId: Id Ride
+      mandatoryQuery:
+        - lat: Double
+        - lon: Double
+      response:
+        type: GetRoutesResp
+  - GET:
+      endpoint: /pickup/route/{rideId}
+      auth: NoAuth
+      params:
+        rideId: Id Ride
+      mandatoryQuery:
+        - lat: Double
+        - lon: Double
+      response:
+        type: GetRoutesResp
+  - POST:
+      endpoint: /sync
+      name: PostRideSyncMultiple
+      auth: ApiAuthV2
+      request:
+        type: MultipleRideSyncReq
+      response:
+        type: MultipleRideSyncResp
+      migrate:
+        endpoint: RideAPI MultipleRideSyncRideEndpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT RIDES MULTIPLE_RIDE_SYNC
+  - POST:
+      endpoint: /cancel
+      name: PostRideCancelMultiple
+      auth: ApiAuthV2
+      request:
+        type: MultipleRideCancelReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: RideAPI MultipleRideCancelRideEndpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT RIDES MULTIPLE_RIDE_CANCEL
+  - GET:
+      endpoint: /kapture/list
+      auth: ApiAuthV2
+      query:
+        - rideShortId: (ShortId Ride)
+        - countryCode: Text
+        - phoneNumber: Text
+        - supportPhoneNumber: Text
+      response:
+        type: TicketRideListRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT RIDES TICKET_RIDE_LIST_API
+
+types:
+  RideListRes:
+    - totalItems: Int # for backward compatibility
+    - summary: Summary
+    - rides: [RideListItem]
+  RideListItem:
+    - rideShortId: ShortId Ride
+    - rideCreatedAt: UTCTime
+    - rideId: Id Ride
+    - customerName: Maybe Text
+    - customerPhoneNo: Maybe Text
+    - driverName: Text
+    - driverPhoneNo: Text
+    - vehicleNo: Text
+    - bookingStatus: BookingStatus
+    - nextStopLocation: Maybe Location
+    - rideScheduledAt: UTCTime
+    - fareProductType: FareProductType # TODO: For backward compatibility  please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+    - tripCategory: TripCategory
+    - endOtp: Maybe Text
+    - isSafetyPlus: Bool
+  RideInfoRes:
+    - rideId: Id Ride
+    - bookingId: Id Booking
+    - rideStatus: RideStatus
+    - customerName: Maybe Text
+    - customerPhoneNo: Maybe Text
+    - rideOtp: Text
+    - customerPickupLocation: Location
+    - customerDropLocation: Maybe Location
+    - driverName: Text
+    - driverPhoneNo: Maybe Text
+    - driverAlternatePhoneNo: Maybe Text
+    - driverRegisteredAt: Maybe UTCTime
+    - vehicleNo: Text
+    - vehicleModel: Text
+    - vehicleVariant: VehicleVariant
+    - vehicleServiceTierName: Maybe Text
+    - rideBookingTime: UTCTime
+    - actualDriverArrivalTime: Maybe UTCTime
+    - rideStartTime: Maybe UTCTime
+    - rideEndTime: Maybe UTCTime
+    - rideDistanceEstimated: Maybe HighPrecMeters
+    - rideDistanceActual: Maybe HighPrecMeters
+    - chargeableDistance: Maybe HighPrecMeters
+    - rideDistanceEstimatedWithUnit: Maybe Distance
+    - rideDistanceActualWithUnit: Maybe Distance
+    - chargeableDistanceWithUnit: Maybe Distance
+    - estimatedFare: Money
+    - actualFare: Maybe Money
+    - estimatedFareWithCurrency: PriceAPIEntity
+    - actualFareWithCurrency: Maybe PriceAPIEntity
+    - estimatedRideDuration: Maybe Seconds
+    - rideDuration: Maybe Seconds
+    - cancelledTime: Maybe UTCTime
+    - cancelledBy: Maybe CancellationSource
+    - nextStopLocation: Maybe Location
+    - rideScheduledAt: UTCTime
+    - fareProductType: FareProductType  # TODO: Deprecated  please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+    - tripCategory: TripCategory
+    - endOtp: Maybe Text
+    - estimateFareBP: Maybe [EstimateBreakup]
+    - merchantOperatingCityId: Maybe Text
+    - estimatedDistance: Maybe HighPrecMeters
+    - computedPrice: Maybe HighPrecMoney
+    - fareBreakup: [FareBreakup]
+    - rideCreatedAt: UTCTime
+    - roundTrip: Maybe Bool
+    - mobileCountryCode: Maybe Text
+    - isSafetyPlus: Bool
+    - isAirConditioned: Bool
+  CancellationChargesWaiveOffRes:
+    - rideId: Id Ride
+    - waivedOffAmount: Maybe HighPrecMoney
+    - waivedOffAmountWithCurrency: Maybe PriceAPIEntity
+    - waivedOffSuccess: Bool
+  ShareRideInfoRes:
+    - id: Id Ride
+    - bookingId: Id Booking
+    - status: RideStatus
+    - driverName: Text
+    - driverNumber: Maybe Text
+    - driverRating: Maybe Centesimal
+    - vehicleNumber: Text
+    - vehicleModel: Text
+    - vehicleColor: Text
+    - trackingUrl: Maybe BaseUrl
+    - estimatedDistance: Maybe HighPrecMeters
+    - estimatedDistanceWithUnit: Maybe Distance
+    - rideStartTime: Maybe UTCTime
+    - rideEndTime: Maybe UTCTime
+    - userFirstName: Maybe Text
+    - userLastName: Maybe Text
+    - fromLocation: Location
+    - toLocation: Maybe Location
+    - sosStatus: Maybe SosStatus
+    - vehicleVariant: VehicleVariant
+    - nextStopLocation: Maybe Location
+    - rideScheduledAt: UTCTime
+    - fareProductType: FareProductType    # TODO: For backward compatibility please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+    - tripCategory: TripCategory
+    - estimatedEndTimeRange: Maybe (Kernel.Prelude.UTCTime, Kernel.Prelude.UTCTime) # FIXME qualified name does not generate inside of tuple
+    - destinationReachedAt: Maybe UTCTime
+  CancellationSource:
+    - enum: ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication
+  RideStatus:
+    - enum: UPCOMING_RIDE, NEW, INPROGRESS, COMPLETED, CANCELLED
+  SosStatus:
+    - enum: NotResolved, Pending, Resolved, MockPending, MockResolved
+  EstimateBreakup:
+    - title: Text
+    - price: EstimateBreakupPrice
+  EstimateBreakupPrice:
+    - recordType: NewType
+    - value: PriceAPIEntity
+  FareBreakup:
+    - amount: Price
+    - description: Text
+    - entityId: Text
+    - entityType: FareBreakupEntityType
+  FareBreakupEntityType:
+    - enum: BOOKING_UPDATE_REQUEST, BOOKING, RIDE, INITIAL_BOOKING
+  MultipleRideSyncReq:
+    - recordType: NewType
+    - rides: [MultipleRideItem]
+    - derive: "'HideSecrets"
+  MultipleRideItem:
+    - recordType: NewType
+    - rideId: Id Ride
+  BookingCancelledReq:
+    - bookingId: Id Booking
+    - cancellationReasonCode: CancellationReasonCode
+    - cancellationStage: CancellationStage
+    - additionalInfo: Maybe Text
+  MultipleRideCancelReq:
+    - recordType: NewType
+    - multipleRideCancelInfo: [BookingCancelledReq]
+    - derive: "'HideSecrets"
+  CancellationStage:
+    - enum: "OnSearch, OnInit, OnConfirm, OnAssign"
+  TicketRideListRes:
+    - recordType: NewType
+    - rides: [RideInfo]
+    - derive': "Show, Generic, ToSchema"
+  RideInfo:
+     - rideShortId: ShortId Ride
+     - customerName: Maybe Text
+     - customerPhoneNo: Maybe Text
+     - driverName: Text
+     - driverPhoneNo: Maybe Text
+     - vehicleNo: Text
+     - status: BookingStatus
+     - rideCreatedAt: UTCTime
+     - pickupLocationLat: Maybe Double
+     - pickupLocationLon: Maybe Double
+     - pickupLocationStreet: Maybe Text
+     - pickupLocationCity: Maybe Text
+     - pickupLocationState: Maybe Text
+     - pickupLocationCountry: Maybe Text
+     - pickupLocationBuilding: Maybe Text
+     - pickupLocationAreaCode: Maybe Text
+     - pickupLocationArea: Maybe Text
+     - dropLocationLat: Maybe Double
+     - dropLocationLon: Maybe Double
+     - dropLocationStreet: Maybe Text
+     - dropLocationCity: Maybe Text
+     - dropLocationState: Maybe Text
+     - dropLocationCountry: Maybe Text
+     - dropLocationBuilding: Maybe Text
+     - dropLocationAreaCode: Maybe Text
+     - dropLocationArea: Maybe Text
+     - fare: Maybe Money
+     - fareWithCurrency: Maybe PriceAPIEntity
+     - personId: Id Customer
+     - nextStopLocation: Maybe Location
+     - rideScheduledAt: UTCTime
+     - fareProductType: FareProductType   # TODO :: For backward compatibility  please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+     - tripCategory: TripCategory
+     - endOtp: Maybe Text
+     - classification: Classification
+     - derive': "Show, Generic, ToSchema"
+  Location:
+    - id: Id Location
+    - lat: Double
+    - lon: Double
+    - address: LocationAddress
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - derive: "Show"
+  LocationAddress:
+    - street: Maybe Text
+    - city: Maybe Text
+    - state: Maybe Text
+    - country: Maybe Text
+    - building: Maybe Text
+    - areaCode: Maybe Text
+    - area: Maybe Text
+    - derive: "Show"
+  BookingStatus:
+    - enum: UPCOMING, UPCOMING_6HRS, ONGOING, ONGOING_6HRS, RCOMPLETED, RCANCELLED
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE

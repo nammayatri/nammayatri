@@ -6,6 +6,8 @@ let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let transporter = ./dynamic-offer-driver-app.dhall
 
+let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+
 let schedulerConfig =
       { loggerConfig =
               common.loggerConfig
@@ -14,12 +16,13 @@ let schedulerConfig =
               , prettyPrinting = True
               }
       , esqDBCfg = appCfg.esqDBCfg
+      , esqDBReplicaCfg = appCfg.esqDBReplicaCfg
       , metricsPort = +8056
       , hedisCfg = appCfg.hedisCfg
       , hedisClusterCfg = appCfg.hedisClusterCfg
       , hedisNonCriticalCfg = appCfg.hedisCfg
       , hedisNonCriticalClusterCfg = appCfg.hedisClusterCfg
-      , hedisMigrationStage = True
+      , hedisMigrationStage = False
       , cutOffHedisCluster = False
       , hedisPrefix = "driver-offer-scheduler"
       , port = +8055
@@ -38,6 +41,8 @@ let schedulerConfig =
       , block = +10000
       , readCount = +1
       , kafkaProducerCfg = appCfg.kafkaProducerCfg
+      , cacConfig = appCfg.cacConfig
+      , inMemConfig
       }
 
 in  { appCfg =

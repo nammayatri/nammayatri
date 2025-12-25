@@ -20,7 +20,7 @@ view config =
   , orientation config.orientation
   ](map (\_ -> linearLayout[height config.height
   , width config.width
-  , background Color.black500
+  , background config.color
   , cornerRadius $ getCornerRadius config.width
   , margin viewConfig.margin
   ][]) (getArray config.count))
@@ -35,7 +35,7 @@ getConfigByOrientation orientation config = case orientation of
   , width : config.layoutWidth
   }
   HORIZONTAL -> {
-    margin : MarginVertical 2 2
+    margin : MarginHorizontal 2 2
   , height : config.layoutHeight
   , width : WRAP_CONTENT
   }
@@ -49,6 +49,7 @@ type Config = {
 , width :: Length
 , layoutWidth :: Length
 , layoutHeight :: Length
+, color :: String
 }
 
 getCornerRadius :: Length -> Number

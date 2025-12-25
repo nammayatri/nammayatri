@@ -1,0 +1,32 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Location: Domain.Types.Location
+
+LocationMapping:
+  tableName: location_mapping
+
+  types:
+    LocationMappingTags:
+      enum: "WALK_LEG, BOOKING, SEARCH_REQUEST, RIDE, BOOKING_UPDATE_REQUEST"
+
+  fields:
+    id : Id LocationMapping
+    tag : LocationMappingTags
+    locationId : Id Location
+    entityId : Text
+    order : Int
+    version : Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+
+  constraints:
+    id: PrimaryKey
+    entityId: "!SecondaryKey" # forcing to be a secondary key
+
+  queries: {}
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

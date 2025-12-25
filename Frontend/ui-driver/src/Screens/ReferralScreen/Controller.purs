@@ -28,14 +28,14 @@ import Data.Maybe (fromMaybe)
 import Data.String (length)
 import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
+import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC, getPastMonths)
 import Engineering.Helpers.LogEvent (logEvent)
 import Helpers.Utils (setRefreshing, getPastDays, getPastWeeks, convertUTCtoISC, generateQR, incrementValueOfLocalStoreKey, contactSupportNumber)
 import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd, cleverTapCustomEvent, metaLogEvent, shareImageMessage)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&&), not, (+), show, void, (<>), when, map, (-), (>), (/=))
-import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.ReferralScreen.ScreenData as RSD
@@ -48,9 +48,36 @@ import Effect.Uncurried(runEffectFn4)
 import Storage(KeyStore(..), getValueToLocalStore)
 import ConfigProvider
 import Timers (clearTimerWithId)
+import Data.String as DS
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BottomNavBarAction var1) = "BottomNavBarAction_" <> show var1
+  show (GenericHeaderActionController var1) = "GenericHeaderActionController_" <> show var1
+  show (PrimaryEditTextAction1 var1) = "PrimaryEditTextAction1_" <> show var1
+  show (PrimaryEditTextAction2 var1) = "PrimaryEditTextAction2_" <> show var1
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (PasswordModalAction var1) = "PasswordModalAction_" <> show var1
+  show (SuccessScreenExpireCountDwon _ _ _) = "SuccessScreenExpireCountDwon"
+  show (ContactSupportAction var1) = "ContactSupportAction_" <> show var1
+  show (GoToAlertScreen) = "GoToAlertScreen"
+  show (EnableReferralFlow) = "EnableReferralFlow"
+  show (BackPressed) = "BackPressed"
+  show (RefreshScreen) = "RefreshScreen"
+  show (EnableReferralFlowNoAction) = "EnableReferralFlowNoAction"
+  show (SuccessScreenRenderAction) = "SuccessScreenRenderAction"
+  show (ChangeLeaderBoardtab _) = "ChangeLeaderBoardtab"
+  show (DateSelectorAction) = "DateSelectorAction"
+  show (ChangeDate _) = "ChangeDate"
+  show (UpdateLeaderBoard _) = "UpdateLeaderBoard"
+  show (AfterRender) = "AfterRender"
+  show (UpdateLeaderBoardFailed) = "UpdateLeaderBoardFailed"
+  show (ReferralQrRendered _) = "ReferralQrRendered"
+  show (NoAction) = "NoAction"
+  show (ShareOptions) = "ShareOptions"
+  show (UpdateDriverPerformance _) = "UpdateDriverPerformance"
+  show (UpdateReferralCode _) = "UpdateReferralCode"
+  show (UpdateDriverPerformanceFailed) = "UpdateDriverPerformanceFailed"
+  show (UpdateReferralCodeFailed) = "UpdateReferralCodeFailed"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -87,14 +114,16 @@ instance loggableAction :: Loggable Action where
       PopUpModal.ETextController act -> case act of
         PrimaryEditTextController.TextChanged valId newVal -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "referral_code_text_changed" "popup_modal_edit_password"
         PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "referral_code_text_focus_changed" "popup_modal_edit_password"
+        PrimaryEditTextController.TextImageClicked -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "text_image_onclick"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "close_icon"
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "no_action"
       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "countdown_updated"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "no_action"
-      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "tip_clicked"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "popup_dismissed"
+      _ -> pure unit
     SuccessScreenExpireCountDwon seconds status timerId -> do
       if status == "EXPIRED" then trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "countdown_expired"
         else trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "countdown_updated"
@@ -105,10 +134,11 @@ instance loggableAction :: Loggable Action where
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "countdown_updated"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "no_action"
-      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "tip_clicked"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "popup_dismissed"
+      _ -> pure unit
     GoToAlertScreen -> do
       trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "for_updates_see_alerts"
       trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
@@ -121,6 +151,7 @@ instance loggableAction :: Loggable Action where
       case date of
         DaySelector _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "day_changed"
         WeekSelector _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "week_changed"
+        MonthSelector _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "month_changed"
     UpdateLeaderBoard _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_leaderBoard"
     UpdateLeaderBoardFailed -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_leaderBoard_failed"
     ReferralQrRendered _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "referral_qr_rendered"
@@ -168,6 +199,7 @@ data ScreenOutput = GoToHomeScreen ReferralScreenState
                   | LinkReferralApi ReferralScreenState
                   | Refresh ReferralScreenState
                   | SubscriptionScreen ReferralScreenState
+                  | EarningsScreen
 
 eval :: Action -> ReferralScreenState -> Eval Action ScreenOutput ReferralScreenState
 
@@ -181,23 +213,25 @@ eval (UpdateLeaderBoard (LeaderBoardRes leaderBoardRes)) state = do
       lastUpdatedAt = convertUTCtoISC (fromMaybe (getCurrentUTC "") leaderBoardRes.lastUpdatedAt) "h:mm A"
   let newState = state{ props { rankersData = rankersData, currentDriverData = currentDriverData, showShimmer = false, noData = not (dataLength > 0), lastUpdatedAt = lastUpdatedAt } }
   _ <- pure $ setRefreshing (getNewIDWithTag "ReferralRefreshView") false
-  if (any (_ == "") [state.props.selectedDay.utcDate, state.props.selectedWeek.utcStartDate, state.props.selectedWeek.utcEndDate]) then do
+  if (any DS.null [state.props.selectedDay.utcDate, state.props.selectedWeek.utcStartDate, state.props.selectedWeek.utcEndDate, state.props.selectedMonth.utcDate]) then do
     let pastDates = getPastDays 7
         pastWeeks = getPastWeeks 4
+        pastMonths = getPastMonths 3
         selectedDay = case last pastDates of
                         Just date -> date
                         Nothing -> state.props.selectedDay
         selectedWeek = case last pastWeeks of
                         Just week -> week
                         Nothing -> state.props.selectedWeek
-    continue newState{ props{ days = pastDates, weeks = pastWeeks, selectedDay = selectedDay, selectedWeek = selectedWeek } }
+        selectedMonth = fromMaybe state.props.selectedMonth $ last pastMonths
+    continue newState{ props{ days = pastDates, weeks = pastWeeks, months = pastMonths, selectedDay = selectedDay, selectedWeek = selectedWeek, selectedMonth = selectedMonth} }
   else continue newState
 
 eval UpdateLeaderBoardFailed state = do 
   _ <- pure $ setRefreshing (getNewIDWithTag "ReferralRefreshView") false
   continue state{ props{ showShimmer = false, noData = true } }
 
-eval (UpdateDriverPerformance (GetPerformanceRes performanceRes)) state = continue state {data {driverInfo {referralCode = Just (getValueToLocalStore REFERRAL_CODE)},driverPerformance{referrals = performanceRes.referrals}} , props{showShimmer =  if (getValueToLocalStore REFERRAL_CODE) /= "__failed" then false else state.props.showShimmer}}
+eval (UpdateDriverPerformance (GetPerformanceRes performanceRes)) state = continue state {data {driverInfo {referralCode = Just (getValueToLocalStore REFERRAL_CODE)},driverPerformance{referrals{totalActivatedCustomers = performanceRes.referrals.totalActivatedCustomers,totalReferredCustomers = performanceRes.referrals.totalReferredCustomers, totalReferredDrivers = fromMaybe 0 performanceRes.referrals.totalReferredDrivers}}} , props{showShimmer =  if (getValueToLocalStore REFERRAL_CODE) /= "__failed" then false else state.props.showShimmer}}
 
 eval (UpdateDriverPerformanceFailed) state = continue state {props{showShimmer= false}}
 
@@ -219,6 +253,13 @@ eval (ChangeDate (WeekSelector item)) state =
     let newState = state { props { selectedWeek = item, showShimmer = true } }
     updateAndExit newState $ Refresh newState
 
+eval (ChangeDate (MonthSelector item)) state = 
+  if state.props.selectedMonth == item then 
+    continue state
+  else do
+    let newState = state { props { selectedMonth = item, showShimmer = true } }
+    updateAndExit newState $ Refresh newState
+
 eval DateSelectorAction state = do
   _ <- pure $ scrollToEnd (getNewIDWithTag "DateSelector") false
   continue state { props { showDateSelector = not state.props.showDateSelector } }
@@ -228,7 +269,7 @@ eval (ChangeLeaderBoardtab tab) state = do
   let newState = state { props { leaderBoardType = tab, showShimmer = true } }
   updateAndExit newState $ Refresh newState
 
-eval BackPressed state = exit $ GoBack
+eval BackPressed state = exit $ GoToHomeScreen state
 
 eval RefreshScreen state = exit $ Refresh state
 
@@ -295,6 +336,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Home" -> exit $ GoToHomeScreen state
     "Rides" -> exit $ GoToRidesScreen state
     "Profile" -> exit $ GoToProfileScreen state
+    "Earnings" -> exit $ EarningsScreen
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
@@ -313,7 +355,7 @@ eval (ReferralQrRendered id) state =
     runEffectFn4 generateQR state.data.config.referral.link id 200 0
     pure $ NoAction
   ]
-eval _ state = continue state
+eval _ state = update state
 
 
 transformLeaderBoardList :: (Array DriversInfo) -> Boolean -> Array RankCardData

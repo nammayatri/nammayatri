@@ -39,7 +39,7 @@ type API =
            :> Get '[JSON] ListRes
        )
 
-type ListRes = [DCR.CancellationReasonAPIEntity]
+type ListRes = [DCancellationReason.CancellationReasonAPIEntity]
 
 handler :: FlowServer API
 handler = list

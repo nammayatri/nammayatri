@@ -11,14 +11,13 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab where
 
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
 import qualified Domain.Types.FarePolicy as Domain
+import Domain.Types.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
@@ -28,7 +27,10 @@ data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
   { id :: B.C f (Maybe Int),
     farePolicyId :: B.C f Text,
     startDistance :: B.C f Meters,
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     baseFare :: B.C f Money,
+    baseFareAmount :: B.C f (Maybe HighPrecMoney),
+    currency :: B.C f (Maybe Currency),
     platformFeeCharge :: B.C f (Maybe Domain.PlatformFeeCharge),
     platformFeeCgst :: B.C f (Maybe Double),
     platformFeeSgst :: B.C f (Maybe Double),
@@ -51,3 +53,4 @@ type FullFarePolicySlabsDetailsSlab = (KTI.Id Domain.FarePolicy, Domain.FPSlabsD
 $(enableKVPG ''FarePolicySlabsDetailsSlabT ['id] [['farePolicyId]])
 
 $(mkTableInstances ''FarePolicySlabsDetailsSlabT "fare_policy_slabs_details_slab")
+$(mkCacParseInstanceList ''FarePolicySlabsDetailsSlab)

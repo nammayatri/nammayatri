@@ -11,12 +11,11 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.FarePolicy.DriverExtraFeeBounds where
 
 import qualified Database.Beam as B
+import Domain.Types.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -25,8 +24,15 @@ data DriverExtraFeeBoundsT f = DriverExtraFeeBoundsT
   { id :: B.C f (Maybe Int),
     farePolicyId :: B.C f Text,
     startDistance :: B.C f Meters,
+    distanceUnit :: B.C f (Maybe DistanceUnit),
+    stepFee :: B.C f Money,
+    defaultStepFee :: B.C f Money,
+    stepFeeAmount :: B.C f (Maybe HighPrecMoney),
+    defaultStepFeeAmount :: B.C f (Maybe HighPrecMoney),
     minFee :: B.C f Money,
-    maxFee :: B.C f Money
+    maxFee :: B.C f Money,
+    minFeeAmount :: B.C f (Maybe HighPrecMoney),
+    maxFeeAmount :: B.C f (Maybe HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 
@@ -41,3 +47,5 @@ type DriverExtraFeeBounds = DriverExtraFeeBoundsT Identity
 $(enableKVPG ''DriverExtraFeeBoundsT ['id] [['farePolicyId]])
 
 $(mkTableInstances ''DriverExtraFeeBoundsT "fare_policy_driver_extra_fee_bounds")
+
+$(mkCacParseInstance ''DriverExtraFeeBoundsT)

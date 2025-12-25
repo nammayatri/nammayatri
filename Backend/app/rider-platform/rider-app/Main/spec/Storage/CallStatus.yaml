@@ -1,0 +1,90 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Ride: Domain.Types.Ride
+  CallService: Kernel.External.Call.Types
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+
+
+CallStatus:
+  tableName: call_status
+
+  types:
+    CallAttemptStatus:
+      enum: "Attempted, Resolved, Failed, Pending"
+
+  fields:
+    id : Id CallStatus
+    callId : Text
+    rideId : Maybe (Id Ride)
+    dtmfNumberUsed : Maybe Text
+    status : Kernel.External.Call.Interface.Types.CallStatus
+    recordingUrl : Maybe Text
+    conversationDuration : Int
+    merchantId : Maybe Text
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+    callService : Maybe CallService
+    callError : Maybe Text
+    callAttempt : Maybe CallAttemptStatus
+    createdAt : UTCTime
+    customerIvrResponse : Maybe Text
+
+  sqlType:
+    callId: character varying(255)
+    conversationDuration: int8
+    dtmfNumberUsed: character varying(255)
+    id: character(36)
+    merchantId: character(36)
+    merchangtOperatingCityId: character varying(36)
+    recordingUrl: character varying(255)
+    rideId: character(36)
+    status: varchar(255)
+
+  constraints:
+    id: PrimaryKey
+    callId: "!SecondaryKey" # forcing to be a secondary key
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByCallId:
+      kvFunction: findOneWithKV
+      where: callId
+
+    updateCallStatus:
+      kvFunction: updateWithKV
+      params: [conversationDuration, recordingUrl, status, callAttempt]
+      where: id
+
+    updateCallStatusInformation:
+      kvFunction: updateWithKV
+      params: [merchantId, callService, dtmfNumberUsed]
+      where: id
+
+    updateCallStatusCallId:
+      kvFunction: updateWithKV
+      params: [callId]
+      where: id
+
+    updateCallError:
+      kvFunction: updateWithKV
+      params: [callError, callService, merchantId]
+      where: id
+
+    updateCustomerIvrResponse:
+      kvFunction: updateWithKV
+      params: [callId, customerIvrResponse, status]
+      where: callId
+
+  excludedFields: [merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - create
+
+

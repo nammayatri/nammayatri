@@ -26,7 +26,7 @@ where
 
 import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
@@ -55,7 +55,7 @@ handler =
     :<|> getPlaceName
 
 autoComplete :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
-autoComplete (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.autoComplete merchantId merchantOpCityId
+autoComplete (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.autoComplete merchantId merchantOpCityId (Just personId.getId)
 
 getPlaceName :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
-getPlaceName (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceName merchantId merchantOpCityId
+getPlaceName (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceName merchantId merchantOpCityId (Just personId.getId)

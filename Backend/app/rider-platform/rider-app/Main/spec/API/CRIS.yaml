@@ -1,0 +1,46 @@
+imports:
+  Text: Data.Text
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+
+module: CRIS
+
+types:
+  GetSDKDataRequest:
+    mobileNo: Text
+    deviceID: Text
+    derive: "Show"
+
+  GetSDKDataResponse:
+    respCode: Int
+    respMessage: Text
+    sdkData: Text
+    derive: "Show"
+
+  CrisChangeDeviceRequest:
+    otp: Text
+
+apis:
+  - POST:
+      endpoint: cris/getSDKData
+      query:
+        integratedBppConfigId: Id IntegratedBPPConfig
+      request:
+        type: GetSDKDataRequest
+      response:
+        type: GetSDKDataResponse
+
+  - GET:
+      endpoint: cris/otp/generation
+      query:
+        integratedBppConfigId: Id IntegratedBPPConfig
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: cris/change/device
+      query:
+        integratedBppConfigId: Id IntegratedBPPConfig
+      request:
+        type: CrisChangeDeviceRequest
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

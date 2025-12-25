@@ -1,0 +1,38 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  HighPrecMoney: Kernel.Types.Common
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Text: Data.Text
+
+CancellationReason:
+  tableName: cancellation_reason
+
+  types:
+    CancellationReasonCode:
+      recordType: NewType
+      enum: CancellationReasonCode Text
+
+  fields:
+    reasonCode : CancellationReasonCode
+    description : Text
+    enabled : Bool
+    priority : Int
+
+
+  constraints:
+    reasonCode: PrimaryKey
+
+
+  toTType:
+    reasonCode: reasonCodeToText
+
+  queries:
+    findAll:
+      kvFunction: findAllWithOptionsDb
+      where: enabled
+      orderBy: priority
+
+  excludedFields: [merchantOperatingCityId, merchantId]
+

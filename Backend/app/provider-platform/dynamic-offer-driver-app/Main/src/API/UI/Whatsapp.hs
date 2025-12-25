@@ -16,7 +16,7 @@ module API.UI.Whatsapp where
 
 import qualified Domain.Action.UI.Whatsapp as DWhatsapp
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude

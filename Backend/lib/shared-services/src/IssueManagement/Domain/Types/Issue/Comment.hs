@@ -11,6 +11,7 @@ data Comment = Comment
     issueReportId :: Id D.IssueReport,
     authorId :: Id Person,
     comment :: Text,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    merchantId :: Maybe (Id Merchant)
   }
   deriving (Generic, Show, Eq)

@@ -1,0 +1,54 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EncryptedHashedField: Kernel.External.Encryption
+  Person: Domain.Types.Person
+  RiderDetails: Domain.Types.RiderDetails
+
+RiderDriverCorrelation:
+  tableName: rider_driver_correlation
+
+  types:
+  fields:
+    riderDetailId : Id RiderDetails
+    driverId : Id Person
+    mobileNumber : EncryptedHashedField e Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+    favourite : Bool
+
+  constraints:
+    riderDetailId: PrimaryKey
+    driverId: PrimaryKey
+
+  queries:
+    findByRiderIdAndDriverId:
+      kvFunction: findOneWithKV
+      where:
+        and: [riderDetailId, driverId]
+
+    findFavDriversForRider:
+      kvFunction: findAllWithKV
+      where:
+        and: [riderDetailId, favourite]
+
+    checkRiderFavDriver:
+      kvFunction: findOneWithKV
+      where:
+        and: [riderDetailId, driverId, favourite]
+
+    updateFavouriteDriverForRider:
+      kvFunction: updateOneWithKV
+      params: [favourite, updatedAt]
+      where:
+        and: [riderDetailId, driverId]
+
+  sqlType:
+    mobileNumberHash: bytea
+
+  default:
+    favourite: 'false'
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

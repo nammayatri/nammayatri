@@ -18,25 +18,63 @@ module Domain.Action.UI.Route
     getRoutes,
     getPickupRoutes,
     getTripRoutes,
+    GetPickupRoutesReq (..),
   )
 where
 
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
+import Domain.Types.Ride
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
+import Kernel.Utils.Common (CacheFlow, MonadFlow, fromMaybeM)
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
+import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 import qualified Tools.Maps as Maps
 
-getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getRoutes (personId, merchantId) req = do
-  Maps.getRoutes personId merchantId Nothing req
+data GetPickupRoutesReq = GetPickupRoutesReq
+  { waypoints :: NonEmpty Maps.LatLong,
+    mode :: Maybe Maps.TravelMode,
+    calcPoints :: Bool,
+    rideId :: Maybe (Id Ride)
+  }
+  deriving (Generic, ToJSON, FromJSON, Show, ToSchema)
 
-getPickupRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getPickupRoutes (personId, merchantId) req = do
-  Maps.getPickupRoutes personId merchantId Nothing req
+getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => (Id DP.Person, Id Merchant.Merchant) -> Maybe Text -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getRoutes (personId, merchantId) entityId req = do
+  Maps.getRoutes Nothing personId merchantId Nothing entityId req
 
-getTripRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getTripRoutes (personId, merchantId) req = do
-  Maps.getTripRoutes personId merchantId Nothing req
+getPickupRoutes ::
+  ( ServiceFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    MonadFlow m
+  ) =>
+  (Id DP.Person, Id Merchant.Merchant) ->
+  Maybe Text ->
+  GetPickupRoutesReq ->
+  m Maps.GetRoutesResp
+getPickupRoutes (personId, merchantId) entityId GetPickupRoutesReq {..} = do
+  mocId <- Maps.getMerchantOperatingCityId personId Nothing
+  merchantConfig <- QMSUC.findByMerchantOperatingCityId mocId >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
+  service <- getService merchantConfig
+  let req = Maps.GetRoutesReq {..}
+  Maps.getPickupRoutes merchantId mocId service entityId req
+  where
+    getService merchantConfig = do
+      case (rideId, merchantConfig.getFirstPickupRoute) of
+        (Just rid, Just firstPickupService) -> do
+          ride <- QRide.findById rid >>= fromMaybeM (RideNotFound rid.getId)
+          let pikcupRouteCalls = fromMaybe 0 (ride.pickupRouteCallCount)
+          QRide.updatePickupRouteCallCount (Just $ pikcupRouteCalls + 1) rid
+          if pikcupRouteCalls == 0
+            then return firstPickupService
+            else return merchantConfig.getPickupRoutes
+        _ -> return merchantConfig.getPickupRoutes
+
+getTripRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maybe Text -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getTripRoutes (personId, merchantId) entityId req = do
+  Maps.getTripRoutes personId merchantId Nothing entityId req

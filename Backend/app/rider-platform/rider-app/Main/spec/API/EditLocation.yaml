@@ -1,0 +1,27 @@
+imports:
+  Text: Data.Text
+  Maybe: Data.Maybe
+  BookingUpdateRequest: Domain.Types.BookingUpdateRequest
+
+
+module: EditLocation
+types:
+  EditLocationResultAPIResp:
+    bookingUpdateRequestDetails : BookingUpdateRequest
+
+apis:
+  - GET:
+      endpoint: /edit/{bookingUpdateRequestId}/result
+      params:
+        bookingUpdateRequestId: Id BookingUpdateRequest
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.EditLocation.EditLocationResultAPIResp
+
+  - POST:
+      endpoint: /edit/result/{bookingUpdateRequestId}/confirm
+      params:
+        bookingUpdateRequestId: Id BookingUpdateRequest
+      auth: TokenAuth
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

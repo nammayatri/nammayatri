@@ -1,0 +1,73 @@
+imports:
+  Driver: Dashboard.Common
+  DriverGoHomeRequest: Dashboard.Common
+  DriverHomeLocation: Dashboard.Common
+
+module: DriverGoHome
+apiPrefix: driver
+
+apis:
+  - GET: # GetDriverHomeLocationAPI
+      endpoint: /{driverId}/getHomeLocation
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: GetHomeLocationsRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DRIVER_HOME_LOCATION
+  - POST: # UpdateDriverHomeLocationAPI
+      endpoint: /{driverId}/updateHomeLocation
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdateDriverHomeLocationReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI UpdateDriverHomeLocationEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DRIVER_HOME_LOCATION
+  - POST: # IncrementDriverGoToCountAPI
+      endpoint: /{driverId}/incrementGoToCount
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI IncrementDriverGoToCountEndPoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS INCREMENT_DRIVER_GO_TO_COUNT
+  - GET: # GetDriverGoHomeInfoAPI
+      endpoint: /{driverId}/getGoHomeInfo
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: CachedGoHomeRequestInfoRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DRIVER_GO_HOME_INFO
+types:
+  DriverHomeLocationAPIEntity:
+    - id: Id DriverHomeLocation
+    - lat: Double
+    - lon: Double
+    - address: Text
+    - tag: Text
+    - derive: "'HideSecrets"
+  GetHomeLocationsRes:
+    - recordType: Type
+    - type: "[DriverHomeLocationAPIEntity]"
+  UpdateDriverHomeLocationReq:
+    - recordType: Type
+    - type: DriverHomeLocationAPIEntity
+  CachedGoHomeRequestInfoRes:
+    - status: Maybe String
+    - cnt: Int
+    - validTill: Maybe UTCTime
+    - driverGoHomeRequestId: Maybe (Id DriverGoHomeRequest)
+    - isOnRide: Bool
+    - goHomeReferenceTime: UTCTime
+    - derive: "'HideSecrets"

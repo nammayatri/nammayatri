@@ -15,13 +15,17 @@
 module Domain.Action.Internal.Rating where
 
 import Data.Foldable ()
-import Data.OpenApi (ToSchema)
+import Data.OpenApi
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
-import Domain.Types.Ride (RideStatus (..))
 import qualified Domain.Types.Ride as DRide
+import Domain.Types.RideStatus
+import qualified Domain.Types.RideStatus as DRide
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import IssueManagement.Domain.Types.MediaFile as D
 import Kernel.Beam.Functions as B
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.CacheFlow
@@ -41,7 +45,13 @@ data FeedbackReq = FeedbackReq
     feedbackDetails :: Maybe Text,
     wasOfferedAssistance :: Maybe Bool
   }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+instance ToSchema FeedbackReq where
+  declareNamedSchema proxy = do
+    genericDeclareNamedSchema customSchemaOptions proxy
+    where
+      customSchemaOptions = defaultSchemaOptions {datatypeNameModifier = const "FeedbackReqInternal"}
 
 rating ::
   ( MonadFlow m,
@@ -68,17 +78,17 @@ rating apiKey FeedbackReq {..} = do
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id booking.riderId ratingValue feedbackDetails wasOfferedAssistance
+      newRating <- buildRating ride.id ride.merchantId ride.merchantOperatingCityId booking.riderId ratingValue feedbackDetails wasOfferedAssistance Nothing
       QRating.create newRating
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating rideRating.id booking.riderId ratingValue feedbackDetails wasOfferedAssistance
+      QRating.updateRating ratingValue feedbackDetails wasOfferedAssistance Nothing rideRating.id booking.riderId
   calculateAverageRating booking.riderId merchant.minimumDriverRatesCount ratingValue person.totalRatings person.totalRatingScore
   pure Success
 
 calculateAverageRating ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
   Id DP.Person ->
   Int ->
   Int ->
@@ -91,17 +101,22 @@ calculateAverageRating personId minimumDriverRatesCount ratingValue totalRatings
   let newTotalRatingScore = totalRatingScore + ratingValue
   when (totalRatings == 0) $
     logTagInfo "PersonAPI" "No rating found to calculate"
-  if totalRatings >= minimumDriverRatesCount
-    then do
-      let isValidRating = True
-      logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
-      void $ QP.updateAverageRating personId newRatingsCount newTotalRatingScore isValidRating
-    else do
-      let isValidRating = False
-      void $ QP.updateAverageRating personId newRatingsCount newTotalRatingScore isValidRating
+  let isValidRating = newRatingsCount >= minimumDriverRatesCount
+  logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
+  void $ QP.updateAverageRating newRatingsCount newTotalRatingScore isValidRating personId
 
-buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Bool -> m DRating.Rating
-buildRating rideId riderId ratingValue feedbackDetails wasOfferedAssistance = do
+buildRating ::
+  MonadFlow m =>
+  Id DRide.Ride ->
+  Maybe (Id DM.Merchant) ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  Id DP.Person ->
+  Int ->
+  Maybe Text ->
+  Maybe Bool ->
+  Maybe (Id D.MediaFile) ->
+  m DRating.Rating
+buildRating rideId merchantId merchantOperatingCityId riderId ratingValue feedbackDetails wasOfferedAssistance mediaId = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now

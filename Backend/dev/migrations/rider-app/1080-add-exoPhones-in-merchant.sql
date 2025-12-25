@@ -5,4 +5,3 @@ UPDATE atlas_app.merchant
 UPDATE atlas_app.merchant
     SET exo_phones = '{"8069457995","8035272983"}', exo_phone_country_code = '+91'
     WHERE short_id = 'YATRI';
-ALTER TABLE atlas_app.merchant ALTER COLUMN exo_phones SET NOT NULL;

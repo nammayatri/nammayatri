@@ -16,7 +16,7 @@ module API.UI.DriverCoins where
 
 import qualified Domain.Action.UI.DriverCoin as Domain
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
@@ -42,6 +42,12 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] Domain.ConvertCoinToCashReq
              :> Post '[JSON] APISuccess
+           :<|> "rideStatusPastDays"
+             :> TokenAuth
+             :> Get '[JSON] Domain.RideStatusPastDaysRes
+           :<|> "info"
+             :> TokenAuth
+             :> Get '[JSON] Domain.CoinInfoRes
        )
 
 handler :: FlowServer API
@@ -49,6 +55,8 @@ handler =
   getCoinEventSummary
     :<|> getCoinUsageSummary
     :<|> useCoinsHandler
+    :<|> getRideStatusPastDays
+    :<|> getCoinsInfo
 
 getCoinEventSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> UTCTime -> FlowHandler Domain.CoinTransactionRes
 getCoinEventSummary (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Domain.getCoinEventSummary (personId, merchantId, merchantOpCityId)
@@ -58,3 +66,9 @@ getCoinUsageSummary mbLimit mbOffset = withFlowHandlerAPI . Domain.getCoinUsageS
 
 useCoinsHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Domain.ConvertCoinToCashReq -> FlowHandler APISuccess
 useCoinsHandler (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Domain.useCoinsHandler (personId, merchantId, merchantOpCityId)
+
+getRideStatusPastDays :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler Domain.RideStatusPastDaysRes
+getRideStatusPastDays (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ Domain.getRideStatusPastDays (personId, merchantId, merchantOpCityId)
+
+getCoinsInfo :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler Domain.CoinInfoRes
+getCoinsInfo (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ Domain.getCoinsInfo (personId, merchantId, merchantOpCityId)

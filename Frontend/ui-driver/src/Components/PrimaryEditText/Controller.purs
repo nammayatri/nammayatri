@@ -15,4 +15,11 @@
 
 module Components.PrimaryEditText.Controllers where
 
+import Prelude (class Show)
+
+instance showAction :: Show Action where
+  show (OnClick) = "OnClick"
+  show (TextChanged _ _) = "TextChanged"
+  show (TextClicked) = "TextClicked"
+
 data Action = OnClick | TextChanged String String | TextClicked

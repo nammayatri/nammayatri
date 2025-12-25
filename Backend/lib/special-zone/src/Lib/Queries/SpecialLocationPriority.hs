@@ -19,14 +19,14 @@ import Kernel.Storage.Esqueleto as Esq
 import Lib.Tabular.SpecialLocationPriority
 import qualified Lib.Types.SpecialLocationPriority as SpecialLocationPriorityD
 
-findByMerchantIdAndCategory ::
+findByMerchantOpCityIdAndCategory ::
   Transactionable m =>
   Text ->
   Text ->
   m (Maybe SpecialLocationPriorityD.SpecialLocationPriority)
-findByMerchantIdAndCategory merchantId category =
+findByMerchantOpCityIdAndCategory merchantOpCityId category = do
   Esq.findOne $ do
     specialLocationPriority <- from $ table @SpecialLocationPriorityT
-    where_ $ specialLocationPriority ^. SpecialLocationPriorityMerchantId ==. val merchantId
+    where_ $ specialLocationPriority ^. SpecialLocationPriorityMerchantOperatingCityId ==. val merchantOpCityId
     where_ $ specialLocationPriority ^. SpecialLocationPriorityCategory ==. val category
     return specialLocationPriority

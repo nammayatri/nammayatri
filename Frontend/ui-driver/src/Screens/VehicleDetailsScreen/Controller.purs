@@ -15,8 +15,8 @@
 
 module Screens.VehicleDetailsScreen.Controller where
 
-import Prelude (class Show, bind, not, pure, unit, ($), (/=), discard)
-import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import Prelude (class Show, bind, not, pure, unit, ($), (/=), discard, (<>), show)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
 import Screens.Types (VehicleDetailsScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Components.PrimaryButton as PrimaryButton
@@ -30,9 +30,21 @@ import JBridge(previewImage, uploadFile)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 import Helpers.Utils(getVehicleType)
+import Common.Types.App
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (NoAction ) = "NoAction"
+  show (PrimaryEditTextActionController var1) = "PrimaryEditTextActionController_" <> show var1
+  show (ToggleScreenMode ) = "ToggleScreenMode"
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (SelectVehicleType ) = "SelectVehicleType"
+  show (BackPressed ) = "BackPressed"
+  show (SelectVehicleTypeModalAction var1) = "SelectVehicleTypeModalAction_" <> show var1
+  show (PreviewImage ) = "PreviewImage"
+  show (RemoveImageClick ) = "RemoveImageClick"
+  show (UploadImage ) = "UploadImage"
+  show (CallBackImageUpload _ _ _) = "CallBackImageUpload"
+  show (AfterRender ) = "AfterRender"
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of 
     AfterRender -> trackAppScreenRender appId "screen" (getScreen VEHICLE_DETAILS_SCREEN)
@@ -42,6 +54,7 @@ instance loggableAction :: Loggable Action where
     PrimaryEditTextActionController act -> case act of
       PrimaryEditText.TextChanged id value -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_image_clicked" "primary_edit_text"
     ToggleScreenMode -> trackAppActionClick appId (getScreen VEHICLE_DETAILS_SCREEN) "in_screen" "toggle_screen_mode"
     PrimaryButtonActionController act -> case act of
       PrimaryButton.OnClick -> do
@@ -71,6 +84,13 @@ data Action = NoAction
               | CallBackImageUpload String String String
               | AfterRender
 
+uploadFileConfig :: UploadFileConfig
+uploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio : false,
+  imageAspectHeight : 0,
+  imageAspectWidth : 0
+}
+
 eval :: Action -> VehicleDetailsScreenState -> Eval Action ScreenOutput VehicleDetailsScreenState
 eval AfterRender state = continue state
 
@@ -89,7 +109,7 @@ eval (PreviewImage) state = continueWithCmd state [do
   pure NoAction]
 
 eval (UploadImage) state = continueWithCmd state [do
-  _ <- liftEffect $ uploadFile false
+  _ <- liftEffect $ uploadFile uploadFileConfig true
   pure NoAction]
 
 eval (CallBackImageUpload base_64 imageName imagePath) state = do
@@ -97,7 +117,7 @@ eval (CallBackImageUpload base_64 imageName imagePath) state = do
 
 eval SelectVehicleType state = continue state
 
-eval _ state = continue state
+eval _ state = update state
   
 getTitle :: ListOptions -> String
 getTitle listOptions =

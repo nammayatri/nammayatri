@@ -1,0 +1,168 @@
+imports:
+  Customer: Dashboard.Common
+  Summary: Dashboard.Common
+  HighPrecMoney: Kernel.Types.Common
+  PriceAPIEntity: Kernel.Types.Common
+  PersonRes: Dashboard.Common
+  PersonIdsReq: Dashboard.Common
+  PersonMobileNoReq: Dashboard.Common
+  PaymentMode: Domain.Types.PaymentMode
+
+module: Customer
+
+apis:
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - enabled: Bool
+        - blocked: Bool
+        - phone: Text
+        - personId: Id Customer
+      response:
+        type: CustomerListRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_LIST
+  - DELETE:
+      endpoint:  /{customerId}/delete
+      auth: ApiAuthV2
+      params:
+        customerId: Id Customer
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI DeleteCustomerEndpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_DELETE
+  - POST:
+      endpoint:  /{customerId}/block
+      auth: ApiAuthV2
+      params:
+        customerId: Id Customer
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI BlockCustomerEndpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_BLOCK
+  - POST:
+      endpoint:  /{customerId}/unblock
+      auth: ApiAuthV2
+      params:
+        customerId: Id Customer
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI UnblockCustomerEndpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_UNBLOCK
+  - GET:
+      endpoint:  /{customerId}/info
+      auth: ApiAuthV2
+      params:
+        customerId: Id Customer
+      response:
+        type: CustomerInfoRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_INFO
+  - POST:
+      endpoint: /{customerId}/cancellationDuesSync
+      auth: ApiAuthV2
+      params:
+        customerId: Id Customer
+      request:
+        type: CustomerCancellationDuesSyncReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI CancellationDuesSyncCustomerEndpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_CANCELLATION_DUES_SYNC
+  - GET:
+      name: GetCustomerCancellationDuesDetails
+      endpoint:  /{customerId}/getCancellationDuesDetails
+      auth: ApiAuthV2
+      params:
+        customerId: Id Customer
+      response:
+        type: CancellationDuesDetailsRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_CANCELLATION_DUES_DETAILS
+  - POST:
+      endpoint: /{customerId}/updateSafetyCenterBlocking
+      auth: ApiAuthV2
+      params:
+        customerId: Id Customer
+      request:
+        type: UpdateSafetyCenterBlockingReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI UpdateSafetyCenterBlockingCustomerEndpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS UPDATE_SAFETY_CENTER
+  - POST:
+      endpoint: /personNumbers
+      auth: ApiAuthV2
+      multipart:
+        type: PersonIdsReq
+      response:
+        type: "[PersonRes]"
+      migrate:
+        endpoint: CustomerAPI PersonNumbersCustomerEndpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS PERSON_NUMBERS
+  - POST:
+      endpoint: /personId
+      auth: ApiAuthV2
+      multipart:
+        type: PersonMobileNoReq
+      response:
+        type: "[PersonRes]"
+      migrate:
+        endpoint: CustomerAPI PersonIdCustomerEndpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS FETCH_PERSON_ID
+  - POST:
+      endpoint: /{customerId}/updatePaymentMode
+      auth: ApiAuthV2
+      params:
+        customerId: Id Customer
+      request:
+        type: UpdatePaymentModeReq
+      response:
+        type: APISuccess
+
+types:
+  CustomerListRes:
+    - totalItems: Int # for backward compatibility
+    - summary: Summary
+    - customers: [CustomerListItem]
+  CustomerListItem:
+    - customerId: Id Customer
+    - firstName: Maybe Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
+    - phoneNo: Maybe Text
+    - enabled: Bool
+    - blocked: Bool
+    - paymentMode: Maybe PaymentMode
+  CustomerInfoRes:
+    - numberOfRides: Int
+    - falseSafetyAlarmCount: Int
+    - safetyCenterDisabledOnDate: Maybe UTCTime
+    - totalSosCount: Int
+    - paymentMode: Maybe PaymentMode
+  CustomerCancellationDuesSyncReq:
+    - cancellationCharges: Maybe HighPrecMoney
+    - cancellationChargesWithCurrency: Maybe PriceAPIEntity
+    - disputeChancesUsed: Maybe Int
+    - paymentMadeToDriver: Bool
+    - derive: "'HideSecrets"
+  CancellationDuesDetailsRes:
+    - cancellationDues: Maybe PriceAPIEntity
+    - disputeChancesUsed: Maybe Int
+    - canBlockCustomer: Maybe Bool
+  UpdateSafetyCenterBlockingReq:
+    - incrementCount: Maybe Bool
+    - resetCount: Maybe Bool
+    - derive: "'HideSecrets"
+  UpdatePaymentModeReq:
+    - recordType: NewType
+    - paymentMode: PaymentMode
+    - derive: "'HideSecrets"

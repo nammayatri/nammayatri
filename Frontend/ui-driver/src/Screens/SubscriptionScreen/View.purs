@@ -21,7 +21,8 @@ import Screens.SubscriptionScreen.ComponentConfig
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Common.Types.App (APIPaymentStatus(..), LazyCheck(..), PaymentStatus(..))
+import Common.Types.App (LazyCheck(..))
+import Domain.Payments (APIPaymentStatus(..), PaymentStatus(..))
 import Components.Banner as Banner
 import Components.BottomNavBar (navData)
 import Components.BottomNavBar as BottomNavBar
@@ -30,6 +31,8 @@ import Components.DueDetailsList as DueDetailsList
 import Components.OptionsMenu as OptionsMenu
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
+import Common.RemoteConfig.Types as RemoteConfig
+import Common.RemoteConfig.Utils as RemoteConfig
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -45,6 +48,7 @@ import Data.Number (fromString) as Number
 import Data.String as DS
 import Data.Time.Duration (Seconds(..))
 import Debug (spy)
+import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Class (liftEffect)
@@ -56,10 +60,10 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||), identity)
+import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||), identity, (<$>))
 import Presto.Core.Types.API (ErrorResponse)
-import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay, fork)
+import PrestoDOM (alignParentRight, alignParentLeft, Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, LoggableScreen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
@@ -67,25 +71,35 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens (getScreen)
 import Screens as ScreenNames
 import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
-import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval, getAllFareFromArray, getPlanPrice)
+import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (AutoPayStatus(..), DueItem, GlobalProps, KioskLocation(..), MyPlanData, OfferBanner, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (FeeType(..), GetCurrentPlanResp(..), GetDriverInfoResp(..), KioskLocationRes(..), KioskLocationResp(..), OrderStatusRes(..), PaymentBreakUp(..), UiPlansResp(..), GetDriverInfoReq(..), LastPaymentType(..))
+import Services.API (ReelsResp, FeeType(..), GetCurrentPlanResp(..), GetDriverInfoResp(..), KioskLocationRes(..), KioskLocationResp(..), OrderStatusRes(..), PaymentBreakUp(..), UiPlansResp(..), DriverInfoReq(..), LastPaymentType(..), CoinEntity(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore, isOnFreeTrial)
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
 import Locale.Utils
+import RemoteConfig (ReelItem(..))
+import Mobility.Prelude as MP
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Components.PlanCard as PlanCard
+import Components.SelectPlansModal as SelectPlansModal
+import Services.API as APITypes
+import Resource.Constants as RSC
+import Data.Function.Uncurried (Fn3(..), runFn3)
+import Screens.Types as ST
 
-screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
-screen initialState globalState =
+screen :: SubscriptionScreenState -> GlobalState -> LoggableScreen Action SubscriptionScreenState ScreenOutput
+screen initialState (GlobalState globalState) =
   { initialState
   , view
   , name: "SubscriptionScreen"
   , globalEvents: [(\push -> do
-      let showSubscriptions = getValueToLocalStore SHOW_SUBSCRIPTIONS == "true"
       void $ launchAff $ flowRunner defaultGlobalState $ do
-        if showSubscriptions then
-          loadData push LoadPlans LoadAlternatePlans LoadMyPlans LoadHelpCentre ShowError initialState globalState
+        let globalProp = globalState.globalProps
+        (GetDriverInfoResp driverInfo) <- getDriverInfoDataFromCache globalProp.driverInformation
+        if showSubscriptions driverInfo then
+          loadData push LoadPlans LoadAlternatePlans LoadMyPlans LoadHelpCentre OnCityOrVehicleChange ShowError initialState (GetDriverInfoResp driverInfo)
         else 
           liftFlow $ push $ EnableIntroductoryView
       case initialState.data.orderId of 
@@ -99,27 +113,50 @@ screen initialState globalState =
           let _ = spy "SubscriptionScreen --------action" action
           eval state action
       )
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.subscriptionScreenLogWhitelist
   }
+  where 
+    showSubscriptions driverInfo = do
+      let subscriptionEnabledFE = getValueToLocalStore SHOW_SUBSCRIPTIONS == "true"
+      case driverInfo.isSubscriptionEnabledAtCategoryLevel, driverInfo.subscriptionEnabledForVehicleCategory of
+            Just f1, Just f2 -> f1 && f2 && subscriptionEnabledFE
+            _ , _ -> subscriptionEnabledFE
 
-loadData :: forall action. (action -> Effect Unit) ->  (UiPlansResp -> action) -> (UiPlansResp -> action) -> (GetCurrentPlanResp -> action) -> (Number -> Number -> Array KioskLocationRes -> action) -> (ErrorResponse -> action) -> SubscriptionScreenState -> GlobalState -> Flow GlobalState Unit
-loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre errorAction state (GlobalState globalState) = do
+
+
+loadData :: forall action. (action -> Effect Unit) ->  (UiPlansResp -> action) -> (UiPlansResp -> action) -> (GetCurrentPlanResp -> action) -> (Number -> Number -> Array KioskLocationRes -> action) -> (APITypes.UiPlansResp -> action) -> (ErrorResponse -> action) -> SubscriptionScreenState -> GetDriverInfoResp -> Flow GlobalState Unit
+loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre onCityOrVehicleChangeAC errorAction state (GetDriverInfoResp driverInfo) = do
   if any ( _ == state.props.subView )[JoinPlan, MyPlan, NoSubView] then do
-    let globalProp = globalState.globalProps
-    (GetDriverInfoResp driverInfo) <- getDriverInfoDataFromCache globalProp.driverInformation
     if isJust driverInfo.autoPayStatus then do 
       currentPlan <- Remote.getCurrentPlan ""
       _ <- pure $ setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
       case currentPlan of
-        Right resp -> doAff do liftEffect $ push $ loadMyPlans resp
+        Right resp -> do
+          let (GetCurrentPlanResp resp') = resp
+          if cityOrVehicleChangedCondition resp' then do
+            void $ fork $ onCityOrVehicleChange push onCityOrVehicleChangeAC
+          else pure unit
+          case resp'.currentPlanDetails of
+            Nothing -> do
+              uiPlans <- Remote.getUiPlans "null"
+              case uiPlans of
+                Right plansResp -> do
+                  doAff do liftEffect $ push $ loadPlans plansResp
+                Left err -> doAff do liftEffect $ push $ errorAction err
+            Just _ -> do doAff do liftEffect $ push $ loadMyPlans resp
         Left err -> doAff do liftEffect $ push $ errorAction err
     else do
       currentPlan <- Remote.getCurrentPlan ""
       case currentPlan of
         Right resp' -> do
           let (GetCurrentPlanResp resp) = resp'
+          if cityOrVehicleChangedCondition resp then do
+            void $ fork $ onCityOrVehicleChange push onCityOrVehicleChangeAC
+          else pure unit
           case resp.currentPlanDetails of
             Nothing -> do
-              uiPlans <- Remote.getUiPlans ""
+              uiPlans <- Remote.getUiPlans "null"
               case uiPlans of
                 Right plansResp -> doAff do liftEffect $ push $ loadPlans plansResp
                 Left err -> doAff do liftEffect $ push $ errorAction err
@@ -134,14 +171,24 @@ loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre errorActio
       Left err -> if err.code /= 404 then doAff do liftEffect $ push $ errorAction err
                   else doAff do liftEffect $ push $ loadHelpCentre state.props.currentLat state.props.currentLon []
   else pure unit
+  where 
+    cityOrVehicleChangedCondition resp = isJust resp.autoPayStatus && driverInfo.isSubscriptionEnabledAtCategoryLevel == Just true && driverInfo.subscriptionEnabledForVehicleCategory == Just true && (resp.askForPlanSwitchByCity == Just true || resp.askForPlanSwitchByVehicle == Just true)
 
+onCityOrVehicleChange :: forall action. (action -> Effect Unit) ->  (APITypes.UiPlansResp -> action) -> Flow GlobalState Unit
+onCityOrVehicleChange push action = do
+  plans <- Remote.getUiPlans "null"
+  case plans of
+    Right plansResp -> doAff do liftEffect $ push $ action plansResp
+    Left err -> pure unit
+  pure unit
 
 getDriverInfoDataFromCache :: Maybe GetDriverInfoResp -> Flow GlobalState GetDriverInfoResp
 getDriverInfoDataFromCache resp = do
   case resp of 
     Just cacheResp -> pure cacheResp
     Nothing -> do
-      driverInfoResp <- Remote.getDriverInfoApi (GetDriverInfoReq {})
+      (GlobalState state) <- getState
+      driverInfoResp <- Remote.getDriverInfoApi ""
       case driverInfoResp of
         Right latestResp -> pure latestResp
         Left _ -> pure dummyDriverInfo
@@ -172,7 +219,7 @@ view push state =
   , onBackPressed push $ const BackPressed
   , afterRender push $ const AfterRender
   , background Color.white900
-  ][ relativeLayout
+  ][  relativeLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -230,54 +277,64 @@ view push state =
       , height MATCH_PARENT
       , visibility if (state.props.confirmCancel) then VISIBLE else GONE
       ][PopUpModal.view (push <<< ConfirmCancelPopup) (confirmCancelPopupConfig state)]
+    , if state.data.switchPlanModalState.showSwitchPlanModal then SelectPlansModal.view (push <<< SelectPlansModalAction) (selectPlansModalState state) else linearLayout[visibility GONE][]
+    , if (state.data.subscriptionDown == Just true) then paymentUnderMaintenanceView push state else linearLayout[visibility GONE][]
   ]
 
 joinPlanView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> Boolean -> PrestoDOM (Effect Unit) w
-joinPlanView push state visibility' = 
+joinPlanView push state visibility' = do
+  let remoteSubscriptionsConfigVariantLevel = state.data.vehicleAndCityConfig
   PrestoAnim.animationSet [ Anim.fadeIn visibility' ] $
-  linearLayout
-  [ width MATCH_PARENT
-  , height MATCH_PARENT
-  , orientation VERTICAL
-  , visibility if visibility' then VISIBLE else GONE
-  , margin $ MarginBottom 48
-  ][ 
     linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
-    ][
-      lottieView state "lottieSubscriptionScreen" (Margin 0 0 0 0) (Padding 16 16 16 0)
-    , relativeLayout
+    , visibility if visibility' then VISIBLE else GONE
+    , margin $ MarginBottom 48
+    ][ 
+      linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
-      , background Color.blue600
-      ][  imageView
-          [ width $ V 116
-          , height $ V 368
-          , margin $ MarginTop 20
-          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_ny_driver"
-          ]
-        , enjoyBenefitsView push state
-        , plansBottomView push state
+      , orientation VERTICAL
+      ][
+        lottieView state "lottieSubscriptionScreen" (Margin 0 0 0 0) (Padding 16 16 16 0) (fromMaybe false remoteSubscriptionsConfigVariantLevel.useFreeTrialLottie) --- did this as lotties were no available TODO :- need to refactor this
+      , relativeLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , background Color.blue600
+        ][  imageView
+            [ width $ V 116
+            , height $ V 368
+            , margin $ MarginTop 20
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImageType
+            ]
+          , enjoyBenefitsView push state remoteSubscriptionsConfigVariantLevel
+          , plansBottomView push state
+        ]
       ]
     ]
-  ]
+  where 
+    driverImageType = 
+      if (RSC.getCategoryFromVariant state.data.linkedVehicleVariant) == Just ST.CarCategory then "ny_ic_ny_driver_cab"
+      else if (RSC.getCategoryFromVariant state.data.linkedVehicleVariant) == Just ST.AutoCategory then "ny_ic_ny_driver_auto"
+      else "ny_ic_ny_driver"
 
-enjoyBenefitsView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
-enjoyBenefitsView push state = 
-  linearLayout
+enjoyBenefitsView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> RemoteConfig.SubscriptionConfigVariantLevelEntity -> PrestoDOM (Effect Unit) w
+enjoyBenefitsView push state remoteSubscriptionsConfigVariantLevel =
+  let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+      plansTitle = if MP.has appName "Kerala Savaari" then "Get ready for\nKerala Savaari Plans!" else (getString $ GET_READY_FOR_YS_SUBSCRIPTION "GET_READY_FOR_YS_SUBSCRIPTION")
+  in linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , gravity RIGHT
     , orientation VERTICAL
-    , margin $ Margin 116 10 10 0
+    , margin $ Margin 136 10 16 0
     ][  linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        ][  commonTV push (getString $ GET_READY_FOR_YS_SUBSCRIPTION "GET_READY_FOR_YS_SUBSCRIPTION") Color.black800 (FontStyle.h1 TypoGraphy) 0 LEFT state.props.joinPlanProps.isIntroductory
-          , commonTV push (getString ENJOY_THESE_BENEFITS) Color.black800 (FontStyle.body4 TypoGraphy) 0 LEFT true
+        ][  commonTV push plansTitle Color.black800 (FontStyle.h1 TypoGraphy) 0 LEFT state.props.joinPlanProps.isIntroductory
+          , commonTV push (getString WE_GUARANTEE_YOU) Color.black800 (FontStyle.body4 TypoGraphy) 0 LEFT true
           , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -303,15 +360,25 @@ enjoyBenefitsView push state =
                           ] <> FontStyle.body1 TypoGraphy
                       ]
                 )
-              ([(getString ZERO_COMMISION), (getString EARN_TODAY_PAY_TOMORROW)] 
-                  <> if state.props.joinPlanProps.isIntroductory then [getString GET_FULL_PAYMENT, getString (GUARANTEED_FIXED_PRICE "GUARANTEED_FIXED_PRICE")]
-                     else if not state.data.config.subscriptionConfig.enableSubscriptionPopups
-                      then [(getString SIGNUP_EARLY_FOR_SPECIAL_OFFERS), getString (GUARANTEED_FIXED_PRICE "GUARANTEED_FIXED_PRICE")]
-                      else [(getString PAY_ONLY_IF_YOU_TAKE_RIDES), getString (GET_SPECIAL_OFFERS "GET_SPECIAL_OFFERS")])
-            ) 
-        ]
+              benefitsData )]
+        
         
     ]
+    where
+      benefitsData = do
+        let noChargesTillDate = remoteSubscriptionsConfigVariantLevel.noChargesTillDate
+            lowestFeesFromDate = remoteSubscriptionsConfigVariantLevel.lowestFeesFromDate
+        if state.props.joinPlanProps.isIntroductory 
+                        then [ getVarString ZERO_FEE_TILL [HU.splitBasedOnLanguage noChargesTillDate ],
+                               getString ZERO_COMMISION_UNLIMITED_RIDES,
+                               getString EARN_TODAY_PAY_TOMORROW,
+                               getVarString LOWEST_FEES_FROM [HU.splitBasedOnLanguage lowestFeesFromDate]
+                             ]
+                        else 
+                             [ getString ZERO_COMMISION_UNLIMITED_RIDES, 
+                               getString EARN_TODAY_PAY_TOMORROW,
+                               getString PAY_ONLY_IF_YOU_TAKE_RIDES] 
+                             
 
 paymentPendingView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
 paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE
@@ -323,14 +390,10 @@ paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentTy
   , background Color.yellow800
   , cornerRadii $ Corners 24.0 false false true true
   , padding $ Padding 16 12 16 12
-  , visibility if ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE) then VISIBLE else GONE -- Condition will be updated when dues are introduced to YS flow.
+  , visibility if isPaymentPending state then VISIBLE else GONE -- Condition will be updated when dues are introduced to YS flow.
   ][  commonTV push (getString if isAutoPayPending then AUTOPAY_SETUP_PENDING_STR else PAYMENT_PENDING) Color.black800 (FontStyle.h2 TypoGraphy) 0 LEFT true
     , commonTV push (getString AUTOPAY_PENDING_DESC_STR) Color.black800 (FontStyle.tags TypoGraphy) 0 LEFT true
-    , textView $
-      [ text $ getString OFFERS_NOT_APPLICABLE
-      , color Color.red
-      , visibility if isAutoPayPending && not HU.isDateGreaterThan state.props.offerBannerProps.offerBannerValidTill && (any (_ == state.data.myPlanData.planEntity.id) state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans) then VISIBLE else GONE
-      ] <> if state.props.isSelectedLangTamil then FontStyle.body16 TypoGraphy else FontStyle.tags TypoGraphy
+    , commonTV push (getString OFFERS_NOT_APPLICABLE) Color.red900 (FontStyle.tags TypoGraphy) 0 LEFT true
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -364,7 +427,7 @@ paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentTy
           textFromHtml $ getString NEED_HELP
         ] <> FontStyle.tags TypoGraphy
         , imageView [
-          imageWithFallback "ny_ic_phone_filled_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_phone_filled_blue.png"
+          imageWithFallback "ny_ic_phone_filled_blue,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_phone_filled_blue.png"
           , height $ V 12
           , width $ V 12
           , margin $ Margin 2 1 2 0
@@ -378,13 +441,15 @@ paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentTy
 
 plansBottomView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
 plansBottomView push state =
+  let yatriPlansPlaylist = fromMaybe "" state.data.vehicleAndCityConfig.yatriPlansPlaylist
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , alignParentBottom "true,-1"
   , cornerRadii $ Corners 20.0 true true false false
   , background Color.white900
-  , padding $ Padding 20 20 20 if length state.data.joinPlanData.allPlans == 1 then 16 else 0
+  , padding $ Padding 20 20 20 16
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -417,12 +482,11 @@ plansBottomView push state =
           , gravity CENTER_VERTICAL
           , visibility if state.props.joinPlanProps.isIntroductory then GONE else VISIBLE
           , onClick (\action -> do
-                        let url = if state.data.config.subscriptionConfig.myPlanYoutubeLink == "" then state.data.config.subscriptionConfig.faqLink else HU.splitBasedOnLanguage state.data.config.subscriptionConfig.myPlanYoutubeLink
                         _ <- push action
                         _ <- pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- pure $ JB.metaLogEvent "ny_driver_nyplans_watchvideo_clicked"
                         _ <- pure $ JB.firebaseLogEvent "ny_driver_nyplans_watchvideo_clicked"
-                        _ <- JB.openUrlInApp url
+                        _ <- JB.openUrlInApp yatriPlansPlaylist
                         pure unit
                         ) (const NoAction)
           ][ textView $
@@ -434,11 +498,11 @@ plansBottomView push state =
               , visibility GONE
               ] <> FontStyle.body1 TypoGraphy 
             , imageView [
-                imageWithFallback "ny_ic_youtube,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_youtube.png"
+                imageWithFallback "ny_ic_youtube,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_youtube.png"
                 , height $ V 16
                 , width $ V 16
                 , margin $ Margin 0 3 6 0
-                , visibility if state.data.config.subscriptionConfig.myPlanYoutubeLink == "" then GONE else VISIBLE
+                , visibility if DS.null yatriPlansPlaylist then GONE else VISIBLE
             ]
             , textView $
               [ weight 1.0
@@ -465,8 +529,8 @@ plansBottomView push state =
                   (\item ->
                     let selectedPlan = state.props.joinPlanProps.selectedPlanItem
                     in case selectedPlan of
-                        Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory []
-                        Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory []
+                        Just plan -> PlanCard.view (push <<< ChoosePlanAction) (planCardConfig item (item.id == plan.id) true state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory [] Nothing)
+                        Nothing -> PlanCard.view (push <<< ChoosePlanAction) (planCardConfig item false true state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory [] Nothing)
                   ) state.data.joinPlanData.allPlans)
           ]
         , PrimaryButton.view (push <<< JoinPlanAC) (joinPlanButtonConfig state)
@@ -521,9 +585,122 @@ myPlanView push state visibility' =
   , height MATCH_PARENT
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
-  , gradient (Linear 180.0 [Color.darkGradientBlue, Color.lightGradientBlue])
+  , background $ Color.transparent
   ][ paymentPendingView push state
    , myPlanBodyview push state
+  ]
+
+carouselView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
+carouselView push state =
+  let paymentPending = isPaymentPending state
+  in
+  linearLayout
+  [ width $ MATCH_PARENT
+  , height $ WRAP_CONTENT
+  , padding $ PaddingVertical 24 24
+  , background $ Color.white900
+  , visibility $ if DA.length state.data.reelsData > 0 then VISIBLE else GONE
+  ][ horizontalScrollView
+    [ height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , scrollBarX false
+    ][ linearLayout
+       [ width $ MATCH_PARENT
+       , height WRAP_CONTENT
+       , orientation HORIZONTAL
+       ](DA.mapWithIndex (\index item -> if paymentPending then carouselSmallCardView push state item index (index == 0) else carouselBigCardView push state item index (index == 0)) state.data.reelsData)
+    ]
+  ]
+
+carouselSmallCardView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> ReelItem -> Int -> Boolean -> PrestoDOM (Effect Unit) w
+carouselSmallCardView push state reelInfo index isFirst =
+  relativeLayout
+  [ width $ WRAP_CONTENT
+  , height $ WRAP_CONTENT
+  , cornerRadius 16.0
+  , onClick push $ const $ OpenReelsView index
+  , margin $ if isFirst then (MarginHorizontal 12 12) else (MarginRight 12)
+  , background $ Color.transparent
+  ][  imageView
+      [ width $ V 196
+      , height $ V 73
+      , imageWithFallback $ "," <> fromMaybe "" reelInfo.carouselSmallImageUrl
+      ]
+    , linearLayout
+      [ width $ V 196
+      , height $ V 73
+      , gravity CENTER_VERTICAL
+      ][  textView $ 
+          [ textFromHtml $ fromMaybe "" reelInfo.carouselTextString
+          , color $ fromMaybe Color.white900 reelInfo.carouselTextColor
+          , height $ WRAP_CONTENT
+          , width $ WRAP_CONTENT
+          , margin $ MarginLeft 12
+          ]
+        , linearLayout
+          [ weight 1.0
+          ][]
+        , imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_white_play_circle"
+          , width $ V 40
+          , height $ V 40
+          , alignParentLeft "true,-1"
+          , margin $ MarginRight 12
+          ]
+      ] 
+  ]  
+
+carouselBigCardView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> ReelItem -> Int -> Boolean -> PrestoDOM (Effect Unit) w
+carouselBigCardView push state reelInfo index isFirst =
+  relativeLayout
+  [ width $ WRAP_CONTENT
+  , height $ WRAP_CONTENT
+  , cornerRadius 16.0
+  , onClick push $ const $ OpenReelsView index
+  , margin $ if isFirst then (MarginHorizontal 12 12) else (MarginRight 12)
+  , background $ Color.black6000
+  ][  imageView
+      [ width $ V 196
+      , height $ V 196
+      , imageWithFallback $ "," <> (fromMaybe "" reelInfo.carouselBigImageUrl)
+      ]
+    , relativeLayout
+      [ width $ V 196
+      , height $ V 196
+      ][  textView $ 
+          [ textFromHtml $ fromMaybe "" reelInfo.carouselTextString
+          , color $ fromMaybe Color.white900 reelInfo.carouselTextColor
+          , height $ WRAP_CONTENT
+          , width $ WRAP_CONTENT
+          , margin $ Margin 12 20 12 12
+          ]
+        , linearLayout
+          [ width $ MATCH_PARENT
+          , height WRAP_CONTENT
+          , alignParentBottom "true,-1"
+          , gravity CENTER
+          , margin $ MarginBottom 16
+          ][ linearLayout
+             [ width $ WRAP_CONTENT
+             , height $ WRAP_CONTENT
+             , padding $ Padding 8 8 8 8
+             , background $ Color.white27
+             , gravity CENTER
+             , cornerRadius 4.0
+             ][ imageView
+                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_white_transparent_play_circle"
+                , width $ V 20
+                , height $ V 20]
+              , textView $
+                [ text $ getString WATCH_NOW
+                , color Color.white900
+                , margin $ MarginLeft 10
+                , width WRAP_CONTENT
+                , height WRAP_CONTENT
+                ] <> FontStyle.body1 TypoGraphy
+            ]
+          ]
+      ] 
   ]
 
 headerView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w 
@@ -595,8 +772,12 @@ myPlanBodyview :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -
 myPlanBodyview push state =
   let isFreezed = ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE)
       paddingBottom = case state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY , state.data.myPlanData.manualDueAmount > 0.0 of
-                        true, true -> 270
-                        _, _ -> 250
+                        true, true -> 290
+                        _, _ -> 270
+      mbCoinDiscountUpto = case state.data.myPlanData.coinEntity of
+                            Just (CoinEntity coinEntity) -> Just coinEntity.coinDiscountUpto
+                            Nothing -> Nothing
+      yatriPlansPlaylist = fromMaybe "" state.data.vehicleAndCityConfig.yatriPlansPlaylist
   in 
   scrollView
   [ height MATCH_PARENT
@@ -605,12 +786,14 @@ myPlanBodyview push state =
     [ height $ V 300 
     , width MATCH_PARENT
     , orientation VERTICAL
-    , padding $ PaddingVertical 24 paddingBottom
-    ][ linearLayout
+    , padding $ PaddingVertical 0 paddingBottom
+    , gradient (Linear 180.0 [Color.darkGradientBlue, Color.lightGradientBlue])
+    ][ carouselView push state
+    , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity CENTER_VERTICAL
-      , margin $ Margin 16 0 16 16 
+      , margin $ Margin 16 10 16 16 
       ][ linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -626,26 +809,26 @@ myPlanBodyview push state =
           , height $ V 38
           , margin (MarginLeft 4)
           , padding $ Padding 8 8 8 8
-          , visibility if state.data.config.subscriptionConfig.myPlanYoutubeLink == "" then GONE else VISIBLE
+          , visibility if DS.null yatriPlansPlaylist then GONE else VISIBLE
           , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_youtube"
           , onClick (\action -> do
                       _<- push action
                       _ <- pure $ JB.cleverTapCustomEvent "ny_driver_myplan_watchvideo_clicked"
                       _ <- pure $ JB.metaLogEvent "ny_driver_myplan_watchvideo_clicked"
                       _ <- pure $ JB.firebaseLogEvent "ny_driver_myplan_watchvideo_clicked"
-                      _ <- JB.openUrlInApp $ HU.splitBasedOnLanguage state.data.config.subscriptionConfig.myPlanYoutubeLink
+                      _ <- JB.openUrlInApp $ HU.splitBasedOnLanguage yatriPlansPlaylist
                       pure unit
                       ) (const NoAction)
           ]
           ]
         , paymentMethodView push state.data.myPlanData
       ]
-    , lottieView state "lottieSubscriptionScreen2" (Margin 16 0 16 16) (Padding 0 0 0 0)
-    , planCardView push state.data.myPlanData.planEntity true (not isFreezed) TogglePlanDescription state.props.isSelectedLangTamil false true true Nothing false [] -- Always expended
-    , offerCardBannerView push true (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && (any (_ == state.data.myPlanData.planEntity.id) state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans)) false state.props.offerBannerProps isFreezed
+    , lottieView state "lottieSubscriptionScreen2" (Margin 16 0 16 16) (Padding 0 0 0 0) false
+    , PlanCard.view (push <<< TogglePlanAction) (planCardConfig state.data.myPlanData.planEntity true (not isFreezed) state.props.isSelectedLangTamil false true true Nothing false [] mbCoinDiscountUpto)  -- Always expended
+    , offerCardBannerView push true (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && (any (_ == state.data.myPlanData.planEntity.id) state.props.offerBannerProps.offerBannerPlans)) false state.props.offerBannerProps isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil true isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (any (_ == state.data.myPlanData.autoPayStatus) [CANCELLED_PSP, SUSPENDED]) state.props.isSelectedLangTamil false isFreezed
-    , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (DS.replace (DS.Pattern "<X>") (DS.Replacement $ HU.getFixedTwoDecimals $ fromMaybe 0.0 state.data.myPlanData.lowAccountBalance) (getString LOW_ACCOUNT_BALANCE_DESC)) "" NoAction (Mb.isJust state.data.myPlanData.lowAccountBalance) state.props.isSelectedLangTamil false isFreezed
+    , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (DS.replace (DS.Pattern "<X>") (DS.Replacement $ getFixedTwoDecimals $ fromMaybe 0.0 state.data.myPlanData.lowAccountBalance) (getString LOW_ACCOUNT_BALANCE_DESC)) "" NoAction (Mb.isJust state.data.myPlanData.lowAccountBalance) state.props.isSelectedLangTamil false isFreezed
     , alertView push (getImageURL "ny_ic_warning_blue") Color.blue800 (getString SWITCH_AND_SAVE) (getString SWITCH_AND_SAVE_DESC) (getString SWITCH_NOW) NoAction state.data.myPlanData.switchAndSave state.props.isSelectedLangTamil false isFreezed
   ]
 ]
@@ -685,7 +868,7 @@ duesView push state =
               , color if state.props.myPlanProps.overDue then Color.red else Color.black800
               ]  <> if state.props.isSelectedLangTamil then FontStyle.body9 TypoGraphy else FontStyle.body6 TypoGraphy
             , textView $
-              [ text $  "₹" <> HU.getFixedTwoDecimals state.data.myPlanData.totalDueAmount
+              [ text $  "₹" <> getFixedTwoDecimals state.data.myPlanData.totalDueAmount
               , color if state.props.myPlanProps.overDue then Color.red else Color.blue800
               , padding $ PaddingBottom 2
               , visibility if state.props.myPlanProps.isDueViewExpanded then GONE else VISIBLE
@@ -738,14 +921,14 @@ duesView push state =
             , width MATCH_PARENT
             , gravity CENTER_VERTICAL
             ][ textView $
-              [ text $  "₹" <> HU.getFixedTwoDecimals state.data.myPlanData.totalDueAmount
+              [ text $  "₹" <> getFixedTwoDecimals state.data.myPlanData.totalDueAmount
               , color if state.props.myPlanProps.overDue then Color.red 
                       else if state.props.myPlanProps.multiTypeDues then Color.black900 
                       else Color.blue800
               , weight 1.0
               ] <> if state.props.isSelectedLangTamil then FontStyle.body7 TypoGraphy else FontStyle.h2 TypoGraphy
             , textView $
-              [ text $ "₹" <>  HU.getFixedTwoDecimals state.data.myPlanData.maxDueAmount
+              [ text $ "₹" <>  getFixedTwoDecimals state.data.myPlanData.maxDueAmount
               , color Color.black700
               ] <> if state.props.isSelectedLangTamil then FontStyle.body7 TypoGraphy else FontStyle.h2 TypoGraphy
             ]
@@ -835,8 +1018,8 @@ duesView push state =
                 , weight 1.0
                 ] <> FontStyle.tags TypoGraphy
             , commonImageView (  if state.props.myPlanProps.multiTypeDues then "ny_ic_chevron_right"
-                                  else if state.props.myPlanProps.isDuesExpanded then "ny_ic_chevron_up,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_up.png"
-                                  else "ny_ic_chevron_down,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_down.png") 12 12 (MarginRight 4) (Padding 0 0 0 0)
+                                  else if state.props.myPlanProps.isDuesExpanded then "ny_ic_chevron_up,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_up.png"
+                                  else "ny_ic_chevron_down,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_down.png") 12 12 (MarginRight 4) (Padding 0 0 0 0)
             ]
           , tripList push state.data.myPlanData.dueItems (state.data.myPlanData.manualDueAmount /= 0.0) state.props.myPlanProps.isDuesExpanded true true
         ] 
@@ -846,19 +1029,19 @@ duesView push state =
     ]
   
 
-promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> PrestoDOM (Effect Unit) w 
-promoCodeView push state =
+promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 
+promoCodeView push state isIntroductory isSelectedLangTamil =
   linearLayout 
   ([ height WRAP_CONTENT
   , width MATCH_PARENT
   , cornerRadius 100.0
   , padding $ Padding 10 4 10 4
-  , stroke $ "1," <> Color.grey900
   , background Color.white900
   , margin $ MarginRight 4
   , gravity CENTER_VERTICAL
   , visibility if state.title == Nothing then GONE else VISIBLE
-  ]<> if state.isGradient then [gradient (Linear 90.0 state.gradient)] else [])
+  ] <> if not isIntroductory then [stroke $ "1," <> Color.grey900] else []
+    <> if state.isGradient then [gradient (Linear 90.0 state.gradient)] else [])
    [ imageView
      [ width $ V 12
      , height $ V 12
@@ -870,7 +1053,7 @@ promoCodeView push state =
      [ color Color.blue900
      , singleLine true
      , padding $ PaddingBottom 3
-     ]  <> FontStyle.body16 TypoGraphy
+     ]  <> (if isSelectedLangTamil then FontStyle.body16 TypoGraphy else FontStyle.tags TypoGraphy)
         <> case state.title of
             Mb.Nothing -> [visibility GONE]
             Mb.Just txt -> [text txt]
@@ -994,163 +1177,37 @@ paymentMethodView push state =
 
 managePlanBodyView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
 managePlanBodyView push state =
-  scrollView
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , scrollBarY false
-  ][ linearLayout
-     [ height MATCH_PARENT
-     , width MATCH_PARENT
-     , padding $ PaddingTop 24
-     , margin $ MarginHorizontal 16 16
-     , orientation VERTICAL
-     ][ textView $
-        [ text (getString CURRENT_PLAN)
-        , color Color.black700
-        , margin $ MarginBottom 12
-        ] <> if state.props.isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body9 TypoGraphy
-      , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false true (Just state.props.offerBannerProps) false state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans
-      , textView $
-        [ text (getString ALTERNATE_PLAN)
-        , color Color.black700
-        , margin $ MarginVertical 32 12 
-        ] <> if state.props.isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body9 TypoGraphy
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        ](map(
-             (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false false (Just state.props.offerBannerProps) false state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans)
-             ) state.data.managePlanData.alternatePlans)
-      , textView $ [
-        text (getString OFFERS_APPLICABLE_ON_DAILY_UNLIMITED)
-        , color Color.black600
-        , margin $ MarginBottom 16
-        , visibility if showOfferApplicable state then VISIBLE else GONE
-      ] <> if state.props.isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body9 TypoGraphy
-      , PrimaryButton.view (push <<< SwitchPlan) (switchPlanButtonConfig state)
-     ]
-   ]
-
-planCardView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> Boolean -> (PlanCardConfig -> Action) -> Boolean -> Boolean -> Boolean -> Boolean -> Maybe OfferBanner -> Boolean -> Array String -> PrestoDOM (Effect Unit) w
-planCardView push state isSelected clickable' action isSelectedLangTamil showBanner isMyPlan isActivePlan offerBannerProps isIntroductory offerBannerPlans =
-  -- PrestoAnim.animationSet                TODO :: Animations
-  -- [ translateInXForwardAnim true] $
-  let dummyOfferConfig = { showOfferBanner : false, offerBannerValidTill : "", offerBannerDeadline : ""}
-      gradient' = Linear 180.0 if isSelected && not isMyPlan then ["#53BB6F", "#2194FF"] else ["#53BB6F", "#E5E7EB"]
-  in
-  relativeLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , clickable if isMyPlan then true else clickable'
-  , alpha if not clickable' && isMyPlan then 0.5 else 1.0
-  ][ linearLayout
-    ([ height WRAP_CONTENT
+    scrollView
+    [ height MATCH_PARENT
     , width MATCH_PARENT
-    , padding $ Padding 1 1 1 1
-    , margin if isMyPlan then Margin 16 13 16 0 else MarginVertical 13 16    
-    , cornerRadius 8.0 
-   ] <> if isActivePlan then [gradient gradient'] else [])
-   [ linearLayout
-      [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , background Color.white900
-        , cornerRadius 8.0
-        ][
-        linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , background if isSelected && not isMyPlan && not isIntroductory then Color.blue600 else Color.white900
-        , stroke $ "1," <> (if isIntroductory then Color.grey900
-                            else if isSelected && isActivePlan then Color.transparent
-                            else if isSelected && not isMyPlan then Color.blue800 
-                            else Color.grey900)
-        , padding $ Padding 16 12 16 (if isMyPlan then 16 else 12)
-        , cornerRadius 8.0
-        , orientation VERTICAL
-        , onClick push $ const $ action state
-        ][ linearLayout
+    , scrollBarY false
+    ][ linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , padding $ PaddingTop 24
+      , margin $ MarginHorizontal 16 16
+      , orientation VERTICAL
+      ][ textView $
+          [ text (getString CURRENT_PLAN)
+          , color Color.black700
+          , margin $ MarginBottom 12
+          ] <> if state.props.isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body9 TypoGraphy
+        , PlanCard.view (push <<< SelectPlanAction) (planCardConfig state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlanItem.id) true state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false true (Just state.props.offerBannerProps) false state.props.offerBannerProps.offerBannerPlans Nothing)
+        , textView $
+          [ text (getString ALTERNATE_PLAN)
+          , color Color.black700
+          , margin $ MarginVertical 32 12 
+          ] <> if state.props.isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body9 TypoGraphy
+        , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
-          , gravity CENTER_VERTICAL
-          , margin $ MarginBottom 5
-          ][ textView
-              [ text state.title
-              , textSize if isSelectedLangTamil then FontSize.a_12 else FontSize.a_14
-              , weight 1.0
-              , fontStyle $ (if isSelected && not isMyPlan then FontStyle.bold else FontStyle.semiBold) LanguageStyle
-              , color if isSelected && not isMyPlan || isIntroductory then Color.blue900 else Color.black700
-              ]
-            , planPriceView state.priceBreakup state.frequency isSelectedLangTamil isIntroductory
-            ]
-          , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , gravity CENTER_VERTICAL
-            ][ textView $
-              [ text state.description
-              , color Color.black600
-              , weight 1.0
-              , visibility if isIntroductory then GONE else VISIBLE
-              ] <> if isSelectedLangTamil then FontStyle.body16 TypoGraphy else FontStyle.tags TypoGraphy
-            , if state.showOffer && DA.length state.offers > 1 then offerCountView (DA.length state.offers) isSelected else linearLayout[visibility GONE][]
-            ]
-          , horizontalScrollView 
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , scrollBarX false
-            , margin $ MarginTop 8
-            , visibility if DA.length state.offers == 1 || (isSelected && DA.length state.offers > 0) then VISIBLE else GONE
-            ][ linearLayout
-              [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              ](map  (\item -> promoCodeView push item) state.offers)
-            ]
-          , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , visibility if isSelected && (DA.length state.offers > 0) || isIntroductory then VISIBLE else GONE
-            ](map (\item ->
-                linearLayout
-                  ([ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , orientation VERTICAL
-                  , padding $ Padding 8 8 8 8
-                  , margin $ MarginTop 8
-                  , background if isMyPlan || isIntroductory then Color.grey700 else Color.white900
-                  , cornerRadius 4.0
-                  ] <> case item.offerDescription of 
-                        Mb.Just desc -> [text desc, visibility if (isSelected || isIntroductory) && not DS.null desc then VISIBLE else GONE]
-                        Mb.Nothing -> [visibility GONE])
-                  [ textView $
-                    [ textFromHtml $ Mb.fromMaybe "" item.offerDescription
-                    , color Color.black600
-                    ] <> if isSelectedLangTamil then FontStyle.captions TypoGraphy else FontStyle.body3 TypoGraphy
-                  ]
-              )state.offers)
-          , offerCardBannerView push false (isJust offerBannerProps && (any (_ == state.id) offerBannerPlans) && showBanner) true (fromMaybe dummyOfferConfig offerBannerProps) false
-          ]
+          , orientation VERTICAL
+          ](map(
+              (\item -> PlanCard.view (push <<< SelectPlanAction) (planCardConfig item (item.id == state.props.managePlanProps.selectedPlanItem.id) true state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false false (Just state.props.offerBannerProps) false state.props.offerBannerProps.offerBannerPlans Nothing))
+              ) state.data.managePlanData.alternatePlans)
+        , PrimaryButton.view (push <<< SwitchPlan) (switchPlanButtonConfig state)
       ]
     ]
-   , linearLayout 
-     [  height WRAP_CONTENT
-      , width MATCH_PARENT
-      , gravity CENTER
-      , visibility if isActivePlan then VISIBLE else GONE
-     ][ textView $ [
-        text $ getString ACTIVE_PLAN
-      , background Color.green900
-      , color Color.white900
-      , padding $ Padding 8 5 8 5
-      , cornerRadius 100.0
-      ] <> FontStyle.tags TypoGraphy
-    ]
-   
-]
-  
-  
 
 offerCountView :: forall w. Int -> Boolean -> PrestoDOM (Effect Unit) w
 offerCountView count isSelected = 
@@ -1423,7 +1480,7 @@ sfl height' =
 
 planPriceView :: forall w. Array PaymentBreakUp -> String -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 planPriceView fares frequency isSelectedLangTamil isIntroductory =
-  let finalFee = "₹" <> (getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
+  let finalFee = "₹" <> (HU.getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
                                                                     "PER_RIDE" -> getString RIDE
                                                                     "DAILY" -> getString DAY
                                                                     _ -> getString DAY
@@ -1433,8 +1490,8 @@ planPriceView fares frequency isSelectedLangTamil isIntroductory =
   , width WRAP_CONTENT
   , gravity CENTER_VERTICAL
   ][ textView $ 
-     [ textFromHtml $ "<strike> ₹" <> getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
-     , visibility if (getAllFareFromArray fares ["INITIAL_BASE_FEE", "FINAL_FEE"]) > 0.0 && not isIntroductory then VISIBLE else GONE
+     [ textFromHtml $ "<strike> ₹" <> HU.getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
+     , visibility if (HU.getAllFareFromArray fares ["INITIAL_BASE_FEE", "FINAL_FEE"]) > 0.0 && not isIntroductory then VISIBLE else GONE
      , color Color.black600
      ] <> FontStyle.body7 TypoGraphy
    , textView $
@@ -1442,20 +1499,6 @@ planPriceView fares frequency isSelectedLangTamil isIntroductory =
       , margin $ MarginLeft 3
       , color if isIntroductory then Color.black600 else Color.black800
       ] <> if isSelectedLangTamil then FontStyle.body4 TypoGraphy else FontStyle.body7 TypoGraphy
-   , linearLayout
-     [ height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , padding $ Padding 5 5 5 5
-      , visibility if isIntroductory then VISIBLE else GONE
-      , background Color.blue600
-      , margin $ MarginLeft 4
-      , cornerRadius 24.0
-     ][ imageView 
-         [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_lock" 
-         , height $ V 10  
-         , width $ V 10
-         ]
-     ]
    ]
 
 findHelpCentreView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> Boolean -> PrestoDOM (Effect Unit) w
@@ -1613,6 +1656,7 @@ duesOverView push state visibility' =
 dueOverViewCard :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 dueOverViewCard push state isManual =
   let items = filter (\item -> if isManual then item.mode /= AUTOPAY_PAYMENT else item.mode == AUTOPAY_PAYMENT) state.data.myPlanData.dueItems
+      yatriPlansPlaylist = fromMaybe "" state.data.vehicleAndCityConfig.yatriPlansPlaylist
   in
   linearLayout
   [ height WRAP_CONTENT
@@ -1638,16 +1682,16 @@ dueOverViewCard push state isManual =
         , height $ V 32
         , margin (MarginLeft 4)
         , padding $ Padding 8 8 8 8
-        , visibility if isManual then VISIBLE else GONE
+        , visibility if isManual && (not DS.null yatriPlansPlaylist) then VISIBLE else GONE
         , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_youtube"
         , onClick (\action -> do
             _<- push action
-            _ <- JB.openUrlInApp $ HU.splitBasedOnLanguage state.data.config.subscriptionConfig.myPlanYoutubeLink
+            _ <- JB.openUrlInApp $ HU.splitBasedOnLanguage yatriPlansPlaylist
             pure unit
           ) (const NoAction)
         ]
       , textView $
-        [ text $  "₹" <> HU.getFixedTwoDecimals if isManual then state.data.myPlanData.manualDueAmount else state.data.myPlanData.autoPayDueAmount
+        [ text $  "₹" <> getFixedTwoDecimals if isManual then state.data.myPlanData.manualDueAmount else state.data.myPlanData.autoPayDueAmount
         , weight 1.0
         , gravity RIGHT
         , color if isManual then Color.orange900 else Color.blue800
@@ -1723,7 +1767,7 @@ tripList push trips isManual isExpanded viewDatailsText useFixedHeight =
                   , weight 1.0
                   ] <> FontStyle.body15 TypoGraphy
                 , textView $
-                  [ text $ "₹" <>  HU.getFixedTwoDecimals item.amount
+                  [ text $ "₹" <>  getFixedTwoDecimals item.amount
                   , color Color.black700
                   ] <> FontStyle.body15 TypoGraphy
                 ]
@@ -1786,12 +1830,6 @@ getAutoPayStatusPillData autoPayStatus =
     _ | autoPayStatus `elem` [PENDING, MANDATE_FAILED] -> {color: Color.orange900, status : getString PENDING_STR }
     _ -> {color: Color.orange900, status : getString PENDING_STR }
 
-showOfferApplicable :: SubscriptionScreenState -> Boolean
-showOfferApplicable state = 
-  let currentPlanOffers = length $ filter (not _.addedFromUI) state.data.managePlanData.currentPlan.offers
-      selectedPlanOffers = length $ filter (not _.addedFromUI) state.props.managePlanProps.selectedPlanItem.offers
-  in state.props.managePlanProps.selectedPlanItem.id /= state.data.managePlanData.currentPlan.id && selectedPlanOffers < currentPlanOffers
-
 commonImageView :: String -> Int -> Int -> Margin -> Padding -> forall w . PrestoDOM (Effect Unit) w
 commonImageView imageName imageHeight imageWidth imageViewMargin imageViewPadding =
   imageView $
@@ -1802,8 +1840,8 @@ commonImageView imageName imageHeight imageWidth imageViewMargin imageViewPaddin
       , padding imageViewPadding
       ]
 
-lottieView :: SubscriptionScreenState -> String -> Margin -> Padding -> forall w . PrestoDOM (Effect Unit) w
-lottieView state viewId margin' padding'= 
+lottieView :: SubscriptionScreenState -> String -> Margin -> Padding -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+lottieView state viewId margin' padding' useFreeTrial = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -1816,7 +1854,7 @@ lottieView state viewId margin' padding'=
     lottieAnimationView
     [ id (getNewIDWithTag viewId)
     , afterRender (\action-> do
-                  void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = lottieJsonAccordingToLang (isOnFreeTrial FunctionCall) state.props.joinPlanProps.isIntroductory, lottieId = (getNewIDWithTag viewId), scaleType = "CENTER_CROP", forceToUseRemote = false}
+                  void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = lottieJsonAccordingToLang ((isOnFreeTrial FunctionCall) && (not useFreeTrial)) (state.props.joinPlanProps.isIntroductory && (not useFreeTrial)) , lottieId = (getNewIDWithTag viewId), scaleType = "CENTER_CROP", forceToUseRemote = false}
                   )(const NoAction)
     , height $ V 35
     , width MATCH_PARENT
@@ -1837,27 +1875,41 @@ offerCardBannerView push useMargin visibility' isPlanCard offerBannerProps isFre
     , clickable false
     , alpha if isFreezed then 0.6 else 1.0
     ][
-        Banner.view (push <<< OfferCardBanner) (offerCardBannerConfig isPlanCard offerBannerProps)
+        Banner.view (push <<< OfferCardBanner) (PlanCard.offerCardBannerConfig isPlanCard offerBannerProps)
     ]
 
 lottieJsonAccordingToLang :: Boolean -> Boolean -> String
 lottieJsonAccordingToLang isOnFreeTrial isIntroductory = 
-  (HU.getAssetsBaseUrl FunctionCall) <> case getLanguageLocale languageKey of 
-    "HI_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_hindi_03.json"
-               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_hindi_01.json" 
-               else "lottie/ny_ic_subscription_info_hindi_02.json"
-    "KN_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_kannada_02.json"
-               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_kannada_01.json" 
-               else "lottie/ny_ic_subscription_info_kannada_02.json"
-    "TA_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_tamil_02.json"
-               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_tamil_01.json" 
-               else "lottie/ny_ic_subscription_info_tamil_02.json"
-    "BN_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_bengali_02.json"
-               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_bengali_01.json" 
-               else "lottie/ny_ic_subscription_info_bengali_02.json"
-    "TE_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_telugu_03.json"
-               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_01.json" 
-               else "lottie/ny_ic_subscription_info_02.json"
-    _       -> if isIntroductory then "lottie/ny_ic_subscription_info_03.json"
-               else if isOnFreeTrial then "lottie/ny_ic_subscription_info_01.json" 
-               else "lottie/ny_ic_subscription_info_02.json"
+  let lang = getLanguageLocale languageKey
+      driverCity = getValueToLocalStore DRIVER_LOCATION
+      driverVehicle = getValueToLocalStore VEHICLE_VARIANT
+      vehicleAndCityConfig = RemoteConfig.subscriptionsConfigVariantLevel driverCity "default"
+      lottieSubscriptionInfo = fromMaybe RemoteConfig.defaultLottieSubscriptionInfo vehicleAndCityConfig.lottieSubscriptionInfo
+      getLottieByLang lottieConfig = case lang of
+        "HI_IN" -> lottieConfig.hindi
+        "KN_IN" -> lottieConfig.kannada
+        "TA_IN" -> lottieConfig.tamil
+        "BN_IN" -> lottieConfig.bengali
+        "TE_IN" -> lottieConfig.telugu
+        "ML_IN" -> lottieConfig.malayalam
+        _       -> lottieConfig.english
+      lottieUrl = if isOnFreeTrial then
+            getLottieByLang lottieSubscriptionInfo.freeTrialLottie
+          else if isIntroductory then
+            getLottieByLang lottieSubscriptionInfo.introductoryLottie
+          else
+            getLottieByLang lottieSubscriptionInfo.subscriptionPlanLottie
+  in (HU.getAssetsBaseUrl FunctionCall) <> lottieUrl
+
+
+isPaymentPending :: SubscriptionScreenState -> Boolean
+isPaymentPending state = ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE)
+
+paymentUnderMaintenanceView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState ->  PrestoDOM (Effect Unit) w
+paymentUnderMaintenanceView push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , gravity CENTER 
+  , background Color.blackLessTrans
+  ][ PopUpModal.view (push <<< PaymentUnderMaintenanceModalAC) (paymentUnderMaintenanceConfig state) ]

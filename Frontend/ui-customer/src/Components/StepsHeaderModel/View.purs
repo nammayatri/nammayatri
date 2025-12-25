@@ -4,7 +4,7 @@ import Data.Array (mapWithIndex)
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, (<>), bind, ($), pure, unit, show, (+), (>=), (&&), (>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, lottieAnimationView, id, afterRender, visibility, background, padding, accessibilityHint, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, lottieAnimationView, id, afterRender, visibility, background, padding, accessibilityHint, accessibility, rippleColor, cornerRadius)
 import Screens.Types (StepsHeaderModelState)
 import Styles.Colors as Color
 import Components.StepsHeaderModel.Controller (Action(..))
@@ -24,12 +24,12 @@ view push state =
     ][ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , margin $ MarginHorizontal 5 10
+        , margin $ MarginHorizontal 2 10
         , padding $ PaddingVertical 10 10
         , gravity CENTER_VERTICAL
         ][  imageView
-            [ height $ V 25
-            , width $ V 25
+            [ height $ V 35
+            , width $ V 35
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
             , onClick push $ const OnArrowClick
             , accessibilityHint "Back"
@@ -37,6 +37,9 @@ view push state =
             , visibility case state.backArrowVisibility of 
                 true -> VISIBLE
                 false -> if state.activeIndex > 0 then VISIBLE else GONE
+            , cornerRadius 20.0
+            , rippleColor Color.rippleShade
+            , padding $ Padding 7 7 7 7
             ]
           , linearLayout
             [ width WRAP_CONTENT

@@ -20,17 +20,20 @@ import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.PopUpModal as PopUpModal
 import Effect.Uncurried (EffectFn3, mkEffectFn3, runEffectFn3)
 import Effect.Unsafe (unsafePerformEffect)
-import JBridge (firebaseLogEvent, isInternetAvailable, requestLocation, getLocationPermissionStatus)
+import JBridge (firebaseLogEvent, isInternetAvailable, requestLocation, getLocationPermissionStatus,isLocationEnabled,askRequestedPermissionsWithCallback, isLocationEnabledWithoutEff,isLocationPermissionEnabled,isLocationPermissionEnabledWithoutEff)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, pure, unit, ($), (==), (&&))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import Prelude (class Show, Unit, bind, discard, pure, unit, ($), (==), (&&), (||),not)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (PermissionScreenState, PermissionScreenStage(..))
 import Effect.Unsafe 
 import Engineering.Helpers.LogEvent (logEvent)
 import Data.Array
-
+import PrestoDOM.Core (getPushFn)
+import Debug (spy)
+import Helpers.Utils (launchAppSettings)
+import Data.Maybe (Maybe(..))
 instance showAction :: Show Action where 
     show _ = ""
   
@@ -66,6 +69,7 @@ data Action = ErrorModalActionController ErrorModalController.Action
             | AfterRender
             | RequestLocation
             | LocationBlockerPopUpAC PopUpModal.Action
+            | UpdateState PermissionScreenState
 
 data ScreenOutput = GoBack | Refresh | InternetCallBack PermissionScreenState | LocationCallBack PermissionScreenState 
 
@@ -84,21 +88,39 @@ eval (ErrorModalActionController (ErrorModalController.PrimaryButtonActionContro
 
 eval (LocationPermissionCallBackCustomer isLocationPermissionEnabled) state = do 
   let status = getLocationPermissionStatus unit
-  if isLocationPermissionEnabled && elem state.stage [LOCATION_DISABLED, LOCATION_DENIED] then updateAndExit state (LocationCallBack state)
-    else continue state {stage = (if status == "DENIED" then LOCATION_DENIED else state.stage)}
+  let phonePermissionEnabled = isLocationEnabledWithoutEff unit
+  let appPermissionEnabled = isLocationPermissionEnabledWithoutEff unit
+  if not phonePermissionEnabled && appPermissionEnabled then do
+    continue state {stage = LOCATION_DISABLED}
+  else if isLocationPermissionEnabled && elem state.stage [LOCATION_DISABLED, LOCATION_DENIED] then updateAndExit state (LocationCallBack state)
+    else do
+     continue state {stage = (if status == "DENIED" then LOCATION_DENIED else state.stage)}
 eval (InternetCallBackCustomer isInternetAvailable) state = do 
   if( isInternetAvailable == "true") then do
     updateAndExit state (InternetCallBack state)
     else continue state
 
-eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
-  let _ = unsafePerformEffect $ requestLocation unit
-      _ = unsafePerformEffect $ logEvent state.logField "ny_user_grant_location_permission"
-  continue state
+eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = continueWithCmd state [do
+  push <- getPushFn Nothing "PermissionScreen"
+  let _ = unsafePerformEffect $ do
+        phonePermissionEnabled <- isLocationEnabled unit
+        appPermissionEnabled <- isLocationPermissionEnabled unit
+        if not phonePermissionEnabled && appPermissionEnabled then do
+          askRequestedPermissionsWithCallback ["android.permission.ACCESS_FINE_LOCATION"] push LocationPermissionCallBackCustomer
+        else do
+          _ <- requestLocation unit
+          pure unit
+  pure $ UpdateState state
+]
+
+eval (UpdateState newState) state = continue newState
 
 eval RequestLocation state = do 
   continue state
 
 eval Reload state = updateAndExit state $ Refresh
-  
-eval _ state = continue state
+
+eval (LocationBlockerPopUpAC PopUpModal.OnButton1Click) state = do
+    _ <- pure $ launchAppSettings unit
+    continue state
+eval _ state = update state

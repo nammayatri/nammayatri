@@ -42,11 +42,12 @@ cancelButtonConfig state = let
     , isClickable  = true
     , cornerRadius = 8.0
     , id = "RideSelectionScreenPrimaryButton"
+    , enableRipple = true
     }
   in primaryButtonConfig'
 
-errorModalConfig :: ErrorModal.Config
-errorModalConfig = let
+errorModalConfig :: RideSelectionScreenState -> ErrorModal.Config
+errorModalConfig _ = let
   config = ErrorModal.config
   errorModalConfig' = config
     { imageConfig {

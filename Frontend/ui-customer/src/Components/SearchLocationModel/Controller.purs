@@ -18,16 +18,24 @@ module Components.SearchLocationModel.Controller where
 import Components.LocationListItem as LocationListItem
 import Components.LocationTagBar as LocationTagBarController
 import Components.PrimaryButton as PrimaryButton
+import Components.Selector as Selector
+import Components.DateTimeSelector as DateTimeSelector
 import Data.Maybe (Maybe(..))
 import Prelude (show)
-import PrestoDOM (Visibility(..))
-import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..))
+import Effect (Effect)
+import PrestoDOM (Visibility(..), Padding(..), Gravity(..), Prop)
+import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..), FareProductType(..))
 import MerchantConfig.Types (AppConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
+import Common.Types.App (LazyCheck(..),TicketType(..))
+import Prelude
 import Foreign.Object (Object)
 import Foreign (Foreign)
+import Screens.Types (DateTimeConfig)
+import PrestoDOM
+import Styles.Colors as Color
+import Language.Types 
+import Components.RequestInfoCard as RequestInfoCardController
 
 data Action = GoBack
             | NoAction
@@ -45,6 +53,13 @@ data Action = GoBack
             | SavedAddressClicked LocationTagBarController.Action
             | UpdateCurrentLocation String String
             | RecenterCurrentLocation
+            | DateTimePickerButtonClicked
+            | GoBackSearchModel
+            | RequestInfoCardAction RequestInfoCardController.Action
+            | RideInfoButtonPressed
+            | DateSelectButtonClicked DateTimeSelector.Action
+            | SelectorControllerAction Selector.Action
+
 
 type SearchLocationModelState = {
     isSearchLocation :: SearchLocationModelType
@@ -63,8 +78,33 @@ type SearchLocationModelState = {
   , isAutoComplete :: Boolean
   , showLoader :: Boolean
   , prevLocation :: String
-  , findPlaceIllustration :: Boolean
+  , isEditDestination :: Boolean
+  , isDestViewEditable :: Boolean
+  , isPrimaryButtonForEditDest :: Boolean
+  , currentLocationText :: String
+  , suffixButtonVisibility :: Visibility
+  , suffixButton :: ButtonLayoutConfig
+  , headerVisibility :: Boolean
+  , headerText :: String
+  , tripType :: TicketType
+  , pickupConfig :: DateTimeSelector.DateSelectorConfig 
+  , returnConfig :: DateTimeSelector.DateSelectorConfig
+  , totalRideDuration :: Int
+  , totalRideDistance :: Int
+  , showRideInfo :: Boolean
+  , isIntercityFlow :: Boolean
+  , fareProductType :: FareProductType
 }
+
+type ButtonLayoutConfig = 
+  { text :: String
+  , fontStyle :: Array (Prop (Effect Unit))
+  , prefixImage :: String
+  , suffixImage :: String
+  , padding :: Padding
+  , gravity :: Gravity
+  }
+
 
 dummy_data :: Array LocationListItemState
 dummy_data = [
@@ -95,7 +135,8 @@ dummy_data = [
     , frequencyCount : Nothing
     , recencyDate : Nothing
     , locationScore : Nothing
-
+    , dynamicAction : Nothing
+    , types : Nothing
     }
   , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_recent_search"
     , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
@@ -124,7 +165,8 @@ dummy_data = [
     , frequencyCount : Nothing
     , recencyDate : Nothing
     , locationScore : Nothing
-
+    , dynamicAction : Nothing
+    , types : Nothing
     }
   , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
     , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
@@ -153,6 +195,7 @@ dummy_data = [
     , frequencyCount : Nothing
     , recencyDate : Nothing
     , locationScore : Nothing
-
+    , dynamicAction : Nothing
+    , types : Nothing
     }
 ]

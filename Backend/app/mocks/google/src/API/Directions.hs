@@ -49,4 +49,4 @@ handler origin destination key _alternatives mode waypoints avoid = withFlowHand
   where
     isEmptyWaypoint Nothing = True
     isEmptyWaypoint (Just [GoogleMaps.Address ""]) = True
-    isEmptyWaypoint _ = False
+    isEmptyWaypoint _ = True -- TODO: Handle it later

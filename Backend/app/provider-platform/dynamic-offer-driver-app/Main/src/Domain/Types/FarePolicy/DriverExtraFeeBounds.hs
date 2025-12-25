@@ -21,13 +21,16 @@ import Kernel.Types.Common
 
 data DriverExtraFeeBounds = DriverExtraFeeBounds
   { startDistance :: Meters,
-    minFee :: Money,
-    maxFee :: Money
+    distanceUnit :: DistanceUnit,
+    stepFee :: HighPrecMoney,
+    defaultStepFee :: HighPrecMoney,
+    minFee :: HighPrecMoney,
+    maxFee :: HighPrecMoney
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 findDriverExtraFeeBoundsByDistance :: Meters -> NonEmpty DriverExtraFeeBounds -> DriverExtraFeeBounds
 findDriverExtraFeeBoundsByDistance dist driverExtraFeeBoundsList = do
   case NE.filter (\driverExtraFeeBounds -> driverExtraFeeBounds.startDistance <= dist) $ NE.sortBy (comparing (.startDistance)) driverExtraFeeBoundsList of
-    [] -> error $ "DriverExtraFeeBounds for dist = " <> show dist <> " not found. Non-emptiness supposed to be guaranteed by app logic."
+    [] -> DriverExtraFeeBounds 0 ((.distanceUnit) $ NE.head driverExtraFeeBoundsList) 0 0 0 0 -- error $ "DriverExtraFeeBounds for dist = " <> show dist <> " not found. Non-emptiness supposed to be guaranteed by app logic."
     a -> last a

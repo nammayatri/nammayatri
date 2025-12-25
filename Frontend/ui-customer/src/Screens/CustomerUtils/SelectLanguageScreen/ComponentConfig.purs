@@ -31,6 +31,7 @@ import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, showTitle)
 import Prelude ((<>))
 import MerchantConfig.Types (Language)
+import Common.RemoteConfig as RC
 
 primaryButtonConfig :: ST.SelectLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -47,6 +48,7 @@ primaryButtonConfig state = let
         , id = "UpdateLanguageButton"
         , enableLoader = (JB.getBtnLoader "UpdateLanguageButton")
         , background = state.data.config.primaryBackground
+        , enableRipple = state.props.btnActive
       }
   in primaryButtonConfig'
 
@@ -57,10 +59,10 @@ menuButtonConfig state language = MenuButton.config {
         , selectedTextStyle = FontStyle.ParagraphText
         , unselectedTextStyle = FontStyle.ParagraphText
        }
-      , accessibilityHint = language.subTitle
+      , accessibilityHint = if language.name == "English" then language.name else language.subtitle
       ,subTitleConfig
       {
-        text = language.subTitle
+        text = language.subtitle
       }
       , id = language.value
       , isSelected = (language.value == state.props.selectedLanguage)
@@ -73,7 +75,7 @@ menuButtonConfig state language = MenuButton.config {
 genericHeaderConfig :: ST.SelectLanguageScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
-  btnVisibility = if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  btnVisibility =  config.prefixImageConfig.visibility
   titleVisibility = if showTitle FunctionCall then config.visibility else GONE
   in config 
     {
@@ -83,6 +85,9 @@ genericHeaderConfig state = let
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , visibility = btnVisibility
+      , margin = Margin 8 8 8 8 
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       } 
     , textConfig {
         text = (getString LANGUAGE)

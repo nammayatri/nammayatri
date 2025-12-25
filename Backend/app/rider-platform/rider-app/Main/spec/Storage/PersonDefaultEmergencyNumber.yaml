@@ -1,0 +1,60 @@
+imports:
+  Person: Domain.Types.Person
+  EncryptedHashedField: Kernel.External.Encryption
+  Merchant: Domain.Types.Merchant
+  RideShareOptions: Domain.Types.Person
+
+PersonDefaultEmergencyNumber:
+  derives: Generic
+  fields:
+    personId: Id Person
+    name: Text
+    mobileNumber: EncryptedHashedField e Text
+    mobileCountryCode: Text
+    createdAt: UTCTime
+    contactPersonId: Maybe (Id Person)
+    enableForFollowing: Bool
+    enableForShareRide: Bool
+    merchantId: Maybe (Id Merchant)
+    priority: Int
+    shareTripWithEmergencyContactOption : Maybe RideShareOptions
+
+  # beamType: -- Why do this its already having a default value
+  #   enableForShareRide: Maybe Bool
+  excludedFields:
+    - merchantOperatingCityId
+    - updatedAt
+
+  # toTType:
+  #   enableForShareRide: Just enableForShareRide|E
+  # fromTType:
+  #   enableForShareRide: fromMaybe False enableForShareRide|E
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+    - findByPrimaryKey
+    - create
+    - createMany
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  sqlType:
+    contactPersonId: text
+    enableForFollowing: boolean
+    priority: int
+    merchantId: text
+    name: character varying(255)
+    mobileCountryCode: character varying(255)
+
+  default:
+    enableForFollowing: "false"
+    priority: "0"
+    enableForShareRide: "false"
+
+  constraints:
+    personId: PrimaryKey|!SecondaryKey
+    mobileNumberHash: PrimaryKey|!SecondaryKey
+    contactPersonId: "!SecondaryKey" # forcing to be a secondary key
+    #mobileNumberEncrypted: PrimaryKey
+

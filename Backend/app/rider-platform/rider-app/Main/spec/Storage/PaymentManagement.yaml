@@ -1,0 +1,38 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  CustomerId: Kernel.External.Payment.Interface.Types
+  PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+
+
+PaymentCustomer:
+  tableName: payment_customer
+
+  derives: "Generic, ToJSON, FromJSON, Show"
+
+  fields:
+    clientAuthToken : Maybe Text
+    clientAuthTokenExpiry : Maybe UTCTime
+    customerId : CustomerId
+    paymentMode : Maybe PaymentMode
+
+  default:
+    paymentMode : "'LIVE'"
+
+  queries:
+    findByCustomerIdAndPaymentMode:
+      kvFunction: findOneWithKV
+      where:
+        and: [customerId, paymentMode]
+
+    updateCATAndExipry:
+      kvFunction: updateWithKV
+      params: [clientAuthToken, clientAuthTokenExpiry]
+      where:
+        and: [customerId, paymentMode]
+
+  constraints:
+    customerId: PrimaryKey
+    paymentMode: PrimaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]

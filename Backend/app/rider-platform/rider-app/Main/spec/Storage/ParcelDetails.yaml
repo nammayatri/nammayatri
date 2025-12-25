@@ -1,0 +1,26 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  SearchRequest: Domain.Types.SearchRequest
+  ParcelType: Domain.Types.ParcelType
+
+ParcelDetails:
+  fields:
+    searchRequestId : Id SearchRequest
+    parcelType: ParcelType|NoRelation
+    quantity: Maybe Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    searchRequestId: PrimaryKey
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  queries:
+    findBySearchRequestId:
+      kvFunction: findOneWithKV
+      where: searchRequestId

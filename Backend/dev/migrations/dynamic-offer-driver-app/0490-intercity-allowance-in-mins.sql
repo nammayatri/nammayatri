@@ -1,0 +1,3 @@
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_inter_city_details ADD COLUMN per_day_max_allowance_in_mins int;
+UPDATE atlas_driver_offer_bpp.fare_policy_inter_city_details set per_day_max_allowance_in_mins = 840;
+

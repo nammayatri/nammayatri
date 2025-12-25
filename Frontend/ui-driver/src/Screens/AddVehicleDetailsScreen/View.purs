@@ -18,7 +18,8 @@ module Screens.AddVehicleDetailsScreen.Views where
 import Common.Types.App
 import Data.Maybe
 import Screens.AddVehicleDetailsScreen.ComponentConfig
-
+import Common.Animation.Config hiding (listExpandingAnimationConfig)
+import Helpers.Utils as HU
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.GenericMessageModal.View as GenericMessageModal
@@ -44,15 +45,15 @@ import PaymentPage (consumeBP)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||))
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||),show)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), adjustViewWithKeyboard,accessibility, accessibilityHint,onAnimationEnd,Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Types.DomAttributes as PTD
-import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput, validateRegistrationNumber)
+import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
 import Screens.Types (AddVehicleDetailsScreenState, StageStatus(..), ValidationStatus(..))
 import Styles.Colors as Color
@@ -61,8 +62,17 @@ import Data.String.Common as DSC
 import Effect.Uncurried (runEffectFn1)
 import ConfigProvider
 import Mobility.Prelude
+import Components.OptionsMenu as OptionsMenu
+import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
+import Data.Array as DA
+import Components.BottomDrawerList as BottomDrawerList
+import Screens.Types as ST
+import Components.RequestInfoCard as RequestInfoCard
+import Engineering.Helpers.Events as EHE
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2
 
-screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
+screen :: AddVehicleDetailsScreenState -> LoggableScreen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -70,6 +80,7 @@ screen initialState =
   , globalEvents : [(\push -> do
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     _ <- runEffectFn1 consumeBP unit
+    let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepScreenLoadedEventName ST.VEHICLE_DETAILS_OPTION ) { module = "vehicle_registration_page", source = "RC"}
     if initialState.props.successfulValidation then do
       _ <- launchAff $ flowRunner defaultGlobalState $ redirectScreen push RedirectScreen
       pure unit
@@ -82,7 +93,13 @@ screen initialState =
         let _ = spy "AddVehicleDetailsScreen --------action" action
         eval state action
     ) 
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.addVehicleDetailsScreenLogWhitelist
   }
+
+logWhitelist :: Array String
+logWhitelist = []
+
 
 view
   :: forall w
@@ -94,7 +111,7 @@ view push state =
   frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  ]([  linearLayout
+  ] $ [  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -167,17 +184,30 @@ view push state =
         [ width MATCH_PARENT
         , height MATCH_PARENT
         ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_RC_IMAGE), openGenericMessageModal : state.props.limitExceedModal, buttonText : (getString NEXT) }] else linearLayout [][]
-
+    , if state.props.contactSupportModal /= ST.HIDE then BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state) else linearLayout[][]
     , if state.props.openReferralMobileNumber then
         linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT] 
         [ReferralMobileNumber.view (push <<< ReferralMobileNumberAction) (referalNumberConfig state)] else linearLayout [][]
-    ] <> if state.props.logoutModalView then [logoutPopupModal push state] else []
+    ] <> if DA.any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle] then [ popupModal push state ] else []
       <> if state.props.imageCaptureLayoutView then [imageCaptureLayout push state] else []
       <> if state.props.validateProfilePicturePopUp then [validateProfilePicturePopUp push state] else []
       <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] 
-      <> if state.props.multipleRCstatus /= NOT_STARTED then [addRCFromProfileStatusView state push] else [])
+      <> if state.props.multipleRCstatus /= NOT_STARTED then [addRCFromProfileStatusView state push] else []
+      <> if state.props.menuOptions then [menuOptionModal push state] else []
+      <> if state.props.acModal then [RequestInfoCard.view (push <<< RequestInfoCardAction) (acModalConfig state)] else []
+      <> if state.props.ambulanceModal then [RequestInfoCard.view (push <<< RequestAmbulanceFacility) (ambulanceModalConfig state)] else []
+      <> if state.props.agreeTermsModal then [PopUpModal.view (push <<< AgreePopUp) (agreeTermsModalConfig state)] else []
+
+menuOptionModal :: forall w. (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
+menuOptionModal push state = 
+  linearLayout 
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , padding $ PaddingTop 55
+    , background Color.blackLessTrans
+    ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 headerView :: forall w. AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
@@ -267,7 +297,13 @@ vehicleRegistrationNumber state push =
   , height WRAP_CONTENT
   , padding (Padding 20 32 20 0)
   , visibility if state.props.openHowToUploadManual then GONE else VISIBLE
-  ][  linearLayout
+  , adjustViewWithKeyboard "true"
+  ]
+  [scrollView
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ]
+  [  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
@@ -399,11 +435,195 @@ vehicleRegistrationNumber state push =
                 , color Color.darkGrey
                 ]
           ]
+          , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          , visibility $ boolToVisibility $ state.data.vehicleCategory == Just (ST.AmbulanceCategory)
+          ] [
+              linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation HORIZONTAL
+              , gravity CENTER_VERTICAL
+               , margin (MarginTop 25)
+              ][  textView
+                  ([ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , text (getString A_F)
+                  , color Color.greyTextColor
+                  , margin (MarginVertical 10 10)
+                  ] <> FontStyle.body3 TypoGraphy)
+                 , imageView
+                    [ width (V 12)
+                    , height (V 12)
+                    , margin (MarginLeft 3)
+                    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_blue"
+                    , color Color.black800
+                    , onClick push $ const OpenAmbulanceFacilityModal
+                    ]
+                ] 
+              , linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , orientation HORIZONTAL
+                , stroke ("1," <> Color.borderColorLight) 
+                , cornerRadius 4.0
+                , gravity CENTER_VERTICAL
+                , onClick push $ const $ SelectAmbulanceFacility
+                
+                ][  textView $
+                    [ width MATCH_PARENT
+                    , height WRAP_CONTENT
+                    , padding (Padding 19 17 0 17)
+                    , color Color.greyTextColor
+                    , text state.props.input_data
+                    , textFromHtml $ if state.props.isvariant == "" then (getString SELECT_ONE) else case  state.props.isvariant of
+                                                                                                      "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getStringV2 no_oxygen
+                                                                                                      "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getStringV2 oxygen
+                                                                                                      "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getStringV2 no_oxygen
+                                                                                                      "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getStringV2 oxygen
+                                                                                                      "AMBULANCE_VENTILATOR" -> getStringV2 ventilator
+                                                                                                      _ -> "Other" 
+                    , weight 4.0
+                    , cornerRadius 6.0
+                    , stroke ("3," <> Color.white900)
+                    ]
+                    , linearLayout
+                      [ width WRAP_CONTENT
+                      , height WRAP_CONTENT
+                      , gravity CENTER_VERTICAL
+                      ][ imageView
+                          [ width (V 20)
+                          , height (V 20)
+                          , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.props.facilities then "ny_ic_chevron_up_dark" else "ny_ic_chevron_down_light"
+                          ]
+                      ]
+                    ]
+                  , facilityListView state push
+          ]
+        , checkACView state push
         ]
       ]
+  ]
+      where validateRegistrationNumber regNum = regNum `DA.elem` state.data.rcNumberPrefixList
 
 
+facilityListView :: forall w . ST.AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+facilityListView state push  = 
+  PrestoAnim.animationSet ([] <>
+    if EHC.os == "IOS" then
+      [ Anim.fadeIn state.props.facilities 
+      , Anim.fadeOut $ not state.props.facilities ]
+    else
+      [Anim.listExpandingAnimation $ listExpandingAnimationConfig state.props.facilities])
+   $ 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , orientation VERTICAL
+    , margin $ MarginTop 15 -- 16 16 0 
+    , visibility $ boolToVisibility $ state.props.facilities
+    , stroke ("1," <> Color.borderColorLight)
+    , cornerRadius 4.0
+    , onAnimationEnd push $ const ListExpandAinmationEnd
+    ](DA.mapWithIndex (\index variant ->
+        linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , padding $ Padding 16 13 16 13
+        , onClick push $ const $ SelectAmbulanceVarient variant
+        , orientation VERTICAL
+        ][  linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation HORIZONTAL
+            ][  textView $
+                [ accessibilityHint $ show variant <> " : Button"
+                , textFromHtml $ case variant of
+                                    "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getStringV2 no_oxygen
+                                    "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getStringV2 oxygen
+                                    "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getStringV2 no_oxygen
+                                    "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getStringV2 oxygen
+                                    "AMBULANCE_VENTILATOR" -> getStringV2 ventilator
+                                    _ -> "Other" 
 
+                , color Color.darkCharcoal
+                ] <> FontStyle.paragraphText LanguageStyle
+
+              ]
+          ]) ["AMBULANCE_VENTILATOR","AMBULANCE_AC_OXY", "AMBULANCE_AC","AMBULANCE_TAXI_OXY" ,"AMBULANCE_TAXI" ])
+
+
+checkACView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+checkACView state push =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ MarginTop 22
+    , visibility $ boolToVisibility $ state.data.vehicleCategory == Just ST.CarCategory
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        ]
+        [ textView
+            $ [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text $ getString IS_YOUR_CAR_AC_WORKING
+              , color Color.greyTextColor
+              , margin $ MarginVertical 10 10
+              ]
+            <> FontStyle.body3 TypoGraphy
+        , imageView
+            [ width $ V 12
+            , height $ V 12
+            , margin $ MarginLeft 5
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_grey"
+            , onClick push $ const OpenAcModal
+            ]
+        ]
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER
+        ]
+        $ DA.mapWithIndex
+            ( \index item ->
+                linearLayout
+                  ( [ weight 1.0
+                    , height WRAP_CONTENT
+                    , orientation VERTICAL
+                    , cornerRadius 8.0
+                    , gravity CENTER
+                    , onClick push $ const $ SelectButton index
+                    , margin $ MarginLeft if index == 0 then 0 else 10
+                    ]
+                      <> case state.props.buttonIndex of
+                          Just ind ->
+                            [ stroke $ "1," <> if ind == index then Color.blue900 else Color.grey800
+                            , background if ind == index then Color.blue600 else Color.white900
+                            ]
+                          Nothing ->
+                            [ stroke $ "1," <> Color.grey800
+                            , background Color.white900
+                            ]
+                  )
+                  [ textView
+                      $ [ width WRAP_CONTENT
+                        , height WRAP_CONTENT
+                        , text item
+                        , color Color.black800
+                        , padding $ Padding 10 12 10 12
+                        ]
+                      <> FontStyle.subHeading1 TypoGraphy
+                  ]
+            )
+            [ getString YES, getString NO ]
+    ]
 
 
 
@@ -655,13 +875,13 @@ headerLayout state push =
       , padding $ Padding 6 4 6 4
       , margin $ MarginRight 10
       , background Color.lightBlue
-      , stroke $ "1," <> Color.blueBtn
+      , stroke $ "1," <> Color.brightBlue
       , alpha 0.8
       ][ textView
           [ width MATCH_PARENT
           , height MATCH_PARENT
           , text $ getString HELP
-          , color Color.blueBtn
+          , color Color.brightBlue
           , fontStyle $ FontStyle.semiBold LanguageStyle
           , clickable true
           , onClick push $ const $ TutorialModal "RC"
@@ -761,13 +981,18 @@ rightWrongItemView isRight text' =
     ] <> FontStyle.body1 TypoGraphy
   ]
 
-logoutPopupModal :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
-logoutPopupModal push state =
-       linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        , background Color.blackLessTrans
-        ][ PopUpModal.view (push <<<PopUpModalLogoutAction) (logoutPopUp Language) ] 
+popupModal :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
+popupModal push state =
+    linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , background Color.blackLessTrans
+    ][ PopUpModal.view (push <<< action) popupConfig ] 
+    where 
+      action = if state.props.logoutModalView then PopUpModalLogoutAction 
+                else ChangeVehicleAC
+      popupConfig = if state.props.logoutModalView then (logoutPopUp Language)
+                    else changeVehicleConfig FunctionCall
 
 skipButton :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w
 skipButton push state =

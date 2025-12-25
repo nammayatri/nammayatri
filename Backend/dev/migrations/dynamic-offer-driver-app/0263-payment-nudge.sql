@@ -1,19 +1,6 @@
-CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.merchant_overlay
-(   id CHARACTER(36) PRIMARY KEY NOT NULL,
-    merchant_id character(36) NOT NULL,
-    overlay_key character varying(255) not null,
-    language character varying(255) not null,
-    udf1 character varying(255),
-    title text,
-    description text,
-    image_url text,
-    ok_button_text text,
-    cancel_button_text text,
-    actions text[] not null default '{}',
-    link text
-);
-
 CREATE INDEX idx_merchant_overlay_key ON atlas_driver_offer_bpp.merchant_overlay (merchant_id,overlay_key);
+-- PLEASE DON'T RUN THE NEXT LINE (ONLY FOR LOCAL)
+ALTER TABLE atlas_driver_offer_bpp.merchant_overlay ALTER COLUMN merchant_operating_city_id DROP NOT NULL;
 
 INSERT INTO atlas_driver_offer_bpp.merchant_overlay (id, merchant_id, language, overlay_key, udf1, image_url, title, description, ok_button_text, cancel_button_text) VALUES
     (atlas_driver_offer_bpp.uuid_generate_v4(), '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'ENGLISH', 'PAYMENT_FAILED_AUTOPAY', 'Z9', 'https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_save_more', 'Low Account Balance', 'Your Bank Account balance is low.<br>Add <b> \\u20B9 {#dueAmount#} </b> to enjoy uninterrupted rides.', 'Okay', 'Cancel'),
@@ -46,10 +33,3 @@ INSERT INTO atlas_driver_offer_bpp.merchant_overlay (id, merchant_id, language, 
     (atlas_driver_offer_bpp.uuid_generate_v4(), '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'TAMIL', 'PAYMENT_FAILED_MANUAL', null, 'https://assets.juspay.in/beckn/nammayatri/driver/images/ny_failed', 'பணம் செலுத்த முடியவில்லை', 'தொந்தரவு இல்லாத சவாரிகளுக்கு உங்கள் கைமுறை நிலுவைத் தொகையை அழிக்கவும்!', 'Okay', 'Cancel');
 
 ALTER TABLE atlas_driver_offer_bpp.payment_order ALTER COLUMN amount type numeric(30,2);
-
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cache_offer_list_by_driver_id boolean not null default false;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_offer_list_cache boolean not null default true;
-
-ALTER TABLE atlas_driver_offer_bpp.merchant_overlay ADD COLUMN req_body json not null default json_build_object();
-ALTER TABLE atlas_driver_offer_bpp.merchant_overlay ADD COLUMN end_point text;
-ALTER TABLE atlas_driver_offer_bpp.merchant_overlay ADD COLUMN method text;

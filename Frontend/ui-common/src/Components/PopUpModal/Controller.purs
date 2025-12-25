@@ -16,15 +16,40 @@
 module Components.PopUpModal.Controller where
 
 import Common.Styles.Colors as Color
-import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..))
+import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..), PrestoDOM)
 import Font.Size as FontSize
 import Font.Style (Style(..))
 import Common.Types.App as Common
 import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Prelude ((<>))
+import Prelude ((<>), Unit, class Show, show)
 import Data.Maybe as Mb
+import Font.Style as FontStyle
+import Engineering.Helpers.Commons as EHC
+import Components.TipsView as TipsView
+import JBridge
+import Effect (Effect)
+import Language.Strings (getString)
+
+instance showAction :: Show Action where
+  show (OnButton1Click) = "OnButton1Click"
+  show (OnButton2Click) = "OnButton2Click"
+  show (NoAction) = "NoAction"
+  show (ETextController var1) = "ETextController_" <> show var1
+  show (CountDown _ _ _) = "CountDown"
+  show (OnImageClick) = "OnImageClick"
+  show (DismissPopup) = "DismissPopup"
+  show (OptionWithHtmlClick) = "OptionWithHtmlClick"
+  show (OnSecondaryTextClick) = "OnSecondaryTextClick"
+  show (YoutubeVideoStatus _) = "YoutubeVideoStatus"
+  show (TipsViewActionController var1) = "TipsViewActionController_" <> show var1
+  show (OnCoverImageClick) = "OnCoverImageClick"
+  show (PersonMobile var1) = "PersonMobile_" <> show var1
+  show (PersonName var1) = "PersonName_" <> show var1
+  show (PersonAddress var1) = "PersonAddress_" <> show var1
+  show (PersonInstruction var1) = "PersonInstruction_" <> show var1
+  show (CheckBoxClick) = "CheckBoxClick"
 
 data Action = OnButton1Click
             | OnButton2Click
@@ -32,16 +57,26 @@ data Action = OnButton1Click
             | ETextController PrimaryEditTextController.Action
             | CountDown Int String String
             | OnImageClick
-            | Tipbtnclick Int Int
             | DismissPopup
             | OptionWithHtmlClick
             | OnSecondaryTextClick
+            | YoutubeVideoStatus String
+            | TipsViewActionController TipsView.Action
+            | OnCoverImageClick
+            | PersonMobile PrimaryEditTextController.Action
+            | PersonName PrimaryEditTextController.Action
+            | PersonAddress PrimaryEditTextController.Action
+            | PersonInstruction PrimaryEditTextController.Action
+            | CheckBoxClick
 
 type Config = {
     primaryText :: TextConfig,
+    headerInfo :: TextConfig,
+    enableAnim :: Boolean,
     customerTipArray :: Array String,
     customerTipArrayWithValues :: Array Int,
     secondaryText :: TextConfig,
+    popUpHeaderConfig :: PopUpHeaderConfig,
     option1 :: ButtonConfig,
     option2 :: ButtonConfig,
     tipButton :: ButtonConfig,
@@ -54,6 +89,7 @@ type Config = {
     optionButtonOrientation :: String,
     buttonLayoutMargin :: Margin,
     tipLayoutMargin :: Margin,
+    searchExpired :: Boolean,
     eTextConfig :: PrimaryEditTextController.Config,
     editTextVisibility :: Visibility,
     dismissPopupConfig :: DismissPopupConfig,
@@ -69,15 +105,63 @@ type Config = {
     tipSelected :: String,
     fareEstimateText :: String,
     tipSelectedText :: String,
+    background :: String,
     backgroundColor  :: String,
     optionWithHtml :: OptionWithHtmlConfig,
     topTitle :: TopTitle,
     listViewArray :: Array String,
-    coverVideoConfig :: CoverVideoConfig,
-    timerId :: String
+    coverMediaConfig :: CoverMediaConfig,
+    timerId :: String,
+    onlyTopTitle :: Visibility,
+    topTextVisibility :: Boolean,
+    isTipEnabled :: Boolean,
+    isVisible :: Boolean,
+    isTipPopup :: Boolean,
+    coverLottieConfig :: LottieConfig,
+    showRetry :: Boolean,
+    coverLottie :: CoverLottie,
+    layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w),
+    completeProfileLayout :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
+    upiDetailConfig :: UPIDetailConfig,
+    deliveryDetailsConfig :: DeliveryDetailsConfig,
+    externalHeader :: forall w. Mb.Maybe (PrestoDOM (Effect Unit) w),
+    voiceToTextConfig :: VoiceToTextConfig,
+    goldTierRewardConfig :: CoinWarningConfig,
+    showDownloadPolicy :: Boolean,
+    certificateUrl :: String
 }
 
-type CoverVideoConfig = {
+
+type VoiceToTextConfig = {
+  id :: String,
+  enabled :: Boolean
+}
+
+type DeliveryDetailsConfig = {
+  visibility :: Visibility,
+  margin  :: Margin,
+  personNameDetails :: PrimaryEditTextController.Config,
+  mobileNumberDetails :: PrimaryEditTextController.Config,
+  addressDetails :: PrimaryEditTextController.Config,
+  instructionDetails :: PrimaryEditTextController.Config,
+  isSource :: Boolean,
+  locationTitle :: String,
+  locationDetails :: String,
+  checkBoxDetails :: {text :: String, isSelected :: Boolean, visibility :: Boolean }
+}
+
+type UPIDetailConfig = {
+  visibility :: Visibility,
+  upiID :: String,
+  accountName :: String,
+  imageConfig :: ImageConfig
+}
+
+type LayoutConfig = {
+  visibility :: Visibility
+}
+
+type CoverMediaConfig = {
   visibility :: Visibility,
   height :: Length ,
   width :: Length ,
@@ -85,7 +169,12 @@ type CoverVideoConfig = {
   padding :: Padding ,
   mediaUrl :: String ,
   mediaType :: String ,
-  id :: String
+  id :: String,
+  background :: String,
+  stroke :: String,
+  cornerRadius :: Number,
+  coverMediaText :: TextConfig,
+  audioAutoPlay :: Boolean
 }
 
 type ContactViewConfig = {
@@ -100,11 +189,15 @@ type TextConfig = {
   color :: String,
   gravity :: Gravity,
   padding :: Padding,
+  lineheight :: Mb.Maybe String,
   margin :: Margin,
   visibility :: Visibility,
   textStyle :: Style,
   accessibilityHint :: String,
-  suffixImage :: ImageConfig
+  suffixImage :: ImageConfig,
+  prefixImage :: ImageConfig,
+  isClickable :: Boolean,
+  useTextFromHtml :: Boolean
 }
 type ButtonConfig = {
   background :: String,
@@ -118,12 +211,16 @@ type ButtonConfig = {
   padding :: Padding,
   timerValue :: Int,
   enableTimer :: Boolean,
+  animate :: Boolean,
   timerID :: String,
   textStyle :: Style,
   height :: Length,
   image :: ImageConfig,
   showShimmer :: Boolean,
-  gravity :: Gravity
+  gravity :: Gravity,
+  enableRipple :: Boolean,
+  rippleColor :: String,
+  useWeight :: Boolean
 }
 
 type DismissPopupConfig =
@@ -144,6 +241,18 @@ type ImageConfig =
   , width :: Length
   , margin :: Margin
   , padding :: Padding
+  }
+
+type LottieConfig = 
+  {
+    lottieUrl :: String
+  , visibility :: Visibility
+  , repeat :: Boolean
+  , height :: Length
+  , width :: Length
+  , margin :: Margin
+  , padding :: Padding
+  , id :: String
   }
 
 type OptionWithHtmlConfig = {
@@ -170,12 +279,55 @@ type TopTitle = {
   , margin :: Margin
   , color :: String
   , gravity :: Gravity
+  , textStyle :: Style
 }
+
+type CoverLottie = {
+  id :: String
+, background :: String
+, cornerRadius :: Number
+, padding :: Padding
+, visibility :: Visibility
+, height :: Length
+, width :: Length
+, margin :: Margin
+, config :: LottieAnimationConfig
+}
+type PopUpHeaderConfig = { 
+    height :: Length
+  , width :: Length
+  , margin :: Margin
+  , padding :: Padding
+  , visibility :: Visibility
+  , visibilityV2 :: Visibility
+  , backgroundColor :: String
+  , cornerRadius :: Number
+  , orientation :: String
+  , headingText :: TextConfig
+  , subHeadingText :: TextConfig
+  , imageConfig :: ImageConfig
+  , gravity :: Gravity
+  }
+
+type CoinWarningConfig = {
+  text :: String,
+  coinsLoss :: Mb.Maybe Int,
+  cancellationWarningText :: String,
+  backgroundColor :: String,
+  textColor :: String,
+  cornerRadius :: Number,
+  padding :: Padding,
+  margin :: Margin,
+  coinImage :: ImageConfig,
+  arrowImage :: ImageConfig
+}  
 
 config :: Config
 config = {
   optionButtonOrientation: "HORIZONTAL"
+  , showRetry : true
   , activeIndex : 1
+  , enableAnim : false
   , customerTipAvailable : false
   , backgroundClickable : true
   , customerTipArray : []
@@ -183,10 +335,13 @@ config = {
   , cornerRadius : (PTD.Corners 24.0 true true false false)
   , margin : (Margin 0 0 0 0)
   , gravity : BOTTOM
+  , background : Color.white900
+  , showDownloadPolicy : false
   , backgroundColor : Color.black9000
   , buttonLayoutMargin : (Margin 0 0 0 25)
   , editTextVisibility : GONE
   , tipLayoutMargin : (Margin 0 0 0 0)
+  , searchExpired : false
   , padding : (Padding 0 0 0 0)
   , topTitle : {
       text : ""
@@ -196,13 +351,16 @@ config = {
     , margin : MarginVertical 10 10
     , color : Color.black800
     , gravity : LEFT
+    , textStyle : Heading2
     }
   , primaryText : {
       text : "Text1",
       color : Color.black800,
       gravity : CENTER,
+      isClickable : false,
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 0),
+      lineheight : Mb.Nothing,
       visibility : VISIBLE,
       textStyle : Heading2,
       accessibilityHint : "", 
@@ -213,7 +371,16 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
-      }
+      },
+      prefixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      useTextFromHtml : true
     }
   , secondaryText : {
       text : "Text2",
@@ -221,7 +388,9 @@ config = {
       gravity : CENTER,
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 20),
+      lineheight : Mb.Nothing,
       visibility : VISIBLE,
+      isClickable : false ,
       textStyle : ParagraphText,
       accessibilityHint : "", 
       suffixImage : {
@@ -231,7 +400,45 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
-      }
+      },
+      prefixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      useTextFromHtml : true
+    }
+  , headerInfo : {
+      text : "Step",
+      color : Color.textSecondary,
+      gravity : RIGHT,
+      padding : (Padding 16 0 16 0),
+      margin : (Margin 0 20 0 20),
+      visibility : GONE,
+      textStyle : ParagraphText,
+      isClickable : true,
+      accessibilityHint : "", 
+      suffixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      prefixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      useTextFromHtml : true,
+      lineheight : Mb.Nothing
     }
   , tipButton: {
      background : Color.white900
@@ -246,6 +453,7 @@ config = {
     , gravity : CENTER
     , timerValue : 5
     , enableTimer : false
+    , animate : true
     , timerID : ""
     , textStyle : Body3
     , height : (V 48)
@@ -258,6 +466,9 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
+    , useWeight : true
   } 
   , option1 : {
       background : Color.white900
@@ -272,6 +483,7 @@ config = {
     , gravity : CENTER
     , timerValue : 5
     , enableTimer : false
+    , animate : true
     , timerID : ""
     , height : (V 48)
     , textStyle : SubHeading1
@@ -284,6 +496,9 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
+    , useWeight : true
     }
   , option2 : {
       background : Color.black900
@@ -298,6 +513,7 @@ config = {
     , padding : (Padding 0 0 0 0)
     , timerValue : 5
     , enableTimer : false
+    , animate : true
     , timerID : ""
     , height : (V 48)
     , textStyle : SubHeading1
@@ -310,6 +526,9 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
+    , useWeight : true
     }
   , optionWithHtml : {
       background : Color.black900,
@@ -318,6 +537,7 @@ config = {
         text : "",
         color : Color.black800,
         gravity : CENTER,
+        isClickable :true,
         padding : (Padding 0 0 0 0),
         margin : (Margin 0 0 0 0),
         visibility : GONE,
@@ -330,13 +550,24 @@ config = {
           , width : (V 0)
           , margin : (Margin 0 0 0 0)
           , padding : (Padding 0 0 0 0)
-        }
+        }, 
+        prefixImage : {
+          visibility : GONE
+          , imageUrl : ""
+          , height : (V 0)
+          , width : (V 0)
+          , margin : (Margin 0 0 0 0)
+          , padding : (Padding 0 0 0 0)
+        },
+        useTextFromHtml : true,
+        lineheight : Mb.Nothing
       },
       textOpt2 : {
         text : "",
         color : Color.black800,
         gravity : CENTER,
         padding : (Padding 0 0 0 0),
+        isClickable : true,
         margin : (Margin 0 0 0 0),
         visibility : GONE,
         textStyle : Heading2,
@@ -348,7 +579,17 @@ config = {
           , width : (V 0)
           , margin : (Margin 0 0 0 0)
           , padding : (Padding 0 0 0 0)
-        }
+        }, 
+        prefixImage : {
+          visibility : GONE
+          , imageUrl : ""
+          , height : (V 0)
+          , width : (V 0)
+          , margin : (Margin 0 0 0 0)
+          , padding : (Padding 0 0 0 0)
+        },
+        useTextFromHtml : true,
+        lineheight : Mb.Nothing
       },
       visibility : false,
       margin : (Margin 0 0 0 0),
@@ -386,6 +627,17 @@ config = {
     , margin : (Margin 0 0 0 0)
     , padding : (Padding 0 0 0 0)
     },
+    coverLottieConfig : 
+    {
+      lottieUrl : ""
+    , id : ""
+    , visibility : GONE
+    , repeat : false
+    , height : WRAP_CONTENT
+    , width : WRAP_CONTENT
+    , margin : (Margin 0 0 0 0)
+    , padding : (Padding 0 0 0 0)
+    },
     contactViewConfig :
     {
        nameInitials: "",
@@ -403,7 +655,7 @@ config = {
     , fareEstimateText : ""
     , tipSelectedText : ""
     , listViewArray : []
-    , coverVideoConfig : {
+    , coverMediaConfig : {
         visibility : GONE ,
         height : V 400 ,
         width : WRAP_CONTENT ,
@@ -411,9 +663,235 @@ config = {
         padding : (Padding 0 0 0 0) ,
         mediaType : "",
         mediaUrl : "",
-        id : ""
+        id : "",
+        background : Color.transparent,
+        stroke : "1," <> Color.transparent,
+        cornerRadius : 16.0
+      , audioAutoPlay : false
+      , coverMediaText : {
+          text : "",
+          color : Color.textSecondary,
+          gravity : CENTER,
+          isClickable : true,
+          padding : PaddingHorizontal 16 16,
+          margin : MarginVertical 20 20,
+          visibility : GONE,
+          textStyle : SubHeading2,
+          accessibilityHint : "", 
+          suffixImage : {
+            visibility : GONE
+            , imageUrl : ""
+            , height : V 0
+            , width : V 0
+            , margin : Margin 0 0 0 0
+            , padding : Padding 0 0 0 0
+          }, 
+          prefixImage : {
+            visibility : GONE
+            , imageUrl : ""
+            , height : (V 0)
+            , width : (V 0)
+            , margin : (Margin 0 0 0 0)
+            , padding : (Padding 0 0 0 0)
+          },
+          useTextFromHtml : true,
+          lineheight : Mb.Nothing
+      }
     },
-    timerId : ""
+    onlyTopTitle : VISIBLE,
+    timerId : "",
+    topTextVisibility : false,
+    isVisible : false,
+    isTipEnabled : true,
+    isTipPopup : false
+    , coverLottie : {
+      id : ""
+    , background : Color.transparent
+    , cornerRadius : 0.0
+    , padding : Padding 0 0 0 0
+    , visibility : GONE
+    , height : V 0
+    , width : V 0
+    , margin : Margin 0 0 0 0
+    , config : lottieAnimationConfig
+    },
+    popUpHeaderConfig : {
+      height : V 0,
+      width : MATCH_PARENT,
+      margin : (Margin 0 0 0 0),
+      padding : (Padding 0 0 0 0),
+      visibility : GONE,
+      visibilityV2 : VISIBLE,
+      backgroundColor : Color.white900,
+      cornerRadius : 0.0,
+      orientation : "VERTICAL",
+      headingText : {
+      text : "Text1",
+      color : Color.black800,
+      isClickable : false,
+      gravity : CENTER,
+      padding : (Padding 0 0 0 0),
+      margin : (Margin 0 0 0 0),
+      visibility : VISIBLE,
+      textStyle : Heading2,
+      accessibilityHint : "", 
+      suffixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      prefixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      useTextFromHtml : true,
+      lineheight : Mb.Nothing
+    },
+    subHeadingText :{
+      text : "",
+      color : Color.textSecondary,
+      gravity : CENTER,
+      padding : (Padding 16 0 16 0),
+      margin : (Margin 0 20 0 20),
+      isClickable : false,
+      visibility : VISIBLE,
+      textStyle : Tags,
+      accessibilityHint : "", 
+      suffixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      prefixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      useTextFromHtml : true,
+      lineheight : Mb.Nothing
+    },
+    imageConfig : {
+      visibility : GONE
+      , imageUrl : ""
+      , height : (V 0)
+      , width : (V 0)
+      , margin : (Margin 0 0 0 0)
+      , padding : (Padding 0 0 0 0)
+    },
+    gravity : CENTER
+  }
+  , layout : Mb.Nothing
+  , upiDetailConfig : {
+      visibility : GONE,
+      upiID : "",
+      accountName : "",
+      imageConfig : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      }
+    }
+  , deliveryDetailsConfig : dummyDeliveryDetailsConfig
+  , externalHeader : Mb.Nothing
+  , completeProfileLayout : Mb.Nothing
+  , voiceToTextConfig : dummyVoiceToTextConfig
+  ,  goldTierRewardConfig: {
+        text: "",
+        coinsLoss: Mb.Nothing,
+        cancellationWarningText: "",
+        backgroundColor: Color.lightOrange400,
+        textColor: Color.black800,
+        cornerRadius: 12.0,
+        padding: (Padding 8 12 10 12),
+        margin: (Margin 20 8 0 8),
+        coinImage: {
+          visibility: VISIBLE,
+          imageUrl: fetchImage FF_COMMON_ASSET "ny_ic_yatri_coin",
+          height: (V 20),
+          width: (V 20),
+          margin: (MarginLeft 8),
+          padding: (Padding 0 0 0 0)
+        },
+        arrowImage: {
+          visibility: VISIBLE,
+          imageUrl: fetchImage FF_COMMON_ASSET "ny_ic_arrow_down_red",
+          height: (V 12),
+          width: (V 12),
+          margin: MarginLeft 8,
+          padding: PaddingLeft 8
+        }
+    }
+  , certificateUrl : ""
 }
 
+dummyDeliveryDetailsConfig :: DeliveryDetailsConfig
+dummyDeliveryDetailsConfig = 
+  let config' = dummyDeliveryPrimaryText
+  in
+    {
+      visibility : GONE,
+      margin : Margin 0 0 0 0,
+      isSource : true,
+      locationTitle : "",
+      locationDetails : "",
+      personNameDetails : config',
+      mobileNumberDetails : config',
+      addressDetails : config',
+      instructionDetails : config',
+      checkBoxDetails : {
+        text : ""
+        , isSelected : false
+        , visibility : true
+      }
+    }
 
+dummyDeliveryPrimaryText :: PrimaryEditTextController.Config
+dummyDeliveryPrimaryText = 
+  let
+      config = PrimaryEditTextController.config
+      primaryEditTextConfig' = config
+        { editText
+          { color = Color.black800
+          , singleLine = true
+          , placeholder = ""
+          , textStyle = FontStyle.SubHeading3
+          }
+        , background = Color.white900
+        , topLabel
+          { text = ""
+          , color = Color.black800
+          , textStyle = FontStyle.Body3
+          }
+        , stroke = ("1,"<> Color.black500)
+        , margin = (Margin 0 8 0 0)
+        , errorLabel
+          { text = ""
+          , margin = (MarginTop 1)
+          }
+        , showErrorLabel = false
+        , width = MATCH_PARENT
+        }
+      in primaryEditTextConfig'
+
+dummyVoiceToTextConfig :: VoiceToTextConfig
+dummyVoiceToTextConfig = 
+  {
+    id : "",
+    enabled: false
+  }

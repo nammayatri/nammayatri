@@ -21,7 +21,7 @@ where
 import qualified Domain.Action.UI.Payment as DPayment
 import Domain.Types.Invoice (Invoice)
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Notification (Notification)
 import qualified Domain.Types.Person as DP
 import Environment

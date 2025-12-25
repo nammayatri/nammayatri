@@ -1,0 +1,27 @@
+imports:
+  TicketPlace: Domain.Types.TicketPlace
+
+module: AttractionRecommend
+
+types:
+  AttractionRecommendReq:
+    lat: Double
+    lon: Double
+    radius: Double
+    count: Int
+  AttractionRecommendResp:
+    attractions: [Attraction]
+  Attraction:
+    id: Id TicketPlace
+    iconUrl: Maybe Text
+    name: Text
+    distanceInKm: Double
+
+apis:
+  - POST:
+      endpoint: /attractions/recommend
+      auth: TokenAuth
+      request:
+        type: AttractionRecommendReq
+      response:
+        type: AttractionRecommendResp

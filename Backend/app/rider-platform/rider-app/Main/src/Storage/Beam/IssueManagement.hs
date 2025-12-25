@@ -12,7 +12,10 @@ module Storage.Beam.IssueManagement where
 
 import qualified Data.Text as T
 import qualified IssueManagement.Storage.Beam.Issue.Comment as BeamC
+import qualified IssueManagement.Storage.Beam.Issue.IGMConfig as BeamIGMC
+import qualified IssueManagement.Storage.Beam.Issue.IGMIssue as BeamIGI
 import qualified IssueManagement.Storage.Beam.Issue.IssueCategory as BeamIC
+import qualified IssueManagement.Storage.Beam.Issue.IssueChat as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueConfig as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueMessage as BeamIM
 import qualified IssueManagement.Storage.Beam.Issue.IssueOption as BeamIO
@@ -33,6 +36,12 @@ instance HasSchemaName BeamIC.IssueConfigT where
 instance HasSchemaName BeamIM.IssueMessageT where
   schemaName _ = T.pack currentSchemaName
 
+instance HasSchemaName BeamIGI.IGMIssueT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamIGMC.IGMConfigT where
+  schemaName _ = T.pack currentSchemaName
+
 instance HasSchemaName BeamIO.IssueOptionT where
   schemaName _ = T.pack currentSchemaName
 
@@ -43,4 +52,7 @@ instance HasSchemaName BeamIT.IssueTranslationT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamMF.MediaFileT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamIC.IssueChatT where
   schemaName _ = T.pack currentSchemaName

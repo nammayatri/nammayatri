@@ -1,24 +1,10 @@
-CREATE TABLE IF NOT EXISTS atlas_app.disability (
-	id character varying(36) NOT NULL,
-	tag character varying(255) NOT NULL,
-	description character varying(255) NOT NULL
-);
 ALTER TABLE atlas_app.disability OWNER TO atlas_app_user;
 
-
-INSERT INTO atlas_app.disability VALUES
+INSERT INTO atlas_app.disability(id,tag,description) VALUES
 	(atlas_app.uuid_generate_v4(), 'BLIND_LOW_VISION', 'Blind/Low Vision'),
 	(atlas_app.uuid_generate_v4(), 'HEAR_IMPAIRMENT', 'Hearing Impairment (Deaf/Mute)'),
 	(atlas_app.uuid_generate_v4(), 'LOCOMOTOR_DISABILITY', 'Locomotor Disability'),
 	(atlas_app.uuid_generate_v4(), 'OTHER', 'Other');
-
-
-CREATE TABLE IF NOT EXISTS atlas_app.disability_translation (
-	disability_id character varying(36) NOT NULL,
-	disability_tag character varying(255) NOT NULL,
-	translation character varying(255) NOT NULL,
-	language character varying(255) NOT NULL
-);
 
 INSERT INTO atlas_app.disability_translation (disability_id, disability_tag, translation, language)
 	SELECT

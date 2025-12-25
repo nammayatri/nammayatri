@@ -14,6 +14,7 @@
 
 module Domain.Types.Coins.CoinsConfig where
 
+import Domain.Types.VehicleCategory as DTV
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id
 import qualified Lib.DriverCoins.Types as DCT
@@ -26,6 +27,7 @@ data CoinsConfig = CoinsConfig
     merchantOptCityId :: Text,
     coins :: Int,
     expirationAt :: Maybe Int,
-    active :: Bool
+    active :: Bool,
+    vehicleCategory :: Maybe DTV.VehicleCategory
   }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)

@@ -26,8 +26,11 @@ import Data.OpenApi (ToSchema)
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.CallbackRequest as DCallback
 import qualified Domain.Types.Issue as DIssue
+import qualified Domain.Types.Location as Location
+import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Quote (Quote)
+import qualified Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (state)
 import qualified IssueManagement.Common as Domain
@@ -36,16 +39,17 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess
-import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
+import SharedLogic.Person as SLP
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.CallbackRequest as QCallback
-import qualified Storage.Queries.Issues as Queries
+import qualified Storage.Queries.Issue as Queries
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -87,14 +91,18 @@ validateSendIssueReq SendIssueReq {..} =
 
 type SendIssueRes = APISuccess
 
-sendIssue :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> SendIssueReq -> m SendIssueRes
-sendIssue personId request = do
+-- Deprecated : Only used for delete account requests
+sendIssue :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> SendIssueReq -> m SendIssueRes
+sendIssue (personId, merchantId) request = do
   runRequestValidation validateSendIssueReq request
-  newIssue <- buildDBIssue personId request
-  Queries.insertIssue newIssue
+  newIssue <- buildDBIssue personId request merchantId
+  Queries.create newIssue
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
-  ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket newIssue person phoneNumber))
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  ticketRequest <- mkTicket newIssue person phoneNumber merchant.kaptureDisposition riderConfig.kaptureQueue riderConfig.kaptureConfig.deleteAccountCategory
+  ticketResponse <- withTryCatch "createTicket:sendIssue" (createTicket person.merchantId person.merchantOperatingCityId ticketRequest)
   case ticketResponse of
     Right ticketResponse' -> do
       Queries.updateTicketId newIssue.id ticketResponse'.ticketId
@@ -102,62 +110,47 @@ sendIssue personId request = do
       logTagInfo "Create Ticket API failed - " $ show err
   return Success
 
-safetyCheckSupport :: (EncFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Id Person.Person -> SafetyCheckSupportReq -> m SendIssueRes
-safetyCheckSupport personId req = do
+safetyCheckSupport :: (EncFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, MonadFlow m) => (Id Person.Person, Id Merchant.Merchant) -> SafetyCheckSupportReq -> m SendIssueRes
+safetyCheckSupport (personId, _merchantId) req = do
   ride <- runInReplica $ QRide.findActiveByRBId req.bookingId >>= fromMaybeM (RideDoesNotExist "")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let moCityId = person.merchantOperatingCityId
   phoneNumber <- mapM decrypt person.mobileNumber
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId moCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist moCityId.getId)
   void $ QRide.updateSafetyCheckStatus ride.id $ Just req.isSafe
-  when (not req.isSafe && riderConfig.enableSupportForSafety) $ void $ createTicket person.merchantId person.merchantOperatingCityId $ ticketReq ride person phoneNumber req.description
+  let kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
+  ticketRequest <- ticketReq ride person phoneNumber req.description riderConfig.kaptureConfig.disposition kaptureQueue
+  if not req.isSafe && riderConfig.enableSupportForSafety
+    then do
+      logDebug $ "Safety req from frontend is not safe and creating ticket : " <> show req.isSafe
+      void $ createTicket person.merchantId moCityId $ ticketRequest
+      void $ QRide.updateSafetyJourneyStatus ride.id Ride.CSAlerted
+    else do
+      logDebug $ "Safety req from frontend is safe and maerking ride as safe : " <> show req.isSafe
+      void $ QRide.updateSafetyJourneyStatus ride.id Ride.Safe
   return Success
   where
-    ticketReq ride person phoneNumber description =
-      Ticket.CreateTicketReq
-        { category = "Code Red",
-          subCategory = Just "Night safety check",
-          issueId = Nothing,
-          issueDescription = description,
-          mediaFiles = Just [show ride.trackingUrl],
-          name = Just $ getName person,
-          phoneNo = phoneNumber,
-          personId = person.id.getId,
-          classification = Ticket.CUSTOMER,
-          rideDescription = Just $ rideInfo ride person phoneNumber
-        }
+    ticketReq ride person phoneNumber description disposition queue = do
+      rideDesc <- mkRideInfo (Just ride) person phoneNumber
+      pure $
+        Ticket.CreateTicketReq
+          { category = "Code Red",
+            subCategory = Just "Night safety check",
+            disposition,
+            queue,
+            issueId = Nothing,
+            issueDescription = description,
+            mediaFiles = Just [show ride.trackingUrl],
+            name = Just $ SLP.getName person,
+            phoneNo = phoneNumber,
+            personId = person.id.getId,
+            classification = Ticket.CUSTOMER,
+            rideDescription = Just rideDesc,
+            becknIssueId = Nothing
+          }
 
-    rideInfo ride person phoneNumber =
-      Ticket.RideInfo
-        { rideShortId = show ride.shortId,
-          customerName = Just $ getName person,
-          customerPhoneNo = phoneNumber,
-          driverName = Just ride.driverName,
-          driverPhoneNo = Just ride.driverMobileNumber,
-          vehicleNo = ride.vehicleNumber,
-          status = show ride.status,
-          rideCreatedAt = ride.createdAt,
-          pickupLocation = castLocationAPIEntity ride.fromLocation,
-          dropLocation = castLocationAPIEntity <$> ride.toLocation,
-          fare = Nothing
-        }
-
-    castLocationAPIEntity ent =
-      Ticket.Location
-        { lat = ent.lat,
-          lon = ent.lon,
-          street = ent.address.street,
-          city = ent.address.city,
-          state = ent.address.state,
-          country = ent.address.country,
-          building = ent.address.building,
-          areaCode = ent.address.areaCode,
-          area = ent.address.area
-        }
-
-    getName person = fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName
-
-buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> m DIssue.Issue
-buildDBIssue (Id customerId) SendIssueReq {..} = do
+buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> Id Merchant.Merchant -> m DIssue.Issue
+buildDBIssue (Id customerId) SendIssueReq {..} merchantId = do
   issueId <- L.generateGUID
   time <- getCurrentTime
   return $
@@ -172,23 +165,64 @@ buildDBIssue (Id customerId) SendIssueReq {..} = do
         status = Domain.OPEN,
         nightSafety = fromMaybe False nightSafety,
         createdAt = time,
-        updatedAt = time
+        updatedAt = time,
+        merchantId = Just merchantId
       }
 
-mkTicket :: DIssue.Issue -> Person.Person -> Maybe Text -> Ticket.CreateTicketReq
-mkTicket issue person phoneNumber =
-  Ticket.CreateTicketReq
-    { category = "Driver Related",
-      subCategory = Just issue.reason,
-      issueId = Just issue.id.getId,
-      issueDescription = issue.description,
-      mediaFiles = Nothing,
-      name = Just (fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName),
-      phoneNo = phoneNumber,
-      personId = person.id.getId,
-      classification = Ticket.CUSTOMER,
-      rideDescription = Nothing
-    }
+mkTicket :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Text -> Maybe Text -> m Ticket.CreateTicketReq
+mkTicket issue person phoneNumber disposition queue deleteAccountCategory = do
+  rideDesc <- mkRideInfo Nothing person Nothing
+  pure $
+    Ticket.CreateTicketReq
+      { category = fromMaybe "Delete Account" deleteAccountCategory,
+        subCategory = Just issue.reason,
+        disposition,
+        queue,
+        issueId = Just issue.id.getId,
+        issueDescription = issue.description,
+        mediaFiles = Nothing,
+        name = Just (fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName),
+        phoneNo = phoneNumber,
+        personId = person.id.getId,
+        classification = Ticket.CUSTOMER,
+        rideDescription = Just rideDesc,
+        becknIssueId = Nothing
+      }
+
+mkRideInfo :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Ride.Ride -> Person.Person -> Maybe Text -> m Ticket.RideInfo
+mkRideInfo mbRide person mbPhoneNumber = do
+  now <- getCurrentTime
+  pure $
+    Ticket.RideInfo
+      { rideShortId = maybe "" (.shortId.getShortId) mbRide,
+        rideCity = show person.currentCity,
+        customerName = Just $ SLP.getName person,
+        customerPhoneNo = mbPhoneNumber,
+        driverName = (.driverName) <$> mbRide,
+        driverPhoneNo = (.driverMobileNumber) <$> mbRide,
+        vehicleNo = maybe "" (.vehicleNumber) mbRide,
+        vehicleCategory = show . (.vehicleVariant) <$> mbRide,
+        vehicleServiceTier = show . (.vehicleServiceTierType) <$> mbRide,
+        status = maybe "" (show . (.status)) mbRide,
+        rideCreatedAt = maybe now (.createdAt) mbRide,
+        pickupLocation = castLocationAPIEntity ((.fromLocation) <$> mbRide),
+        dropLocation = castLocationAPIEntity . (.toLocation) <$> mbRide,
+        fare = Nothing
+      }
+  where
+    castLocationAPIEntity :: Maybe Location.Location -> Ticket.Location
+    castLocationAPIEntity mbLocAPIEnt =
+      Ticket.Location
+        { lat = maybe 0.00 (.lat) mbLocAPIEnt,
+          lon = maybe 0.00 (.lon) mbLocAPIEnt,
+          street = (.address.street) =<< mbLocAPIEnt,
+          city = (.address.city) =<< mbLocAPIEnt,
+          state = (.address.state) =<< mbLocAPIEnt,
+          country = (.address.country) =<< mbLocAPIEnt,
+          building = (.address.building) =<< mbLocAPIEnt,
+          areaCode = (.address.areaCode) =<< mbLocAPIEnt,
+          area = (.address.area) =<< mbLocAPIEnt
+        }
 
 callbackRequest :: (CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> m APISuccess
 callbackRequest personId = do

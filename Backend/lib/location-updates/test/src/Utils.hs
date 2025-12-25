@@ -50,7 +50,8 @@ data AppEnv = AppEnv
     snapToRoadSnippetThreshold :: HighPrecMeters,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -81,6 +82,7 @@ wrapTests func = do
       -- fetch google configs for using mock-google or real google
       appCfg <- Environment.readConfig "../"
       version <- lookupDeploymentVersion
+      let url = Nothing
       let appEnv =
             AppEnv
               { httpClientOptions = defaultHttpClientOptions,
@@ -95,8 +97,8 @@ wrapTests func = do
 incrDistance :: Id Person -> Double -> TestM Double
 incrDistance driverId = Hedis.incrByFloat driverId.getId
 
-updateDistanceTest :: Id Person -> HighPrecMeters -> Int -> Int -> TestM ()
-updateDistanceTest driverId dist _ _ = void $ incrDistance driverId (realToFrac dist)
+updateDistanceTest :: Id Person -> HighPrecMeters -> Int -> Int -> Int -> TestM ()
+updateDistanceTest driverId dist _ _ _ = void $ incrDistance driverId (realToFrac dist)
 
 checkTraveledDistance :: Id Person -> TestM Double
 checkTraveledDistance driverId = incrDistance driverId 0
@@ -113,6 +115,6 @@ osrmConfig :: MapsServiceConfig
 osrmConfig =
   OSRMConfig
     OSRMCfg
-      { osrmUrl = fromJust $ parseBaseUrl "localhost:5000",
+      { osrmUrl = fromJust $ parseBaseUrl "localhost:5001",
         radiusDeviation = Just 20
       }

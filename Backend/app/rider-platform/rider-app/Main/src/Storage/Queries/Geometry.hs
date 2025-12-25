@@ -22,22 +22,32 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import qualified Sequelize as Se
 import Storage.Beam.Common as BeamCommon
-import qualified Storage.Beam.Geometry as BeamG
+import qualified Storage.Beam.Geometry.Geometry as BeamG
+import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
+
+create :: (MonadFlow m, EsqDBFlow m r) => Geometry -> m ()
+create = createWithKV
+
+findGeometryByStateAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City -> Context.IndianState -> m (Maybe Geometry)
+findGeometryByStateAndCity cityParam stateParam = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamG.city (Se.Eq cityParam),
+          Se.Is BeamG.state (Se.Eq stateParam)
+        ]
+    ]
 
 findGeometriesContaining :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] geoms)
-
-someGeometriesContain :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLong -> [Text] -> m Bool
-someGeometriesContain gps regions = do
-  geometries <- findGeometriesContaining gps regions
-  pure $ not $ null geometries
 
 instance FromTType' BeamG.Geometry Geometry where
   fromTType' BeamG.GeometryT {..} = do
@@ -45,13 +55,16 @@ instance FromTType' BeamG.Geometry Geometry where
       Just
         Geometry
           { id = Id id,
+            geom = Nothing,
             ..
           }
 
-instance ToTType' BeamG.Geometry Geometry where
+instance ToTType' BeamGeomG.GeometryGeom Geometry where
   toTType' Geometry {..} =
-    BeamG.GeometryT
-      { BeamG.id = getId id,
-        BeamG.region = region,
-        BeamG.city = city
+    BeamGeomG.GeometryGeomT
+      { BeamGeomG.id = getId id,
+        BeamGeomG.region = region,
+        BeamGeomG.state = state,
+        BeamGeomG.city = city,
+        BeamGeomG.geom = geom
       }

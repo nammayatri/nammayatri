@@ -13,6 +13,9 @@ to generate this file without the comments in this block.
 { name = "ui-driver"
 , dependencies =
   [ "aff"
+  , "argonaut-codecs"
+  , "argonaut-core"
+  , "argonaut-generic"
   , "arrays"
   , "backtrack"
   , "beckn-common"
@@ -52,6 +55,7 @@ to generate this file without the comments in this block.
   , "transformers"
   , "tuples"
   , "web-html"
+  , "console"
   ]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]

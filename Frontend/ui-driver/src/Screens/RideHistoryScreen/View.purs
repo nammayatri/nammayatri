@@ -33,6 +33,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (length, (..))
 import Data.Array as DA
 import Data.Function.Uncurried (runFn1)
+import Data.Maybe (Maybe(..))
 import Data.Tuple as DT
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -50,7 +51,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, ($), (<$>), const, (==), (<<<), bind, pure, unit, discard, show, not, map, (&&), ($), (<$>), (<>), (<<<), (==), (/), (>), (-))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
@@ -68,7 +69,7 @@ import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 
 
-screen :: ST.RideHistoryScreenState -> PrestoList.ListItem -> Screen Action ST.RideHistoryScreenState ScreenOutput
+screen :: ST.RideHistoryScreenState -> PrestoList.ListItem -> LoggableScreen Action ST.RideHistoryScreenState ScreenOutput
 screen initialState rideListItem =
   {
     initialState : initialState {
@@ -94,6 +95,8 @@ screen initialState rideListItem =
     let _ = spy "RideHistoryScreenState action" action
     let _ = spy "RideHistoryScreenState state" state 
     eval action state)
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.rideHistoryScreenLogWhitelist
   }
 
 view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
@@ -409,5 +412,6 @@ shimmerData i = {
   specialZoneLayoutBackground : toPropValue "",
   gotoTagVisibility : toPropValue "",
   purpleTagVisibility : toPropValue "",
-  tipTagVisibility : toPropValue ""
+  tipTagVisibility : toPropValue "",
+  specialZonePickup : toPropValue ""
 }

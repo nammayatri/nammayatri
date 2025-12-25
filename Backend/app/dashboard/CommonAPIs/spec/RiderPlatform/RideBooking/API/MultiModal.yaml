@@ -1,0 +1,75 @@
+imports:
+  BookingStatus: Domain.Types.BookingStatus
+  Person: Domain.Types.Person
+  BookingListResV2: Domain.Action.UI.Booking
+  Integer: EulerHS.Prelude
+  JourneyStatus: Domain.Types.Journey
+  BookingRequestType: Domain.Types.Booking.API
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Types.Booking.API: "rider-app"
+  Domain.Action.UI.Booking: "rider-app"
+  Domain.Types.Journey: "rider-app"
+  Domain.Types.BookingStatus: "beckn-spec"
+
+module: MultiModal
+
+apis:
+  - GET:
+      endpoint: /list/
+      auth: ApiAuthV2
+      query:
+        - limit: Integer
+        - offset: Integer
+        - bookingOffset: Integer
+        - journeyOffset: Integer
+        - customerPhoneNo: Text
+        - countryCode: Text
+        - email: Text
+        - fromDate: Integer
+        - toDate: Integer
+        - rideStatus: [BookingStatus]
+        - journeyStatus: [JourneyStatus]
+        - isPaymentSuccess: Bool
+        - bookingRequestType: BookingRequestType
+        - customerId: Text
+      response:
+        type: BookingListResV2
+  - POST:
+      endpoint: /sendMessage/{customerId}/
+      auth: ApiAuthV2
+      params:
+        customerId: Text
+      request:
+        type: CustomerSendMessageReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /addComment/{customerId}/
+      auth: ApiAuthV2
+      params:
+        customerId: Text
+      request:
+        type: CustomerCommentReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /getComments/{customerId}/
+      auth: ApiAuthV2
+      params:
+        customerId: Text
+      response:
+        type: CustomerCommentsResp
+types:
+  CustomerSendMessageReq:
+    title: Text
+    message: Text
+    channel: MediaChannel
+  MediaChannel:
+    - enum: WHATSAPP, PUSH_NOTIFICATION, SMS
+  CustomerCommentReq:
+    body: Text
+  CustomerCommentsResp:
+    customerId: Id Person
+    comments: Maybe [Text]

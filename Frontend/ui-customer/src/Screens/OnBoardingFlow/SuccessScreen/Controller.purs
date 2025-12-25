@@ -17,7 +17,7 @@ module Screens.SuccessScreen.Controller where
 
 import Log (trackAppEndScreen, trackAppScreenRender)
 import Prelude (class Show, ($))
-import PrestoDOM (Eval, continue, exit)
+import PrestoDOM (Eval, update, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (SuccessScreenState)

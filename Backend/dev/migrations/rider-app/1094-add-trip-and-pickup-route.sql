@@ -1,2 +1,0 @@
-ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_pickup_routes text DEFAULT 'Google';
-ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_trip_routes text DEFAULT 'Google';

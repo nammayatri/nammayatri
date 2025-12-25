@@ -9,26 +9,7 @@
     window.JBridge = top.JBridge;
     window.Android = top.Android;
     window.DUIGatekeeper = JBridge;
-	window.onFileUpdated = function (){
-      console.log("arguments -=>", arguments)
-    //   JBridge.toast("GOT UPDATE");
-      if ((arguments[0].includes("v1-index_bundle.zip")) && ((arguments[0].includes("in.juspay.nammayatri")) || (arguments[0].includes("in.juspay.nammayatripartner"))) ){
-        JBridge.toast("BUNDLE UPDATE AVAILABLE");
-        JBridge.runInJuspayBrowser("onEvent", JSON.stringify({
-            event: "reboot",
-            service: "in.juspay.nammayatri",
-            payload: {},
-            error: false,
-            errorMessage: "",
-            errorCode: ""
-          }), "");
-        console.log("arguments after -=>", arguments)
-      }
-
-    }
-    window.JOS.addEventListener("onFileUpdated")();
-
-
+    window.JBridge.setAnalyticsHeader(JSON.stringify({"x-client-id": "mobility"}));
 </script>
 
 <script type="text/javascript">

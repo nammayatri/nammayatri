@@ -1,0 +1,220 @@
+imports:
+  Text: Data.Text
+  APISuccess: Kernel.Types.APISuccess
+  LatLong: Kernel.External.Maps.Types
+  ServiceTierType: Domain.Types.Common
+  ToParamSchema: Kernel.Prelude
+  Person: Domain.Types.Person
+  AlertRequestData: Domain.Types.Alert.AlertRequestData
+  TripStatus: Domain.Types.TripTransaction
+  TripTransaction: Domain.Types.TripTransaction
+  AlertRequest: Domain.Types.AlertRequest
+  TimeBound: Kernel.Types.TimeBound
+  HighPrecMeters: Kernel.Types.Distance
+  FleetConfig: Domain.Types.FleetConfig
+  RouteDetails: API.Types.ProviderPlatform.Fleet.Endpoints.Driver
+  AlertRequestStatus: Domain.Types.Alert.AlertRequestStatus
+  FleetBadgeType: Domain.Types.FleetBadgeType
+  TripType: Domain.Types.TripTransaction
+
+module: WMB
+
+types:
+  RouteInfo:
+    code: Text
+    shortName: Text
+    longName: Text
+    startPoint: LatLong
+    endPoint: LatLong
+
+  AvailableRoute:
+    routeInfo: RouteInfo
+    source: StopInfo
+    destination: StopInfo
+    vehicleDetails: VehicleDetails
+    roundRouteCode: Maybe Text
+
+  StopInfo:
+    name: Text
+    code: Text
+    point: LatLong
+    derive: "Show"
+
+  VehicleDetails:
+    number: Text
+    _type: ServiceTierType
+
+  TripQrStartReq:
+    vehicleNumberHash: Maybe Text
+    driverBadgeName: Maybe Text
+    conductorBadgeName: Maybe Text
+    routeCode: Text
+    location: LatLong
+
+  TripTransactionDetails:
+    tripTransactionId: Id TripTransaction
+    endRideApprovalRequestId: Maybe (Id AlertRequest)
+    driverName: Maybe Text
+    conductorName: Maybe Text
+    vehicleNumber: Text
+    vehicleType: ServiceTierType
+    source: StopInfo
+    destination: StopInfo
+    status: TripStatus
+    routeInfo: RouteInfo
+    dutyType: Maybe Text
+    vipName: Maybe Text
+    tripType: Maybe TripType
+    scheduledTripTime: Maybe UTCTime
+
+  ActiveTripTransaction:
+    tripTransactionDetails: Maybe TripTransactionDetails
+
+  EndTripStatus:
+    enum: "SUCCESS,WAITING_FOR_ADMIN_APPROVAL"
+
+  TripStartReq:
+    location: LatLong
+
+  TripEndReq:
+    location: LatLong
+
+  TripEndResp:
+    requestId: Maybe Text
+    result: EndTripStatus
+
+  RequestDetails:
+    requestData: AlertRequestData
+    title: Text
+    body: Text
+
+  AlertReqResp:
+    requestId: Text
+
+  AlertRequestResp:
+    status: AlertRequestStatus
+
+  AvailableRouteReq:
+    vehicleNumber: Maybe Text
+
+  AvailableBadge:
+    badgeName: Text
+    isActive: Bool
+    badgeType: FleetBadgeType
+
+apis:
+  - GET: # Get all Available Driver Badges of Private Fleet
+      endpoint: /wmb/fleetBadges
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - mbSearchString: Text
+        - mbBadgeType: FleetBadgeType
+      mandatoryQuery:
+        - limit: Int
+        - offset: Int
+      response:
+        type: "[AvailableBadge]"
+  - POST: # Fetch available routes for a driver of private fleet.
+      endpoint: /wmb/availableRoutes
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: AvailableRouteReq
+      response:
+        type: "[AvailableRoute]"
+  # - POST: # Link a trip to a specific route for a driver of private fleet.
+  #     endpoint: /wmb/trip/link
+  #     auth: TokenAuth PROVIDER_TYPE
+  #     request:
+  #       type: TripLinkReq
+  #     response:
+  #       type: TripTransactionDetails
+
+  - POST: # qr start api
+      endpoint: /wmb/qr/start
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: TripQrStartReq
+      response:
+        type: TripTransactionDetails
+
+  - GET: # Retrieve details of the currently active trip.
+      endpoint: /wmb/trip/active
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: ActiveTripTransaction
+
+  - GET: # Retrieve the route details
+      endpoint: /wmb/route/{routeCode}/details
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        routeCode: Text
+      response:
+        type: RouteDetails
+
+  - GET: # List all trips with optional filters (e.g., limit, offset, and status).
+      endpoint: /wmb/trip/list
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - limit: Int
+        - offset: Int
+        - status: TripStatus
+      response:
+        type: "[TripTransactionDetails]"
+
+  - POST: # Start a trip by trip transaction ID.
+      endpoint: /wmb/trip/{tripTransactionId}/start
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        tripTransactionId: Id TripTransaction
+      request:
+        type: TripStartReq
+      response:
+        type: APISuccess
+
+  - POST: # End a trip by trip transaction ID.
+      endpoint: /wmb/trip/{tripTransactionId}/end
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        tripTransactionId: Id TripTransaction
+      request:
+        type: TripEndReq
+      response:
+        type: TripEndResp
+
+  - POST: # Add a driver request for a specific trip transaction.
+      endpoint: /wmb/trip/{tripTransactionId}/request
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        tripTransactionId: Id TripTransaction
+      request:
+        type: RequestDetails
+      response:
+        type: AlertReqResp
+
+  - GET: # Get approval request status by approval request ID.
+      endpoint: /wmb/requests/{approvalRequestId}/status
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        approvalRequestId: Id AlertRequest
+      response:
+        type: AlertRequestResp
+
+  - POST: # Cancel a driver request by approval request ID.
+      endpoint: /wmb/requests/{approvalRequestId}/cancel
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        approvalRequestId: Id AlertRequest
+      response:
+        type: APISuccess
+
+  - POST: # Provide consent for fleet-related actions.
+      endpoint: /fleet/consent
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: APISuccess
+
+  - GET: # Retrieve the fleet config information
+      endpoint: /fleet/config
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: FleetConfig

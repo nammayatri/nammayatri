@@ -55,6 +55,8 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - TemplateHaskell
+  - DerivingStrategies
 
 dependencies:
   - aeson
@@ -82,6 +84,12 @@ dependencies:
   - openapi3
   - servant-openapi3
   - unordered-containers
+  - beckn-services
+  - utf8-string
+  - yudhishthira
+  - shared-services
+  - beam-core
+  - sequelize
 
 ghc-options:
   - -Wall
@@ -94,7 +102,9 @@ ghc-options:
   - -hiedir=.hie
 
 library:
-  source-dirs: src
+  source-dirs:
+    - src
+    - src-read-only
   ghc-options:
     - -fhide-source-paths
     - -Wincomplete-uni-patterns
@@ -118,7 +128,9 @@ library:
     - dynamic-offer-driver-app
     - rider-app
     - special-zone
+    - special-zone-a
     - shared-services
+    - special-zone-a
 
 executables:
   provider-dashboard-exe:
@@ -148,3 +160,5 @@ executables:
       - mobility-core
       - beckn-spec
       - special-zone
+      - special-zone-a
+      - shared-services

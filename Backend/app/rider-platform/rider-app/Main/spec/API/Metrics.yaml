@@ -1,0 +1,17 @@
+imports:
+  Text: Data.Text
+
+module: Metrics
+types:
+  MetricCounterReq:
+    metricName: Text
+    message: Text
+
+apis:
+  - POST:
+      endpoint: /metrics/increment
+      auth: TokenAuth
+      request:
+        type: MetricCounterReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

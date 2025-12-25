@@ -14,123 +14,145 @@
 
 module Beckn.ACL.OnInit where
 
-import qualified Beckn.ACL.Common as Common
-import Beckn.Types.Core.Taxi.OnInit as OnInit
+import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
+import BecknV2.OnDemand.Utils.Payment
+import qualified Data.List as L
 import Domain.Action.Beckn.Init as DInit
-import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.FareParameters as DFParams
-import qualified Domain.Types.Location as DL
+import Domain.Types
+import Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.FarePolicy as FarePolicyD
 import Kernel.Prelude
-import SharedLogic.FareCalculator
+import qualified Kernel.Types.Common as Common
+import Kernel.Utils.Common
 
-mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
-mkOnInitMessage res = do
-  let rb = res.booking
-      vehicleVariant = Common.castVariant res.booking.vehicleVariant
-      itemId = Common.mkItemId res.transporter.shortId.getShortId res.booking.vehicleVariant
-      fareDecimalValue = fromIntegral rb.estimatedFare
-      currency = "INR"
-      breakup_ =
-        mkBreakupList (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem rb.fareParams
-          & filter (Common.filterRequiredBreakups $ DFParams.getFareParametersType rb.fareParams) -- TODO: Remove after roll out
-  OnInit.OnInitMessage
-    { order =
-        OnInit.Order
-          { id = res.booking.id.getId,
-            items =
-              [ OnInit.OrderItem
-                  { id = itemId,
-                    fulfillment_id = res.booking.quoteId,
-                    price =
-                      OnInit.Price
-                        { currency,
-                          value = fareDecimalValue
-                        },
-                    descriptor =
-                      OnInit.Descriptor
-                        { short_desc = Just itemId,
-                          code = Nothing
-                        }
-                  }
-              ],
-            fulfillment =
-              OnInit.FulfillmentInfo
-                { id = res.booking.quoteId,
-                  _type = buildFulfillmentType res.booking.bookingType,
-                  start =
-                    OnInit.StartInfo
-                      { location =
-                          OnInit.Location
-                            { gps =
-                                OnInit.Gps
-                                  { lat = res.booking.fromLocation.lat,
-                                    lon = res.booking.fromLocation.lon
-                                  },
-                              address = castAddress res.booking.fromLocation.address
-                            },
-                        authorization = Nothing
-                      },
-                  end =
-                    Just
-                      OnInit.StopInfo
-                        { location =
-                            OnInit.Location
-                              { gps =
-                                  OnInit.Gps
-                                    { lat = res.booking.toLocation.lat,
-                                      lon = res.booking.toLocation.lon
-                                    },
-                                address = castAddress res.booking.toLocation.address
-                              }
-                        },
-                  vehicle =
-                    OnInit.Vehicle
-                      { category = vehicleVariant
-                      },
-                  agent =
-                    res.driverName >>= \driverName ->
-                      Just
-                        OnInit.Agent
-                          { name = driverName,
-                            rateable = True,
-                            tags = Nothing,
-                            phone = Nothing,
-                            image = Nothing
-                          }
-                },
-            state = OnInit.NEW,
-            quote =
-              OnInit.Quote
-                { price =
-                    OnInit.QuotePrice
-                      { currency,
-                        value = fareDecimalValue,
-                        offered_value = fareDecimalValue
-                      },
-                  breakup = Just breakup_
-                },
-            provider =
-              res.driverId >>= \dId ->
-                Just
-                  OnInit.Provider
-                    { id = dId
-                    },
-            payment =
-              OnInit.Payment
-                { params =
-                    OnInit.PaymentParams
-                      { collected_by = OnInit.BPP, --maybe OnInit.BPP (Common.castDPaymentCollector . (.collectedBy)) res.paymentMethodInfo,
-                        instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> res.paymentMethodInfo,
-                        currency = currency,
-                        amount = Just fareDecimalValue
-                      },
-                  _type = maybe OnInit.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) res.paymentMethodInfo,
-                  uri = res.booking.paymentUrl
-                }
-          }
+mkOnInitMessageV2 :: DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
+mkOnInitMessageV2 res becknConfig mbFarePolicy =
+  Spec.ConfirmReqMessage
+    { confirmReqMessageOrder = tfOrder res becknConfig mbFarePolicy
     }
-  where
-    castAddress DL.LocationAddress {..} = OnInit.Address {area_code = areaCode, locality = area, ward = Nothing, ..}
-    buildFulfillmentType = \case
-      DRB.NormalBooking -> OnInit.RIDE
-      DRB.SpecialZoneBooking -> OnInit.RIDE_OTP
+
+tfOrder :: DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.Order
+tfOrder res becknConfig mbFarePolicy = do
+  let farePolicy = case mbFarePolicy of
+        Nothing -> Nothing
+        Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
+  Spec.Order
+    { orderBilling = Nothing,
+      orderCancellation = Nothing,
+      orderCancellationTerms = Just $ tfCancellationTerms res.cancellationFee,
+      orderFulfillments = tfFulfillments res,
+      orderId = Just res.booking.id.getId,
+      orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId Nothing farePolicy (Just res.paymentId),
+      orderPayments = tfPayments res becknConfig,
+      orderProvider = Utils.tfProvider becknConfig,
+      orderQuote = Utils.tfQuotation res.booking,
+      orderStatus = Nothing,
+      orderCreatedAt = Just res.booking.createdAt,
+      orderUpdatedAt = Just res.booking.updatedAt
+    }
+
+mkCommissionTagGroup :: Maybe Common.HighPrecMoney -> Maybe [Spec.TagGroup]
+mkCommissionTagGroup mbCommission = do
+  commission <- mbCommission
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.SETTLEMENT_DETAILS,
+                  descriptorName = Nothing,
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.COMMISSION,
+                            descriptorName = Nothing,
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ Common.highPrecMoneyToText commission,
+                    tagDisplay = Just False
+                  }
+              ]
+        }
+    ]
+
+tfFulfillments :: DInit.InitRes -> Maybe [Spec.Fulfillment]
+tfFulfillments res =
+  Just
+    [ Spec.Fulfillment
+        { fulfillmentAgent = Nothing,
+          fulfillmentCustomer = tfCustomer res,
+          fulfillmentId = Just res.booking.quoteId,
+          fulfillmentState = Nothing,
+          fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.stops Nothing,
+          fulfillmentTags = Nothing,
+          fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
+          fulfillmentVehicle = tfVehicle res
+        }
+    ]
+
+-- TODO: Discuss payment info transmission with ONDC
+tfPayments :: DInit.InitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
+tfPayments res bppConfig = do
+  let mPrice = Just $ mkPrice (Just res.booking.currency) res.booking.estimatedFare
+  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
+  let basePayment = mkPayment (show res.transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice (Just res.paymentId) mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing
+      commissionTagGroup = mkCommissionTagGroup res.booking.commission
+      updatedPaymentTags = case (basePayment.paymentTags, commissionTagGroup) of
+        (Just existingTags, Just commissionTags) -> Just (existingTags <> commissionTags)
+        (Just existingTags, Nothing) -> Just existingTags
+        (Nothing, Just commissionTags) -> Just commissionTags
+        (Nothing, Nothing) -> Nothing
+  Just . L.singleton $ basePayment {Spec.paymentTags = updatedPaymentTags}
+
+tfVehicle :: DInit.InitRes -> Maybe Spec.Vehicle
+tfVehicle res = do
+  let (category, variant) = Utils.castVariant res.vehicleVariant
+  Just
+    Spec.Vehicle
+      { vehicleCategory = Just category,
+        vehicleVariant = Just variant,
+        vehicleColor = Nothing,
+        vehicleMake = Nothing,
+        vehicleModel = Nothing,
+        vehicleRegistration = Nothing,
+        vehicleCapacity = Nothing
+      }
+
+tfCancellationTerms :: Maybe PriceAPIEntity -> [Spec.CancellationTerm]
+tfCancellationTerms cancellationFee =
+  L.singleton
+    Spec.CancellationTerm
+      { cancellationTermCancellationFee = Utils.tfCancellationFee cancellationFee,
+        cancellationTermFulfillmentState = Utils.tfFulfillmentState Enums.RIDE_ASSIGNED,
+        cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
+      }
+
+tfCustomer :: DInit.InitRes -> Maybe Spec.Customer
+tfCustomer res =
+  return $
+    Spec.Customer
+      { customerContact =
+          Just
+            Spec.Contact
+              { contactPhone = Just res.riderPhoneNumber
+              },
+        customerPerson = do
+          riderName <- res.riderName
+          Just
+            Spec.Person
+              { personId = Nothing,
+                personImage = Nothing,
+                personName = Just riderName,
+                personTags = Nothing
+              }
+      }

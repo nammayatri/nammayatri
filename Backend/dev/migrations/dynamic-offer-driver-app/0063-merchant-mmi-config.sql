@@ -1,5 +1,6 @@
-INSERT INTO atlas_driver_offer_bpp.merchant_service_config (merchant_id, service_name, config_json)
-SELECT m.id, 'Maps_MMI',
+-- local sync
+INSERT INTO atlas_driver_offer_bpp.merchant_service_config (merchant_id, merchant_operating_city_id, service_name, config_json)
+SELECT m.merchant_id, m.id, 'Maps_MMI',
   json_build_object(
      'mmiAuthUrl','https://outpost.mappls.com/api/security/oauth/token'
     , 'mmiAuthId','mmi-auth-id'
@@ -8,4 +9,4 @@ SELECT m.id, 'Maps_MMI',
     , 'mmiKeyUrl','https://apis.mapmyindia.com/'
     , 'mmiNonKeyUrl','https://atlas.mapmyindia.com/'
   )
-FROM atlas_driver_offer_bpp.merchant m;
+FROM atlas_driver_offer_bpp.merchant_operating_city m;

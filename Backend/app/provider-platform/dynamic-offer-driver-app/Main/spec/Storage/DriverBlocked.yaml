@@ -1,0 +1,40 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person : Domain.Types.Person
+  DriverBlockReason: Domain.Types.DriverBlockReason
+  BlockReasonFlag: Tools.Error
+DriverBlockTransactions:
+  tableName: driver_block_transactions
+
+  types:
+    BlockedBy:
+          enum : "Dashboard, Application"
+    ActionType:
+          enum: "BLOCK, UNBLOCK"
+
+  fields:
+    id : Id DriverBlockTransactions
+    reasonCode :  Maybe Text
+    blockReason : Maybe Text
+    blockTimeInHours : Maybe Int
+    driverId : Id Person
+    reportedAt : UTCTime
+    blockLiftTime : Maybe UTCTime
+    blockedBy : BlockedBy
+    requestorId : Maybe Text
+    blockReasonFlag: Maybe BlockReasonFlag
+    actionType: Maybe ActionType
+
+  constraints:
+    id: PrimaryKey
+    driverId: "!SecondaryKey"
+  queries:
+    findByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    blockCountByDriverId:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId , actionType]

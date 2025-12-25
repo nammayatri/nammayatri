@@ -3,50 +3,65 @@ module Screens.EmergencyContactsScreen.View where
 import Animation (screenAnimation)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText as PrimaryEditText
 import Effect (Effect)
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge (openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), (&&),(-), (>), show)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..),scrollView, swipeRefreshLayout, hint, onScroll, scrollBarY, onScrollStateChange, alignParentBottom, pattern, onChange, id, editText, background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback, onRefresh, accessibility, accessibilityHint)
-import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval, contactColorsList)
-import Screens.Types (EmergencyContactsScreenState, ContactDetail, NewContacts)
-import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
+import Prelude (Unit, const, discard, pure, unit, void, map, not, (<$>), ($), (&&), (-), (<), (<<<), (<>), (==), (>))
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarY, stroke, text, textSize, textView, visibility, weight, width, adjustViewWithKeyboard, scrollView, clickable)
+import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.Types (EmergencyContactsScreenState, NewContacts, CheckBoxSelectionConfig, Stage(..))
 import Styles.Colors as Color
-import Common.Types.App
-import Helpers.Utils (storeCallBackContacts, contactPermission)
-import Data.Array (take, (!!), mapWithIndex, null, length)
+import Common.Types.App (LazyCheck(..))
+import Helpers.Utils (FetchImageFrom(FF_COMMON_ASSET), fetchImage, storeCallBackContacts)
+import Data.Array (difference, length, null, take, (!!), mapWithIndex, concat, any)
 import Data.String as DS
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.String (split, Pattern(..))
+import Data.Foldable (foldl)
+import Data.String.CodeUnits (toCharArray)
 import Components.PopUpModal as PopUpModal
-import Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig
+import Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig, removeContactPopUpModelConfig)
+import Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig as CC
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Events (globalOnScroll)
+import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Elements.Keyed as Keyed
+import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.Tuple (Tuple(..))
 import Components.PrimaryButton.Controller as PrimaryButtonConfig
-import Data.Array as DA
-import PrestoDOM.Types.Core (toPropValue)
-import Data.String.Regex (match)
-import Halogen.VDom.DOM.Prop (PropValue)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), setRefreshing)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackContacts)
+import Screens.NammaSafetyFlow.Components.ContactsList as ContactsList
+import Screens.NammaSafetyFlow.Components.HelperViews as HelperViews
+import Components.DropDownWithHeader as DropDownWithHeader
+import Debug (spy)
+import Storage (isLocalStageOn)
+import Engineering.Helpers.Utils (terminateLoader)
+import Mobility.Prelude (boolToInvisibility, boolToVisibility)
+import JBridge as JB
+import Effect.Uncurried (runEffectFn2)
 
 screen :: EmergencyContactsScreenState -> PrestoList.ListItem -> Screen Action EmergencyContactsScreenState ScreenOutput
 screen initialState listItemm =
   { initialState
   , view: view listItemm
   , name: "EmergencyContactsScreen"
-  , globalEvents: [ globalOnScroll "EmergencyContactsScreen",
-                    ( \push -> do
-                        _ <- pure $ setRefreshing (getNewIDWithTag "EmergencyContactTag") false
-                        pure (pure unit)
-                    )
-                  ]
-  , eval
+  , globalEvents:
+      [ globalOnScroll "EmergencyContactsScreen"
+      , ( \push -> do
+            pure (pure unit)
+        )
+      ]
+  , eval:
+      \action state -> do
+        let
+          _ = spy "EmergencyContactsScreen action " action
+        let
+          _ = spy "EmergencyContactsScreen state " state
+        eval action state
   }
 
 view :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
@@ -58,203 +73,183 @@ view listItemm push state =
         , orientation VERTICAL
         , onBackPressed push (const BackPressed)
         , background Color.white900
-        , padding if os == "IOS" then (Padding 0 safeMarginTop 0 (if safeMarginBottom == 0 && os == "IOS" then 16 else safeMarginBottom)) else (Padding 0 0 0 0)
-        , gravity CENTER
-        , afterRender
-            ( \action -> do
-                _ <- push action
-                _ <- storeCallBackContacts push ContactsCallback
-                if ((getValueToLocalStore CONTACTS == "__failed") || (getValueToLocalStore CONTACTS == "(null)")) then do
-                  _ <- push FetchContacts
-                  pure unit
-                else do
-                  pure unit
-                _ <- push CheckingContactList
-                pure unit
-            )
-            (const NoAction)
+        , padding if os == "IOS" then (Padding 0 safeMarginTop 0 paddingBottom) else (Padding 0 0 0 0)
+        , afterRender push $ const NoAction
         ]
-        ([ linearLayout
-            [ height MATCH_PARENT
+        ( [ linearLayout
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , accessibility if state.props.showInfoPopUp then DISABLE_DESCENDANT else DISABLE
+              ]
+              [ GenericHeader.view (push <<< ContactListGenericHeaderActionController) (genericHeaderConfig state)
+              , linearLayout
+                  [ height $ V 1
+                  , width $ V (screenWidth unit)
+                  , background Color.greySmoke
+                  ]
+                  []
+              , linearLayout
+                  [ height MATCH_PARENT
+                  , width MATCH_PARENT
+                  , orientation VERTICAL
+                  , visibility if state.props.showContactList then GONE else VISIBLE
+                  ]
+                  [ emergencyContactsView push state
+                  , HelperViews.recommendContactsToInstallView state.props.appName $ state.props.saveEmergencyContacts && not state.props.getDefaultContacts && length state.data.selectedContacts > 0
+                  , linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , padding $ Padding 16 0 16 16
+                      ]
+                      [ PrimaryButton.view (push <<< PrimaryButtonActionControll) (primaryButtonConfig state) ]
+                  ]
+              ]
+          , if state.props.showAddContactOptions then (addContactsOptionView push state) else emptyTextView state
+          ]
+            <> if state.props.showInfoPopUp then [ removeContactPopUpView push state ] else [ emptyTextView state ]
+        )
+  where
+  marginBottom =
+    if state.props.showContactList then
+      0
+    else if safeMarginBottom == 0 && os == "IOS" then
+      16
+    else
+      safeMarginBottom
+
+  paddingBottom = if state.props.isKeyBoardOpen then 0 else marginBottom
+
+addContactsOptionView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
+addContactsOptionView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.black9000
+    , onClick push $ const HideAddContactsOptions
+    , gravity BOTTOM
+    , adjustViewWithKeyboard "true"
+    ]
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , cornerRadii $ Corners 16.0 true true false false
+        , orientation VERTICAL
+        , clickable true
+        , onClick push $ const NoAction
+        , background Color.white900
+        ]
+        [ textView
+            $ [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , padding $ Padding 16 16 0 0
+              , text $ getString $ if state.props.addContactsManually then ADD_CONTACTS_MANUALLY else ADD_CONTACTS
+              , color Color.black700
+              ]
+            <> FontStyle.subHeading2 TypoGraphy
+        , addContactOptions push state
+        , manualContactView push state
+        ]
+    ]
+
+manualContactView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
+manualContactView push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , cornerRadius 16.0
+    , visibility $ boolToVisibility state.props.addContactsManually
+    , orientation VERTICAL
+    , background Color.white900
+    ]
+    [
+      PrimaryEditText.view (push <<< TrustedNumberPET) (CC.primaryEditTextConfig state),
+      PrimaryEditText.view (push <<< TrustedNamePET) (CC.primaryEditTextConfigName state),
+      separator,
+      relativeLayout[
+        height WRAP_CONTENT,
+        width MATCH_PARENT
+      ][
+      PrimaryButton.view (push <<< PrimaryButtonActionControll) (CC.primaryButtonConfigManualContact state)
+      , linearLayout 
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.transparentHigh
+        , clickable true
+        , visibility $ boolToVisibility $ not $ state.props.validManualContact && state.props.validManualName
+        ][
+          PrimaryButton.view (push <<< PrimaryButtonActionControll) (CC.primaryButtonConfigManualContactDummy state)
+        ]
+      ]
+    ]
+
+separator :: forall w. PrestoDOM (Effect Unit) w
+separator =
+  linearLayout
+  [ width MATCH_PARENT
+  , height $ V 1
+  , background Color.grey900
+  , margin $ MarginTop 5
+  ][]
+
+addContactOptions :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
+addContactOptions push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , visibility $ boolToVisibility $ not state.props.addContactsManually
+    , padding $ Padding 16 16 16 16
+    ]
+    [ optionView AddContacts "ny_ic_user_info_details" CHOOSE_FROM_CONTACTS,
+     separator,
+     optionView AddContactsManually "ny_ic_new_add_contact" ADD_MANUALLY]
+  where
+  optionView action imageAsset componentText =
+    linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation HORIZONTAL
+      , gravity CENTER_VERTICAL
+      , padding $ Padding 16 16 16 16
+      , onClick push $ const action
+      ]
+      [ imageView
+          [ height $ V 24
+          , width $ V 24
+          , margin $ MarginRight 12
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET imageAsset
+          ]
+      , textView
+          $ [ height WRAP_CONTENT
             , width MATCH_PARENT
-            , orientation VERTICAL
-            , accessibility if state.props.showInfoPopUp then DISABLE_DESCENDANT else DISABLE
+            , text $ getString componentText
+            , weight 1.0
+            , color Color.black800
             ]
-            [ GenericHeader.view (push <<< ContactListGenericHeaderActionController) (genericHeaderConfig state)
-            , linearLayout
-                [ height $ V 1
-                , width $ V (screenWidth unit)
-                , background Color.greySmoke
-                ]
-                []
-            , linearLayout
-                [ height MATCH_PARENT
-                , width MATCH_PARENT
-                , orientation VERTICAL
-                , gravity CENTER
-                , padding (Padding 16 0 16 0)
-                , visibility if state.props.showContactList then GONE else VISIBLE
-                ]
-                [ emergencyContactsView push state
-                , PrimaryButton.view (push <<< PrimaryButtonActionControll) (primaryButtonConfig state)
-                ]
-            ]
-        , if state.props.showContactList then (contactListView listItemm push state) else emptyTextView state
-        ] <>  if state.props.showInfoPopUp then [removeContactPopUpView push state] else [emptyTextView state])
+          <> FontStyle.subHeading3 TypoGraphy
+      , imageView
+          [ height $ V 24
+          , width $ V 24
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
+          ]
+      ]
 
 ------------------------ EmptyTextView ---------------------------
 emptyTextView :: forall w. EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
 emptyTextView state = textView []
 
------------------------- ContactsListView ---------------------------
-contactListView :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
-contactListView listItemm push state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    ]
-    [ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , background Color.white900
-        ]
-        [ GenericHeader.view (push <<< ContactListGenericHeaderActionController) (genericHeaderConfig state)
-        , horizontalLine
-        ]
-    , linearLayout
-        [ width MATCH_PARENT
-        , height $ V 44
-        , orientation HORIZONTAL
-        , cornerRadius 8.0
-        , padding (Padding 2 2 2 2)
-        , margin (Margin 16 16 16 16)
-        , gravity LEFT
-        , stroke ("1," <> Color.borderColorLight)
-        ]
-        [ editText
-            [ height MATCH_PARENT
-            , width WRAP_CONTENT
-            , weight 1.0
-            , textSize FontSize.a_16
-            , padding (Padding 14 10 0 10)
-            , color Color.black800
-            , gravity LEFT
-            , id (getNewIDWithTag "contactEditText")
-            , background Color.white900
-            , fontStyle $ FontStyle.semiBold LanguageStyle
-            , text ""
-            , hint $ getString SEARCH_CONTACTS
-            , pattern "[^\n]*,255"
-            , onChange push $ ContactTextChanged
-            ]
-        , imageView
-            [ height $ V 17
-            , width $ V 17
-            , accessibilityHint "Cancel Search : Button"
-            , accessibility ENABLE
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cancel"
-            , gravity CENTER
-            , margin (Margin 10 10 10 10)
-            , onClick push $ const ContactListClearText
-            ]
-        ]
-    , showEmergencyContact listItemm push state
-    , linearLayout
-        [ height if os == "IOS" then (V 84) else WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , background Color.white900
-        , padding (Padding 16 16 16 24)
-        , stroke $ "1," <> Color.grey900
-        , alignParentBottom "true,-1"
-        , margin (Margin 0 0 0 0)
-        ]
-        [ linearLayout
-            [ width MATCH_PARENT
-            , height if os == "IOS" then (V 52) else WRAP_CONTENT
-            , gravity BOTTOM
-            , alignParentBottom "true,-1"
-            ]
-            [ PrimaryButton.view (push <<< ContactListPrimaryButtonActionController) (contactListPrimaryButtonConfig state.data.contactsCount)
-            ]
-        ]
-    ]
-
-showEmergencyContact :: forall w. PrestoList.ListItem ->  (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
-showEmergencyContact listitemm push config =
-  swipeRefreshLayout
-    ([ width MATCH_PARENT
-    , height MATCH_PARENT
-    , background Color.blue600
-    , weight 1.0
-    , onRefresh push (const RefreshScreen)
-    ] <> if os == "IOS" then [] else [id $ getNewIDWithTag "EmergencyContactTag"] )
-    [ showEmergencyContactData listitemm push config
-    ]
-
-showEmergencyContactData :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
-showEmergencyContactData listItemm push state =
-  Keyed.linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  ]
-  [ Tuple "contacts"
-    $ PrestoList.list
-    [ height MATCH_PARENT
-    -- , scrollBarY false
-    , width MATCH_PARENT
-    , onScroll "contacts" "EmergencyContactsScreen" push (ContactListScroll)
-    , onScrollStateChange push (ContactListScrollStateChanged)
-    , PrestoList.listItem listItemm
-    , background Color.white900
-    , PrestoList.listDataV2  $ state.data.prestoListArrayItems
-    ]
-  ]
-
-startsWith :: String -> String -> Boolean
-startsWith prefix str = DS.take (DS.length prefix) str == prefix
-
-contactListPrimaryButtonConfig :: Int -> PrimaryButtonConfig.Config
-contactListPrimaryButtonConfig count =
-  let
-    config' = PrimaryButtonConfig.config
-
-    primaryButtonConfig' =
-      config'
-        { textConfig
-          { text = if (count > 0) then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)
-          , accessibilityHint =  (if (count > 0) then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)) <> " : Button"
-          , color = if (count > 0) then Color.yellow900 else Color.yellow800
-          }
-        , background = if (count > 0) then Color.black900 else Color.black600
-        , isClickable = if (count > 0) then true else false
-        }
-  in
-    primaryButtonConfig'
-
-
-horizontalLine :: forall w. PrestoDOM (Effect Unit) w
-horizontalLine =
-  linearLayout
-    [ height $ V 1
-    , width MATCH_PARENT
-    , background Color.grey900
-    ][]
-
-
 --------------------------------------------------- emergencyContactsView -----------------------------------------------------
 emergencyContactsView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
-emergencyContactsView push state = 
+emergencyContactsView push state =
   linearLayout
-    [ width $ MATCH_PARENT
+    [ width MATCH_PARENT
     , orientation VERTICAL
     , weight 1.0
     ]
     [ emptyContactsView push state
-    , emergencyContactsListView push state
+    -- , emergencyContactsListView push state
     ]
 
 --------------------------------------------------- emptyContactsView -----------------------------------------------------
@@ -264,102 +259,328 @@ emptyContactsView push state =
     [ height $ WRAP_CONTENT
     , width $ MATCH_PARENT
     , orientation VERTICAL
-    , gravity CENTER
-    , visibility if (null state.data.contactsList) then VISIBLE else GONE
     , weight 1.0
     ]
-    [ imageView
-        [ height $ V 150
-        , width $ V 150
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_emergency_contact_empty"
+    [ scrollView
+        [ height MATCH_PARENT 
+        , width MATCH_PARENT
+        , scrollBarY false
+        , height WRAP_CONTENT
+        , orientation VERTICAL
         ]
-    , textView $
-        [ height $ WRAP_CONTENT
-        , width $ WRAP_CONTENT
-        , gravity CENTER
-        , text (getString NO_EMERGENCY_CONTACTS_SET)
-        , color Color.black900
-        ] <> FontStyle.h2 LanguageStyle
-    , textView $
-        [ height $ WRAP_CONTENT
-        , width WRAP_CONTENT
-        , gravity CENTER
-        , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
-        , color Color.black700
-        , padding (Padding 16 10 16 10)
-        ] <> FontStyle.paragraphText LanguageStyle
+        [ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ]
+            [ imageView
+                [ height $ V 200
+                , width MATCH_PARENT
+                , visibility $ boolToVisibility $ not $ state.props.saveEmergencyContacts && state.props.getDefaultContacts
+                , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET "ny_ic_share_explain"
+                ]
+            , explanationContentView push state
+            , HelperViews.recommendContactsToInstallView state.props.appName $ state.props.saveEmergencyContacts && state.props.getDefaultContacts
+            , checkBoxSelectionView push state
+            ]
+        ]
+    ]
+
+explanationContentView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
+explanationContentView push state =
+  let
+    contactsLength = length state.data.selectedContacts
+  in
+    linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , visibility $ boolToVisibility state.props.saveEmergencyContacts
+      , orientation VERTICAL
+      , gravity CENTER_HORIZONTAL
+      ]
+      [ linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , padding $ Padding 16 16 16 0
+          ]
+          [ textView
+              $ [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , text $ getString LIVE_RIDE_TRACKING
+                , color Color.black900
+                ]
+              <> FontStyle.h3 TypoGraphy
+          ]
+      , imageViewComponent state "ny_ic_share_ride_rounded" true
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , padding $ Padding 16 16 16 0
+          ]
+          [ textView
+              $ [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , text $ getString LIVE_RIDE_TRACKING_DESC
+                , color Color.black700
+                ]
+              <> FontStyle.body5 TypoGraphy
+          ]
+      , emergencyContactsListView push state
+      , if contactsLength < 3 && contactsLength > 0 then addContactsButtonView push state else emptyTextView state
+      ]
+
+imageViewComponent :: forall w. EmergencyContactsScreenState -> String -> Boolean -> PrestoDOM (Effect Unit) w
+imageViewComponent state imageUrl enableMargin =
+  imageView
+    [ height $ V 200
+    , width MATCH_PARENT
+    , margin $ if enableMargin then Margin 16 16 16 0 else MarginTop 16
+    , visibility $ boolToVisibility $ state.props.saveEmergencyContacts && state.props.getDefaultContacts
+    , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET imageUrl
+    ]
+
+addContactsButtonView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
+addContactsButtonView push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , padding $ Padding 16 16 16 16
+    , margin $ Margin 16 16 16 16
+    , cornerRadius 16.0
+    , background Color.blue600
+    , onClick push $ const ShowAddContactsOptions
+    , gravity CENTER
+    ]
+    [ textView
+        $ [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ getString ADD_CONTACTS
+          , color Color.blue800
+          ]
+        <> FontStyle.body20 TypoGraphy
     ]
 
 --------------------------------------------------- emergencyContactsListView -----------------------------------------------------
 emergencyContactsListView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
 emergencyContactsListView push state =
   linearLayout
-    [ height $ WRAP_CONTENT
-    , width $ MATCH_PARENT
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
     , orientation VERTICAL
-    , padding (Padding 0 10 0 10)
-    , visibility if (null state.data.contactsList) then GONE else VISIBLE
-    , weight 1.0
     ]
-    [ textView $ 
-        [ height $ WRAP_CONTENT
-        , width if os == "IOS" then V (screenWidth unit - 20) else WRAP_CONTENT
-        , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
-        , color Color.black700
-        , padding (Padding 0 10 0 10)
-        ] <> FontStyle.paragraphText LanguageStyle
-    , linearLayout
+    $ mapWithIndex
+        ( \index contact ->
+            linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , padding $ Padding 16 16 16 16
+              , margin $ Margin 16 16 16 0
+              , cornerRadius 16.0
+              , background Color.blue600
+              , orientation VERTICAL
+              ]
+              [ emergencyContactListItem push state contact index
+              , dropDownWithHeaderView push state contact
+              ]
+        )
+        state.data.selectedContacts
+
+dropDownWithHeaderView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> NewContacts -> PrestoDOM (Effect Unit) w
+dropDownWithHeaderView push state contact =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER_HORIZONTAL
+    , padding (Padding 0 0 0 0)
+    ]
+    [ DropDownWithHeader.view (push <<< DropDownWithHeaderAC) $ CC.dropDownWithHeaderConfig state contact --(CC.dropDownWithHeaderConfig state)
+    ]
+
+emergencyContactListItem :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> NewContacts -> Int -> PrestoDOM (Effect Unit) w
+emergencyContactListItem push state contact index =
+  let
+    userColor = case index of
+      0 -> Color.yellow900
+      1 -> Color.blue800
+      2 -> Color.yellow800
+      _ -> Color.grey700
+  in
+    linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER_VERTICAL
+      ]
+      [ linearLayout
+          [ height $ V 36
+          , width $ V 36
+          , background userColor
+          , cornerRadius 50.0
+          , gravity CENTER
+          , margin $ MarginRight 12
+          ]
+          [ textView
+              $ [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ getInitials $ getNameInitials contact.name
+                , color Color.black
+                ]
+          ]
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , orientation VERTICAL
+          , weight 1.0
+          ]
+          [ textView
+              $ [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text contact.name
+                , color Color.black900
+                ]
+              <> FontStyle.subHeading3 TypoGraphy
+          , textView
+              $ [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text contact.number
+                , color Color.black700
+                ]
+              <> FontStyle.body32 TypoGraphy
+          ]
+      , imageView
+          [ height $ V 40
+          , width $ V 40
+          , visibility $ boolToVisibility $ not $ any isLocalStageOn [RideAccepted, RideStarted, ChatWithDriver]
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_delete_bin"
+          , onClick push $ const $ RemoveButtonClicked contact
+          ]
+      ]
+
+getInitials :: Array String -> String
+getInitials wordsArray =
+  let
+    getInitial word = DS.take 1 word
+    initialsArray = map (\word -> getInitial word) wordsArray
+    uppercaseInitials = foldl (\acc w -> acc <> (DS.toUpper w) ) "" initialsArray
+  in
+    uppercaseInitials
+
+--------------------------------------------------- checkBoxSelectionView -----------------------------------------------------
+checkBoxSelectionView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
+checkBoxSelectionView push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , visibility $ boolToVisibility state.props.getDefaultContacts
+    , orientation VERTICAL
+    , padding (Padding 0 0 0 0)
+    ]
+    [ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
+        , padding $ Padding 16 16 16 0
         ]
-        (mapWithIndex (\index item -> contactCardView push state item index) state.data.contactsList)
+        [ textView
+            $ [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , text $ getString APP_CALL_CHAT
+              , color Color.black900
+              ]
+            <> FontStyle.h3 TypoGraphy
+        , imageViewComponent state "ny_ic_chat_rounded" false
+        , textView
+            $ [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , text $ getString TRUSTED_CONTACT_DESC
+              , color Color.black700
+              , margin $ MarginTop 6
+              ]
+            <> FontStyle.body5 TypoGraphy
+        , textView
+            $ [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , text $ getString DEFAULT_CONTACT
+              , margin $ MarginTop 16
+              , color Color.black700
+              ]
+            <> FontStyle.body1 TypoGraphy
+        ]
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , padding $ Padding 16 16 16 16
+        , margin $ Margin 16 12 16 16
+        , cornerRadius 16.0
+        , background Color.blue600
+        , orientation VERTICAL
+        ]
+        $ mapWithIndex (\index contact -> contactListViewCheckBox push state contact index) state.data.selectedContacts
     ]
+
+contactListViewCheckBox :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> NewContacts -> Int -> PrestoDOM (Effect Unit) w
+contactListViewCheckBox push state contact index =
+  let
+    isDefault = contact.priority == 0 --contact.number == state.data.defaultSelectedContact.number
+
+    strokeColor = if isDefault then Color.black800 else Color.black500
+
+    userColor = case index of
+      0 -> Color.yellow900
+      1 -> Color.blue800
+      2 -> Color.yellow800
+      _ -> Color.grey700
+  in
+    linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , margin $ MarginVertical 12 12
+      , orientation HORIZONTAL
+      , onClick push $ const $ DefaultContactSelected contact
+      , gravity CENTER_VERTICAL
+      ]
+      [ linearLayout
+          [ height $ V 36
+          , width $ V 36
+          , background userColor
+          , cornerRadius 50.0
+          , gravity CENTER
+          , margin $ MarginRight 12
+          ]
+          [ textView
+              $ [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ getInitials $ getNameInitials contact.name
+                , color Color.black
+                ]
+          ]
+      , textView
+          $ [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text contact.name
+            , color Color.black900
+            , weight 1.0
+            ]
+          <> FontStyle.body32 TypoGraphy
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , padding $ Padding 4 4 4 4
+          , stroke $ "1," <> Color.black800
+          , cornerRadius 50.0
+          ]
+          [ linearLayout
+              [ height $ V 12
+              , width $ V 12
+              , cornerRadius 50.0
+              , visibility $ boolToInvisibility isDefault
+              , background Color.black800
+              ]
+              []
+          ]
+      ]
 
 --------------------------------------------------- emergencyContactsListView -----------------------------------------------------
-contactCardView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> NewContacts -> Int -> PrestoDOM (Effect Unit) w
-contactCardView push state contact index =
-  linearLayout
-    [ height $ WRAP_CONTENT
-    , width MATCH_PARENT
-    , padding $ Padding 18 18 18 18
-    , margin $ Margin 0 5 0 5
-    , cornerRadius 8.0
-    , stroke ("1," <> Color.grey900)
-    ]
-    [ linearLayout
-        [ height $ V 24
-        , width $ V 24
-        , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
-        , cornerRadius 12.0
-        , gravity CENTER
-        , margin (MarginRight 10)
-        ]
-        [ textView $
-            [ text (DS.toUpper ((<>) (getFirstChar contact.name) (getLastChar contact.name)))
-            , color (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1))
-            , accessibility DISABLE
-            ] <> FontStyle.body3 TypoGraphy
-        ]
-    , textView $
-        [ height $ WRAP_CONTENT
-        , width $ WRAP_CONTENT
-        , weight 1.0
-        , text contact.name
-        , color Color.black800
-        ] <> FontStyle.subHeading1 LanguageStyle
-    , textView
-        [ height $ WRAP_CONTENT
-        , width $ WRAP_CONTENT
-        , text (getString REMOVE)
-        , accessibilityHint "Remove : Button"
-        , accessibility ENABLE
-        , color Color.blue900
-        , textSize 14
-        , onClick push (const (RemoveButtonClicked contact))
-        ]
-    ]
-
 getNameInitials :: String -> (Array String)
 getNameInitials fullName = (take 2 (split (Pattern " ") (fullName)))
 

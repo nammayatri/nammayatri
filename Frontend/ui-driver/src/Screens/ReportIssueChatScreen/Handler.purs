@@ -18,7 +18,7 @@ module Screens.ReportIssueChatScreen.Handler where
 import Prelude (bind, pure, ($), (<$>))
 import Types.App
 import Engineering.Helpers.BackTrack (getState)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans as App
 import Screens.ReportIssueChatScreen.Controller (ScreenOutput(..))
@@ -27,7 +27,7 @@ import Screens.ReportIssueChatScreen.View (screen)
 reportIssueChatScreen :: FlowBT String REPORT_ISSUE_CHAT_SCREEN_OUTPUT
 reportIssueChatScreen = do
     (GlobalState state) <- getState
-    act <- lift $ lift $ runScreen $ screen state.reportIssueChatScreen
+    act <- lift $ lift $ runLoggableScreen $ screen state.reportIssueChatScreen
     case act of
         GoBack -> App.BackT $ pure App.GoBack
         UploadIssue updatedState -> App.BackT $ App.NoBack <$> (pure $ SUBMIT_ISSUE updatedState)

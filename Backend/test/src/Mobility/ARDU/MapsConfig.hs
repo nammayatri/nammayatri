@@ -12,17 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-deprecations #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module Mobility.ARDU.MapsConfig where
 
-import "dynamic-offer-driver-app" Domain.Types.Merchant
-import "dynamic-offer-driver-app" Domain.Types.Merchant.MerchantServiceConfig
+import "dynamic-offer-driver-app" Domain.Types.MerchantServiceConfig
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Mobility.ARDU.Fixtures as Fixtures
-import qualified "dynamic-offer-driver-app" Storage.Queries.Merchant.MerchantServiceConfig as QMSC
+import qualified "dynamic-offer-driver-app" Storage.Queries.MerchantServiceConfig as QMSC
 import Test.Hspec
 import "dynamic-offer-driver-app" Tools.Maps
 import Utils
@@ -37,21 +34,23 @@ spec = describe "Merchant maps configs" $ do
     fetchOSRMConfig
 
 -- We use direct calls to DB in this test because cache already changed for using mock-google
-fetchConfig :: forall b. (Show b, Eq b) => Id Merchant -> Maps.MapsService -> (ServiceConfig -> b) -> b -> IO ()
-fetchConfig merchantId serviceProvider getterFunc resultExpected = do
+fetchConfig :: forall b. (Show b, Eq b) => Maps.MapsService -> (ServiceConfig -> Maybe b) -> b -> IO ()
+fetchConfig serviceProvider getterFunc resultExpected = do
   Just cfg <-
     runARDUFlow "" $
-      QMSC.findByMerchantIdAndService merchantId (MapsService serviceProvider)
-  getterFunc cfg.serviceConfig `shouldBe` resultExpected
+      QMSC.findByServiceAndCity (MapsService serviceProvider) (Id "Merchnant-op-city")
+  getterFunc cfg.serviceConfig `shouldBe` Just resultExpected
 
 fetchGoogleConfig :: IO ()
 fetchGoogleConfig = do
-  fetchConfig Fixtures.nammaYatriPartnerMerchantId Google func (fromJust $ parseBaseUrl "http://localhost:8019/")
+  fetchConfig Google func (fromJust $ parseBaseUrl "http://localhost:8019/")
   where
-    func (MapsServiceConfig (GoogleConfig cfg)) = cfg.googleMapsUrl
+    func (MapsServiceConfig (GoogleConfig cfg)) = Just cfg.googleMapsUrl
+    func _ = Nothing
 
 fetchOSRMConfig :: IO ()
 fetchOSRMConfig = do
-  fetchConfig Fixtures.nammaYatriPartnerMerchantId OSRM func (fromJust $ parseBaseUrl "localhost:5000")
+  fetchConfig OSRM func (fromJust $ parseBaseUrl "localhost:5001")
   where
-    func (MapsServiceConfig (OSRMConfig cfg)) = cfg.osrmUrl
+    func (MapsServiceConfig (OSRMConfig cfg)) = Just cfg.osrmUrl
+    func _ = Nothing

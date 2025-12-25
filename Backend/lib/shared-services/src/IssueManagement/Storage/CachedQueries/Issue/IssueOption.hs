@@ -11,9 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
 module IssueManagement.Storage.CachedQueries.Issue.IssueOption where
 
 import IssueManagement.Common
@@ -35,11 +32,11 @@ findAllByCategoryAndLanguage issueCategoryId language identifier =
     Just a -> pure a
     Nothing -> cacheAllIssueOptionByCategoryAndLanguage issueCategoryId language identifier /=<< Queries.findAllByCategoryAndLanguage issueCategoryId language
 
-findAllByMessageAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> Identifier -> m [(IssueOption, Maybe IssueTranslation)]
-findAllByMessageAndLanguage issueMessageId language identifier =
+findAllActiveByMessageAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> Identifier -> m [(IssueOption, Maybe IssueTranslation)]
+findAllActiveByMessageAndLanguage issueMessageId language identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueOptionByMessageAndLanguageKey issueMessageId language identifier) >>= \case
     Just a -> pure a
-    Nothing -> cacheAllIssueOptionByMessageAndLanguage issueMessageId language identifier /=<< Queries.findAllByMessageAndLanguage issueMessageId language
+    Nothing -> cacheAllIssueOptionByMessageAndLanguage issueMessageId language identifier /=<< Queries.findAllActiveByMessageAndLanguage issueMessageId language
 
 findById :: BeamFlow m r => Id IssueOption -> Identifier -> m (Maybe IssueOption)
 findById issueOptionId identifier =
@@ -70,7 +67,7 @@ cacheAllIssueOptionByCategoryAndLanguage issueCategoryId language identifier iss
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByCategoryAndLanguageKey issueCategoryId language identifier) issueOptionTranslation expTime
 
 makeIssueOptionByCategoryAndLanguageKey :: Id IssueCategory -> Language -> Identifier -> Text
-makeIssueOptionByCategoryAndLanguageKey issueCategoryId language identifier = show identifier <> "CachedQueries:IssueOption:IssueCategoryId-" <> getId issueCategoryId <> ":Language-" <> show language
+makeIssueOptionByCategoryAndLanguageKey issueCategoryId language identifier = show identifier <> ":CachedQueries:IssueOption:IssueCategoryId-" <> getId issueCategoryId <> ":Language-" <> show language
 
 --------- Caching logic for issue option by id -------------------
 
@@ -83,9 +80,14 @@ cacheIssueOptionById issueOptionId identifier issueOption = do
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByIdKey issueOptionId identifier) issueOption expTime
 
 makeIssueOptionByIdKey :: Id IssueOption -> Identifier -> Text
-makeIssueOptionByIdKey id identifier = show identifier <> "CachedQueries:IssueOption:Id-" <> show id
+makeIssueOptionByIdKey id identifier = show identifier <> ":CachedQueries:IssueOption:Id-" <> id.getId
 
 --------- Caching logic for issue option by id and language -------------------
+
+clearAllIssueOptionByIdAndLanguageCache :: CacheFlow m r => Id IssueOption -> Identifier -> m ()
+clearAllIssueOptionByIdAndLanguageCache issueOptionId identifier =
+  forM_ allLanguages $ \language ->
+    clearIssueOptionByIdAndLanguageCache issueOptionId language identifier
 
 clearIssueOptionByIdAndLanguageCache :: CacheFlow m r => Id IssueOption -> Language -> Identifier -> m ()
 clearIssueOptionByIdAndLanguageCache issueOptionId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueOptionByIdAndLanguageKey issueOptionId language identifier
@@ -96,7 +98,7 @@ cacheIssueOptionByIdAndLanguage issueOptionId language identifier issueOptionTra
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByIdAndLanguageKey issueOptionId language identifier) issueOptionTranslation expTime
 
 makeIssueOptionByIdAndLanguageKey :: Id IssueOption -> Language -> Identifier -> Text
-makeIssueOptionByIdAndLanguageKey id language identifier = show identifier <> "CachedQueries:IssueOption:Id-" <> show id <> ":Language-" <> show language
+makeIssueOptionByIdAndLanguageKey id language identifier = show identifier <> ":CachedQueries:IssueOption:Id-" <> id.getId <> ":Language-" <> show language
 
 --------- Caching logic for issue option by id and issueCategoryId -------------------
 
@@ -109,9 +111,14 @@ cacheIssueOptionByIdAndIssueCategoryId issueOptionId issueCategoryId identifier 
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByIdAndIssueCategoryIdKey issueOptionId issueCategoryId identifier) issueOptionTranslation expTime
 
 makeIssueOptionByIdAndIssueCategoryIdKey :: Id IssueOption -> Id IssueCategory -> Identifier -> Text
-makeIssueOptionByIdAndIssueCategoryIdKey id issueCategoryId identifier = show identifier <> "CachedQueries:IssueOption:Id-" <> show id <> ":IssueCategoryId-" <> show issueCategoryId
+makeIssueOptionByIdAndIssueCategoryIdKey id issueCategoryId identifier = show identifier <> ":CachedQueries:IssueOption:Id-" <> id.getId <> ":IssueCategoryId-" <> show issueCategoryId
 
 --------- Caching logic for issue option by issueMessageId & language -------------------
+
+clearAllIssueOptionByMessageAndLanguageCache :: CacheFlow m r => Id IssueMessage -> Identifier -> m ()
+clearAllIssueOptionByMessageAndLanguageCache issueMessageId identifier =
+  forM_ allLanguages $ \language ->
+    clearIssueOptionByMessageAndLanguageCache issueMessageId language identifier
 
 clearIssueOptionByMessageAndLanguageCache :: CacheFlow m r => Id IssueMessage -> Language -> Identifier -> m ()
 clearIssueOptionByMessageAndLanguageCache issueMessageId language identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueOptionByMessageAndLanguageKey issueMessageId language identifier
@@ -122,4 +129,4 @@ cacheAllIssueOptionByMessageAndLanguage issueMessageId language identifier issue
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByMessageAndLanguageKey issueMessageId language identifier) issueOption expTime
 
 makeIssueOptionByMessageAndLanguageKey :: Id IssueMessage -> Language -> Identifier -> Text
-makeIssueOptionByMessageAndLanguageKey issueMessageId language identifier = show identifier <> "CachedQueries:IssueOption:IssueMessageId-" <> getId issueMessageId <> ":Language-" <> show language
+makeIssueOptionByMessageAndLanguageKey issueMessageId language identifier = show identifier <> ":CachedQueries:IssueOption:IssueMessageId-" <> getId issueMessageId <> ":Language-" <> show language

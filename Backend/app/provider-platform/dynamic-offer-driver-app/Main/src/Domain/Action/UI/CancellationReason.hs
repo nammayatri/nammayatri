@@ -14,9 +14,11 @@
 
 module Domain.Action.UI.CancellationReason
   ( list,
+    CancellationReasonAPIEntity,
   )
 where
 
+import Data.OpenApi (ToSchema)
 import qualified Domain.Types.CancellationReason as SCR
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
@@ -24,5 +26,19 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Utils.Common
 import qualified Storage.Queries.CancellationReason as QCR
 
-list :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => m [SCR.CancellationReasonAPIEntity]
-list = fmap SCR.makeCancellationReasonAPIEntity <$> runInReplica QCR.findAll
+list :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => m [CancellationReasonAPIEntity]
+list = do
+  let cancellationReasons = QCR.findAll Nothing Nothing True
+  fmap makeCancellationReasonAPIEntity <$> runInReplica cancellationReasons
+
+data CancellationReasonAPIEntity = CancellationReasonAPIEntity
+  { reasonCode :: SCR.CancellationReasonCode,
+    description :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+makeCancellationReasonAPIEntity :: SCR.CancellationReason -> CancellationReasonAPIEntity
+makeCancellationReasonAPIEntity SCR.CancellationReason {..} =
+  CancellationReasonAPIEntity {..}
+
+-- TODO: Move CancellationAPI Through DSL

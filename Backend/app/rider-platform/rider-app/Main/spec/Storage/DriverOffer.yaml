@@ -1,0 +1,88 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Centesimal: Kernel.Types.Common
+  Estimate: Domain.Types.Estimate
+  Distance: Kernel.Types.Common
+  FareProductType: Domain.Types.FarePolicy.FareProductType
+  TripCategory: Domain.Types.Common
+
+DriverOffer:
+  tableName: driver_offer
+  types:
+    DriverOfferStatus:
+      enum: "ACTIVE, INACTIVE"
+
+    BPPQuote: {}
+
+  fields:
+    id : Id DriverOffer
+    estimateId : Id Estimate
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+    driverName : Text
+    durationToPickup : Maybe Int
+    distanceToPickup : Maybe Distance
+    distanceUnit : DistanceUnit
+    validTill : UTCTime
+    bppQuoteId : Text
+    isUpgradedToCab: Maybe Bool
+    rating : Maybe Centesimal
+    status : DriverOfferStatus
+    createdAt: UTCTime
+    updatedAt : UTCTime
+    fareProductType : Maybe FareProductType # TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+
+  beamType:
+    createdAt: Maybe UTCTime
+
+  beamFields:
+    distanceToPickup:
+      distanceToPickup: Maybe HighPrecMeters
+      distanceToPickupValue: Maybe HighPrecDistance
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
+
+  fromTType:
+    createdAt: Kernel.Prelude.fromMaybe updatedAt|I
+    distanceToPickup: Kernel.Types.Common.mkDistanceWithDefault distanceUnit distanceToPickupValue <$> distanceToPickup|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
+
+  # distanceUnit should be the same for all fields
+  toTType:
+    createdAt: Kernel.Prelude.Just|I
+    distanceToPickup: (Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup)|E
+    distanceToPickupValue: (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> distanceToPickup)|E
+    distanceUnit: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    bppQuoteId: SecondaryKey
+    estimateId: SecondaryKey
+
+  sqlType:
+    driverName: character varying(255)
+    distanceToPickup: double precision
+    rating: double precision
+    bppQuoteId: character(36)
+    status: character varying(255)
+    fareProductType: character varying(255)
+
+  default:
+    status: "'ACTIVE'"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByBPPQuoteId:
+      kvFunction: findAllWithKV
+      where: bppQuoteId
+
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [updatedAt, status]
+      where: estimateId
+
+

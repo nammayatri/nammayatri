@@ -23,6 +23,7 @@ where
 
 import Data.Text (pack)
 import qualified Domain.Types.Person as Person
+import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SavedReqLocation as SavedReqLocation
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -32,6 +33,12 @@ import Kernel.Types.Error
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import qualified Storage.Queries.SavedReqLocation as QSavedReqLocation
+
+makeSavedReqLocationAPIEntity :: SavedReqLocation -> SavedReqLocationAPIEntity
+makeSavedReqLocationAPIEntity SavedReqLocation {..} =
+  SavedReqLocationAPIEntity
+    { ..
+    }
 
 data CreateSavedReqLocationReq = CreateSavedReqLocationReq
   { lat :: Double,
@@ -47,7 +54,8 @@ data CreateSavedReqLocationReq = CreateSavedReqLocationReq
     tag :: Text,
     placeId :: Maybe Text,
     ward :: Maybe Text,
-    isMoved :: Maybe Bool
+    isMoved :: Maybe Bool,
+    locationName :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -69,7 +77,7 @@ createSavedReqLocation riderId sreq = do
 getSavedReqLocations :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m SavedReqLocationsListRes
 getSavedReqLocations riderId = do
   savedLocations <- runInReplica $ QSavedReqLocation.findAllByRiderId riderId
-  return $ SavedReqLocationsListRes $ SavedReqLocation.makeSavedReqLocationAPIEntity <$> savedLocations
+  return $ SavedReqLocationsListRes $ makeSavedReqLocationAPIEntity <$> savedLocations
 
 deleteSavedReqLocation :: EsqDBFlow m r => Id Person.Person -> Text -> m APISuccess.APISuccess
 deleteSavedReqLocation riderId tag = do

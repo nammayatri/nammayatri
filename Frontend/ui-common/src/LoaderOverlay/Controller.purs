@@ -18,7 +18,7 @@ import Prelude
 
 import Prelude (class Show, discard, pure, unit)
 import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
-import PrestoDOM (Eval, exit, continue, continueWithCmd)
+import PrestoDOM (Eval, update, exit, continue, continueWithCmd)
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 

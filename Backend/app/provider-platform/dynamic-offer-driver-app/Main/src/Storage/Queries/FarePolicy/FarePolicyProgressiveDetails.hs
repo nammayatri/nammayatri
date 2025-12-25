@@ -15,9 +15,8 @@
 
 module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails where
 
-import Data.List.NonEmpty (nonEmpty)
+import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.FarePolicy as Domain
-import Domain.Types.FarePolicy.Common as Common
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -25,41 +24,78 @@ import qualified Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
+import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QueriesFPPDP
+import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection as QueriesFPMin
 
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyProgressiveDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPPD.farePolicyId $ Se.Eq farePolicyId']
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FullFarePolicyProgressiveDetails -> m ()
+create farePolicyProgressiveDetails = do
+  mapM_ QueriesFPPDP.create (map (fst farePolicyProgressiveDetails,) (NE.toList (snd farePolicyProgressiveDetails).perExtraKmRateSections))
+  createWithKV farePolicyProgressiveDetails
+
+delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m ()
+delete farePolicyId = do
+  QueriesFPPDP.deleteAll' farePolicyId
+  deleteWithKV [Se.Is BeamFPPD.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]
+
 instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyProgressiveDetails where
-  fromTType' BeamFPPD.FarePolicyProgressiveDetailsT {..} = do
-    fullFPPDP <- QueriesFPPDP.findAll' (KTI.Id farePolicyId)
-    fPPDP <- fromMaybeM (InternalError "FromLocation not found") (nonEmpty fullFPPDP)
-    pure $
-      Just
-        ( KTI.Id farePolicyId,
-          Domain.FPProgressiveDetails
-            { baseDistance = baseDistance,
-              baseFare = baseFare,
-              perExtraKmRateSections = snd <$> fPPDP,
-              deadKmFare = deadKmFare,
-              waitingChargeInfo =
-                ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
-                  Domain.WaitingChargeInfo
-                    { waitingCharge = waitingCharge',
-                      freeWaitingTime = freeWaitingTime'
-                    },
-              nightShiftCharge = nightShiftCharge
-            }
-        )
+  fromTType' farePolicyProgressiveDetails = do
+    fullFPPDP <- QueriesFPPDP.findAll' (KTI.Id farePolicyProgressiveDetails.farePolicyId)
+    fullMinFP <- NE.nonEmpty <$> QueriesFPMin.findAll (KTI.Id farePolicyProgressiveDetails.farePolicyId)
+    fPPDP <- fromMaybeM (InternalError "FromLocation not found") (NE.nonEmpty fullFPPDP)
+    pure . Just $ fromTTypeFarePolicyProgressiveDetails farePolicyProgressiveDetails fullMinFP fPPDP
+
+fromTTypeFarePolicyProgressiveDetails ::
+  BeamFPPD.FarePolicyProgressiveDetails ->
+  Maybe (NonEmpty Domain.FPProgressiveDetailsPerMinRateSection) ->
+  NonEmpty BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection ->
+  Domain.FullFarePolicyProgressiveDetails
+fromTTypeFarePolicyProgressiveDetails BeamFPPD.FarePolicyProgressiveDetailsT {..} fullMinFP fPPDP =
+  ( KTI.Id farePolicyId,
+    Domain.FPProgressiveDetails
+      { baseDistance = baseDistance,
+        baseFare = mkAmountWithDefault baseFareAmount baseFare,
+        perExtraKmRateSections = snd <$> fPPDP,
+        deadKmFare = mkAmountWithDefault deadKmFareAmount deadKmFare,
+        pickupCharges = do
+          let pChargesmin = fromMaybe deadKmFare pickupChargesMin
+              pChargesmax = fromMaybe deadKmFare pickupChargesMax
+          Domain.PickupCharges
+            { pickupChargesMin = mkAmountWithDefault pickupChargesMinAmount pChargesmin,
+              pickupChargesMax = mkAmountWithDefault pickupChargesMaxAmount pChargesmax
+            },
+        currency = fromMaybe INR currency,
+        distanceUnit = fromMaybe Meter distanceUnit,
+        perMinRateSections = fullMinFP,
+        waitingChargeInfo =
+          ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
+            Domain.WaitingChargeInfo
+              { waitingCharge = waitingCharge',
+                freeWaitingTime = freeWaitingTime'
+              },
+        nightShiftCharge = nightShiftCharge
+      }
+  )
 
 instance ToTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyProgressiveDetails where
   toTType' (KTI.Id farePolicyId, Domain.FPProgressiveDetails {..}) =
     BeamFPPD.FarePolicyProgressiveDetailsT
       { farePolicyId = farePolicyId,
         baseDistance = baseDistance,
-        baseFare = baseFare,
-        freeWatingTime = freeWaitingTime <$> waitingChargeInfo,
-        deadKmFare = deadKmFare,
-        waitingCharge = Common.waitingCharge <$> waitingChargeInfo,
+        baseFare = roundToIntegral baseFare,
+        baseFareAmount = Just baseFare,
+        freeWatingTime = (.freeWaitingTime) <$> waitingChargeInfo,
+        deadKmFare = roundToIntegral deadKmFare,
+        deadKmFareAmount = Just deadKmFare,
+        currency = Just currency,
+        distanceUnit = Just distanceUnit,
+        pickupChargesMin = Just $ roundToIntegral pickupCharges.pickupChargesMin,
+        pickupChargesMax = Just $ roundToIntegral pickupCharges.pickupChargesMax,
+        pickupChargesMinAmount = Just pickupCharges.pickupChargesMin,
+        pickupChargesMaxAmount = Just pickupCharges.pickupChargesMax,
+        waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge
       }

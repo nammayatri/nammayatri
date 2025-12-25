@@ -5,5 +5,5 @@ echo " ---------- cleaning done --------------"
 
 echo " ---------- started installing --------------"
 npm install
-npm run start
+npm run fast:start
 echo " ---------- cleaning done --------------"

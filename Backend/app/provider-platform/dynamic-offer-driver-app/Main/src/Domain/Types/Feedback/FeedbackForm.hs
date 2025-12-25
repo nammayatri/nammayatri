@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Feedback.FeedbackForm where
 
@@ -21,9 +20,20 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
+data BadgeMetadata = BadgeMetadata
+  { badgeKey :: Text,
+    sendPN :: Bool,
+    priority :: Maybe Int,
+    badgeText :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 data FeedbackFormReq = FeedbackFormReq
   { rideId :: Id Ride,
-    feedback :: [FeedbackAnswer]
+    rating :: Maybe Int,
+    feedbackDetails :: Maybe Text,
+    badges :: Maybe [BadgeMetadata],
+    feedback :: Maybe [FeedbackAnswer]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

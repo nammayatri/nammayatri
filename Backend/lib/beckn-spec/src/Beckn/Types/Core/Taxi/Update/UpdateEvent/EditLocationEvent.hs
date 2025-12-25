@@ -88,26 +88,22 @@ instance ToSchema EditLocationEvent where
 
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,
-    origin :: StartInfo,
-    destination :: EndInfo
+    origin :: Maybe LocationInfo,
+    destination :: Maybe LocationInfo,
+    status :: UpdateStatus
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
 instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-newtype StartInfo = StartInfo
-  { location :: Maybe Location
+data UpdateStatus = SOFT_UPDATE | CONFIRM_UPDATE
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+newtype LocationInfo = LocationInfo
+  { location :: Location
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-instance ToSchema StartInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-newtype EndInfo = EndInfo
-  { location :: Maybe Location
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
-
-instance ToSchema EndInfo where
+instance ToSchema LocationInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

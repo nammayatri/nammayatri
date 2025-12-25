@@ -34,9 +34,9 @@ import Font.Style as FontStyle
 import JBridge (getArray)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<$>), (<>), (&&), (<<<), (==), (||), const, show, discard, bind, not, pure, unit, when)
+import Prelude (Unit, ($), (<$>), (<>), (&&), (<<<), (==), (||), const, show, discard, bind, not, pure, unit, when, void, map)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textView, visibility, weight, width, textSize, fontStyle, lineHeight)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textView, visibility, weight, width, textSize, fontStyle, lineHeight, enableRefresh , setEnable)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
@@ -49,6 +49,9 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Helpers.Utils as HU
+import Mobility.Prelude (boolToVisibility)
+import Debug(spy)
+import Data.Maybe(Maybe(..))
 
 screen :: ST.MyRidesScreenState -> PrestoList.ListItem -> Screen Action ST.MyRidesScreenState ScreenOutput
 screen initialState listItemm =
@@ -61,12 +64,21 @@ screen initialState listItemm =
   , globalEvents : [
        globalOnScroll "MyRidesScreen",
         ( \push -> do
-                    _ <- launchAff $ EHC.flowRunner defaultGlobalState $ getPastRides RideBookingListAPIResponseAction push initialState
+                    void $ launchAff $ EHC.flowRunner defaultGlobalState $ getPastRides RideBookingListAPIResponseAction push initialState
                     pure $ pure unit
-        )
+        ),globalNotificationListener
   ]
-  , eval
+  , eval:
+      \action state -> do
+        let _ = spy "MyRidesScreen action " action
+        let _ = spy "MyRidesScreen state  " state
+        eval action state
   }
+  where 
+  globalNotificationListener push = do    
+    void $ HU.storeCallBackCustomer push NotificationListener "MyRidesScreen" Just Nothing
+    pure $ pure unit
+    
 
 view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.MyRidesScreenState -> PrestoDOM (Effect Unit) w
 view listItemm push state =
@@ -119,7 +131,7 @@ loadButtonView state push =
   , orientation VERTICAL
   , background Color.white900
   , onClick push (const Loader)
-  , clickable if state.data.loadMoreText == "LoadMore" then true else false
+  , clickable state.data.loadMoreText 
   , gravity CENTER
   , alignParentBottom "true,-1"
   , padding (Padding 0 0 0 5)
@@ -138,7 +150,7 @@ loadButtonView state push =
     [ textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text $ if state.data.loadMoreText == "LoadMore" then (getString LOAD_MORE) else (getString NO_MORE_RIDES)
+      , text $ if state.data.loadMoreText then getString LOAD_MORE else getString NO_MORE_RIDES
       , padding (Padding 10 5 10 5)
       , color Color.blue900
       ] <> FontStyle.body1 LanguageStyle
@@ -150,7 +162,8 @@ ridesView listItemm push state =
   ([height MATCH_PARENT
   , width MATCH_PARENT
   , onRefresh push (const Refresh)
-  ] <> if EHC.os == "IOS" then [] else [id "2000031"] )
+  , enableRefresh state.props.refreshLoader
+  ]<> if state.props.scrollEnable then [setEnable $ false] else [] )
   [ Keyed.relativeLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
@@ -160,21 +173,21 @@ ridesView listItemm push state =
         [ height MATCH_PARENT
         , scrollBarY false
         , width MATCH_PARENT
-        , onScroll "rides" "MyRidesScreen" push (Scroll)
+        , onScroll "rides" "MyRidesScreen" push (Scroll )
         , onScrollStateChange push (ScrollStateChanged)
         , visibility $ case DA.null state.itemsRides of
                     false -> VISIBLE
                     true -> GONE
         , PrestoList.listItem listItemm
         , background Color.white900
-        , PrestoList.listDataV2 $ (DA.filter (\item -> (item.status) == toPropValue("COMPLETED") || (item.status) == toPropValue("CANCELLED")) state.prestoListArrayItems)
+        , PrestoList.listDataV2 $ (DA.filter (\item -> DA.any (_ == item.status) $ map (toPropValue) ["COMPLETED", "CANCELLED", "REALLOCATED", "CONFIRMED","UPCOMING","TRIP_ASSIGNED"]) state.prestoListArrayItems)
         ]
       , Tuple "NoRides"
         $ linearLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT
           , background Color.white900
-          , visibility $ if (DA.length state.itemsRides) == 0  then VISIBLE else GONE
+          , visibility $ boolToVisibility $ DA.null state.itemsRides
           ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
       , Tuple "APIFailure"
         $ linearLayout
@@ -190,16 +203,14 @@ ridesView listItemm push state =
             [ PrestoAnim.duration 1000
             , PrestoAnim.toAlpha $
                 case state.shimmerLoader of
-                    ST.AnimatingIn -> 1.0
-                    ST.AnimatedIn -> 1.0
-                    ST.AnimatingOut -> 0.0
-                    ST.AnimatedOut -> 0.0
+                  loader | loader `DA.elem` [ST.AnimatingIn, ST.AnimatedIn] -> 1.0
+                  loader | loader `DA.elem` [ST.AnimatingOut, ST.AnimatedOut] -> 0.0
+                  _ -> 0.0
             , PrestoAnim.fromAlpha $
                 case state.shimmerLoader of
-                    ST.AnimatingIn -> 0.0
-                    ST.AnimatedIn -> 1.0
-                    ST.AnimatingOut -> 1.0
-                    ST.AnimatedOut -> 0.0
+                  loader | loader `DA.elem` [ST.AnimatingIn, ST.AnimatedOut] -> 0.0
+                  loader | loader `DA.elem` [ST.AnimatingOut, ST.AnimatedIn] -> 1.0
+                  _ -> 0.0
             , PrestoAnim.tag "Shimmer"
             ] true
           ] $ PrestoList.list
@@ -246,21 +257,28 @@ shimmerData i = {
   status : toPropValue "",
   rideEndTimeUTC : toPropValue "",
   alpha : toPropValue "",
-  zoneVisibility : toPropValue "gone"
+  zoneVisibility : toPropValue "gone",
+  variantImage : toPropValue "",
+  showVariantImage : toPropValue "",
+  showRepeatRide : toPropValue "visible",
+  isScheduled : toPropValue "gone",
+  showDestination : toPropValue "visible",
+  itemRideType : toPropValue "ONE_WAY",
+  rideTypeVisibility : toPropValue "gone",
+  rideTypeBackground : toPropValue "#454545",
+  cornerRadius : toPropValue "24.0"
 }
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> ST.MyRidesScreenState ->  Flow GlobalState Unit
 getPastRides action push state = do
-  (rideBookingListResponse) <- Remote.rideBookingList "8" (show state.data.offsetValue) "false"
+  let fromBanner = if state.props.fromBanner then "true" else "false"
+  (rideBookingListResponse) <- Remote.rideBookingList "8" (show state.data.offsetValue) fromBanner
   case rideBookingListResponse of
       Right (RideBookingListRes  listResp) -> do
           doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"
           pure unit
       Left (err) -> do
-        if err.code == 500 then
-          doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) "listCompleted"
-          else
-            doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) "failure"
+        doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) if err.code == 500 then "listCompleted" else "failure"
         pure unit
 
 dummyListResp :: forall a.  { list :: Array a}

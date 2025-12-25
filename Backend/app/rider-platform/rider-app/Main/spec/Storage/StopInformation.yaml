@@ -1,0 +1,45 @@
+imports:
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Location: Domain.Types.Location
+  UTCTime: Kernel.Prelude
+  LatLong: Kernel.External.Maps
+
+
+StopInformation:
+  tableName: stop_information
+  derives: "Generic,Show,ToJSON,FromJSON,ToSchema"
+
+  beamInstance: MakeTableInstancesWithTModifier []
+
+  fields:
+    id: Id StopInformation
+    rideId : Id Ride
+    waitingTimeStart : UTCTime
+    waitingTimeEnd : Maybe UTCTime
+    stopId : Id Location
+    stopOrder : Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+        # and: [id]
+    findAllByRideId:
+      kvFunction: findAllWithKVAndConditionalDB
+      where: rideId
+
+    updateByStopOrderAndRideId:
+      kvFunction: updateOneWithKV
+      params: [waitingTimeEnd]
+      where:
+        and: [rideId, stopOrder]
+
+  constraints:
+    id: PrimaryKey
+    rideId: SecondaryKey
+    stopLocId: SecondaryKey

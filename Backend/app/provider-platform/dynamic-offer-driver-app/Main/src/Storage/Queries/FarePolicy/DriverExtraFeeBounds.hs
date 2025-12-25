@@ -31,10 +31,14 @@ create = createWithKV
 findByFarePolicyIdAndStartDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
 findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = findAllWithKV [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]] <&> listToMaybe
 
-update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> Meters -> Money -> Money -> m ()
+update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> Meters -> HighPrecMoney -> HighPrecMoney -> m ()
 update (Id farePolicyId) startDistance minFee maxFee =
   updateWithKV
-    [Se.Set BeamDEFB.minFee minFee, Se.Set BeamDEFB.maxFee maxFee]
+    [ Se.Set BeamDEFB.minFee $ roundToIntegral minFee,
+      Se.Set BeamDEFB.maxFee $ roundToIntegral maxFee,
+      Se.Set BeamDEFB.minFeeAmount $ Just minFee,
+      Se.Set BeamDEFB.maxFeeAmount $ Just maxFee
+    ]
     [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]]
 
 findAll' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> m [DFP.FullDriverExtraFeeBounds]
@@ -50,8 +54,11 @@ instance FromTType' BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds w
         ( KTI.Id farePolicyId,
           DFP.DriverExtraFeeBounds
             { startDistance = startDistance,
-              minFee = minFee,
-              maxFee = maxFee
+              stepFee = mkAmountWithDefault stepFeeAmount stepFee,
+              defaultStepFee = mkAmountWithDefault defaultStepFeeAmount defaultStepFee,
+              minFee = mkAmountWithDefault minFeeAmount minFee,
+              maxFee = mkAmountWithDefault maxFeeAmount maxFee,
+              distanceUnit = fromMaybe Meter distanceUnit
             }
         )
 
@@ -61,6 +68,13 @@ instance ToTType' BeamDEFB.DriverExtraFeeBounds DFP.FullDriverExtraFeeBounds whe
       { id = Nothing,
         farePolicyId = farePolicyId,
         startDistance = startDistance,
-        minFee = minFee,
-        maxFee = maxFee
+        minFee = roundToIntegral minFee,
+        maxFee = roundToIntegral maxFee,
+        stepFee = roundToIntegral stepFee,
+        defaultStepFee = roundToIntegral defaultStepFee,
+        minFeeAmount = Just minFee,
+        maxFeeAmount = Just maxFee,
+        stepFeeAmount = Just stepFee,
+        defaultStepFeeAmount = Just defaultStepFee,
+        distanceUnit = Just distanceUnit
       }

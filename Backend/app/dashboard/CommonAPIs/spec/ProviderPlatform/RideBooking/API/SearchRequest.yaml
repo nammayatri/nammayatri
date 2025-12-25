@@ -1,0 +1,76 @@
+imports:
+  Person: Domain.Types.Person
+  Id: Kernel.Types.Id
+  UTCTime: Kernel.Prelude
+  Meters: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  SearchRequestForDriver: Domain.Types.SearchRequestForDriver
+  SearchRequest: Domain.Types.SearchRequest
+  Location: Domain.Types.Location
+
+importPackageOverrides:
+  Domain.Types.Person: "dynamic-offer-driver-app"
+
+module: SearchRequest
+
+types:
+  SearchRequestOfDriver:
+    id: Id SearchRequestForDriver
+    createdAt: UTCTime
+    requestId: Id SearchRequest
+    tripEstimatedDistance: Maybe Meters
+    tripEstimatedDuration: Maybe Seconds
+    fromLocation: Maybe Location
+    toLocation: Maybe Location
+
+  SearchRequestsReq:
+  - driverId: Id Person
+  - fromDate: UTCTime
+  - toDate: UTCTime
+  - mbLimit: Int
+  - mbOffset: Int
+  - mbOnlyActive: Maybe Bool
+  - derive: "'HideSecrets"
+
+  SearchRequestsRes:
+    searchrequests: [SearchRequestOfDriver]
+
+  SearchReqInfoRes:
+    totalCount: Int
+    acceptedCount: Int
+    rejectedCount: Int
+    pulledCount: Int
+    emptyCount: Int
+# SearchRequest is different from SearchRequestForDriver
+# mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
+
+apis:
+  - POST:
+      endpoint: /searchrequests/
+      auth: ApiAuthV2
+      request:
+        type: SearchRequestsReq
+      response:
+        type: SearchRequestsRes
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - driverId: Id Person
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - limit: Int
+        - offset: Int
+      response:
+        type: SearchRequestsRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT SEARCH_REQUESTS LIST_SEARCH_REQUESTS
+  - GET:
+      endpoint: /info
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - driverId: Id Person
+      response:
+        type: SearchReqInfoRes

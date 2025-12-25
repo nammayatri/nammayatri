@@ -16,68 +16,115 @@ module Domain.Action.UI.Ride.CancelRide
   ( CancelRideReq (..),
     CancelRideResp (..),
     ServiceHandle (..),
+    RequestorId (..),
     cancelRideHandle,
     driverCancelRideHandler,
     dashboardCancelRideHandler,
-    driverDistanceToPickup,
+    cancelRideImpl,
   )
 where
 
+import qualified Data.HashMap.Strict as HM
+import qualified Data.HashMap.Strict as HMS
+import qualified Data.Map as M
+import qualified Data.Text as Text
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
+import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
-import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
-import Domain.Types.Merchant
+import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import Kernel.Prelude
-import Kernel.Tools.Metrics.CoreMetrics.Types (CoreMetrics)
+import qualified Kernel.Storage.Clickhouse.Config as CH
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
-import qualified Lib.DriverCoins.Types as DCT
+import Lib.Scheduler (SchedulerType)
+import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.CallBAPInternal
+import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
+import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import qualified Tools.Maps as Maps
-
-type MonadHandler m = (MonadThrow m, Log m, MonadGuid m)
+import qualified Tools.Metrics as Metrics
+import TransactionLogs.Types
+import Utils.Common.Cac.KeyNameConstants
 
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findById :: Id DP.Person -> m (Maybe DP.Person),
-    cancelRide :: Id DRide.Ride -> DBCR.BookingCancellationReason -> m (),
+    cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> Bool -> Maybe Bool -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    pickUpDistance :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> m Meters
+    pickUpDistance :: SRB.Booking -> LatLong -> LatLong -> m Meters
   }
 
-cancelRideHandle :: ServiceHandle Flow
+cancelRideHandle ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    Metrics.HasSendSearchRequestToDriverMetrics m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
+    HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    TranslateFlow m r,
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasShortDurationRetryCfg r c,
+    Redis.HedisFlow m r,
+    EventStreamFlow m r,
+    MonadFlow m,
+    Metrics.HasCoreMetrics r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  ServiceHandle m
 cancelRideHandle =
   ServiceHandle
     { findRideById = QRide.findById,
       findById = QPerson.findById,
       cancelRide = CInternal.cancelRideImpl,
       findBookingByIdInReplica = B.runInReplica . QRB.findById,
-      pickUpDistance = driverDistanceToPickup
+      pickUpDistance = CInternal.driverDistanceToPickup
     }
 
 data CancelRideReq = CancelRideReq
   { reasonCode :: CancellationReasonCode,
-    additionalInfo :: Maybe Text
+    additionalInfo :: Maybe Text,
+    doCancellationRateBasedBlocking :: Maybe Bool
   }
 
 data CancelRideResp = CancelRideResp
@@ -87,71 +134,38 @@ data CancelRideResp = CancelRideResp
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant, Id DMOC.MerchantOperatingCity)
+data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant, Id DMOC.MerchantOperatingCity) | ApplicationRequestorId Text | MerchantRequestorId (Id DM.Merchant, Id DMOC.MerchantOperatingCity)
 
 driverCancelRideHandler ::
-  ( MonadHandler m,
-    CacheFlow m r,
-    MonadFlow m,
-    EsqDBFlow m r,
-    LT.HasLocationService m r,
-    CoreMetrics m,
-    HasField
-      "minTripDistanceForReferralCfg"
-      r
-      (Maybe HighPrecMeters)
-  ) =>
-  ServiceHandle m ->
+  ServiceHandle Flow ->
   Id DP.Person ->
   Id DRide.Ride ->
   CancelRideReq ->
-  m CancelRideResp
+  Flow CancelRideResp
 driverCancelRideHandler shandle personId rideId req =
   withLogTag ("rideId-" <> rideId.getId) $
     cancelRideHandler shandle (PersonRequestorId personId) rideId req
 
 dashboardCancelRideHandler ::
-  ( MonadHandler m,
-    CacheFlow m r,
-    MonadFlow m,
-    EsqDBFlow m r,
-    LT.HasLocationService m r,
-    CoreMetrics m,
-    HasField
-      "minTripDistanceForReferralCfg"
-      r
-      (Maybe HighPrecMeters)
-  ) =>
-  ServiceHandle m ->
+  ServiceHandle Flow ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id DRide.Ride ->
   CancelRideReq ->
-  m APISuccess.APISuccess
+  Flow APISuccess.APISuccess
 dashboardCancelRideHandler shandle merchantId merchantOpCityId rideId req =
   withLogTag ("merchantId-" <> merchantId.getId) $ do
-    void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req
+    void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req False
     return APISuccess.Success
 
 cancelRideHandler ::
-  ( MonadHandler m,
-    CacheFlow m r,
-    MonadFlow m,
-    EsqDBFlow m r,
-    LT.HasLocationService m r,
-    CoreMetrics m,
-    HasField
-      "minTripDistanceForReferralCfg"
-      r
-      (Maybe HighPrecMeters)
-  ) =>
-  ServiceHandle m ->
+  ServiceHandle Flow ->
   RequestorId ->
   Id DRide.Ride ->
   CancelRideReq ->
-  m CancelRideResp
+  Flow CancelRideResp
 cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
-  (cancellationCnt, isGoToDisabled) <- cancelRideImpl sh requestorId rideId req
+  (cancellationCnt, isGoToDisabled) <- cancelRideImpl sh requestorId rideId req False
   pure $ buildCancelRideResp cancellationCnt isGoToDisabled
   where
     buildCancelRideResp cancelCnt isGoToDisabled =
@@ -162,74 +176,92 @@ cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.ge
         }
 
 cancelRideImpl ::
-  ( MonadHandler m,
+  ( EsqDBFlow m r,
+    EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     LT.HasLocationService m r,
-    CoreMetrics m,
-    HasField
-      "minTripDistanceForReferralCfg"
-      r
-      (Maybe HighPrecMeters)
+    DC.EventFlow m r,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   ServiceHandle m ->
   RequestorId ->
   Id DRide.Ride ->
   CancelRideReq ->
+  Bool ->
   m (Maybe Int, Maybe Bool)
-cancelRideImpl ServiceHandle {..} requestorId rideId req = do
+cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"
+  unless (isValidRide ride) $ throwError $ RideInvalidStatus ("This ride cannot be canceled" <> Text.pack (show ride.status))
   let driverId = ride.driverId
   booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  (rideCancelationReason, cancellationCnt, isGoToDisabled) <- case requestorId of
+  (rideCancelationReason, cancellationCnt, isGoToDisabled, driverGoHomeRequestId, dghInfo, goHomeConfig, _disToPickup, rideEndedBy) <- case requestorId of
     PersonRequestorId personId -> do
       authPerson <-
         findById personId
           >>= fromMaybeM (PersonNotFound personId.getId)
-      (rideCancellationReason, mbCancellationCnt, isGoToDisabled) <- case authPerson.role of
+      (rideCancellationReason, mbCancellationCnt, isGoToDisabled, driverGoHomeRequestId, dghInfo, goHomeConfig, disToPickup, rideEndedBy) <- case authPerson.role of
         DP.ADMIN -> do
           unless (authPerson.merchantId == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
           logTagInfo "admin -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing)
-        DP.DRIVER -> do
+          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.CallBased)
+        _ -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
-          goHomeConfig <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId
+          goHomeConfig <- CGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId)))
           dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
-          (cancellationCount, isGoToDisabled) <-
+          (cancellationCount, isGoToDisabled, driverGoHomeRequestId) <-
             if dghInfo.status == Just DDGR.ACTIVE
               then do
                 dghReqId <- fromMaybeM (InternalError "Status active but goHomeRequestId not found") dghInfo.driverGoHomeRequestId
                 driverGoHomeReq <- QDGR.findById dghReqId >>= fromMaybeM (InternalError "DriverGoHomeRequestId present but DriverGoHome Request Entry not found")
-                let cancelCnt = driverGoHomeReq.numCancellation + 1
-                QDGR.updateCancellationCount driverGoHomeReq.id cancelCnt
-                when (cancelCnt == goHomeConfig.cancellationCnt) $
-                  CQDGR.deactivateDriverGoHomeRequest booking.merchantOperatingCityId driverId DDGR.SUCCESS dghInfo (Just False)
-                return (Just cancelCnt, Just $ cancelCnt == goHomeConfig.cancellationCnt)
+                let cancelCnt = if (isNothing booking.exotelDeclinedCallStatusReceivingTime) then driverGoHomeReq.numCancellation + 1 else driverGoHomeReq.numCancellation
+                return (Just cancelCnt, Just $ cancelCnt == goHomeConfig.cancellationCnt, Just driverGoHomeReq.id)
               else do
-                return (Nothing, Nothing)
+                return (Nothing, Nothing, Nothing)
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           mbLocation <- do
             driverLocations <- LF.driversLocation [driverId]
             return $ listToMaybe driverLocations
           disToPickup <- forM mbLocation $ \location -> do
-            pickUpDistance booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
+            pickUpDistance booking (getCoordinates location) (getCoordinates booking.fromLocation)
+          -- Temporary for debug issue with huge values
+          let disToPickupThreshold = 1000000 --1000km can be max valid distance
+          updatedDisToPickup :: Maybe Meters <- case disToPickup of
+            Just dis -> if abs (toInteger dis) > disToPickupThreshold then logWarning ("Invalid disToPickup received:" <> show disToPickup) >> return Nothing else return (Just dis)
+            Nothing -> return Nothing
           let currentDriverLocation = getCoordinates <$> mbLocation
-          logDebug "RideCancelled Coin Event by driver"
-          fork "DriverRideCancelledCoin Event : " $ DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
-          buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled)
-      return (rideCancellationReason, mbCancellationCnt, isGoToDisabled)
-    DashboardRequestorId (reqMerchantId, mocId) -> do
-      unless (driver.merchantId == reqMerchantId && mocId == driver.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)
+          buildRideCancelationReason currentDriverLocation updatedDisToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled, driverGoHomeRequestId, Just dghInfo, Just goHomeConfig, disToPickup, DRide.Driver)
+      return (rideCancellationReason, mbCancellationCnt, isGoToDisabled, driverGoHomeRequestId, dghInfo, goHomeConfig, disToPickup, rideEndedBy)
+    DashboardRequestorId (reqMerchantId, _) -> do
+      unless (driver.merchantId == reqMerchantId) $ throwError (RideDoesNotExist rideId.getId)
       logTagInfo "dashboard -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing) -- is it correct DBCR.ByMerchant?
-  cancelRide rideId rideCancelationReason
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.Dashboard) -- is it correct DBCR.ByMerchant?
+    ApplicationRequestorId jobId -> do
+      logTagInfo "Allocator -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id <> "JobId " <> jobId)
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByApplication ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.Allocator)
+    MerchantRequestorId (reqMerchantId, mocId) -> do
+      unless (driver.merchantId == reqMerchantId && mocId == driver.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)
+      logTagInfo "Allocator : ByMerchant -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.Allocator)
+
+  -- Lock Description: This is a Shared Lock held Between Booking Cancel for Customer & Driver, At a time only one of them can do the full Cancel to OnCancel/Reallocation flow.
+  -- Lock Release: Held for 30 seconds and released at the end of the OnCancel/EstimateRepitition-OnUpdate/QuoteRepitition-OnUpdate.
+  SharedCancel.tryCancellationLock booking.transactionId $ do
+    when (rideCancelationReason.source == DBCR.ByDriver) $ do
+      mapM_
+        ( \(cancelCnt, driverGoHomeReqId, goHomeCfg, driverGoHomeReqInfo) -> do
+            QDGR.updateCancellationCount cancelCnt driverGoHomeReqId
+            when (cancelCnt == goHomeCfg.cancellationCnt) $
+              CQDGR.deactivateDriverGoHomeRequest booking.merchantOperatingCityId driverId DDGR.SUCCESS driverGoHomeReqInfo (Just False)
+        )
+        ((,,,) <$> cancellationCnt <*> driverGoHomeRequestId <*> goHomeConfig <*> dghInfo)
+    cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation req.doCancellationRateBasedBlocking
   pure (cancellationCnt, isGoToDisabled)
   where
-    isValidRide ride =
-      ride.status == DRide.NEW
+    isValidRide ride = ride.status `elem` [DRide.NEW, DRide.UPCOMING]
     buildRideCancelationReason currentDriverLocation disToPickup mbDriverId source ride merchantId = do
       let CancelRideReq {..} = req
       return $
@@ -242,27 +274,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
             driverId = mbDriverId,
             driverCancellationLocation = currentDriverLocation,
             driverDistToPickup = disToPickup,
+            distanceUnit = ride.distanceUnit,
+            merchantOperatingCityId = Just ride.merchantOperatingCityId,
             ..
           }
-
-driverDistanceToPickup ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    Maps.HasCoordinates tripStartPos,
-    Maps.HasCoordinates tripEndPos
-  ) =>
-  Id Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  tripStartPos ->
-  tripEndPos ->
-  m Meters
-driverDistanceToPickup merchantId merchantOpCityId tripStartPos tripEndPos = do
-  distRes <-
-    Maps.getDistanceForCancelRide merchantId merchantOpCityId $
-      Maps.GetDistanceReq
-        { origin = tripStartPos,
-          destination = tripEndPos,
-          travelMode = Just Maps.CAR
-        }
-  return $ distRes.distance

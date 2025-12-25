@@ -18,17 +18,17 @@ module Components.QuoteListItem.View where
 import Common.Types.App
 
 import Animation (translateInXForwardAnim)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), City(..))
 import Components.QuoteListItem.Controller (Action(..))
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (ceil)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner, os)
+import Engineering.Helpers.Commons (flowRunner, os, parseFloat)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -36,7 +36,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, pure, show, unit, ($), (/=), (<>), (==))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, disableClickFeedback, fontStyle, frameLayout, gradient, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, disableClickFeedback, fontStyle, frameLayout, gradient, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, ellipsize, maxLines, singleLine)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
@@ -44,8 +44,11 @@ import Types.App (defaultGlobalState)
 import Timers
 import Debug
 import Engineering.Helpers.Commons (liftFlow)
-import Screens.Types (QuoteListItemState(..), City(..))
+import Screens.Types (QuoteListItemState(..))
 import Locale.Utils
+import JBridge(getWidthFromPercent)
+import Data.String
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -66,7 +69,7 @@ view push state =
                         ) (const NoAction)
           , onClick push (const $ Click state)
           , disableClickFeedback true
-          , padding (Padding 16 10 16 24)
+          , padding (Padding 16 (if os == "IOS" then 16 else 10) 16 24)
           ][ linearLayout[
             orientation HORIZONTAL
           , width MATCH_PARENT
@@ -88,8 +91,9 @@ nameAndPrice state push =
  linearLayout
  [ width MATCH_PARENT
  , height WRAP_CONTENT
- ][ driverNameAndTimeView state
-  , priceView state push
+ , orientation VERTICAL
+ ][ variantAndpriceView state push
+  , driverNameAndTimeView state
  ]
 
 ratingAndExpiryTime :: forall w . QuoteListItemState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -104,11 +108,11 @@ ratingAndExpiryTime state push =
 
 driverImageView :: forall w . QuoteListItemState -> PrestoDOM (Effect Unit) w
 driverImageView state =
- linearLayout
- [ width WRAP_CONTENT
- , height WRAP_CONTENT
- , orientation VERTICAL
- ][ frameLayout
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ][ frameLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , gravity CENTER
@@ -117,7 +121,8 @@ driverImageView state =
       imageView
         [ margin (MarginLeft 27)
       , cornerRadius 18.0
-      , background state.appConfig.quoteListItemConfig.driverImagebg
+      -- , background state.appConfig.quoteListItemConfig.driverImagebg --Removing for now till we add driver images.
+      , visibility GONE
       , width (V 36)
       , height (V 36)
       , imageWithFallback ""
@@ -127,11 +132,12 @@ driverImageView state =
         [ height $ V state.appConfig.quoteListItemConfig.vehicleHeight
         , width $ V state.appConfig.quoteListItemConfig.vehicleWidth
         , cornerRadius 20.0
-        , imageWithFallback $ fetchImage FF_ASSET $ if state.city == Hyderabad then "ny_ic_black_yellow_auto_quote_list" else "ny_ic_auto_quote_list"
+        , imageWithFallback $ fetchImage FF_ASSET $ state.vehicleImage
         , weight 1.0
         ]
       ]
- ]
+  ]
+
 
 driverRatingView :: forall w . QuoteListItemState -> PrestoDOM (Effect Unit) w
 driverRatingView state  =
@@ -151,19 +157,28 @@ driverRatingView state  =
       , textView (
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ if ceil state.driverRating == 0.0 then (getString NEW_) else show $ ceil state.driverRating
+        , text $ if state.driverRating == 0.0 then (getString NEW_) else parseFloat state.driverRating 2
         ] <> FontStyle.tags LanguageStyle)
     ]
 
 
-priceView :: forall w . QuoteListItemState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-priceView state push =
+variantAndpriceView :: forall w . QuoteListItemState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+variantAndpriceView state push =
   linearLayout
     [ height MATCH_PARENT
-    , width WRAP_CONTENT
-    , orientation VERTICAL
+    , width MATCH_PARENT
     , gravity CENTER_HORIZONTAL
-    ][  textView $
+    ][ textView (
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ fromMaybe "" state.serviceTierName
+        , color Color.black800
+        ] <> FontStyle.subHeading1 LanguageStyle)  
+     , linearLayout
+       [ height WRAP_CONTENT
+       , weight 1.0
+       ][]
+     , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text $ state.appConfig.currency <> " " <> state.price
@@ -194,24 +209,39 @@ timerView state push =
 driverNameAndTimeView :: forall w . QuoteListItemState -> PrestoDOM (Effect Unit) w
 driverNameAndTimeView state =
   linearLayout
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , orientation VERTICAL
-    , weight 1.0
-    , margin (Margin 0 5 20 10)
-    ][  textView (
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , margin $ MarginBottom 8
+  ][ linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , gravity CENTER_VERTICAL
+    ][ textView $ 
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ if state.timeLeft == 0 then (getString NEARBY) else show state.timeLeft <> (getString MINS_AWAY)
-        , color Color.black800
-        ] <> FontStyle.subHeading1 LanguageStyle)
-      , textView (
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text state.driverName
+        , text if state.timeLeft == 0 then (getString NEARBY) else show state.timeLeft <> (getString MINS_AWAY)
         , color Color.black700
-        ] <> FontStyle.tags LanguageStyle)
-    ]
+        ] <> FontStyle.tags LanguageStyle
+      , imageView
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_circle_grey"
+        , width $ V 4
+        , height $ V 4
+        , margin $ Margin 4 2 4 0
+        ]
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width $ if os /= "IOS" then MATCH_PARENT else V $ getWidthFromPercent 60
+        ][ textView $ 
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , maxLines 1
+          , ellipsize true
+          , text state.driverName
+          , color Color.black700
+          ] <> FontStyle.tags LanguageStyle 
+        ]
+     ]
+  ]
 
 primaryButtonView :: QuoteListItemState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 primaryButtonView state push =

@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="in.juspay.mobility.app">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -20,6 +21,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
     <uses-permission android:name="android.permission.VIBRATE" />
+
     <uses-permission
         android:name="android.permission.RECEIVE_SMS"
         tools:node="remove" />
@@ -34,10 +36,12 @@
         android:name="android.hardware.camera"
         android:required="true" />
 
-    <application>
+    <application
+        android:theme="@style/MaterialTheme">
         <activity
             android:name=".RideRequestActivity"
             android:exported="false"
+            android:excludeFromRecents="true"
             android:resizeableActivity="false"
             android:screenOrientation="portrait" />
 
@@ -62,25 +66,28 @@
             android:enabled="true">
         </receiver>
         <service
-            android:name=".MyFirebaseMessagingService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
-        <service
             android:name=".LocationUpdateService"
             android:exported="false"
             android:foregroundServiceType="location"
             android:largeHeap="true"
             android:stopWithTask="false" />
         <service
+            android:name=".LocationUpdateServiceV2"
+            android:exported="false"
+            android:foregroundServiceType="location"
+            android:largeHeap="true"
+            android:stopWithTask="false" />
+        <service
+            android:name=".GRPCNotificationService"
+            android:exported="false"
+            android:largeHeap="true"
+            android:stopWithTask="false" />
+        <service
             android:name=".WidgetService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="mediaProjection"
             android:permission="android.permission.SYSTEM_ALERT_WINDOW" />
-        <service android:name=".OverlayMessagingService"
+        <service android:name=".overlayMessage.Service"
             android:enabled="true"
             android:exported="true"
             android:largeHeap="true" />
@@ -90,9 +97,11 @@
             android:resource="@mipmap/ic_launcher_round" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
+            tools:replace="android:resource"
             android:resource="@color/colorPrimary" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
+            tools:replace="android:value"
             android:value="General" />
 
         <receiver
@@ -127,12 +136,9 @@
             android:exported="false"
             android:foregroundServiceType="dataSync"
             android:stopWithTask="false" />
+       
 
-        <activity
-            android:name="com.theartofdev.edmodo.cropper.CropImageActivity"
-            android:theme="@style/Base.Theme.AppCompat" />
-
-        <service android:name=".OverlayMessagingService"
+        <service android:name=".overlayMessage.Service"
             android:enabled="true"
             android:exported="true"
             android:largeHeap="true" />
@@ -148,6 +154,10 @@
         <activity android:name=".YoutubeVideoView"
             android:exported="false"
             android:resizeableActivity="true"
+            />
+        <activity android:name=".ReelsPlayerView"
+            android:screenOrientation="portrait"
+            android:exported="false"
             />
     </application>
 </manifest>

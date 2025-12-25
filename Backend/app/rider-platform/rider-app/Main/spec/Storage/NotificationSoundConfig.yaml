@@ -1,0 +1,24 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Category: Kernel.External.Notification.Interface.Types
+
+NotificationSoundsConfig:
+  tableName: notification_sounds_config
+
+  fields:
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+    notificationType : Category
+    defaultSound : Maybe Text
+    blindSound : Maybe Text
+
+  queries:
+    findByNotificationType:
+      kvFunction: findOneWithKV
+      where:
+        and: [notificationType, merchantOperatingCityId]
+
+  constraints:
+    merchantOperatingCityId : PrimaryKey
+    notificationType : PrimaryKey

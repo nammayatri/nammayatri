@@ -3,7 +3,7 @@ module Screens.TicketInfoScreen.View where
 import Animation as Anim 
 import Animation.Config (translateYAnimConfig, translateYAnimMapConfig, removeYAnimFromTopConfig)
 import JBridge as JB 
-import Prelude (not, Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<),(<>), (==), map, show, (||), show, (-))
+import Prelude (not, Unit, bind, const, pure, unit, ($), (&&), (/=), (<<<),(<>), (==), map, show, (||), show, (-), (*), (/))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, scrollView, text, textSize, textView, weight, width, imageWithFallback, cornerRadius, relativeLayout, alignParentBottom, layoutGravity, stroke, visibility, textFromHtml, onClick, clickable, id, horizontalScrollView)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TicketInfoScreen.Controller (Action(..), ScreenOutput, eval)
@@ -26,6 +26,9 @@ import Debug
 import Data.List ((:))
 import Effect.Uncurried  (runEffectFn1)
 import PaymentPage (consumeBP)
+import Engineering.Helpers.Commons as EHC
+import Data.Int as DI 
+import Data.String as DS
 
 screen :: ST.TicketInfoScreenState -> Screen Action ST.TicketInfoScreenState ScreenOutput
 screen initialState =
@@ -47,24 +50,25 @@ view push state =
   , width MATCH_PARENT
   , background Color.white900
   , onBackPressed push $ const BackPressed
+  , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
    ][
     linearLayout 
-    [ height WRAP_CONTENT
+    [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.white900
     , orientation VERTICAL
-    , margin $ MarginBottom 84
+    , padding $ PaddingBottom 70
     ][ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
     , linearLayout
       [ height $ V 1 
       , width MATCH_PARENT
       , background Color.grey900][]
     , separatorView Color.greySmoke
-    , scrollView[
-        height WRAP_CONTENT
+    , linearLayout[
+        height MATCH_PARENT
+      , background Color.black600
       , width MATCH_PARENT
-      , background Color.white900
-      ][ individualBookingInfoView state push]
+        ][individualBookingInfoView state push]
     ]
   , linearLayout
     [ height WRAP_CONTENT
@@ -123,15 +127,24 @@ separatorView color =
 individualBookingInfoView :: forall w. ST.TicketInfoScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 individualBookingInfoView state push =
  linearLayout
-  [ height WRAP_CONTENT
+  [ height MATCH_PARENT
   , width $ MATCH_PARENT
   , background Color.white900
-  , orientation VERTICAL
-  , padding $ Padding 16 20 16 20
   -- , onBackPressed push $ const BackPressed
   , afterRender push (const AfterRender)
-  ][ zooTicketView state push
-  ,  carouselDotView state push
+  ][  scrollView
+      [ height MATCH_PARENT
+      , background Color.white900 
+      , padding $ Padding 16 20 16 20
+      , width MATCH_PARENT
+      ][ linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          ][  zooTicketView state push
+            , carouselDotView state push
+            ]
+          ]
   ]
 
 zooTicketView :: forall w. ST.TicketInfoScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -275,9 +288,8 @@ ticketImageView state push =
               ]
           ]
         , linearLayout
-          [ weight 1.0
-          , width $ V 192
-          , height $ V 192
+          [ width $ V 194
+          , height $ V 194
           , gravity CENTER
           ][ imageView
             [ width $ V 194
@@ -302,9 +314,11 @@ ticketImageView state push =
             ]
           ]
       ]
-    , textContentView ((getTextForQRType activeItem.ticketServiceName) <> "QR") (getInfoColor activeItem.ticketServiceName) (MarginVertical 10 10) (FontStyle.subHeading1 TypoGraphy)
+    , textContentView ((getTextForQRType (getTicketQRName activeItem)) <> "QR") (getInfoColor activeItem.ticketServiceName) (MarginVertical 10 10) (FontStyle.subHeading1 TypoGraphy)
     , pillView state push (getPillBackgroundColor activeItem.ticketServiceName) (getPillInfoColor activeItem.ticketServiceName)
   ]
+  where
+    getTicketQRName ticket = ticket.ticketServiceName <> (DS.joinWith "" $ (map (\cat ->  if cat.name /= "all" then " ( " <> cat.name <> " ) " else "") ticket.categories))
 
 getTextForQRType :: String -> String
 getTextForQRType ticketServiceName = case ticketServiceName of
@@ -394,7 +408,7 @@ dotView color layMargin size =
   [ width $ V size
   , height $ V size
   , background color
-  , cornerRadius 30.0
+  , cornerRadius $ DI.toNumber (size/2)
   , margin $ layMargin
   ][]
 

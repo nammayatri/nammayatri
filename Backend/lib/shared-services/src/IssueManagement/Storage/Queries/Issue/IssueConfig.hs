@@ -3,14 +3,32 @@
 
 module IssueManagement.Storage.Queries.Issue.IssueConfig where
 
+import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IssueConfig
 import qualified IssueManagement.Storage.Beam.Issue.IssueConfig as BeamIC
 import IssueManagement.Storage.BeamFlow
 import IssueManagement.Tools.UtilsTH
 import Kernel.Types.Id
 
-findOne :: BeamFlow m r => m (Maybe IssueConfig)
-findOne = findOneWithKV [Is BeamIC.id $ Not $ Eq ""]
+create :: BeamFlow m r => IssueConfig -> m ()
+create = createWithKV
+
+findByMerchantOpCityId :: BeamFlow m r => Id MerchantOperatingCity -> m (Maybe IssueConfig)
+findByMerchantOpCityId (Id merchantOpCityId) = findOneWithKV [Is BeamIC.merchantOperatingCityId $ Eq merchantOpCityId]
+
+updateByPrimaryKey :: BeamFlow m r => IssueConfig -> m ()
+updateByPrimaryKey IssueConfig {..} =
+  updateWithKV
+    [ Set BeamIC.autoMarkIssueClosedDuration autoMarkIssueClosedDuration,
+      Set BeamIC.onCreateIssueMsgs (getId <$> onCreateIssueMsgs),
+      Set BeamIC.onAutoMarkIssueClsMsgs (getId <$> onAutoMarkIssueClsMsgs),
+      Set BeamIC.onIssueReopenMsgs (getId <$> onIssueReopenMsgs),
+      Set BeamIC.onKaptMarkIssueResMsgs (getId <$> onKaptMarkIssueResMsgs),
+      Set BeamIC.onIssueCloseMsgs (getId <$> onIssueCloseMsgs),
+      Set BeamIC.reopenCount reopenCount,
+      Set BeamIC.updatedAt updatedAt
+    ]
+    [Is BeamIC.id $ Eq (getId id)]
 
 instance FromTType' BeamIC.IssueConfig IssueConfig where
   fromTType' BeamIC.IssueConfigT {..} = do
@@ -18,10 +36,13 @@ instance FromTType' BeamIC.IssueConfig IssueConfig where
       Just
         IssueConfig
           { id = Id id,
+            merchantOperatingCityId = Id merchantOperatingCityId,
             onCreateIssueMsgs = Id <$> onCreateIssueMsgs,
             onAutoMarkIssueClsMsgs = Id <$> onAutoMarkIssueClsMsgs,
             onIssueReopenMsgs = Id <$> onIssueReopenMsgs,
             onKaptMarkIssueResMsgs = Id <$> onKaptMarkIssueResMsgs,
+            merchantId = Id merchantId,
+            onIssueCloseMsgs = Id <$> onIssueCloseMsgs,
             ..
           }
 
@@ -29,9 +50,12 @@ instance ToTType' BeamIC.IssueConfig IssueConfig where
   toTType' IssueConfig {..} = do
     BeamIC.IssueConfigT
       { BeamIC.id = getId id,
-        BeamIC.onCreateIssueMsgs = show <$> onCreateIssueMsgs,
-        BeamIC.onAutoMarkIssueClsMsgs = show <$> onAutoMarkIssueClsMsgs,
-        BeamIC.onIssueReopenMsgs = show <$> onIssueReopenMsgs,
-        BeamIC.onKaptMarkIssueResMsgs = show <$> onKaptMarkIssueResMsgs,
+        BeamIC.merchantOperatingCityId = getId merchantOperatingCityId,
+        BeamIC.onCreateIssueMsgs = getId <$> onCreateIssueMsgs,
+        BeamIC.onAutoMarkIssueClsMsgs = getId <$> onAutoMarkIssueClsMsgs,
+        BeamIC.onIssueReopenMsgs = getId <$> onIssueReopenMsgs,
+        BeamIC.onKaptMarkIssueResMsgs = getId <$> onKaptMarkIssueResMsgs,
+        BeamIC.merchantId = getId merchantId,
+        BeamIC.onIssueCloseMsgs = getId <$> onIssueCloseMsgs,
         ..
       }

@@ -1,0 +1,288 @@
+# run migration for dev testing:
+
+# UPDATE atlas_bpp_dashboard.access_matrix
+# 	SET user_access_type='USER_FULL_ACCESS'
+# 	WHERE (api_entity = 'VOLUNTEER'
+# 		AND (user_action_type = 'ALL_FEE_HISTORY' OR user_action_type = 'VOLUNTEER_COLLECTION_HISTORY')
+# 		AND role_id = '37947162-3b5d-4ed6-bcac-08841be1534d');
+
+# INSERT INTO atlas_driver_offer_bpp.volunteer (id, place, created_at, updated_at) VALUES
+# 	('8b278f98-f9fb-4be6-a19f-175ffe2ac1fb', 'Kochi', now(), now());
+
+@empty =
+
+@clickhouse-driver-offer-bpp = http://localhost:8123
+
+@bpp-dashboard-host = http://localhost:8018
+
+@clickhouse-password = {{empty}}
+
+@merchantId = favorit0-0000-0000-0000-00000favorit
+
+@driverId = favorit-auto1-0000000000000000000000
+
+@volunteerId = 8b278f98-f9fb-4be6-a19f-175ffe2ac1fb
+
+@dashboardToken = 0f3378e2-da5b-4eac-a0f6-397ca48358de
+
+@dbName = atlas_driver_offer_bpp
+
+# @name dashboard
+
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name clickhouse
+
+GET {{clickhouse-driver-offer-bpp}}
+
+###
+
+# @name version
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+Select version()
+
+###
+
+# @name testQuery
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+Select 1
+
+###
+
+# @name selectAll
+
+# COLLECTED_CASH: totalAmount = 3.0+2.0+1.5+6=12.5
+# PAYMENT_PENDING: totalAmount = 4+3+2.5+7=16.5
+# CLEARED: totalAmount = 5+4+3.5+8=20.5
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT (*) from {{dbName}}.driver_fee
+FORMAT JSON
+
+###
+
+# @name getAllDriverFeeHistory
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/Kochi/revenue/allFeeHistory
+  ?from=2024-01-01T07:02:42Z
+  &to=2024-02-22T08:02:42Z
+token: {{dashboardToken}}
+
+#  clickhouse queries for above api:
+
+###
+
+# @name getAllDriverFeeHistory_dueFees
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT
+    status as res1,
+    SUM(num_rides) as res2,
+    COUNT(DISTINCT(driver_id)) as res3,
+    SUM((((platform_fee + cgst) + sgst) + govt_charges)) as res4
+FROM
+    {{dbName}}.driver_fee
+WHERE
+    (
+        (
+            merchant_id = 'favorit0-0000-0000-0000-00000favorit'
+        )
+        AND (
+            (status IN ('PAYMENT_PENDING', 'PAYMENT_OVERDUE'))
+            AND (
+                (true)
+                AND (true)
+            )
+        )
+    )
+GROUP BY
+    status
+FORMAT JSON
+
+###
+
+# @name getAllDriverFeeHistory_paidFees
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT
+    status as res1,
+    SUM(num_rides) as res2,
+    COUNT(DISTINCT(driver_id)) as res3,
+    SUM((((platform_fee + cgst) + sgst) + govt_charges)) as res4
+FROM
+    {{dbName}}.driver_fee
+WHERE
+    (
+        (
+            merchant_id = 'favorit0-0000-0000-0000-00000favorit'
+        )
+        AND (
+            (status IN ('CLEARED', 'COLLECTED_CASH', 'EXEMPTED'))
+            AND (
+                (collected_at >= '2024-01-01 07:02:42')
+                AND (collected_at <= '2024-01-22 08:02:42')
+            )
+        )
+    )
+GROUP BY
+    status
+FORMAT JSON
+
+###
+
+# @name getCollectionHistory
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/Kochi/revenue/collectionHistory
+  ?volunteerId={{volunteerId}}
+  # &place="Kochi"
+  &from=2024-01-01T07:02:42Z
+  &to=2024-02-22T08:02:42Z
+token: {{dashboardToken}}
+
+#  clickhouse queries for above api:
+
+###
+
+# @name getCollectionHistory_offlineCollectionFees
+
+#  this version works wrong when we add duplicated entries: getCollectionHistory_duplicatedEntry
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+
+SELECT SUM((((platform_fee+cgst)+sgst)+govt_charges)) AS res1,
+       SUM(special_zone_amount) AS res2,
+       SUM(num_rides) AS res3,
+       COUNT(DISTINCT(driver_id)) AS res4,
+       toDate(collected_at) AS res5,
+       0.0 AS res6
+FROM {{dbName}}.driver_fee
+WHERE ((merchant_id='favorit0-0000-0000-0000-00000favorit')
+       AND ((status IN ('CLEARED'))
+            AND ((collected_at>='2024-01-01 07:02:42')
+                 AND ((collected_at<='2024-02-22 08:02:42')
+                      AND (TRUE)))))
+GROUP BY toDate(collected_at),
+         0.0
+ORDER BY toDate(collected_at),
+         0.0 ASC
+FORMAT JSON
+
+# result:
+#     {
+#       "res1": 20.5,
+#       "res2": 5,
+#       "res3": "6",
+#       "res4": "1",
+#       "res5": "2024-01-22",
+#       "res6": 0
+#     }
+
+###
+
+# @name getCollectionHistory_subQuery
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT SUM(res1) AS res1_sub1,
+       SUM(res2) AS res2_sub1,
+       SUM(res3) AS res3_sub1,
+       COUNT(DISTINCT(res4)) AS res4_sub1,
+       res5 AS res5_sub1,
+       res6 AS res6_sub1
+FROM
+  (SELECT argMax((((platform_fee+cgst)+sgst)+govt_charges), updated_at) AS res1,
+          argMax(special_zone_amount, updated_at) AS res2,
+          argMax(num_rides, updated_at) AS res3,
+          argMax(driver_id, updated_at) AS res4,
+          argMax(toDate(collected_at), updated_at) AS res5,
+          argMax(0.0, updated_at) AS res6
+   FROM {{dbName}}.driver_fee
+   WHERE ((merchant_id='favorit0-0000-0000-0000-00000favorit')
+          AND ((status IN ('CLEARED'))
+               AND ((collected_at>='2024-01-01 07:02:42')
+                    AND ((collected_at<='2024-02-22 08:02:42')
+                         AND (TRUE)))))
+   GROUP BY id)
+GROUP BY res5,
+         res6
+ORDER BY res5,
+         res6 ASC
+    FORMAT JSON
+
+# result:
+#     {
+#       "res1_sub1": 20.5,
+#       "res2_sub1": 5,
+#       "res3_sub1": "6",
+#       "res4_sub1": "1",
+#       "res5_sub1": "2024-01-22",
+#       "res6_sub1": 0
+#     }
+
+# @name getCollectionHistory_duplicatedEntry
+
+###
+
+# lets add duplicated entries with the same id, but older updated_at (can be ran multiple times)
+# these entries should be filtered out by subquery
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+INSERT INTO
+    atlas_driver_offer_bpp.driver_fee (
+        id,
+        merchant_id,
+        driver_id,
+        status,
+        num_rides,
+        platform_fee,
+        cgst,
+        sgst,
+        govt_charges,
+        special_zone_amount,
+        collected_at,
+        collected_by,
+        updated_at
+    )
+VALUES
+    (
+        '5289bb0b-b012-4d1a-abed-32555212ea02',
+        'favorit0-0000-0000-0000-00000favorit',
+        'favorit-auto1-0000000000000000000000',
+        'CLEARED',
+        '667',
+        '5.0',
+        '4.0',
+        '3.5',
+        8,
+        '5.0',
+        '2024-01-22 07:02:42',
+        '8b278f98-f9fb-4be6-a19f-175ffe2ac1fb',
+        '2024-01-22 06:04:44'
+    );

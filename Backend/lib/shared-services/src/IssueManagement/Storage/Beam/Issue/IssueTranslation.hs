@@ -11,9 +11,7 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module IssueManagement.Storage.Beam.Issue.IssueTranslation where
 
@@ -26,7 +24,10 @@ data IssueTranslationT f = IssueTranslationT
   { id :: B.C f Text,
     sentence :: B.C f Text,
     translation :: B.C f Text,
-    language :: B.C f Language
+    language :: B.C f Language,
+    merchantId :: B.C f Text,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

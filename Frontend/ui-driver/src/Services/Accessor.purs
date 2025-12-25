@@ -1,19 +1,24 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Services.Accessor where
+module Services.Accessor (
+  module Services.Accessor,
+  module Reexport
+) where
+
+import Engineering.Helpers.Accessor as Reexport
 
 import Prelude
 import Data.Lens (Lens', lens)
@@ -71,7 +76,7 @@ _lat = lens (unwrap >>> _.lat) (\oldRec newVal -> wrap ((unwrap oldRec) {lat = n
 _lon :: forall a b c. Newtype a { lon :: b | c} => Lens' a b
 _lon = lens (unwrap >>> _.lon) (\oldRec newVal -> wrap ((unwrap oldRec) {lon = newVal}))
 
-_certificateNumber :: forall a b c. Newtype a { certificateNumber :: b | c} => Lens' a b 
+_certificateNumber :: forall a b c. Newtype a { certificateNumber :: b | c} => Lens' a b
 _certificateNumber = lens (unwrap >>> _.certificateNumber) (\oldRec newVal -> wrap (unwrap oldRec) {certificateNumber = newVal})
 
 _distance :: forall a b c. Newtype a {distance :: c | b} => Lens' a c
@@ -79,3 +84,40 @@ _distance = lens (unwrap >>> _.distance) (\oldRec newVal -> wrap ((unwrap oldRec
 
 _orderId :: forall a b c. Newtype a { orderId :: b | c } => Lens' a b
 _orderId = lens (unwrap >>> _.orderId) (\oldRec newVal -> wrap ((unwrap oldRec) { orderId = newVal }))
+
+_moduleId :: forall a b c. Newtype a { moduleId :: b | c } => Lens' a b
+_moduleId = lens (unwrap >>> _.moduleId) (\oldRec newVal -> wrap ((unwrap oldRec) { moduleId = newVal }))
+
+_name :: forall a b c. Newtype a { name :: b | c } => Lens' a b
+_name = lens (unwrap >>> _.name) (\oldRec newVal -> wrap ((unwrap oldRec) { name = newVal }))
+
+_languagesAvailableForQuiz :: forall a b c. Newtype a { languagesAvailableForQuiz :: b | c } => Lens' a b
+_languagesAvailableForQuiz = lens (unwrap >>> _.languagesAvailableForQuiz) (\oldRec newVal -> wrap ((unwrap oldRec) { languagesAvailableForQuiz = newVal }))
+
+_languagesAvailableForVideos :: forall a b c. Newtype a { languagesAvailableForVideos :: b | c } => Lens' a b
+_languagesAvailableForVideos = lens (unwrap >>> _.languagesAvailableForVideos) (\oldRec newVal -> wrap ((unwrap oldRec) { languagesAvailableForVideos = newVal }))
+
+_area :: forall a b c. Newtype a { area :: b | c } => Lens' a b
+_area = lens (unwrap >>> _.area) (\oldRec newVal -> wrap ((unwrap oldRec) { area = newVal }))
+
+_extras :: forall a b c. Newtype a { extras :: b | c } => Lens' a b
+_extras = lens (unwrap >>> _.extras) (\oldRec newVal -> wrap ((unwrap oldRec) { extras = newVal }))
+
+_instructions :: forall a b c. Newtype a { instructions :: b | c } => Lens' a b
+_instructions = lens (unwrap >>> _.instructions) (\oldRec newVal -> wrap ((unwrap oldRec) { instructions = newVal }))
+
+_description :: forall a b c. Newtype a {description :: c | b} => Lens' a c
+_description = lens (unwrap >>> _.description) (\oldRec newVal -> wrap ((unwrap oldRec) {description = newVal}))
+
+_place_id :: forall a b c. Newtype a {placeId :: c | b} => Lens' a c
+_place_id = lens (unwrap >>> _.placeId) (\oldRec newVal -> wrap ((unwrap oldRec) {placeId = newVal}))
+
+_distance_meters :: forall a b c. Newtype a { distance :: b | c} => Lens' a b
+_distance_meters = lens (unwrap >>> _.distance) (\oldRec newVal -> wrap ((unwrap oldRec) {distance = newVal}))
+
+_types :: forall a b c. Newtype a { types :: b | c } => Lens' a b
+_types = lens (unwrap >>> _.types) (\oldRec newVal -> wrap ((unwrap oldRec) { types = newVal }))
+
+
+_overchargingTag :: forall a b c. Newtype a { overchargingTag :: b | c } => Lens' a b
+_overchargingTag = lens (unwrap >>> _.overchargingTag) (\oldRec newVal -> wrap ((unwrap oldRec) { overchargingTag = newVal }))

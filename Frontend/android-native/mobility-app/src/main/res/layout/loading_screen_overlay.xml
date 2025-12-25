@@ -1,76 +1,79 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:gravity="center"
-    android:id="@+id/loaderOverlay">
+<merge>
 
-    <RelativeLayout
-        android:id="@+id/loaderOverlayCard"
-        android:layout_marginHorizontal="20dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="40dp">
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/loaderOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center">
 
-        <androidx.cardview.widget.CardView
-            android:id="@+id/card"
-            android:layout_width="match_parent"
+        <RelativeLayout
+            android:id="@+id/loaderOverlayCard"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            app:cardCornerRadius="16dp"
-            app:cardBackgroundColor="@color/white"
-            app:cardElevation="0dp">
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="40dp">
 
-            <LinearLayout
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:paddingTop="10dp"
-                android:id="@+id/inner_view">
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp">
 
-
-                <com.airbnb.lottie.LottieAnimationView
-                    android:id="@+id/lottie_view_waiting"
-                    android:layout_marginTop="20dp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="160dp"
-                    app:lottie_autoPlay="true"
-                    android:scaleType="centerCrop"
-                    app:lottie_loop="true"
-                    android:layout_gravity="center"
-                    app:lottie_rawRes="@raw/waiting_for_customer_lottie" />
-
-
-                <TextView
-                    android:id="@+id/text_waiting_for_customer"
+                <LinearLayout
+                    android:id="@+id/inner_view"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textSize="18dp"
-                    android:layout_marginHorizontal="20dp"
-                    android:paddingHorizontal="35dp"
-                    android:fontFamily="@font/plus_jakartasans_medium"
-                    android:gravity="center"
-                    android:layout_marginBottom="25dp"
-                    android:text="@string/waiting_for_customer_response" />
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:paddingTop="10dp">
 
-                <ImageView
-                    android:layout_width="128dp"
-                    android:id="@+id/image_view_waiting"
-                    android:layout_height="128dp"
-                    android:layout_gravity="center"
-                    android:layout_marginTop="20dp"
-                    android:visibility="gone"
-                    android:background="@drawable/ic_waiting_image" />
 
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
+                    <com.airbnb.lottie.LottieAnimationView
+                        android:id="@+id/lottie_view_waiting"
+                        android:layout_width="wrap_content"
+                        android:layout_height="160dp"
+                        android:layout_gravity="center"
+                        android:layout_marginTop="20dp"
+                        android:scaleType="centerCrop"
+                        app:lottie_autoPlay="true"
+                        app:lottie_loop="true"
+                        app:lottie_rawRes="@raw/waiting_for_customer_lottie" />
 
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="45dp"
-            android:src="@drawable/ny_ic_namma_yatri_text_with_logo" />
 
-    </RelativeLayout>
-</LinearLayout>
+                    <TextView
+                        android:id="@+id/text_waiting_for_customer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="20dp"
+                        android:layout_marginBottom="25dp"
+                        android:fontFamily="@font/plus_jakartasans_medium"
+                        android:gravity="center"
+                        android:paddingHorizontal="35dp"
+                        android:text="@string/waiting_for_customer_response"
+                        android:textSize="18dp" />
+
+                    <ImageView
+                        android:id="@+id/image_view_waiting"
+                        android:layout_width="128dp"
+                        android:layout_height="128dp"
+                        android:layout_gravity="center"
+                        android:layout_marginTop="20dp"
+                        android:background="@drawable/ic_waiting_image"
+                        android:visibility="gone" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="45dp"
+                android:src="@drawable/ny_ic_namma_yatri_text_with_logo" />
+
+        </RelativeLayout>
+    </LinearLayout>
+</merge>

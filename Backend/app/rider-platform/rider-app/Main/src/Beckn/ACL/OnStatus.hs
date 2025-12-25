@@ -12,166 +12,98 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnStatus (buildOnStatusReq) where
+module Beckn.ACL.OnStatus (buildOnStatusReqV2) where
 
-import Beckn.ACL.Common (getTag)
 import qualified Beckn.ACL.Common as Common
-import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
-import qualified Beckn.Types.Core.Taxi.OnStatus as OnStatus
-import Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder as OnStatusRideAssigned
-import qualified Data.Text as T
+import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Kernel.Prelude
-import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id (Id (Id))
 import Kernel.Utils.Common
 import Tools.Error (GenericError (InvalidRequest))
 
-buildOnStatusReq ::
-  ( HasFlowEnv m r '["coreVersion" ::: Text]
+buildOnStatusReqV2 ::
+  ( HasFlowEnv m r '["_version" ::: Text],
+    MonadFlow m,
+    CacheFlow m r
   ) =>
-  OnStatus.OnStatusReq ->
+  Spec.OnStatusReq ->
+  Text ->
   m (Maybe DOnStatus.DOnStatusReq)
-buildOnStatusReq req = do
-  validateContext Context.ON_STATUS req.context
-  handleError req.contents $ \message ->
-    parseOrder message.order
+buildOnStatusReqV2 req txnId = do
+  ContextV2.validateContext Context.ON_STATUS req.onStatusReqContext
+  handleErrorV2 req \message -> do
+    let order = message.confirmReqMessageOrder
+    messageId <- Utils.getMessageId req.onStatusReqContext
+    bppBookingIdText <- order.orderId & fromMaybeM (InvalidRequest "order.id is not present in on_status request.")
+    let bppBookingId = Id bppBookingIdText
+    orderStatus <- order.orderStatus & fromMaybeM (InvalidRequest "order.status is not present in on_status request.")
+    eventType <-
+      order.orderFulfillments
+        >>= listToMaybe
+        >>= (.fulfillmentState)
+        >>= (.fulfillmentStateDescriptor)
+        >>= (.descriptorCode)
+        & fromMaybeM (InvalidRequest "Event type is not present in OnUpdateReq.")
 
-parseOrder :: (MonadFlow m) => OnStatus.Order -> m DOnStatus.DOnStatusReq
-parseOrder (OnStatus.NewBooking raOrder) = do
-  pure
-    DOnStatus.DOnStatusReq
-      { bppBookingId = Id raOrder.id,
-        rideDetails = DOnStatus.NewBookingDetails
-      }
-parseOrder (OnStatus.RideAssigned raOrder) = do
-  newRideInfo <- buildNewRideInfo raOrder.fulfillment
-  pure
-    DOnStatus.DOnStatusReq
-      { bppBookingId = Id raOrder.id,
-        rideDetails = DOnStatus.RideAssignedDetails {newRideInfo}
-      }
-parseOrder (OnStatus.RideStarted rsOrder) = do
-  newRideInfo <- buildNewRideInfo rsOrder.fulfillment
-  rideStartTime <- fromMaybeM (InvalidRequest "fulfillment.start.time is not present in RideStarted Order.") (rsOrder.fulfillment.start.time <&> (.timestamp))
-  tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in DriverArrived Event.") rsOrder.fulfillment.tags
-  let driverArrivalTime =
-        readMaybe . T.unpack
-          =<< getTag "driver_arrived_info" "arrival_time" tagsGroup
-  let rideStartedInfo =
-        DOnStatus.RideStartedInfo
-          { rideStartTime,
-            driverArrivalTime
-          }
-  pure
-    DOnStatus.DOnStatusReq
-      { bppBookingId = Id rsOrder.id,
-        rideDetails = DOnStatus.RideStartedDetails {newRideInfo, rideStartedInfo}
-      }
-parseOrder (OnStatus.RideCompleted rcOrder) = do
-  tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideCompleted Order.") rcOrder.fulfillment.tags
-  chargeableDistance :: HighPrecMeters <-
-    fromMaybeM (InvalidRequest "chargeable_distance is not present.") $
-      readMaybe . T.unpack
-        =<< getTag "ride_distance_details" "chargeable_distance" tagsGroup
-  traveledDistance :: HighPrecMeters <-
-    fromMaybeM (InvalidRequest "traveled_distance is not present.") $
-      readMaybe . T.unpack
-        =<< getTag "ride_distance_details" "traveled_distance" tagsGroup
-  let driverArrivalTime =
-        readMaybe . T.unpack
-          =<< getTag "driver_arrived_info" "arrival_time" tagsGroup
-  newRideInfo <- buildNewRideInfo rcOrder.fulfillment
-  rideStartTime <- fromMaybeM (InvalidRequest "fulfillment.start.time is not present in RideCompleted Order.") (rcOrder.fulfillment.start.time <&> (.timestamp))
-  rideEndTime <- fromMaybeM (InvalidRequest "fulfillment.end.time is not present in RideCompleted Order.") (rcOrder.fulfillment.end.time <&> (.timestamp))
-  let rideStartedInfo =
-        DOnStatus.RideStartedInfo
-          { rideStartTime,
-            driverArrivalTime
-          }
-  let rideCompletedInfo =
-        DOnStatus.RideCompletedInfo
-          { rideEndTime,
-            fare = roundToIntegral rcOrder.quote.price.value,
-            totalFare = roundToIntegral rcOrder.quote.price.computed_value,
-            fareBreakups = mkOnStatusFareBreakup <$> rcOrder.quote.breakup,
-            chargeableDistance,
-            traveledDistance,
-            paymentUrl = rcOrder.payment >>= (.uri)
-          }
-  pure
-    DOnStatus.DOnStatusReq
-      { bppBookingId = Id rcOrder.id,
-        rideDetails = DOnStatus.RideCompletedDetails {newRideInfo, rideStartedInfo, rideCompletedInfo}
-      }
-  where
-    mkOnStatusFareBreakup breakup =
-      DOnStatus.OnStatusFareBreakup
-        { amount = realToFrac breakup.price.value,
-          description = breakup.title
+    rideDetails <-
+      -- TODO::Beckn, need to refactor this codes, according to spec.
+      case orderStatus of
+        "NEW_BOOKING" -> pure DOnStatus.NewBookingDetails
+        "RIDE_BOOKING_REALLOCATION" -> parseRideBookingReallocationOrder order messageId
+        "ACTIVE" -> do
+          case eventType of
+            "RIDE_ASSIGNED" -> do
+              assignedReq <- Common.parseRideAssignedEvent order messageId txnId
+              return $ DOnStatus.RideAssignedDetails assignedReq
+            "RIDE_ENROUTE_PICKUP" -> pure DOnStatus.RideEnroutePickupDetails
+            "RIDE_ARRIVED_PICKUP" -> do
+              arrivedReq <- Common.parseDriverArrivedEvent order messageId
+              return $ DOnStatus.DriverArrivedDetails arrivedReq
+            "RIDE_STARTED" -> do
+              startedReq <- Common.parseRideStartedEvent order messageId
+              return $ DOnStatus.RideStartedDetails startedReq
+            _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
+        "COMPLETE" -> do
+          case eventType of
+            "RIDE_ENDED" -> do
+              completedReq <- Common.parseRideCompletedEvent order messageId
+              return $ DOnStatus.RideCompletedDetails completedReq
+            _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
+        "CANCELLED" -> do
+          case eventType of
+            "RIDE_CANCELLED" -> do
+              cancelledReq <- Common.parseBookingCancelledEvent order messageId
+              return $ DOnStatus.BookingCancelledDetails cancelledReq
+            _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
+        _ -> throwError . InvalidRequest $ "Invalid order.status: " <> show orderStatus
+    pure $
+      DOnStatus.DOnStatusReq
+        { bppBookingId,
+          rideDetails
         }
-parseOrder (OnStatus.BookingCancelled bcOrder) = do
-  mbNewRideInfo <- forM bcOrder.fulfillment buildNewRideInfo
-  pure
-    DOnStatus.DOnStatusReq
-      { bppBookingId = Id bcOrder.id,
-        rideDetails =
-          DOnStatus.BookingCancelledDetails
-            { mbNewRideInfo,
-              cancellationSource = Common.castCancellationSource bcOrder.cancellation_reason
-            }
-      }
-parseOrder (OnStatus.BookingReallocation brOrder) = do
-  newRideInfo <- buildNewRideInfo brOrder.fulfillment
-  pure
-    DOnStatus.DOnStatusReq
-      { bppBookingId = Id brOrder.id,
-        rideDetails =
-          DOnStatus.BookingReallocationDetails
-            { newRideInfo,
-              reallocationSource = Common.castCancellationSource brOrder.reallocation_reason
-            }
-      }
 
-buildNewRideInfo :: (MonadFlow m) => OnStatusRideAssigned.FulfillmentInfo -> m DOnStatus.NewRideInfo
-buildNewRideInfo fulfillment = do
-  vehicle <- fromMaybeM (InvalidRequest "vehicle is not present in RideAssigned Order.") $ fulfillment.vehicle
-  agent <- fromMaybeM (InvalidRequest "agent is not present in RideAssigned Order.") $ fulfillment.agent
-  agentPhone <- fromMaybeM (InvalidRequest "agent phoneNumber is not present in RideAssigned Order.") $ agent.phone
-  tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideAssigned Order.") agent.tags
-  registeredAt :: UTCTime <-
-    fromMaybeM (InvalidRequest "registered_at is not present.") $
-      readMaybe . T.unpack
-        =<< getTag "driver_details" "registered_at" tagsGroup
-  let rating :: Maybe HighPrecMeters =
-        readMaybe . T.unpack
-          =<< getTag "driver_details" "rating" tagsGroup
-  authorization <- fromMaybeM (InvalidRequest "authorization is not present in RideAssigned Order.") $ fulfillment.start.authorization
-  pure
-    DOnStatus.NewRideInfo
-      { bppRideId = Id fulfillment.id,
-        otp = authorization.token,
-        driverName = agent.name,
-        driverMobileNumber = agentPhone,
-        driverMobileCountryCode = Just "+91", -----------TODO needs to be added in agent Tags------------
-        driverRating = realToFrac <$> rating,
-        driverImage = agent.image,
-        driverRegisteredAt = registeredAt,
-        vehicleNumber = vehicle.registration,
-        vehicleColor = vehicle.color,
-        vehicleModel = vehicle.model
-      }
+parseRideBookingReallocationOrder :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m DOnStatus.RideDetails
+parseRideBookingReallocationOrder order messageId = do
+  bookingDetails <- Common.parseBookingDetails order messageId
+  reallocationSourceText <- order.orderCancellation >>= (.cancellationCancelledBy) & fromMaybeM (InvalidRequest "order.cancellation.,cancelled_by is not present in on_status BookingReallocationEvent request.")
+  let reallocationSource = Utils.castCancellationSourceV2 reallocationSourceText
+  pure $ DOnStatus.BookingReallocationDetails DOnStatus.BookingReallocationReq {..}
 
-handleError ::
+handleErrorV2 ::
   (MonadFlow m) =>
-  Either Error OnStatus.OnStatusMessage ->
-  (OnStatus.OnStatusMessage -> m DOnStatus.DOnStatusReq) ->
+  Spec.OnStatusReq ->
+  (Spec.ConfirmReqMessage -> m DOnStatus.DOnStatusReq) ->
   m (Maybe DOnStatus.DOnStatusReq)
-handleError etr action =
-  case etr of
-    Right msg -> do
-      Just <$> action msg
-    Left err -> do
+handleErrorV2 req action =
+  case req.onStatusReqError of
+    Nothing -> do
+      onStatusMessage <- req.onStatusReqMessage & fromMaybeM (InvalidRequest "on_status request message is not present.")
+      Just <$> action onStatusMessage
+    Just err -> do
       logTagError "on_status req" $ "on_status error: " <> show err
       pure Nothing

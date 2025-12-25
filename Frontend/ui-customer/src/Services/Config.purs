@@ -20,6 +20,7 @@ import Prelude (class Eq, (==))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import ConfigJBridge (getKeyInSharedPrefKeysConfig, getValueToLocalNativeStoreConfig)
+import Data.Maybe
 
 
 foreign import environment :: String -> String
@@ -104,3 +105,31 @@ getSupportNumber _ = case getEnv of
                         UAT  -> "9999999999"
                         PROD -> "9999999999"
                         _    -> "9999999999"
+
+getNumbersToWhiteList :: String -> Array String
+getNumbersToWhiteList _ = []
+
+type QuickReportIssueConfig = {
+  categoryId :: String
+, optionId :: Maybe String
+}
+
+type QuickReportIssueConfigs = {
+  tollIssue :: QuickReportIssueConfig
+}
+
+getQuickReportIssueConfig :: String -> QuickReportIssueConfigs
+getQuickReportIssueConfig lazy =
+  case getEnv of
+    PROD -> {
+      tollIssue : {
+        categoryId : "1bb14f3c-95bd-4421-bfd4-e9c9b0689b29"
+      , optionId : Just "023b2f1b-f505-41e2-81b4-d1e06cdb15b3"
+      }
+    }
+    _ -> {
+      tollIssue : {
+        categoryId : "a3267872-0748-4b33-8b7b-229dc5cb102c"
+      , optionId : Just "62040b95-8fab-4876-83a7-2fc5852fa312"
+      }
+    }

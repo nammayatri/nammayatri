@@ -28,23 +28,41 @@ import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, setText)
 import Engineering.Helpers.Commons as EHC
-import JBridge (addMarker, exitLocateOnMap, getCurrentLatLong, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestLocation, showMarker, toggleBtnLoader, locateOnMapConfig)
+import JBridge (exitLocateOnMap, getCurrentLatLong, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestLocation, toggleBtnLoader, locateOnMapConfig, currentPosition)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, pure, unit, void, ($), (&&), (/=), (<), (<>), (==))
+import Prelude (class Show, Unit, bind, discard, pure, unit, void, ($), (&&), (/=), (<), (<>), (==), show)
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.DriverSavedLocationScreen.Transformer (getLocationArray, tagAlreadySaved)
-import Screens.Types (DriverSavedLocationScreenState, GoToScrEntryType(..), Location(..), PredictionItem(..), SavedLocationScreenType(..))
+import Screens.Types (DriverSavedLocationScreenState, GoToScrEntryType(..), Location(..), PredictionItem(..), SavedLocationScreenType(..),LocationSelectType(..))
 import Services.API (GetHomeLocationsRes(..))
 import Common.Resources.Constants (zoomLevel)
+import Helpers.Utils(getCurrentLocation, LatLon(..))
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (AfterRender) = "AfterRender"
+  show (NoAction) = "NoAction"
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
+  show (GoToLocationModalAC var1) = "GoToLocationModalAC_" <> show var1
+  show (OnTextChanged _) = "OnTextChanged"
+  show (DebounceCallback _ _) = "DebounceCallback"
+  show (ConfirmLocEDT _) = "ConfirmLocEDT"
+  show (MAPREADY _ _ _) = "MAPREADY"
+  show (LocateOnMap _) = "LocateOnMap"
+  show (UpdateLocation _ _ _) = "UpdateLocation"
+  show (ConfirmChangesAC var1) = "ConfirmChangesAC_" <> show var1
+  show (SuggestionClick _) = "SuggestionClick"
+  show (Respones _) = "Respones"
+  show (Error _) = "Error"
+  show (PopUpModalAction var1) = "PopUpModalAction_" <> show var1
+  show (ClearSearch) = "ClearSearch"
+  show (OnAnimationEnd) = "OnAnimationEnd"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -66,7 +84,7 @@ data Action
   | DebounceCallback String Boolean
   | ConfirmLocEDT String
   | MAPREADY String String String
-  | LocateOnMap
+  | LocateOnMap LocationSelectType
   | UpdateLocation String String String
   | ConfirmChangesAC PrimaryButton.Action
   | SuggestionClick PredictionItem
@@ -87,7 +105,8 @@ data ScreenOutput
   | EditLocation DriverSavedLocationScreenState
 
 eval :: Action -> DriverSavedLocationScreenState -> Eval Action ScreenOutput DriverSavedLocationScreenState
-eval BackPressed state =
+eval BackPressed state = do
+  void $ pure $ JB.hideKeyboardOnNavigation true
   if state.props.confirmDelete then
     continue state { props { confirmDelete = false } }
   else if state.props.viewType == SearchLocation then do
@@ -113,8 +132,11 @@ eval (UpdateLocation _ lat lon) state = case NUM.fromString lat, NUM.fromString 
   Just latitute, Just longitute -> exit $ UpdateConfirmLocation state { data { saveLocationObject { position { lat = latitute, lon = longitute } } } }
   _, _ -> continue state
 
-eval LocateOnMap state = do
-  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = zoomLevel}
+eval (LocateOnMap check ) state = do
+  void $ pure $ JB.hideKeyboardOnNavigation true
+  if check == CURRENT_LOC then do
+    void $ pure $ currentPosition ""
+  else pure unit
   exit $ ChangeView state { props { viewType = LOCATE_ON_MAP } }
 
 eval (ConfirmLocEDT val) state =
@@ -191,4 +213,8 @@ eval (SuggestionClick pred) state = case pred.placeId of
 
 eval (Respones resp) state = continue state { data { savedLocationsArray = getLocationArray resp } }
 
-eval _ state = continue state
+eval (MAPREADY _ _ _) state = 
+  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = zoomLevel}
+  in continue state
+
+eval _ state = update state

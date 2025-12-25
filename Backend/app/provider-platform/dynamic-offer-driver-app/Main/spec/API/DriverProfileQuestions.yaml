@@ -1,0 +1,39 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  APISuccess: Kernel.Types.APISuccess
+module: DriverProfileQuestions
+types:
+  DriverProfileQuesRes:
+    hometown : Maybe Text
+    pledges : "[Text]"
+    drivingSince : "Maybe Int"
+    aspirations : "[Text]"
+    vehicleTags : "[Text]"
+    profileImage: "Maybe Text"
+    otherImages: "[Text]"
+    otherImageIds: "[Text]"
+    vehicleImage: "Maybe Text"
+  DriverProfileQuesReq:
+    aspirations : "[Text]"
+    drivingSince : "Maybe Int"
+    hometown : Maybe Text
+    pledges : "[Text]"
+    vehicleTags : "[Text]"
+    imageIds: "[Text]"
+apis:
+  # POST /DriverProfileQues
+  - POST:
+      endpoint: /DriverProfileQues
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DriverProfileQuesReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+  # GET /DriverProfileQues
+  - GET:
+      endpoint: /DriverProfileQues
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - isImages: Bool
+      response:
+        type: DriverProfileQuesRes

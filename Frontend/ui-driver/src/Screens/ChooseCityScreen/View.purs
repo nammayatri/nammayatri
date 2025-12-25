@@ -20,7 +20,6 @@ import Screens.ChooseCityScreen.ComponentConfig
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..), CarouselData)
-import Common.Types.Config
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.SelectMenuButton as MenuButton
@@ -28,6 +27,8 @@ import Data.Array as DA
 import Data.Function.Uncurried (runFn2)
 import Data.Maybe as Mb
 import Debug (spy)
+import DecodeUtil as DU
+import Data.Function.Uncurried (runFn3)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Size as FontSize
@@ -38,20 +39,22 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, not, pure, unit, ($), (<<<), (<>), (==), (&&), when, void)
-import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), accessibility, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, LoggableScreen, Visibility(..), accessibility, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseCityScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import MerchantConfig.Utils as MU
+import MerchantConfig.Types
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Components.ErrorModal as ErrorModal
 import Mobility.Prelude
 import Locale.Utils
+import Common.RemoteConfig as RC
 
-screen :: ChooseCityScreenState -> Screen Action ChooseCityScreenState ScreenOutput
+screen :: ChooseCityScreenState -> LoggableScreen Action ChooseCityScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -75,6 +78,8 @@ screen initialState =
           let _ = spy "ChooseCityScreen --------action" action
           eval state action
       )
+  , parent : Mb.Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.chooseCityScreenLogWhitelist
   }
 
 
@@ -92,7 +97,7 @@ view push state =
       pure unit
       )(const AfterRender)
   , gradient $ Linear 0.0 ["#F5F8FF", "#E2EAFF"]
-  ][ if state.props.isMockLocation && state.data.config.enableMockLocation 
+  ][ if state.props.isMockLocation && state.data.config.enableMockLocation  && not cugUser
       then mockLocationEnabledView push state
       else
         relativeLayout
@@ -112,10 +117,10 @@ view push state =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , alignParentBottom "true,-1"
-            , visibility $ boolToVisibility (not state.props.isMockLocation)
             ][ PrimaryButton.view (push <<< PrimaryButtonAC ) (primaryButtonConfig state) ]
           ]
     ]
+    where cugUser = Mb.fromMaybe false $ runFn3 DU.getAnyFromWindow "isCUGUser" Mb.Nothing Mb.Just
 
 headerView :: ChooseCityScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 headerView state push = 
@@ -135,54 +140,61 @@ headerView state push =
 
 currentLocationView :: forall w. ChooseCityScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 currentLocationView state push = 
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , gravity CENTER
-  , padding $ Padding 24 24 24 24
-  , margin $ Margin 16 16 16 16
-  , cornerRadius 12.0
-  , background Color.white900
-  , stroke $ "1," <> Color.grey900
-  ][  imageView
-      [ height $ V 220
-      , width $ V 220
-      , imageWithFallback $ fetchImage FF_ASSET $ getLocationMapImage state
-      ]
-    , textView $
-      [ text $ getString LOCATION_UNSERVICEABLE
-      , gravity CENTER
-      , color Color.black800
-      , margin $ MarginTop 4
-      , visibility $ boolToVisibility state.props.locationUnserviceable
-      ] <> FontStyle.h2 TypoGraphy
-    , textView $
-      [ text $ getString case state.props.locationDetectionFailed, Mb.isNothing state.data.locationSelected, state.props.locationUnserviceable of
-                            _ , _ , true -> WE_ARE_NOT_LIVE_IN_YOUR_AREA
-                            false, true, _ -> DETECTING_LOCATION
-                            true, true, _ -> UNABLE_TO_DETECT_YOUR_LOCATION
-                            _, false, _ -> YOUR_DETECTED_LOCATION_IS
-      , gravity CENTER
-      , color Color.black700
-      , margin $ MarginTop if state.props.locationUnserviceable then 4 else 24
-      ] <> FontStyle.paragraphText TypoGraphy
-    , textView $
-      [ text if Mb.isJust state.data.locationSelected then (Mb.fromMaybe "--" state.data.locationSelected) else "--"
-      , gravity CENTER
-      , color Color.black800
-      , margin $ MarginTop 4
-      , visibility $ boolToVisibility (not state.props.locationUnserviceable)
-      ] <> FontStyle.priceFont TypoGraphy
-    , textView $
-      [ text $ getString if Mb.isJust state.data.locationSelected then CHANGE_CITY else SELECT_CITY_STR
-      , gravity CENTER
-      , color Color.blue800
-      , margin $ MarginTop 16
-      , onClick push $ const $ ChangeStage SELECT_CITY
-      , visibility GONE -- Disable change city for now
-      ] <> FontStyle.tags TypoGraphy
-  ]
+  let locSelectedVal = if Mb.isJust state.data.locationSelected then Mb.fromMaybe "" state.data.locationSelected else ""
+      locSelected = 
+        case locSelectedVal of
+          "" -> ""
+          "Paris" -> "Odisha"
+          _ -> locSelectedVal
+
+  in linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , padding $ Padding 24 24 24 24
+    , margin $ Margin 16 16 16 16
+    , cornerRadius 12.0
+    , background Color.white900
+    , stroke $ "1," <> Color.grey900
+    ][  imageView
+        [ height $ V 220
+        , width $ V 220
+        , imageWithFallback $ fetchImage FF_ASSET $ getLocationMapImage state
+        ]
+      , textView $
+        [ text $ getString LOCATION_UNSERVICEABLE
+        , gravity CENTER
+        , color Color.black800
+        , margin $ MarginTop 4
+        , visibility $ boolToVisibility state.props.locationUnserviceable
+        ] <> FontStyle.h2 TypoGraphy
+      , textView $
+        [ text $ getString case state.props.locationDetectionFailed, Mb.isNothing state.data.locationSelected, state.props.locationUnserviceable of
+                              _ , _ , true -> WE_ARE_NOT_LIVE_IN_YOUR_AREA
+                              false, true, _ -> DETECTING_LOCATION
+                              true, true, _ -> UNABLE_TO_DETECT_YOUR_LOCATION
+                              _, false, _ -> YOUR_DETECTED_LOCATION_IS
+        , gravity CENTER
+        , color Color.black700
+        , margin $ MarginTop if state.props.locationUnserviceable then 4 else 24
+        ] <> FontStyle.paragraphText TypoGraphy
+      , textView $
+        [ text if Mb.isJust state.data.locationSelected then locSelected else "--"
+        , gravity CENTER
+        , color Color.black800
+        , margin $ MarginTop 4
+        , visibility $ boolToVisibility (not state.props.locationUnserviceable)
+        ] <> FontStyle.priceFont TypoGraphy
+      , textView $
+        [ text $ getString if Mb.isJust state.data.locationSelected then CHANGE_CITY else SELECT_CITY_STR
+        , gravity CENTER
+        , color Color.blue800
+        , margin $ MarginTop 16
+        , onClick push $ const $ ChangeStage SELECT_CITY
+        , visibility GONE -- Disable change city for now
+        ] <> FontStyle.tags TypoGraphy
+    ]
 
 currentLanguageView :: forall w. ChooseCityScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 currentLanguageView state push = 
@@ -224,7 +236,10 @@ currentLanguageView state push =
 
 radioButtonView :: ChooseCityScreenState -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
 radioButtonView state push visibility' =
-  let items = if state.props.currentStage == SELECT_LANG then state.data.config.languageList else transformCityConfig state.data.merchantOperatingCityConfig
+  let appName = JB.getAppName unit
+      getLanguageList = if state.props.currentStage == SELECT_LANG then RC.appLanguageConfig appName else []
+      languageList = if not DA.null getLanguageList then getLanguageList else state.data.config.languageList
+      items = if state.props.currentStage == SELECT_LANG then languageList else transformCityConfig state.data.merchantOperatingCityConfig
       subTitle = if state.props.currentStage == SELECT_LANG then SELECT_LANGUAGE_DESC else SELECT_LOCATION_DESC
       selectedVal = if state.props.currentStage == SELECT_LANG then state.props.radioMenuFocusedLang else state.props.radioMenuFocusedCity
   in
@@ -257,44 +272,46 @@ radioButtonView state push visibility' =
 
 enableLocationPermission :: ChooseCityScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 enableLocationPermission state push = 
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , gravity CENTER
-  , padding $ Padding 20 20 20 20
-  , margin $ MarginTop 14
-  , visibility $ boolToVisibility (state.props.currentStage == ENABLE_PERMISSION)
-  , margin $ Margin 16 16 16 16
-  , cornerRadius 12.0
-  , background Color.white900
-  , stroke $ "1," <> Color.grey900
-  ][  textView $
-      [ text $ getString ENABLE_LOCATION_PERMISSION
-      , gravity CENTER
-      , color Color.black800
-      , margin $ MarginBottom 20
-      ] <> FontStyle.body8 TypoGraphy
-    , linearLayout 
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , background Color.blue600
-      , cornerRadius 8.0
-      , orientation VERTICAL
-      , gravity CENTER_HORIZONTAL
-      ][ imageView
-         [ height $ V 220
-         , width $ V 220 
-         , imageWithFallback $ fetchImage FF_ASSET "ny_driver_location_permission"
-         ]
-       ]
-    , textView $
-      [ text $ getString PLEASE_ENABLE_LOCATION_PERMISSION_FOR <> "Namma yatri " <> "from your device settings to start riding"
-      , gravity CENTER
-      , color Color.black700
-      , margin $ MarginTop 4
-      ] <> FontStyle.paragraphText TypoGraphy
-  ]
+  let appName = Mb.fromMaybe state.data.config.appData.name $ runFn3 DU.getAnyFromWindow "appName" Mb.Nothing Mb.Just
+  in 
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , padding $ Padding 20 20 20 20
+    , margin $ MarginTop 14
+    , visibility $ boolToVisibility (state.props.currentStage == ENABLE_PERMISSION)
+    , margin $ Margin 16 16 16 16
+    , cornerRadius 12.0
+    , background Color.white900
+    , stroke $ "1," <> Color.grey900
+    ][  textView $
+        [ text $ getString ENABLE_LOCATION_PERMISSION
+        , gravity CENTER
+        , color Color.black800
+        , margin $ MarginBottom 20
+        ] <> FontStyle.body8 TypoGraphy
+      , linearLayout 
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , background Color.blue600
+        , cornerRadius 8.0
+        , orientation VERTICAL
+        , gravity CENTER_HORIZONTAL
+        ][ imageView
+          [ height $ V 220
+          , width $ V 220 
+          , imageWithFallback $ fetchImage FF_ASSET "ny_driver_location_permission"
+          ]
+        ]
+      , textView $
+        [ text $ getString PLEASE_ENABLE_LOCATION_PERMISSION_FOR <> appName <> " from your device settings to start riding\n\n" <> "Background location access is used to get you ride requests even when your app is closed and not in use."
+        , gravity CENTER
+        , color Color.black700
+        , margin $ MarginTop 4
+        ] <> FontStyle.paragraphText TypoGraphy
+    ]
 
 mockLocationEnabledView :: forall w. (Action -> Effect Unit) -> ChooseCityScreenState -> PrestoDOM (Effect Unit) w
 mockLocationEnabledView push state =

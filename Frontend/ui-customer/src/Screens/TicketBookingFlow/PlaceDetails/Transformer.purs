@@ -17,19 +17,20 @@ module Screens.TicketBookingFlow.PlaceDetails.Transformer where
 
 import Prelude
 
-import Accessor (_ticketShortId, _ticketPlaceId, _ticketPlaceName, _personId, _amount, _visitDate, _status, _services)
-import Data.Array (elem, find, groupBy, length, mapWithIndex, (!!), filter)
+import Accessor (_ticketShortId, _ticketPlaceId, _ticketPlaceName, _personId, _amount, _visitDate, _status, _services, _id, _categoryId, _name, _availableSeats, _allowedSeats, _bookedSeats, _peopleCategories, _isClosed)
+import Data.Array (head, concat, sortBy, elem, find, groupBy, length, mapWithIndex, (!!), filter)
 import Data.String (toUpper)
 import Data.String as DS
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Services.API as API
 import Data.Lens((^.))
-import Screens.Types(TimeInterval, TicketCategoriesData, PeopleCategoriesRespData, BusinessHoursData, SlotsAndTimeIntervalData, TicketServiceData, TicketBookingScreenState(..), TicketBookingItem(..),IndividualBookingItem(..), TicketBookingCategoryDetails(..), TicketBookingServiceDetails(..), TicketBookingPeopleCategoryDetails(..))
+import Screens.Types(PeopleCategoriesData, OperationalDaysData, FlattenedBusinessHourData, TicketServiceData, ServiceCategory, TimeInterval, TicketBookingScreenState(..), TicketBookingItem(..),IndividualBookingItem(..), TicketBookingCategoryDetails(..), TicketBookingServiceDetails(..), TicketBookingPeopleCategoryDetails(..), OperationalDate(..))
 import Data.Array.NonEmpty as DAN
 import Data.Int (ceil)
 import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUTC, convertUTCtoISC)
 import Data.Function.Uncurried (runFn3)
 import Helpers.Utils(incrOrDecrTimeFrom)
+import Data.Ord (compare)
 
 buildBookingDetails :: (Array API.TicketBookingAPIEntity) -> Array TicketBookingItem
 buildBookingDetails res =
@@ -94,104 +95,6 @@ ticketBookingPCTransformer pcs =
       }
   ) (pcs)
 
-
-transformRespToStateData :: Boolean -> API.TicketServiceResp -> TicketBookingScreenState -> String -> TicketServiceData
-transformRespToStateData isFirstElement (API.TicketServiceResp service) state selOpDay = do
-  let timeIntervalDataInfo = convertServiceDataToTimeIntervalData service.businessHours
-  { id : service.id,
-    serviceName : service.name,
-    shortDesc : service.shortDesc,
-    allowFutureBooking : service.allowFutureBooking,
-    expiry : service.expiry,
-    businessHours : map convertServiceBusinessHoursData service.businessHours,
-    timeIntervalData : timeIntervalDataInfo,
-    isExpanded : isFirstElement,
-    selectedBHid : getValidBHid (getValidTimeIntervals timeIntervalDataInfo selOpDay) selOpDay state.data.dateOfVisit state service.expiry,
-    selectedSlot : Nothing
-  }
-  where
-  convertServiceDataToTimeIntervalData :: Array API.BusinessHoursResp -> Array SlotsAndTimeIntervalData
-  convertServiceDataToTimeIntervalData respArr = do
-    let groupedBusinessHours = groupBy (\(API.BusinessHoursResp x) (API.BusinessHoursResp y) -> x.operationalDays == y.operationalDays) respArr
-    map generateSlotData groupedBusinessHours
-
-  generateSlotData :: DAN.NonEmptyArray API.BusinessHoursResp -> SlotsAndTimeIntervalData
-  generateSlotData bhs = 
-    let (API.BusinessHoursResp headBH) = DAN.head bhs
-        businessHours = DAN.toArray bhs
-    in
-      { operationalDays : headBH.operationalDays,
-        slot : if (isClosed headBH.specialDayType) then [] else filter (\slotinfo -> slotinfo.slot /= "") (map (\(API.BusinessHoursResp bh) -> {bhourId : bh.id, slot : fromMaybe "" bh.slot }) businessHours ),
-        timeIntervals : if (isClosed headBH.specialDayType) then [] else filter (\timeIntervalInfo -> timeIntervalInfo.startTime /= "" || timeIntervalInfo.endTime /= "") (map (\(API.BusinessHoursResp bh) -> {bhourId : bh.id, startTime : fromMaybe "" bh.startTime, endTime : fromMaybe "" bh.endTime }) businessHours)
-      }
-    where
-      isClosed specialDayType = maybe false (\val -> val == "Closed") specialDayType
-
-  convertServiceBusinessHoursData :: API.BusinessHoursResp -> BusinessHoursData
-  convertServiceBusinessHoursData (API.BusinessHoursResp resp) = do
-    { bhourId : resp.id,
-      slot : resp.slot,
-      startTime : resp.startTime,
-      endTime : resp.endTime ,
-      categories : map (convertServiceTicketCategoriesData (length resp.categories)) resp.categories,
-      operationalDays : resp.operationalDays
-    }
-  convertPeopleCategoriesData :: API.PeopleCategoriesResp -> PeopleCategoriesRespData
-  convertPeopleCategoriesData (API.PeopleCategoriesResp price) = do
-    { peopleCategoryName : price.name,
-      pricePerUnit : ceil price.pricePerUnit,
-      currentValue : 0,
-      peopleCategoryId : price.id,
-      ticketLimitCrossed : false
-    }
-  convertServiceTicketCategoriesData :: Int ->API.TicketCategoriesResp -> TicketCategoriesData
-  convertServiceTicketCategoriesData catLength (API.TicketCategoriesResp resp) = do
-    { categoryName : resp.name,
-      categoryId : resp.id,
-      availableSeats : resp.availableSeats,
-      allowedSeats : resp.allowedSeats,
-      bookedSeats : resp.bookedSeats,
-      peopleCategories : map convertPeopleCategoriesData resp.peopleCategories,
-      isSelected : catLength <= 1
-    }
-
-getValidTimeIntervals :: Array SlotsAndTimeIntervalData -> String -> Array TimeInterval
-getValidTimeIntervals timeInData selOpDay = do
-  let validSlotTIdata = find (\ti -> selOpDay `elem` ti.operationalDays) timeInData
-  maybe [] (\validSlot -> validSlot.timeIntervals) validSlotTIdata
-
-getValidBHid :: Array TimeInterval -> String -> String -> TicketBookingScreenState -> API.ServiceExpiry -> Maybe String
-getValidBHid timeIntervals selOperationalDay dateOfVisit state expiry = do
-    let now = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
-        currentDate = convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD"
-        selTimeInterval = timeIntervals !! 0
-    case selTimeInterval of
-      Nothing -> Nothing
-      Just sti -> do
-        let startTime = if not (DS.null sti.startTime) then convertUTCTimeToISTTimeinHHMMSS sti.startTime else ""
-            endTime = if not (DS.null  sti.endTime) then convertUTCTimeToISTTimeinHHMMSS sti.endTime else ""
-        if dateOfVisit == currentDate then do
-            case expiry of
-              API.InstantExpiry val -> do
-                if not (DS.null startTime) then do
-                  let newStartTime = runFn3 incrOrDecrTimeFrom startTime val false
-                  if (now > newStartTime) then 
-                      if not (DS.null endTime) then do
-                        if (now < endTime) then Just sti.bhourId
-                        else Nothing 
-                      else Just sti.bhourId
-                  else Nothing
-                else 
-                    if not (DS.null endTime) then do
-                      if (now < endTime) then Just sti.bhourId
-                      else Nothing 
-                    else Nothing
-              _ ->  if not (DS.null endTime) then do
-                      if (now < endTime) then Just sti.bhourId
-                      else Nothing 
-                    else Nothing
-        else Just sti.bhourId
-
 dummyTicketBookingApiEntity :: API.TicketBookingAPIEntity
 dummyTicketBookingApiEntity = API.TicketBookingAPIEntity {
   ticketShortId : "",
@@ -208,4 +111,112 @@ getBookingStatus status =
     "PENDING" -> (API.Pending)
     "FAILED" -> API.Failed
     "BOOKED" -> API.Booked 
+    "CANCELLED" -> API.Cancelled
     _ -> API.Pending
+
+transformRespToStateDatav2 :: Boolean -> API.TicketServiceResp -> TicketBookingScreenState -> String -> TicketServiceData
+transformRespToStateDatav2 isFirstElement (API.TicketServiceResp service) state selOpDay =
+  let serviceCatData = transformBusinessHoursToServiceCategoriesData service.businessHours selOpDay
+      modifiedSelectedServiceCategoriesData = selectByDefaultOneServiceCategory serviceCatData selOpDay
+  in
+  { id : service.id,
+    serviceName : service.name,
+    allowFutureBooking : service.allowFutureBooking,
+    shortDesc : service.shortDesc,
+    expiry : service.expiry,
+    isExpanded : isFirstElement,
+    serviceCategories : modifiedSelectedServiceCategoriesData,
+    selectedBHId : Nothing
+  }
+  where
+    transformBusinessHoursToServiceCategoriesData :: Array API.BusinessHoursResp -> String -> Array ServiceCategory
+    transformBusinessHoursToServiceCategoriesData respArr selOpDay =
+      let flattenedBusinessHourData = flattenBusinessHourData respArr
+          sortedServicesData = sortBy (\bh1 bh2-> compare (bh1.category ^. _id) (bh2.category ^. _id)) flattenedBusinessHourData
+          groupedBusinessHoursAccordingToServiceCategories = groupBy (\bh1 bh2 -> (bh1.category ^. _id) == (bh2.category ^. _id)) sortedServicesData
+      in concat $ map (generateServiceCategoryData selOpDay) groupedBusinessHoursAccordingToServiceCategories
+
+    generateServiceCategoryData :: String -> DAN.NonEmptyArray FlattenedBusinessHourData -> Array ServiceCategory
+    generateServiceCategoryData selOpDay respNEArr = do
+      let respArr = DAN.toArray respNEArr
+          operationalDaysData = generateOperationalDaysData respArr
+      case head respArr of
+        Nothing -> []
+        Just bhData ->
+          [{  categoryId : bhData.category ^. _id,
+              categoryName : bhData.category ^. _name,
+              availableSeats : bhData.category ^. _availableSeats,
+              allowedSeats : bhData.category ^. _allowedSeats,
+              bookedSeats :  bhData.category ^. _bookedSeats,
+              isClosed : bhData.category ^. _isClosed,
+              isSelected : false,
+              peopleCategories : generatePeopleCategories (bhData.category ^. _peopleCategories),
+              operationalDays : operationalDaysData,
+              operationalDate : bhData.operationalDate,
+              validOpDay : find (\opDay -> selOpDay `elem` opDay.operationalDays) operationalDaysData,
+              noRemainingTicketAvailable : false
+          }]
+
+    generateOperationalDaysData :: Array FlattenedBusinessHourData -> Array OperationalDaysData
+    generateOperationalDaysData respArr =
+      let sortedData = sortBy (\bh1 bh2 -> compare bh1.operationalDays bh2.operationalDays) respArr
+          groupedData = groupBy (\bh1 bh2 -> bh1.operationalDays == bh2.operationalDays) sortedData
+      in map generateSlotData groupedData
+
+    generateOperationalDateData :: Maybe API.OperationalDateResp -> Maybe OperationalDate
+    generateOperationalDateData res = 
+      case res of
+        Just (API.OperationalDateResp resp) ->
+          Just { startDate : resp.startDate,
+                 endDate : resp.eneDate
+                }
+        Nothing -> Nothing
+    
+
+    generateSlotData :: DAN.NonEmptyArray FlattenedBusinessHourData -> OperationalDaysData
+    generateSlotData bhs = 
+      let headBH = DAN.head bhs
+          businessHours = DAN.toArray bhs
+      in
+        { operationalDays : headBH.operationalDays,
+          slot : if (isClosed headBH.specialDayType) then [] else filter (\x -> not DS.null x.slot ) (map (\bh -> {bhourId : bh.id, slot : fromMaybe "" bh.slot }) businessHours ),
+          timeIntervals : if (isClosed headBH.specialDayType) then [] else filter (\x -> not DS.null x.startTime || not DS.null x.endTime ) (map (\bh -> {bhourId : bh.id, startTime : fromMaybe "" bh.startTime, endTime : fromMaybe "" bh.endTime }) businessHours)
+        }
+      where
+        isClosed specialDayType = maybe false (\val -> val == "Closed") specialDayType
+
+    generatePeopleCategories :: Array API.PeopleCategoriesResp -> Array PeopleCategoriesData
+    generatePeopleCategories arr = map (\(API.PeopleCategoriesResp resp) -> 
+          { peopleCategoryName : resp.name,
+            pricePerUnit : ceil resp.pricePerUnit,
+            currentValue : 0,
+            peopleCategoryId : resp.id,
+            ticketLimitCrossed : false
+          }) arr
+
+    flattenBusinessHourData :: Array API.BusinessHoursResp -> Array FlattenedBusinessHourData
+    flattenBusinessHourData respArr = 
+      concat
+      ( map (\(API.BusinessHoursResp bh) ->
+           map (\(API.TicketCategoriesResp cat) -> 
+            { id : bh.id,
+              slot : bh.slot,
+              startTime : bh.startTime,
+              endTime : bh.endTime,
+              specialDayDescription : bh.specialDayDescription,
+              specialDayType : bh.specialDayType,
+              operationalDays : sortBy (\d1 d2 -> compare d1 d2) bh.operationalDays,
+              operationalDate : generateOperationalDateData bh.operationalDate,
+              category : (API.TicketCategoriesResp cat)
+            }) bh.categories
+        ) respArr
+      )
+
+    getCategoriesId :: Array API.TicketCategoriesResp -> Array String
+    getCategoriesId categoryRespArr = map (\(API.TicketCategoriesResp x) -> x.id) categoryRespArr
+
+selectByDefaultOneServiceCategory :: Array ServiceCategory -> String -> Array ServiceCategory
+selectByDefaultOneServiceCategory arr selOpDay = 
+  case (find (\serviceCat -> length (filter (\opDay -> selOpDay `elem` opDay.operationalDays) serviceCat.operationalDays) > 0 ) arr) of
+    Nothing -> map (\elem -> elem {isSelected = false}) arr
+    Just serviceCat -> map (\elem -> if elem.categoryId == serviceCat.categoryId then elem {isSelected = true} else elem {isSelected = false}) arr

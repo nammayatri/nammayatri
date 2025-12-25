@@ -1,0 +1,41 @@
+imports:
+  ShortId: Kernel.Types.Id
+  Merchant: Domain.Types.Merchant
+  Client: Domain.Types.Client
+  Person: Domain.Types.Person
+  VehicleCategory : BecknV2.OnDemand.Enums
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+ClientPersonInfo:
+  tableName: client_person_info
+
+  fields:
+    id: Id ClientPersonInfo
+    clientId : Maybe (Id Client)
+    personId: Id Person
+    vehicleCategory : Maybe VehicleCategory|NoRelation
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId : Id Merchant
+    rideCount : Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    personId: SecondaryKey
+  queries :
+    updateHasTakenValidRideCount:
+      kvFunction: updateOneWithKV
+      params: [rideCount]
+      where:
+        and: [personId, vehicleCategory]
+    findByPersonIdAndVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [personId, vehicleCategory]
+    findAllByPersonId:
+      kvFunction: findAllWithKV
+      where:
+        personId
+
+

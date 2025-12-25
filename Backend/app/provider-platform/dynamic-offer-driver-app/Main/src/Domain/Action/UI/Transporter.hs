@@ -22,8 +22,9 @@ module Domain.Action.UI.Transporter
 where
 
 import Control.Applicative
+import qualified Domain.Action.UI.Merchant as DM
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)

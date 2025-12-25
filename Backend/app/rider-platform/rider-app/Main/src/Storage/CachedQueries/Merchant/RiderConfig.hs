@@ -14,34 +14,48 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.RiderConfig
-  ( findByMerchantOperatingCityId,
+  ( create,
     clearCache,
+    findByMerchantOperatingCityId,
+    findByMerchantOperatingCityIdInRideFlow,
+    updateByPrimaryKey,
   )
 where
 
-import Domain.Types.Merchant.RiderConfig
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.RiderConfig
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Merchant.RiderConfig as Queries
+import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Yudhishthira ()
+import qualified Storage.Queries.RiderConfig as Queries
+import qualified Tools.DynamicLogic as DynamicLogic
 
-findByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m (Maybe RiderConfig)
-findByMerchantOperatingCityId id =
-  Hedis.safeGet (makeMerchantOperatingCityIdKey id) >>= \case
-    Just a -> return a
-    Nothing -> flip whenJust cacheRiderConfig /=<< Queries.findByMerchantOperatingCityId id
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RiderConfig -> m ()
+create = Queries.create
 
-cacheRiderConfig :: (CacheFlow m r) => RiderConfig -> m ()
-cacheRiderConfig riderConfig = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let riderConfigKey = makeMerchantOperatingCityIdKey riderConfig.merchantOperatingCityId
-  Hedis.setExp riderConfigKey riderConfig expTime
+findByMerchantOperatingCityIdInRideFlow ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id MerchantOperatingCity ->
+  [LYT.ConfigVersionMap] ->
+  m (Maybe RiderConfig)
+findByMerchantOperatingCityIdInRideFlow id configInExperimentVersions =
+  findByMerchantOperatingCityId id (Just configInExperimentVersions)
 
-makeMerchantOperatingCityIdKey :: Id MerchantOperatingCity -> Text
-makeMerchantOperatingCityIdKey id = "CachedQueries:RiderConfig:MerchantOperatingCityId-" <> id.getId
+findByMerchantOperatingCityId ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id MerchantOperatingCity ->
+  Maybe [LYT.ConfigVersionMap] ->
+  m (Maybe RiderConfig)
+findByMerchantOperatingCityId id mbConfigInExperimentVersions = IM.withInMemCache ["RC", id.getId, show mbConfigInExperimentVersions] 3600 do
+  DynamicLogic.findOneConfig (cast id) (LYT.RIDER_CONFIG LYT.RiderConfig) mbConfigInExperimentVersions Nothing (Queries.findByMerchantOperatingCityId id)
 
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
-clearCache merchanOperatingCityId = do
-  Hedis.del (makeMerchantOperatingCityIdKey merchanOperatingCityId)
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
+clearCache id = DynamicLogic.clearConfigCache (cast id) (LYT.RIDER_CONFIG LYT.RiderConfig) Nothing
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RiderConfig -> m ()
+updateByPrimaryKey riderConfig = do
+  Queries.updateByPrimaryKey riderConfig
+  clearCache riderConfig.merchantOperatingCityId

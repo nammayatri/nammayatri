@@ -15,8 +15,8 @@
 
 module Screens.WriteToUsScreen.Controller where
 
-import Prelude (class Show, pure, unit, ($), discard)
-import PrestoDOM (Eval, continue, exit)
+import Prelude (class Show, pure, unit, ($), discard, show, (<>))
+import PrestoDOM (Eval, update, continue, exit)
 import Screens.Types (WriteToUsScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Components.PrimaryButton as PrimaryButton
@@ -28,7 +28,11 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import Screens (ScreenName(..), getScreen)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (NoAction ) = "NoAction"
+  show (PrimaryEditTextActionController var1) = "PrimaryEditTextActionController" <> show var1
+  show (PrimaryButtonActionController _ var1) = "PrimaryButtonActionController" <> show var1
+  show (BackPressed ) = "BackPressed"
+  show (AfterRender ) = "AfterRender"
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen WRITE_TO_US_SCREEN)
@@ -38,6 +42,7 @@ instance loggableAction :: Loggable Action where
     PrimaryEditTextActionController act -> case act of
       PrimaryEditText.TextChanged id value -> trackAppTextInput appId (getScreen WRITE_TO_US_SCREEN) "ride_feedback_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen WRITE_TO_US_SCREEN) "ride_feedback_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppTextInput appId (getScreen WRITE_TO_US_SCREEN) "ride_feedback_text_image_clicked" "primary_edit_text"
     PrimaryButtonActionController primaryButtonState act -> case primaryButtonState.props.isThankYouScreen of
       true -> case act of
         PrimaryButton.OnClick -> do
@@ -64,7 +69,7 @@ eval BackPressed state = exit GoBack
 eval (PrimaryButtonActionController primaryButtonState (PrimaryButton.OnClick) ) state = if(state.props.isThankYouScreen) then exit GoToHomeScreen
   else continue $ state {props = state.props {isThankYouScreen = true}}
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = continue state
-eval _ state = continue state
+eval _ state = update state
 
 
 getTitle :: ListOptions -> String

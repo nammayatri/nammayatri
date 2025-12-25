@@ -15,18 +15,23 @@
 module Storage.Queries.DriverQuote.Internal where
 
 import Domain.Types.DriverQuote as DriverQuote
-import Kernel.Beam.Functions (findAllWithKV)
+import Kernel.Beam.Functions (findAllWithKVAndConditionalDB)
 import Kernel.Prelude
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.DriverQuote as BeamDQ
-import Storage.Queries.Instances.Person ()
+import Storage.Queries.OrphanInstances.DriverQuote ()
+import Storage.Queries.OrphanInstances.Person ()
 
 getDriverQuote ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) =>
   [Text] ->
   m [DriverQuote.DriverQuote]
 getDriverQuote personKeys =
-  findAllWithKV
-    [ Se.And [Se.Is BeamDQ.driverId $ Se.In personKeys, Se.Is BeamDQ.status $ Se.Eq DriverQuote.Active]
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is BeamDQ.driverId $ Se.In personKeys,
+          Se.Is BeamDQ.status $ Se.Eq DriverQuote.Active
+        ]
     ]
+    Nothing

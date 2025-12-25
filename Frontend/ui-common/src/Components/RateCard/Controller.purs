@@ -18,10 +18,26 @@ module Components.RateCard.Controller where
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Data.Show.Generic (genericShow)
-import Prelude (class Eq, class Show)
-import Common.Types.App (RateCardType(..), FareList(..))
+import Prelude (class Eq, class Show, show, (<>))
+import Common.Types.App (RateCardType(..), FareList(..), WaitingTimeInfo(..))
 import Components.PrimaryButton as PrimaryButton
 import Data.Maybe(Maybe(..))
+import PrestoDOM (Length(..), Margin(..), Visibility(..))
+import Styles.Colors as Color
+
+instance showAction :: Show Action where
+  show (Close) = "Close"
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (GoToDefaultStart) = "GoToDefaultStart"
+  show (GoToDriverAddition) = "GoToDriverAddition"
+  show (GoToFareUpdate) = "GoToFareUpdate"
+  show (GoToWaitingCharges) = "GoToWaitingCharges"
+  show (GoToTollOrParkingCharges) = "GoToTollOrParkingCharges"
+  show (GoToDriverAllowance) = "GoToDriverAllowance"
+  show (GoToNightShiftCharges) = "GoToNightShiftCharges"
+  show (GoToTollAndParkingCharges) = "GoToTollAndParkingCharges"
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
 
 data Action = Close 
               | BackPressed 
@@ -30,52 +46,74 @@ data Action = Close
               | GoToDriverAddition 
               | GoToFareUpdate 
               | GoToWaitingCharges
+              | GoToTollOrParkingCharges
+              | GoToDriverAllowance
+              | GoToNightShiftCharges
+              | GoToTollAndParkingCharges
               | PrimaryButtonAC PrimaryButton.Action
 
 
 type Config = {
-    baseFare :: String,
-    extraFare :: String,
-    pickUpCharges :: String,
     additionalFare :: String,
-    nightCharges :: Boolean,
-    nightShiftMultiplier :: String, 
+    isNightShift :: Boolean,
     currentRateCardType :: RateCardType,
+    fareInfoDescription :: Array String,
     onFirstPage :: Boolean,
     showDetails :: Boolean,
-    alertDialogPrimaryColor :: String,
     title :: String,
     description :: String,
     buttonText :: Maybe String,
     applicableCharges :: String,
-    primaryButtonText :: String,
     fareList :: Array FareList,
     otherOptions :: Array FareList,
+    driverAdditions :: Array FareList,
     additionalStrings :: Array FareList,
+    fareInfoText :: String,
+    waitingTimeInfo :: WaitingTimeInfo,
     driverAdditionsImage :: String,
-    fareInfoText :: String
+    primaryButtonConfig :: ButtonConfig
 }
+
+type ButtonConfig =
+  { margin :: Margin
+  , text :: String
+  , color :: String
+  , height :: Length
+  , cornerRadius :: Number
+  , background :: String
+  , visibility :: Visibility
+  , enableRipple :: Boolean
+  , rippleColor :: String
+  }
 
 config :: Config 
 config = {
-    baseFare : "₹45",
-    extraFare : "₹23",
-    pickUpCharges : "₹10", 
+    isNightShift : false,
     additionalFare : "₹30",
-    nightCharges : false,
-    nightShiftMultiplier : "1.5",
     currentRateCardType : DefaultRateCard,
     onFirstPage : false,
     showDetails : true,
-    alertDialogPrimaryColor: "#2194FF",
     title : "",
     description : "",
+    fareInfoDescription: [],
     buttonText : Nothing,
-    primaryButtonText : "",
+    driverAdditions : [],
     applicableCharges : "",
     driverAdditionsImage : "",
     fareList : [],
     otherOptions : [],
     additionalStrings : [],
-    fareInfoText : ""
+    fareInfoText : "",
+    waitingTimeInfo : { freeMinutes: "", charge: "" },
+    primaryButtonConfig : {
+      text: ""
+    , color : Color.yellow900
+    , margin : MarginVertical 20 10
+    , cornerRadius : 8.0
+    , background : Color.black900
+    , height : V 54
+    , visibility : GONE
+    , enableRipple : true
+    , rippleColor : Color.rippleShade
+    }
 }

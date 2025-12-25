@@ -11,8 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.FareParameters.FareParametersSlabDetails where
 
@@ -28,7 +26,8 @@ data FareParametersSlabDetailsT f = FareParametersSlabDetailsT
   { fareParametersId :: B.C f Text,
     platformFee :: B.C f (Maybe HighPrecMoney),
     sgst :: B.C f (Maybe HighPrecMoney),
-    cgst :: B.C f (Maybe HighPrecMoney)
+    cgst :: B.C f (Maybe HighPrecMoney),
+    currency :: B.C f (Maybe Currency)
   }
   deriving (Generic, B.Beamable)
 

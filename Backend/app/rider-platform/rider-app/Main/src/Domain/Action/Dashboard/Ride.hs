@@ -11,78 +11,82 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.Dashboard.Ride
-  ( shareRideInfo,
-    rideList,
+  ( getRideInfo,
+    getShareRideInfoByShortId,
+    getRideList,
     rideInfo,
-    multipleRideCancel,
-    MultipleRideCancelReq,
+    getShareRideInfo,
+    postRideCancelMultiple,
     rideSync,
-    ticketRideList,
+    getRideKaptureList,
+    getRideTripRoute,
+    getRidePickupRoute,
+    postRideSyncMultiple,
+    validateMultipleRideSyncReq,
+    cancellationChargesWaiveOff,
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
+import qualified Beckn.ACL.Common as Common
 import Beckn.ACL.Status
-import qualified "dashboard-helper-api" Dashboard.Common as Common
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Data.Coerce (coerce)
 import qualified Data.List as DL
 import qualified Data.Text as T
+import Domain.Action.Dashboard.Route (mkGetLocation)
+import qualified Domain.Action.UI.EstimateBP as EstimateBP
+import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
-import qualified Domain.Types.Booking.Type as DB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
+import qualified Domain.Types.BookingStatus as DTB
 import Domain.Types.CancellationReason
+import Domain.Types.Common
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Location (Location (..))
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
+import qualified Domain.Types.Sos as DSos
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (count, isNothing, on)
+import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Tools.Logging
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Predicate (UniqueField (..))
 import Kernel.Utils.Common
+import Kernel.Utils.Validation (Validate, runRequestValidation, validateField)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
+import qualified Storage.Queries.BookingPartiesLink as QBPL
+import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SearchRequest as QSearch
-
-data BookingCancelledReq = BookingCancelledReq
-  { bookingId :: Id DTB.Booking,
-    cancellationReasonCode :: CancellationReasonCode,
-    cancellationStage :: CancellationStage,
-    additionalInfo :: Maybe Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-newtype MultipleRideCancelReq = MultipleRideCancelReq
-  { multipleRideCancelInfo :: [BookingCancelledReq]
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Common.HideSecrets MultipleRideCancelReq where
-  hideSecrets = identity
-
----------------------------------------------------------------------
 
 mkCommonRideStatus :: DRide.RideStatus -> Common.RideStatus
 mkCommonRideStatus rs = case rs of
+  DRide.UPCOMING -> Common.UPCOMING_RIDE
   DRide.NEW -> Common.NEW
   DRide.INPROGRESS -> Common.INPROGRESS
   DRide.COMPLETED -> Common.COMPLETED
@@ -99,15 +103,33 @@ mkCommonBookingLocation Location {..} =
 mkAddressRes :: LocationAddress -> Common.LocationAddress
 mkAddressRes LocationAddress {..} = Common.LocationAddress {..}
 
-shareRideInfo ::
+getShareRideInfo ::
   ShortId DM.Merchant ->
+  Context.City ->
   Id Common.Ride ->
   Flow Common.ShareRideInfoRes
-shareRideInfo merchantId rideId = do
+getShareRideInfo merchantId _ rideId = do
   ride <- B.runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  buildShareRideInfo merchantId ride
+
+getShareRideInfoByShortId ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  ShortId Common.Ride ->
+  Flow Common.ShareRideInfoRes
+getShareRideInfoByShortId merchantId _ rideId = do
+  let rideShortId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) rideId
+  ride <- QRide.findRideByRideShortId rideShortId >>= fromMaybeM (InvalidRequest "Ride ShortId Not Found")
+  buildShareRideInfo merchantId ride
+
+buildShareRideInfo ::
+  ShortId DM.Merchant ->
+  DRide.Ride ->
+  Flow Common.ShareRideInfoRes
+buildShareRideInfo merchantId ride = do
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   merchant <- findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
-  unless (merchant.id == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
+  unless (merchant.id == booking.merchantId) $ throwError (RideDoesNotExist ride.id.getId)
   case ride.status of
     DRide.COMPLETED -> throwError $ RideInvalidStatus "This ride is completed"
     DRide.CANCELLED -> throwError $ RideInvalidStatus "This ride is cancelled"
@@ -116,36 +138,72 @@ shareRideInfo merchantId rideId = do
   let mbtoLocation = case booking.bookingDetails of
         DB.OneWayDetails locationDetail -> Just $ mkCommonBookingLocation locationDetail.toLocation
         DB.DriverOfferDetails driverOfferDetail -> Just $ mkCommonBookingLocation driverOfferDetail.toLocation
+        DB.DeliveryDetails deliveryDetails -> Just $ mkCommonBookingLocation deliveryDetails.toLocation
+        DB.InterCityDetails details -> Just $ mkCommonBookingLocation details.toLocation
         _ -> Nothing
   let mbDistance = case booking.bookingDetails of
         DB.OneWayDetails locationDetail -> Just $ locationDetail.distance
         DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
         DB.OneWaySpecialZoneDetails oneWaySpecialZoneDetail -> Just $ oneWaySpecialZoneDetail.distance
+        DB.InterCityDetails details -> Just details.distance
+        DB.DeliveryDetails details -> Just details.distance
         _ -> Nothing
+  let driverNumber =
+        ( case booking.tripCategory of
+            Just (Delivery _) -> Just ride.driverMobileNumber
+            _ -> Nothing
+        )
+          <&> (\number -> if ride.status `elem` [DRide.NEW, DRide.INPROGRESS] then number else "xxxx")
+  sosDetails <- CQSos.findByRideId ride.id
+  let fareProductType = mkFareProductType booking.bookingDetails
   return $
     Common.ShareRideInfoRes
       { id = cast ride.id,
         bookingId = cast ride.bookingId,
         status = mkCommonRideStatus ride.status,
         driverName = ride.driverName,
+        driverNumber = driverNumber,
         driverRating = ride.driverRating,
         vehicleNumber = ride.vehicleNumber,
         vehicleModel = ride.vehicleModel,
-        vehicleColor = ride.vehicleColor,
+        vehicleColor = fromMaybe "NA" ride.vehicleColor, -- TODO::remove this default value
         trackingUrl = ride.trackingUrl,
-        estimatedDistance = mbDistance,
+        estimatedDistance = distanceToHighPrecMeters <$> mbDistance,
+        estimatedDistanceWithUnit = mbDistance,
         rideStartTime = ride.rideStartTime,
         rideEndTime = ride.rideEndTime,
         userFirstName = person.firstName,
         userLastName = person.lastName,
         fromLocation = mkCommonBookingLocation booking.fromLocation,
-        toLocation = mbtoLocation
+        toLocation = mbtoLocation,
+        sosStatus = castSosStatus . (.status) <$> sosDetails,
+        vehicleVariant = ride.vehicleVariant,
+        nextStopLocation = getStopFromBookingDetails booking.bookingDetails,
+        rideScheduledAt = booking.startTime,
+        fareProductType = fareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+        tripCategory = getTripCategory booking.tripCategory fareProductType,
+        estimatedEndTimeRange = (\tr -> (tr.start, tr.end)) <$> ride.estimatedEndTimeRange,
+        destinationReachedAt = ride.destinationReachedAt
       }
+
+getStopFromBookingDetails :: DTB.BookingDetails -> Maybe Common.Location
+getStopFromBookingDetails bookingDetails = case bookingDetails of
+  DB.RentalDetails rentalDetails -> mkCommonBookingLocation <$> rentalDetails.stopLocation
+  _ -> Nothing
+
+castSosStatus :: DSos.SosStatus -> Common.SosStatus
+castSosStatus = \case
+  DSos.Pending -> Common.Pending
+  DSos.Resolved -> Common.Resolved
+  DSos.NotResolved -> Common.NotResolved
+  DSos.MockPending -> Common.MockPending
+  DSos.MockResolved -> Common.MockResolved
 
 ---------------------------------------------------------------------
 
-rideList ::
+getRideList ::
   ShortId DM.Merchant ->
+  Context.City ->
   Maybe Int ->
   Maybe Int ->
   Maybe Common.BookingStatus ->
@@ -155,14 +213,17 @@ rideList ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Flow Common.RideListRes
-rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo = do
+getRideList merchantShortId _ mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo = withDynamicLogLevel "ride-list" $ do
   merchant <- findMerchantByShortId merchantShortId
   let limit_ = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset_ = fromMaybe 0 mbOffset
   let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   now <- getCurrentTime
-  when (isNothing mbBookingStatus && isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhone) $ throwError $ InvalidRequest "Atleast one of the filter is required"
+  when (isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhone) $ throwError $ InvalidRequest "Atleast one of the filter is required"
+  case (mbFrom, mbTo) of
+    (Just from', Just to') -> when (from' > to') $ throwError $ InvalidRequest "from date should be less than to date"
+    _ -> pure ()
   rideItems <- B.runInReplica $ QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
@@ -173,9 +234,10 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
     maxLimit = 20
     defaultLimit = 10
 
-buildRideListItem :: EncFlow m r => QRide.RideItem -> m Common.RideListItem
+buildRideListItem :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => QRide.RideItem -> m Common.RideListItem
 buildRideListItem QRide.RideItem {..} = do
   customerPhoneNo <- mapM decrypt person.mobileNumber
+  let fareProductType = mkFareProductType bookingDetails
   pure
     Common.RideListItem
       { rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) ride.shortId,
@@ -186,11 +248,23 @@ buildRideListItem QRide.RideItem {..} = do
         driverName = ride.driverName,
         driverPhoneNo = ride.driverMobileNumber,
         vehicleNo = ride.vehicleNumber,
-        bookingStatus
+        endOtp = ride.endOtp,
+        nextStopLocation = getStopFromBookingDetails bookingDetails,
+        fareProductType = fareProductType,
+        tripCategory = getTripCategory tripCategory fareProductType,
+        isSafetyPlus = ride.isSafetyPlus,
+        ..
       }
 
-ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
-ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
+getRideKaptureList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe (ShortId Common.Ride) ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow Common.TicketRideListRes
+getRideKaptureList merchantShortId _ mbRideShortId countryCode mbPhoneNumber _ = withDynamicLogLevel "ride-kapture-list" $ do
   merchant <- findMerchantByShortId merchantShortId
   let totalRides = 5
   let mbShortId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbRideShortId
@@ -245,26 +319,41 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
           dropLocationAreaCode = (.address.areaCode) =<< detail.customerDropLocation,
           dropLocationArea = (.address.area) =<< detail.customerDropLocation,
           fare = detail.actualFare,
+          fareWithCurrency = detail.actualFareWithCurrency,
           personId = cast personId,
-          classification = Ticket.CUSTOMER
+          classification = Ticket.CUSTOMER,
+          nextStopLocation = detail.nextStopLocation,
+          rideScheduledAt = detail.rideScheduledAt,
+          fareProductType = detail.fareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+          tripCategory = detail.tripCategory,
+          endOtp = ride.endOtp
         }
 
-rideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id Common.Ride -> m Common.RideInfoRes
+getRideInfo ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Ride ->
+  Flow Common.RideInfoRes
+getRideInfo merchantShortId _ rideId = do
+  merchant <- findMerchantByShortId merchantShortId
+  rideInfo merchant.id rideId
+
+rideInfo :: Id DM.Merchant -> Id Common.Ride -> Flow Common.RideInfoRes
 rideInfo merchantId reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  estimatedDuration <- case booking.quoteId of
+  let estimatedDuration :: Maybe Seconds = booking.estimatedDuration
+  estBreakup <- case booking.quoteId of
     Just quoteId -> do
-      mbQuote <- B.runInReplica $ QQuote.findById quoteId
-      case mbQuote of
-        Just quote -> do
-          mbSearchReq <- B.runInReplica $ QSearch.findById quote.requestId
-          case mbSearchReq of
-            Just searchReq -> pure searchReq.estimatedRideDuration
-            Nothing -> pure Nothing
-        Nothing -> pure Nothing
-    Nothing -> pure Nothing
+      quote <- B.runInReplica $ QQuote.findById quoteId
+      case quote of
+        Just q -> do
+          estimateBreakup <- EstimateBP.getEstimateBreakupFromQuote q
+          return $ Just estimateBreakup
+        Nothing -> return Nothing
+    Nothing -> return Nothing
+  fareBreakup <- B.runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE
   unless (merchantId == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
   person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
   mbBCReason <-
@@ -283,37 +372,89 @@ rideInfo merchantId reqRideId = do
         DB.OneWayDetails locationDetail -> Just $ locationDetail.distance
         DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
         DB.OneWaySpecialZoneDetails oneWaySpecialZoneDetail -> Just $ oneWaySpecialZoneDetail.distance
+        DB.InterCityDetails details -> Just details.distance
         _ -> Nothing
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
+  unencryptedMobileNumber <- mapM decrypt person.mobileNumber
+  unencryptedDriverAlternateNumber <- mapM decrypt ride.driverAlternateNumber
+  let fareProductType = mkFareProductType booking.bookingDetails
   pure
     Common.RideInfoRes
       { rideId = reqRideId,
         bookingId = cast ride.bookingId,
         rideStatus = mkCommonRideStatus ride.status,
         customerName = person.firstName,
-        customerPhoneNo = person.unencryptedMobileNumber,
+        customerPhoneNo = unencryptedMobileNumber,
         rideOtp = ride.otp,
         customerPickupLocation = mkCommonBookingLocation booking.fromLocation,
         customerDropLocation = mbtoLocation,
         driverName = ride.driverName,
         driverPhoneNo = Just ride.driverMobileNumber,
+        driverAlternatePhoneNo = unencryptedDriverAlternateNumber,
         driverRegisteredAt = ride.driverRegisteredAt,
         vehicleNo = ride.vehicleNumber,
         vehicleModel = ride.vehicleModel,
+        vehicleVariant = ride.vehicleVariant,
+        vehicleServiceTierName = booking.serviceTierName,
         rideBookingTime = booking.createdAt,
         actualDriverArrivalTime = ride.driverArrivalTime,
         rideStartTime = ride.rideStartTime,
         rideEndTime = ride.rideEndTime,
-        rideDistanceEstimated = mbDistance,
-        rideDistanceActual = ride.traveledDistance,
-        chargeableDistance = ride.chargeableDistance,
-        estimatedFare = booking.estimatedFare,
-        actualFare = ride.fare,
+        rideDistanceEstimated = distanceToHighPrecMeters <$> mbDistance,
+        rideDistanceEstimatedWithUnit = mbDistance,
+        rideDistanceActual = distanceToHighPrecMeters <$> ride.traveledDistance,
+        rideDistanceActualWithUnit = ride.traveledDistance,
+        chargeableDistance = distanceToHighPrecMeters <$> ride.chargeableDistance,
+        chargeableDistanceWithUnit = ride.chargeableDistance,
+        estimatedFare = booking.estimatedFare.amountInt,
+        actualFare = ride.fare <&> (.amountInt),
+        estimatedFareWithCurrency = mkPriceAPIEntity booking.estimatedFare,
+        actualFareWithCurrency = mkPriceAPIEntity <$> ride.fare,
         estimatedRideDuration = estimatedDuration,
         rideDuration = timeDiffInSeconds <$> ride.rideEndTime <*> ride.rideStartTime,
         cancelledTime = cancelledTime,
-        cancelledBy = cancelledBy
+        cancelledBy = cancelledBy,
+        nextStopLocation = getStopFromBookingDetails booking.bookingDetails,
+        rideScheduledAt = booking.startTime,
+        fareProductType = fareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+        tripCategory = getTripCategory booking.tripCategory fareProductType,
+        endOtp = ride.endOtp,
+        estimateFareBP = map EstimateBP.transformEstimate' <$> estBreakup,
+        merchantOperatingCityId = getId <$> ride.merchantOperatingCityId,
+        fareBreakup = transformFareBreakup <$> fareBreakup,
+        estimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
+        computedPrice = ride.totalFare <&> (.amount),
+        rideCreatedAt = ride.createdAt,
+        roundTrip = booking.roundTrip,
+        mobileCountryCode = person.mobileCountryCode,
+        isSafetyPlus = ride.isSafetyPlus,
+        isAirConditioned = fromMaybe False booking.isAirConditioned
       }
+
+transformFareBreakup :: DFareBreakup.FareBreakup -> Common.FareBreakup
+transformFareBreakup DFareBreakup.FareBreakup {..} = do
+  Common.FareBreakup
+    { entityType = mkEntityType entityType,
+      ..
+    }
+
+mkEntityType :: DFareBreakup.FareBreakupEntityType -> Common.FareBreakupEntityType
+mkEntityType = \case
+  DFareBreakup.BOOKING_UPDATE_REQUEST -> Common.BOOKING_UPDATE_REQUEST
+  DFareBreakup.BOOKING -> Common.BOOKING
+  DFareBreakup.RIDE -> Common.RIDE
+  DFareBreakup.INITIAL_BOOKING -> Common.INITIAL_BOOKING
+
+mkFareProductType :: DTB.BookingDetails -> FareProductType
+mkFareProductType bookingDetails = case bookingDetails of
+  DTB.OneWayDetails _ -> ONE_WAY
+  DTB.RentalDetails _ -> RENTAL
+  DTB.DriverOfferDetails _ -> DRIVER_OFFER
+  DTB.OneWaySpecialZoneDetails _ -> ONE_WAY_SPECIAL_ZONE
+  DTB.InterCityDetails _ -> INTER_CITY
+  DTB.AmbulanceDetails _ -> AMBULANCE
+  DTB.DeliveryDetails _ -> DRIVER_OFFER --Fix: Check later if this is correct
+  DTB.MeterRideDetails _ -> ONE_WAY
 
 timeDiffInSeconds :: UTCTime -> UTCTime -> Seconds
 timeDiffInSeconds t1 = nominalDiffTimeToSeconds . diffUTCTime t1
@@ -328,17 +469,19 @@ castCancellationSource = \case
 
 bookingCancel ::
   (CacheFlow m r, EsqDBFlow m r) =>
-  BookingCancelledReq ->
+  Common.BookingCancelledReq ->
   m ()
-bookingCancel BookingCancelledReq {..} = do
+bookingCancel Common.BookingCancelledReq {bookingId = reqBookingId} = do
+  let bookingId = cast @Common.Booking @DTB.Booking reqBookingId
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingId.getId)
   unless (isBookingCancellable booking) $
     throwError (BookingInvalidStatus (show booking.status))
   mbRide <- QRide.findActiveByRBId booking.id
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCReason.ByMerchant)
-  let bookingCancellationReason = buildBookingCancellationReason booking.id (mbRide <&> (.id)) booking.merchantId
+  bookingCancellationReason <- buildBookingCancellationReason booking (mbRide <&> (.id))
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   _ <- QRB.updateStatus booking.id DTB.CANCELLED
+  _ <- QBPL.makeAllInactiveByBookingId booking.id
   _ <- whenJust mbRide $ \ride -> void $ QRide.updateStatus ride.id DRide.CANCELLED
   void $ QBCReason.upsert bookingCancellationReason
   where
@@ -346,27 +489,35 @@ bookingCancel BookingCancelledReq {..} = do
       booking.status `elem` [DTB.NEW, DTB.CONFIRMED, DTB.AWAITING_REASSIGNMENT, DTB.TRIP_ASSIGNED]
 
 buildBookingCancellationReason ::
-  Id DTB.Booking ->
+  (MonadFlow m) =>
+  DTB.Booking ->
   Maybe (Id DRide.Ride) ->
-  Id DM.Merchant ->
-  DBCReason.BookingCancellationReason
-buildBookingCancellationReason bookingId mbRideId merchantId = do
-  DBCReason.BookingCancellationReason
-    { bookingId = bookingId,
-      rideId = mbRideId,
-      merchantId = Just merchantId,
-      source = DBCReason.ByMerchant,
-      reasonCode = Just $ CancellationReasonCode "BOOKING_NEW_STATUS_MORE_THAN_6HRS",
-      reasonStage = Nothing,
-      additionalInfo = Nothing,
-      driverCancellationLocation = Nothing,
-      driverDistToPickup = Nothing
-    }
+  m DBCReason.BookingCancellationReason
+buildBookingCancellationReason booking mbRideId = do
+  now <- getCurrentTime
+  return $
+    DBCReason.BookingCancellationReason
+      { bookingId = booking.id,
+        rideId = mbRideId,
+        merchantId = Just booking.merchantId,
+        distanceUnit = booking.distanceUnit,
+        source = DBCReason.ByMerchant,
+        reasonCode = Just $ CancellationReasonCode "BOOKING_NEW_STATUS_MORE_THAN_6HRS",
+        reasonStage = Nothing,
+        additionalInfo = Nothing,
+        driverCancellationLocation = Nothing,
+        driverDistToPickup = Nothing,
+        riderId = Just booking.riderId,
+        createdAt = now,
+        updatedAt = now
+      }
 
-multipleRideCancel ::
-  MultipleRideCancelReq ->
+postRideCancelMultiple ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.MultipleRideCancelReq ->
   Flow APISuccess
-multipleRideCancel req = do
+postRideCancelMultiple _ _ req = do
   mapM_ bookingCancel req.multipleRideCancelInfo
   pure Success
 
@@ -375,17 +526,114 @@ rideSync ::
   DM.Merchant ->
   Id Common.Ride ->
   Flow APISuccess
-rideSync merchant reqRideId = do
+rideSync merchant reqRideId = withDynamicLogLevel "ride-sync-single" $ do
+  withLogTag ("merchantId-" <> merchant.id.getId) $ do
+    let rideId = cast @Common.Ride @DRide.Ride reqRideId
+    logDebug $ "Starting ride sync for rideId: " <> rideId.getId
+    withLogTag ("rideId-" <> rideId.getId) $ do
+      ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+      booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      logDebug $ "Found booking: " <> booking.id.getId <> " with status: " <> show booking.status <> " and bppBookingId: " <> show booking.bppBookingId <> " and transactionId: " <> show booking.transactionId
+
+      unless (merchant.id == booking.merchantId) $
+        throwError (RideDoesNotExist rideId.getId)
+      city <- case ride.merchantOperatingCityId of
+        Nothing -> pure merchant.defaultCity
+        Just merchantOperatingCityId -> CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+      let dStatusReq = DStatusReq {booking, merchant, city}
+      becknStatusReq <- buildStatusReqV2 dStatusReq
+      messageId <- Utils.getMessageId becknStatusReq.statusReqContext
+      logDebug $ "Sending status request to BPP with transactionId: " <> show booking.transactionId <> " and providerUrl: " <> show booking.providerUrl
+      withLogTag ("messageId-" <> messageId) $ do
+        Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
+        void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId
+        logDebug $ "Completed ride sync for rideId: " <> rideId.getId
+        pure Success
+
+getRideTripRoute ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Ride ->
+  Double ->
+  Double ->
+  Flow Maps.GetRoutesResp
+getRideTripRoute merchantShortId _ rideId pickupLocationLat pickupLocationLon =
+  mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon False
+
+getRidePickupRoute ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Ride ->
+  Double ->
+  Double ->
+  Flow Maps.GetRoutesResp
+getRidePickupRoute merchantShortId _ rideId currLocationLat currLocationLon =
+  mkGetLocation merchantShortId rideId currLocationLat currLocationLon True
+
+postRideSyncMultiple ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.MultipleRideSyncReq ->
+  Flow Common.MultipleRideSyncResp
+postRideSyncMultiple merchantShortId _ req = withDynamicLogLevel "ride-sync-multiple" $ do
+  withLogTag ("merchantShortId-" <> merchantShortId.getShortId) $ do
+    logDebug $ "Starting multiple ride sync for " <> show (length req.rides) <> " rides"
+    runRequestValidation validateMultipleRideSyncReq req
+    merchant <- findMerchantByShortId merchantShortId
+    withLogTag ("merchantId-" <> merchant.id.getId) $ do
+      logTagInfo "dashboard -> multipleRideSync : " $ show (req.rides <&> (.rideId))
+      respItems <- forM req.rides $ \reqItem -> do
+        withLogTag ("rideId-" <> reqItem.rideId.getId) $ do
+          logDebug $ "Processing ride: " <> reqItem.rideId.getId
+          info <- handle Common.listItemErrHandler $ do
+            void $ rideSync merchant reqItem.rideId
+            logDebug $ "Successfully synced ride: " <> reqItem.rideId.getId
+            pure Common.SuccessItem
+          logDebug $ "Completed processing ride: " <> reqItem.rideId.getId <> " with result: " <> show info
+          pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
+      logDebug $ "Completed multiple ride sync for " <> show (length req.rides) <> " rides"
+      pure $ Common.MultipleRideSyncResp {list = respItems}
+
+validateMultipleRideSyncReq :: Validate Common.MultipleRideSyncReq
+validateMultipleRideSyncReq Common.MultipleRideSyncReq {..} = do
+  validateField "rides" rides $ UniqueField @"rideId"
+
+cancellationChargesWaiveOff ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Ride ->
+  Flow Common.CancellationChargesWaiveOffRes
+cancellationChargesWaiveOff merchantShortId _ reqRideId = do
+  merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-
+  booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (merchant.id == booking.merchantId) $
     throwError (RideDoesNotExist rideId.getId)
-  city <- case ride.merchantOperatingCityId of
-    Nothing -> pure merchant.defaultCity
-    Just merchantOperatingCityId -> CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-  let dStatusReq = DStatusReq {booking, merchant, city}
-  becknStatusReq <- buildStatusReq dStatusReq
-  void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
-  pure Success
+  -- fareBreakup <- B.runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
+  -- let cancellationCharges = filter (\fareBreakup' -> fareBreakup'.description == "CANCELLATION_CHARGES") fareBreakup
+  case ride.cancellationChargesOnCancel of
+    Just entity -> do
+      let charges = entity
+      case booking.bppBookingId of
+        Just bppBookingId -> do
+          if charges > 0
+            then do
+              logInfo $ "CancellationChargesWaiveOff: Trying to waive off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges
+              result <- withTryCatch "customerCancellationDuesWaiveOff" $ CallBPPInternal.customerCancellationDuesWaiveOff merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId bppBookingId.getId ride.bppRideId.getId charges
+              case result of
+                Right _ -> do
+                  logInfo $ "CancellationChargesWaiveOff: Successfully waived off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges
+                  return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Just charges, waivedOffAmountWithCurrency = Just PriceAPIEntity {amount = charges, currency = INR}, waivedOffSuccess = True}
+                Left err -> do
+                  logError $ "CancellationChargesWaiveOff: Failed to waive off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges <> " with error: " <> show err
+                  return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
+            else do
+              logInfo $ "CancellationChargesWaiveOff: No non-zero cancellation charges found for rideId: " <> rideId.getId
+              return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
+        _ -> do
+          logInfo $ "CancellationChargesWaiveOff: No bppBookingId found for rideId: " <> rideId.getId
+          return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
+    _ -> do
+      logInfo $ "CancellationChargesWaiveOff: No cancellation charges found for rideId: " <> rideId.getId
+      return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}

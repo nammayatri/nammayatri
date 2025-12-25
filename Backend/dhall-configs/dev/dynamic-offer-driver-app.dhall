@@ -4,6 +4,8 @@ let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let globalCommon = ../generic/common.dhall
 
+let sosAlertsTopicARN = common.sosAlertsTopicARN
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -41,18 +43,22 @@ let kafkaClickhouseCfg =
       , host = "localhost"
       , port = 8123
       , password = sec.clickHousePassword
-      , database = "test_db"
+      , database = "atlas_kafka"
       , tls = False
+      , retryInterval = [ +0 ]
       }
 
 let driverClickhouseCfg =
       { username = sec.clickHouseUsername
-      , host = "xxxxx"
-      , port = 1234
+      , host = "localhost"
+      , port = 8123
       , password = sec.clickHousePassword
-      , database = "xxxx"
-      , tls = True
+      , database = "atlas_driver_offer_bpp"
+      , tls = False
+      , retryInterval = [ +0 ]
       }
+
+let dashboardClickhouseCfg = driverClickhouseCfg
 
 let rcfg =
       { connectHost = "localhost"
@@ -62,6 +68,7 @@ let rcfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let rccfg =
@@ -72,6 +79,7 @@ let rccfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let smsConfig =
@@ -80,6 +88,7 @@ let smsConfig =
         { username = common.smsUserName
         , password = common.smsPassword
         , otpHash = sec.smsOtpHash
+        , token = None Text
         }
       , useFakeSms = Some 7891
       , url = "http://localhost:4343"
@@ -96,6 +105,24 @@ let exophoneKafkaConfig
     : globalCommon.kafkaConfig
     = { topicName = "ExophoneData"
       , kafkaKey = "dynamic-offer-driver-exophone-events"
+      }
+
+let eventTrackerKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "EventTracker"
+      , kafkaKey = "dynamic-offer-driver-event-tracker-events"
+      }
+
+let marketingParamsKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "MarketingParamsData"
+      , kafkaKey = "dynamic-offer-driver-app-marketing-events"
+      }
+
+let marketingParamsPreLoginKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "MarketingParamsPreLoginData"
+      , kafkaKey = "dynamic-offer-driver-app-marketing-events"
       }
 
 let sampleLogConfig
@@ -130,9 +157,36 @@ let eventStreamMappings =
           , globalCommon.eventType.RideCancelled
           ]
         }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig = globalCommon.streamConfig.LogStream sampleLogConfig
+        , eventTypes =
+          [ globalCommon.eventType.RideEnded
+          , globalCommon.eventType.RideCancelled
+          ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream eventTrackerKafkaConfig
+        , eventTypes = [ globalCommon.eventType.EventTracker ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream marketingParamsKafkaConfig
+        , eventTypes = [ globalCommon.eventType.MarketingParamsData ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream
+              marketingParamsPreLoginKafkaConfig
+        , eventTypes = [ globalCommon.eventType.MarketingParamsPreLoginData ]
+        }
       ]
 
-let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
+let apiRateLimitOptions = { limit = +20, limitResetTimeInSec = +1 }
+
+let sendOtpRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+
+let externalServiceRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
@@ -140,8 +194,6 @@ let slackCfg =
       { channelName = "beckn-driver-onboard-test"
       , slackToken = common.slackToken
       }
-
-let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
 let driverLocationUpdateRateLimitOptions =
       { limit = +100, limitResetTimeInSec = +1 }
@@ -157,14 +209,17 @@ let kafkaProducerCfg =
 
 let kvConfigUpdateFrequency = +10
 
-let dontEnableForDb = [] : List Text
-
-let dontEnableForKafka = [] : List Text
-
 let appBackendBapInternal =
       { name = "APP_BACKEND"
       , url = "http://localhost:8013/"
       , apiKey = sec.appBackendApikey
+      , internalKey = sec.internalKey
+      }
+
+let mlPricingInternal =
+      { name = "PRICING"
+      , url = "http://localhost:8013/"
+      , apiKey = sec.mlPricingApiKey
       , internalKey = sec.internalKey
       }
 
@@ -180,28 +235,51 @@ let registryMap =
 
 let AllocatorJobType =
       < SendSearchRequestToDriver
-      | SendPaymentReminderToDriver
-      | UnsubscribeDriverForPaymentOverdue
       | UnblockDriver
+      | UnblockSoftBlockedDriver
+      | SoftBlockNotifyDriver
       | SendPDNNotificationToDriver
+      | CheckExotelCallStatusAndNotifyBAP
       | MandateExecution
       | CalculateDriverFees
       | OrderAndNotificationStatusUpdate
       | SendOverlay
+      | SupplyDemand
+      | CongestionCharge
       | BadDebtCalculation
       | RetryDocumentVerification
+      | SendManualPaymentLink
+      | ScheduledRideNotificationsToDriver
+      | ScheduleTagActionNotification
+      | DriverReferralPayout
+      | ScheduledRideAssignedOnUpdate
+      | Daily
+      | Weekly
+      | Monthly
+      | Quarterly
+      | DailyUpdateTag
+      | MonthlyUpdateTag
+      | QuarterlyUpdateTag
+      | WeeklyUpdateTag
+      | FleetAlert
+      | SendWebhookToExternal
+      | ScheduledFCMS
+      | CheckDashCamInstallationStatus
+      | MediaFileDocumentComplete
+      | SendFeedbackPN
       >
 
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
-      , { mapKey = AllocatorJobType.SendPaymentReminderToDriver
-        , mapValue = False
-        }
-      , { mapKey = AllocatorJobType.UnsubscribeDriverForPaymentOverdue
+      , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.UnblockSoftBlockedDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.SoftBlockNotifyDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.SupplyDemand, mapValue = True }
+      , { mapKey = AllocatorJobType.CongestionCharge, mapValue = True }
+      , { mapKey = AllocatorJobType.SendPDNNotificationToDriver
         , mapValue = True
         }
-      , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
-      , { mapKey = AllocatorJobType.SendPDNNotificationToDriver
+      , { mapKey = AllocatorJobType.CheckExotelCallStatusAndNotifyBAP
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.MandateExecution, mapValue = True }
@@ -214,9 +292,59 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.RetryDocumentVerification
         , mapValue = False
         }
+      , { mapKey = AllocatorJobType.SendManualPaymentLink, mapValue = True }
+      , { mapKey = AllocatorJobType.ScheduledRideNotificationsToDriver
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.ScheduleTagActionNotification
+        , mapValue = False
+        }
+      , { mapKey = AllocatorJobType.ScheduledRideAssignedOnUpdate
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.DriverReferralPayout, mapValue = True }
+      , { mapKey = AllocatorJobType.Daily, mapValue = True }
+      , { mapKey = AllocatorJobType.Weekly, mapValue = True }
+      , { mapKey = AllocatorJobType.Monthly, mapValue = True }
+      , { mapKey = AllocatorJobType.Quarterly, mapValue = True }
+      , { mapKey = AllocatorJobType.DailyUpdateTag, mapValue = True }
+      , { mapKey = AllocatorJobType.MonthlyUpdateTag, mapValue = True }
+      , { mapKey = AllocatorJobType.QuarterlyUpdateTag, mapValue = True }
+      , { mapKey = AllocatorJobType.WeeklyUpdateTag, mapValue = True }
+      , { mapKey = AllocatorJobType.FleetAlert, mapValue = False }
+      , { mapKey = AllocatorJobType.SendWebhookToExternal, mapValue = True }
+      , { mapKey = AllocatorJobType.ScheduledFCMS, mapValue = True }
+      , { mapKey = AllocatorJobType.CheckDashCamInstallationStatus
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.MediaFileDocumentComplete, mapValue = True }
+      , { mapKey = AllocatorJobType.SendFeedbackPN, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
+
+let VocaliticsConfig = { url = "http://0.0.0.0:8000/", token = "secret-key" }
+
+let cacConfig =
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenant = "test"
+      , retryConnection = False
+      , cacExpTime = +86400
+      , enablePolling = True
+      , enableCac = False
+      }
+
+let cacTenants = [ "dev", "test" ]
+
+let superPositionConfig =
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenants = [ "dev", "test" ]
+      , retryConnection = False
+      , enablePolling = True
+      , enableSuperPosition = False
+      }
 
 let maxMessages
     : Text
@@ -231,28 +359,42 @@ let modelNamesMap =
         }
       ]
 
+let tsServiceConfig = { url = "http://0.0.0.0:3001/" }
+
+let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+
+let driverFleetLocationListAPIRateLimitOptions =
+      { limit = +5, limitResetTimeInSec = +30 }
+
+let noSignatureSubscribers =
+      [ "pre-prod-ondc-ticketing-api-delhi.transportstack.in" ]
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
     , driverClickhouseCfg
+    , dashboardClickhouseCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
-    , hedisMigrationStage = True
+    , hedisMigrationStage = False
     , cutOffHedisCluster = False
     , port = +8016
     , metricsPort = +9997
     , hostName = "localhost"
     , nwAddress = "http://localhost:8016/beckn"
     , selfUIUrl = "http://localhost:8016/ui/"
+    , selfBaseUrl = "http://localhost:8016/"
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config
     , s3PublicConfig = common.s3PublicConfig
     , migrationPath =
-      [   env:DYNAMIC_OFFER_DRIVER_APP_MIGRATION_PATH as Text
+      [ "dev/migrations-read-only/dynamic-offer-driver-app"
+      ,   env:DYNAMIC_OFFER_DRIVER_APP_MIGRATION_PATH as Text
         ? "dev/migrations/dynamic-offer-driver-app"
+      , "dev/migrations-after-release/dynamic-offer-driver-app"
       ]
     , autoMigrate = True
     , coreVersion = "0.9.4"
@@ -264,6 +406,7 @@ in  { esqDBCfg
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
     , appBackendBapInternal
+    , mlPricingInternal
     , graceTerminationPeriod = +90
     , encTools
     , authTokenCacheExpiry = +600
@@ -272,25 +415,28 @@ in  { esqDBCfg
     , shortDurationRetryCfg = common.shortDurationRetryCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , apiRateLimitOptions
+    , sendOtpRateLimitOptions
+    , externalServiceRateLimitOptions
     , slackCfg
     , jobInfoMapx
     , smsCfg = smsConfig
     , searchRequestExpirationSeconds = +3600
+    , searchRequestExpirationSecondsForMultimodal = +14400
     , driverQuoteExpirationSeconds = +60
     , driverUnlockDelay = +2
     , dashboardToken = sec.dashboardToken
     , cacheConfig
     , metricsSearchDurationTimeout = +45
     , driverLocationUpdateRateLimitOptions
-    , driverReachedDistance = +100
     , cacheTranslationConfig
     , driverLocationUpdateTopic = "location-updates"
     , broadcastMessageTopic = "broadcast-messages"
     , kafkaProducerCfg
     , snapToRoadSnippetThreshold = +300
     , droppedPointsThreshold = +2000
-    , minTripDistanceForReferralCfg = Some +1000
+    , osrmMatchThreshold = +1500
     , maxShards = +5
+    , maxNotificationShards = +128
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , enableAPILatencyLogging = True
@@ -301,10 +447,31 @@ in  { esqDBCfg
     , schedulerSetName = "Scheduled_Jobs"
     , schedulerType = common.schedulerType.RedisBased
     , ltsCfg = LocationTrackingeServiceConfig
-    , dontEnableForDb
-    , dontEnableForKafka
-    , maxMessages
     , modelNamesMap
     , incomingAPIResponseTimeout = +15
     , internalEndPointMap = common.internalEndPointMap
+    , _version = "2.0.0"
+    , cacConfig
+    , tsServiceConfig
+    , cacTenants
+    , superPositionConfig
+    , maxStraightLineRectificationThreshold = +800
+    , singleBatchProcessingTempDelay = +2
+    , ondcTokenMap = sec.ondcTokenMap
+    , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
+    , quoteRespondCoolDown = +10
+    , sosAlertsTopicARN
+    , ondcRegistryUrl = common.ondcRegistryUrl
+    , ondcGatewayUrl = common.ondcGatewayUrl
+    , nyRegistryUrl = common.nyRegistryUrl
+    , nyGatewayUrl = common.nyGatewayUrl
+    , nammayatriRegistryConfig = common.nammayatriRegistryConfig
+    , urlShortnerConfig = common.urlShortnerConfig
+    , vocalyticsCnfg = VocaliticsConfig
+    , meterRideReferralLink =
+        "https://nammayatri.in/refer?referrer=utm_source%3DChennai%26utm_medium%3Dqrcode%26utm_term%3Dreferral%26utm_content%3Dcoins%26utm_campaign%{referralCode}%26anid%3Dadmob&id=in.juspay.nammayatri"
+    , minDistanceBetweenTwoPoints = +25
+    , inMemConfig
+    , driverFleetLocationListAPIRateLimitOptions
+    , noSignatureSubscribers
     }

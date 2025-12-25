@@ -1,0 +1,176 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  PlanBaseAmount: Domain.Types.Extra.Plan
+  VehicleVariant: Domain.Types.VehicleVariant
+  VehicleCategory: Domain.Types.VehicleCategory
+  ServiceNames:  Domain.Types.Extra.Plan
+
+Plan:
+  tableName: plan
+
+  types:
+    PaymentMode:
+      enum: "MANUAL, AUTOPAY"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+    Frequency:
+      enum: "DAILY, WEEKLY, MONTHLY, FLEXIBLE"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+    PlanType:
+      enum: "DEFAULT, SUBSCRIPTION"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+
+    BasedOnEntity:
+      enum: "RIDE, NONE, VEHICLE, VEHICLE_AND_RIDE"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+    BillingType:
+      enum: "PREPAID, POSTPAID"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+
+  fields:
+    id : Id Plan
+    paymentMode : PaymentMode
+    merchantId : Id Merchant
+    name : Text
+    description : Text
+    maxAmount : HighPrecMoney
+    registrationAmount : HighPrecMoney
+    isOfferApplicable : Bool
+    maxCreditLimit : HighPrecMoney
+    maxMandateAmount : HighPrecMoney
+    planBaseAmount : PlanBaseAmount
+    freeRideCount : Int
+    frequency : Frequency
+    planType : PlanType
+    billingType: Maybe BillingType
+    cgstPercentage : HighPrecMoney
+    sgstPercentage : HighPrecMoney
+    subscribedFlagToggleAllowed : Bool
+    isDeprecated : Bool
+    eligibleForCoinDiscount : Bool
+    merchantOpCityId : Id MerchantOperatingCity
+    basedOnEntity : BasedOnEntity
+    serviceName : ServiceNames
+    vehicleVariant : Maybe VehicleVariant|NoRelation
+    vehicleCategory : VehicleCategory|NoRelation
+    listingPriority : Maybe  Int
+    validityInDays : Maybe Int
+    isFleetOwnerPlan : Maybe Bool
+    allowStrikeOff: Bool
+    productOwnershipAmount : HighPrecMoney
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMode>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PaymentMode>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Frequency>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <Frequency>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PlanType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PlanType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <BasedOnEntity>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <BasedOnEntity>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <BillingType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <BillingType>
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findByIdAndPaymentModeWithServiceName:
+      kvFunction: findOneWithKV
+      where:
+        and: [id, paymentMode, serviceName]
+
+    findByMerchantOpCityIdWithServiceName:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOpCityId, serviceName]
+
+    findByMerchantOpCityAndServiceAndFleetOwnerPlan:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOpCityId, serviceName, isFleetOwnerPlan]
+
+    findByMerchantOpCityIdAndTypeWithServiceName:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOpCityId, planType, serviceName, vehicleCategory, isDeprecated]
+
+    findByMerchantOpCityIdTypeServiceNameVehicle:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOpCityId, paymentMode, serviceName, vehicleCategory, isDeprecated]
+
+    findByCityServiceAndVehicle:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOpCityId, serviceName, vehicleCategory, isDeprecated]
+
+    findByMerchantOpCityIdAndTypeWithServiceNameAndVariant:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOpCityId, paymentMode, serviceName, vehicleVariant]
+
+  cachedQueries:
+    deletePlansKeys:
+      keyParams:
+        - merchantOpCityId
+        - paymentMode
+        - serviceName
+        - vehicleCategory
+        - isDeprecated
+      keyMaker: makeIdKey
+    findByMerchantOpCityIdTypeServiceNameVehicle:
+      keyParams:
+        - merchantOpCityId
+        - paymentMode
+        - serviceName
+        - vehicleCategory
+        - isDeprecated
+      keyMaker: makeIdKey
+      returnType: Array
+      dbQuery: findByMerchantOpCityIdTypeServiceNameVehicle
+      dbQueryParams:
+        - merchantOpCityId
+        - paymentMode
+        - serviceName
+        - vehicleCategory
+        - isDeprecated
+
+  sqlType:
+    maxAmount: integer
+    registrationAmount: integer
+    maxCreditLimit: integer
+    freeRideCount: integer
+    merchantOpCityId: text
+
+  default:
+    subscribedFlagToggleAllowed: "true"
+    isDeprecated: "false"
+    eligibleForCoinDiscount: "true"
+    serviceName: "'YATRI_SUBSCRIPTION'"
+    basedOnEntity: "'RIDE'"
+
+  fromTType:
+    vehicleCategory: Storage.Queries.Transformers.Plan.getCategoryFromSubscriptionConfig vehicleCategory merchantOpCityId serviceName|EM
+    allowStrikeOff: Kernel.Prelude.fromMaybe True | I
+    productOwnershipAmount: Kernel.Prelude.fromMaybe 0 | I
+  toTType:
+    vehicleCategory: Kernel.Prelude.Just|I
+    allowStrikeOff: Kernel.Prelude.Just|I
+    productOwnershipAmount: Kernel.Prelude.Just|I
+  beamType:
+    vehicleCategory: Maybe VehicleCategory
+    allowStrikeOff : Maybe Bool
+    productOwnershipAmount: Maybe HighPrecMoney
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_CACHED_QUERY_FILE
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

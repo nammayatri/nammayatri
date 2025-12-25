@@ -26,23 +26,44 @@ flag Local
 
 library
   exposed-modules:
-      IssueManagement.API.Dashboard.Issue
+      ConfigPilotFrontend.API
+      ConfigPilotFrontend.Common
+      ConfigPilotFrontend.Flow
+      ConfigPilotFrontend.Types
+      IssueManagement.API.Beckn.Issue
       IssueManagement.API.UI.Issue
+      IssueManagement.Beckn.ACL.IGM.Utils
+      IssueManagement.Beckn.ACL.Issue
+      IssueManagement.Beckn.ACL.IssueStatus
+      IssueManagement.Beckn.ACL.OnIssue
+      IssueManagement.Beckn.ACL.OnIssueStatus
       IssueManagement.Common
+      IssueManagement.Common.Beckn.Issue
       IssueManagement.Common.Dashboard.Issue
       IssueManagement.Common.UI.Issue
+      IssueManagement.Domain.Action.Beckn.Issue
+      IssueManagement.Domain.Action.Beckn.IssueStatus
+      IssueManagement.Domain.Action.Beckn.OnIssue
+      IssueManagement.Domain.Action.Beckn.OnIssueStatus
       IssueManagement.Domain.Action.Dashboard.Issue
       IssueManagement.Domain.Action.UI.Issue
       IssueManagement.Domain.Types.Issue.Comment
+      IssueManagement.Domain.Types.Issue.IGMConfig
+      IssueManagement.Domain.Types.Issue.IGMIssue
       IssueManagement.Domain.Types.Issue.IssueCategory
+      IssueManagement.Domain.Types.Issue.IssueChat
       IssueManagement.Domain.Types.Issue.IssueConfig
       IssueManagement.Domain.Types.Issue.IssueMessage
       IssueManagement.Domain.Types.Issue.IssueOption
       IssueManagement.Domain.Types.Issue.IssueReport
       IssueManagement.Domain.Types.Issue.IssueTranslation
       IssueManagement.Domain.Types.MediaFile
+      IssueManagement.SharedLogic.CallAPI
       IssueManagement.Storage.Beam.Issue.Comment
+      IssueManagement.Storage.Beam.Issue.IGMConfig
+      IssueManagement.Storage.Beam.Issue.IGMIssue
       IssueManagement.Storage.Beam.Issue.IssueCategory
+      IssueManagement.Storage.Beam.Issue.IssueChat
       IssueManagement.Storage.Beam.Issue.IssueConfig
       IssueManagement.Storage.Beam.Issue.IssueMessage
       IssueManagement.Storage.Beam.Issue.IssueOption
@@ -56,7 +77,10 @@ library
       IssueManagement.Storage.CachedQueries.Issue.IssueOption
       IssueManagement.Storage.CachedQueries.MediaFile
       IssueManagement.Storage.Queries.Issue.Comment
+      IssueManagement.Storage.Queries.Issue.IGMConfig
+      IssueManagement.Storage.Queries.Issue.IGMIssue
       IssueManagement.Storage.Queries.Issue.IssueCategory
+      IssueManagement.Storage.Queries.Issue.IssueChat
       IssueManagement.Storage.Queries.Issue.IssueConfig
       IssueManagement.Storage.Queries.Issue.IssueMessage
       IssueManagement.Storage.Queries.Issue.IssueOption
@@ -65,10 +89,26 @@ library
       IssueManagement.Storage.Queries.MediaFile
       IssueManagement.Tools.Error
       IssueManagement.Tools.UtilsTH
+      Registry.Beckn.Interface
+      Registry.Beckn.Interface.Nammayatri
+      Registry.Beckn.Interface.Types
+      Registry.Beckn.Nammayatri.Flow
+      Registry.Beckn.Nammayatri.Types
+      UrlShortner.Common
+      UrlShortner.Types
+      API.Types.ProviderPlatform.IssueManagement
+      API.Types.ProviderPlatform.IssueManagement.Endpoints.Issue
+      API.Types.ProviderPlatform.IssueManagement.Issue
+      API.Types.RiderPlatform.IssueManagement
+      API.Types.RiderPlatform.IssueManagement.Endpoints.Issue
+      API.Types.RiderPlatform.IssueManagement.Endpoints.IssueList
+      API.Types.RiderPlatform.IssueManagement.Issue
+      API.Types.RiderPlatform.IssueManagement.IssueList
   other-modules:
       Paths_shared_services
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -76,6 +116,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -103,6 +144,7 @@ library
       UndecidableInstances
       StandaloneDeriving
       PackageImports
+      TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
@@ -118,25 +160,27 @@ library
     , cereal
     , containers
     , cryptonite
-    , dashboard-helper-api
     , either
     , esqueleto
     , euler-hs
     , exceptions
+    , external
     , extra
     , generic-lens
-    , hashmap
     , hspec
     , http-client
     , lens
     , location-updates
     , mobility-core
+    , mock-registry
     , openapi3
     , persistent
     , postgresql-simple
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
+    , regex-compat
+    , regex-tdfa
     , resource-pool
     , scheduler
     , sequelize
@@ -147,6 +191,7 @@ library
     , servant-openapi3
     , servant-server
     , singletons
+    , singletons-th
     , special-zone
     , stm
     , string-conversions

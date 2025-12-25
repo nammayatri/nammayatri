@@ -15,24 +15,41 @@
 module Domain.Action.UI.Registration
   ( AuthReq (..),
     AuthRes (..),
+    AuthWithOtpRes (..),
     ResendAuthRes,
     AuthVerifyReq (..),
     AuthVerifyRes (..),
+    MarketingParams (..),
+    MarketEventReq (..),
     auth,
+    authWithOtp,
     verify,
     resend,
     logout,
     cleanCachedTokens,
+    createDriverWithDetails,
+    makePerson,
+    marketingEventsPreLogin,
+    marketingEventsPostLogin,
   )
 where
 
-import Data.OpenApi hiding (info, url)
+import Data.OpenApi hiding (email, info, name, url)
+import Data.Text hiding (elem)
+import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import Domain.Action.UI.DriverReferral
+import qualified Domain.Action.UI.Person as SP
+import qualified Domain.Types.Common as DriverInfo
+import qualified Domain.Types.DriverFlowStatus as DriverFlowStatus
 import qualified Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.Extra.Plan as DEP
 import qualified Domain.Types.Merchant as DO
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
+import qualified Domain.Types.TransporterConfig as TC
+import Environment (Flow)
+-- import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
@@ -40,9 +57,12 @@ import Kernel.External.Encryption
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common as BC
 import Kernel.Types.Id
@@ -53,25 +73,37 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
+import Kernel.Utils.Version
+import Lib.SessionizerMetrics.Types.Event
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.OTP as SOTP
+import Storage.Beam.Yudhishthira ()
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.DriverInformation as QD
-import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDL
+import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
+import qualified Tools.Event as TE
+import Tools.MarketingEvents as TM
 import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
 
 data AuthReq = AuthReq
-  { mobileNumber :: Text,
-    mobileCountryCode :: Text,
+  { mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text,
     merchantId :: Text,
     merchantOperatingCity :: Maybe Context.City,
+    email :: Maybe Text,
+    name :: Maybe Text,
+    identifierType :: Maybe SP.IdentifierType,
     registrationLat :: Maybe Double,
     registrationLon :: Maybe Double
   }
@@ -80,12 +112,19 @@ data AuthReq = AuthReq
 validateInitiateLoginReq :: Validate AuthReq
 validateInitiateLoginReq AuthReq {..} =
   sequenceA_
-    [ validateField "mobileNumber" mobileNumber P.mobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    [ whenJust mobileNumber $ \justMobileNumber -> validateField "mobileNumber" justMobileNumber P.mobileNumber,
+      whenJust mobileCountryCode $ \countryCode -> validateField "mobileCountryCode" countryCode P.mobileCountryCode
     ]
 
 data AuthRes = AuthRes
   { authId :: Id SR.RegistrationToken,
+    attempts :: Int
+  }
+  deriving (Generic, ToJSON, ToSchema)
+
+data AuthWithOtpRes = AuthWithOtpRes
+  { authId :: Id SR.RegistrationToken,
+    otpCode :: Text,
     attempts :: Int
   }
   deriving (Generic, ToJSON, ToSchema)
@@ -112,67 +151,114 @@ data AuthVerifyRes = AuthVerifyRes
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+data MarketingParams = MarketingParams
+  { gclId :: Maybe Text,
+    utmCampaign :: Maybe Text,
+    utmContent :: Maybe Text,
+    utmCreativeFormat :: Maybe Text,
+    utmMedium :: Maybe Text,
+    utmSource :: Maybe Text,
+    utmTerm :: Maybe Text,
+    appName :: Maybe Text,
+    userType :: Maybe TE.UserType
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+data MarketEventReq = MarketEventReq
+  { marketingParams :: MarketingParams
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
 authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BPP:Registration:auth:" <> getId person.id <> ":hitsCount"
 
 auth ::
-  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    EncFlow m r
-  ) =>
   Bool ->
   AuthReq ->
   Maybe Version ->
   Maybe Version ->
-  m AuthRes
-auth isDashboard req mbBundleVersion mbClientVersion = do
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow AuthRes
+auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash = do
+  authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash
+  return $ AuthRes {attempts = authRes.attempts, authId = authRes.authId}
+
+authWithOtp ::
+  Bool ->
+  AuthReq ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow AuthWithOtpRes
+authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash = do
+  let req = if req'.merchantId == "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" then req' {merchantId = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f", merchantOperatingCity = Just City.Kochi} :: AuthReq else req' ---   "2e8eac28-9854-4f5d-aea6-a2f6502cfe37" -> YATRI_PARTNER_MERCHANT_ID  , "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f" -> NAMMA_YATRI_PARTNER_MERCHANT_ID
+  deploymentVersion <- asks (.version)
   runRequestValidation validateInitiateLoginReq req
+  let identifierType = fromMaybe SP.MOBILENUMBER req'.identifierType
+
   smsCfg <- asks (.smsCfg)
-  let mobileNumber = req.mobileNumber
-      countryCode = req.mobileCountryCode
-  mobileNumberHash <- getDbHash mobileNumber
   let merchantId = Id req.merchantId :: Id DO.Merchant
   merchant <-
     QMerchant.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req.merchantOperatingCity
-  person <-
-    QP.findByMobileNumberAndMerchant countryCode mobileNumberHash merchant.id
-      >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id merchantOpCityId isDashboard) return
+
+  (person, otpChannel) <-
+    case identifierType of
+      SP.MOBILENUMBER -> do
+        countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
+        mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for mobileNumber auth")
+        mobileNumberHash <- getDbHash mobileNumber
+        person <-
+          QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
+        return (person, SP.MOBILENUMBER)
+      SP.EMAIL -> do
+        email <- req.email & fromMaybeM (InvalidRequest "Email is required for email auth")
+        person <-
+          QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id SP.DRIVER
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
+        return (person, SP.EMAIL)
+      SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
-      useFakeOtpM = useFakeSms smsCfg
+      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
       scfg = sessionConfig smsCfg
   let mkId = getId merchantId
-  token <- makeSession scfg entityId mkId SR.USER (show <$> useFakeOtpM) merchantOpCityId.getId
+  token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId
   _ <- QR.create token
-  QP.updatePersonVersions person mbBundleVersion mbClientVersion
+  QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId
+  let otpCode = SR.authValueHash token
   whenNothing_ useFakeOtpM $ do
-    let otpHash = smsCfg.credConfig.otpHash
-    let otpCode = SR.authValueHash token
-        phoneNumber = countryCode <> mobileNumber
-        sender = smsCfg.sender
-    withLogTag ("personId_" <> getId person.id) $ do
-      message <-
-        MessageBuilder.buildSendOTPMessage merchantOpCityId $
-          MessageBuilder.BuildSendOTPMessageReq
-            { otp = otpCode,
-              hash = otpHash
-            }
-      Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
-        >>= Sms.checkSmsResult
+    SOTP.sendOTPByIdentifierType
+      otpChannel
+      otpCode
+      person.id
+      person.merchantId
+      merchantOpCityId
+      req.mobileCountryCode
+      req.mobileNumber
+      req.email
+      mbSenderHash
   let attempts = SR.attempts token
       authId = SR.id token
-  return $ AuthRes {attempts, authId}
+  return $ AuthWithOtpRes {attempts, authId, otpCode}
 
-createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
-createDriverDetails personId merchantId merchantOpCityId = do
+createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> TC.TransporterConfig -> m ()
+createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
   now <- getCurrentTime
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId = cast personId
   mbDriverLicense <- runInReplica $ QDL.findByDriverId driverId
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   let driverInfo =
         DriverInfo.DriverInformation
           { driverId = personId,
@@ -180,20 +266,27 @@ createDriverDetails personId merchantId merchantOpCityId = do
             merchantId = Just merchantId,
             active = False,
             onRide = False,
+            specialLocWarriorEnabledAt = Nothing,
             enabled = False,
             blocked = False,
             numOfLocks = 0,
             verified = False,
             subscribed = True,
+            isPetModeEnabled = False,
             paymentPending = False,
             autoPayStatus = Nothing,
             referralCode = Nothing,
+            referredByFleetOwnerId = Nothing,
+            referredByOperatorId = Nothing,
             referredByDriverId = Nothing,
             totalReferred = Just 0,
             lastEnabledOn = Nothing,
             canDowngradeToSedan = transporterConfig.canDowngradeToSedan,
             canDowngradeToHatchback = transporterConfig.canDowngradeToHatchback,
             canDowngradeToTaxi = transporterConfig.canDowngradeToTaxi,
+            canSwitchToRental = transporterConfig.canSwitchToRental,
+            canSwitchToInterCity = transporterConfig.canSwitchToInterCity,
+            canSwitchToIntraCity = True,
             aadhaarVerified = False,
             blockedReason = Nothing,
             blockExpiryTime = Nothing,
@@ -206,35 +299,122 @@ createDriverDetails personId merchantId merchantOpCityId = do
             compAadhaarImagePath = Nothing,
             availableUpiApps = Nothing,
             driverDob = (.driverDob) =<< mbDriverLicense,
-            merchantOperatingCityId = Just merchantOpCityId
+            airConditionScore = Nothing,
+            merchantOperatingCityId = Just merchantOpCityId,
+            acRestrictionLiftCount = 0,
+            acUsageRestrictionType = DriverInfo.NoRestriction,
+            lastACStatusCheckedAt = Nothing,
+            hasAdvanceBooking = False,
+            tollRelatedIssueCount = Nothing,
+            drunkAndDriveViolationCount = Nothing,
+            extraFareMitigationFlag = Nothing,
+            forwardBatchingEnabled = False,
+            payoutVpa = Nothing,
+            isInteroperable = False,
+            payoutRegistrationOrderId = Nothing,
+            latestScheduledPickup = Nothing,
+            latestScheduledBooking = Nothing,
+            payoutVpaStatus = Nothing,
+            payoutVpaBankAccount = Nothing,
+            payoutRegAmountRefunded = Nothing,
+            dailyCancellationRateBlockingCooldown = Nothing,
+            weeklyCancellationRateBlockingCooldown = Nothing,
+            blockReasonFlag = Nothing,
+            onRideTripCategory = Nothing,
+            preferredPrimarySpecialLocId = Nothing,
+            preferredSecondarySpecialLocIds = [],
+            isSpecialLocWarrior = False,
+            driverTripEndLocation = Nothing,
+            issueBreachCooldownTimes = Nothing,
+            hasRideStarted = Nothing,
+            softBlockExpiryTime = Nothing,
+            softBlockReasonFlag = Nothing,
+            softBlockStiers = Nothing,
+            isBlockedForReferralPayout = Nothing,
+            onboardingVehicleCategory = Nothing,
+            servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION],
+            driverFlowStatus = Just DriverFlowStatus.OFFLINE,
+            onlineDurationRefreshedAt = Just now,
+            panNumber = Nothing,
+            aadhaarNumber = Nothing,
+            dlNumber = Nothing,
+            planExpiryDate = Nothing,
+            prepaidSubscriptionBalance = Nothing,
+            walletBalance = Nothing,
+            maxPickupRadius = Nothing,
+            tripDistanceMaxThreshold = Nothing,
+            tripDistanceMinThreshold = Nothing,
+            rideRequestVolume = Nothing,
+            isSilentModeEnabled = Nothing,
+            isTTSEnabled = Nothing,
+            isHighAccuracyLocationEnabled = Nothing,
+            rideRequestVolumeEnabled = Nothing,
+            lastOfflineTime = Just now,
+            ruleBasedUpgradeTiers = Nothing,
+            dailyExtraKms = Nothing,
+            weeklyExtraKms = Nothing,
+            onboardingAs = Nothing,
+            tollRouteBlockedTill = Nothing
           }
-  QDriverStats.createInitialDriverStats driverId
+  QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo
   pure ()
 
-makePerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
-makePerson req mbBundleVersion mbClientVersion merchantId merchantOperatingCityId isDashboard = do
+makePerson ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  AuthReq ->
+  TC.TransporterConfig ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Id DO.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Bool ->
+  Maybe SP.Role ->
+  m SP.Person
+makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp merchantId merchantOperatingCityId isDashboard mbRole = do
   pid <- BC.generateGUID
   now <- getCurrentTime
-  encMobNum <- encrypt req.mobileNumber
+  let identifierType = fromMaybe SP.MOBILENUMBER req.identifierType
+  (email, encMobNum, useFakeOtp) <-
+    case identifierType of
+      SP.MOBILENUMBER -> do
+        case (req.mobileNumber, req.mobileCountryCode) of
+          (Just mobileNumber, Just _) -> do
+            let useFakeOtp = if mobileNumber `elem` transporterConfig.fakeOtpMobileNumbers then Just "7891" else Nothing
+            encMobNum <- encrypt mobileNumber
+            return (Nothing, Just encMobNum, useFakeOtp)
+          (_, _) -> throwError $ InvalidRequest "phone number and country code required"
+      SP.EMAIL -> do
+        case req.email of
+          Just email -> do
+            let useFakeOtp = if email `elem` transporterConfig.fakeOtpEmails then Just "7891" else Nothing
+            pure (Just email, Nothing, useFakeOtp)
+          Nothing -> throwError $ InvalidRequest "Email is required"
+      SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+  safetyCohortNewTag <- Yudhishthira.fetchNammaTagExpiry $ LYT.TagNameValue "SafetyCohort#New"
   return $
     SP.Person
       { id = pid,
-        firstName = "Driver",
+        firstName = fromMaybe "Driver" req.name,
         middleName = Nothing,
         lastName = Nothing,
-        role = SP.DRIVER,
+        role = fromMaybe SP.DRIVER mbRole,
         gender = SP.UNKNOWN,
         hometown = Nothing,
         languagesSpoken = Nothing,
-        identifierType = SP.MOBILENUMBER,
-        email = Nothing,
+        identifierType = identifierType,
+        email = email,
         passwordHash = Nothing,
-        unencryptedMobileNumber = Just req.mobileNumber,
-        mobileNumber = Just encMobNum,
-        mobileCountryCode = Just $ req.mobileCountryCode,
+        mobileNumber = encMobNum,
+        mobileCountryCode = req.mobileCountryCode,
         identifier = Nothing,
-        rating = Nothing,
         merchantId = merchantId,
         merchantOperatingCityId = merchantOperatingCityId,
         isNew = True,
@@ -244,16 +424,26 @@ makePerson req mbBundleVersion mbClientVersion merchantId merchantOperatingCityI
         description = Nothing,
         createdAt = now,
         updatedAt = now,
-        bundleVersion = mbBundleVersion,
-        clientVersion = mbClientVersion,
+        clientBundleVersion = mbBundleVersion,
+        clientSdkVersion = mbClientVersion,
+        clientConfigVersion = mbClientConfigVersion,
+        clientDevice = getDeviceFromText mbDevice,
+        backendConfigVersion = Nothing,
+        backendAppVersion = mbBackendApp,
         whatsappNotificationEnrollStatus = Nothing,
-        unencryptedAlternateMobileNumber = Nothing,
         alternateMobileNumber = Nothing,
         faceImageId = Nothing,
+        qrImageId = Nothing,
         totalEarnedCoins = 0,
         usedCoins = 0,
         registrationLat = req.registrationLat,
-        registrationLon = req.registrationLon
+        registrationLon = req.registrationLon,
+        useFakeOtp,
+        clientId = Nothing,
+        driverTag = Just [safetyCohortNewTag],
+        maskedMobileDigits = fmap (takeEnd 4) req.mobileNumber,
+        nyClubConsent = Just False,
+        reactBundleVersion = mbReactBundleVersion
       }
 
 makeSession ::
@@ -299,11 +489,12 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchan
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
-createDriverWithDetails req mbBundleVersion mbClientVersion merchantId merchantOpCityId isDashboard = do
-  person <- makePerson req mbBundleVersion mbClientVersion merchantId merchantOpCityId isDashboard
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
+createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard Nothing
   void $ QP.create person
-  createDriverDetails (person.id) merchantId merchantOpCityId
+  createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig
   pure person
 
 verify ::
@@ -311,7 +502,9 @@ verify ::
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    EsqDBReplicaFlow m r
+    EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasKafkaProducer r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -325,16 +518,18 @@ verify tokenId req = do
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
   person <- checkPersonExists entityId
   fork "generating the referral code for driver" $ do
-    void $ generateReferralCode (person.id, person.merchantId, Id merchantOperatingCityId)
+    void $ generateReferralCode (Just person.role) (person.id, person.merchantId, Id merchantOperatingCityId)
 
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
+  when (isNothing person.deviceToken) $ do
+    TM.notifyMarketingEvents person.id deviceToken TM.NEW_SIGNUP Nothing (TM.MerchantOperatingCityId (Id merchantOperatingCityId)) [TM.FIREBASE]
   cleanCachedTokens person.id
   QR.deleteByPersonIdExceptNew person.id tokenId
-  _ <- QR.setVerified tokenId
-  _ <- QP.updateDeviceToken person.id deviceToken
+  _ <- QR.setVerified True tokenId
+  _ <- QP.updateDeviceToken deviceToken person.id
   when isNewPerson $
-    QP.setIsNewFalse person.id
+    QP.setIsNewFalse False person.id
   updPers <- QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
   decPerson <- decrypt updPers
   unless (decPerson.whatsappNotificationEnrollStatus == req.whatsappNotificationEnroll && isJust req.whatsappNotificationEnroll) $ do
@@ -352,7 +547,8 @@ verify tokenId req = do
 callWhatsappOptApi ::
   ( EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    HasKafkaProducer r
   ) =>
   Text ->
   Id SP.Person ->
@@ -363,7 +559,7 @@ callWhatsappOptApi ::
 callWhatsappOptApi mobileNo personId hasOptedIn merchantId merchantOpCityId = do
   let status = fromMaybe Whatsapp.OPT_IN hasOptedIn
   void $ Whatsapp.whatsAppOptAPI merchantId merchantOpCityId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
-  QP.updateWhatsappNotificationEnrollStatus personId $ Just status
+  QP.updateWhatsappNotificationEnrollStatus (Just status) personId
 
 checkRegistrationTokenExists :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id SR.RegistrationToken -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
@@ -377,11 +573,13 @@ resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    HasKafkaProducer r
   ) =>
   Id SR.RegistrationToken ->
+  Maybe Text ->
   m ResendAuthRes
-resend tokenId = do
+resend tokenId mbSenderHash = do
   SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
   person <- checkPersonExists entityId
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
@@ -389,24 +587,24 @@ resend tokenId = do
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   let otpCode = authValueHash
-  let otpHash = smsCfg.credConfig.otpHash
+  let otpHash = fromMaybe smsCfg.credConfig.otpHash mbSenderHash
       phoneNumber = countryCode <> mobileNumber
-      sender = smsCfg.sender
   withLogTag ("personId_" <> entityId) $ do
-    message <-
+    (mbSender, message, templateId) <-
       MessageBuilder.buildSendOTPMessage (Id merchantOperatingCityId) $
         MessageBuilder.BuildSendOTPMessageReq
           { otp = otpCode,
             hash = otpHash
           }
-    Sms.sendSMS person.merchantId (Id merchantOperatingCityId) (Sms.SendSMSReq message phoneNumber sender)
+    let sender = fromMaybe smsCfg.sender mbSender
+    Sms.sendSMS person.merchantId (Id merchantOperatingCityId) (Sms.SendSMSReq message phoneNumber sender templateId)
       >>= Sms.checkSmsResult
   _ <- QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
 cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
-  regTokens <- QR.findAllByPersonId personId
+  regTokens <- QR.findAllByPersonId personId.getId
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
@@ -414,16 +612,86 @@ cleanCachedTokens personId = do
 logout ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->
   m APISuccess
-logout (personId, _, _) = do
+logout (personId, _, merchantOpCityId) = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   cleanCachedTokens personId
   uperson <-
     QP.findById personId
       >>= fromMaybeM (PersonNotFound personId.getId)
-  _ <- QP.updateDeviceToken uperson.id Nothing
-  QR.deleteByPersonId personId
-  when (uperson.role == SP.DRIVER) $ void (QD.updateActivity (cast uperson.id) False (Just DriverInfo.OFFLINE))
+  _ <- QP.updateDeviceToken Nothing uperson.id
+  QR.deleteByPersonId personId.getId
+  when (uperson.role == SP.DRIVER) $ do
+    driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
+    let newFlowStatus = DDriverMode.getDriverFlowStatus (Just DriverInfo.OFFLINE) False
+    DDriverMode.updateDriverModeAndFlowStatus uperson.id transporterConfig False (Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing
+  pure Success
+
+marketingEventsPreLogin ::
+  ( MonadFlow m,
+    EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EventStreamFlow m r
+  ) =>
+  MarketEventReq ->
+  m APISuccess
+marketingEventsPreLogin req = do
+  let params = req.marketingParams
+  now <- getCurrentTime
+  let marketingParamsData =
+        TE.MarketingParamsEventPreLoginData
+          { gclId = params.gclId,
+            utmCampaign = params.utmCampaign,
+            utmContent = params.utmContent,
+            utmCreativeFormat = params.utmCreativeFormat,
+            utmMedium = params.utmMedium,
+            utmSource = params.utmSource,
+            utmTerm = params.utmTerm,
+            appName = params.appName,
+            userType = params.userType,
+            createdAt = now,
+            updatedAt = now
+          }
+  TE.triggerMarketingParamEventPreLogin marketingParamsData
+  pure Success
+
+marketingEventsPostLogin ::
+  ( MonadFlow m,
+    EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EventStreamFlow m r
+  ) =>
+  (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->
+  MarketEventReq ->
+  m APISuccess
+marketingEventsPostLogin (personId, merchantId, merchantOpCityId) req = do
+  let params = req.marketingParams
+  now <- getCurrentTime
+  let marketingParamsData =
+        TE.MarketingParamsEventData
+          { personId = personId,
+            gclId = params.gclId,
+            utmCampaign = params.utmCampaign,
+            utmContent = params.utmContent,
+            utmCreativeFormat = params.utmCreativeFormat,
+            utmMedium = params.utmMedium,
+            utmSource = params.utmSource,
+            utmTerm = params.utmTerm,
+            appName = params.appName,
+            userType = params.userType,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOpCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+  TE.triggerMarketingParamEvent marketingParamsData
   pure Success

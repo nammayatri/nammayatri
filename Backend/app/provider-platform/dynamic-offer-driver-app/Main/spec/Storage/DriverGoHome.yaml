@@ -1,0 +1,211 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Point: Kernel.Storage.Esqueleto
+  Seconds: Kernel.Types.Common
+  DistanceUnit: Kernel.Types.Common
+
+DriverGoHomeRequest:
+  tableName: driver_go_home_request
+  derives: "Generic, Kernel.External.Maps.HasCoordinates.HasCoordinates, Show"
+
+  types:
+    DriverGoHomeRequestStatus:
+      enum: "ACTIVE, SUCCESS, FAILED"
+
+
+  fields:
+    id : Id DriverGoHomeRequest
+    driverId : Id Person
+    lat : Double
+    lon : Double
+    status : DriverGoHomeRequestStatus
+    numCancellation : Int
+    mbReachedHome : Maybe Bool
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+
+  beamFields:
+    mbReachedHome:
+      reachedHome: Maybe Bool
+
+  fromTType:
+    lat: lat|E
+    lon: lon|E
+    point: point|E
+    mbReachedHome: reachedHome|E
+
+  toTType:
+    lat: lat|E
+    lon: lon|E
+    point: Kernel.Storage.Esqueleto.Point|E
+    reachedHome: mbReachedHome|E
+
+
+  constraints:
+    id: PrimaryKey
+    driverId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    finishWithStatus:
+      kvFunction: updateOneWithKV
+      params: [status, mbReachedHome]
+      where: id
+
+    updateCancellationCount:
+      kvFunction: updateOneWithKV
+      params: [numCancellation]
+      where: id
+
+  sqlType:
+    status: character varying (36)
+
+  default:
+    numCancellation: 0
+
+
+  excludedDefaultQueries:
+    - createMany
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
+DriverHomeLocation:
+  tableName: driver_home_location
+  beamInstance: MakeTableInstancesWithTModifier [("address", "home_address")]
+
+
+  fields:
+    id : Id DriverHomeLocation
+    driverId : Id Person
+    lat : Double
+    lon : Double
+    address : Text
+    tag : Text
+    updatedAt : UTCTime
+    createdAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+
+GoHomeConfig:
+  tableName: go_home_config
+
+  types:
+    Subscriber: {}
+
+
+  fields:
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+    enableGoHome : Bool
+    startCnt : Int
+    destRadiusMeters : Int
+    activeTime : Int
+    updateHomeLocationAfterSec : Int
+    cancellationCnt : Int
+    numHomeLocations : Int
+    goHomeFromLocationRadius : Meters
+    goHomeWayPointRadius : Meters
+    numDriversForDirCheck : Int
+    goHomeBatchDelay : Seconds
+    ignoreWaypointsTill : Meters
+    addStartWaypointAt : Meters
+    newLocAllowedRadius : Meters
+    distanceUnit: DistanceUnit
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  beamType:
+    goHomeBatchDelay: Int
+    ignoreWaypointsTill: Int
+    addStartWaypointAt: Int
+    newLocAllowedRadius: Int
+    distanceUnit: Maybe DistanceUnit
+
+  fromTType:
+    goHomeBatchDelay: Kernel.Types.Common.Seconds goHomeBatchDelay|E
+    ignoreWaypointsTill: Kernel.Types.Common.Meters ignoreWaypointsTill|E
+    addStartWaypointAt: Kernel.Types.Common.Meters addStartWaypointAt|E
+    newLocAllowedRadius: Kernel.Types.Common.Meters newLocAllowedRadius|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit|E
+
+  toTType:
+    goHomeBatchDelay: Kernel.Types.Common.getSeconds goHomeBatchDelay|E
+    ignoreWaypointsTill: Kernel.Types.Common.getMeters ignoreWaypointsTill|E
+    addStartWaypointAt: Kernel.Types.Common.getMeters addStartWaypointAt|E
+    newLocAllowedRadius: Kernel.Types.Common.getMeters newLocAllowedRadius|E
+    distanceUnit: Kernel.Prelude.Just|I
+
+
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+
+  queries:
+    findByMerchantOpCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+
+  default:
+    enableGoHome: "true"
+    startCnt: "2"
+    destRadiusMeters: "3000"
+    activeTime: "1800"
+    updateHomeLocationAfterSec: "2592000"
+    cancellationCnt: "2"
+    numHomeLocations: "5"
+    goHomeFromLocationRadius: "7000"
+    goHomeWayPointRadius: "2000"
+    numDriversForDirCheck: "5"
+    goHomeBatchDelay: "4"
+    ignoreWaypointsTill: "3000"
+    addStartWaypointAt: "3000"
+    newLocAllowedRadius: "20"
+
+
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+
+

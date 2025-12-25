@@ -4,6 +4,8 @@
     <string name="request">অনুরোধ</string>
     <string name="decline">পতন</string>
     <string name="pickup">পিকআপ</string>
+    <string name="test_request">পরীক্ষার অনুরোধ</string>
+    <string name="test_request_successful">টেস্ট রাইডের অনুরোধ সফল!</string>
     <string name="trip">ট্রিপ</string>
     <string name="new_ride_assigned">নতুন যাত্রা নির্ধারিত</string>
     <string name="waiting_for_customer_response">গ্রাহকের প্রতিক্রিয়ার জন্য অপেক্ষা করছি</string>
@@ -26,7 +28,7 @@
     <string name="tap_on">3. আলতো চাপুন</string>
     <string name="location">অবস্থান</string>
     <string name="phone">ফোন</string>
-    <string name="includes_pickup_charges_10">পিকআপ চার্জ ₹ 10 অন্তর্ভুক্ত</string>
+    <string name="includes_pickup_charges_10">পিকআপ চার্জ ₹ {#amount#} অন্তর্ভুক্ত</string>
     <string name="away">দূরে</string>
     <string name="we_made_you_online">আমরা আপনাকে অনলাইনে তৈরি করেছি</string>
     <string name="location_is_turned_on">অবস্থান চালু করা হয়</string>
@@ -46,4 +48,8 @@
     <string name="message_from_customer">গ্রাহক থেকে বার্তা</string>
     <string name="go_to">গো-টু</string>
     <string name="call_support">সাহায্য কল করুন</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"অতিরিক্ত ভাড়া নেই। টিপস নেই। অপেক্ষা চার্জ নেই।"</string>
+    <string name="third_party_booking">"তৃতীয় পক্ষের বুকিং"</string>
+    <string name="tip_included"> টিপ অন্তর্ভুক্ত!</string>
+    <string name="round_trip">রাউন্ড ট্রিপ</string>
 </resources>

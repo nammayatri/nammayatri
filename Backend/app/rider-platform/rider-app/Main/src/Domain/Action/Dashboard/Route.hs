@@ -14,11 +14,11 @@
 
 module Domain.Action.Dashboard.Route where
 
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+import qualified Dashboard.Common as Common
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.RideStatus as Ride
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Maps (LatLong (..))
@@ -32,8 +32,8 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import Tools.Maps (getTripRoutes)
 
-mkGetLocation :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> Flow GetRoutesResp
-mkGetLocation _ rideId pickupLocationLat pickupLocationLon = do
+mkGetLocation :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> Bool -> Flow GetRoutesResp
+mkGetLocation _ rideId pickupLocationLat pickupLocationLon isPickUpRoute = do
   ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == Ride.NEW || ride.status == Ride.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
@@ -42,16 +42,24 @@ mkGetLocation _ rideId pickupLocationLat pickupLocationLon = do
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.DriverOfferDetails details -> Just details.toLocation
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
-  bookingLocation <- mbToLocation & fromMaybeM (InvalidRequest "Drop location does not exist for this ride")
-  let merchantOperatingCityId = booking.merchantOperatingCityId
-  let fromLocation = LatLong pickupLocationLat pickupLocationLon
-  let toLocation = LatLong bookingLocation.lat bookingLocation.lon
-  let listOfLatLong = [fromLocation, toLocation]
-  let waypointsList = NE.fromList listOfLatLong
-  let mkGetRoutesResp =
+        DRB.InterCityDetails details -> Just details.toLocation
+        DRB.AmbulanceDetails details -> Just details.toLocation
+        DRB.DeliveryDetails details -> Just details.toLocation
+        DRB.MeterRideDetails details -> details.toLocation
+      merchantOperatingCityId = booking.merchantOperatingCityId
+      fromLocation = LatLong pickupLocationLat pickupLocationLon
+  targetLocation <-
+    bool
+      (mbToLocation & fromMaybeM (InvalidRequest "Drop location does not exist for this ride"))
+      (pure booking.fromLocation)
+      isPickUpRoute
+  let toLocation = LatLong targetLocation.lat targetLocation.lon
+      listOfLatLong = [fromLocation, toLocation]
+      waypointsList = NE.fromList listOfLatLong
+      mkGetRoutesResp =
         Maps.GetRoutesReq
           { waypoints = waypointsList,
             mode = Just CAR,
             calcPoints = True
           }
-  getTripRoutes booking.riderId booking.merchantId (Just merchantOperatingCityId) mkGetRoutesResp
+  getTripRoutes booking.riderId booking.merchantId (Just merchantOperatingCityId) (Just rideId.getId) mkGetRoutesResp

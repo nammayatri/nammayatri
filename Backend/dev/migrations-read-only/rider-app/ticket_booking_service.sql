@@ -19,3 +19,26 @@ ALTER TABLE atlas_app.ticket_booking_service ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_booking_service ALTER COLUMN merchant_operating_city_id SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN currency text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN visit_date date ;
+ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN cancelled_seats integer ;
+ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN booked_seats integer NOT NULL default 0;
+ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN b_hour_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN vendor_split_details json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN assignment_id text ;

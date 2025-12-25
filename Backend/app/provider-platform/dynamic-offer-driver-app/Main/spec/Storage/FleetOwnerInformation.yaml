@@ -1,0 +1,164 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  Person: Domain.Types.Person
+  FleetType : Domain.Types.FleetType
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+  Value: Data.Aeson
+  Address: Kernel.External.Payment.Stripe.Types
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+FleetOwnerInformation:
+  tableName: fleet_owner_information
+  fields:
+    merchantId: Id Merchant
+    fleetOwnerPersonId : Id Person
+    enabled: Bool
+    blocked: Bool
+    verified: Bool
+    isEligibleForSubscription: Bool
+    gstNumber: Maybe (EncryptedHashedField e Text)
+    gstNumberDec: Maybe Text # for backward compatibilty
+    panNumber: Maybe (EncryptedHashedField e Text)
+    panNumberDec: Maybe Text # for backward compatibilty
+    fleetType: FleetType
+    gstImageId : Maybe Text
+    panImageId: Maybe Text
+    aadhaarNumber: Maybe (EncryptedHashedField e Text)
+    aadhaarNumberDec: Maybe Text # for backward compatibilty
+    aadhaarFrontImageId: Maybe Text
+    aadhaarBackImageId: Maybe Text
+    businessLicenseNumber : Maybe (EncryptedHashedField e Text)
+    businessLicenseNumberDec: Maybe Text # for backward compatibilty
+    businessLicenseImageId : Maybe Text
+    stripeIdNumber: Maybe (EncryptedHashedField e Text) # required for Stripe connected account, can have different format depending on country
+    referredByOperatorId: Maybe Text
+    registeredAt: Maybe UTCTime
+    ticketPlaceId: Maybe Text
+    prepaidSubscriptionBalance: Maybe HighPrecMoney
+    lienAmount: Maybe HighPrecMoney
+    planExpiryDate: Maybe UTCTime
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    fleetDob: Maybe UTCTime
+    stripeAddress: Maybe Address
+    fleetName: Maybe Text
+
+  excludedFields: [merchantOperatingCityId]
+  types:
+    FleetType:
+      enum: "RENTAL_FLEET,NORMAL_FLEET,BUSINESS_FLEET"
+      derive: "HttpInstance"
+  beamType:
+    isEligibleForSubscription: Maybe Bool
+    stripeAddress: Maybe Value
+
+  beamFields:
+    gstNumber:
+      gstNumberEncrypted: Maybe Text
+      gstNumberHash: Maybe DbHash
+    gstNumberDec:
+      gstNumber: Maybe Text
+    panNumber:
+      panNumberEncrypted: Maybe Text
+      panNumberHash: Maybe DbHash
+    panNumberDec:
+      panNumber: Maybe Text
+    aadhaarNumber:
+      aadhaarNumberEncrypted: Maybe Text
+      aadhaarNumberHash: Maybe DbHash
+    aadhaarNumberDec:
+      aadhaarNumber: Maybe Text
+    businessLicenseNumber:
+      businessLicenseNumberEncrypted: Maybe Text
+      businessLicenseNumberHash: Maybe DbHash
+    businessLicenseNumberDec:
+      businessLicenseNumber: Maybe Text
+    stripeIdNumber:
+      stripeIdNumberEncrypted: Maybe Text
+      stripeIdNumberHash: Maybe DbHash
+
+  fromTType:
+    gstNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem gstNumberEncrypted gstNumberHash|E
+    panNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem panNumberEncrypted panNumberHash|E
+    aadhaarNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem aadhaarNumberEncrypted aadhaarNumberHash|E
+    businessLicenseNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem businessLicenseNumberEncrypted businessLicenseNumberHash|E
+    stripeIdNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem stripeIdNumberEncrypted stripeIdNumberHash|E
+    isEligibleForSubscription: fromMaybe True isEligibleForSubscription | E
+    stripeAddress: stripeAddress >>= Kernel.Utils.JSON.valueToMaybe|E
+
+  toTType:
+      gstNumber: Nothing|E
+      gstNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+      gstNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+      panNumber: Nothing|E
+      panNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+      panNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+      aadhaarNumber: Nothing|E
+      aadhaarNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+      aadhaarNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+      businessLicenseNumber: Nothing|E
+      businessLicenseNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+      businessLicenseNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+      stripeIdNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+      stripeIdNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+      isEligibleForSubscription: Just isEligibleForSubscription | E
+      stripeAddress: Kernel.Prelude.fmap toJSON
+
+  constraints:
+    fleetOwnerPersonId : PrimaryKey
+
+  queries:
+    updateFleetOwnerVerifiedStatus:
+      kvFunction: updateOneWithKV
+      params: [verified, updatedAt]
+      where: fleetOwnerPersonId
+    updateBusinessLicenseImage:
+      kvFunction: updateOneWithKV
+      params: [businessLicenseImageId, updatedAt]
+      where: fleetOwnerPersonId
+    updateRegistration:
+      kvFunction: updateOneWithKV
+      params: [registeredAt]
+      where: fleetOwnerPersonId
+    updateFleetOwnerEnabledStatus:
+      kvFunction: updateOneWithKV
+      params: [enabled]
+      where: fleetOwnerPersonId
+    updateReferredByOperatorId:
+      kvFunction: updateOneWithKV
+      params: [referredByOperatorId]
+      where: fleetOwnerPersonId
+    updateLienAmount:
+      kvFunction: updateOneWithKV
+      params: [lienAmount]
+      where: fleetOwnerPersonId
+    updatePrepaidSubscriptionBalanceAndExpiry:
+      kvFunction: updateOneWithKV
+      params: [prepaidSubscriptionBalance, planExpiryDate]
+      where: fleetOwnerPersonId
+    deleteByFleetOwnerPersonId:
+      kvFunction: deleteWithKV
+      where: fleetOwnerPersonId
+    findAllByPrimaryKeys:
+      kvFunction: findAllWithKV
+      where:
+        in: [fleetOwnerPersonId]
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+
+  sqlType:
+    referredByOperatorId: character varying (36)
+    gstNumberEncrypted: character varying (255)
+    gstNumberHash: bytea
+    panNumberEncrypted: character varying (255)
+    panNumberHash: bytea
+    aadhaarNumberEncrypted: character varying (255)
+    aadhaarNumberHash: bytea
+    businessLicenseNumberEncrypted: character varying (255)
+    businessLicenseNumberHash: bytea
+    stripeAddress: json
+    fleetName: character varying (255)
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

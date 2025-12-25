@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN search_request_for_driver_id character(36) REFERENCES atlas_driver_offer_bpp.search_request_for_driver (id);

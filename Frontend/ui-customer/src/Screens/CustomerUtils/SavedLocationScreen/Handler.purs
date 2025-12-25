@@ -15,12 +15,13 @@
 
 module Screens.SavedLocationScreen.Handler where
 
-import Prelude ( bind, discard, ($), (<$>), pure)
+import Prelude ( void, bind, discard, ($), (<$>), pure)
 import Engineering.Helpers.BackTrack (getState)
 import Screens.SavedLocationScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import Engineering.Helpers.Utils (toggleLoader)
 import Screens.SavedLocationScreen.View as SavedLocationScreen
 import Types.App (FlowBT, GlobalState(..), SAVED_LOCATION_SCREEN_OUTPUT(..))
 import ModifyScreenState (modifyScreenState)
@@ -32,6 +33,15 @@ savedLocationScreen = do
   (GlobalState state) <- getState 
   act <- lift $ lift $ runScreen $ SavedLocationScreen.screen state.savedLocationScreen (GlobalState state)
   case act of 
+    DriverProfile updatedState id -> do
+      modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreenState → updatedState)
+      App.BackT $ App.BackPoint <$> ( pure $ GO_TO_FAV_DRIVER_PROFILE id)
+    GoToBack updatedState -> do
+      modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreenState → updatedState)
+      App.BackT $ pure App.GoBack
+    FavouriteDriverTrips updatedState -> do 
+      modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreenState → updatedState)
+      App.BackT $  App.BackPoint <$> ( pure $ GOTO_FAVOURITEDRIVERS_LIST updatedState)
     AddLocation updatedState -> do 
       modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreenState → updatedState)
       App.BackT $  App.BackPoint <$> ( pure $ ADD_NEW_LOCATION updatedState)

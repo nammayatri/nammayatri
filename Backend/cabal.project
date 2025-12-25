@@ -2,12 +2,13 @@ packages:
   app/alchemist
   app/provider-platform/dynamic-offer-driver-drainer
   app/beckn-cli
-  app/provider-platform/driver-tracking-health-check
   app/provider-platform/dynamic-offer-driver-app/Main
   app/provider-platform/dynamic-offer-driver-app/Allocator
   app/rider-platform/rider-app-drainer
   app/rider-platform/rider-app/Main
+  app/rider-platform/rider-app/Scheduler
   app/rider-platform/rider-app/search-result-aggregator
+  app/safety-dashboard
   app/mocks/sms
   app/mocks/fcm
   app/dashboard/rider-dashboard
@@ -16,6 +17,7 @@ packages:
   app/dashboard/CommonAPIs
   app/example-service
   app/special-zone
+  app/sdk-event-pipeline
   app/mocks/rider-platform
   app/kafka-consumers
   app/mocks/idfy
@@ -23,7 +25,6 @@ packages:
   app/rider-platform/public-transport-rider-platform/Main
   app/rider-platform/public-transport-rider-platform/search-consumer
   app/mocks/public-transport-provider-platform
-  app/scheduler-example
   app/utils/route-extractor
   app/utils/image-api-helper
   lib/beckn-spec
@@ -34,10 +35,14 @@ packages:
   lib/special-zone
   lib/scheduler
   lib/sessionizer-metrics
+  lib/yudhishthira
   test
   lib/producer
   lib/utils
-
+  lib/external
+  lib/webhook
+  lib/dashcam
+  hunit-tests
 -- ## 6 parallel jobs by default.
 --
 -- # since we now use "-j4" in "ghc-options" for all packages,
@@ -66,9 +71,9 @@ jobs: 6
 -- #       If you are not planning to run code,
 -- #       turning off optimization will lead to better build times
 -- #       and less code to be rebuilt when a module changes.
-
+--
 -- optimization: 0
-
+--
 -- ## Enables flags in the project.
 -- #  +flagname enables the flag.
 -- #  -flagname disables it.

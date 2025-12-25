@@ -24,11 +24,14 @@ import Components.MenuButton as MenuButton
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
-import Prelude (Unit, const, map, ($), (<<<), (==), not)
+import Prelude (Unit, const, map, ($), (<<<), (==), not, unit)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, weight, width)
 import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
+import RemoteConfig as RC
+import Data.Array as DA
+import JBridge as JB
 
 screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
 screen initialState =
@@ -76,8 +79,11 @@ view push state =
 
 listLanguageView :: forall w . ST.SelectLanguageScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 listLanguageView state push = 
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    ](map (\lang_data -> MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state lang_data)) (state.data.config.languageList))
+  let appName = JB.getAppName unit
+      getConfigList = RC.customerAppLanguageConfig appName
+      languageList = if not DA.null getConfigList then getConfigList else state.data.config.languageList 
+  in linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      ](map (\lang_data -> MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state lang_data)) languageList)

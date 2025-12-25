@@ -2,6 +2,9 @@ let common = ./common.dhall
 
 let sec = ./secrets/rider-app.dhall
 
+let noSignatureSubscribers =
+      [ "pre-prod-ondc-ticketing-api-delhi.transportstack.in" ]
+
 in  { port = +8027
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/mock-rider-platform.log" }
@@ -20,4 +23,5 @@ in  { port = +8027
     , longDurationRetryCfg = common.longDurationRetryCfg
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , noSignatureSubscribers
     }

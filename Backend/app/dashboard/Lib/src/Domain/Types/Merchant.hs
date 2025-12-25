@@ -29,12 +29,16 @@ data MerchantE e = Merchant
     is2faMandatory :: Bool,
     defaultOperatingCity :: City.City,
     supportedOperatingCities :: [City.City],
-    companyName :: Maybe Text,
     domain :: Maybe Text,
     website :: Maybe Text,
-    email :: Maybe (EncryptedHashedField e Text),
-    passwordHash :: Maybe DbHash,
-    createdAt :: UTCTime
+    authToken :: Maybe (EncryptedHashedField e Text),
+    createdAt :: UTCTime,
+    enabled :: Maybe Bool,
+    requireAdminApprovalForFleetOnboarding :: Maybe Bool,
+    verifyFleetWhileLogin :: Maybe Bool,
+    hasFleetMemberHierarchy :: Maybe Bool,
+    isStrongNameCheckRequired :: Maybe Bool,
+    singleActiveSessionOnly :: Maybe Bool
   }
   deriving (Generic)
 
@@ -45,29 +49,41 @@ type DecryptedMerchant = MerchantE 'AsUnencrypted
 instance EncryptedItem Merchant where
   type Unencrypted Merchant = (DecryptedMerchant, HashSalt)
   encryptItem (Merchant {..}, salt) = do
-    email_ <- encryptItem $ (,salt) <$> email
-    return Merchant {email = email_, ..}
+    authToken_ <- encryptItem $ (,salt) <$> authToken
+    return Merchant {authToken = authToken_, ..}
+
   decryptItem Merchant {..} = do
-    email_ <- fmap fst <$> decryptItem email
-    return (Merchant {email = email_, ..}, "")
+    authToken_ <- fmap fst <$> decryptItem authToken
+    return (Merchant {authToken = authToken_, ..}, "")
 
 instance EncryptedItem' Merchant where
   type UnencryptedItem Merchant = DecryptedMerchant
-  toUnencrypted :: UnencryptedItem Merchant -> HashSalt -> Unencrypted Merchant
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
 data MerchantAPIEntity = MerchantAPIEntity
   { id :: Id Merchant,
     shortId :: ShortId Merchant,
-    companyName :: Maybe Text,
     domain :: Maybe Text,
     website :: Maybe Text,
-    email :: Maybe Text,
+    authToken :: Maybe Text,
     supportedOperatingCities :: [City.City],
-    defaultOperatingCity :: City.City
+    defaultOperatingCity :: City.City,
+    adminList :: [(Text, Text)],
+    enabled :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
-mkMerchantAPIEntity :: DecryptedMerchant -> MerchantAPIEntity
-mkMerchantAPIEntity Merchant {..} = MerchantAPIEntity {..}
+mkMerchantAPIEntity :: DecryptedMerchant -> [(Text, Text)] -> MerchantAPIEntity
+mkMerchantAPIEntity merchant adminList = do
+  MerchantAPIEntity
+    { id = merchant.id,
+      shortId = merchant.shortId,
+      domain = merchant.domain,
+      website = merchant.website,
+      supportedOperatingCities = merchant.supportedOperatingCities,
+      defaultOperatingCity = merchant.defaultOperatingCity,
+      authToken = merchant.authToken,
+      adminList = adminList,
+      enabled = merchant.enabled
+    }

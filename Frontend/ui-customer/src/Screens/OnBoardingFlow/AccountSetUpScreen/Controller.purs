@@ -28,13 +28,15 @@ import Data.String (length, trim)
 import Helpers.Utils (setText)
 import JBridge (hideKeyboardOnNavigation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=), (==), (<))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, id, updateAndExit)
+import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=), (==), (<), (<>), show)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, id, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..), ErrorType(..))
+import Screens.Types (ReferralEnum(..), AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..), ErrorType(..))
 import Data.Array as DA
+import Engineering.Helpers.Commons as EHC
 import Timers (clearTimerWithId)
+import Engineering.Helpers.Events as EHE
 
 instance showAction :: Show Action where
   show _ = ""
@@ -52,6 +54,7 @@ instance loggableAction :: Loggable Action where
     NameEditTextActionController act -> case act of
       PrimaryEditTextController.TextChanged _ _ -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_changed" "primary_edit_text"
       PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_focus_changed" "primary_edit_text"
+      PrimaryEditTextController.TextImageClicked -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_action" "text_image"
     GenericHeaderActionController act -> case act of
       GenericHeaderController.PrefixImgOnClick -> do
         trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "generic_header_action" "back_icon"
@@ -66,12 +69,16 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "countdown_updated"
-      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "tip_clicked"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "popup_dismissed"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen ACCOUNT_SET_UP_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      _ -> pure unit
     ShowOptions -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "show_options"
-    EditTextFocusChanged -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_focus_changed" "edit_text"
+    EditTextFocusChanged _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_focus_changed" "edit_text"
+    ReferralTextFocusChanged _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "referral_edit_text_focus_changed" "referral_text"
+    ReferralTextChanged value -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "referral_text_changed" "edit_text"
+    VerifyReferralClick -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "verify_referral_click"
     TextChanged value -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_text_changed" "edit_text"
     GenderSelected value -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "gender_selected" "edit_text"
     AnimationEnd _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "show_options" "animation_end"
@@ -86,6 +93,7 @@ instance loggableAction :: Loggable Action where
 data ScreenOutput
   = GoHome AccountSetUpScreenState
   | ChangeMobileNumber
+  | VerifyReferral AccountSetUpScreenState
 
 data Action
   = BackPressed
@@ -94,7 +102,11 @@ data Action
   | GenericHeaderActionController GenericHeaderController.Action
   | PopUpModalAction PopUpModal.Action
   | ShowOptions
-  | EditTextFocusChanged
+  | EditTextFocusChanged Boolean
+  | ReferralTextFocusChanged Boolean
+  | ReferralTextChanged String
+  | VerifyReferralClick
+  | ReferralSectionClick
   | TextChanged String
   | GenderSelected Gender
   | AfterRender
@@ -111,6 +123,7 @@ eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
     continue state{props{isSpecialAssistList = true},data{disabilityOptions{editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
     else do 
       let newState = state{data{disabilityOptions{editedDisabilityReason = "" , selectedDisability = Nothing, otherDisabilityReason = Nothing}}}
+      let _ = EHE.addEvent (EHE.defaultEventObject "profile_details_submitted") { module = "onboarding", payload = "name : " <> state.data.name}
       updateAndExit newState $ GoHome newState
 
 eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state =
@@ -121,9 +134,18 @@ eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) 
 
 eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state[ do pure $ BackPressed]
 
-eval EditTextFocusChanged state = continue state {props{genderOptionExpanded = false, activeField = Just NameSection}}
+eval (EditTextFocusChanged focus) state = continue state {data{referralTextFocussed = false},props{genderOptionExpanded = false, activeField = if EHC.isTrue focus then Just NameSection else state.props.activeField}}
 
-eval (GenderSelected value) state = continue state{data{gender = Just value}, props{genderOptionExpanded = false, btnActive = (state.data.name /= "") && (length state.data.name >= 3) }}
+eval (ReferralTextFocusChanged focus) state = if state.data.isReferred == Verified then continue state else continue state {data {referralTextFocussed = EHC.isTrue focus}, props{genderOptionExpanded = false, activeField = if EHC.isTrue focus then Just ReferralSection else state.props.activeField}}
+
+eval (ReferralTextChanged value) state = do
+  let
+    newState = state {data { referralCode = if state.data.isReferred == Verified then state.data.referralCode else trim value, isReferred = if state.data.isReferred == Verified then Verified else NotVerified}}
+  continue newState
+
+eval (GenderSelected value) state = do
+  let _ = EHE.addEvent (EHE.defaultEventObject "profile_details_gender_selected") { module = "onboarding", payload = show value}
+  continue state{data{gender = Just value}, props{genderOptionExpanded = false, btnActive = (state.data.name /= "") && (length state.data.name >= 3) }}
 
 eval (TextChanged value) state = do
   let
@@ -132,11 +154,17 @@ eval (TextChanged value) state = do
 
 eval (ShowOptions) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  continue state{data {nameErrorMessage = if(length state.data.name >= 3) then Nothing else Just INVALID_NAME}, props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true, activeField = Just DropDown}}
+  continue state{data {referralTextFocussed = false, nameErrorMessage = if(length state.data.name >= 3) then Nothing else Just INVALID_NAME}, props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true, activeField = Just DropDown}}
 
 eval NameSectionClick state = continue state {props{genderOptionExpanded = false, activeField = Just NameSection}}
 
 eval (AnimationEnd _)  state = continue state{props{showOptions = false}}
+
+eval VerifyReferralClick state = do 
+  let newState = state {data {isReferred = Verifying}}
+  updateAndExit newState $ (VerifyReferral newState)
+
+eval ReferralSectionClick state = if state.data.isReferred == Verified then continue state {props{genderOptionExpanded = false}} else continue state {props{genderOptionExpanded = false, activeField = Just ReferralSection}, data {referralTextFocussed = true}}
 
 eval BackPressed state = do
   if state.props.isSpecialAssistList then continue state {props{isSpecialAssistList = false}}
@@ -150,29 +178,35 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { pro
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ ChangeMobileNumber
 
 eval (GenericRadioButtonAC (GenericRadioButton.OnSelect idx)) state = do 
-  let newState = state{data{disabilityOptions = 
+  let newState = state{data{referralTextFocussed = false,
+                    disabilityOptions = 
                       if idx == 0 then 
                         state.data.disabilityOptions{ activeIndex = idx, specialAssistActiveIndex = 0, editedDisabilityReason = "", selectedDisability = Nothing, otherDisabilityReason = Nothing }
                         else state.data.disabilityOptions{ activeIndex = idx}
                           }}
       isBtnActive = getBtnActive newState 
+      disabilityPayload = if idx == 0 then "NO" else "Yes"
+      _ = EHE.addEvent (EHE.defaultEventObject "profile_details_disability_selected") { module = "onboarding", payload = disabilityPayload}
   continue newState{ props{btnActive = isBtnActive }}
 
-eval (SpecialAssistanceListAC action) state = case action of
-  SelectListModal.OnGoBack -> continue state{props{isSpecialAssistList = false}}
-  SelectListModal.UpdateIndex idx -> continue state{data{disabilityOptions{specialAssistActiveIndex = idx, editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
-  SelectListModal.TextChanged id input -> continue state {data{disabilityOptions{ otherDisabilityReason = Just input}}}
-  SelectListModal.Button2 (PrimaryButtonController.OnClick) -> do 
-    _ <- pure $ hideKeyboardOnNavigation true
-    let selectedDisability = (state.data.disabilityOptions.disabilityOptionList DA.!! state.data.disabilityOptions.specialAssistActiveIndex)
-        selectedDisabilityTag = case selectedDisability of 
-          Just disability -> disability.tag 
-          Nothing -> ""
-        newState = state{data{disabilityOptions{otherDisabilityReason = if selectedDisabilityTag == "OTHER" then state.data.disabilityOptions.otherDisabilityReason else Nothing , selectedDisability = selectedDisability }}}
-    updateAndExit newState $ GoHome newState
-  _ -> continue state
+eval (SpecialAssistanceListAC action) state = do 
+  let _ = EHE.addEvent (EHE.defaultEventObject "profile_details_special_assistance_page_loaded") { module = "onboarding"}
+  case action of
+    SelectListModal.OnGoBack -> continue state{props{isSpecialAssistList = false}}
+    SelectListModal.UpdateIndex idx -> continue state{data{disabilityOptions{specialAssistActiveIndex = idx, editedDisabilityReason = fromMaybe "" state.data.disabilityOptions.otherDisabilityReason}}}
+    SelectListModal.TextChanged id input -> continue state {data{disabilityOptions{ otherDisabilityReason = Just input}}}
+    SelectListModal.Button2 (PrimaryButtonController.OnClick) -> do 
+      _ <- pure $ hideKeyboardOnNavigation true
+      let selectedDisability = (state.data.disabilityOptions.disabilityOptionList DA.!! state.data.disabilityOptions.specialAssistActiveIndex)
+          selectedDisabilityTag = case selectedDisability of 
+            Just disability -> disability.tag 
+            Nothing -> ""
+          newState = state{data{disabilityOptions{otherDisabilityReason = if selectedDisabilityTag == "OTHER" then state.data.disabilityOptions.otherDisabilityReason else Nothing , selectedDisability = selectedDisability }}}
+          _ = EHE.addEvent (EHE.defaultEventObject "profile_details_special_assistance_submit_clicked") { module = "onboarding", payload = "name : " <> state.data.name <> "  disability : " <> show selectedDisabilityTag}
+      updateAndExit newState $ GoHome newState
+    _ -> continue state
 
-eval _ state = continue state
+eval _ state = update state
 
 
 getBtnActive :: AccountSetUpScreenState -> Boolean

@@ -11,20 +11,31 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module IssueManagement.Storage.Beam.Issue.IssueCategory where
 
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import IssueManagement.Tools.UtilsTH
+import qualified IssueManagement.Common as Common
+import qualified IssueManagement.Domain.Types.Issue.IssueCategory as IC
+import IssueManagement.Tools.UtilsTH hiding (label)
 
 data IssueCategoryT f = IssueCategoryT
   { id :: B.C f Text,
     category :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     logoUrl :: B.C f Text,
-    priority :: B.C f Int
+    igmCategory :: B.C f (Maybe Text),
+    priority :: B.C f Int,
+    merchantId :: B.C f Text,
+    categoryType :: B.C f IC.CategoryType,
+    isRideRequired :: B.C f Bool,
+    maxAllowedRideAge :: B.C f (Maybe Seconds),
+    allowedRideStatuses :: B.C f (Maybe [Common.RideStatus]),
+    label :: B.C f (Maybe Text),
+    isActive :: B.C f Bool,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

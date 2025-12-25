@@ -15,8 +15,8 @@ import Kernel.Types.Id
 create :: BeamFlow m r => IssueReport.IssueReport -> m ()
 create = createWithKV
 
-findAllWithOptions :: BeamFlow m r => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
-findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee =
+findAllWithOptions :: BeamFlow m r => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Maybe (Id Person) -> Maybe (Id Ride) -> Id MerchantOperatingCity -> m [IssueReport]
+findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId mbRideId merchantOperatingCityId = do
   findAllWithOptionsKV conditions (Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
   where
     limitVal = min (fromMaybe 10 mbLimit) 10
@@ -26,15 +26,24 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee =
           catMaybes
             [ fmap (Is BeamIR.status . Eq) mbStatus,
               fmap (Is BeamIR.assignee . Eq . Just) mbAssignee,
-              fmap (Is BeamIR.categoryId . Eq . getId) mbCategoryId
+              fmap (Is BeamIR.categoryId . Eq . Just . getId) mbCategoryId,
+              fmap (Is BeamIR.personId . Eq . getId) mbPersonId,
+              fmap (Is BeamIR.rideId . Eq . Just . getId) mbRideId
             ]
+            <> [Is BeamIR.merchantOperatingCityId $ Eq (Just merchantOperatingCityId.getId)]
       ]
 
 findById :: BeamFlow m r => Id IssueReport -> m (Maybe IssueReport)
 findById (Id issueReportId) = findOneWithKV [And [Is BeamIR.id $ Eq issueReportId, Is BeamIR.deleted $ Eq False]]
 
+findByShortId :: BeamFlow m r => ShortId IssueReport -> m (Maybe IssueReport)
+findByShortId (ShortId issueReportShortId) = findOneWithKV [And [Is BeamIR.shortId $ Eq $ Just issueReportShortId, Is BeamIR.deleted $ Eq False]]
+
 findAllByPerson :: BeamFlow m r => Id Person -> m [IssueReport]
-findAllByPerson (Id personId) = findAllWithKV [And [Is BeamIR.personId $ Eq personId, Is BeamIR.deleted $ Eq False]]
+findAllByPerson (Id personId) = findAllWithOptionsKV [And [Is BeamIR.personId $ Eq personId, Is BeamIR.deleted $ Eq False]] (Desc BeamIR.updatedAt) Nothing Nothing
+
+findAllByPersonAndRideId :: BeamFlow m r => Id Person -> Id Ride -> m [IssueReport]
+findAllByPersonAndRideId (Id personId) (Id rideId) = findAllWithOptionsKV [And [Is BeamIR.personId $ Eq personId, Is BeamIR.rideId $ Eq (Just rideId), Is BeamIR.deleted $ Eq False]] (Desc BeamIR.updatedAt) Nothing Nothing
 
 safeToDelete :: BeamFlow m r => Id IssueReport -> Id Person -> m (Maybe IssueReport)
 safeToDelete (Id issueReportId) (Id personId) = findOneWithKV [And [Is BeamIR.id $ Eq issueReportId, Is BeamIR.personId $ Eq personId, Is BeamIR.deleted $ Eq False]]
@@ -60,7 +69,7 @@ updateStatusAssignee :: BeamFlow m r => Id IssueReport -> Maybe IssueStatus -> M
 updateStatusAssignee issueReportId status assignee = do
   now <- getCurrentTime
   updateOneWithKV
-    ([Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now] <> if isJust status then [Set BeamIR.status (fromJust status)] else [] <> ([Set BeamIR.assignee assignee | isJust assignee]))
+    ([Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now] <> [Set BeamIR.status (fromJust status) | isJust status] <> [Set BeamIR.assignee assignee | isJust assignee])
     [Is BeamIR.id (Eq $ getId issueReportId)]
 
 updateOption :: BeamFlow m r => Id IssueReport -> Id IssueOption -> m ()
@@ -76,6 +85,13 @@ updateIssueStatus ticketId status = do
   updateOneWithKV
     [Set BeamIR.status status, Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Is BeamIR.ticketId (Eq (Just ticketId))]
+
+updateIssueReopenedCount :: BeamFlow m r => Id IssueReport -> Int -> m ()
+updateIssueReopenedCount ticketId reopenedCount = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Set BeamIR.reopenedCount (Just reopenedCount), Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
+    [Is BeamIR.id (Eq $ getId ticketId)]
 
 updateTicketId :: BeamFlow m r => Id IssueReport -> Text -> m ()
 updateTicketId issueId ticketId = do
@@ -94,33 +110,36 @@ updateChats issueId chats = do
     [Set BeamIR.chats chats, Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Is BeamIR.id (Eq $ getId issueId)]
 
+findByBecknIssueId :: BeamFlow m r => Text -> m (Maybe IssueReport)
+findByBecknIssueId becknIssueId = findOneWithKV [Is BeamIR.becknIssueId $ Eq (Just becknIssueId)]
+
 instance FromTType' BeamIR.IssueReport IssueReport where
   fromTType' BeamIR.IssueReportT {..} = do
     pure $
       Just
         IssueReport
           { id = Id id,
+            shortId = ShortId <$> shortId,
             personId = Id personId,
             driverId = Id <$> driverId,
             rideId = Id <$> rideId,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
-            description = description,
-            assignee = assignee,
-            status = status,
-            categoryId = Id categoryId,
+            categoryId = Id <$> categoryId,
             optionId = Id <$> optionId,
-            deleted = deleted,
             mediaFiles = Id <$> mediaFiles,
-            ticketId = ticketId,
             createdAt = T.localTimeToUTC T.utc createdAt,
             updatedAt = T.localTimeToUTC T.utc updatedAt,
-            chats = chats
+            merchantId = Id <$> merchantId,
+            becknIssueId = becknIssueId,
+            reopenedCount = fromMaybe 0 reopenedCount,
+            ..
           }
 
 instance ToTType' BeamIR.IssueReport IssueReport where
   toTType' IssueReport {..} = do
     BeamIR.IssueReportT
       { BeamIR.id = getId id,
+        BeamIR.shortId = getShortId <$> shortId,
         BeamIR.personId = getId personId,
         BeamIR.driverId = getId <$> driverId,
         BeamIR.rideId = getId <$> rideId,
@@ -128,12 +147,15 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.description = description,
         BeamIR.assignee = assignee,
         BeamIR.status = status,
-        BeamIR.categoryId = getId categoryId,
+        BeamIR.categoryId = getId <$> categoryId,
         BeamIR.optionId = getId <$> optionId,
         BeamIR.deleted = deleted,
         BeamIR.mediaFiles = getId <$> mediaFiles,
         BeamIR.ticketId = ticketId,
         BeamIR.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamIR.updatedAt = T.utcToLocalTime T.utc updatedAt,
-        BeamIR.chats = chats
+        BeamIR.chats = chats,
+        BeamIR.merchantId = getId <$> merchantId,
+        BeamIR.becknIssueId = becknIssueId,
+        BeamIR.reopenedCount = Just reopenedCount
       }

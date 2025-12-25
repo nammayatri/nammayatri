@@ -2,6 +2,8 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Merchant: Domain.Types.Merchant
   HighPrecMoney: Kernel.Types.Common
+  Price: Kernel.Types.Common
+  Currency: Kernel.Types.Common
   UTCTime: Kernel.Prelude
   Person: Domain.Types.Person
   ShortId: Kernel.Types.Id
@@ -10,40 +12,135 @@ imports:
   TicketBookingPeopleCategory: Domain.Types.TicketBookingPeopleCategory
   TicketBooking: Domain.Types.TicketBooking
   TicketPlace: Domain.Types.TicketPlace
+  TicketSubPlace: Domain.Types.TicketSubPlace
   TicketService: Domain.Types.TicketService
   BusinessHour: Domain.Types.BusinessHour
   SpecialOccasion: Domain.Types.SpecialOccasion
   ServiceCategory: Domain.Types.ServiceCategory
   ServicePeopleCategory: Domain.Types.ServicePeopleCategory
   BusinessHourType: Domain.Types.BusinessHour
+  Value: Data.Aeson
+  TimeBound : Kernel.Types.TimeBound
+  BookingStatus: Domain.Types.Extra.TicketBooking
+  PaymentMethod: Domain.Types.Extra.TicketBooking
+  Day: Data.Time
+  VendorSplitDetails: Tools.Payment
+  SplitType: Tools.Payment
+  TicketPlaceDef: Domain.Types.EventManagement
+  Rule: SharedLogic.TicketRule.Core
+  ActionType: SharedLogic.TicketRule.Core
 
 TicketPlace:
   tableName: ticket_place
 
   fields:
-    id : Id TicketPlace
-    merchantOperatingCityId : Id MerchantOperatingCity
-    name : Text
-    description : Maybe Text
-    lat : Maybe Double
-    lon : Maybe Double
-    gallery : "[Text]"
-    shortDesc : Text
-    iconUrl : Maybe Text
-    termsAndConditions : "[Text]"
-    placeType : PlaceType #
-    mapImageUrl : Maybe Text
-    openTimings : Maybe TimeOfDay
-    closeTimings : Maybe TimeOfDay
+    id: Id TicketPlace
+    merchantOperatingCityId: Id MerchantOperatingCity
+    name: Text
+    description: Maybe Text
+    lat: Maybe Double
+    lon: Maybe Double
+    gallery: "[Text]"
+    shortDesc: Text
+    iconUrl: Maybe Text
+    termsAndConditions: "[Text]"
+    termsAndConditionsUrl: Maybe Text
+    placeType: PlaceType #
+    mapImageUrl: Maybe Text
+    openTimings: Maybe TimeOfDay
+    closeTimings: Maybe TimeOfDay
+    status: PlaceStatus
+    allowSameDayBooking: Bool
+    ticketMerchantId: Maybe Text
+    priority: Int
+    customTabs: "Maybe [CustomTab]"
+    rules: "Maybe [Rule]"
+    recommend: Bool
+    metadata: "Maybe [Metadata]"
+    pricingOnwards: Maybe Int
+    isRecurring: Bool
+    platformFee: Maybe Fee
+    platformFeeVendor: Maybe Text
+    faqs: "Maybe [Faq]"
+    startDate: Maybe Day
+    endDate: Maybe Day
+    venue: Maybe Text
+    isClosed: Bool
+    assignTicketToBpp: Bool
+    enforcedAsSubPlace: Bool
 
   types:
     PlaceType:
-      enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Other"
+      enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Boating,Other"
+    PlaceStatus:
+      enum: "Active,Inactive,ComingSoon,Ended,Unpublished"
+    CustomTab:
+      header: Text
+      body: Text
+      derive: "Eq,Ord"
+    Metadata:
+      key: Text
+      value: Text
+      icon: Maybe Text
+      derive: "Eq,Ord"
+    Fee:
+      enum: "Percentage Int,Flat Double"
+    Faq:
+      question: Text
+      answer: Text
+      derive: "Eq,Ord"
 
+  beamType:
+    priority: Maybe Int
+    customTabs: "Maybe Value"
+    rules: "Maybe Value"
+    recommend: Maybe Bool
+    metadata: "Maybe Value"
+    faqs: "Maybe Value"
+    isRecurring: Maybe Bool
+    isClosed: Maybe Bool
+    assignTicketToBpp: Maybe Bool
+    enforcedAsSubPlace: Maybe Bool
+
+  sqlType:
+    customTabs: json
+    metadata: json
+    rules: json
+    faqs: json
+
+  fromTType:
+    priority: Kernel.Prelude.fromMaybe 0|I
+    customTabs: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customTabs|E
+    rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
+    recommend: fromMaybe False recommend|E
+    metadata: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< metadata|E
+    faqs: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< faqs|E
+    isRecurring: Kernel.Prelude.fromMaybe True|I
+    isClosed: Kernel.Prelude.fromMaybe False|I
+    assignTicketToBpp: Kernel.Prelude.fromMaybe False|I
+    enforcedAsSubPlace: Kernel.Prelude.fromMaybe False|I
+  toTType:
+    priority: Kernel.Prelude.Just|I
+    customTabs: Data.Aeson.toJSON <$> customTabs|E
+    rules: Data.Aeson.toJSON <$> rules|E
+    recommend: Kernel.Prelude.Just|I
+    metadata: Data.Aeson.toJSON <$> metadata|E
+    faqs: Data.Aeson.toJSON <$> faqs|E
+    isRecurring: Kernel.Prelude.Just|I
+    isClosed: Kernel.Prelude.Just isClosed|E
+    assignTicketToBpp: Kernel.Prelude.Just assignTicketToBpp|E
+    enforcedAsSubPlace: Kernel.Prelude.Just enforcedAsSubPlace|E
   default:
     termsAndConditions: "'{}'"
     placeType: "'Other'"
     shortDesc: "'Short description not available'"
+    status: "'Active'"
+    allowSameDayBooking: "true"
+    priority: "0"
+    isRecurring: "true"
+    isClosed: 'false'
+    assignTicketToBpp: "false"
+    enforcedAsSubPlace: "false"
 
   queries:
     getTicketPlaces:
@@ -52,54 +149,184 @@ TicketPlace:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findByNameAndCity:
+      kvFunction: findOneWithKV
+      where:
+        and: [name, merchantOperatingCityId]
+    findAllByTicketMerchantIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [ticketMerchantId, status]
+    getAllTicketPlaces:
+      kvFunction: findAllWithKV
+      where: status
+    updateGalleryById:
+      kvFunction: updateOneWithKV
+      params: [gallery]
+      where: id
+    findAllRecommendationTicketPlaces:
+      kvFunction: findAllWithKV
+      where: recommend
+    updateRecommendById:
+      kvFunction: updateOneWithKV
+      params: [recommend]
+      where: id
 
 TicketService:
-  tableName : ticket_service
+  tableName: ticket_service
 
-  fields :
-    id : Id TicketService
-    placesId : Text
-    service : Text
-    shortDesc : Maybe Text
-    operationalDays : "[Text]"
-    maxVerification : Int
-    allowFutureBooking : Bool
-    expiry : ExpiryType
-    businessHours : "[Id BusinessHour]"
+  fields:
+    id: Id TicketService
+    placesId: Text
+    subPlaceId: Maybe (Id TicketSubPlace)
+    service: Text
+    shortDesc: Maybe Text
+    serviceDetails: "Maybe [Text]"
+    operationalDays: "[Text]"
+    operationalDate: "Maybe OperationalDate"
+    maxVerification: Int
+    allowFutureBooking: Bool
+    allowCancellation: Bool
+    expiry: ExpiryType
+    businessHours: "[Id BusinessHour]"
+    rules: "Maybe [Rule]"
+    isClosed: Bool
+    maxSelection: Maybe Int
+    note: Maybe Text
+    priority: Maybe Int
   types:
     ExpiryType:
-      enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay"
+      enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay,ValidityDays Kernel.Prelude.Int"
+    OperationalDate:
+      startDate: Day
+      eneDate: Day
+      derive: "Eq,Ord"
 
+  beamType:
+    serviceDetails: "Maybe Value"
+    rules: "Maybe Value"
+    isClosed: Maybe Bool
+
+  beamFields:
+    operationalDate:
+      operationalStartDate: Maybe Day
+      operationalEndDate: Maybe Day
+
+  sqlType:
+    operationalDates: text[]
+    serviceDetails: json
+    rules: json
+  fromTType:
+    operationalDate: ((,) <$> operationalStartDate <*> operationalEndDate) <&> \(operationalStartDate', operationalEndDate') -> Domain.Types.TicketService.OperationalDate operationalEndDate' operationalStartDate'|E
+    serviceDetails: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< serviceDetails|E
+    rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
+    isClosed: fromMaybe False isClosed|E
+  toTType:
+    operationalStartDate: operationalDate <&> (.startDate)|E
+    operationalEndDate: operationalDate <&> (.eneDate)|E
+    serviceDetails: Data.Aeson.toJSON <$> serviceDetails|E
+    rules: Data.Aeson.toJSON <$> rules|E
+    isClosed: Kernel.Prelude.Just isClosed|E
   default:
     operationalDays: "'{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}'"
     allowFutureBooking: "true"
+    allowCancellation: "false"
     business_hours: "'{}'"
     expiry: "'VisitDate 12:00:00'"
+    isClosed: "false"
 
   queries:
     findById:
       kvFunction: findOneWithKV
       where: id
 
+    findByPlacesIdAndService:
+      kvFunction: findOneWithKV
+      where:
+        and: [placesId, service]
+
     getTicketServicesByPlaceId:
       kvFunction: findAllWithKV
       where: placesId
+    getTicketServicesByPlaceIdAndSubPlaceId:
+      kvFunction: findAllWithKV
+      where:
+        and: [placesId, subPlaceId]
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
+
+TicketSubPlace:
+  tableName: ticket_sub_place
+
+  fields:
+    id: Id TicketSubPlace
+    ticketPlaceId: Id TicketPlace
+    enforcedTicketPlaceId: "Maybe (Id TicketPlace)"
+    name: Text
+    description: Maybe Text
+    subPlaceType: SubPlaceType
+    isActive: Bool
+    rules: "Maybe [Rule]"
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    SubPlaceType:
+      enum: "Venue,Terminal,Dock,Screen,Hall,Platform"
+
+  beamType:
+    rules: "Maybe Value"
+
+  sqlType:
+    rules: json
+
+  fromTType:
+    rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
+
+  toTType:
+    rules: Data.Aeson.toJSON <$> rules|E
+
+  constraints:
+    id: PrimaryKey
+    ticketPlaceId: SecondaryKey
+
+  default:
+    isActive: "true"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByTicketPlaceId:
+      kvFunction: findAllWithKV
+      where: ticketPlaceId
+    findActiveByTicketPlaceId:
+      kvFunction: findAllWithKV
+      where:
+        and: [ticketPlaceId, isActive]
 
 SpecialOccasion:
-  tableName : special_occasion
+  tableName: special_occasion
 
-  fields :
-    id : Id SpecialOccasion
-    entityId : Text
-    date : Maybe Day
-    dayOfWeek : Maybe Text
-    specialDayType : SpecialDayType
-    description : Maybe Text
-    businessHours : "[Id BusinessHour]"
+  fields:
+    id: Id SpecialOccasion
+    entityId: Text
+    date: Maybe Day
+    dayOfWeek: Maybe Text
+    specialDayType: SpecialDayType
+    description: Maybe Text
+    businessHours: "[Id BusinessHour]"
+    placeId: Maybe Text
+    name: Maybe Text
 
   types:
     SpecialDayType:
       enum: "Open,Closed"
+
+  constraints:
+    id: PrimaryKey
+    entityId: SecondaryKey
 
   queries:
     findSpecialOccasionByEntityIdAndDate:
@@ -114,6 +341,20 @@ SpecialOccasion:
       kvFunction: findOneWithKV
       where:
         and: [entityId, dayOfWeek]
+    updateBusinessHoursById:
+      kvFunction: updateOneWithKV
+      params: [businessHours]
+      where: id
+    findBySplDayAndEntityIdAndDate:
+      kvFunction: findOneWithKV
+      where:
+        and: [specialDayType, entityId, date]
+    findAllByPlaceId:
+      kvFunction: findAllWithKV
+      where: placeId
+    findAllByEntityId:
+      kvFunction: findAllWithKV
+      where: entityId
 
 BusinessHour:
   tableName: business_hour
@@ -122,6 +363,12 @@ BusinessHour:
     id: Id BusinessHour
     btype: BusinessHourType # Slot TimeOfDay | Duration TimeOfDay TimeOfDay
     categoryId: "[Id ServiceCategory]"
+    bookingClosingTime : Maybe TimeOfDay
+    hash: Maybe Text
+    expiryDate: Maybe Day
+    placeId: Maybe Text
+    name: Maybe Text
+
   types:
     BusinessHourType:
       enum: "Slot Kernel.Prelude.TimeOfDay,Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay"
@@ -130,6 +377,18 @@ BusinessHour:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findAllByPlaceId:
+      kvFunction: findAllWithKV
+      where: placeId
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+    findAllByHash:
+      kvFunction: findAllWithKV
+      where: hash
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 ServiceCategory:
   tableName: service_category
@@ -138,28 +397,144 @@ ServiceCategory:
     id: Id ServiceCategory
     name: Text
     description: Text
+    inclusionPoints: "Maybe [Text]"
     availableSeats: Maybe Int
     allowedSeats: Maybe Int
     peopleCategory: "[Id ServicePeopleCategory]"
-
+    placeId: Maybe Text
+    rules: "Maybe [Rule]"
+    remainingActions: "Maybe [ActionType]"
+    isClosed: Bool
+    maxSelection: Maybe Int
+  beamFields:
+    remainingActions: {}
+  sqlType:
+    inclusionPoints: json
+    rules: json
+  beamType:
+    inclusionPoints: "Maybe Value"
+    rules: "Maybe Value"
+    isClosed: Maybe Bool
+  fromTType:
+    inclusionPoints: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< inclusionPoints|E
+    rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
+    isClosed: fromMaybe False isClosed|E
+    remainingActions: Nothing|E
+  toTType:
+    inclusionPoints: Data.Aeson.toJSON <$> inclusionPoints|E
+    rules: Data.Aeson.toJSON <$> rules|E
+    isClosed: Kernel.Prelude.Just isClosed|E
   queries:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findAllByPlaceId:
+      kvFunction: findAllWithKV
+      where: placeId
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
 
 ServicePeopleCategory:
   tableName: service_people_category
-
+  derives: "Generic,Show"
   fields:
     id: Id ServicePeopleCategory
     name: Text
     description: Text
-    pricePerUnit: HighPrecMoney
+    pricePerUnit: Price
+    cancellationCharges: "Maybe [CancellationCharge]"
+    timeBounds: TimeBound|NoRelation
+    pricingType: PricingType
+    vendorSplitDetails: "Maybe [VendorSplitDetails]"
+    placeId: Maybe Text
+    rules: "Maybe [Rule]"
+    isClosed: Bool
+    iconUrl: Maybe Text
+  beamType:
+    cancellationCharges: Maybe Value
+    vendorSplitDetails: Maybe Value
+    timeBounds: Maybe TimeBound
+    pricingType: Maybe PricingType
+    rules: Maybe Value
+    isClosed: Maybe Bool
+
+  sqlType:
+    cancellationCharges: json
+    vendorSplitDetails: json
+    rules: json
+  beamFields:
+    pricePerUnit:
+      currency: Maybe Currency
+      pricePerUnit: HighPrecMoney
+
+  fromTType:
+    pricePerUnit: Kernel.Types.Common.mkPrice currency pricePerUnit|E
+    cancellationCharges: getCancellationChargesFromTable
+    timeBounds: (Kernel.Prelude.fromMaybe Kernel.Types.TimeBound.Unbounded)|I
+    pricingType: (Kernel.Prelude.fromMaybe Domain.Types.ServicePeopleCategory.AllDays)|I
+    vendorSplitDetails: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
+    rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
+    isClosed: fromMaybe False isClosed|E
+  toTType:
+    pricePerUnit: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+    cancellationCharges: convertCancellationChargesToTable
+    timeBounds: Kernel.Prelude.Just|I
+    pricingType: Kernel.Prelude.Just|I
+    vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
+    rules: Data.Aeson.toJSON <$> rules|E
+    isClosed: Kernel.Prelude.Just isClosed|E
+  default:
+    timeBounds: "'Unbounded'"
+    pricingType: "'AllDays'"
+    isClosed: "false"
+  types:
+    CancellationCharge:
+      time: Seconds
+      cancelCharge: CancelCharge
+      derive: "'ListInstance, Eq, Ord, Read"
+    CancelCharge:
+      enum: "FlatFee HighPrecMoney,Percentage Int"
+    PricingType:
+      enum: "SameDay,AllDays"
 
   queries:
-    findById:
-      kvFunction: findOneWithKV
+    findAllServicePeopleCategory:
+      kvFunction: findAllWithKV
       where: id
+    findAllByPlaceId:
+      kvFunction: findAllWithKV
+      where: placeId
+    findAllById:
+      kvFunction: findAllWithKV
+      where: id
+    findByIdAndTimebounds:
+      kvFunction: findOneWithKV
+      where:
+        and: [id, timeBounds]
+    updateByIdAndTimebounds:
+      kvFunction: updateOneWithKV
+      fullObjectAsParam: True
+      params:
+        - name
+        - description
+        - pricePerUnit
+        - cancellationCharges
+        - pricingType
+        - vendorSplitDetails
+        - placeId
+        - iconUrl
+      where:
+        and: [id, timeBounds]
+    deleteByIdAndTimebounds:
+      kvFunction: deleteWithKV
+      where:
+        and: [id, timeBounds]
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
 
 SeatManagement:
   tableName: seat_management
@@ -170,11 +545,15 @@ SeatManagement:
     ticketServiceCategoryId: Id ServiceCategory
     booked: Int
     blocked: Int
+    maxCapacity: Maybe Int
 
   default:
     booked: "0"
     blocked: "0"
 
+  constraints:
+    id: PrimaryKey
+    ticketServiceCategoryId: SecondaryKey
   queries:
     findByTicketServiceCategoryIdAndDate:
       kvFunction: findOneWithKV
@@ -185,9 +564,28 @@ SeatManagement:
       params: [booked]
       where:
         and: [ticketServiceCategoryId, date]
+    safeUpdateBookedSeats:
+      kvFunction: updateWithKV
+      params: [booked]
+      where:
+        and:
+         - ticketServiceCategoryId
+         - date
+         - lt:
+            - booked
     updateBlockedSeats:
       kvFunction: updateWithKV
       params: [blocked]
+      where:
+        and: [ticketServiceCategoryId, date]
+    updateBookedAndBlockedSeats:
+      kvFunction: updateOneWithKV
+      params: [booked, blocked]
+      where:
+        and: [ticketServiceCategoryId, date]
+    updateMaxCapacity:
+      kvFunction: updateOneWithKV
+      params: [maxCapacity]
       where:
         and: [ticketServiceCategoryId, date]
 
@@ -195,28 +593,64 @@ SeatManagement:
 ### Ticket Booking ###
 TicketBooking:
   tableName: ticket_booking
-
+  derives: "Generic,Show"
   fields:
     id: Id TicketBooking
     shortId: ShortId TicketBooking
     merchantOperatingCityId: Id MerchantOperatingCity
     ticketPlaceId: Id TicketPlace
+    ticketSubPlaceId: Maybe (Id TicketSubPlace)
     personId: Id Person
-    amount: HighPrecMoney
+    amount: Price
     visitDate: Day
     status: BookingStatus
     createdAt: UTCTime
     updatedAt: UTCTime
+    bookedSeats: Int
+    cancelledSeats: Maybe Int
+    vendorSplitDetails: "Maybe [VendorSplitDetails]"
+    blockExpirationTime: Maybe Double
+    peopleTicketQuantity: "Maybe [PeopleTicketQuantity]"
+    paymentMethod: Maybe PaymentMethod
+    ticketBookedBy: Maybe Text
+
+  types:
+    PeopleTicketQuantity:
+      name: Text
+      bookedSeats: Int
+
+  beamType:
+    vendorSplitDetails: Maybe Value
+    peopleTicketQuantity: Maybe Value
+  beamFields:
+    amount:
+      currency: Maybe Currency
+      amount: HighPrecMoney
+
+  fromTType:
+    amount: Kernel.Types.Common.mkPrice currency amount|E
+    vendorSplitDetails: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
+    peopleTicketQuantity: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< peopleTicketQuantity|E
+
+  toTType:
+    amount: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+    vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
+    peopleTicketQuantity: Data.Aeson.toJSON <$> peopleTicketQuantity|E
+
+  sqlType:
+    vendorSplitDetails: json
+    peopleTicketQuantity: json
 
   constraints:
     id: PrimaryKey
     shortId: SecondaryKey
     personId: SecondaryKey
 
-  types:
-    BookingStatus:
-      enum: "Pending,Failed,Booked"
-      derive: HttpInstance
+  default:
+    bookedSeats: "0"
 
   queries:
     updateStatusByShortId:
@@ -229,34 +663,84 @@ TicketBooking:
     findByShortId:
       kvFunction: findOneWithKV
       where: shortId
-    getAllBookingsByPersonId:
+    getAllBookingsByPersonIdAndStatus:
       kvFunction: findAllWithOptionsKV
       where:
         and: [personId, merchantOperatingCityId, status]
+    getAllBookingsByPlaceIdAndVisitDate:
+      kvFunction: findAllWithKV
+      where:
+        and: [ticketPlaceId, visitDate, status]
+    updateStatusAndCancelledSeatsById:
+      kvFunction: updateOneWithKV
+      params: [status, cancelledSeats, updatedAt]
+      where: id
+    updatePaymentMethodByShortId:
+      kvFunction: updateOneWithKV
+      params: [paymentMethod, updatedAt]
+      where: shortId
+    getAllBookingsByPersonId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [personId, merchantOperatingCityId]
+      orderBy:
+        field: createdAt
+        order: desc
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
+  - EXTRA_DOMAIN_TYPE_FILE
 
 TicketBookingService:
   tableName: ticket_booking_service
-
+  derives: "Generic,Show"
   fields:
     id: Id TicketBookingService
     shortId: ShortId TicketBookingService
     ticketBookingId: Id TicketBooking
     ticketServiceId: Id TicketService
     merchantOperatingCityId: Id MerchantOperatingCity
-    amount: HighPrecMoney
+    amount: Price
     status: ServiceStatus
     verificationCount: Int
+    visitDate: Maybe Day
     btype: BusinessHourType
+    bHourId: Maybe (Id BusinessHour)
     expiryDate: Maybe UTCTime
     createdAt: UTCTime
     updatedAt: UTCTime
+    bookedSeats: Int
+    cancelledSeats: Maybe Int
+    vendorSplitDetails: "Maybe [VendorSplitDetails]"
+    assignmentId: Maybe Text
+
+  beamType:
+    vendorSplitDetails: Maybe Value
+  beamFields:
+    amount:
+      currency: Maybe Currency
+      amount: HighPrecMoney
+
+  fromTType:
+    amount: Kernel.Types.Common.mkPrice currency amount|E
+    vendorSplitDetails: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
+
+  toTType:
+    amount: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+    vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
+
+  sqlType:
+    vendorSplitDetails: json
 
   types:
     ServiceStatus:
-      enum: "Pending,Failed,Confirmed,Verified"
+      enum: "Pending,Failed,Confirmed,Verified,Cancelled"
 
   default:
     btype: "'Duration 03:30:00 12:00:00'"
+    bookedSeats: "0"
 
   queries:
     findById:
@@ -276,33 +760,115 @@ TicketBookingService:
       kvFunction: updateWithKV
       params: [status, verificationCount, updatedAt]
       where: id
+    updateStatusAndCancelledSeatsById:
+      kvFunction: updateOneWithKV
+      params: [status, cancelledSeats, updatedAt]
+      where: id
+    updateAssignmentById:
+      kvFunction: updateOneWithKV
+      params: [assignmentId, updatedAt]
+      where: id
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
 
 TicketBookingServiceCategory:
   tableName: ticket_booking_service_category
-
+  derives: "Generic,Show"
   fields:
     id: Id TicketBookingServiceCategory
     ticketBookingServiceId: Id TicketBookingService
     name: Text
     bookedSeats: Int
-    amount: HighPrecMoney
+    amount: Price
+    eventCancelledBy: Maybe CancelledBy
+    cancelledSeats: Maybe Int
+    amountToRefund: Maybe HighPrecMoney
     serviceCategoryId: Maybe Text
+    visitDate: Maybe Day
+    btype: Maybe BusinessHourType
+    vendorSplitDetails: "Maybe [VendorSplitDetails]"
+
+  beamType:
+    vendorSplitDetails: Maybe Value
+
+  beamFields:
+    amount:
+      currency: Maybe Currency
+      amount: HighPrecMoney
+
+  fromTType:
+    amount: Kernel.Types.Common.mkPrice currency amount|E
+    vendorSplitDetails: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
+
+  toTType:
+    amount: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+    vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
+
+  sqlType:
+    vendorSplitDetails: json
+
+  types:
+    CancelledBy:
+      enum: "User,Merchant"
 
   queries:
     findAllByTicketBookingServiceId:
       kvFunction: findAllWithKV
       where: ticketBookingServiceId
+    updateCancellationDetailsById:
+      kvFunction: updateWithKV
+      params: [cancelledSeats, amountToRefund, eventCancelledBy]
+      where: id
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByServiceCategoryIdDateAndBtype:
+      kvFunction: findAllWithKV
+      where:
+        and: [serviceCategoryId, visitDate, btype]
+
+  default:
+    bookedSeats: "0"
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
 
 TicketBookingPeopleCategory:
   tableName: ticket_booking_people_category
-
+  derives: "Generic,Show"
   fields:
     id: Id TicketBookingPeopleCategory
     ticketBookingServiceCategoryId: Id TicketBookingServiceCategory
+    peopleCategoryId: Maybe (Id ServicePeopleCategory)
     name: Text
-    pricePerUnit: HighPrecMoney
+    pricePerUnit: Price
     numberOfUnits: Int
+    numberOfUnitsCancelled: Maybe Int
+    amountToRefund: Maybe HighPrecMoney
+    vendorSplitDetails: "Maybe [VendorSplitDetails]"
 
+  beamType:
+    vendorSplitDetails: Maybe Value
+  beamFields:
+    pricePerUnit:
+      currency: Maybe Currency
+      pricePerUnit: HighPrecMoney
+
+  fromTType:
+    pricePerUnit: Kernel.Types.Common.mkPrice currency pricePerUnit|E
+    vendorSplitDetails: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
+
+  toTType:
+    pricePerUnit: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+    vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
+
+  sqlType:
+    vendorSplitDetails: json
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -310,3 +876,97 @@ TicketBookingPeopleCategory:
     findAllByServiceCategoryId:
       kvFunction: findAllWithKV
       where: ticketBookingServiceCategoryId
+    updateTicketPeopleUnitsAndAmountById:
+      kvFunction: updateWithKV
+      params: [numberOfUnitsCancelled, amountToRefund]
+      where: id
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
+
+DraftTicketChange:
+  tableName: draft_ticket_change
+  fields:
+    id: Id TicketPlace
+    draftPayload: Maybe TicketPlaceDef
+    isApprovalRequired: Bool
+    ticketMerchantId: Maybe Text
+    message: Maybe Text
+    status: DraftStatus
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  beamType:
+    draftPayload: Maybe Value
+  types:
+    DraftStatus:
+      enum: "OPEN,APPROVAL_PENDING,REJECTED,ACCEPTED"
+      derive: "HttpInstance"
+  toTType:
+    draftPayload: Data.Aeson.toJSON <$> draftPayload|E
+  fromTType:
+    draftPayload: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< draftPayload|E
+  sqlType:
+    draftPayload: json
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateDraftById:
+      kvFunction: updateOneWithKV
+      params: [draftPayload, isApprovalRequired]
+      where: id
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    updateMessage:
+      kvFunction: updateOneWithKV
+      params: [message]
+      where: id
+    deleteDraftById:
+      kvFunction: deleteWithKV
+      where: id
+    findAllByStatus:
+      kvFunction: findAllWithOptionsKV
+      where: status
+      orderBy:
+        field: createdAt
+        order: desc
+
+DraftTicketChangeHistory:
+  tableName: draft_ticket_change_history
+  fields:
+    id: Id DraftTicketChangeHistory
+    ticketPlaceId: Id TicketPlace
+    draftPayload: Maybe TicketPlaceDef
+    isApprovalRequired: Bool
+    ticketMerchantId: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    reviewedBy: Maybe Text
+    message: Maybe Text
+    status: Domain.Types.DraftTicketChange.DraftStatus
+  beamType:
+    draftPayload: Maybe Value
+  toTType:
+    draftPayload: Data.Aeson.toJSON <$> draftPayload|E
+  fromTType:
+    draftPayload: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< draftPayload|E
+  sqlType:
+    draftPayload: json
+  queries:
+    findByTicketPlaceIdAndStatus:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - ticketPlaceId
+          - status
+      orderBy:
+        field: createdAt
+        order: desc
+    findByTicketPlaceId:
+      kvFunction: findAllWithOptionsKV
+      where: ticketPlaceId
+      orderBy:
+        field: createdAt
+        order: desc

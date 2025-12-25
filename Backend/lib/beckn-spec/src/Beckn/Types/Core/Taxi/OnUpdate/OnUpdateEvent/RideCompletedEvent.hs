@@ -23,7 +23,7 @@ import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.FulfillmentInfo
 import Beckn.Types.Core.Taxi.Common.Payment as Reexport
 import Beckn.Types.Core.Taxi.Common.RideCompletedQuote as Reexport
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_COMPLETED))
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_ENDED))
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, tags, title, value)
@@ -47,12 +47,12 @@ instance ToJSON RideCompletedEvent where
         -- <> "update_target" .= update_target
         <> "quote" .= quote
         <> "payment" .= payment
-        <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= RIDE_COMPLETED <> "name" .= A.String "Ride Completed") :: A.Object) :: A.Object)))
+        <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= RIDE_ENDED <> "name" .= A.String "Ride Completed") :: A.Object) :: A.Object)))
 
 instance FromJSON RideCompletedEvent where
   parseJSON = withObject "RideCompletedEvent" $ \obj -> do
     update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "descriptor") >>= (.: "code")
-    unless (update_type == RIDE_COMPLETED) $ fail "Wrong update_type."
+    unless (update_type == RIDE_ENDED) $ fail "Wrong update_type."
     RideCompletedEvent
       <$> obj .: "id"
       -- <*> obj .: "update_target"

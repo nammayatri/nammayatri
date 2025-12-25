@@ -1,0 +1,50 @@
+imports:
+  Merchant Domain.Types.Merchant
+  MerchantOperatingCity Domain.Types.MerchantOperatingCity
+
+HotSpotConfig:
+  tableName: hot_spot_config
+
+  fields:
+    id : Id HotSpotConfig
+    blockRadius : Int
+    minFrequencyOfHotSpot : Int
+    weightOfManualPickup : Int
+    weightOfManualSaved : Int
+    weightOfAutoPickup : Int
+    weightOfAutoSaved : Int
+    weightOfTripStart : Int
+    maxNumHotSpotsToShow : Int
+    weightOfTripEnd : Int
+    weightOfSpecialLocation : Int
+    shouldTakeHotSpot : Bool
+    shouldSaveSearchHotSpot : Bool
+    hotSpotRadius : Double
+    precisionToSetGeohash : Int
+    precisionToGetGeohash : Int
+    precisionToFilterGeohash : Int
+    maxGeoHashToFilter : Int
+    hotSpotExpiry : Int
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findConfigByMerchantId:
+      kvFunction: findOneWithKV
+      where: id
+
+  default:
+    shouldSaveSearchHotSpot: "False"
+    hotSpotRadius: '150.0'
+    precisionToSetGeohash: "9"
+    precisionToGetGeohash: "7"
+    precisionToFilterGeohash: "8"
+    maxGeoHashToFilter: "1"
+    hotSpotExpiry: "1296000"
+
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

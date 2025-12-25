@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.merchant ADD COLUMN country text NOT NULL DEFAULT 'India';

@@ -5,6 +5,8 @@
     <string name="request">Request</string>
     <string name="decline">Decline</string>
     <string name="pickup">Pickup</string>
+    <string name="test_request">Test Request</string>
+    <string name="test_request_successful">Test Ride Request Successful!</string>
     <string name="trip">Trip</string>
     <string name="new_ride_assigned">New Ride Assigned</string>
     <string name="ride_cancelled">Ride Cancelled</string>
@@ -18,6 +20,8 @@
     <string name="too_far">Too far</string>
     <string name="on_another_ride">On Another Ride</string>
     <string name="accept_offer">Accept Offer</string>
+    <string name="navigate_to_location">Navigate to location</string>
+    <string name="close">Close</string>
     <string name="extra">Extra</string>
     <string name="upload_image">Upload Image</string>
     <string name="open_settings">1. Open Settings</string>
@@ -27,7 +31,7 @@
     <string name="tap_on">3. Tap on </string>
     <string name="location">Location</string>
     <string name="phone">Phone</string>
-    <string name="includes_pickup_charges_10">Includes Pickup Charges ₹10</string>
+    <string name="includes_pickup_charges_10">Includes Pickup Charges ₹{#amount#}</string>
     <string name="away">away</string>
     <string name="we_made_you_online">We made you Online</string>
     <string name="location_is_turned_on">Location is turned on</string>
@@ -40,7 +44,6 @@
     <string name="chatting_is_enabled">Chatting is enabled</string>
     <string name="you_can_now_chat_with_driver">You can now chat with driver</string>
     <string name="you_can_now_chat_with_customer">You can now chat with customer</string>
-
     <string name="new_ride_req">New Ride Request</string>
     <string name="new_ride_available_for_offering">New ride available for offering</string>
     <string name="and">and</string>
@@ -48,4 +51,11 @@
     <string name="message_from_customer">Message from Customer</string>
     <string name="go_to">Go-To</string>
     <string name="call_support">Call Support</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"No additional fare. No tips. No waiting charges."</string>
+    <string name="third_party_booking">"Third Party Booking"</string>
+    <string name="title_dynamicfeature" translatable="false">dynamicfeature</string>
+    <string name="round_trip">Round Trip</string>
+    <string name="voip_logo" translatable="false">https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_logo_and_name.png</string>
+    <string name="enable_mic_and_notifications_permissions_driver">"Please enable “Microphone” permissions from Settings > Apps to make/receive in-app calls with the customer."</string>
+    <string name="enable_mic_and_notifications_permissions_customer">"Please enable “Microphone” and “Notification” permissions from Settings > Apps to make/receive in-app calls with the driver"</string>
 </resources>

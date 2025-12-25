@@ -24,6 +24,7 @@ import Font.Style as FontStyle
 import Font.Size as FontSize
 import Components.Banner.Controller
 import Common.Types.App (LazyCheck(..))
+import Data.Maybe(fromMaybe, isJust)
 
 
 view :: forall w. (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -31,7 +32,7 @@ view push config =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , cornerRadius 12.0
+    , cornerRadius config.cornerRadius
     , margin config.margin
     , padding config.padding
     , background config.backgroundColor
@@ -53,45 +54,50 @@ view push config =
           [ height if config.alertTextVisibility then WRAP_CONTENT else V 0
           , width MATCH_PARENT
           , gravity LEFT
-          , text config.alertText
-          , color config.alertTextColor
+          , text config.alertText.text
+          , color config.alertText.textColor
           , padding $ PaddingBottom 2
           , visibility if config.alertTextVisibility then VISIBLE else GONE
-          ] <> (FontStyle.getFontStyle config.alertTextStyle LanguageStyle)
+          ] <> (FontStyle.getFontStyle config.alertText.style LanguageStyle)
         , textView $
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity LEFT
-          , text config.title
+          , textFromHtml config.title
           , color config.titleColor
-          , padding $ PaddingBottom 2
+          , padding $ PaddingBottom 8
           , visibility if config.titleTextVisibility then VISIBLE else GONE
           ] <> (FontStyle.getFontStyle config.titleStyle LanguageStyle)
         , linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity CENTER_VERTICAL
+          , padding config.actionPadding
           , visibility if config.actionTextVisibility then VISIBLE else GONE
+          , background $ fromMaybe config.backgroundColor config.actionText.backgroundColor
+          , cornerRadius config.actionText.cornerRadius
+          , padding config.actionText.padding
+          , margin config.actionText.margin
           ]
           [
             textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity LEFT
-            , text config.actionText
-            , color config.actionTextColor
+            , text config.actionText.text
+            , color config.actionText.textColor
             , padding $ PaddingBottom 2
-            ] <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
+            ] <> (FontStyle.getFontStyle config.actionText.style LanguageStyle)
           , textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity LEFT
-            , textFromHtml "&rarr;"
-            , color config.actionTextColor
+            , textFromHtml $ if config.actionTextImgType == DownArrow then "&darr;" else "&rarr;"
+            , color config.actionText.textColor
             , padding $ PaddingBottom 3
             , margin $ MarginLeft 5
             , visibility if config.showActionArrow then VISIBLE else GONE
-            ] <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
+            ] <> (FontStyle.getFontStyle config.actionText.style LanguageStyle)
           ]
         ]
     ,   linearLayout
@@ -104,7 +110,7 @@ view push config =
             [
               height config.imageHeight
             , width config.imageWidth
-            , margin $ MarginRight 5
+            , margin $ config.imageMargin
             , imageWithFallback config.imageUrl
             ]]
     ]

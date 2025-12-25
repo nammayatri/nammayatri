@@ -31,7 +31,7 @@ import Prelude ((<>))
 genericHeaderConfig :: ST.AboutUsScreenState -> GenericHeader.Config
 genericHeaderConfig state = let 
   config = if state.appConfig.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
-  btnVisibility = if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  btnVisibility =  config.prefixImageConfig.visibility
   titleVisibility = if showTitle FunctionCall then config.visibility else GONE
   genericHeaderConfig' = config 
     {
@@ -41,6 +41,9 @@ genericHeaderConfig state = let
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , visibility = btnVisibility
+      , margin = Margin 8 8 8 8 
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       } 
     , textConfig {
         text = (getString ABOUT)

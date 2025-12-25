@@ -1,0 +1,54 @@
+imports:
+  Person: Domain.Types.Person
+  AutoCompleteReq: Domain.Action.UI.Maps
+  AutoCompleteResp: Domain.Action.UI.Maps
+  GetPlaceDetailsReq: Domain.Action.UI.Maps
+  GetPlaceDetailsResp: Domain.Action.UI.Maps
+  GetPlaceNameReq: Domain.Action.UI.Maps
+  GetPlaceNameResp: Domain.Action.UI.Maps
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Action.UI.Maps: "rider-app"
+
+module: Maps
+
+apis:
+  - POST:  # RideAutoCompleteAPI
+      endpoint: /autoComplete/{customerId}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: AutoCompleteReq
+      response:
+        type: AutoCompleteResp
+      migrate:
+        endpoint: MapsAPI AutoCompleteEndPoint
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS AUTOCOMPLETE
+  - POST:  # RideGetPlaceDetailsAPI
+      endpoint: /getPlaceDetails/{customerId}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: GetPlaceDetailsReq
+      response:
+        type: GetPlaceDetailsResp
+      migrate:
+        endpoint: MapsAPI GetPlaceDetailsEndPoints
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS PLACEDETAIL
+  - POST:  # RideGetPlaceNameAPI
+      endpoint: /getPlaceName/{customerId}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: GetPlaceNameReq
+      response:
+        type: GetPlaceNameResp
+      migrate:
+        endpoint: MapsAPI GetPlaceNameEndPoint
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS PLACENAME
+
+types: {}

@@ -1,0 +1,49 @@
+imports:
+  Day: Data.Time
+  DriverFeeStatus:  Dashboard.Common.Driver
+
+module: Revenue
+
+types:
+  AllFees:
+    - status: DriverFeeStatus
+    - numRides: Int
+    - numDrivers: Int
+    - totalAmount: Int
+    - specialZoneAmount: Int
+    - openMarketAmount: Int
+  CollectionListElem:
+    - totalAmount: Int
+    - specialZoneAmount: Int
+    - openMarketAmount: Int
+    - totalRides: Int
+    - numDrivers: Int
+    - date: Day
+    - hour: Int
+  CollectionList:
+    - onlineCollection: [CollectionListElem]
+    - offlineCollection: [CollectionListElem]
+
+apis:
+  - GET:
+      endpoint: /collectionHistory
+      query:
+        volunteerId: Text
+        place: Text
+        from: UTCTime
+        to: UTCTime
+      auth: ApiAuthV2
+      response:
+        type: CollectionList
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT VOLUNTEER VOLUNTEER_COLLECTION_HISTORY
+  - GET:
+      endpoint: /allFeeHistory
+      query:
+        from: UTCTime
+        to: UTCTime
+      auth: ApiAuthV2
+      response:
+        type: '[AllFees]'
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT VOLUNTEER ALL_FEE_HISTORY

@@ -1,0 +1,78 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EncryptedHashedField: Kernel.External.Encryption
+  Ride: Domain.Types.Ride
+  VehicleVariant: Domain.Types.VehicleVariant
+  DbHash: Kernel.External.Encryption
+  Months: Kernel.Types.Time
+
+RideDetails:
+  tableName: ride_details
+
+
+
+  fields:
+    id : Id Ride
+    driverName : Text
+    driverNumber : Maybe (EncryptedHashedField e Text)
+    driverCountryCode : Maybe Text
+    vehicleNumber : Text
+    vehicleColor : Maybe Text
+    vehicleVariant : Maybe VehicleVariant|NoRelation
+    vehicleModel : Maybe Text
+    vehicleClass : Maybe Text
+    vehicleAge : Maybe Months
+    fleetOwnerId : Maybe Text
+    defaultServiceTierName : Maybe Text
+    createdAt : Maybe UTCTime
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    rcId : Maybe Text
+
+
+  constraints:
+    id: PrimaryKey
+
+  beamFields:
+    driverNumber:
+      driverNumberEncrypted: Maybe Text
+      driverNumberHash: Maybe DbHash
+
+  fromTType:
+    driverNumber: EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash|E
+
+  toTType:
+    driverNumberEncrypted: driverNumber <&> unEncrypted . (.encrypted)|E
+    driverNumberHash: driverNumber <&> (.hash)|E
+
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+
+  sqlType:
+    driverName: character varying(255)
+    driverNumberEncrypted: character varying(255)
+    driverNumberHash: bytea
+    driverCountryCode: character varying(255)
+    vehicleNumber: character varying(255)
+    vehicleColor: character varying(255)
+    vehicleModel: character varying(255)
+    vehicleClass: character varying(255)
+    vehicleVariant: character varying(255)
+    vehicleAge: int
+    fleetOwnerId: character varying(36)
+    rcId: character varying(36)
+
+
+  excludedFields: [createdAt, updatedAt]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  extraIndexes:
+    - columns: [vehicleNumber]

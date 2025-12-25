@@ -38,10 +38,13 @@ data AppEnv = AppEnv
   { port :: Int,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
-    notificationsMap :: MVar (Map.Map FCMRecipientToken [FCMMessage Value]),
+    notificationsMap :: MVar (Map.Map FCMRecipientToken [FCMMessage Value Value]),
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
-    version :: Metrics.DeploymentVersion
+    version :: Metrics.DeploymentVersion,
+    requestId :: Maybe Text,
+    sessionId :: Maybe Text,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -52,6 +55,9 @@ buildAppEnv AppCfg {..} = do
   notificationsMap <- newMVar Map.empty
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   isShuttingDown <- mkShutdown
+  let requestId = Nothing
+  let sessionId = Nothing
+  let url = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

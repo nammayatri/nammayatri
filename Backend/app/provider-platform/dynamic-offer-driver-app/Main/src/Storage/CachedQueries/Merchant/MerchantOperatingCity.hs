@@ -11,25 +11,29 @@
 module Storage.CachedQueries.Merchant.MerchantOperatingCity where
 
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Merchant.MerchantOperatingCity as Queries
+import qualified Storage.Queries.MerchantOperatingCity as Queries
 import Tools.Error
+
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => MerchantOperatingCity -> m ()
+create = Queries.create
+
+getMerchantOpCity :: (CacheFlow m r, EsqDBFlow m r) => Merchant -> Maybe Context.City -> m MerchantOperatingCity
+getMerchantOpCity merchant mbCity = do
+  let city = fromMaybe merchant.city mbCity
+  findByMerchantIdAndCity merchant.id city
+    >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
 
 getMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id MerchantOperatingCity) -> Merchant -> Maybe Context.City -> m (Id MerchantOperatingCity)
 getMerchantOpCityId mbMerchantOpCityId merchant mbCity =
   case mbMerchantOpCityId of
     Just moCityId -> pure moCityId
-    Nothing -> do
-      let city = fromMaybe merchant.city mbCity
-      (.id)
-        <$> ( findByMerchantIdAndCity merchant.id city
-                >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
-            )
+    Nothing -> (.id) <$> getMerchantOpCity merchant mbCity
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity)
 findById merchantOpCityId =
@@ -42,6 +46,12 @@ findAllByMerchantId merchantId =
   Hedis.safeGet (makeMerchantIdKey merchantId) >>= \case
     Just a -> return a
     Nothing -> cacheMerchantId merchantId /=<< Queries.findAllByMerchantId merchantId
+
+findAllByMerchantIdAndState :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Context.IndianState -> m [MerchantOperatingCity]
+findAllByMerchantIdAndState merchantId state =
+  Hedis.safeGet (makeMerchantIdAndStateKey merchantId state) >>= \case
+    Just a -> return a
+    Nothing -> cacheMerchantIdAndState merchantId state /=<< Queries.findAllByMerchantIdAndState merchantId state
 
 findByMerchantIdAndCity :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantIdAndCity merchantId city =
@@ -67,6 +77,12 @@ cacheMerchantId merchantId merchantOperatingCities = do
   let merchantIdKey = makeMerchantIdKey merchantId
   Hedis.setExp merchantIdKey merchantOperatingCities expTime
 
+cacheMerchantIdAndState :: CacheFlow m r => Id Merchant -> Context.IndianState -> [MerchantOperatingCity] -> m ()
+cacheMerchantIdAndState merchantId state merchantOperatingCities = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let merchantIdAndStateKey = makeMerchantIdAndStateKey merchantId state
+  Hedis.setExp merchantIdAndStateKey merchantOperatingCities expTime
+
 cachedMerchantIdAndCity :: CacheFlow m r => MerchantOperatingCity -> m ()
 cachedMerchantIdAndCity merchantOperatingCity = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
@@ -90,3 +106,6 @@ makeMerchantShortIdAndCityKey merchantShortId city = "CachedQueries:MerchantOper
 
 makeMerchantIdKey :: Id Merchant -> Text
 makeMerchantIdKey merchantId = "CachedQueries:MerchantOperatingCity:MerchantId-" <> merchantId.getId
+
+makeMerchantIdAndStateKey :: Id Merchant -> Context.IndianState -> Text
+makeMerchantIdAndStateKey merchantId state = "CachedQueries:MerchantOperatingCity:MerchantId-" <> merchantId.getId <> ":State-" <> show state

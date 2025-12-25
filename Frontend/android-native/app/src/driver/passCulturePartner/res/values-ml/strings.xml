@@ -26,7 +26,7 @@
     <string name="tap_on">3. ടാപ്പ് ചെയ്യുക </string>
     <string name="location">സ്ഥാനം</string>
     <string name="phone">ഫോൺ</string>
-    <string name="includes_pickup_charges_10">പിക്കപ്പ് നിരക്കുകൾ ₹ 10 ഉൾപ്പെടുന്നു</string>
+    <string name="includes_pickup_charges_10">പിക്കപ്പ് നിരക്കുകൾ ₹ {#amount#} ഉൾപ്പെടുന്നു</string>
     <string name="away">ദൂരെ</string>
     <string name="we_made_you_online">ഞങ്ങൾ നിങ്ങളെ ഓൺലൈനാക്കി</string>
     <string name="location_is_turned_on">ലൊക്കേഷൻ ഓണാക്കി</string>
@@ -39,4 +39,6 @@
     <string name="new_ride_req">പുതിയ റൈഡ് അഭ്യർത്ഥന</string>
     <string name="new_ride_available_for_offering">ഓഫറിനായി പുതിയ റൈഡ് ലഭ്യമാണ്</string>
     <string name="no_enabled_browser">നിങ്ങളുടെ ഉപകരണത്തിൽ പ്രവർത്തനക്ഷമമാക്കിയ ബ്രൗസറൊന്നും കണ്ടെത്തിയില്ല, ദയവായി ഒരു ബ്രൗസർ പ്രവർത്തനക്ഷമമാക്കുക അല്ലെങ്കിൽ ഇൻസ്റ്റാൾ ചെയ്യുക</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"അതിരിക്കുകയുമില്ല. ടിപ്സുകളുമില്ല. കാത്തിരിക്കൽ ചാർജും ഇല്ല."</string>
+    <string name="third_party_booking">"മൂന്നാംകക്ഷി ബുക്കിംഗ്"</string>
 </resources>

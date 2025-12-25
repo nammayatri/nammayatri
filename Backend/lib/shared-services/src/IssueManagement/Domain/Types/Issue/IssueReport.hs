@@ -14,6 +14,7 @@ import Kernel.Utils.Common
 
 data IssueReport = IssueReport
   { id :: Id IssueReport,
+    shortId :: Maybe (ShortId IssueReport),
     personId :: Id Person,
     driverId :: Maybe (Id Person),
     rideId :: Maybe (Id Ride),
@@ -21,13 +22,16 @@ data IssueReport = IssueReport
     description :: Text,
     assignee :: Maybe Text,
     status :: IssueStatus,
-    categoryId :: Id D.IssueCategory,
+    categoryId :: Maybe (Id D.IssueCategory),
     optionId :: Maybe (Id D.IssueOption),
     deleted :: Bool,
     mediaFiles :: [Id D.MediaFile],
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     ticketId :: Maybe Text,
-    chats :: [Chat]
+    chats :: [Chat],
+    merchantId :: Maybe (Id Merchant),
+    becknIssueId :: Maybe Text,
+    reopenedCount :: Int
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, BP.ToSchema)

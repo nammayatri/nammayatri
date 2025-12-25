@@ -93,13 +93,13 @@ assertFailedBooking = assertBooking TB.CANCELLED FAILED
 
 testSearch :: IO (PublicTransportQuote, PublicTransportQuote)
 testSearch = do
-  searchId <- (.searchId) <$> callRiderApp (searchServices userToken defaultSearchReq (Just defaultVersion) (Just defaultVersion) Nothing)
+  searchId <- (.searchId) <$> callRiderApp (searchServices userToken defaultSearchReq (Just defaultVersion) (Just defaultVersion) Nothing Nothing Nothing Nothing Nothing Nothing)
   searchId `shouldSatisfy` (\s -> T.length s.getId == 36)
   searchRequest <- pollDesc "Expected search request in the app backend database" $ findSearchBAP searchId
   searchRequest.id `shouldBe` searchId
   threadDelay $ 3 * kafkaConsumerTimeoutMilliseconds * 1000
   pollDesc "Expected EKM-ABC and EKM-EMB trips in the search results" $ do
-    quotes <- (.quotes) <$> callRiderApp (getQuotes searchId userToken)
+    quotes <- (.quotes) <$> callRiderApp (getQuotes searchId userToken Nothing)
     ekmAbcQuote <- maybe (expectationFailure "No EKM-ABC trip found") pure $ findEkmAbcQuote quotes
     ekmEmbQuote <- maybe (expectationFailure "No EKM-EMB trip found") pure $ findEkmEmbQuote quotes
     pure $ Just (ekmAbcQuote, ekmEmbQuote)

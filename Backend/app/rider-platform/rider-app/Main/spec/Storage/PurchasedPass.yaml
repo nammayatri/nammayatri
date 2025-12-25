@@ -1,0 +1,205 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  PassType: Domain.Types.PassType
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  HighPrecMoney: Kernel.Types.Common
+  FRFSVehicleServiceTier: Domain.Types.FRFSVehicleServiceTier
+  ServiceTierType: BecknV2.FRFS.Enums
+  BenefitType: Domain.Types.PurchasedPass
+
+PurchasedPass:
+  tableName: purchased_pass
+
+  types:
+    StatusType:
+      enum: "Pending,Active,PreBooked,Failed,Expired,RefundPending,RefundInitiated,Refunded,RefundFailed,PhotoPending"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+    BenefitType:
+      enum: "FullSaving,FixedSaving,PercentageSaving"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <StatusType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <StatusType>
+    - Custom Kernel.Utils.TH.mkToHttpInstanceForEnum <StatusType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <BenefitType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <BenefitType>
+
+  fields:
+    id: Id PurchasedPass
+    passNumber: Int
+    personId: Id Person
+    startDate: Day
+    endDate: Day
+    passTypeId: Id PassType
+    deviceId: Text
+    deviceSwitchCount: Int
+    passCode: Text
+    passName: Maybe Text
+    passDescription: Maybe Text
+    passAmount: HighPrecMoney
+    verificationValidity: Seconds
+    benefitDescription: Text
+    benefitType: Maybe BenefitType
+    benefitValue: Maybe HighPrecMoney
+    applicableVehicleServiceTiers: "[ServiceTierType]"
+    maxValidTrips: Maybe Int
+    maxValidDays: Maybe Int
+    usedTripCount: Maybe Int
+    status: StatusType
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    profilePicture: Maybe Text
+
+  beamType:
+    deviceSwitchCount: Maybe Int
+    verificationValidity: Maybe Seconds
+
+  fromTType:
+    deviceSwitchCount: (fromMaybe 0 deviceSwitchCount)|E
+    verificationValidity: Kernel.Prelude.fromMaybe 9000|I
+
+  toTType:
+    deviceSwitchCount: Just deviceSwitchCount|E
+    verificationValidity: Just verificationValidity|E
+
+  sqlType:
+    applicableVehicleServiceTiers: text[]
+
+  constraints:
+    id: PrimaryKey
+    passNumber: SecondaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  queries:
+    updateDeviceSwitchCount:
+      kvFunction: updateWithKV
+      params: [deviceSwitchCount]
+      where: id
+
+    findByPassNumber:
+      kvFunction: findOneWithKV
+      where: passNumber
+
+PurchasedPassPayment:
+  tableName: purchased_pass_payment
+
+  fields:
+    id: Id PurchasedPassPayment
+    orderId: Id PaymentOrder
+    passCode: Text
+    passName: Maybe Text
+    purchasedPassId: Id PurchasedPass
+    amount: HighPrecMoney
+    benefitDescription: Text
+    isDashboard: Maybe Bool
+    benefitType: Maybe BenefitType
+    benefitValue: Maybe HighPrecMoney
+    personId: Id Person
+    startDate: Day
+    status: Domain.Types.PurchasedPass.StatusType
+    endDate: Day
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    profilePicture: Maybe Text
+
+  beamType:
+    benefitDescription: Maybe Text
+
+  fromTType:
+    benefitDescription: Kernel.Prelude.fromMaybe ""|I
+
+  toTType:
+    benefitDescription: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    orderId: SecondaryKey
+    purchasedPassId: SecondaryKey
+
+  queries:
+    findOneByPaymentOrderId:
+        kvFunction: findOneWithKV
+        where: orderId
+
+    findAllByPurchasedPassId:
+      kvFunction: findAllWithKV
+      where: purchasedPassId
+
+    updateStatusByOrderId:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: orderId
+
+    findAllByPurchasedPassIdAndStatus:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - purchasedPassId
+          - status
+          - gte:
+            - endDate
+      orderBy:
+        field: startDate
+        order: asc
+
+    findAllByPurchasedPassIdAndStatusStartDateGreaterThan:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - purchasedPassId
+          - status
+          - gte:
+            - startDate
+      orderBy:
+        field: startDate
+        order: asc
+
+    findAllWithPersonId:
+      kvFunction: findAllWithOptionsKV
+      where: personId
+
+    updateStatusByPurchasedPassIdAndStartEndDate:
+      kvFunction: updateWithKV
+      params: [status]
+      where:
+        and:
+          - purchasedPassId
+          - startDate
+          - endDate
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+PassVerifyTransaction:
+  tableName: pass_verify_transaction
+
+  fields:
+    id: Id PassVerifyTransaction
+    purchasePassId: Id PurchasedPass
+    validTill: UTCTime
+    verifiedAt: UTCTime
+    sourceStopCode: Maybe Text
+    destinationStopCode: Maybe Text
+    fleetId: Text
+    isActuallyValid: Maybe Bool
+    autoActivated: Maybe Bool
+
+  constraints:
+    id: PrimaryKey
+    purchasePassId: SecondaryKey
+
+  queries:
+    findAllByPurchasePassId:
+      kvFunction: findAllWithKV
+      where: purchasePassId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES

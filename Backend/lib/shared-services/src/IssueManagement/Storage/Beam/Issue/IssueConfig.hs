@@ -11,9 +11,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module IssueManagement.Storage.Beam.Issue.IssueConfig where
@@ -21,15 +18,23 @@ module IssueManagement.Storage.Beam.Issue.IssueConfig where
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import GHC.Generics (Generic)
+import qualified IssueManagement.Domain.Types.Issue.IssueConfig as DIC
 import IssueManagement.Tools.UtilsTH hiding (Generic)
 
 data IssueConfigT f = IssueConfigT
   { id :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     autoMarkIssueClosedDuration :: B.C f Double,
     onAutoMarkIssueClsMsgs :: B.C f [Text],
     onCreateIssueMsgs :: B.C f [Text],
     onIssueReopenMsgs :: B.C f [Text],
-    onKaptMarkIssueResMsgs :: B.C f [Text]
+    onKaptMarkIssueResMsgs :: B.C f [Text],
+    merchantId :: B.C f Text,
+    messageTransformationConfig :: B.C f (Maybe DIC.MessageTransformationConfig),
+    reopenCount :: B.C f Int,
+    onIssueCloseMsgs :: B.C f [Text],
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

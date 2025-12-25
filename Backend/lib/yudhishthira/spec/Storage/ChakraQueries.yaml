@@ -1,0 +1,31 @@
+imports:
+  Chakra: Lib.Yudhishthira.Types
+  QueryResult: Lib.Yudhishthira.Types
+
+ChakraQueries:
+  tableName: chakra_queries
+
+  fields:
+    chakra: Chakra
+    queryName: Text
+    queryText: Text
+    queryResults: '[QueryResult]'
+
+  constraints:
+    chakra: PrimaryKey
+    queryName: PrimaryKey
+
+  sqlType:
+    queryResults: text[]
+
+  queries:
+    findAllByChakra:
+      kvFunction: findAllWithKV
+      where: chakra
+    deleteByPrimaryKey:
+      kvFunction: deleteWithKV
+      where:
+        and: [chakra, queryName]
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"

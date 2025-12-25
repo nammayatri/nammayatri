@@ -12,8 +12,10 @@ defaultColors = {
 defaultAppData :: AppDatas
 defaultAppData =  {
     link : ""
-  , supportMail :"nammayatri.support@juspay.in"
+  , supportMail :"support@nammayatri.in"
   , name : ""
+  , website : "https://nammayatri.in"
+  , logoLight : ""
   }
 
 defaultPrimaryButtonConfig :: PrimaryButtonConfig
@@ -27,6 +29,7 @@ defaultFontConfig :: FontConfig
 defaultFontConfig = {
     default : "PlusJakartaSans"
   , kannada : "NotoSansKannada"
+  , telugu : "NotoSansTelugu"
   , "type": "Assets"
   }
 
@@ -36,7 +39,7 @@ defaultLoaderConfig = {
 }
 defaultGenericHeader :: GenericHeaderConfig
 defaultGenericHeader = {
-    backArrow : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
+    backArrow : "ny_ic_chevron_left,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
   }
 
 defaultNavigationAppConfig :: NavigationConfig
@@ -45,10 +48,44 @@ defaultNavigationAppConfig = {
         query : "google.navigation:q=%f,%f"
       , packageName : "com.google.android.apps.maps"
       , walkQuery : "google.navigation:q=%f,%f&mode=w"
+      , directionQuery : "http://maps.google.com?saddr=&daddr=%f,%f&dirflg=d"
+      , twoWheelerQuery : "google.navigation:q=%f,%f&mode=l"
       }
     , ios : {
         query : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=d"
       , walkQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=w"
+      , directionQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=d"
+      , twoWheelerQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=l"
       , packageName : ""
       }
     }
+
+defaultBannerCarousel :: BannerCarousalConfig
+defaultBannerCarousel = {
+  autoScrollDelay : 5000.0,
+  enableAutoScroll : true
+}
+
+defaultGeoJson :: GeoJson
+defaultGeoJson = {
+    type : "FeatureCollection"
+  , features : []
+}
+
+defaultGeoJsonFeature :: GeoJsonFeature
+defaultGeoJsonFeature = {
+    type : "Feature"
+  , properties : {
+        name : ""
+      , id : ""
+      , defaultDriverExtra : 0
+      , canQueueUpOnGate : false
+    }
+  , geometry : defaultGeoJsonGeometry
+}
+
+defaultGeoJsonGeometry :: GeoJsonGeometry
+defaultGeoJsonGeometry = {
+    type : "MultiPolygon"
+  , coordinates : [[[[]]]]
+}

@@ -1,0 +1,77 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Booking: Domain.Types.Booking
+  Price: Kernel.Types.Common
+  PriceAPIEntity: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+FareBreakup:
+  derives: "Show"
+
+  fields:
+    id: Id FareBreakup
+    description: Text
+    amount: Price
+    entityType: FareBreakupEntityType
+    entityId: Text
+
+  excludedFields:
+    - updatedAt
+    - createdAt
+    - merchantId
+    - merchantOperatingCityId
+
+  default:
+    entityType: "'BOOKING'"
+
+  beamFields:
+    entityId: bookingId
+    amount:
+      amount: HighPrecMoney
+      currency: Maybe Currency
+
+  toTType:
+    amount: ((.amount) amount)|E
+    currency: (Just $ (.currency) amount)|E
+
+  fromTType:
+    amount: Kernel.Types.Common.mkPrice currency amount|E
+
+  types:
+    FareBreakupAPIEntity:
+      description: Text
+      amount: Money
+      amountWithCurrency: PriceAPIEntity
+      derive': "Generic, Show, FromJSON, ToJSON, ToSchema"
+    FareBreakupEntityType:
+      enum: "BOOKING_UPDATE_REQUEST, BOOKING, RIDE, INITIAL_BOOKING"
+
+  constraints:
+    bookingId: SecondaryKey
+    entityId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        and: [id]
+    findAllByEntityIdAndEntityType:
+      kvFunction: findAllWithKVAndConditionalDB
+      where:
+        and: [entityId, entityType]
+
+    deleteByEntityIdAndEntityType:
+      kvFunction: deleteWithKV
+      where:
+        and: [entityId, entityType]
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  sqlType:
+    currency: character varying(255)

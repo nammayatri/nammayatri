@@ -28,15 +28,31 @@ import JBridge (checkAndAskNotificationPermission, checkOverlayPermission, fireb
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
-import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (==), void)
-import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (==), void, show, (<>))
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.PermissionsScreen.ScreenData (Permissions(..))
-import Screens.Types (PermissionsScreenState)
+import Screens.Types (PermissionsScreenState, NotificationBody)
 
 instance showAction :: Show Action where
-    show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (PrimaryButtonActionController var1) = "PrimaryButtonActionController_" <> show var1
+  show (ItemClick _) = "ItemClick"
+  show (UpdateNotificationPermissionState) = "UpdateNotificationPermissionState"
+  show (UpdateOverlayPermissionState) = "UpdateOverlayPermissionState"
+  show (NotificationPermissionCallBack _) = "NotificationPermissionCallBack"
+  show (OverlayPermissionSwitchCallBack _) = "OverlayPermissionSwitchCallBack"
+  show (BatteryUsagePermissionCallBack _) = "BatteryUsagePermissionCallBack"
+  show (LocationPermissionCallBack _) = "LocationPermissionCallBack"
+  show (UpdateLocationPermissionState) = "UpdateLocationPermissionState"
+  show (UpdateBatteryPermissionState) = "UpdateBatteryPermissionState"
+  show (AfterRender) = "AfterRender"
+  show (UpdateAllChecks _) = "UpdateAllChecks"
+  show (PopUpModalLogoutAction var1) = "PopUpModalLogoutAction_" <> show var1
+  show (AppOnboardingNavBarAC var1) = "AppOnboardingNavBarAC_" <> show var1
+  show (FcmNotificationAction _ _) = "FcmNotificationAction"
 
 instance loggableAction :: Loggable Action where
     performLog action appId = case action of
@@ -60,9 +76,9 @@ instance loggableAction :: Loggable Action where
         LocationPermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location_permission_callback"
         UpdateAllChecks updatedState -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_all_checks"
         NoAction -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "no_action"
+        FcmNotificationAction _ _ -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "fcm_notification"
         PopUpModalLogoutAction act -> case act of
             PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal" "on_goback"
-            PopUpModal.Tipbtnclick _ _ -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal" "tip_button_click"
             PopUpModal.DismissPopup -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal" "dismiss_popup"
             PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal" "call_support"
             PopUpModal.NoAction -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "popup_modal_action" "no_action"
@@ -77,7 +93,7 @@ instance loggableAction :: Loggable Action where
             AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "onboarding_nav_bar_logout"
             AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
 
-data ScreenOutput =  GoBack | GoToHome | LogoutAccount | GoToRegisteration PermissionsScreenState
+data ScreenOutput =  GoBack | GoToHome | LogoutAccount | GoToRegisteration PermissionsScreenState | FcmNotification String NotificationBody
 
 data Action = BackPressed
             | NoAction
@@ -92,6 +108,7 @@ data Action = BackPressed
             | UpdateLocationPermissionState
             | UpdateBatteryPermissionState
             | AfterRender
+            | FcmNotificationAction String NotificationBody
             | UpdateAllChecks PermissionsScreenState
             | PopUpModalLogoutAction PopUpModal.Action
             | AppOnboardingNavBarAC AppOnboardingNavBar.Action
@@ -109,6 +126,7 @@ eval AfterRender state = continueWithCmd state [ do
                                                         isBatteryOptimizationChecked = isBatteryUsagePermission, androidVersion = androidVersion}}]
 
 eval (UpdateAllChecks updatedState) state = continue updatedState
+eval (FcmNotificationAction notificationType notificationBody) state = exit $ FcmNotification notificationType notificationBody
 eval BackPressed state = exit $ GoToRegisteration state -- DECIDE FOR ENABLED DRIVER
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = exit $ if state.props.isDriverEnabled then GoToHome else GoToRegisteration state
 eval UpdateNotificationPermissionState state = continue state {props {isNotificationPermissionChecked = true}}
@@ -210,7 +228,7 @@ eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutA
 
 eval (PopUpModalLogoutAction (PopUpModal.DismissPopup)) state = continue state {props {logoutModalView= false}}
 
-eval _ state = continue state
+eval _ state = update state
 
 getTitle :: Permissions -> String
 getTitle permission = 

@@ -1,0 +1,42 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  VehicleCategory: Domain.Types.VehicleCategory
+
+PurchaseHistory:
+  tableName: purchase_history
+  beamInstance: Custom Kernel.Beam.Lib.UtilsTH.mkTableInstances "coin_purchase_history" "atlas_driver_offer_bpp"
+
+  fields:
+    id : Id PurchaseHistory
+    driverId : Text
+    merchantId : Text
+    merchantOptCityId : Text
+    numCoins : Int
+    cash : HighPrecMoney
+    currency : Currency
+    title : Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    vehicleCategory : Maybe VehicleCategory
+
+  beamFields:
+    currency:
+      currency: Maybe Currency
+
+  fromTType:
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    driverId: "!SecondaryKey" # forcing to be a secondary key
+
+  excludedFields: [merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+

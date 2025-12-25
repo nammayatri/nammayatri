@@ -41,6 +41,8 @@ import Helpers.Utils as HU
 import Storage ( getValueToLocalStore , KeyStore(..))
 import ConfigProvider
 import Mobility.Prelude
+import Components.OptionsMenu as OptionsMenuConfig
+import Components.BottomDrawerList as BottomDrawerList
 
 ------------------------------ primaryButtonConfig --------------------------------
 primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config
@@ -48,13 +50,11 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     imageUploadCondition = state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL
     dobNotEmpty = not $ DS.null state.data.dob
+    id = "UploadDrivingLicenseButton"
     driverLicenseLengthValid = DS.length state.data.driver_license_number >= 9
-    driverLicensesMatch = caseInsensitiveCompare state.data.driver_license_number state.data.reEnterDriverLicenseNumber
-    uploadRCandDLNotRequired = not state.data.cityConfig.uploadRCandDL
     dateOfIssueNotEmpty = state.data.dateOfIssue /= Just ""
     isDriverInfoValid = dobNotEmpty 
-                        && driverLicenseLengthValid 
-                        && (driverLicensesMatch || uploadRCandDLNotRequired) 
+                        && driverLicenseLengthValid
                         && dateOfIssueNotEmpty
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfIssue then getString CONFIRM 
@@ -170,7 +170,10 @@ appOnboardingNavBarConfig state =
               { text = if state.props.openHowToUploadManual 
                         then getString UPLOAD_DRIVING_LICENSE 
                         else getString DRIVING_LICENSE_DETAILS
-              }
+              },
+    rightButton = AppOnboardingNavBar.config.rightButton{
+      text = getString HELP_FAQ
+      }
   }
 
 genericHeaderConfig :: ST.UploadDrivingLicenseState -> GenericHeader.Config
@@ -199,3 +202,33 @@ genericHeaderConfig state = let
       }
     }
   in genericHeaderConfig'
+
+optionsMenuConfig :: ST.UploadDrivingLicenseState -> OptionsMenuConfig.Config
+optionsMenuConfig state = OptionsMenuConfig.config {
+  menuItems = [
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : true, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : true, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  true, color : Color.black800}
+  ],
+  backgroundColor = Color.blackLessTrans,
+  menuBackgroundColor = Color.white900,
+  gravity = RIGHT,
+  menuExpanded = true,
+  width = WRAP_CONTENT,
+  marginRight = 16,
+  itemHeight = V 50,
+  itemPadding = Padding 16 16 16 16,
+  cornerRadius = 4.0,
+  enableAnim = true
+}
+
+bottomDrawerListConfig :: ST.UploadDrivingLicenseState -> BottomDrawerList.Config
+bottomDrawerListConfig state = BottomDrawerList.config {
+  animState = state.props.contactSupportModal,
+  titleText = getString CONTACT_SUPPORT_VIA,
+  itemList = [
+    {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
+    {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"}
+  ]
+}

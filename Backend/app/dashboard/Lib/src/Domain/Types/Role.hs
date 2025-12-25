@@ -1,4 +1,5 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -12,11 +13,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Role where
 
 import Data.Singletons.TH
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -24,8 +25,10 @@ import Kernel.Types.Id
 
 -- DASHBOARD_ADMIN is superuser, who can can create and assign other roles
 
-data DashboardAccessType = DASHBOARD_USER | DASHBOARD_ADMIN | FLEET_OWNER | DASHBOARD_RELEASE_ADMIN | MERCHANT_ADMIN
-  deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema)
+data DashboardAccessType = DASHBOARD_USER | DASHBOARD_ADMIN | FLEET_OWNER | DASHBOARD_RELEASE_ADMIN | MERCHANT_ADMIN | RENTAL_FLEET_OWNER | MERCHANT_MAKER | MERCHANT_SERVER | DASHBOARD_OPERATOR | TICKET_DASHBOARD_USER | TICKET_DASHBOARD_MERCHANT | TICKET_DASHBOARD_ADMIN | TICKET_DASHBOARD_APPROVER
+  deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, Ord)
+
+$(mkBeamInstancesForEnum ''DashboardAccessType)
 
 genSingletons [''DashboardAccessType]
 
@@ -39,6 +42,7 @@ data Role = Role
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data RoleAPIEntity = RoleAPIEntity
   { id :: Id Role,

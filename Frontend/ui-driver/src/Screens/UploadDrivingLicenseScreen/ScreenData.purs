@@ -19,9 +19,10 @@ import Data.Maybe
 
 import Engineering.Helpers.Commons as EHC
 import Foreign.Object (empty)
-import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
 import Screens.Types (UploadDrivingLicenseState)
 import ConfigProvider
+import Screens.Types as ST
+import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 initData :: UploadDrivingLicenseState
 initData = {
@@ -43,7 +44,8 @@ initData = {
       , imageFrontUrl : ""
       , logField : empty
       , mobileNumber : ""
-      , cityConfig : dummyCityConfig
+      , vehicleCategory : Nothing
+      , cityConfig : defaultCityConfig
       , config : getAppConfig appConfig
       },
       props: {
@@ -63,5 +65,8 @@ initData = {
       , fileCameraOption : false
       , validating : false
       , successfulValidation : false
+      , menuOptions : false
+      , confirmChangeVehicle : false
+      , contactSupportModal : ST.HIDE
       }
     }

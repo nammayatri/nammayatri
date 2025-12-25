@@ -38,7 +38,9 @@ timeoutEvent flowRt appEnv timeoutResponse seconds app req respond = do
     Left response -> pure response
     Right _ -> do
       requestId <- getRequestId $ Wai.requestHeaders req
-      runFlowR flowRt appEnv $ timeoutLog requestId
+      let path = Wai.rawPathInfo req
+          query = Wai.rawQueryString req
+      runFlowR flowRt appEnv $ timeoutLog requestId path query
       respond timeoutResponse
   where
     getRequestId headers = do
@@ -46,5 +48,14 @@ timeoutEvent flowRt appEnv timeoutResponse seconds app req respond = do
       case value of
         Just val -> pure ("requestId-" <> decodeUtf8 val)
         Nothing -> pure "randomRequestId-" <> show <$> nextRandom
-    timeoutLog logRequestId =
-      logWarning $ "Request timed out! " <> logRequestId
+    timeoutLog logRequestId path query =
+      logError $
+        "Request timed out! "
+          <> logRequestId
+          <> " | Path: "
+          <> decodeUtf8 path
+          <> " | Query: "
+          <> decodeUtf8 query
+          <> " | Timeout: "
+          <> show seconds
+          <> " seconds"

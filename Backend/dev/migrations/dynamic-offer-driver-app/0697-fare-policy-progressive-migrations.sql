@@ -1,0 +1,15 @@
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details ADD COLUMN pickup_charges_min integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details ADD COLUMN pickup_charges_max integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details ADD COLUMN pickup_charges_min_amount double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details ADD COLUMN pickup_charges_max_amount double precision;
+
+UPDATE atlas_driver_offer_bpp.fare_policy_progressive_details SET pickup_charges_min = dead_km_fare;
+UPDATE atlas_driver_offer_bpp.fare_policy_progressive_details SET pickup_charges_max = dead_km_fare;
+UPDATE atlas_driver_offer_bpp.fare_policy_progressive_details SET pickup_charges_min_amount = dead_km_fare_amount;
+UPDATE atlas_driver_offer_bpp.fare_policy_progressive_details SET pickup_charges_max_amount = dead_km_fare_amount;
+
+
+
+
+
+

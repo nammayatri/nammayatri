@@ -27,6 +27,7 @@
 -keep class androidx.coordinatorlayout.widget.* { *;}
 -keep class androidx.coordinatorlayout.widget.CoordinatorLayout.* { *;}
 -keep class com.airbnb.lottie.* { *;}
+-keep class androidx.profileinstaller.** { *; }
 
 -assumenosideeffects class android.util.Log {
     public static boolean isLoggable(java.lang.String, int);
@@ -41,3 +42,21 @@
      public void println(%);
      public void println(**);
  }
+
+-keep public class * implements com.bumptech.glide.module.GlideModule
+-keep public class * extends com.bumptech.glide.module.AppGlideModule
+-keep public enum com.bumptech.glide.load.ImageHeaderParser$** {
+  **[] $VALUES;
+  public *;
+}
+
+ -dontwarn in.juspay.hypertrident.TridentBridge
+ -dontwarn dalvik.system.ZipPathValidator
+ -dontwarn co.hyperverge.**
+ -dontwarn org.openjsse.net.ssl.OpenJSSE
+ -dontwarn org.openjsse.javax.net.ssl.SSLParameters
+ -dontwarn org.openjsse.javax.net.ssl.SSLSocket
+
+ -dontwarn com.finternet.sdk.R$anim
+ -dontwarn com.finternet.sdk.R$styleable
+ -dontwarn com.clevertap.android.sdk.pushnotification.PushType

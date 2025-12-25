@@ -13,185 +13,37 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Init (buildInitReq) where
+module Beckn.ACL.Init (buildInitReqV2) where
 
-import qualified Beckn.ACL.Common as Common
-import qualified Beckn.Types.Core.Taxi.Init as Init
+import qualified Beckn.OnDemand.Transformer.Init as TF
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import Control.Lens ((%~))
 import qualified Data.Text as T
-import qualified Domain.Types.Location as DL
-import qualified Domain.Types.LocationAddress as DLA
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.VehicleVariant as VehVar
--- import Environment
--- import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Beckn.ReqTypes
-import Kernel.Types.Logging
+import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
+import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.ValueAddNP as VNP
+import Tools.Error
 
-buildInitReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+buildInitReqV2 ::
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   SConfirm.DConfirmRes ->
-  m (BecknReq Init.InitMessage)
-buildInitReq res = do
-  let transactionId = res.searchRequestId.getId
+  m Spec.InitReq
+buildInitReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.INIT res.booking.id.getId (Just transactionId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.defaultCity res.merchant.country False
-  initMessage <- buildInitMessage res
-  pure $ BecknReq context initMessage
-
-buildInitMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmRes -> m Init.InitMessage
-buildInitMessage res = do
-  let (fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
-        SConfirm.ConfirmOneWayDetails -> (Init.RIDE, Nothing, Nothing)
-        SConfirm.ConfirmRentalDetails _ -> (Init.RIDE, Nothing, Nothing)
-        SConfirm.ConfirmAutoDetails estimateId driverId -> (Init.RIDE, Just estimateId, driverId)
-        SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (Init.RIDE_OTP, Just quoteId, Nothing) --need to be  checked
-  let vehicleVariant = castVehicleVariant res.vehicleVariant
-  pure
-    Init.InitMessage
-      { order =
-          Init.Order
-            { items = [mkOrderItem res.itemId mbBppFullfillmentId],
-              quote =
-                Init.Quote
-                  { price =
-                      Init.QuotePrice
-                        { value = fromIntegral res.booking.estimatedFare,
-                          offered_value = fromIntegral res.booking.estimatedTotalFare,
-                          currency = "INR"
-                        },
-                    breakup = Nothing
-                  },
-              billing = mkBilling res.riderPhone res.riderName,
-              fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant,
-              payment = mkPayment res.paymentMethodInfo,
-              provider = mkProvider mbDriverId
-            }
-      }
-  where
-    castVehicleVariant = \case
-      VehVar.SEDAN -> Init.SEDAN
-      VehVar.SUV -> Init.SUV
-      VehVar.HATCHBACK -> Init.HATCHBACK
-      VehVar.AUTO_RICKSHAW -> Init.AUTO_RICKSHAW
-      VehVar.TAXI -> Init.TAXI
-      VehVar.TAXI_PLUS -> Init.TAXI_PLUS
-
-mkBilling :: Maybe Text -> Maybe Text -> Init.Billing
-mkBilling phone name = Init.Billing {..}
-
-mkProvider :: Maybe Text -> Maybe Init.Provider
-mkProvider driverId =
-  driverId >>= \dId ->
-    Just
-      Init.Provider
-        { id = dId
-        }
-
-mkOrderItem :: Text -> Maybe Text -> Init.OrderItem
-mkOrderItem itemId mbBppFullfillmentId =
-  Init.OrderItem
-    { id = itemId,
-      fulfillment_id = mbBppFullfillmentId
-    }
-
-mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DL.Location -> Maybe DL.Location -> Maybe HighPrecMeters -> Init.VehicleVariant -> Init.FulfillmentInfo
-mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDistance vehicleVariant =
-  Init.FulfillmentInfo
-    { id = mbBppFullfillmentId,
-      _type = fulfillmentType,
-      tags =
-        if isJust mbMaxDistance
-          then
-            Just $
-              Init.TG
-                [ Init.TagGroup
-                    { display = True,
-                      code = "estimations",
-                      name = "Estimations",
-                      list =
-                        [ Init.Tag
-                            { display = (\_ -> Just True) =<< mbMaxDistance,
-                              code = (\_ -> Just "max_estimated_distance") =<< mbMaxDistance,
-                              name = (\_ -> Just "Max Estimated Distance") =<< mbMaxDistance,
-                              value = (Just . show) =<< mbMaxDistance
-                            }
-                        ]
-                    }
-                ]
-          else Nothing,
-      start =
-        Init.StartInfo
-          { location =
-              Init.Location
-                { gps =
-                    Init.Gps
-                      { lat = fromLoc.lat,
-                        lon = fromLoc.lon
-                      },
-                  address = mkAddress fromLoc.address
-                },
-            authorization = Nothing
-          },
-      end =
-        mbToLoc >>= \toLoc ->
-          Just
-            Init.StopInfo
-              { location =
-                  Init.Location
-                    { gps =
-                        Init.Gps
-                          { lat = toLoc.lat,
-                            lon = toLoc.lon
-                          },
-                      address = mkAddress toLoc.address
-                    }
-              },
-      vehicle =
-        Init.Vehicle
-          { category = vehicleVariant
-          }
-    }
-
-mkAddress :: DLA.LocationAddress -> Init.Address
-mkAddress DLA.LocationAddress {..} =
-  Init.Address
-    { area_code = areaCode,
-      locality = area,
-      ward = ward,
-      door = door,
-      ..
-    }
-
-mkPayment :: Maybe DMPM.PaymentMethodInfo -> Init.Payment
-mkPayment (Just DMPM.PaymentMethodInfo {..}) =
-  Init.Payment
-    { _type = Common.castDPaymentType paymentType,
-      params =
-        Init.PaymentParams
-          { collected_by = Init.BPP,
-            instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
-            currency = "INR",
-            amount = Nothing
-          },
-      uri = Nothing
-    }
--- for backward compatibility
-mkPayment Nothing =
-  Init.Payment
-    { _type = Init.ON_FULFILLMENT,
-      params =
-        Init.PaymentParams
-          { collected_by = Init.BPP,
-            instrument = Nothing,
-            currency = "INR",
-            amount = Nothing
-          },
-      uri = Nothing
-    }
+  moc <- CQMOC.findByMerchantIdAndCity res.merchant.id res.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> res.merchant.id.getId <> "-city-" <> show res.city)
+  riderConfig <- QRC.findByMerchantOperatingCityId moc.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
+  bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId res.merchant.id "MOBILITY" moc.id
+  bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
+  let action = Context.INIT
+  let domain = Context.MOBILITY
+  isValueAddNP <- VNP.isValueAddNP res.providerId
+  ttl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  TF.buildInitReq res bapUrl action domain isValueAddNP bapConfig riderConfig ttl

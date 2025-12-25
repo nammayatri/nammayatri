@@ -15,28 +15,36 @@
 
 module Storage.CachedQueries.Maps.PlaceNameCache where
 
-import Domain.Types.Maps.PlaceNameCache
+import Domain.Types.PlaceNameCache
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
-import qualified Storage.Queries.Maps.PlaceNameCache as Queries
+import qualified Storage.Queries.PlaceNameCache as Queries
 
 findPlaceByPlaceId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> m [PlaceNameCache]
 findPlaceByPlaceId placeId =
   Hedis.safeGet (makePlaceIdKey placeId) >>= \case
     Just a -> return a
-    Nothing -> cachedPlaceByPlaceId placeId /=<< Queries.findPlaceByPlaceId placeId
+    Nothing -> cachedPlaceByPlaceId placeId /=<< Queries.findPlaceByPlaceId (Just placeId)
 
 findPlaceByGeoHash :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> m [PlaceNameCache]
 findPlaceByGeoHash geoHash =
   Hedis.safeGet (makeGeoHashIdKey geoHash) >>= \case
     Just a -> return a
-    Nothing -> cachedPlaceByGeoHash geoHash /=<< Queries.findPlaceByGeoHash geoHash
+    Nothing -> cachedPlaceByGeoHash geoHash /=<< Queries.findPlaceByGeoHash (Just geoHash)
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => PlaceNameCache -> m ()
 create = Queries.create
+
+delete :: (CacheFlow m r, Esq.EsqDBFlow m r) => PlaceNameCache -> m ()
+delete obj = do
+  whenJust obj.geoHash $ \geoH -> do
+    Hedis.del $ makeGeoHashIdKey geoH
+  whenJust obj.placeId $ \pId -> do
+    Hedis.del $ makePlaceIdKey pId
+  Queries.deleteById obj.id
 
 -- test with empty list
 cachedPlaceByPlaceId :: CacheFlow m r => Text -> [PlaceNameCache] -> m ()

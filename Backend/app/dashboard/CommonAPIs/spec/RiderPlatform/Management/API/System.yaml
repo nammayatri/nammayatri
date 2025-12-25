@@ -1,0 +1,26 @@
+imports:
+  Value: Data.Aeson
+
+module: System
+
+apis:
+  - POST:
+      endpoint: /runQuery
+      auth: ApiAuthV2
+      request:
+        type: QueryData
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MIGRATION RUN_QUERY
+
+types:
+  QueryData:
+    - queryType: QueryType
+    - tableName: Text
+    - setClause: Value
+    - whereClause: Value
+    - derive: "'HideSecrets"
+
+  QueryType:
+    - enum: "INSERT, UPDATE"

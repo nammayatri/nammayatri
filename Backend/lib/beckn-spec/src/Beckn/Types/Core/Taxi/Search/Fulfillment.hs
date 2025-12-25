@@ -34,7 +34,7 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 -- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY
 data FulfillmentInfo = FulfillmentInfo
   { start :: StartInfo,
-    end :: StopInfo,
+    end :: Maybe StopInfo,
     tags :: Maybe TagGroups,
     customer :: Maybe Customer
   }

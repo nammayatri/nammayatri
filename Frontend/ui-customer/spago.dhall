@@ -25,6 +25,7 @@ to generate this file without the comments in this block.
   , "debug"
   , "effect"
   , "either"
+  , "enums"
   , "exceptions"
   , "foldable-traversable"
   , "foreign"
@@ -34,7 +35,9 @@ to generate this file without the comments in this block.
   , "functions"
   , "halogen-vdom"
   , "integers"
+  , "js-uri"
   , "lists"
+  , "lite-decode"
   , "maybe"
   , "monoid-extras"
   , "newtype"
@@ -52,9 +55,8 @@ to generate this file without the comments in this block.
   , "transformers"
   , "tuples"
   , "unfoldable"
+  , "unordered-collections"
   , "unsafe-coerce"
-  , "lite-decode"
-  , "js-uri"
   ]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]

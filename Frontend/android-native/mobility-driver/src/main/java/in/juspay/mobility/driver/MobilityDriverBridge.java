@@ -9,11 +9,7 @@
 
 package in.juspay.mobility.driver;
 
-import static android.Manifest.permission.CAMERA;
-import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
-import static android.Manifest.permission.RECORD_AUDIO;
-import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
-import static android.app.Activity.RESULT_OK;
+import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.content.Context.WINDOW_SERVICE;
 
 import android.Manifest;
@@ -26,14 +22,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import com.google.common.util.concurrent.ListenableFuture;
-
-import androidx.camera.core.CameraSelector;
-import androidx.camera.core.ImageAnalysis;
-import androidx.camera.core.ImageProxy;
-import androidx.camera.core.Preview;
-import androidx.lifecycle.LifecycleOwner;
-
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
@@ -60,18 +48,22 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import androidx.annotation.Keep;
+import androidx.annotation.NonNull;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
+import androidx.camera.core.ImageProxy;
+import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
-
-import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.FileProvider;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.lifecycle.LifecycleOwner;
 import androidx.work.Constraints;
 import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.PeriodicWorkRequest;
@@ -86,75 +78,52 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
-import com.theartofdev.edmodo.cropper.CropImage;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.lang.reflect.Method;
-import java.net.HttpURLConnection;
 import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
-import in.juspay.mobility.app.AudioRecorder;
 import in.juspay.mobility.app.CheckPermissionOverlay;
 import in.juspay.mobility.app.LocationUpdateService;
+import in.juspay.mobility.app.LocationUpdateServiceV2;
 import in.juspay.mobility.app.LocationUpdateWorker;
 import in.juspay.mobility.app.NotificationUtils;
-import in.juspay.mobility.app.OverlaySheetService;
 import in.juspay.mobility.app.TranslatorMLKit;
-import in.juspay.mobility.app.Utils;
-import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.common.MobilityCommonBridge;
-import in.juspay.mobility.driver.mediaPlayer.DefaultMediaPlayerControl;
+import in.juspay.mobility.common.utils.Utils;
+import in.juspay.mobility.common.mediaPlayer.DefaultMediaPlayerControl;
 
+@Keep
 public class MobilityDriverBridge extends MobilityCommonBridge {
 
     private static final String LOG_TAG = "MobilityDriverBridge";
-
-    // Constants
-    private static final int IMAGE_CAPTURE_REQ_CODE = 101;
-    private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
 
     // Media Utils
     public static YouTubePlayerView youTubePlayerView;
     public static YouTubePlayer youtubePlayer;
     public static float videoDuration = 0;
-    public static ArrayList<MediaPlayerView> audioPlayers = new ArrayList<>();
-    private AudioRecorder audioRecorder = null;
     private static final int IMAGE_PERMISSION_REQ_CODE_PROFILE = 1243;
 
-    // Others
-    private static boolean isUploadPopupOpen = false;
-
     // CallBacks
-    private String storeDriverCallBack = null;
-    private String storeUpdateTimeCallBack = null;
-    private String storeImageUploadCallBack = null;
-    private CallBack callBack;
+    private static String storeUpdateTimeCallBack = null;
+    private String storeAddRideStopCallBack = null;
     private LocationUpdateService.UpdateTimeCallback locationCallback;
+    private LocationUpdateServiceV2.UpdateTimeCallback locationCallbackV2;
     private PreviewView previewView;
     private ImageCapture imageCapture;
     private Button bCapture;
@@ -165,20 +134,21 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         super(bridgeComponents);
         registerCallBacks();
         translator = new TranslatorMLKit(bridgeComponents.getContext());
+        app = AppType.PROVIDER;
     }
-
-    //region Store and Trigger CallBack
+ 
     @JavascriptInterface
-    public void storeCallBackForNotification(String callback) {
-        storeDriverCallBack = callback;
+    public void storeCallBackForAddRideStop(String callback) {
+        storeAddRideStopCallBack = callback;
     }
 
-    public void callDriverNotificationCallBack(String notificationType) {
-        if (storeDriverCallBack != null) {
+    public void callDriverAddRideStopCallBack(String newStopLocation) {
+       
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                    storeDriverCallBack, notificationType);
+                    storeAddRideStopCallBack, newStopLocation);
+            Log.d(CALLBACK, javascript);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
-        }
+        
     }
 
     @JavascriptInterface
@@ -218,148 +188,108 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         storeUpdateTimeCallBack = callback;
     }
 
-    public void callUpdateTimeCallBack(String time, String lat, String lng) {
+    public void callUpdateTimeCallBack(String time, String lat, String lng, String errorCode) {
         if (storeUpdateTimeCallBack != null) {
-            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
-                    storeUpdateTimeCallBack, time, lat, lng);
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s','%s');",
+                    storeUpdateTimeCallBack, time, lat, lng, errorCode);
             Log.d(CALLBACK, javascript);
-            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+            JsCallback jsCallback = bridgeComponents.getJsCallback();
+            if (jsCallback != null) {
+                jsCallback.addJsToWebView(javascript);
+            }
         }
-    }
-
-    @JavascriptInterface
-    public void storeCallBackImageUpload(String callback) {
-        storeImageUploadCallBack = callback;
-    }
-
-    public void callImageUploadCallBack(String stringImage, String imageName, String imagePath) {
-        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
-                storeImageUploadCallBack, stringImage, imageName, imagePath);
-        bridgeComponents.getJsCallback().addJsToWebView(javascript);
     }
 
     public void registerCallBacks() {
-        if (isClassAvailable("in.juspay.mobility.app.callbacks.CallBack")) {
-            callBack = new CallBack() {
-                @Override
-                public void customerCallBack(String notificationType) {
-                    Log.i(OTHERS, "No Customer CallBack Required");
-                }
-
-                @Override
-                public void driverCallBack(String notificationType) {
-                    callDriverNotificationCallBack(notificationType);
-                }
-
-                @Override
-                public void imageUploadCallBack(String encImage, String filename, String filePath) {
-                    callImageUploadCallBack(encImage, filename, filePath);
-                }
-
-                @Override
-                public void chatCallBack(String message, String sentBy, String time, String len) {
-                    Log.i(OTHERS, "No Required");
-                }
-
-                @Override
-                public void inAppCallBack(String onTapAction) {
-                    Log.i(OTHERS, "No Required");
-                }
-
-                @Override
-                public void bundleUpdatedCallBack(String event, JSONObject desc) {
-                    Log.i(CALLBACK, "No Required");
-                }
-            };
-            NotificationUtils.registerCallback(callBack);
-            Utils.registerCallback(callBack);
-        }
-        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
+        if (getKeysInSharedPref("LOCATION_SERVICE_VERSION").equals("V1")) {
             locationCallback = this::callUpdateTimeCallBack;
             LocationUpdateService.registerCallback(locationCallback);
-        }
-        if (isClassAvailable("in.juspay.mobility.app.OverlaySheetService")) {
-            OverlaySheetService.registerCallback(callBack);
+        } else {
+            locationCallbackV2 = this::callUpdateTimeCallBack;
+            LocationUpdateServiceV2.registerCallback(locationCallbackV2);
         }
     }
 
     public void onDestroy() {
-        Log.e("onDestroy","onDestroy");
-        NotificationUtils.deRegisterCallback(callBack);
-        Utils.deRegisterCallback(callBack);
+        Log.e("onDestroy", "onDestroy");
         DefaultMediaPlayerControl.mediaPlayer.reset();
-        if (isClassAvailable("in.juspay.mobility.app.OverlaySheetService")) {
-            OverlaySheetService.deRegisterCallback(callBack);
-        }
-        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
+        if (getKeysInSharedPref("LOCATION_SERVICE_VERSION").equals("V1")) {
             LocationUpdateService.deRegisterCallback(locationCallback);
+        } else {
+            LocationUpdateServiceV2.deRegisterCallback(locationCallbackV2);
         }
         // Clearing all static variables
         // Media Utils
         youTubePlayerView = null;
         youtubePlayer = null;
         videoDuration = 0;
-        audioPlayers = new ArrayList<>();
-        audioRecorder = null;
-
-        // Others
-        isUploadPopupOpen = false;
 
         // CallBacks
-        storeDriverCallBack = null;
+        storeAddRideStopCallBack = null;
         storeUpdateTimeCallBack = null;
-        storeImageUploadCallBack = null;
-        callBack = null;
     }
     //endregion
 
     //region Location
     @JavascriptInterface
     public void startLocationPollingAPI() {
+        checkAndAskStoragePermission();
         ExecutorManager.runOnBackgroundThread(() -> {
-            if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
-                Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
-                locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                WorkManager mWorkManager;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    bridgeComponents.getContext().getApplicationContext().startForegroundService(locationUpdateService);
-                } else {
-                    bridgeComponents.getContext().startService(locationUpdateService);
+            if (getKeysInSharedPref("LOCATION_SERVICE_VERSION").equals("V1")) {
+                if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
+                    Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
+                    locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    WorkManager mWorkManager;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        bridgeComponents.getContext().getApplicationContext().startForegroundService(locationUpdateService);
+                    } else {
+                        bridgeComponents.getContext().startService(locationUpdateService);
+                    }
+                    mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
+                    Constraints constraints = new Constraints.Builder()
+                            .setRequiresDeviceIdle(false)
+                            .build();
+                    PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class, 16, TimeUnit.MINUTES).addTag(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update)).setConstraints(constraints).build();
+                    mWorkManager.enqueueUniquePeriodicWork(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update), ExistingPeriodicWorkPolicy.UPDATE, mWorkRequest);
+                    Log.i(LOCATION, "Start Location Polling");
                 }
-                mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
-                Constraints constraints = new Constraints.Builder()
-                        .setRequiresDeviceIdle(true)
-                        .build();
-                PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class, 15, TimeUnit.MINUTES).addTag(bridgeComponents.getContext().getString(R.string.location_update)).setConstraints(constraints).build();
-                mWorkManager.enqueueUniquePeriodicWork(bridgeComponents.getContext().getString(R.string.location_update), ExistingPeriodicWorkPolicy.UPDATE, mWorkRequest);
-                Log.i(LOCATION, "Start Location Polling");
+            } else {
+                if (isClassAvailable("in.juspay.mobility.app.LocationUpdateServiceV2")) {
+                    Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateServiceV2.class);
+                    locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    WorkManager mWorkManager;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        bridgeComponents.getContext().getApplicationContext().startForegroundService(locationUpdateService);
+                    } else {
+                        bridgeComponents.getContext().startService(locationUpdateService);
+                    }
+                    mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
+                    Constraints constraints = new Constraints.Builder()
+                            .setRequiresDeviceIdle(false)
+                            .build();
+                    PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class, 16, TimeUnit.MINUTES).addTag(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update)).setConstraints(constraints).build();
+                    mWorkManager.enqueueUniquePeriodicWork(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update), ExistingPeriodicWorkPolicy.UPDATE, mWorkRequest);
+                    Log.i(LOCATION, "Start Location Polling");
+                }
             }
         });
     }
 
     @JavascriptInterface
     public void stopLocationPollingAPI() {
-        Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
+        Intent locationUpdateService;
+        if (getKeysInSharedPref("LOCATION_SERVICE_VERSION").equals("V1")) {
+            locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
+        } else {
+            locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateServiceV2.class);
+        }
         bridgeComponents.getContext().stopService(locationUpdateService);
         WorkManager mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
-        mWorkManager.cancelAllWorkByTag(bridgeComponents.getContext().getString(R.string.location_update));
+        mWorkManager.cancelAllWorkByTag(bridgeComponents.getContext().getString(in.juspay.mobility.app.R.string.location_update));
         Log.i(LOCATION, "Stop Location Update Polling");
     }
 
     //endregion
-
-    //region Media Utils
-    @JavascriptInterface
-    public void pauseMediaPlayer() {
-        ExecutorManager.runOnBackgroundThread(() -> {
-            if (DefaultMediaPlayerControl.mediaPlayer.isPlaying()) {
-                DefaultMediaPlayerControl.mediaPlayer.pause();
-            }
-            for (MediaPlayerView audioPlayer : audioPlayers) {
-                audioPlayer.onPause(audioPlayer.getPlayer());
-            }
-        });
-    }
 
     @JavascriptInterface
     public void previewImage(String base64Image) {
@@ -396,246 +326,12 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }
     }
 
-    @JavascriptInterface
-    public void addMediaPlayer(String viewID, String source) {
-        ExecutorManager.runOnMainThread(() -> {
-            MediaPlayerView audioPlayer = new MediaPlayerView(bridgeComponents.getContext(), bridgeComponents.getActivity());
-            try {
-                audioPlayer.inflateView(Integer.parseInt(viewID));
-                if (source.contains(".mp3")) {
-                    audioPlayer.addAudioFileUrl(source);
-                } else {
-                    Thread thread = new Thread(() -> {
-                        try {
-                            String base64 = getAPIResponse(source);
-                            byte[] decodedAudio = Base64.decode(base64, Base64.DEFAULT);
-                            File tempMp3 = File.createTempFile("audio_cache", "mp3", bridgeComponents.getContext().getCacheDir());
-                            tempMp3.deleteOnExit();
-                            FileOutputStream fos = new FileOutputStream(tempMp3);
-                            fos.write(decodedAudio);
-                            fos.close();
-                            FileInputStream fis = new FileInputStream(tempMp3);
-                            audioPlayer.addAudioFileInput(fis);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    });
-                    thread.start();
-                }
-                audioPlayers.add(audioPlayer);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-    }
-
-    @JavascriptInterface
-    public void renderBase64Image(String url, String id, boolean fitCenter, String imgScaleType) {
-        if (url.contains("http"))
-            url = getAPIResponse(url);
-        renderBase64ImageFile(url, id, fitCenter, imgScaleType);
-    }
-
-    @JavascriptInterface
-    public void renderBase64ImageFile(String base64Image, String id, boolean fitCenter, String imgScaleType) {
-        ExecutorManager.runOnMainThread(() -> {
-            try {
-                if (!base64Image.equals("") && id != null && bridgeComponents.getActivity() != null) {
-                    LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
-                    if (layout != null){
-                        byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
-                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                        ImageView imageView = new ImageView(bridgeComponents.getContext());
-                        ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(layout.getWidth(),layout.getHeight());
-                        imageView.setLayoutParams(layoutParams);
-                        imageView.setImageBitmap(decodedByte);
-                        imageView.setScaleType(getScaleTypes(imgScaleType));
-                        imageView.setAdjustViewBounds(true);
-                        imageView.setClipToOutline(true);
-                        layout.removeAllViews();
-                        layout.addView(imageView);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-    }
-
-    /*
-     * This function is deprecated on 22 May - 2023
-     * Added only for Backward Compatibility
-     * Remove this function once it is not begin used.
-     */
-
-    @JavascriptInterface
-    public void renderBase64Image(String url, String id) {
-        String base64Image = getAPIResponse(url);
-        if (bridgeComponents.getActivity() != null) {
-            ExecutorManager.runOnMainThread(() -> {
-                try {
-                    if (!base64Image.equals("") && id != null) {
-                        LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
-                        byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
-                        Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                        ImageView imageView = new ImageView(bridgeComponents.getContext());
-                        imageView.setImageBitmap(decodedByte);
-                        imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                        imageView.setAdjustViewBounds(true);
-                        imageView.setClipToOutline(true);
-                        layout.removeAllViews();
-                        layout.addView(imageView);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
-        }
-    }
-
-    @JavascriptInterface
-    public void removeMediaPlayer() {
-        try {
-            if (audioPlayers != null) {
-                for (MediaPlayerView audioPlayer : audioPlayers) {
-                    audioPlayer.resetListeners();
-                }
-                bridgeComponents.getContext().getCacheDir().delete();
-                audioPlayers.clear();
-                DefaultMediaPlayerControl.mediaPlayer.reset();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     @Override
     public void reset() {
         onDestroy();
         super.reset();
     }
 
-    @JavascriptInterface
-    public void uploadFile() { // TODO : need to handle thr storage permission 
-        if (!isUploadPopupOpen) {
-            ExecutorManager.runOnMainThread(() -> {
-                Context context = bridgeComponents.getContext();
-                if ((ActivityCompat.checkSelfPermission(context.getApplicationContext(), CAMERA) == PackageManager.PERMISSION_GRANTED)) {
-                    if (bridgeComponents.getActivity() != null) {
-                        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                        setKeysInSharedPrefs(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
-                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
-                        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                        Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                        chooseFromFile.setType("image/*");
-                        Intent chooser = Intent.createChooser(takePicture, context.getString(in.juspay.mobility.app.R.string.upload_image));
-                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
-                        isUploadPopupOpen = true;
-                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
-                    }
-                } else {
-                    if (bridgeComponents.getActivity() != null) {
-                        ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{CAMERA, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
-                    }
-                }
-            });
-        }
-    }
-
-    @JavascriptInterface
-    public String stopAudioRecording() {
-        if (audioRecorder != null) {
-            String res = audioRecorder.stopRecording();
-            Log.d(LOG_TAG, "stopAudioRecording: " + res);
-            audioRecorder = null;
-            return res;
-        }
-        return null;
-    }
-
-    public boolean isMicrophonePermissionEnabled() {
-        return ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    @JavascriptInterface
-    public boolean startAudioRecording() {
-        if (isMicrophonePermissionEnabled()) {
-            audioRecorder = new AudioRecorder();
-            audioRecorder.startRecording(bridgeComponents.getContext());
-            return true;
-        } else {
-            if (bridgeComponents.getActivity() != null) {
-                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{RECORD_AUDIO}, AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION);
-            }
-            return false;
-        }
-    }
-
-    @JavascriptInterface
-    public String saveAudioFile(String source) throws IOException {
-        File sourceFile = new File(source);
-        FileInputStream fis = new FileInputStream(sourceFile);
-        File destFile = new File(bridgeComponents.getContext().getFilesDir().getAbsolutePath() + "final_audio_record.mp3");
-        FileOutputStream fos = new FileOutputStream(destFile);
-        int n;
-        while ((n = fis.read()) != -1) {
-            fos.write(n);
-        }
-        fis.close();
-        fos.close();
-        return destFile.getAbsolutePath();
-    }
-
-    @JavascriptInterface
-    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID) {
-        Log.d(LOG_TAG, "addMediaFile: " + source);
-        Context context = bridgeComponents.getContext();
-        Activity activity = bridgeComponents.getActivity();
-        ExecutorManager.runOnMainThread(() -> {
-            MediaPlayerView audioPlayer;
-            if (Integer.parseInt(actionPlayerID) != -1) {
-                if (Integer.parseInt(timerID) != -1) {
-                    audioPlayer = new MediaPlayerView(context, activity, Integer.parseInt(actionPlayerID), playIcon, pauseIcon, Integer.parseInt(timerID));
-                    audioPlayer.setTimerColorAndSize(Color.WHITE, 14);
-                    audioPlayer.setVisualizerBarPlayedColor(Color.WHITE);
-                } else {
-                    audioPlayer = new MediaPlayerView(context, activity, Integer.parseInt(actionPlayerID), playIcon, pauseIcon);
-                    audioPlayer.setTimerColorAndSize(Color.GRAY, 14);
-                }
-            } else {
-                audioPlayer = new MediaPlayerView(context, activity);
-            }
-            try {
-                audioPlayer.inflateView(Integer.parseInt(viewID));
-                if (source.startsWith("http")) {
-                    Thread thread = new Thread(() -> {
-                        try {
-                            String base64 = getAPIResponse(source);
-                            byte[] decodedAudio = Base64.decode(base64, Base64.DEFAULT);
-                            File tempMp3 = File.createTempFile("audio_cache", "mp3", context.getCacheDir());
-                            tempMp3.deleteOnExit();
-                            FileOutputStream fos = new FileOutputStream(tempMp3);
-                            fos.write(decodedAudio);
-                            fos.close();
-                            FileInputStream fis = new FileInputStream(tempMp3);
-                            audioPlayer.addAudioFileInput(fis);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    });
-                    thread.start();
-                } else {
-                    File file = new File(source);
-                    FileInputStream fis = new FileInputStream(file);
-                    audioPlayer.addAudioFileInput(fis);
-                }
-                audioPlayers.add(audioPlayer);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-    }
     //endregion
 
     //region Permission Utils
@@ -680,6 +376,11 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     @JavascriptInterface
+    public boolean isNonOverlayDevice(){
+        return NotificationUtils.overlayFeatureNotAvailable(bridgeComponents.getContext());
+    }
+
+    @JavascriptInterface
     public void checkOverlayPermission() {
         System.out.println("CommonJsInterface checkOverlayPermission()");
         if (!Settings.canDrawOverlays(bridgeComponents.getContext())) {
@@ -708,7 +409,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     // region Maps
     @JavascriptInterface
-    public void mapSnapShot(final String pureScriptId, final String json, final String routeType, final boolean actualRoute, final String callback) {
+    public void mapSnapShot(final String pureScriptId, final String json, final String routeType, final boolean actualRoute, final String callback, final String key) {
         try {
             if (bridgeComponents.getActivity() != null) {
                 ExecutorManager.runOnMainThread(() -> {
@@ -723,12 +424,12 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                             googleMap.getUiSettings().setAllGesturesEnabled(false);
                             googleMap.getUiSettings().setRotateGesturesEnabled(false);
                             googleMap.getUiSettings().setMyLocationButtonEnabled(false);
-                            markers = new JSONObject();
+                            markers = new HashMap<>();
                             markersElement.put(pureScriptId, markers);
                             this.googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
                                 @Override
                                 public synchronized void onMapLoaded() {
-                                    showRoute(json, routeType, "#323643", actualRoute, "ny_ic_dest_marker", "ny_ic_src_marker", 8);
+                                    showRoute(json, routeType, "#323643", actualRoute, "ny_ic_dest_marker", "ny_ic_src_marker", 8, key, pureScriptId);
                                     final Handler handler = new Handler();
                                     handler.postDelayed(() -> {
                                         GoogleMap.SnapshotReadyCallback callback2 = new GoogleMap.SnapshotReadyCallback() {
@@ -760,8 +461,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                                 }
                             });
                         });
-                    } 
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         Log.e(LOG_TAG, "Error in mapSnapShot " + e);
                     }
                 });
@@ -773,7 +473,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
 
     @JavascriptInterface
-    public void showRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth) {
+    public void showRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String key, String gmapKey) {
         ExecutorManager.runOnMainThread(() -> {
             if (googleMap != null) {
                 Log.i(MAPS, "Show Route");
@@ -833,8 +533,8 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                         polylineOptions.add(toPointObj);
                         polylineOptions.add(fromPointObj);
                     }
-                    Polyline polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth);
-
+                    PolylineDataPoints polylineDataPoints = setRouteCustomTheme(polylineOptions, color, style, polylineWidth, null, googleMap,false, key, gmapKey);
+                    Polyline polyline = getPolyLine(false, polylineDataPoints);
                     if (sourceMarker != null && !sourceMarker.equals("")) {
                         Bitmap sourceBitmap = constructBitmap(90, sourceMarker);
                         polyline.setStartCap(
@@ -842,6 +542,8 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                                         BitmapDescriptorFactory.fromBitmap(sourceBitmap)
                                 )
                         );
+                        polylineDataPoints.setPolyline(polyline);
+                        setPolyLineDataByMapInstance(gmapKey,key,polylineDataPoints);
                     }
 
                     if (destMarker != null && !destMarker.equals("")) {
@@ -861,40 +563,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     //endregion
 
     //region Others
-    private String getAPIResponse(String url) {
-        if (url.equals("")) return "";
-        StringBuilder result = new StringBuilder();
-        try {
-            HttpURLConnection connection = (HttpURLConnection) (new URL(url).openConnection());
-            connection.setRequestMethod("GET");
-            connection.setRequestProperty("token", getKeysInSharedPref("REGISTERATION_TOKEN"));
-            connection.setRequestProperty("x-device", getKeysInSharedPref("DEVICE_DETAILS"));
-            connection.connect();
-            int respCode = connection.getResponseCode();
-            InputStreamReader respReader;
-            if ((respCode < 200 || respCode >= 300) && respCode != 302) {
-                respReader = new InputStreamReader(connection.getErrorStream());
-                BufferedReader in = new BufferedReader(respReader);
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                    result.append(inputLine);
-                }
-                return "";
-            } else {
-                respReader = new InputStreamReader(connection.getInputStream());
-                BufferedReader in = new BufferedReader(respReader);
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                    result.append(inputLine);
-                }
-                return result.toString();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "";
-        }
-    }
-
     @JavascriptInterface
     public void launchAppSettings() {
         Context context = bridgeComponents.getContext();
@@ -908,7 +576,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     public void launchDateSettings() {
         try {
             bridgeComponents.getContext().startActivity(new Intent(android.provider.Settings.ACTION_DATE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-        }catch (ActivityNotFoundException e){
+        } catch (ActivityNotFoundException e) {
             bridgeComponents.getContext().startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         }
     }
@@ -942,84 +610,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 editText.setTextIsSelectable(false);
             }
         }
-    }
-
-    @JavascriptInterface
-    public void clearFocus(String id) {
-        if (bridgeComponents.getActivity() != null) {
-            ExecutorManager.runOnMainThread(() -> bridgeComponents.getActivity().findViewById(Integer.parseInt(id)).clearFocus());
-        }
-    }
-
-    @JavascriptInterface
-    public String uploadMultiPartData(String filePath, String uploadUrl, String fileType) throws IOException {
-        String boundary = UUID.randomUUID().toString();
-
-        URL url = new URL(uploadUrl);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod("POST");
-        connection.setDoOutput(true);
-        connection.setUseCaches(false);
-        connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-        connection.setRequestProperty("token", getKeyInNativeSharedPrefKeys("REGISTERATION_TOKEN"));
-
-        File file = new File(filePath);
-        String fileName = file.getName();
-        DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
-
-        outputStream.writeBytes("--" + boundary + "\r\n");
-        outputStream.writeBytes(("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + "\r\n"));
-        if (fileType.equals("Image"))
-            outputStream.writeBytes("Content-Type: image/jpeg\r\n");
-        else if (fileType.equals("Audio"))
-            outputStream.writeBytes("Content-Type: audio/mpeg\r\n");
-        outputStream.writeBytes("\r\n");
-
-        FileInputStream fileInputStream = new FileInputStream(file);
-        int bytesAvailable = fileInputStream.available();
-        int maxBufferSize = 1024 * 1024;
-        int bufferSize = Math.min(bytesAvailable, maxBufferSize);
-
-        byte[] buffer = new byte[bufferSize];
-        int bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-        while (bytesRead > 0) {
-            outputStream.write(buffer, 0, bufferSize);
-            bytesAvailable = fileInputStream.available();
-            bufferSize = Math.min(bytesAvailable, maxBufferSize);
-            bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-        }
-        outputStream.writeBytes("\r\n");
-        outputStream.writeBytes("--" + boundary + "\r\n");
-
-        outputStream.writeBytes("Content-Disposition: form-data; name=\"fileType\"" + "\r\n");
-        outputStream.writeBytes("Content-Type: application/json" + "\r\n");
-        outputStream.writeBytes("\r\n");
-        outputStream.writeBytes(fileType);
-        outputStream.writeBytes("\r\n");
-        outputStream.writeBytes("--" + boundary + "\r\n" + "--");
-
-        int responseCode = connection.getResponseCode();
-        String res = "";
-        if (responseCode == 200) {
-            StringBuilder s_buffer = new StringBuilder();
-            InputStream is = new BufferedInputStream(connection.getInputStream());
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is));
-            String inputLine;
-            while ((inputLine = bufferedReader.readLine()) != null) {
-                s_buffer.append(inputLine);
-            }
-            res = s_buffer.toString();
-            JSONObject jsonObject;
-            try {
-                jsonObject = new JSONObject(res);
-                res = jsonObject.getString("fileId");
-            } catch (JSONException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            Toast.makeText(bridgeComponents.getContext(), "Unable to upload image", Toast.LENGTH_SHORT).show();
-        }
-        return res;
     }
 
     @JavascriptInterface
@@ -1070,54 +660,14 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }
         return 0;
     }
-    // endregion
 
-    //region Override Funtions
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
-        switch (requestCode) {
-            case IMAGE_CAPTURE_REQ_CODE:
-                isUploadPopupOpen = false;
-                if (resultCode == RESULT_OK) {
-                    if (bridgeComponents.getActivity() != null) {
-                        Utils.captureImage(data, bridgeComponents.getActivity(), bridgeComponents.getContext());
-                    }
-                }
-                break;
-            case CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE:
-                if (resultCode == RESULT_OK) {
-                    new Thread(() -> Utils.encodeImageToBase64(data, bridgeComponents.getContext(), null)).start();
-                } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
-                    CropImage.ActivityResult result = CropImage.getActivityResult(data);
-                    Log.e(OVERRIDE, result.getError().toString());
-                }
-                break;
-        }
         return super.onActivityResult(requestCode, resultCode, data);
     }
-
     @Override
     public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
         switch (requestCode) {
-            case IMAGE_PERMISSION_REQ_CODE:
-                Context context = bridgeComponents.getContext();
-                if ((ActivityCompat.checkSelfPermission(context, CAMERA) == PackageManager.PERMISSION_GRANTED)) {
-                    if (bridgeComponents.getActivity() != null) {
-                        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                        setKeysInSharedPrefs(context.getResources().getString(in.juspay.mobility.app.R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
-                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
-                        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                        Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                        chooseFromFile.setType("image/*");
-                        Intent chooser = Intent.createChooser(takePicture, context.getString(in.juspay.mobility.app.R.string.upload_image));
-                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
-                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
-                    }
-                } else {
-                    Toast.makeText(context, context.getString(in.juspay.mobility.app.R.string.please_allow_permission_to_capture_the_image), Toast.LENGTH_SHORT).show();
-                }
-                break;
             case REQUEST_CALL:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     showDialer(phoneNumber, false);
@@ -1145,9 +695,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     toast("Permission Denied");
                 }
                 break;
-            case AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION:
-                if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(bridgeComponents.getContext(), "Permission Denied", Toast.LENGTH_SHORT).show();
+            case BACKGROUND_LOCATION_REQ_CODE :
+                if (grantResults.length > 0 && bridgeComponents != null){
+                    Utils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
                 }
                 break;
         }
@@ -1189,19 +739,16 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
 
-
     @JavascriptInterface
     public void renderCameraProfilePicture(String id) {
         Activity activity = bridgeComponents.getActivity();
         Context context = bridgeComponents.getContext();
-        if(activity!=null)
-        {
+        if (activity != null) {
             activity.runOnUiThread(() -> {
-                if (isCameraPermissionGranted())
-                {
-                    View profilePictureLayout = LayoutInflater.from(context).inflate(R.layout.validate_documents_preview, null, false);
-                    previewView = profilePictureLayout.findViewById(R.id.previewView);
-                    bCapture = profilePictureLayout.findViewById(R.id.bCapture);
+                if (isCameraPermissionGranted()) {
+                    View profilePictureLayout = LayoutInflater.from(context).inflate(in.juspay.mobility.driver.R.layout.validate_documents_preview, null, false);
+                    previewView = profilePictureLayout.findViewById(in.juspay.mobility.driver.R.id.previewView);
+                    bCapture = profilePictureLayout.findViewById(in.juspay.mobility.driver.R.id.bCapture);
                     bCapture.setOnClickListener(view -> capturePhoto());
                     ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(context);
                     cameraProviderFuture.addListener(() -> {
@@ -1210,14 +757,13 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                             startCameraX(cameraProvider);
                         } catch (ExecutionException | InterruptedException e) {
                             e.printStackTrace();
-                            return ;
+                            return;
                         }
                     }, ContextCompat.getMainExecutor(activity));
                     LinearLayout layout = activity.findViewById(Integer.parseInt(id));
                     layout.removeAllViews();
                     layout.addView(profilePictureLayout);
-                } else
-                {
+                } else {
                     requestCameraPermission(() -> renderCameraProfilePicture(id));
                 }
             });
@@ -1240,6 +786,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                         Uri imageUri = outputFileResults.getSavedUri();
                         Utils.encodeImageToBase64(null, bridgeComponents.getContext(), imageUri);
                     }
+
                     @Override
                     public void onError(@NonNull ImageCaptureException exception) {
                         Toast.makeText(bridgeComponents.getActivity(), "error", Toast.LENGTH_SHORT).show();
@@ -1253,6 +800,16 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         return cameraPermission == PackageManager.PERMISSION_GRANTED;
     }
     //endregion
-}
 
+    @JavascriptInterface
+    public boolean isBackgroundLocationEnabled() {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED);
+        }else{
+            return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED);
+        }
+    }
+}
 

@@ -39,7 +39,8 @@ instance ToTType' FareParametersSlabDetails BeamFPSD.FullFareParametersSlabDetai
       { fareParametersId = fareParametersId,
         platformFee = platformFee,
         sgst = sgst,
-        cgst = cgst
+        cgst = cgst,
+        currency = Just currency
       }
 
 instance FromTType' FareParametersSlabDetails BeamFPSD.FullFareParametersSlabDetails where
@@ -50,6 +51,7 @@ instance FromTType' FareParametersSlabDetails BeamFPSD.FullFareParametersSlabDet
           Domain.FParamsSlabDetails
             { platformFee = platformFee,
               sgst = sgst,
-              cgst = cgst
+              cgst = cgst,
+              currency = fromMaybe INR currency
             }
         )

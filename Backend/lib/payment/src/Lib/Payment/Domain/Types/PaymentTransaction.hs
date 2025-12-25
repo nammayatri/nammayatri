@@ -16,6 +16,7 @@
 module Lib.Payment.Domain.Types.PaymentTransaction where
 
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Interface.Types as KPayment
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -25,6 +26,7 @@ import Lib.Payment.Domain.Types.PaymentOrder as DOrder
 data PaymentTransaction = PaymentTransaction
   { id :: Id PaymentTransaction,
     txnUUID :: Maybe Text,
+    txnId :: Maybe Text,
     paymentMethodType :: Maybe Text,
     paymentMethod :: Maybe Text,
     respMessage :: Maybe Text,
@@ -33,7 +35,9 @@ data PaymentTransaction = PaymentTransaction
     orderId :: Id PaymentOrder,
     merchantId :: Id Merchant,
     amount :: HighPrecMoney,
-    currency :: Payment.Currency,
+    applicationFeeAmount :: HighPrecMoney,
+    retryCount :: Int,
+    currency :: Currency,
     dateCreated :: Maybe UTCTime,
     statusId :: Int,
     status :: Payment.TransactionStatus,
@@ -46,7 +50,9 @@ data PaymentTransaction = PaymentTransaction
     bankErrorCode :: Maybe Text,
     mandateFrequency :: Maybe Payment.MandateFrequency,
     mandateMaxAmount :: Maybe HighPrecMoney,
+    splitSettlementResponse :: Maybe KPayment.SplitSettlementResponse,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity)
   }
   deriving (Generic)

@@ -1,0 +1,187 @@
+imports:
+  Person: Dashboard.Common
+  City: Kernel.Types.Beckn.Context
+  Summary: Dashboard.Common
+  StatusRes: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+  FleetOwnerRegisterReqV2: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+  FleetOwnerRegisterResV2: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+  FleetOwnerLoginReqV2: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+  FleetOwnerLoginResV2: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+  FleetType: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+
+module: FleetManagement
+apiPrefix: operator
+
+apis:
+  - GET: # ListFleetsAPI
+      endpoint: /fleets
+      auth: ApiAuthV2
+      query:
+        - isActive: Bool
+        - verified: Bool
+        - enabled: Bool
+        - limit: Int
+        - offset: Int
+        - mbSearchString: Text
+      response:
+        type: FleetInfoRes
+      helperApi:
+        - GET:
+            endpoint: /fleets
+            auth: ApiAuthV2
+            query:
+              - isActive: Bool
+              - verified: Bool
+              - enabled: Bool
+              - limit: Int
+              - offset: Int
+              - mbSearchString: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: FleetInfoRes
+
+  - POST:
+      endpoint: /fleet/create
+      auth: ApiAuthV2
+      request:
+        type: FleetOwnerLoginReqV2
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/create
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            query:
+              - enabled: Bool
+            request:
+              type: FleetOwnerLoginReqV2
+            response:
+              type: FleetOwnerLoginResV2
+  - POST:
+      endpoint: /fleet/register
+      auth: ApiAuthV2
+      request:
+        type: FleetOwnerRegisterReqV2
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/register
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: FleetOwnerRegisterReqV2
+            response:
+              type: FleetOwnerRegisterResV2
+
+  - POST:
+      endpoint: /fleet/link/sendOtp
+      auth: ApiAuthV2
+      request:
+        type: FleetOwnerSendOtpReq
+      response:
+        type: FleetOwnerSendOtpRes
+      helperApi:
+        - POST:
+            endpoint: /fleet/link/sendOtp
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: FleetOwnerSendOtpReq
+            response:
+              type: FleetOwnerSendOtpRes
+
+  - POST:
+      endpoint: /fleet/link/verifyOtp
+      auth: ApiAuthV2
+      request:
+        type: FleetOwnerVerifyOtpReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/link/verifyOtp
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: FleetOwnerVerifyOtpReq
+            response:
+              type: APISuccess
+
+  - POST:
+      endpoint: /fleet/{fleetOwnerId}/unlink
+      auth: ApiAuthV2
+      params:
+        fleetOwnerId: Text
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/{fleetOwnerId}/unlink
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
+
+  - POST:
+      endpoint: /fleet/member/association/create
+      auth: ApiAuthV2
+      request:
+        type: FleetMemberAssociationCreateReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/member/association/create
+            auth: ApiAuthV2
+            request:
+              type: FleetMemberAssociationCreateReq
+            response:
+              type: APISuccess
+
+types:
+  FleetInfoRes:
+    - listItem: [FleetInfo]
+    - summary: Summary
+  FleetInfo:
+    - id: Id Person
+    - name: Text
+    - enabled: Bool
+    - isActive: Bool
+    - fleetType: Maybe FleetType
+    - mobileCountryCode: Text
+    - mobileNumber: Text
+    - vehicleCount: Int
+    - verified: Bool
+    - documents: StatusRes
+    - registeredAt: Maybe UTCTime
+  FleetOwnerSendOtpReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+  FleetOwnerSendOtpRes:
+    - fleetOwnerId: Id Person
+    - name: Text
+    - derive: "'HideSecrets"
+  FleetOwnerVerifyOtpReq:
+    - fleetOwnerId: Id Person
+    - otp: Text
+    - derive: "'HideSecrets"
+  FleetMemberAssociationCreateReq:
+    - fleetMemberId: Text
+    - fleetOwnerId: Text
+    - enabled: Bool
+    - isFleetOwner: Bool
+    - level: Maybe Int
+    - parentGroupCode: Maybe Text
+    - groupCode: Maybe Text
+    - order: Maybe Int
+    - derive: "'HideSecrets"

@@ -14,11 +14,11 @@
 
 module Environment where
 
-import qualified Data.HashMap as HM
-import qualified Data.Map as M
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as M
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis as Redis hiding (ttl)
 import Kernel.Storage.Hedis.AppPrefixes (publicTransportBapPrefix)
 import Kernel.Types.Cache
 import Kernel.Types.Common
@@ -31,6 +31,7 @@ import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
 import Kernel.Utils.Shutdown
+import System.Environment (lookupEnv)
 import Tools.Metrics.Types
 import Tools.Streaming.Kafka.Environment
 
@@ -61,7 +62,8 @@ data AppCfg = AppCfg
     kafkaProducerCfg :: KafkaProducerCfg,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    internalEndPointMap :: M.Map BaseUrl BaseUrl
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    noSignatureSubscribers :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -97,7 +99,13 @@ data AppEnv = AppEnv
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    url :: Maybe Text,
+    noSignatureSubscribers :: [Text]
   }
   deriving (Generic)
 
@@ -124,6 +132,11 @@ buildAppEnv AppCfg {..} = do
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg publicTransportBapPrefix
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  let requestId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let sessionId = Nothing
+  let kafkaProducerForART = Just kafkaProducerTools
+  let url = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
@@ -146,7 +159,8 @@ instance AuthenticatingEntity AppEnv where
 instance Registry Flow where
   registryLookup sReq = do
     registryUrl <- asks (.registryUrl)
-    Registry.withSubscriberCache (Registry.registryLookup registryUrl) sReq
+    selfId <- asks (.selfId)
+    Registry.withSubscriberCache (\req -> Registry.registryLookup registryUrl req selfId) sReq
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest

@@ -11,18 +11,27 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Storage.Queries.DriverInformation.Internal where
 
+import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
 import qualified Domain.Types.Person as DP
-import Kernel.Beam.Functions (findAllWithKV)
+import Domain.Types.VehicleCategory as DV
+import Kernel.Beam.Functions (findAllWithKV, findOneWithKV, updateOneWithKV)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.DriverInformation as BeamDI
-import qualified Storage.Queries.Instances.DriverInformation ()
+import qualified Storage.Queries.OrphanInstances.DriverInformation ()
+
+updateOnboardingVehicleCategory ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe DV.VehicleCategory -> Id DP.Person -> m ())
+updateOnboardingVehicleCategory onboardingVehicleCategory driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamDI.onboardingVehicleCategory onboardingVehicleCategory, Se.Set BeamDI.updatedAt _now] [Se.Is BeamDI.driverId $ Se.Eq driverId.getId]
 
 getDriverInfos ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -31,8 +40,8 @@ getDriverInfos ::
 getDriverInfos personKeys = do
   findAllWithKV [Se.Is BeamDI.driverId $ Se.In personKeys]
 
-getDriverInfosWithCond :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DP.Person] -> Bool -> Bool -> m [DriverInfo.DriverInformation]
-getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
+getDriverInfosWithCond :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DP.Person] -> Bool -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe MP.PaymentInstrument -> m [DriverInfo.DriverInformation]
+getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental isInterCity minWalletAmountForCashRides paymentInstrument = do
   findAllWithKV
     [ Se.And
         ( [ Se.Is BeamDI.driverId $ Se.In personsKeys,
@@ -52,7 +61,57 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
             Se.Is BeamDI.blocked $ Se.Eq False
           ]
             <> ([Se.Is BeamDI.onRide $ Se.Eq (not onlyNotOnRide) | not (onlyNotOnRide && onlyOnRide)])
+            <> ([Se.Is BeamDI.hasAdvanceBooking $ Se.Eq (Just (not onlyOnRide)) | onlyOnRide])
+            <> ([Se.Is BeamDI.forwardBatchingEnabled $ Se.Eq (Just True) | onlyOnRide])
+            <> ([Se.Is BeamDI.canSwitchToRental $ Se.Eq (Just True) | isRental])
+            <> ([Se.Is BeamDI.canSwitchToInterCity $ Se.Eq (Just True) | isInterCity])
+            <> ([Se.Is BeamDI.canSwitchToIntraCity $ Se.Eq (Just True) | (not isInterCity && not isRental)])
+            <> [Se.Is BeamDI.walletBalance $ Se.GreaterThan minWalletAmountForCashRides | isJust minWalletAmountForCashRides && (isNothing paymentInstrument || paymentInstrument == Just MP.Cash)]
+            <> [Se.Is BeamDI.subscribed $ Se.Eq True]
         )
     ]
   where
     personsKeys = getId . cast <$> driverLocs
+
+getSpecialLocWarriorDriverInfoWithCond :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DP.Person] -> Bool -> Bool -> Bool -> Bool -> m [DriverInfo.DriverInformation]
+getSpecialLocWarriorDriverInfoWithCond driverLocs onlyNotOnRide onlyOnRide isRental isInterCity =
+  findAllWithKV
+    [ Se.And
+        ( [ Se.Is BeamDI.driverId $ Se.In personsKeys,
+            Se.Or
+              [ Se.And
+                  [ Se.Is BeamDI.mode $ Se.Eq Nothing,
+                    Se.Is BeamDI.active $ Se.Eq True
+                  ],
+                Se.And
+                  [ Se.Is BeamDI.mode $ Se.Not $ Se.Eq Nothing,
+                    Se.Or
+                      [ Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.SILENT,
+                        Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.ONLINE
+                      ]
+                  ]
+              ],
+            Se.Is BeamDI.blocked $ Se.Eq False
+          ]
+            <> ([Se.Is BeamDI.onRide $ Se.Eq (not onlyNotOnRide) | not (onlyNotOnRide && onlyOnRide)])
+            <> ([Se.Is BeamDI.hasAdvanceBooking $ Se.Eq (Just (not onlyOnRide)) | onlyOnRide])
+            <> ([Se.Is BeamDI.forwardBatchingEnabled $ Se.Eq (Just True) | onlyOnRide])
+            <> ([Se.Is BeamDI.canSwitchToRental $ Se.Eq (Just True) | isRental])
+            <> ([Se.Is BeamDI.canSwitchToInterCity $ Se.Eq (Just True) | isInterCity])
+            <> ([Se.Is BeamDI.canSwitchToIntraCity $ Se.Eq (Just True) | (not isInterCity && not isRental)])
+            <> [Se.Is BeamDI.isSpecialLocWarrior $ Se.Eq (Just True)]
+        )
+    ]
+  where
+    personsKeys = getId . cast <$> driverLocs
+
+getSpecialLocWarriorDriverInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe DriverInfo.DriverInformation)
+getSpecialLocWarriorDriverInfo driverId =
+  findOneWithKV
+    [ Se.And
+        ( [ Se.Is BeamDI.driverId $ Se.Eq driverId,
+            Se.Is BeamDI.blocked $ Se.Eq False
+          ]
+            <> [Se.Is BeamDI.isSpecialLocWarrior $ Se.Eq (Just True)]
+        )
+    ]

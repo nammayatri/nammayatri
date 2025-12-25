@@ -12,9 +12,8 @@ module Domain.Action.UI.RideRoute
   )
 where
 
-import Domain.Action.Beckn.Search
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Domain.Types.Ride
 import Domain.Types.RideRoute
@@ -23,8 +22,13 @@ import Kernel.Storage.Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Ride
+import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Ride as QRide
 
-rideRoute :: (EncFlow m r, HedisFlow m r) => Id Ride -> (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> m RouteInfo
+rideRoute :: (MonadFlow m, EncFlow m r, HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Ride -> (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> m RouteInfo
 rideRoute rideId (_, _, _) = do
-  let key = searchRequestKey (getId rideId)
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  let key = searchRequestKey booking.transactionId
   safeGet key >>= fromMaybeM (RideDoesNotExist $ getId rideId)

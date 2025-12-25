@@ -1,0 +1,25 @@
+imports:
+  Person: Domain.Types.Person
+  SearchRequest: Domain.Types.SearchRequest
+  GetQuotesRes: Domain.Action.UI.Quote
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Types.SearchRequest: "rider-app"
+  Domain.Action.UI.Quote: "rider-app"
+
+module: Quote
+
+apis:
+  - GET: # CustomerGetQuoteAPI
+      endpoint: /{searchId}/{customerId}/result
+      auth: ApiAuthV2
+      params:
+        searchId: Id SearchRequest
+        customerId: Id Person
+      response:
+        type: GetQuotesRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS GETQUOTE
+
+types: {}

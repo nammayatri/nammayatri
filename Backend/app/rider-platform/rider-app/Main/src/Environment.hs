@@ -17,31 +17,42 @@ module Environment
     FlowHandler,
     FlowServer,
     Flow,
-    AppCfg (),
+    AppCfg (..),
     AppEnv (..),
     BAPs (..),
-    RideConfig (..),
     buildAppEnv,
     releaseAppEnv,
+    cacheRegistryKey,
   )
 where
 
 import AWS.S3
-import qualified Data.HashMap as HM
-import qualified Data.Map as M
+import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.OnDemand.Enums as BecknSpec
+import qualified ConfigPilotFrontend.Types as CPT
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as M
+import qualified Data.Text as T
+import Database.PostgreSQL.Simple as PG
+import Domain.Types (GatewayAndRegistryService (..))
 import Domain.Types.FeedbackForm
-import EulerHS.Prelude (newEmptyTMVarIO)
+import qualified Domain.Types.Merchant as DM
+import EulerHS.Prelude (newEmptyTMVarIO, (+||), (||+))
 import Kernel.External.Encryption (EncTools)
-import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
+import Kernel.External.Infobip.Types (InfoBIPConfig)
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import Kernel.Sms.Config
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis as Redis hiding (ttl)
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.App
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Cache
-import Kernel.Types.Common (HighPrecMeters, Meters, Seconds)
+import qualified Kernel.Types.CacheFlow as CF
+import Kernel.Types.Common (Distance, DistanceUnit (Meter), HighPrecMeters, Seconds, convertHighPrecMetersToDistance)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Error
 import Kernel.Types.Flow
@@ -49,33 +60,45 @@ import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
-import Kernel.Utils.Common (CacheConfig, fromMaybeM)
+import Kernel.Utils.Common (CacheConfig, fromMaybeM, logError, throwError)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
+import Passetto.Client
+import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
+import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
-import qualified Storage.CachedQueries.BlackListOrg as QBlackList
+import SharedLogic.JobScheduler
 import Storage.CachedQueries.Merchant as CM
+import qualified Storage.Queries.BecknConfig as QBC
+import System.Environment as SE
+import Tools.Error
 import Tools.Metrics
 import Tools.Streaming.Kafka
+import TransactionLogs.Types hiding (ONDC)
+import qualified UrlShortner.Common as UrlShortner
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
+    ltsRedis :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     cutOffHedisCluster :: Bool,
     cutOffNonCriticalHedisCluster :: Bool,
+    riderClickhouseCfg :: ClickhouseCfg,
+    kafkaClickhouseCfg :: ClickhouseCfg,
+    dashboardClickhouseCfg :: ClickhouseCfg,
     hedisMigrationStage :: Bool,
     smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
-    webengageCfg :: WebengageConfig,
     port :: Int,
     metricsPort :: Int,
     hostName :: Text,
@@ -84,9 +107,12 @@ data AppCfg = AppCfg
     autoMigrate :: Bool,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
+    internalAPIKey :: Text,
+    internalClickhouseAPIKey :: Text,
+    frfsMetricsRateLimitHits :: Int,
+    frfsMetricsRateLimitWindowSec :: Int,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
-    internalAPIKey :: Text,
     metricsSearchDurationTimeout :: Seconds,
     graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
@@ -100,13 +126,13 @@ data AppCfg = AppCfg
     longDurationRetryCfg :: RetryCfg,
     authTokenCacheExpiry :: Seconds,
     signingKey :: PrivateKey,
+    storeRidesTimeLimit :: Int,
     signatureExpiry :: Seconds,
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
     nwAddress :: BaseUrl,
     selfUIUrl :: BaseUrl,
-    rideCfg :: RideConfig,
     dashboardToken :: Text,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
@@ -117,11 +143,39 @@ data AppCfg = AppCfg
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     kvConfigUpdateFrequency :: Int,
-    dontEnableForDb :: [Text],
-    dontEnableForKafka :: [Text],
-    maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointMap :: M.Map BaseUrl BaseUrl
+    maxShards :: Int,
+    jobInfoMapx :: M.Map RiderJobType Bool,
+    schedulerSetName :: Text,
+    schedulerType :: SchedulerType,
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    _version :: Text,
+    hotSpotExpiry :: Seconds,
+    collectRouteData :: Bool,
+    cacConfig :: CF.CacConfig,
+    cacTenants :: [String],
+    superPositionConfig :: CF.SuperPositionConfig,
+    ondcTokenMap :: M.Map KeyConfig TokenConfig,
+    iosValidateEnpoint :: Text,
+    isMetroTestTransaction :: Bool,
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
+    sosAlertsTopicARN :: Text,
+    ondcRegistryUrl :: BaseUrl,
+    ondcGatewayUrl :: BaseUrl,
+    nyRegistryUrl :: BaseUrl,
+    nyGatewayUrl :: BaseUrl,
+    googleSAPrivateKey :: String,
+    ltsCfg :: LocationTrackingeServiceConfig,
+    locationTrackingServiceKey :: Text,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
+    selfBaseUrl :: BaseUrl,
+    tsServiceConfig :: CPT.TSServiceConfig,
+    inMemConfig :: CF.InMemConfig,
+    disableViaPointTimetableCheck :: Bool,
+    parkingApiKey :: Text,
+    corporatePartnerApiToken :: Text,
+    noSignatureSubscribers :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -129,11 +183,23 @@ data AppCfg = AppCfg
 data AppEnv = AppEnv
   { smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
-    webengageCfg :: WebengageConfig,
+    jobInfoMap :: M.Map Text Bool,
+    schedulerSetName :: Text,
+    schedulerType :: SchedulerType,
     hostName :: Text,
     searchRequestExpiry :: Maybe Seconds,
     coreVersion :: Text,
+    serviceClickhouseEnv :: ClickhouseEnv,
+    kafkaClickhouseEnv :: ClickhouseEnv,
+    dashboardClickhouseEnv :: ClickhouseEnv,
+    serviceClickhouseCfg :: ClickhouseCfg,
+    kafkaClickhouseCfg :: ClickhouseCfg,
+    dashboardClickhouseCfg :: ClickhouseCfg,
     loggerConfig :: LoggerConfig,
+    internalAPIKey :: Text,
+    internalClickhouseAPIKey :: Text,
+    frfsMetricsRateLimitHits :: Int,
+    frfsMetricsRateLimitWindowSec :: Int,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     graceTerminationPeriod :: Seconds,
@@ -145,6 +211,7 @@ data AppEnv = AppEnv
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
     authTokenCacheExpiry :: Seconds,
+    storeRidesTimeLimit :: Int,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
     s3Config :: S3Config,
@@ -156,6 +223,7 @@ data AppEnv = AppEnv
     nwAddress :: BaseUrl,
     selfUIUrl :: BaseUrl,
     hedisEnv :: HedisEnv,
+    ltsHedisEnv :: HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -170,32 +238,74 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BAPKafkaEnvs,
-    rideCfg :: RideConfig,
-    internalAPIKey :: Text,
     dashboardToken :: Text,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
     cacheFeedbackFormConfig :: CacheFeedbackFormConfig,
     maxEmergencyNumberCount :: Int,
-    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
+    minTripDistanceForReferralCfg :: Maybe Distance,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     eventRequestCounter :: EventCounterMetric,
-    dontEnableForDb :: [Text],
-    dontEnableForKafka :: [Text],
-    maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
+    maxShards :: Int,
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
+    _version :: Text,
+    hotSpotExpiry :: Seconds,
+    cacConfig :: CF.CacConfig,
+    cacTenants :: [String],
+    superPositionConfig :: CF.SuperPositionConfig,
+    collectRouteData :: Bool,
+    shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
+    requestId :: Maybe Text,
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
+    iosValidateEnpoint :: Text,
+    isMetroTestTransaction :: Bool,
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
+    passettoContext :: PassettoContext,
+    sosAlertsTopicARN :: Text,
+    psqlConn :: PG.Connection,
+    ondcRegistryUrl :: BaseUrl,
+    ondcGatewayUrl :: BaseUrl,
+    nyRegistryUrl :: BaseUrl,
+    nyGatewayUrl :: BaseUrl,
+    googleSAPrivateKey :: String,
+    ltsCfg :: LocationTrackingeServiceConfig,
+    locationTrackingServiceKey :: Text,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
+    nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
+    selfBaseUrl :: BaseUrl,
+    tsServiceConfig :: CPT.TSServiceConfig,
+    inMemEnv :: CF.InMemEnv,
+    disableViaPointTimetableCheck :: Bool,
+    url :: Maybe Text,
+    parkingApiKey :: Text,
+    corporatePartnerApiToken :: Text,
+    noSignatureSubscribers :: [Text]
   }
   deriving (Generic)
+
+toConnectInfo :: EsqDBConfig -> ConnectInfo
+toConnectInfo config =
+  ConnectInfo
+    { connectHost = T.unpack config.connectHost,
+      connectPort = config.connectPort,
+      connectUser = T.unpack config.connectUser,
+      connectPassword = T.unpack config.connectPassword,
+      connectDatabase = T.unpack config.connectDatabase
+    }
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv cfg@AppCfg {..} = do
   hostname <- getPodName
+  psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion
   isShuttingDown <- newEmptyTMVarIO
+  passettoContext <- uncurry mkDefPassettoContext encTools.service
   bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
@@ -204,9 +314,14 @@ buildAppEnv cfg@AppCfg {..} = do
   eventRequestCounter <- registerEventRequestCounterMetric
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
+  let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let nonCriticalModifierFunc = ("ab:n_c:" <>)
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
+  let requestId = Nothing
+  let sessionId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
+  let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
@@ -218,7 +333,15 @@ buildAppEnv cfg@AppCfg {..} = do
   let s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
-  return AppEnv {..}
+  serviceClickhouseEnv <- createConn riderClickhouseCfg
+  kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
+  dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
+  let serviceClickhouseCfg = riderClickhouseCfg
+  let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
+  ltsHedisEnv <- connectHedis ltsRedis identity
+  inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  let url = Nothing
+  return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, disableViaPointTimetableCheck = disableViaPointTimetableCheck, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
@@ -246,27 +369,48 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = (.signatureExpiry)
 
 instance Registry Flow where
-  registryLookup =
-    Registry.withSubscriberCache $ \sub -> do
-      fetchFromDB sub.merchant_id >>= \registryUrl ->
-        Registry.registryLookup registryUrl sub >>= Registry.whitelisting isWhiteListed
+  registryLookup = Registry.withSubscriberCache performLookup
     where
-      fetchFromDB merchantId = do
-        merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
-        pure $ merchant.registryUrl
-      isWhiteListed subscriberId = QBlackList.findBySubscriberId (ShortId subscriberId) <&> isNothing
+      performLookup sub = do
+        merchant <- CM.findById (Id sub.merchant_id) >>= fromMaybeM (MerchantDoesNotExist sub.merchant_id)
+        performRegistryLookup merchant.gatewayAndRegistryPriorityList sub merchant 1
+      fetchUrlFromList :: [Domain.Types.GatewayAndRegistryService] -> Flow BaseUrl
+      fetchUrlFromList priorityList = do
+        case priorityList of
+          (NY : _) -> asks (.nyRegistryUrl)
+          _ -> asks (.ondcRegistryUrl)
+      retryWithNextRegistry :: ExternalAPICallError -> BaseUrl -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)
+      retryWithNextRegistry _ registryUrl sub merchant tryNumber = do
+        logError $ "registry " <> show registryUrl <> " seems down, trying with next registryUrl"
+        let maxRetries = length merchant.gatewayAndRegistryPriorityList
+        if tryNumber > maxRetries
+          then throwError $ InternalError "Max retries reached, perhaps all registries are down"
+          else do
+            let networkPriorityList = reorderList merchant.gatewayAndRegistryPriorityList
+            performRegistryLookup networkPriorityList sub merchant tryNumber
+      performRegistryLookup :: [Domain.Types.GatewayAndRegistryService] -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)
+      performRegistryLookup priorityList sub merchant tryNumber = do
+        fetchUrlFromList priorityList >>= \registryUrl -> do
+          selfSubId <-
+            if sub.domain == Domain.PUBLIC_TRANSPORT
+              then do
+                bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) BecknSpec.METRO >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchant.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| BecknSpec.METRO ||+ "")
+                pure bapConfig.subscriberId
+              else pure merchant.bapId
+          Registry.registryLookup registryUrl sub selfSubId
+            `catch` \e -> retryWithNextRegistry e registryUrl sub merchant (tryNumber + 1)
+      reorderList :: [a] -> [a]
+      reorderList [] = []
+      reorderList (x : xs) = xs ++ [x]
+
+cacheRegistryKey :: Text
+cacheRegistryKey = "taxi-bap:registry:"
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
-  getKey = Redis.get . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
-  setKey = Redis.set . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
-  delKey = Redis.del . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
+  getKey = Redis.get . (cacheRegistryKey <>) . lookupRequestToRedisKey
+  setKey = Redis.set . (cacheRegistryKey <>) . lookupRequestToRedisKey
+  delKey = Redis.del . (cacheRegistryKey <>) . lookupRequestToRedisKey
 
 instance CacheEx Subscriber Flow where
-  setKeyEx ttl = (\k v -> Redis.setExp k v ttl.getSeconds) . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
-
-data RideConfig = RideConfig
-  { driverReachedDistance :: Meters,
-    driverOnTheWayNotifyExpiry :: Seconds
-  }
-  deriving (Generic, FromDhall)
+  setKeyEx ttls = (\k v -> Redis.setExp k v ttls.getSeconds) . (cacheRegistryKey <>) . lookupRequestToRedisKey

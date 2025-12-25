@@ -1,3 +1,5 @@
+import { callbackMapper } from "presto-ui";
+
 const JBridge = window.JBridge;
 
 export const saveToLocalStoreImpl = function(key) {
@@ -6,6 +8,10 @@ export const saveToLocalStoreImpl = function(key) {
     return function () {
     };
   };
+}
+
+export const compareDate = function (date1, date2) {
+  return date1 >= date2;
 }
 
 export const fetchFromLocalStoreImpl = function(key) {
@@ -21,9 +27,15 @@ export const fetchFromLocalStoreImpl = function(key) {
     };
   };
 }
-export const reboot = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"reboot"}))()
+export const reboot = window.JOS.emitEvent("java","onEvent",JSON.stringify({event:"reboot"}))
 
-export const showSplash = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"show_splash"}))()
+export const showSplash = window.JOS.emitEvent("java","onEvent",JSON.stringify({event:"show_splash"}))
+
+export const getAndRemoveLatestNotificationType = function() {
+  const notificationType = window.notificationType;
+  window.notificationType = null;
+  return notificationType;
+}
 
 
 export const decrementMonth = function (month) {
@@ -94,8 +106,10 @@ export const getWeeksInMonth = function (year) {
   }
 };
 
-export const getCurrentDay = function (dummy) {
+export const getCurrentDay = function (useMidnightTime) {
   const date = new Date();
+  if(useMidnightTime)
+    date.setHours(0,0,0,0);
   return { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString("default", { month: "short" }), year: date.getFullYear(), intMonth : date.getMonth(),
     isInRange : false, isStart: false , isEnd: false }
 }

@@ -1,0 +1,118 @@
+###
+# @name insertDriverInformation
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+INSERT INTO atlas_driver_offer_bpp.driver_information (
+  driver_id,
+  driver_flow_status,
+  enabled,
+  enabled_at
+)
+VALUES
+  ('favorit-sedan-0000000000000000000000', 'ONLINE', 1, now()),
+  ('favorit-suv-000000000000000000000000', 'ONLINE', 1, now());
+
+###
+# @name selectDriverInformation
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+SELECT * FROM atlas_driver_offer_bpp.driver_information
+FORMAT JSON
+
+###
+# @name insertFleetDriverAssociation
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+INSERT INTO atlas_driver_offer_bpp.fleet_driver_association (
+  id,
+  driver_id,
+  fleet_owner_id,
+  is_active,
+  associated_on
+)
+VALUES
+  ('assoc-favorit-sedan-0000000000000000000000', 'favorit-sedan-0000000000000000000000', 'favorit-rental_fleet-owner-000000000', 1, now()),
+  ('assoc-favorit-suv-000000000000000000000000', 'favorit-suv-000000000000000000000000', 'favorit-rental_fleet-owner-000000000', 1, now());
+
+###
+# @name selectFleetDriverAssociation
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+SELECT * FROM atlas_driver_offer_bpp.fleet_driver_association final where is_active = 1
+FORMAT JSON
+###
+# @name insertVehicle
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+INSERT INTO atlas_driver_offer_bpp.vehicle (
+  driver_id
+)
+VALUES
+  ('favorit-sedan-0000000000000000000000'),
+  ('favorit-suv-000000000000000000000000');
+
+###
+# @name selectVehicle
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+SELECT * FROM atlas_driver_offer_bpp.vehicle
+FORMAT JSON
+
+###
+# @name insertFleetOperatorDailyStats
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+INSERT INTO atlas_driver_offer_bpp.fleet_operator_daily_stats (
+  id,
+  fleet_operator_id,
+  merchant_local_date,
+  passed_request_count,
+  acceptation_request_count,
+  total_request_count,
+  customer_cancellation_count,
+  driver_cancellation_count,
+  total_distance,
+  total_completed_rides,
+  total_earning
+)
+VALUES
+  (
+    'fos-favorit-1',
+    'favorit-rental_fleet-owner-000000000',
+    today() - 1,
+    120,
+    95,
+    150,
+    8,
+    12,
+    235,
+    90,
+    14500.25
+  ),
+  (
+    'fos-favorit-2',
+    'favorit-rental_fleet-owner-000000000',
+    today(),
+    140,
+    110,
+    170,
+    7,
+    10,
+    260,
+    105,
+    16875.90
+  );

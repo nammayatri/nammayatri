@@ -14,13 +14,16 @@
 
 module Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection where
 
+import Data.Aeson as DA
 import Domain.Types.Common
 import Kernel.Prelude
 import Kernel.Types.Common
 
 data FPProgressiveDetailsPerExtraKmRateSectionD (s :: UsageSafety) = FPProgressiveDetailsPerExtraKmRateSection
   { startDistance :: Meters,
-    perExtraKmRate :: HighPrecMoney
+    distanceUnit :: DistanceUnit,
+    perExtraKmRate :: HighPrecMoney,
+    baseFareDepreciation :: HighPrecMoney
   }
   deriving (Generic, Show, Eq, ToSchema)
 
@@ -30,18 +33,25 @@ instance FromJSON (FPProgressiveDetailsPerExtraKmRateSectionD 'Unsafe)
 
 instance ToJSON (FPProgressiveDetailsPerExtraKmRateSectionD 'Unsafe)
 
+instance FromJSON (FPProgressiveDetailsPerExtraKmRateSectionD 'Safe)
+
+instance ToJSON (FPProgressiveDetailsPerExtraKmRateSectionD 'Safe)
+
 -----------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------
 
 data FPProgressiveDetailsPerExtraKmRateSectionAPIEntity = FPProgressiveDetailsPerExtraKmRateSectionAPIEntity
   { startDistance :: Meters,
-    perExtraKmRate :: HighPrecMoney
+    startDistanceWithUnit :: Distance,
+    perExtraKmRate :: HighPrecMoney,
+    baseFareDepreciation :: HighPrecMoney
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 makeFPProgressiveDetailsPerExtraKmRateSectionAPIEntity :: FPProgressiveDetailsPerExtraKmRateSection -> FPProgressiveDetailsPerExtraKmRateSectionAPIEntity
 makeFPProgressiveDetailsPerExtraKmRateSectionAPIEntity FPProgressiveDetailsPerExtraKmRateSection {..} =
   FPProgressiveDetailsPerExtraKmRateSectionAPIEntity
-    { ..
+    { startDistanceWithUnit = convertMetersToDistance distanceUnit startDistance,
+      ..
     }

@@ -17,9 +17,9 @@
 module Screens.HomeScreen.Transformer where
 
 import Prelude
-import Screens.Types (GoToLocation)
+import Screens.Types as ST
 
-getDisabledLocById :: String -> Array GoToLocation -> Array GoToLocation
+getDisabledLocById :: String -> Array ST.GoToLocation -> Array ST.GoToLocation
 getDisabledLocById id gotoArray = (map (\item ->  {   
     id : item.id,
     lat : item.lat,

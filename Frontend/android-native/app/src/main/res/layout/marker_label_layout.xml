@@ -4,31 +4,97 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:id="@+id/map_xml">
-    <LinearLayout android:id="@+id/zone_image_and_text"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:background="@drawable/ic_grey_border">
-        <ImageView
-            android:layout_width="25dp"
-            android:layout_height="25dp"
-            android:id="@+id/zone_image"
-            android:paddingRight="5dp"
-            android:visibility="gone"/>
-        <TextView
+        android:orientation="vertical"
+        android:paddingVertical="6dp"
+        android:paddingHorizontal="6dp"
+        android:id="@+id/main_label_layout"
+        android:clickable="true"
+        android:background="@drawable/ic_grey_border"
+        android:focusable="true">
+        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:text="Juspay Technologies"
-            android:textSize="12dp"
-            android:lineHeight="16dp"
-            android:importantForAccessibility = "yes"
-            android:accessibilityPaneTitle="Location"
-            android:contentDescription=""
-            android:textColor="#454545"
-            android:textFontWeight="400"
-            android:gravity="center"
-            android:id="@+id/marker_text"/>
+            android:layout_height="wrap_content"
+            android:id="@+id/zone_image_and_text"
+            android:orientation="horizontal">
+            <ImageView
+                android:layout_gravity="center"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:id="@+id/zone_image"
+                android:paddingRight="5dp"
+                android:visibility="gone"/>
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:id="@+id/label_texts">
+                <view class="in.juspay.mobility.common.CustomTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Juspay Technologies"
+                    android:textSize="11dp"
+                    android:lineHeight="14dp"
+                    android:importantForAccessibility = "yes"
+                    android:accessibilityPaneTitle="Location"
+                    android:contentDescription=""
+                    android:textColor="#454545"
+                    android:alpha="0.7"
+                    android:maxLines="1"
+                    android:textFontWeight="400"
+                    android:gravity="center_vertical"
+                    android:layout_gravity="start"
+                    android:ellipsize="end"
+                    android:visibility="gone"
+                    android:id="@+id/secondary_marker_text"/>
+                <view class="in.juspay.mobility.common.CustomTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Juspay Technologies"
+                    android:textSize="11dp"
+                    android:lineHeight="16dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:fontFamily="@font/plus_jakartasans_semibold"
+                    android:importantForAccessibility = "yes"
+                    android:accessibilityPaneTitle="Location"
+                    android:contentDescription=""
+                    android:textColor="#2C2F3A"
+                    android:gravity="center_vertical"
+                    android:layout_gravity="start"
+                    android:id="@+id/primary_marker_text"/>
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:gravity="center_vertical"
+                android:layout_height="match_parent"
+                android:id="@+id/label_image_action_parent">
+                <ImageView
+                    android:layout_gravity="center"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_marginLeft="12dp"
+                    android:id="@+id/label_image_action"
+                    android:clickable="true"
+                    android:visibility="gone"
+                    android:focusable="true" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/marker_action_image_parent"
+            android:orientation="horizontal"
+            android:visibility="gone">
+            <ImageView
+                android:layout_width="68dp"
+                android:layout_height="15dp"
+                android:id="@+id/marker_action_image"
+                android:src="@drawable/ny_ic_navigate"
+                android:visibility="gone"/>
+        </LinearLayout>
     </LinearLayout>
     <LinearLayout android:id="@+id/ll_marker_right"
         android:layout_width="match_parent"
@@ -44,7 +110,6 @@
             android:layout_height="40dp"
             android:src="@drawable/ny_ic_dest_marker"
             android:importantForAccessibility="noHideDescendants"
-            android:accessibilityHeading="false"
             android:clickable="false"
             android:id="@+id/pointer_img" />
     </LinearLayout>

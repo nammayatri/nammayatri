@@ -1,0 +1,227 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  RiderDetails: Domain.Types.RiderDetails
+  Location: Domain.Types.Location
+  City: Kernel.Types.Beckn.Context
+  Country: Kernel.Types.Beckn.Context
+  Area: Lib.Types.SpecialLocation
+  BaseUrl: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  Language: Tools.Maps
+  Money: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  EncryptedHashedField: Kernel.External.Encryption
+  DeliveryInitiation: BecknV2.OnDemand.Enums
+  DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
+  DbHash: Kernel.External.Encryption
+  TripCategory: Domain.Types.Trip
+  Person: Domain.Types.Person
+  ConfigVersionMap: Lib.Yudhishthira.Types
+  Value: Data.Aeson
+  TagNameValue: Lib.Yudhishthira.Types
+  ParcelType: Domain.Types.ParcelType
+  PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+
+SearchRequest:
+  derives: Generic,Show,ToJSON,FromJSON
+
+  fields:
+    id: Id SearchRequest
+    transactionId: Text
+    messageId: Maybe Text
+    hasStops: Maybe Bool
+    dynamicPricingLogicVersion: Maybe Int
+    providerId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    riderId: Maybe (Id RiderDetails)
+    fromLocation: Location
+    fromLocGeohash: Maybe Text
+    toLocGeohash: Maybe Text
+    stops: "[Location]"
+    area: Maybe Area
+    bapId: Text
+    bapUri: BaseUrl
+    bapCity: Maybe City
+    bapCountry: Maybe Country
+    specialLocationTag: Maybe Text
+    autoAssignEnabled: Maybe Bool
+    device: Maybe Text
+    customerLanguage: Maybe Language
+    disabilityTag: Maybe Text
+    customerCancellationDues: Maybe HighPrecMoney
+    tollCharges: Maybe HighPrecMoney
+    tollNames: Maybe [Text]
+    tollIds: Maybe [Text]
+    isReallocationEnabled: Maybe Bool
+    toLocation: Maybe Location
+    estimatedDistance: Maybe Meters
+    distanceUnit: DistanceUnit
+    estimatedDuration: Maybe Seconds
+    validTill: UTCTime
+    isScheduled: Bool
+    driverDefaultExtraFee: Maybe HighPrecMoney
+    currency: Currency
+    pickupZoneGateId: Maybe Text
+    isCustomerPrefferedSearchRoute: Maybe Bool
+    isBlockedRoute: Maybe Bool
+    returnTime: Maybe UTCTime
+    roundTrip: Maybe Bool
+    isAdvanceBookingEnabled: Bool
+    isDashboardRequest: Bool
+    customerNammaTags: "Maybe [TagNameValue]"
+    searchTags: "Maybe [TagNameValue]"
+    startTime: UTCTime
+    createdAt: UTCTime
+    tripCategory: Maybe TripCategory
+    poolingLogicVersion: Maybe Int
+    poolingConfigVersion: Maybe Int
+    driverIdForSearch: Maybe (Id Person)
+    configInExperimentVersions: "[ConfigVersionMap]"
+    parcelType: Maybe ParcelType
+    parcelQuantity: Maybe Int
+    preferSafetyPlus: Bool
+    isReserveRide: Maybe Bool
+    numberOfLuggages: Maybe Int
+    paymentMode: Maybe PaymentMode
+  beamType:
+    startTime: Maybe UTCTime
+    validTill: Maybe UTCTime
+    isScheduled: Maybe Bool
+    bapUri: Text
+    merchantOperatingCityId: Maybe Text
+    currency: Maybe Currency
+    isAdvanceBookingEnabled: Maybe Bool
+    distanceUnit: Maybe DistanceUnit
+    isDashboardRequest: Maybe Bool
+    configInExperimentVersions: Maybe Value
+    customerNammaTags: "Maybe [Text]"
+    searchTags: "Maybe [Text]"
+    preferSafetyPlus: Maybe Bool
+  beamFields:
+    driverDefaultExtraFee:
+      driverDefaultExtraFee: Maybe Money
+      driverDefaultExtraFeeAmount: Maybe HighPrecMoney
+    fromLocation:
+      fromLocationId: Maybe Text
+    toLocation:
+      toLocationId: Maybe Text
+    stops: {}
+
+  toTType:
+    fromLocationId: Just $ Kernel.Types.Id.getId ((.id) fromLocation)|E
+    toLocationId: (Kernel.Types.Id.getId . (.id)) <$> toLocation|E
+    startTime: Just startTime|E
+    validTill: Just validTill|E
+    isScheduled: Just isScheduled|E
+    bapUri: Kernel.Prelude.showBaseUrl|I
+    merchantOperatingCityId: Just $ Kernel.Types.Id.getId merchantOperatingCityId|E
+    currency: Just currency|E
+    driverDefaultExtraFeeAmount: driverDefaultExtraFee|E
+    driverDefaultExtraFee: roundToIntegral <$> driverDefaultExtraFee|E
+    isAdvanceBookingEnabled: Just isAdvanceBookingEnabled|E
+    distanceUnit: Kernel.Prelude.Just|I
+    isDashboardRequest: Just isDashboardRequest|E
+    configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
+    customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
+    searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
+    preferSafetyPlus: Kernel.Prelude.Just|I
+
+  intermediateTransformers:
+    fromTType:
+    - now: Kernel.Types.Common.getCurrentTime|EM
+    - merchant: Storage.CachedQueries.Merchant.findById (Kernel.Types.Id.Id providerId) >>= fromMaybeM (Kernel.Types.Error.MerchantNotFound providerId)|EM
+    - fromLocationMapping: Storage.Queries.LocationMapping.getLatestStartByEntityId id >>= fromMaybeM (Tools.Error.FromLocationMappingNotFound id)|EM
+    - mbToLocationMapping: Storage.Queries.LocationMapping.getLatestEndByEntityId id|EM
+    - startTime_: fromMaybe now startTime|E
+  fromTType:
+    merchantOperatingCityId: Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity|EM
+    bapUri: Kernel.Prelude.parseBaseUrl|IM
+    fromLocation: Storage.Queries.Location.findById ( (.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ( (.getId) $ (.locationId) fromLocationMapping))|EM
+    toLocation: maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping|EM
+    stops: Storage.Queries.Transformers.SearchRequest.getStops id hasStops|EM
+    startTime: startTime_|E
+    validTill: fromMaybe (Kernel.Utils.Common.addUTCTime 600 startTime_) validTill|E
+    isScheduled: fromMaybe False isScheduled|E
+    driverDefaultExtraFee: Kernel.Types.Common.mkAmountWithDefault driverDefaultExtraFeeAmount <$> driverDefaultExtraFee|E
+    currency: fromMaybe Kernel.Types.Common.INR currency|E
+    isAdvanceBookingEnabled: fromMaybe False isAdvanceBookingEnabled|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    isDashboardRequest: fromMaybe False isDashboardRequest|E
+    configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
+    customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
+    searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
+    preferSafetyPlus: fromMaybe False preferSafetyPlus|E
+
+  constraints:
+    id: PrimaryKey
+    transactionId: SecondaryKey
+
+  excludedFields:
+  - merchantId
+  - updatedAt
+
+  excludedDefaultQueries:
+  - findByPrimaryKey
+  - create
+  - createMany
+
+  sqlType:
+    providerId: character varying(255)
+    fromLocationId: character varying(36)
+    toLocationId: character varying(36)
+    bapId: character varying(255)
+    bapUri: character varying(255)
+    gatewayUri: character varying(255)
+    estimateId: character varying(36)
+    currency: character varying(255)
+    tollNames: "text[]"
+    tollIds: "text[]"
+    driverDefaultExtraFee: double precision
+    driverDefaultExtraFeeAmount: double precision
+    customerLanguage: character varying(36)
+    messageId: character varying(36)
+    pickupZoneGateId: character varying(36)
+    transactionId: character varying(36)
+    configInExperimentVersions: "json"
+
+  default:
+    autoAssignEnabled: "false"
+    customerCancellationDues: "0"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByTransactionIdAndMerchantId:
+      kvFunction: findOneWithKV
+      where:
+        and: [ transactionId, providerId ]
+    updateIsAdvancedBookingEnabled:
+      kvFunction: updateWithKV
+      params: [ isAdvanceBookingEnabled ]
+      where: id
+    updateIsReallocationEnabled:
+      kvFunction: updateWithKV
+      params: [ isReallocationEnabled ]
+      where: id
+    updateSearchTags:
+      kvFunction: updateWithKV
+      params: [ searchTags ]
+      where: id
+    updateTripCategory:
+      kvFunction: updateWithKV
+      params: [ tripCategory ]
+      where: id
+    updatePoolingLogicVersion:
+      kvFunction: updateWithKV
+      params: [ poolingLogicVersion ]
+      where: id
+
+    updatePoolingConfigVersion:
+      kvFunction: updateWithKV
+      params: [ poolingConfigVersion ]
+      where: id
+
+  extraOperations:
+  - EXTRA_QUERY_FILE

@@ -1,0 +1,56 @@
+imports:
+  Id: Kernel.Types.Id
+  UTCTime: Data.Time
+  APISuccess: Kernel.Types.APISuccess
+  DriverWallet: Domain.Types.DriverWallet
+  Location: Domain.Types.Location
+  HighPrecMoney: Kernel.Types.Common
+  Ride: Domain.Types.Ride
+  TransactionType: Domain.Types.DriverWallet
+  PlanSubscribeRes: Domain.Action.UI.Plan
+
+module: DriverWallet
+
+types:
+  TransactionDetails:
+    id: Id DriverWallet
+    rideId: Maybe (Id Ride)
+    transactionType: TransactionType
+    collectionAmount: Maybe HighPrecMoney
+    gstDeduction: Maybe HighPrecMoney
+    merchantPayable: Maybe HighPrecMoney
+    driverPayable: Maybe HighPrecMoney
+    runningBalance: HighPrecMoney
+    fromLocation: Maybe Location
+    toLocation: Maybe Location
+    createdAt: UTCTime
+  TransactionResponse:
+    transactions: [TransactionDetails]
+    currentBalance: Maybe HighPrecMoney
+  TopUpRequest:
+    amount: HighPrecMoney
+
+apis:
+  - GET:
+      endpoint: /wallet/transactions
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - transactionType: TransactionType
+        - limit: Int
+        - offset: Int
+      response:
+        type: TransactionResponse
+  - POST:
+      endpoint: /wallet/payout
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /wallet/topup
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: TopUpRequest
+      response:
+        type: PlanSubscribeRes

@@ -1,15 +1,21 @@
 .vscode/tasks.json
 
+/.DS_Store
+
 # Nix
 result
 result-*
 .direnv
 /.pre-commit-config.yaml
 .envrc
+## Data directory used by services
+/data
 
 # Backend ignores
 dist-newstyle
 /data
+# process-compose log files
+*.log
 
 # Frontend ignores
 Frontend/.DS_Store
@@ -18,6 +24,8 @@ Frontend/package-lock.json
 Frontend/android-native/app/driverProd/debug/output-metadata.json
 Frontend/android-native/app/driverProd/release/output-metadata.json
 Frontend/android-native/package-lock.json
+# Ignore all files in the app directory
+.idea
 
 # Non-nix bans
 Makefile

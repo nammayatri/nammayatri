@@ -17,6 +17,9 @@ import Language.Types (STR(..))
 import Common.Styles.Colors as Color
 import MerchantConfig.Types 
 import JBridge as JB
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Font.Style as FontStyle
+import Resources.LocalizableV2.Strings (getEN)
 
 type ContentConfig = 
    { primaryText :: String,
@@ -60,14 +63,14 @@ accessibilityPopUpConfig selectedDisability purpleRideConfig =
          cornerRadius = (PTD.Corners 15.0 true true true true),
          coverImageConfig {
            imageUrl = popupData.imageUrl
-         , visibility = if popupData.videoUrl == "" || (not (JB.supportsInbuildYoutubePlayer unit)) then VISIBLE else GONE
+         , visibility = if popupData.videoUrl == "" || (not (JB.supportsInbuildYoutubePlayer unit)) || EHC.os == "IOS" then VISIBLE else GONE
          , height = V 160
          , width = MATCH_PARENT
          , margin = Margin 16 20 16 0
          }
          , listViewArray = popupData.listViewArray
-          , coverVideoConfig {
-            visibility = if popupData.videoUrl /= "" && (JB.supportsInbuildYoutubePlayer unit) then VISIBLE else GONE 
+          , coverMediaConfig {
+            visibility = if popupData.videoUrl /= "" && (JB.supportsInbuildYoutubePlayer unit) && EHC.os /= "IOS" then VISIBLE else GONE 
           , height = V 200
           , width = MATCH_PARENT
           , padding = Padding 16 16 16 0
@@ -160,3 +163,48 @@ getDisabilityList =  map \item ->
     , textBoxRequired : item.tag == "OTHER"
     , subtext :  Mb.Nothing
     }
+
+contactSupportPopUpConfig :: AppConfig -> PopUpModal.Config
+contactSupportPopUpConfig appConfig =
+  let
+    config' = PopUpModal.config
+
+    popUpConfig' =
+      config'
+        { gravity = CENTER
+        , cornerRadius = (Corners 15.0 true true true true)
+        , margin = (MarginHorizontal 16 16)
+        , optionButtonOrientation = "VERTICAL"
+        , buttonLayoutMargin = (Margin 0 0 0 0)
+        , dismissPopup = true
+        , primaryText
+          { text = getString CONTACT_SUPPORT <> "?"
+          , margin = Margin 16 16 16 0
+          }
+        , secondaryText
+          { text = getString YOU_CAN_WRITE_TO_US_AT <> ": <br> <span style='color:#2194FF'>" <> appConfig.appData.supportMail <> "</span> <br> <br> OR"
+          , margin = Margin 0 16 0 16
+          , accessibilityHint = getEN YOU_CAN_WRITE_TO_US_AT <> appConfig.appData.supportMail 
+          }
+        , option1
+          { text = getString PLACE_A_CALL
+          , color = appConfig.primaryTextColor
+          , background = appConfig.primaryBackground
+          , strokeColor = Color.transparent
+          , textStyle = FontStyle.SubHeading1
+          , width = MATCH_PARENT
+          , enableRipple = true
+          , margin = (MarginHorizontal 16 16)
+          }
+        , option2
+          { text = getString CANCEL_
+          , textStyle = FontStyle.SubHeading1
+          , color = Color.black700
+          , background = Color.white900
+          , strokeColor = Color.transparent
+          , width = MATCH_PARENT
+          , margin = MarginBottom 10
+          }
+        }
+  in
+    popUpConfig'

@@ -26,7 +26,7 @@
     <string name="tap_on">3. আলতো চাপুন</string>
     <string name="location">অবস্থান</string>
     <string name="phone">ফোন</string>
-    <string name="includes_pickup_charges_10">পিকআপ চার্জ ₹ 10 অন্তর্ভুক্ত</string>
+    <string name="includes_pickup_charges_10">পিকআপ চার্জ ₹ {#amount#} অন্তর্ভুক্ত</string>
     <string name="away">দূরে</string>
     <string name="we_made_you_online">আমরা আপনাকে অনলাইনে তৈরি করেছি</string>
     <string name="location_is_turned_on">অবস্থান চালু করা হয়</string>
@@ -37,5 +37,6 @@
     <string name="ride_assigned_to_another_driver">অন্য চালকের কাছে যাত্রা করা</string>
     <string name="select_date">তারিখ নির্বাচন করুন</string>
     <string name="no_enabled_browser">আপনার ডিভাইসে কোনো সক্ষম ব্রাউজার পাওয়া যায়নি, অনুগ্রহ করে একটি ব্রাউজার সক্ষম বা ইনস্টল করুন</string>
-
+    <string name="no_additional_fare_tips_and_waiting_charges">"অতিরিক্ত ভাড়া নেই। টিপস নেই। অপেক্ষা চার্জ নেই।"</string>
+    <string name="third_party_booking">"তৃতীয় পক্ষের বুকিং"</string>
 </resources>

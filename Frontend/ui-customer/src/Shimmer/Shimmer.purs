@@ -65,7 +65,7 @@ import Prelude
 --   case flow of
 --     GO_TO_TICKET_PAYMENT state -> ticketPaymentFlow state.data
 --     GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW dstLat1 dstLon2  -> do
---       _ <- lift $ lift $ fork $ liftFlow $ openNavigation 0.0 0.0 dstLat1 dstLon2 "DRIVE"
+--       _ <- lift $ lift $ fork $ liftFlow $ openNavigation dstLat1 dstLon2 "DRIVE"
 --       ticketBookingFlow
 --     GET_BOOKING_INFO_SCREEN state bookingStatus -> do
 --       (TicketBookingDetails resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId--state.props.selectedBookingInfo.shortId (show state.props.selectedBookingInfo.status)

@@ -1,0 +1,24 @@
+imports:
+  Text: Data.Text
+
+module: FavouriteDriver
+types:
+  FavouriteDriverResp:
+    id: Text
+    driverRating: Double
+    driverName: Text
+    driverPhone: Text
+    favCount: Int
+
+apis:
+  - GET:
+      endpoint: /driver/favorites
+      response:
+        type: "[FavouriteDriverResp]"
+
+  - POST:
+      endpoint: /favorites/{driverId}/remove
+      params:
+        driverId: Text
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

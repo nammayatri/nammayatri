@@ -1,0 +1,178 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  SearchRequest: Domain.Types.SearchRequest
+  SearchTry: Domain.Types.SearchTry
+  Client: Domain.Types.Client
+  SearchRequestForDriver: Domain.Types.SearchRequestForDriver
+  TripCategory: Domain.Types.Common
+  Estimate: Domain.Types.Estimate
+  Person: Domain.Types.Person
+  ServiceTierType: Domain.Types.Common
+  FareParameters: Domain.Types.FareParameters
+  DriverGoHomeRequest: Domain.Types.DriverGoHomeRequest
+  Version: Kernel.Types.Version
+  Device: Kernel.Types.Version
+  VehicleVariant: Domain.Types.VehicleVariant
+  LocalTime: Data.Time
+  Centesimal: Kernel.Types.Common
+  Money: Kernel.Types.Common
+  DeviceType: Kernel.Types.Version
+
+
+DriverQuote:
+  tableName: driver_quote
+  beamInstance: MakeTableInstancesWithTModifier [("requestId", "search_request_id")]
+  derives: "Generic, Show"
+
+  types:
+    DriverQuoteStatus:
+      enum: "Active, Inactive"
+
+
+  fields:
+    id : Id DriverQuote
+    requestId : Id SearchRequest
+    searchTryId : Id SearchTry
+    clientId : Maybe Text
+    searchRequestForDriverId : Maybe (Id SearchRequestForDriver)
+    tripCategory : TripCategory
+    estimateId : Id Estimate
+    driverId : Id Person
+    driverName : Text
+    driverRating : Maybe Centesimal
+    status : DriverQuoteStatus
+    vehicleVariant : VehicleVariant|NoRelation
+    vehicleServiceTier : ServiceTierType|NoRelation
+    distance : Maybe Meters
+    distanceToPickup : Meters
+    distanceUnit: DistanceUnit
+    durationToPickup : Seconds
+    validTill : UTCTime
+    estimatedFare : HighPrecMoney
+    currency : Currency
+    fareParams : FareParameters|NoRelation
+    providerId : Id Merchant
+    specialLocationTag : Maybe Text
+    goHomeRequestId : Maybe (Id DriverGoHomeRequest)
+    clientSdkVersion : Maybe Version
+    reactBundleVersion : Maybe Text
+    clientBundleVersion : Maybe Version
+    clientConfigVersion : Maybe Version
+    clientDevice : Maybe Device
+    backendConfigVersion : Maybe Version
+    backendAppVersion : Maybe Text
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+    vehicleServiceTierName : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    coinsRewardedOnGoldTierRide: Maybe Int
+
+  beamType:
+    tripCategory: Maybe TripCategory
+    vehicleServiceTier: Maybe ServiceTierType
+    validTill: LocalTime
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    clientOsVersion: Maybe Text
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
+    merchantOperatingCityId: Maybe Text
+    createdAt: LocalTime
+    updatedAt: LocalTime
+    currency: Maybe Currency
+    distanceUnit: Maybe DistanceUnit
+
+  beamFields:
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
+
+    estimatedFare:
+      estimatedFare: Money
+      estimatedFareAmount: Maybe HighPrecMoney
+
+    fareParams:
+      fareParametersId: Text
+
+  fromTType:
+    fareParams: getFareParams|M
+    tripCategory: fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer) tripCategory|E
+    vehicleServiceTier: fromMaybe (Domain.Types.VehicleVariant.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
+    clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
+    clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
+    clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
+    backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
+    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
+    createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
+    updatedAt: Data.Time.localTimeToUTC Data.Time.utc updatedAt|E
+    validTill: Data.Time.localTimeToUTC Data.Time.utc validTill|E
+    currency: fromMaybe Kernel.Types.Common.INR currency|E
+    estimatedFare: Kernel.Types.Common.mkAmountWithDefault estimatedFareAmount estimatedFare|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+
+  toTType:
+    fareParametersId: Kernel.Types.Id.getId ((.id) fareParams)|E
+    tripCategory: Kernel.Prelude.Just|I
+    clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+    clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+    clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
+    backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
+    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
+    clientOsType:  (clientDevice <&> (.deviceType))|E
+    vehicleServiceTier: Kernel.Prelude.Just|I
+    createdAt: Data.Time.utcToLocalTime Data.Time.utc createdAt|E
+    updatedAt: Data.Time.utcToLocalTime Data.Time.utc updatedAt|E
+    validTill: Data.Time.utcToLocalTime Data.Time.utc validTill|E
+    currency: Kernel.Prelude.Just|I
+    estimatedFareAmount: Kernel.Prelude.Just|I
+    estimatedFare: Kernel.Prelude.roundToIntegral estimatedFare|E
+    distanceUnit: Kernel.Prelude.Just|I
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findDriverQuoteBySTId:
+      kvFunction: findOneWithKV
+      where: searchTryId
+
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    searchTryId: SecondaryKey
+    requestId: "!SecondaryKey" # forcing to be a secondary key
+
+  sqlType:
+    status: character varying(255)
+    distanceToPickup: bigint
+    durationToPickup: bigint
+    vehicleVariant: character varying(255)
+    driverRating: double precision
+    estimateId : text
+
+
+  default:
+    providerId: "'7f7896dd-787e-4a0b-8675-e9e6fe93bb8f'"
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - updateByPrimaryKey

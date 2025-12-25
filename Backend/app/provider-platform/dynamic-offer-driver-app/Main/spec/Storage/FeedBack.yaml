@@ -1,0 +1,30 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Ride: Domain.Types.Ride
+  Person: Domain.Types.Person
+
+Feedback:
+  tableName: feedback
+
+  fields:
+    id : Id Feedback
+    rideId : Id Ride
+    driverId : Id Person
+    badge : Text
+    badgeKey : Maybe Text
+    createdAt : UTCTime
+    rating : Maybe Int
+
+  constraints:
+    id: PrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  sqlType:
+    badge: character varying (255)
+    badgeKey: character varying (255)
+
+
+  excludedFields: [createdAt, updatedAt]

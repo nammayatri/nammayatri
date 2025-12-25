@@ -40,11 +40,15 @@ Did you write an integration/unit/API test to verify the code changes?
 Or did you test this change manually (provide relevant screenshots)?
 -->
 
+## Screenshot of test results
+<!-- Provide screenshot of the test results -->
 
 ## Checklist
 <!-- Put an `x` in the boxes that apply -->
 
 - [ ] I reviewed submitted code
 - [ ] I added unit tests for my changes where possible
+- [ ] I added integration tests for my changes where possible
+- [ ] I tested the changes using integration tests
 - [ ] I added a [CHANGELOG](/CHANGELOG.md) entry if applicable
 - [ ] No leak detected in leakcanary

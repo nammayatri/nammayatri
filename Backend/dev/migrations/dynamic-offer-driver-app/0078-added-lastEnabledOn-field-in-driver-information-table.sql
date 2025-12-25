@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN last_enabled_on timestamp with time zone;

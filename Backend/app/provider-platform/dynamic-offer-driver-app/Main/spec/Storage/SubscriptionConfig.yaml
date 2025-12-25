@@ -1,0 +1,175 @@
+imports:
+  UTCTime: Kernel.Prelude
+  Seconds: Kernel.Types.Common
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Id: Kernel.Types.Id
+  VehicleCategory: Domain.Types.VehicleCategory
+  ExternalWebhookConfigs: Domain.Types.WebhookExtra
+  WebhookDeliveryType : Domain.Types.WebhookExtra
+  WebhookEvent : Domain.Types.WebhookExtra
+  Value: Data.Aeson
+
+SubscriptionConfig:
+  tableName: subscription_config
+
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  types :
+    WebhookConfig:
+      webhookDeliveryMode : WebhookDeliveryType
+      retryLimit : Int
+      batchSize : Maybe Int
+      nextJobScheduleTimeThreshold : Int
+      rescheduleTimeThreshold : Int
+      derive: "Ord, Eq"
+    CurrentPlanEntites :
+      enum : "SAFETY_PLUS"
+      derive': "Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read"
+  fields:
+    allowManualPaymentLinks: Bool
+    useOverlayService: Bool
+    paymentLinkChannel: Domain.Types.MerchantMessage.MediaChannel
+    paymentLinkJobTime: Data.Time.NominalDiffTime
+    genericNextJobScheduleTimeThreshold: Data.Time.NominalDiffTime
+    genericBatchSizeForJobs: Int
+    genericJobRescheduleTime: Data.Time.NominalDiffTime
+    maxRetryCount: Int
+    sendInAppFcmNotifications: Bool
+    subscriptionDown: Maybe Bool
+    paymentServiceName: Domain.Types.MerchantServiceConfig.ServiceName
+    allowDueAddition: Bool
+    serviceName: Domain.Types.Plan.ServiceNames
+    sendDeepLink: Bool
+    deepLinkExpiryTimeInMinutes: Maybe Int
+    isVendorSplitEnabled: Maybe Bool
+    sgstPercentageOneTimeSecurityDeposit: Maybe  Kernel.Types.Common.HighPrecMoney
+    cgstPercentageOneTimeSecurityDeposit: Maybe Kernel.Types.Common.HighPrecMoney
+    payoutServiceName: Maybe Domain.Types.MerchantServiceConfig.ServiceName
+    isTriggeredAtEndRide: Bool
+    allowDriverFeeCalcSchedule: Bool
+    defaultCityVehicleCategory: VehicleCategory|NoRelation
+    numberOfFreeTrialRides: Maybe Int
+    subscriptionEnabledForVehicleCategories: Maybe [VehicleCategory]
+    freeTrialRidesApplicable: Bool
+    executionEnabledForVehicleCategories: Maybe [VehicleCategory]
+    isSubscriptionEnabledAtCategoryLevel: Bool
+    enableCityBasedFeeSwitch: Bool
+    partialDueClearanceMessageKey: Maybe Domain.Types.MerchantMessage.MessageKey
+    eventsEnabledForWebhook: "[WebhookEvent]"
+    extWebhookConfigs: Maybe ExternalWebhookConfigs
+    isUIEnabled : Bool
+    webhookConfig : Maybe WebhookConfig
+    isFreeTrialDaysApplicable : Bool
+    dataEntityToSend : "[CurrentPlanEntites]"
+    enableServiceUsageChargeDefault : Bool
+    waiveOffOfferTitle : Text
+    waiveOffOfferDescription : Text
+    autopayEnabled: Maybe Bool
+    showManualPlansInUI: Maybe Bool
+    disabledVariantsForSubscription: "Maybe [Domain.Types.VehicleVariant.VehicleVariant]"
+    sendManualPaymentLinkJobMaxDelay: Maybe Data.Time.NominalDiffTime
+    manualPaymentLinkRateLimitExpirySeconds: Maybe Data.Time.NominalDiffTime
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
+
+  fromTType:
+    genericJobRescheduleTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
+    genericNextJobScheduleTimeThreshold: Kernel.Prelude.fromMaybe 300 (Kernel.Utils.Common.secondsToNominalDiffTime <$> genericNextJobScheduleTimeThreshold)|E
+    paymentLinkJobTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
+    freeTrialRidesApplicable: Kernel.Prelude.fromMaybe False|I
+    isSubscriptionEnabledAtCategoryLevel : Kernel.Prelude.fromMaybe False|I
+    defaultCityVehicleCategory : Kernel.Prelude.fromMaybe Domain.Types.VehicleCategory.AUTO_CATEGORY|I
+    enableCityBasedFeeSwitch: Kernel.Prelude.fromMaybe False|I
+    sendAckForMandateEvents : Kernel.Prelude.fromMaybe False|I
+    isUIEnabled : Kernel.Prelude.fromMaybe False|I
+    eventsEnabledForWebhook : Kernel.Prelude.fromMaybe []|I
+    isFreeTrialDaysApplicable:  Kernel.Prelude.fromMaybe True|I
+    extWebhookConfigs: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< extWebhookConfigs | E
+    webhookConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< webhookConfig | E
+    dataEntityToSend :  Kernel.Prelude.fromMaybe []|I
+    enableServiceUsageChargeDefault:  Kernel.Prelude.fromMaybe True|I
+    waiveOffOfferTitle : Kernel.Prelude.fromMaybe "NAN" |I
+    waiveOffOfferDescription :  Kernel.Prelude.fromMaybe "NAN" |I
+    sendManualPaymentLinkJobMaxDelay: Kernel.Prelude.Just . Kernel.Utils.Common.secondsToNominalDiffTime . Kernel.Prelude.fromMaybe 43200|I
+    manualPaymentLinkRateLimitExpirySeconds: Kernel.Prelude.Just . Kernel.Utils.Common.secondsToNominalDiffTime . Kernel.Prelude.fromMaybe 21600|I
+  toTType:
+    genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    freeTrialRidesApplicable: Kernel.Prelude.Just|I
+    isSubscriptionEnabledAtCategoryLevel : Kernel.Prelude.Just|I
+    defaultCityVehicleCategory : Kernel.Prelude.Just|I
+    enableCityBasedFeeSwitch: Kernel.Prelude.Just|I
+    sendAckForMandateEvents: Kernel.Prelude.Just|I
+    isUIEnabled: Kernel.Prelude.Just|I
+    extWebhookConfigs: Kernel.Prelude.toJSON <$> extWebhookConfigs | E
+    webhookConfig: Kernel.Prelude.toJSON <$> webhookConfig | E
+    eventsEnabledForWebhook: Kernel.Prelude.Just|I
+    isFreeTrialDaysApplicable: Kernel.Prelude.Just|I
+    dataEntityToSend : Kernel.Prelude.Just|I
+    enableServiceUsageChargeDefault : Kernel.Prelude.Just|I
+    genericNextJobScheduleTimeThreshold :  Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    waiveOffOfferTitle : Kernel.Prelude.Just|I
+    waiveOffOfferDescription : Kernel.Prelude.Just|I
+    sendManualPaymentLinkJobMaxDelay: Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 43200)|I
+    manualPaymentLinkRateLimitExpirySeconds: Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 21600)|I
+  beamType:
+    genericJobRescheduleTime: Seconds
+    paymentLinkJobTime: Seconds
+    freeTrialRidesApplicable: Maybe Bool
+    isSubscriptionEnabledAtCategoryLevel: Maybe Bool
+    defaultCityVehicleCategory : Maybe VehicleCategory
+    enableCityBasedFeeSwitch : Maybe Bool
+    sendAckForMandateEvents : Maybe Bool
+    isUIEnabled : Maybe Bool
+    extWebhookConfigs: Maybe Value
+    webhookConfig: Maybe Value
+    eventsEnabledForWebhook: Maybe [WebhookEvent]
+    isFreeTrialDaysApplicable: Maybe Bool
+    dataEntityToSend : Maybe [CurrentPlanEntites]
+    enableServiceUsageChargeDefault : Maybe Bool
+    genericNextJobScheduleTimeThreshold : Maybe Seconds
+    waiveOffOfferTitle : Maybe Text
+    waiveOffOfferDescription : Maybe Text
+    sendManualPaymentLinkJobMaxDelay: Maybe Seconds
+    manualPaymentLinkRateLimitExpirySeconds: Maybe Seconds
+  constraints:
+    serviceName: PrimaryKey
+    merchantOperatingCityId: PrimaryKey
+
+
+  queries:
+    findSubscriptionConfigsByMerchantOpCityIdAndServiceName:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, serviceName]
+
+    findAllServicesUIEnabledByCity:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId,isUIEnabled]
+  default:
+    allowManualPaymentLinks: "false"
+    sendDeepLink: "false"
+    sendInAppFcmNotifications: "false"
+    subscriptionDown: "false"
+    allowDueAddition: "false"
+    paymentServiceName: "'Payment_Juspay'"
+    isTriggeredAtEndRide: "true"
+    allowDriverFeeCalcSchedule: "false"
+    payoutServiceName: "'Payout_Juspay'"
+    autopayEnabled: "true"
+    showManualPlansInUI: "false"
+    sendManualPaymentLinkJobMaxDelay: "43200"
+    manualPaymentLinkRateLimitExpirySeconds: "21600"
+
+  sqlType:
+   executionEnabledForVehicleCategories: text[]
+   subscriptionEnabledForVehicleCategories: text[]
+   eventsEnabledForWebhook: text[]
+   extWebhookConfigs: "json"
+   webhookConfig:  "json"
+   dataEntityToSend: text[]
+   disabledVariantsForSubscription: "text[]"

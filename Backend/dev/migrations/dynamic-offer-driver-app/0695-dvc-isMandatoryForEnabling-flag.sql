@@ -1,0 +1,2 @@
+UPDATE atlas_driver_offer_bpp.document_verification_config
+SET is_mandatory_for_enabling=is_mandatory;

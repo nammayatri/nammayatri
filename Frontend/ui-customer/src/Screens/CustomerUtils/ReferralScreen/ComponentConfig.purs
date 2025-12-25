@@ -21,16 +21,19 @@ import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
+import Components.Referral as ReferralComponent
 import Data.Maybe (Maybe(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((<>))
+import Prelude ((<>), (==))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
+import JBridge as JB
+import Storage (KeyStore(..), getValueToLocalStore)
 
 continueButtonConfig :: ST.ReferralScreenState -> PrimaryButton.Config
 continueButtonConfig state =
@@ -45,6 +48,21 @@ continueButtonConfig state =
     , id = "ReferralCodeModelContinue"
     , margin = (MarginTop 16)
     }
+
+referralButtonConfig :: ST.ReferralScreenState -> PrimaryButton.Config
+referralButtonConfig state =
+  let canApplyReferralCode = (getValueToLocalStore REFERRAL_STATUS) == "NOT_REFERRED_NOT_TAKEN_RIDE"
+  in PrimaryButton.config
+      { textConfig { 
+          text = getString ENTER_NOW
+        ,  color = state.config.primaryTextColor
+        }
+      , background = state.config.primaryBackground
+      , isClickable = canApplyReferralCode
+      , alpha = if canApplyReferralCode then 1.0 else 0.4
+      , id = "ReferralButton"
+      , margin = (MarginTop 16)
+      }
 
 goToHomeButtonConfig :: ST.ReferralScreenState -> PrimaryButton.Config
 goToHomeButtonConfig state =
@@ -100,7 +118,7 @@ genericHeaderConfig state =
       , margin = (Margin 12 12 12 12)
       }
     , textConfig
-      { text = (getString HAVE_REFERRAL_CODE)
+      { text = if state.referralType == ST.GIVE_REFERRAL then (getString REFERRALS) else (getString HAVE_REFERRAL_CODE)
       , color = Color.black900
       }
     , suffixImageConfig
@@ -108,3 +126,20 @@ genericHeaderConfig state =
       }
     , padding = (Padding 0 5 0 5)
     }
+
+primaryButtonConfig :: ST.ReferralScreenState -> PrimaryButton.Config 
+primaryButtonConfig state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig
+        { text = getString GO_BACK_
+        , color = state.config.primaryTextColor
+        }
+      , margin = Margin 10 10 10 10
+      , background = Color.black900
+      , height = V 48
+      , padding = PaddingHorizontal 20 20
+      , width = MATCH_PARENT
+      , id = "ReferralScreenPrimaryButton"
+      }
+  in primaryButtonConfig'

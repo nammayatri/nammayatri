@@ -27,7 +27,7 @@
     <string name="tap_on">3. Tap on </string>
     <string name="location">Location</string>
     <string name="phone">Phone</string>
-    <string name="includes_pickup_charges_10">ಪಿಕಪ್ ಶುಲ್ಕಗಳು ₹ 10 ಒಳಗೊಂಡಿದೆ</string>
+    <string name="includes_pickup_charges_10">ಪಿಕಪ್ ಶುಲ್ಕಗಳು ₹ {#amount#} ಒಳಗೊಂಡಿದೆ</string>
     <string name="away">ದೂರದಲ್ಲಿದೆ</string>
     <string name="we_made_you_online">ನಾವು ನಿಮ್ಮನ್ನು online ಮಾಡಿದ್ದೇವೆ</string>
     <string name="location_is_turned_on">ಸ್ಥಳ ನವೀಕರಣವನ್ನು ಆನ್ ಮಾಡಲಾಗಿದೆ</string>
@@ -44,5 +44,6 @@
     <string name="new_ride_available_for_offering">ಸ್ವೀಕರಿಸಲು ಹೊಸ ಸವಾರಿ ಲಭ್ಯವಿದೆ</string>
     <string name="and">ಮತ್ತು</string>
     <string name="no_enabled_browser">ನಿಮ್ಮ ಸಾಧನದಲ್ಲಿ ಯಾವುದೇ ಸಕ್ರಿಯಗೊಳಿಸಿದ ಬ್ರೌಸರ್ ಕಂಡುಬಂದಿಲ್ಲ, ದಯವಿಟ್ಟು ಬ್ರೌಸರ್ ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ ಅಥವಾ ಸ್ಥಾಪಿಸಿ</string>
-
+    <string name="no_additional_fare_tips_and_waiting_charges">"ಯಾವುದೇ ಅತಿರಿಕ್ತ ಹಣ ಇಲ್ಲ. ಯಾವುದೇ ಸೂಚನೆಗಳಿಲ್ಲ. ಯಾವುದೇ ಕಾಯಲು ವೆಚ್ಚಗಳಿಲ್ಲ."</string>
+    <string name="third_party_booking">"ತೃತೀಯ ಪಕ್ಷದ ಬುಕಿಂಗ್"</string>
 </resources>

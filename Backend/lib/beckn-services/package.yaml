@@ -45,6 +45,7 @@ default-extensions:
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
+  - TemplateHaskell
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -85,6 +86,9 @@ dependencies:
   - filepath
   - euler-hs
   - unordered-containers
+  - amazonka
+  - amazonka-s3
+  - lens
 
 ghc-options:
   - -fwrite-ide-info

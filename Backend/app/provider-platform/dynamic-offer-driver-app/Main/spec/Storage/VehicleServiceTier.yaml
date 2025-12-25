@@ -1,0 +1,73 @@
+imports:
+  VehicleVariant: Domain.Types.VehicleVariant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Centesimal: Kernel.Types.Common
+  ServiceTierType: Domain.Types.Common
+  BaseUrl: Kernel.Types.Common
+  VehicleCategory : Domain.Types.VehicleCategory
+
+VehicleServiceTier:
+  tableName: vehicle_service_tier
+
+  fields:
+    id: Id VehicleServiceTier
+    serviceTierType: ServiceTierType|NoRelation
+    name: Text
+    shortDescription: Maybe Text
+    longDescription: Maybe Text
+    seatingCapacity: Maybe Int
+    airConditionedThreshold: Maybe Double
+    isAirConditioned: Maybe Bool
+    isIntercityEnabled: Maybe Bool
+    isRentalsEnabled: Maybe Bool
+    oxygen: Maybe Double
+    ventilator: Maybe Int
+    luggageCapacity: Maybe Int
+    driverRating: Maybe Centesimal
+    vehicleCategory: Maybe VehicleCategory
+    baseVehicleServiceTier : Maybe Bool
+    fareAdditionPerKmOverBaseServiceTier : Maybe Int
+    vehicleRating: Maybe Double
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    allowedVehicleVariant: '[VehicleVariant]'
+    autoSelectedVehicleVariant: '[VehicleVariant]'
+    defaultForVehicleVariant: '[VehicleVariant]'
+    vehicleIconUrl: Maybe BaseUrl
+    priority: Int
+    stopFcmThreshold: Maybe Int
+    stopFcmSuppressCount: Maybe Int
+    scheduleBookingListEligibilityTags: Maybe [Text]
+  sqlType:
+    allowedVehicleVariant: text[]
+    defaultForVehicleVariant: text[]
+    autoSelectedVehicleVariant: text[]
+    driverRating: double precision
+    vehicleIconUrl: character varying(255)
+  default:
+    priority: '0'
+    autoSelectedVehicleVariant: "'{}'"
+  beamType:
+    vehicleIconUrl: Maybe Text
+  fromTType:
+    vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+  toTType:
+    vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+  constraints:
+    id: PrimaryKey
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findByServiceTierTypeAndCityId:
+      kvFunction: findOneWithKV
+      where:
+        and: [serviceTierType, merchantOperatingCityId]
+    findBaseServiceTierTypeByCategoryAndCityId:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - vehicleCategory
+          - merchantOperatingCityId
+          - baseVehicleServiceTier: "(Just True)|CIM"

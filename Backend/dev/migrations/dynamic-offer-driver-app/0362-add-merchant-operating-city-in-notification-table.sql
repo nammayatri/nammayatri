@@ -1,0 +1,1 @@
+ALTER TABLE IF EXISTS atlas_driver_offer_bpp.notification ADD COLUMN IF NOT EXISTS merchant_operating_city_id character varying(36);

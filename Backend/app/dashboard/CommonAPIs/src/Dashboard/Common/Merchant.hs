@@ -11,8 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Dashboard.Common.Merchant
   ( module Dashboard.Common.Merchant,
@@ -20,11 +18,15 @@ module Dashboard.Common.Merchant
   )
 where
 
+import Control.Applicative ((<|>))
 import Dashboard.Common as Reexport
 import Data.Aeson
+import qualified Data.ByteString.Lazy as BL
 import Data.Either (isRight)
 import Data.List.Extra (anySame)
 import Data.OpenApi hiding (description, name, password, url)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Kernel.External.Call.Types
 import Kernel.External.Encryption (encrypt)
 import qualified Kernel.External.Maps as Maps
@@ -32,36 +34,20 @@ import qualified Kernel.External.Notification.FCM.Flow as FCM
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.SMS as SMS
 import qualified Kernel.External.SMS.ExotelSms.Types as Exotel
+import Kernel.External.SMS.Types (SmsService (..))
+import Kernel.External.Types (Language)
 import qualified Kernel.External.Verification as Verification
+import Kernel.External.Whatsapp.Types (WhatsappService (..))
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (derivePersistField)
-import Kernel.Types.APISuccess (APISuccess)
+import Kernel.ServantMultipart
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import qualified Kernel.Types.Id as Id
 import Kernel.Types.Predicate
+import qualified Kernel.Types.Registry.Subscriber as BecknSub
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
-import Servant
-
--- we need to save endpoint transactions only for POST, PUT, DELETE APIs
-data MerchantEndpoint
-  = MerchantUpdateEndpoint
-  | MerchantCommonConfigUpdateEndpoint
-  | DriverPoolConfigUpdateEndpoint
-  | DriverPoolConfigCreateEndpoint
-  | DriverIntelligentPoolConfigUpdateEndpoint
-  | OnboardingDocumentConfigUpdateEndpoint
-  | OnboardingDocumentConfigCreateEndpoint
-  | MapsServiceConfigUpdateEndpoint
-  | MapsServiceConfigUsageUpdateEndpoint
-  | SmsServiceConfigUpdateEndpoint
-  | SmsServiceConfigUsageUpdateEndpoint
-  | VerificationServiceConfigUpdateEndpoint
-  | CreateFPDriverExtraFeeEndpoint
-  | UpdateFPDriverExtraFeeEndpoint
-  | SchedulerTriggerAPIEndpoint
-  deriving (Show, Read)
-
-derivePersistField "MerchantEndpoint"
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 ---------------------------------------------------------
 -- merchant update --------------------------------------
@@ -71,7 +57,7 @@ data ExophoneReq = ExophoneReq
     backupPhone :: Text,
     callService :: CallService
   }
-  deriving stock (Show, Generic)
+  deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 validateExophoneReq :: Validate ExophoneReq
@@ -89,7 +75,13 @@ data FCMConfigUpdateReq = FCMConfigUpdateReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 mkFCMConfig :: Text -> FCMConfigUpdateReq -> FCM.FCMConfig
-mkFCMConfig fcmTokenKeyPrefix FCMConfigUpdateReq {..} = FCM.FCMConfig {..}
+mkFCMConfig fcmTokenKeyPrefix FCMConfigUpdateReq {..} =
+  FCM.FCMConfig
+    { fcmUrl = fcmUrl,
+      fcmServiceAccount = fcmServiceAccount,
+      fcmTokenKeyPrefix = fcmTokenKeyPrefix,
+      fcmNotificationObj = Nothing
+    }
 
 newtype FCMConfigUpdateTReq = FCMConfigUpdateTReq
   { fcmUrl :: BaseUrl
@@ -108,13 +100,6 @@ validateFCMConfigUpdateReq FCMConfigUpdateReq {..} = do
 
 ---------------------------------------------------------
 -- merchant maps service config update ------------------
-
-type MapsServiceConfigUpdateAPI =
-  "serviceConfig"
-    :> "maps"
-    :> "update"
-    :> ReqBody '[JSON] MapsServiceConfigUpdateReq
-    :> Post '[JSON] APISuccess
 
 data MapsServiceConfigUpdateReq
   = GoogleConfigUpdateReq GoogleCfgUpdateReq
@@ -150,7 +135,7 @@ buildMapsServiceConfig = \case
     googleKey' <- encrypt googleKey
     pure . Maps.GoogleConfig $ Maps.GoogleCfg {googleKey = googleKey', ..}
   OSRMConfigUpdateReq OSRMCfgUpdateReq {..} -> do
-    pure . Maps.OSRMConfig $ Maps.OSRMCfg {..}
+    pure . Maps.OSRMConfig $ Maps.OSRMCfg {radiusDeviation = (distanceToMeters <$> radiusDeviationWithUnit) <|> radiusDeviation, ..}
   MMIConfigUpdateReq MMICfgUpdateReq {..} -> do
     mmiAuthSecret' <- encrypt mmiAuthSecret
     mmiApiKey' <- encrypt mmiApiKey
@@ -212,7 +197,12 @@ updateMapsTReqConstructorModifier = \case
 data GoogleCfgUpdateReq = GoogleCfgUpdateReq
   { googleMapsUrl :: BaseUrl,
     googleRoadsUrl :: BaseUrl,
-    googleKey :: Text
+    googleKey :: Text,
+    useAdvancedDirections :: Bool,
+    googleRouteConfig :: Maps.GoogleRouteConfig,
+    googlePlaceNewUrl :: BaseUrl,
+    useNewPlaces :: Bool,
+    googleAutocompleteParams :: Maybe [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -236,7 +226,8 @@ data MMICfgUpdateReq = MMICfgUpdateReq
     mmiAuthSecret :: Text,
     mmiApiKey :: Text,
     mmiKeyUrl :: BaseUrl,
-    mmiNonKeyUrl :: BaseUrl
+    mmiNonKeyUrl :: BaseUrl,
+    mmiAutocompleteParams :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -258,20 +249,14 @@ instance HideSecrets MMICfgUpdateReq where
 
 data OSRMCfgUpdateReq = OSRMCfgUpdateReq
   { osrmUrl :: BaseUrl,
-    radiusDeviation :: Maybe Meters
+    radiusDeviation :: Maybe Meters,
+    radiusDeviationWithUnit :: Maybe Distance
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
 -- merchant sms service config update -------------------
-
-type SmsServiceConfigUpdateAPI =
-  "serviceConfig"
-    :> "sms"
-    :> "update"
-    :> ReqBody '[JSON] SmsServiceConfigUpdateReq
-    :> Post '[JSON] APISuccess
 
 data SmsServiceConfigUpdateReq
   = MyValueFirstConfigUpdateReq MyValueFirstCfgUpdateReq
@@ -299,14 +284,17 @@ getSmsServiceFromReq = \case
   GupShupConfigUpdateReq _ -> SMS.GupShup
 
 buildSmsServiceConfig ::
-  EncFlow m r =>
+  ( EncFlow m r,
+    MonadFlow m
+  ) =>
   SmsServiceConfigUpdateReq ->
   m SMS.SmsServiceConfig
 buildSmsServiceConfig = \case
   MyValueFirstConfigUpdateReq MyValueFirstCfgUpdateReq {..} -> do
     username' <- encrypt username
     password' <- encrypt password
-    pure . SMS.MyValueFirstConfig $ SMS.MyValueFirstCfg {username = username', password = password', ..}
+    token' <- encrypt token
+    pure . SMS.MyValueFirstConfig $ SMS.MyValueFirstCfg {username = username', password = password', token = token', ..}
   ExotelSmsConfigUpdateReq ExotelSmsCfgUpdateReq {..} -> do
     apiKey' <- encrypt apiKey
     apiToken' <- encrypt apiToken
@@ -315,7 +303,8 @@ buildSmsServiceConfig = \case
     username' <- encrypt gusername
     password' <- encrypt gpassword
     templateId' <- encrypt templateId
-    pure . SMS.GupShupConfig $ SMS.GupShupCfg {userName = username', password = password', templateId = templateId', ..}
+    entityId' <- encrypt entityId
+    pure . SMS.GupShupConfig $ SMS.GupShupCfg {userName = username', password = password', entityId = entityId', templateId = templateId', ..}
 
 instance ToJSON SmsServiceConfigUpdateReq where
   toJSON = genericToJSON (updateSmsReqOptions updateSmsReqConstructorModifier)
@@ -367,6 +356,7 @@ data GupShupCfgUpdateReq = GupShupCfgUpdateReq
   { gusername :: Text,
     gpassword :: Text,
     url :: BaseUrl,
+    entityId :: Text,
     templateId :: Text
   }
   deriving stock (Show, Generic)
@@ -385,7 +375,8 @@ instance HideSecrets GupShupCfgUpdateReq where
 data MyValueFirstCfgUpdateReq = MyValueFirstCfgUpdateReq
   { username :: Text,
     password :: Text,
-    url :: BaseUrl
+    url :: BaseUrl,
+    token :: Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -424,13 +415,6 @@ instance HideSecrets ExotelSmsCfgUpdateReq where
 
 ---------------------------------------------------------
 -- merchant verification service config update ----------
-
-type VerificationServiceConfigUpdateAPI =
-  "serviceConfig"
-    :> "verification"
-    :> "update"
-    :> ReqBody '[JSON] VerificationServiceConfigUpdateReq
-    :> Post '[JSON] APISuccess
 
 newtype VerificationServiceConfigUpdateReq
   = IdfyConfigUpdateReq IdfyCfgUpdateReq
@@ -524,10 +508,6 @@ instance HideSecrets IdfyCfgUpdateReq where
 ---------------------------------------------------------
 -- merchant service usage config ------------------------
 
-type ServiceUsageConfigAPI =
-  "serviceUsageConfig"
-    :> Get '[JSON] ServiceUsageConfigRes
-
 -- Fields with one possible value (verificationService, initiateCall, whatsappProvidersPriorityList) not included here
 data ServiceUsageConfigRes = ServiceUsageConfigRes
   { getDistances :: Maps.MapsService,
@@ -549,13 +529,6 @@ data ServiceUsageConfigRes = ServiceUsageConfigRes
 
 ---------------------------------------------------------
 -- merchant maps service config usage update ------------
-
-type MapsServiceUsageConfigUpdateAPI =
-  "serviceUsageConfig"
-    :> "maps"
-    :> "update"
-    :> ReqBody '[JSON] MapsServiceUsageConfigUpdateReq
-    :> Post '[JSON] APISuccess
 
 data MapsServiceUsageConfigUpdateReq = MapsServiceUsageConfigUpdateReq
   { getDistances :: Maybe Maps.MapsService,
@@ -591,13 +564,6 @@ validateMapsServiceUsageConfigUpdateReq MapsServiceUsageConfigUpdateReq {..} = d
 ---------------------------------------------------------
 -- merchant sms service config usage update -------------
 
-type SmsServiceUsageConfigUpdateAPI =
-  "serviceUsageConfig"
-    :> "sms"
-    :> "update"
-    :> ReqBody '[JSON] SmsServiceUsageConfigUpdateReq
-    :> Post '[JSON] APISuccess
-
 newtype SmsServiceUsageConfigUpdateReq = SmsServiceUsageConfigUpdateReq
   { smsProvidersPriorityList :: [SMS.SmsService]
   }
@@ -614,3 +580,352 @@ validateSmsServiceUsageConfigUpdateReq :: Validate SmsServiceUsageConfigUpdateRe
 validateSmsServiceUsageConfigUpdateReq SmsServiceUsageConfigUpdateReq {..} = do
   let mkMessage field = "All values in list " <> field <> " should be unique"
   validateField "smsProvidersPriorityList" smsProvidersPriorityList $ PredicateFunc mkMessage (not . anySame @SMS.SmsService)
+
+---- CreateMerchantOperatingCity ------------------------
+
+data MerchantData = MerchantData
+  { name :: Text,
+    shortId :: Text,
+    subscriberId :: Text,
+    uniqueKeyId :: Text,
+    networkParticipantId :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
+  { file :: FilePath,
+    reqContentType :: Text,
+    city :: Context.City,
+    state :: Context.IndianState,
+    country :: Context.Country,
+    lat :: Double,
+    long :: Double,
+    primaryLanguage :: Maybe Language,
+    supportNumber :: Maybe Text,
+    enableForMerchant :: Bool,
+    exophone :: Text,
+    rcNumberPrefixList :: Maybe [Text],
+    currency :: Maybe Currency,
+    distanceUnit :: Maybe DistanceUnit,
+    merchantData :: Maybe MerchantData,
+    driverOfferMerchantOperatingCityId :: Maybe Text,
+    buildFRFSSubscriber :: Maybe Bool,
+    baseRequestCity :: Maybe Context.City,
+    baseRequestMerchant :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp CreateMerchantOperatingCityReq where
+  fromMultipart form = do
+    CreateMerchantOperatingCityReq
+      <$> fmap fdPayload (lookupFile "file" form)
+      <*> fmap fdFileCType (lookupFile "file" form)
+      <*> parseInput "city" form
+      <*> parseInput "state" form
+      <*> parseInput "country" form
+      <*> parseInput "lat" form
+      <*> parseInput "long" form
+      <*> parseMaybeInput "primaryLanguage" form
+      <*> parseMaybeInput "supportNumber" form
+      <*> parseInput "enableForMerchant" form
+      <*> parseInput "exophone" form
+      <*> parseMaybeInput "rcNumberPrefixList" form
+      <*> parseMaybeInput "currency" form
+      <*> parseMaybeInput "distanceUnit" form
+      <*> parseMaybeJsonInput "merchantData" form
+      <*> parseMaybeJsonInput "driverOfferMerchantOperatingCityId" form
+      <*> parseMaybeInput "buildFRFSSubscriber" form
+      <*> parseMaybeInput "baseRequestCity" form
+      <*> parseMaybeInput "baseRequestMerchant" form
+
+parseInput :: Read b => Text -> MultipartData tag -> Either String b
+parseInput fieldName form = case lookupInput fieldName form of
+  Right val -> maybe (Left $ "Failed to parse " ++ T.unpack fieldName ++ " input") Right (readMaybe (T.unpack val))
+  Left err -> Left err
+
+parseMaybeInput :: Read b => Text -> MultipartData tag -> Either String (Maybe b)
+parseMaybeInput fieldName form = case lookupInput fieldName form of
+  Right val -> Right $ readMaybe (T.unpack val)
+  Left _ -> Right Nothing
+
+parseMaybeJsonInput :: FromJSON b => Text -> MultipartData tag -> Either String (Maybe b)
+parseMaybeJsonInput fieldName form = case lookupInput fieldName form of
+  Right val -> do
+    case eitherDecode $ BL.fromStrict (TE.encodeUtf8 val) of
+      Right jsonVal -> Right $ Just jsonVal
+      Left err -> Left err
+  Left _ -> Right Nothing
+
+newtype CreateMerchantOperatingCityRes = CreateMerchantOperatingCityRes
+  { cityId :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
+  { geom :: Text,
+    city :: Context.City,
+    state :: Context.IndianState,
+    country :: Context.Country,
+    lat :: Double,
+    long :: Double,
+    primaryLanguage :: Maybe Language,
+    supportNumber :: Maybe Text,
+    enableForMerchant :: Bool,
+    exophone :: Text,
+    rcNumberPrefixList :: Maybe [Text],
+    currency :: Maybe Currency,
+    distanceUnit :: Maybe DistanceUnit,
+    merchantData :: Maybe MerchantData,
+    driverOfferMerchantOperatingCityId :: Maybe Text,
+    buildFRFSSubscriber :: Maybe Bool,
+    baseRequestCity :: Maybe Context.City,
+    baseRequestMerchant :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CreateMerchantOperatingCityReq where
+  hideSecrets = identity
+
+---- UpsertSpecialLocation ---------------------------------------
+
+data UpsertSpecialLocationReq = UpsertSpecialLocationReq
+  { file :: Maybe FilePath,
+    reqContentType :: Maybe Text,
+    locationName :: Maybe Text,
+    category :: Maybe Text,
+    city :: Maybe Context.City
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp UpsertSpecialLocationReq where
+  fromMultipart form = do
+    let eitherFile = lookupFile "file" form
+        (fileField, contentType_) = getFileAndFileType eitherFile
+    ( UpsertSpecialLocationReq fileField contentType_
+        <$> parseMaybeInput "locationName" form
+      )
+      <*> parseMaybeInput "category" form
+      <*> parseMaybeInput "city" form
+
+instance HideSecrets UpsertSpecialLocationReq where
+  hideSecrets = identity
+
+getFileAndFileType :: Either String (FileData tag) -> (Maybe (MultipartResult tag), Maybe Text)
+getFileAndFileType ethFile =
+  case ethFile of
+    Right fileData -> do
+      let payload = fdPayload fileData
+          fileCType = fdFileCType fileData
+      (Just payload, Just fileCType)
+    Left _err -> (Nothing, Nothing)
+
+data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
+  { locationName :: Maybe Text,
+    geom :: Maybe Text,
+    category :: Maybe Text,
+    city :: Maybe Context.City
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+------- UpsertSpecialLocationGates ---------------------------------------
+
+data UpsertSpecialLocationGateReq = UpsertSpecialLocationGateReq
+  { file :: Maybe FilePath,
+    reqContentType :: Maybe Text,
+    name :: Text,
+    latitude :: Maybe Double,
+    longitude :: Maybe Double,
+    defaultDriverExtra :: Maybe Int,
+    address :: Maybe Text,
+    canQueueUpOnGate :: Maybe Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp UpsertSpecialLocationGateReq where
+  fromMultipart form = do
+    let eitherFile = lookupFile "file" form
+        (fileField, contentType_) = getFileAndFileType eitherFile
+    ( UpsertSpecialLocationGateReq fileField contentType_
+        <$> parseInput "name" form
+      )
+      <*> parseMaybeInput "latitude" form
+      <*> parseMaybeInput "longitude" form
+      <*> parseMaybeInput "defaultDriverExtra" form
+      <*> parseMaybeInput "address" form
+      <*> parseMaybeInput "canQueueUpOnGate" form
+
+instance HideSecrets UpsertSpecialLocationGateReq where
+  hideSecrets = identity
+
+data UpsertSpecialLocationGateReqT = UpsertSpecialLocationGateReqT
+  { name :: Text,
+    geom :: Maybe Text,
+    latitude :: Maybe Double,
+    longitude :: Maybe Double,
+    defaultDriverExtra :: Maybe Int,
+    address :: Maybe Text,
+    canQueueUpOnGate :: Maybe Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---- DeleteSpecialLocationGate ----------------------------------
+
+data SupportedVehicleClasses = DLValidClasses [Text] | RCValidClasses [VehicleClassVariantMap]
+  deriving stock (Generic, Show)
+
+instance ToJSON SupportedVehicleClasses where
+  toJSON = genericToJSON supportedVCOptions
+
+instance FromJSON SupportedVehicleClasses where
+  parseJSON = genericParseJSON supportedVCOptions
+
+instance ToSchema SupportedVehicleClasses where
+  declareNamedSchema = genericDeclareNamedSchema supportedVCSchemaOptions
+
+supportedVCOptions :: Options
+supportedVCOptions =
+  defaultOptions
+    { sumEncoding = supportedVCTaggedObject,
+      constructorTagModifier = supportedVCModifier
+    }
+
+supportedVCSchemaOptions :: SchemaOptions
+supportedVCSchemaOptions =
+  defaultSchemaOptions
+    { sumEncoding = supportedVCTaggedObject,
+      constructorTagModifier = supportedVCModifier
+    }
+
+supportedVCTaggedObject :: SumEncoding
+supportedVCTaggedObject =
+  TaggedObject
+    { tagFieldName = "documentType",
+      contentsFieldName = "vehicleClasses"
+    }
+
+supportedVCModifier :: String -> String
+supportedVCModifier = \case
+  "DL" -> "DLValidClasses"
+  "RC" -> "RCValidClasses"
+  x -> x
+
+data VehicleClassVariantMap = VehicleClassVariantMap
+  { vehicleClass :: Text,
+    vehicleCapacity :: Maybe Int,
+    vehicleVariant :: VehicleVariant,
+    manufacturer :: Maybe Text,
+    manufacturerModel :: Maybe Text,
+    reviewRequired :: Maybe Bool,
+    vehicleModel :: Text,
+    bodyType :: Maybe Text,
+    priority :: Maybe Int
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ConfigFailoverReq = ConfigFailoverReq
+  { merchantOperatingCity :: Kernel.Prelude.Maybe Context.City,
+    priorityOrder :: Kernel.Prelude.Maybe PriorityListWrapperType
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets ConfigFailoverReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data ConfigNames
+  = BecknNetwork
+  | SmsProvider
+  | WhatsappProvider
+  deriving stock (Show, Eq, Ord, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+instance FromHttpApiData ConfigNames where
+  parseQueryParam = readEither
+
+instance ToHttpApiData ConfigNames where
+  toUrlPiece = show
+
+data NetworkEnums
+  = ONDC
+  | NY
+  deriving stock (Show, Eq, Ord, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+instance FromHttpApiData NetworkEnums where
+  parseQueryParam = readEither
+
+instance ToHttpApiData NetworkEnums where
+  toUrlPiece = show
+
+data PriorityListWrapperType = PriorityListWrapperType
+  { networkTypes :: [NetworkEnums],
+    smsProviders :: [SmsService],
+    whatsappProviders :: [WhatsappService]
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+--- Upsert special location using csv file ----
+
+data UpsertSpecialLocationCsvReq = UpsertSpecialLocationCsvReq {locationGeoms :: [(Text, Kernel.Prelude.FilePath)], gateGeoms :: [(Text, Kernel.Prelude.FilePath)], file :: Kernel.Prelude.FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpsertSpecialLocationCsvReq where
+  hideSecrets = identity
+
+instance FromMultipart Tmp UpsertSpecialLocationCsvReq where
+  fromMultipart form = do
+    let locationGeoms = map (\file -> (fdFileName file, fdPayload file)) (filter (\file -> fdInputName file == T.pack "locationGeoms") $ files form)
+        gateGeoms = map (\file -> (fdFileName file, fdPayload file)) (filter (\file -> fdInputName file == T.pack "gateGeoms") $ files form)
+    csvFile <- fmap fdPayload (lookupFile "file" form)
+    return $ UpsertSpecialLocationCsvReq locationGeoms gateGeoms csvFile
+
+instance ToMultipart Tmp UpsertSpecialLocationCsvReq where
+  toMultipart form =
+    MultipartData
+      []
+      ( [FileData "file" (T.pack form.file) "" (form.file)]
+          <> (map (\(fileName, file) -> FileData "locationGeoms" fileName (T.pack file) file) form.locationGeoms)
+          <> (map (\(fileName, file) -> FileData "gateGeoms" fileName (T.pack file) file) form.gateGeoms)
+      )
+
+newtype APISuccessWithUnprocessedEntities = APISuccessWithUnprocessedEntities {unprocessedEntities :: [Kernel.Prelude.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+------------------------ WhiteList Operating City ------------------------
+
+data WhiteListOperatingCityReq = WhiteListOperatingCityReq
+  { bppMerchantOperatingCityId :: Text,
+    bppMerchantId :: Text,
+    bppSubscriberDomain :: Context.Domain,
+    bppSubscriberId :: Id.ShortId BecknSub.Subscriber,
+    bapMerchantId :: Text,
+    bapMerchantOperatingCityId :: Text,
+    bapUniqueKeyId :: Text,
+    bapSubscriberId :: Id.ShortId BecknSub.Subscriber,
+    bapSubscriberDomain :: Context.Domain
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WhiteListOperatingCityRes = WhiteListOperatingCityRes
+  { whiteListSuccess :: Bool,
+    whiteListMessage :: Text,
+    whiteListError :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets WhiteListOperatingCityReq where
+  hideSecrets = identity

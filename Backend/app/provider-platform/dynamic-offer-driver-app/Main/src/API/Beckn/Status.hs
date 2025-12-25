@@ -16,25 +16,30 @@ module API.Beckn.Status (API, handler) where
 
 import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.ACL.Status as ACL
-import qualified Beckn.Core as CallBAP
+import qualified Beckn.OnDemand.Utils.Callback as Callback
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.API.Status as Status
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.Status as DStatus
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
+import Kernel.Tools.Logging
 import Kernel.Types.Beckn.Ack
-import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Servant
+import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import TransactionLogs.PushLogs
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
-    :> SignatureAuth "Authorization"
-    :> Status.StatusAPI
+    :> SignatureAuth 'Domain.MOBILITY "Authorization"
+    :> Status.StatusAPIV2
 
 handler :: FlowServer API
 handler = status
@@ -42,20 +47,40 @@ handler = status
 status ::
   Id DM.Merchant ->
   SignatureAuthResult ->
-  Status.StatusReq ->
+  Status.StatusReqV2 ->
   FlowHandler AckResponse
-status transporterId (SignatureAuthResult _ subscriber) req =
-  withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    logTagInfo "Status API Flow" "Reached"
+status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI $
+  withDynamicLogLevel "bpp-status-api" $ do
+    txnId <- Utils.getTransactionId reqV2.statusReqContext
+    Utils.withTransactionIdLogTag txnId $ do
+      logDebug $ "BPP_STATUS_API_DEBUG: Received status request for transactionId: " <> txnId
+      logTagInfo "Status APIV2 Flow" $ "Reached:-" <> show reqV2
+      dStatusReq <- ACL.buildStatusReqV2 subscriber reqV2
+      let context = reqV2.statusReqContext
+      callbackUrl <- Utils.getContextBapUri context
+      logDebug $ "BPP_STATUS_API_DEBUG: Built status request, callback URL: " <> show callbackUrl
+      dStatusRes <- DStatus.handler transporterId dStatusReq
+      logDebug $ "BPP_STATUS_API_DEBUG: Status handler completed for booking: " <> dStatusRes.booking.id.getId
+      fork "status received pushing ondc logs" do
+        void $ pushLogs "status" (toJSON reqV2) dStatusRes.booking.providerId.getId "MOBILITY"
+      internalEndPointHashMap <- asks (.internalEndPointHashMap)
+      msgId <- Utils.getMessageId context
+      onStatusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)
+      logDebug $ "BPP_STATUS_API_DEBUG: Built on_status request with messageId: " <> msgId <> " for booking: " <> dStatusRes.booking.id.getId
+      Callback.withCallback dStatusRes.transporter "on_status" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStatusReq.onStatusReqContext) $
+        pure onStatusReq
 
-    dStatusReq <- ACL.buildStatusReq subscriber req
-    dStatusRes <- DStatus.handler transporterId dStatusReq
-    internalEndPointHashMap <- asks (.internalEndPointHashMap)
-
-    let context = req.context
-    onStatusMessage <- ACL.buildOnStatusMessage dStatusRes.info
-    void $
-      CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPI context context.bap_uri internalEndPointHashMap $
-        pure onStatusMessage
-
-    pure Ack
+errHandler :: Spec.Context -> BecknAPIError -> Spec.OnStatusReq
+errHandler context (BecknAPIError err) =
+  Spec.OnStatusReq
+    { onStatusReqContext = context,
+      onStatusReqError = Just err',
+      onStatusReqMessage = Nothing
+    }
+  where
+    err' =
+      Spec.Error
+        { errorCode = Just err.code,
+          errorMessage = err.message >>= \m -> Just $ encodeToText err._type <> " " <> m,
+          errorPaths = err.path
+        }

@@ -1,0 +1,122 @@
+imports:
+  Driver: Dashboard.Common
+  DriverCoinsFunctionType: Dashboard.Common.DriverCoins
+  Ride: Dashboard.Common
+
+module: DriverCoins # module: Driver.Coins TODO Driver.Coins.yaml should generate Driver.Coins.hs
+apiPrefix: coins
+
+apis:
+- POST:
+    # BulkUploadCoinsAPI
+    endpoint: bulkUploadCoins
+    auth: ApiAuthV2
+    request:
+      type: BulkUploadCoinsReq
+    response:
+      type: BulkUploadCoinRes
+    migrate:
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD
+- POST:
+    # BulkUploadCoinsAPIV2
+    endpoint: bulkUploadCoinsV2
+    auth: ApiAuthV2
+    request:
+      type: BulkUploadCoinsReqV2
+    response:
+      type: BulkUploadCoinRes
+    migrate:
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD_V2
+- GET:
+    # CoinHistoryAPI
+    endpoint: coinHistory/{driverId}
+    auth: ApiAuthV2
+    params:
+      driverId: Id Driver
+    query:
+    - limit: Integer
+    - offset: Integer
+    response:
+      type: CoinHistoryRes
+    migrate:
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_HISTORY
+- POST:
+    # UpdateBlacklistedCoinEventsAPI
+    endpoint: blacklistedEvents/{driverId}/update
+    auth: ApiAuthV2
+    params:
+      driverId: Id Driver
+    request:
+      type: UpdateBlacklistedCoinEventsReq
+    response:
+      type: APISuccess
+    migrate:
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BLACKLIST_EVENTS_UPDATE
+
+types:
+  BulkUploadCoinsReq:
+  - driverIdListWithCoins: [ DriverIdListWithCoins ]
+  - bulkUploadTitle: Translations
+  - expirationTime: Maybe Int
+  BulkUploadCoinsReqV2:
+  - driverIdListWithCoins: [ DriverIdListWithAmount ]
+  - bulkUploadTitle: Translations
+  - expirationTime: Maybe Int
+  - eventFunction: DriverCoinsFunctionType
+  DriverIdListWithAmount:
+  - driverId: Text
+  - amount: HighPrecMoney
+  - amountWithCurrency: Maybe PriceAPIEntity
+  DriverIdListWithCoins:
+  - driverId: Text
+  - coins: Int
+  Translations:
+  - en: Text
+  - bn: Text
+  - hi: Text
+  - ml: Text
+  - ta: Text
+  - te: Text
+  - kn: Text
+  - fr: Text
+  - derive: "Show, Eq, Ord"
+  CoinHistoryRes:
+  - coinBalance: Int
+  - coinEarned: Int
+  - coinUsed: Int
+  - coinExpired: Int
+  - coinEarnHistory: [ CoinEarnHistoryItem ]
+  - coinBurnHistory: [ CoinBurnHistoryItem ]
+  CoinEarnHistoryItem:
+  - coins: Int
+  - eventFunction: DriverCoinsFunctionType
+  - createdAt: UTCTime
+  - expirationAt: Maybe UTCTime
+  - coinsUsed: Int
+  - status: CoinStatus
+  - bulkUploadTitle: Maybe Translations
+  - rideId: Maybe Text
+  - rideShortId: Maybe (ShortId Ride)
+  CoinBurnHistoryItem:
+  - numCoins: Int
+  - cash: HighPrecMoney
+  - cashWithCurrency: PriceAPIEntity
+  - title: Text
+  - createdAt: UTCTime
+  - updatedAt: UTCTime
+  CoinStatus:
+  - enum: "Used, Remaining"
+  - derive: "Read, Ord"
+  BulkUploadFailedItem:
+  - driverId: Text
+  - errorMessage: Text
+  BulkUploadCoinRes:
+  - success: Int
+  - failed: Int
+  - failedItems: [ BulkUploadFailedItem ]
+  UpdateBlacklistedCoinEventsReq:
+  - blacklistedEvents: [ DriverCoinsFunctionType ]
+
+extraOperations:
+- EXTRA_API_TYPES_FILE
+- EXTRA_API_COMMON_TYPES_FILE

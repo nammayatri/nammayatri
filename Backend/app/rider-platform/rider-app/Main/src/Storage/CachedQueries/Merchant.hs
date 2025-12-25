@@ -22,15 +22,19 @@ module Storage.CachedQueries.Merchant
     clearCache,
     getDefaultMerchantOperatingCity,
     getDefaultMerchantOperatingCity_,
+    updateGeofencingConfig,
+    updateGatewayAndRegistryPriorityList,
   )
 where
 
 import Data.Coerce (coerce)
+import qualified Domain.Types
 import Domain.Types.Common
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
@@ -92,7 +96,7 @@ makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 makeSubscriberIdKey :: ShortId Subscriber -> Text
 makeSubscriberIdKey subscriberId = "CachedQueries:Merchant:SubscriberId-" <> subscriberId.getShortId
 
-update :: MonadFlow m => Merchant -> m ()
+update :: (MonadFlow m, EsqDBFlow m r) => Merchant -> m ()
 update = Queries.update
 
 -- Use only for backward compatibility
@@ -113,3 +117,11 @@ getDefaultMerchantOperatingCity_ merchantShortId = do
       ( MerchantOperatingCityNotFound $
           "merchantId:- " <> merchant.id.getId <> " city:- " <> show merchant.defaultCity
       )
+
+updateGeofencingConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
+updateGeofencingConfig = Queries.updateGeofencingConfig
+
+updateGatewayAndRegistryPriorityList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> [Domain.Types.GatewayAndRegistryService] -> m ()
+updateGatewayAndRegistryPriorityList merchant gatewayAndRegistryPriorityList = do
+  Queries.updateGatewayAndRegistryPriorityList gatewayAndRegistryPriorityList merchant.id
+  clearCache merchant

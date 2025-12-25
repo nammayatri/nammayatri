@@ -1,14 +1,5 @@
-CREATE TABLE atlas_app.feedback_form (
-    category_name character varying(255) NOT NULL,
-    id character varying(36) NOT NULL PRIMARY KEY,
-    rating INT,
-    question character varying(255) NOT NULL,
-    answer text[] NOT NULL,
-    answer_type character varying(255) NOT NULL
-);
-
 -- add the migrations as it is without changing the id's
-INSERT INTO atlas_app.feedback_form
+INSERT INTO atlas_app.feedback_form (category_name, id, rating, question, answer, answer_type)
 VALUES('RIDE','1',1,'Give feedback for your ride ?',ARRAY['Felt Unsafe','Too Many Calls','Late Drop Off','Late Pick Up'], 'Checkbox'),
       ('RIDE','2',2,'Give feedback for your ride ?',ARRAY['Felt Unsafe','Too Many Calls','Late Drop Off','Late Pick Up'], 'Checkbox'),
       ('RIDE','3',3,'Give feedback for your ride ?',ARRAY['Trip Got Delayed','Felt Unsafe'], 'Checkbox'),

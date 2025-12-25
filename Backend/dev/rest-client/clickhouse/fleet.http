@@ -1,0 +1,44 @@
+ # UPDATE atlas_driver_offer_bpp.ride_details set fleet_owner_id = '0c414eb2-7ced-4557-bd55-801afbb61a94';
+ # for testing local you have to create a fleetowner then assign all access to the required api. I filled some dummy data in
+ # ride_details table for testing purpose
+ # please change fleet owner Id and dashboard token accordingly
+
+
+
+@empty =
+
+@clickhouse-driver-offer-bpp = http://localhost:8123
+
+@bpp-dashboard-host = http://localhost:8018
+
+@clickhouse-password = {{empty}}
+
+@fleetOwnerId = 0c414eb2-7ced-4557-bd55-801afbb61a94
+
+
+@dashboardToken = 7d626c65-34c4-4732-9ede-b0e6103d7597
+
+@dbName = atlas_driver_offer_bpp
+
+
+
+
+# @name FleetTotalEarning
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/Kochi/driver/fleet/totalEarning
+  ?from=2024-01-01T07:02:42Z
+  &to=2024-02-22T08:02:42Z
+token: {{dashboardToken}}
+
+
+
+#name Query
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+   select sum (timeDiff(created_at, updated_at)) from (select created_at , updated_at from {{dbName}}.ride where id in
+    (select id from {{dbName}}.ride_details where fleet_owner_id = '{{fleetOwnerId}}' ));
+
+

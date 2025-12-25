@@ -14,11 +14,13 @@
 
 module SharedLogic.External.LocationTrackingService.Types where
 
-import qualified Domain.Types.DriverInformation as DI
+import Control.Applicative ((<|>))
+import Data.Aeson
+import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
-import Domain.Types.Vehicle.Variant (Variant)
+import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -30,15 +32,18 @@ data StartRideReq = StartRideReq
   { lat :: Double,
     lon :: Double,
     merchantId :: Id DM.Merchant,
-    driverId :: Id DP.Person
+    driverId :: Id DP.Person,
+    rideInfo :: Maybe RideInfo
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, ToSchema)
 
 data EndRideReq = EndRideReq
   { lat :: Double,
     lon :: Double,
     merchantId :: Id DM.Merchant,
-    driverId :: Id DP.Person
+    driverId :: Id DP.Person,
+    nextRideId :: Maybe (Id DRide.Ride),
+    rideInfo :: Maybe RideInfo
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
@@ -46,9 +51,11 @@ data NearByReq = NearByReq
   { lat :: Double,
     lon :: Double,
     onRide :: Maybe Bool,
-    vehicleType :: Maybe Variant,
+    vehicleType :: Maybe [VehicleVariant],
     radius :: Int,
-    merchantId :: Id DM.Merchant
+    merchantId :: Id DM.Merchant,
+    groupId :: Maybe Text, -- fleetOwnerId
+    groupId2 :: Maybe Text -- operatorId
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
@@ -66,7 +73,7 @@ data EndRideRes = EndRideRes
 
 data DriverDetailsReq = DriverDetailsReq
   { driverId :: Id DP.Person,
-    driverMode :: DI.DriverMode
+    driverMode :: DriverMode
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -75,14 +82,145 @@ data RideDetailsReq = RideDetailsReq
     rideStatus :: DRide.RideStatus,
     merchantId :: Id DM.Merchant,
     driverId :: Id DP.Person,
+    isFutureRide :: Maybe Bool,
     lat :: Double,
-    lon :: Double
+    lon :: Double,
+    rideInfo :: Maybe RideInfo
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+  deriving (Generic, ToJSON, ToSchema, Show)
 
 newtype DriversLocationReq = DriversLocationReq
   { driverIds :: [Id DP.Person]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+data DriverLocationReq = DriverLocationReq
+  { driverId :: Id DP.Person,
+    merchantId :: Id DM.Merchant
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+newtype DriverLocationResp = DriverLocationResp
+  { loc :: [LatLong]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
 type HasLocationService m r = (HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig])
+
+data DriverBlockTillReq = DriverBlockTillReq
+  { merchantId :: Id DM.Merchant,
+    driverId :: Id DP.Person,
+    blockTill :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data BusRideInfo = BusRideInfo
+  { routeCode :: Text,
+    busNumber :: Text,
+    source :: LatLong,
+    destination :: LatLong,
+    routeLongName :: Maybe Text,
+    driverName :: Maybe Text,
+    groupId :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToSchema)
+
+data CarRideInfo = CarRideInfo
+  { pickupLocation :: LatLong,
+    minDistanceBetweenTwoPoints :: Maybe Int,
+    rideStops :: Maybe [LatLong]
+  }
+  deriving (Show, Eq, Generic, ToSchema)
+
+data PilotRideInfo = PilotRideInfo
+  { destination :: LatLong,
+    driverName :: Maybe Text,
+    dutyType :: Maybe Text,
+    endAddress :: Maybe Text,
+    groupId :: Maybe Text,
+    pilotNumber :: Text,
+    scheduledTripTime :: Maybe UTCTime,
+    source :: LatLong,
+    startAddress :: Maybe Text,
+    vipName :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToSchema)
+
+data RideInfo = Bus BusRideInfo | Car CarRideInfo | Pilot PilotRideInfo
+  deriving (Show, Eq, Generic, ToSchema)
+
+instance FromJSON RideInfo where
+  parseJSON = withObject "RideInfo" $ \obj ->
+    ( Bus
+        <$> ( obj .: "bus" >>= \busObj ->
+                BusRideInfo <$> busObj .: "routeCode"
+                  <*> busObj .: "busNumber"
+                  <*> busObj .: "source"
+                  <*> busObj .: "destination"
+                  <*> busObj .:? "routeLongName"
+                  <*> busObj .:? "driverName"
+                  <*> busObj .:? "groupId"
+            )
+    )
+      <|> ( Car
+              <$> ( obj .: "car" >>= \carObj ->
+                      CarRideInfo <$> carObj .: "pickupLocation"
+                        <*> carObj .:? "minDistanceBetweenTwoPoints"
+                        <*> carObj .:? "rideStops"
+                  )
+          )
+      <|> ( Pilot
+              <$> ( obj .: "pilot" >>= \pilotObj ->
+                      PilotRideInfo <$> pilotObj .: "destination"
+                        <*> pilotObj .:? "driverName"
+                        <*> pilotObj .:? "dutyType"
+                        <*> pilotObj .:? "endAddress"
+                        <*> pilotObj .:? "groupId"
+                        <*> pilotObj .: "pilotNumber"
+                        <*> pilotObj .:? "scheduledTripTime"
+                        <*> pilotObj .: "source"
+                        <*> pilotObj .:? "startAddress"
+                        <*> pilotObj .:? "vipName"
+                  )
+          )
+
+instance ToJSON RideInfo where
+  toJSON = \case
+    Bus (BusRideInfo routeCode busNumber source destination routeLongName driverName groupId) ->
+      object
+        [ "bus"
+            .= object
+              [ "routeCode" .= routeCode,
+                "busNumber" .= busNumber,
+                "source" .= source,
+                "destination" .= destination,
+                "routeLongName" .= routeLongName,
+                "driverName" .= driverName,
+                "groupId" .= groupId
+              ]
+        ]
+    Car (CarRideInfo pickupLocation minDistanceBetweenTwoPoints rideStops) ->
+      object
+        [ "car"
+            .= object
+              [ "pickupLocation" .= pickupLocation,
+                "minDistanceBetweenTwoPoints" .= minDistanceBetweenTwoPoints,
+                "rideStops" .= rideStops
+              ]
+        ]
+    Pilot (PilotRideInfo {..}) ->
+      object
+        [ "pilot"
+            .= object
+              [ "destination" .= destination,
+                "driverName" .= driverName,
+                "dutyType" .= dutyType,
+                "endAddress" .= endAddress,
+                "groupId" .= groupId,
+                "pilotNumber" .= pilotNumber,
+                "scheduledTripTime" .= scheduledTripTime,
+                "source" .= source,
+                "startAddress" .= startAddress,
+                "vipName" .= vipName
+              ]
+        ]

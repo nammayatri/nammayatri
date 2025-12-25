@@ -13,10 +13,36 @@ import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 import Kernel.External.Maps (LatLong)
 import Kernel.Utils.Common
+import qualified Tools.Maps as Maps
 
 data RouteInfo = RouteInfo
   { duration :: Maybe Seconds,
     distance :: Maybe Meters,
+    distanceWithUnit :: Maybe Distance,
     points :: Maybe [LatLong]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data DeviationInfo = DeviationInfo
+  { deviation :: Bool,
+    safetyDeviation :: Bool
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data RouteAndDeviationInfo = RouteAndDeviationInfo
+  { routeInfo :: RouteInfo,
+    deviationInfo :: DeviationInfo
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+createMultipleRouteInfo :: Maps.RouteInfo -> RouteAndDeviationInfo
+createMultipleRouteInfo Maps.RouteInfo {..} =
+  RouteAndDeviationInfo
+    { routeInfo =
+        RouteInfo
+          { points = Just points,
+            ..
+          },
+      deviationInfo =
+        DeviationInfo {deviation = False, safetyDeviation = False}
+    }

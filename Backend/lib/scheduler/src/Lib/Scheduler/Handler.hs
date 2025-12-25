@@ -25,8 +25,11 @@ import qualified Control.Monad.Catch as C
 import qualified Data.ByteString as BS
 import Data.Singletons (fromSing)
 import qualified Data.Time as T hiding (getCurrentTime)
+import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude hiding (mask, throwIO)
+import qualified Kernel.Storage.Beam.SystemConfigs as BeamSC
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Tools.Logging
 import Kernel.Tools.LoopGracefully (loopGracefully)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common hiding (id)
@@ -35,7 +38,6 @@ import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.Time ()
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobHandler
-import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types
 
 data SchedulerHandle t = SchedulerHandle
@@ -51,7 +53,7 @@ data SchedulerHandle t = SchedulerHandle
     reScheduleOnError :: Text -> AnyJob t -> Int -> UTCTime -> SchedulerM ()
   }
 
-handler :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> SchedulerM ()
+handler :: forall t. (HasSchemaName BeamSC.SystemConfigsT, JobProcessor t, FromJSON t) => SchedulerHandle t -> SchedulerM ()
 handler hnd = do
   schedulerType <- asks (.schedulerType)
   maxThreads <- asks (.maxThreads)
@@ -60,10 +62,16 @@ handler hnd = do
     DbBased -> loopGracefully $ replicate maxThreads (dbBasedHandlerLoop hnd runTask)
   where
     runTask :: AnyJob t -> SchedulerM ()
-    runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId) $ do
-      res <- measuringDuration registerDuration $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
-      registerExecutionResult hnd anyJob res
-      releaseLock parentJobId
+    runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> do
+      let jobType' = show (fromSing $ jobType jobInfo)
+      expirationTime <- asks (.expirationTime)
+      withDynamicLogLevel jobType' . Hedis.withCrossAppRedis . Hedis.whenWithLockRedis (mkRunningJobKey parentJobId.getId) (fromIntegral expirationTime) $
+        withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId <> "jobType = " <> jobType') $ do
+          res <- measuringDuration (registerDuration jobType') $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
+          registerExecutionResult hnd anyJob res
+          releaseLock parentJobId
+
+    mkRunningJobKey jobId = "RunnningJob:" <> jobId
 
 dbBasedHandlerLoop :: (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
 dbBasedHandlerLoop hnd runTask = do
@@ -88,11 +96,10 @@ runnerIterationRedis SchedulerHandle {..} runTask = do
   key <- asks (.streamName)
   groupName <- asks (.groupName)
   readyTasks <- getReadyTask
-  filteredTasks <- filterM (\(AnyJob Job {..}, _) -> attemptTaskLockAtomic parentJobId) readyTasks
-  logTagDebug "Available tasks - Count" . show $ length filteredTasks
-  mapM_ (runTask . fst) filteredTasks
-  let recordIds = map snd filteredTasks
-  unless (null recordIds) do
+  logTagDebug "Available tasks - Count" . show $ length readyTasks
+  mapM_ (runTask . fst) readyTasks
+  let recordIds = map snd readyTasks
+  fork "removingFromStream" . unless (null recordIds) $ do
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xAck key groupName recordIds
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xDel key recordIds
 
@@ -118,11 +125,8 @@ runnerIteration SchedulerHandle {..} runTask = do
         then (x :) <$> pickTasks (tasksRemain - 1) xs
         else pickTasks tasksRemain xs
 
-registerDuration :: Milliseconds -> a -> SchedulerM ()
-registerDuration millis _ = do
-  let durSecDouble = millisToSecondsDouble millis
-  observeJobExecDuration durSecDouble
-  logInfo $ "job execution took " <> show (realToFrac @_ @NominalDiffTime durSecDouble)
+registerDuration :: Text -> Milliseconds -> a -> SchedulerM ()
+registerDuration jobType millis _ = addGenericLatency ("Job_execution_" <> jobType) millis
 
 -- TODO: refactor the prometheus metrics to measure data that we really need
 
@@ -146,8 +150,9 @@ executeTask SchedulerHandle {..} (AnyJob job) = do
   let begTime = job.scheduledAt
   endTime <- getCurrentTime
   let diff = T.diffUTCTime endTime begTime
-  logDebug $ "diffTime in picking up the job : " <> show (nominalDiffTimeToSeconds diff)
-  fork "" $ addGenericLatency "Job_pickup" $ fromIntegral $ fromEnum diff
+      diffInMill = Milliseconds (div (fromEnum diff) 1000000000)
+  logDebug $ "diffTime in picking up the job : " <> show diffInMill
+  fork "" $ addGenericLatency ("Job_pickup_" <> jobType') $ diffInMill
   case findJobHandlerFunc job jobHandlers of
     Nothing -> failExecution jobType' "No handler function found for the job type = "
     Just handlerFunc_ -> do
@@ -172,6 +177,9 @@ executeTask SchedulerHandle {..} (AnyJob job) = do
 registerExecutionResult :: forall t. (JobProcessor t) => SchedulerHandle t -> AnyJob t -> ExecutionResult -> SchedulerM ()
 registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
   let jobType' = show (fromSing $ jobType jobInfo)
+      storedJobInfo = storeJobInfo jobInfo
+  when (storedJobType storedJobInfo == "SendSearchRequestToDriver") $
+    logDebug $ "Executed scheduled search entry: " <> show (toJSON (AnyJob job))
   logDebug $ "Current Job Id with Status : " <> show id <> " " <> show result
   case result of
     DuplicateExecution -> do
@@ -181,8 +189,9 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
       markAsComplete jobType' job.id
       fork "" $ incrementStreamCounter ("Executor_" <> show jobType')
     Terminate description -> do
-      logInfo $ "job terminated on try " <> show (currErrors + 1) <> "; reason: " <> description
+      logError $ "job terminated on try " <> show (currErrors + 1) <> "; with jobId: " <> show job.id <> "; reason: " <> description
       markAsFailed jobType' job.id
+      fork "" $ incrementStreamFailedCounter ("Executor_" <> show jobType')
     ReSchedule reScheduledTime -> do
       logInfo $ "job rescheduled on time = " <> show reScheduledTime <> " jobType :" <> jobType'
       reSchedule jobType' j reScheduledTime
@@ -190,10 +199,10 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
       let newErrorsCount = job.currErrors + 1
        in if newErrorsCount >= job.maxErrors
             then do
-              logError $ "retries amount exceeded, job failed after try " <> show newErrorsCount
+              logError $ "retries amount exceeded for jobId:" <> show job.id <> ", job failed after try " <> show newErrorsCount
               updateErrorCountAndFail jobType' job.id newErrorsCount
             else do
-              logInfo $ "try " <> show newErrorsCount <> " was not successful, trying again"
+              logError $ "try " <> show newErrorsCount <> " was not successful for jobId:" <> show job.id <> ", trying again"
               waitBeforeRetry <- asks (.waitBeforeRetry)
               now <- getCurrentTime
               reScheduleOnError jobType' j newErrorsCount $

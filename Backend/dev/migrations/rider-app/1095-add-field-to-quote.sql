@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.quote ADD COLUMN merchant_id character varying(36) NOT NULL REFERENCES atlas_app.merchant (id) DEFAULT 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51';

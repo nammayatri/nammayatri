@@ -1,0 +1,88 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  LocationAddress: Domain.Types.LocationAddress
+
+Location:
+  tableName: location
+
+  derives: "Generic, Show, Eq, Kernel.External.Maps.HasCoordinates, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id Location
+    lat: Double
+    lon: Double
+    address: LocationAddress
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    LocationAPIEntity:
+      lat: Double
+      lon: Double
+      street: Maybe Text
+      door: Maybe Text
+      city: Maybe Text
+      state: Maybe Text
+      country: Maybe Text
+      building: Maybe Text
+      areaCode: Maybe Text
+      area: Maybe Text
+      ward: Maybe Text
+      id: Id Location
+      placeId: Maybe Text
+      instructions: Maybe Text
+      title: Maybe Text
+      extras: Maybe Text
+      derive: "Eq"
+
+  beamFields:
+    address:
+      street: Maybe Text
+      door: Maybe Text
+      city: Maybe Text
+      state: Maybe Text
+      country: Maybe Text
+      building: Maybe Text
+      areaCode: Maybe Text
+      area: Maybe Text
+      ward: Maybe Text
+      placeId: Maybe Text
+      instructions: Maybe Text
+      title: Maybe Text
+      extras: Maybe Text
+
+  toTType:
+    street: Domain.Types.LocationAddress.street|I
+    door: Domain.Types.LocationAddress.door|I
+    city: Domain.Types.LocationAddress.city|I
+    state: Domain.Types.LocationAddress.state|I
+    country: Domain.Types.LocationAddress.country|I
+    building: Domain.Types.LocationAddress.building|I
+    areaCode: Domain.Types.LocationAddress.areaCode|I
+    area: Domain.Types.LocationAddress.area|I
+    ward: Domain.Types.LocationAddress.ward|I
+    placeId: Domain.Types.LocationAddress.placeId|I
+    instructions: Domain.Types.LocationAddress.instructions|I
+    title: Domain.Types.LocationAddress.title|I
+    extras: Domain.Types.LocationAddress.extras|I
+
+  fromTType:
+    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId,instructions,title,extras}|E
+
+  queries:
+    updateAddress:
+      kvFunction: updateOneWithKV
+      params: [address]
+      where: id
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateInstructionsAndExtrasById:
+      kvFunction: updateOneWithKV
+      params:
+        - instructions|B
+        - extras|B
+      where: id
+  constraints:
+    id: PrimaryKey

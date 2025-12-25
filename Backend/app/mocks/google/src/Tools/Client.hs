@@ -20,12 +20,15 @@ import qualified Kernel.External.Maps.Google.RoadsClient as Roads
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Error (GenericError (InternalError))
-import Kernel.Utils.Common (MonadFlow, callAPI, fromEitherM)
+import Kernel.Utils.Common (MonadFlow, fromEitherM)
+import Kernel.Utils.Servant.Client
 
 snapToRoad ::
   ( HasCallStack,
     Metrics.CoreMetrics m,
-    MonadFlow m
+    MonadFlow m,
+    HasRequestId r,
+    MonadReader r m
   ) =>
   BaseUrl ->
   Text ->

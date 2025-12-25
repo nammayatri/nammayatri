@@ -20,13 +20,14 @@ import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Person as SP
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
-import qualified Storage.Queries.Person.PersonStats as QPS
+import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
+import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SavedReqLocation as QSRL
 import qualified Storage.Queries.SearchRequest as QSR
@@ -71,14 +72,14 @@ data FrequencyCategory = HIGH | MID | LOW | ZERO
 data UserCategory = POWER | REGULAR | IRREGULAR | RARE
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getPersonStats :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> m PersonStatsRes
-getPersonStats (personId, merchantId) = do
+getPersonStats :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, ClickhouseFlow m r) => (Id DP.Person, Id Merchant.Merchant) -> m PersonStatsRes
+getPersonStats (personId, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   personStats_ <- runInReplica $ QPS.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
   now <- getCurrentTime
   completedRidesCount <- runInReplica $ QRide.countRidesByRiderId personId
   when (completedRidesCount > 0 && all (== 0) [personStats_.userCancelledRides, personStats_.completedRides, personStats_.weekendRides, personStats_.weekdayRides, personStats_.offPeakRides, personStats_.eveningPeakRides, personStats_.morningPeakRides, personStats_.weekendPeakRides]) $ do
-    SP.backfillPersonStats personId merchantId
+    SP.backfillPersonStats personId person.merchantOperatingCityId
 
   personStats <- runInReplica $ QPS.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
   latestCompletedRide <- runInReplica $ QRide.findLatestCompletedRide personId

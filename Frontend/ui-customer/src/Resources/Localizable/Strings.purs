@@ -20,15 +20,11 @@ import Language.Types (STR)
 import MerchantConfig.Utils (getStringFromConfig, getStringWithVar)
 import Prelude (($))
 import Data.Maybe (Maybe(..))
-import Debug (spy)
 import ConfigJBridge (getKeyInSharedPrefKeysConfig)
-import Resources.Localizable.BN (getBN)
-import Resources.Localizable.EN (getEN)
-import Resources.Localizable.HI (getHI)
-import Resources.Localizable.KN (getKN)
-import Resources.Localizable.ML (getML)
-import Resources.Localizable.FR (getFR)
 import Locale.Utils
+import Data.String as DS
+
+import Resources.LocalizableV2.Strings as StringsV2
 
 getString :: STR -> String
 getString key = 
@@ -39,17 +35,10 @@ getStringFromConfigOrLocal :: String -> STR -> String
 getStringFromConfigOrLocal language key = 
   case (getStringFromConfig key Just Nothing) of
     Just value -> value
-    Nothing    -> getStringFromLocal language key
+    Nothing    ->  StringsV2.getString language key
   
 getVarString :: STR -> Array String -> String
 getVarString key vals = getStringWithVar (getString key) vals
 
-getStringFromLocal :: String -> STR -> String
-getStringFromLocal language key = 
-  case language of
-    "BN_IN" -> getBN key
-    "HI_IN" -> getHI key
-    "KN_IN" -> getKN key
-    "ML_IN" -> getML key
-    "FR_FR" -> getFR key
-    _       -> getEN key
+getStringWithoutNewLine :: STR -> String
+getStringWithoutNewLine str = DS.replace (DS.Pattern "\n") (DS.Replacement " ") $ getString str

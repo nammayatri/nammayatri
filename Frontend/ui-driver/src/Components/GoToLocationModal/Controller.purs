@@ -18,6 +18,13 @@ module Components.GoToLocationModal.Controller where
 
 
 import Data.Maybe (Maybe(..))
+import Prelude (show, class Show, (<>))
+
+instance showAction :: Show Action where
+  show (EditLocation var1) = "EditLocation_" <> show var1
+  show (DeleteLocation var1) = "DeleteLocation_" <> show var1
+  show (CardClicked var1) = "CardClicked_" <> show var1
+  show (NoAction) = "NoAction"
 
 data Action = EditLocation GoToModalConfig
             | DeleteLocation GoToModalConfig

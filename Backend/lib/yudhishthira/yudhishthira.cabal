@@ -1,0 +1,328 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           yudhishthira
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2024 Moving Innovation Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
+library
+  exposed-modules:
+      Lib.Yudhishthira.Event
+      Lib.Yudhishthira.Event.KaalChakra
+      Lib.Yudhishthira.Event.KaalChakra.Internal
+      Lib.Yudhishthira.Event.KaalChakra.Jobs
+      Lib.Yudhishthira.Event.KaalChakra.Parse
+      Lib.Yudhishthira.Event.KaalChakra.Template
+      Lib.Yudhishthira.Flow.Dashboard
+      Lib.Yudhishthira.Storage.Beam.BeamFlow
+      Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement
+      Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout
+      Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElementExtra
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRolloutExtra
+      Lib.Yudhishthira.Storage.Queries.NammaTagExtra
+      Lib.Yudhishthira.Storage.Queries.TimeBoundConfigExtra
+      Lib.Yudhishthira.Storage.Queries.Transformers.NammaTag
+      Lib.Yudhishthira.Storage.Queries.UserDataExtra
+      Lib.Yudhishthira.Tools.Error
+      Lib.Yudhishthira.Tools.Utils
+      Lib.Yudhishthira.Types
+      Lib.Yudhishthira.Types.Application
+      Lib.Yudhishthira.Types.Common
+      Lib.Yudhishthira.Types.ConfigPilot
+      Lib.Yudhishthira.Types.KaalChakra
+      Lib.Yudhishthira.Types.Manual
+      Lib.Yudhishthira.Types.Tag
+      Lib.Yudhishthira.TypesTH
+      Tools.Beam.UtilsTH
+      Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement
+      Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout
+      Lib.Yudhishthira.Storage.Beam.ChakraQueries
+      Lib.Yudhishthira.Storage.Beam.NammaTag
+      Lib.Yudhishthira.Storage.Beam.NammaTagTrigger
+      Lib.Yudhishthira.Storage.Beam.TagActionNotificationConfig
+      Lib.Yudhishthira.Storage.Beam.TimeBoundConfig
+      Lib.Yudhishthira.Storage.Beam.UserData
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout
+      Lib.Yudhishthira.Storage.Queries.ChakraQueries
+      Lib.Yudhishthira.Storage.Queries.NammaTag
+      Lib.Yudhishthira.Storage.Queries.NammaTagTrigger
+      Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicElement
+      Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicRollout
+      Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTag
+      Lib.Yudhishthira.Storage.Queries.OrphanInstances.TimeBoundConfig
+      Lib.Yudhishthira.Storage.Queries.OrphanInstances.UserData
+      Lib.Yudhishthira.Storage.Queries.TagActionNotificationConfig
+      Lib.Yudhishthira.Storage.Queries.TimeBoundConfig
+      Lib.Yudhishthira.Storage.Queries.UserData
+      Lib.Yudhishthira.Types.AppDynamicLogicElement
+      Lib.Yudhishthira.Types.AppDynamicLogicRollout
+      Lib.Yudhishthira.Types.ChakraQueries
+      Lib.Yudhishthira.Types.NammaTag
+      Lib.Yudhishthira.Types.NammaTagTrigger
+      Lib.Yudhishthira.Types.TagActionNotificationConfig
+      Lib.Yudhishthira.Types.TimeBoundConfig
+      Lib.Yudhishthira.Types.UserData
+  other-modules:
+      Paths_yudhishthira
+  hs-source-dirs:
+      src
+      src-read-only
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DerivingStrategies
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+      TemplateHaskell
+      DerivingStrategies
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  extra-libraries:
+      cac_client
+  build-depends:
+      JuicyPixels
+    , JuicyPixels-extra
+    , aeson
+    , base >=4.7 && <5
+    , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , beckn-services
+    , beckn-spec
+    , bytestring
+    , casing
+    , cassava
+    , cereal
+    , containers
+    , cryptonite
+    , data-default-class
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , extra
+    , generic-lens
+    , geohash ==1.0.1
+    , hashable
+    , haskell-cac
+    , hspec
+    , http-client
+    , http-client-tls
+    , http-conduit
+    , http-types
+    , json-logic-hs
+    , lens
+    , lens-aeson
+    , mobility-core
+    , openapi3
+    , passetto-client
+    , persistent
+    , postgresql-simple
+    , prometheus-client
+    , pureMD5
+    , random
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , scheduler
+    , scientific
+    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , sessionizer-metrics
+    , shared-services
+    , singletons
+    , singletons-th
+    , split
+    , stm
+    , string-conversions
+    , template-haskell
+    , text
+    , text-conversions
+    , time
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , wai-extra
+    , warp
+  default-language: Haskell2010
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4
+
+test-suite yudhishthira-tests
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      KaalChakraJobs
+      Paths_yudhishthira
+  hs-source-dirs:
+      test/app
+      test/src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DerivingStrategies
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+      TemplateHaskell
+      DerivingStrategies
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor
+  build-depends:
+      JuicyPixels
+    , JuicyPixels-extra
+    , aeson
+    , base >=4.7 && <5
+    , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , beckn-services
+    , bytestring
+    , casing
+    , cassava
+    , cereal
+    , containers
+    , cryptonite
+    , data-default-class
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , extra
+    , generic-lens
+    , geohash ==1.0.1
+    , hashable
+    , hspec
+    , http-client
+    , http-client-tls
+    , http-conduit
+    , http-types
+    , json-logic-hs
+    , lens
+    , lens-aeson
+    , mobility-core
+    , openapi3
+    , passetto-client
+    , persistent
+    , postgresql-simple
+    , prometheus-client
+    , pureMD5
+    , random
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , scheduler
+    , scientific
+    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , shared-services
+    , singletons
+    , singletons-th
+    , split
+    , stm
+    , string-conversions
+    , tasty
+    , tasty-hunit
+    , template-haskell
+    , text
+    , text-conversions
+    , time
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , wai-extra
+    , warp
+    , yudhishthira
+  default-language: Haskell2010

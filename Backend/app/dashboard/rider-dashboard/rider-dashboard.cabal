@@ -27,33 +27,83 @@ flag Local
 library
   exposed-modules:
       API
+      API.BharatTaxi.User
       API.RiderPlatform
-      API.RiderPlatform.Booking
-      API.RiderPlatform.Customer
-      API.RiderPlatform.HotSpot
-      API.RiderPlatform.Issue
-      API.RiderPlatform.IssueList
-      API.RiderPlatform.Merchant
-      API.RiderPlatform.Ride
-      API.RiderPlatform.RideBooking
-      API.RiderPlatform.RideBooking.Booking
-      API.RiderPlatform.RideBooking.Cancel
-      API.RiderPlatform.RideBooking.Confirm
-      API.RiderPlatform.RideBooking.Frontend
-      API.RiderPlatform.RideBooking.Maps
-      API.RiderPlatform.RideBooking.Profile
-      API.RiderPlatform.RideBooking.Quote
-      API.RiderPlatform.RideBooking.Registration
-      API.RiderPlatform.RideBooking.Search
-      API.RiderPlatform.RideBooking.Select
-      API.RiderPlatform.Tickets
       App
-      RiderPlatformClient.RiderApp.Operations
-      RiderPlatformClient.RiderApp.RideBooking
+      Domain.Action.RiderPlatform.AppManagement.Customer
+      Domain.Action.RiderPlatform.AppManagement.EventManagement
+      Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding
+      Domain.Action.RiderPlatform.AppManagement.Pass
+      Domain.Action.RiderPlatform.AppManagement.TicketDashboard
+      Domain.Action.RiderPlatform.AppManagement.Tickets
+      Domain.Action.RiderPlatform.IssueManagement.Issue
+      Domain.Action.RiderPlatform.IssueManagement.IssueList
+      Domain.Action.RiderPlatform.Management.Booking
+      Domain.Action.RiderPlatform.Management.Customer
+      Domain.Action.RiderPlatform.Management.FRFSTicket
+      Domain.Action.RiderPlatform.Management.Invoice
+      Domain.Action.RiderPlatform.Management.Media
+      Domain.Action.RiderPlatform.Management.Merchant
+      Domain.Action.RiderPlatform.Management.NammaTag
+      Domain.Action.RiderPlatform.Management.Ride
+      Domain.Action.RiderPlatform.Management.SosMedia
+      Domain.Action.RiderPlatform.Management.System
+      Domain.Action.RiderPlatform.RideBooking.Booking
+      Domain.Action.RiderPlatform.RideBooking.Cancel
+      Domain.Action.RiderPlatform.RideBooking.Confirm
+      Domain.Action.RiderPlatform.RideBooking.Frontend
+      Domain.Action.RiderPlatform.RideBooking.Maps
+      Domain.Action.RiderPlatform.RideBooking.MultiModal
+      Domain.Action.RiderPlatform.RideBooking.NotifyRideInfo
+      Domain.Action.RiderPlatform.RideBooking.Profile
+      Domain.Action.RiderPlatform.RideBooking.Quote
+      Domain.Action.RiderPlatform.RideBooking.Registration
+      Domain.Action.RiderPlatform.RideBooking.Search
+      Domain.Action.RiderPlatform.RideBooking.Select
+      Storage.Beam.CommonInstances
+      API.Action.RiderPlatform.AppManagement
+      API.Action.RiderPlatform.AppManagement.Customer
+      API.Action.RiderPlatform.AppManagement.EventManagement
+      API.Action.RiderPlatform.AppManagement.MerchantOnboarding
+      API.Action.RiderPlatform.AppManagement.Pass
+      API.Action.RiderPlatform.AppManagement.TicketDashboard
+      API.Action.RiderPlatform.AppManagement.Tickets
+      API.Action.RiderPlatform.IssueManagement
+      API.Action.RiderPlatform.IssueManagement.Issue
+      API.Action.RiderPlatform.IssueManagement.IssueList
+      API.Action.RiderPlatform.Management
+      API.Action.RiderPlatform.Management.Booking
+      API.Action.RiderPlatform.Management.Customer
+      API.Action.RiderPlatform.Management.FRFSTicket
+      API.Action.RiderPlatform.Management.Invoice
+      API.Action.RiderPlatform.Management.Media
+      API.Action.RiderPlatform.Management.Merchant
+      API.Action.RiderPlatform.Management.NammaTag
+      API.Action.RiderPlatform.Management.Ride
+      API.Action.RiderPlatform.Management.SosMedia
+      API.Action.RiderPlatform.Management.System
+      API.Action.RiderPlatform.RideBooking
+      API.Action.RiderPlatform.RideBooking.Booking
+      API.Action.RiderPlatform.RideBooking.Cancel
+      API.Action.RiderPlatform.RideBooking.Confirm
+      API.Action.RiderPlatform.RideBooking.Frontend
+      API.Action.RiderPlatform.RideBooking.Maps
+      API.Action.RiderPlatform.RideBooking.MultiModal
+      API.Action.RiderPlatform.RideBooking.NotifyRideInfo
+      API.Action.RiderPlatform.RideBooking.Profile
+      API.Action.RiderPlatform.RideBooking.Quote
+      API.Action.RiderPlatform.RideBooking.Registration
+      API.Action.RiderPlatform.RideBooking.Search
+      API.Action.RiderPlatform.RideBooking.Select
+      API.Client.RiderPlatform.AppManagement
+      API.Client.RiderPlatform.IssueManagement
+      API.Client.RiderPlatform.Management
+      API.Client.RiderPlatform.RideBooking
   other-modules:
       Paths_rider_dashboard
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -92,6 +142,7 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers
@@ -101,6 +152,7 @@ library
     , lib-dashboard
     , mobility-core
     , openapi3
+    , payment
     , persistent
     , persistent-postgresql
     , record-dot-preprocessor
@@ -110,10 +162,12 @@ library
     , servant-openapi3
     , servant-server
     , shared-services
+    , special-zone-a
     , template-haskell
     , text
     , time
     , unordered-containers
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -164,6 +218,7 @@ executable rider-dashboard-exe
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers
@@ -184,6 +239,7 @@ executable rider-dashboard-exe
     , text
     , time
     , unordered-containers
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

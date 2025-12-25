@@ -1,0 +1,166 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+  Money: Kernel.Types.Common
+  PayoutOrderStatus: Kernel.External.Payout.Juspay.Types.Payout
+
+DailyStats:
+  tableName: daily_stats
+  derives: "Generic,Show,ToJSON,FromJSON"
+  types:
+    PayoutStatus:
+      enum: "Verifying,Processing,Success,Failed,ManualReview,PendingForVpa,Initialized"
+  fields:
+    id : Text
+    driverId : Id Person
+    totalEarnings : HighPrecMoney
+    currency: Currency
+    numRides : Int
+    totalDistance : Meters
+    distanceUnit : DistanceUnit
+    merchantLocalDate : Day
+    activatedValidRides: Int
+    referralEarnings: HighPrecMoney
+    referralCounts: Int
+    payoutStatus: PayoutStatus
+    payoutOrderId: Maybe Text
+    payoutOrderStatus: Maybe PayoutOrderStatus
+    tollCharges: HighPrecMoney
+    bonusEarnings: HighPrecMoney
+    tipAmount: HighPrecMoney
+    cancellationCharges: HighPrecMoney
+    totalRideTime: Seconds
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    numDriversOnboarded: Int
+    numFleetsOnboarded: Int
+    onlineDuration: Maybe Seconds
+
+  beamType:
+    distanceUnit: Maybe DistanceUnit
+    activatedValidRides: Maybe Int
+    referralCounts: Maybe Int
+    payoutStatus: Maybe PayoutStatus
+    referralEarnings: Maybe HighPrecMoney
+    tollCharges: Maybe HighPrecMoney
+    bonusEarnings: Maybe HighPrecMoney
+    tipAmount: Maybe HighPrecMoney
+    cancellationCharges: Maybe HighPrecMoney
+    totalRideTime: Maybe Seconds
+    numDriversOnboarded: Maybe Int
+    numFleetsOnboarded: Maybe Int
+
+  beamFields:
+    totalEarnings:
+      totalEarnings: Money
+      totalEarningsAmount: Maybe HighPrecMoney
+    currency:
+      currency: Maybe Currency
+
+  fromTType:
+    totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    referralEarnings: getHighPrecMoney
+    activatedValidRides:  Kernel.Prelude.fromMaybe 0|I
+    referralCounts: Kernel.Prelude.fromMaybe 0|I
+    payoutStatus: Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Initialized|I
+    tollCharges: Kernel.Prelude.fromMaybe 0|I
+    bonusEarnings: Kernel.Prelude.fromMaybe 0|I
+    tipAmount: Kernel.Prelude.fromMaybe 0|I
+    cancellationCharges: Kernel.Prelude.fromMaybe 0|I
+    totalRideTime: Kernel.Prelude.fromMaybe 0|I
+    numDriversOnboarded: Kernel.Prelude.fromMaybe 0|I
+    numFleetsOnboarded: Kernel.Prelude.fromMaybe 0|I
+
+  toTType:
+    totalEarnings: Kernel.Prelude.roundToIntegral|I
+    totalEarningsAmount:  Kernel.Prelude.Just|I
+    currency: Kernel.Prelude.Just|I
+    distanceUnit: Kernel.Prelude.Just|I
+    referralEarnings: Kernel.Prelude.Just|I
+    referralEarningsAmount: Kernel.Prelude.Just|I
+    activatedValidRides:  Kernel.Prelude.Just|I
+    referralCounts: Kernel.Prelude.Just|I
+    payoutStatus: Kernel.Prelude.Just|I
+    tollCharges: Kernel.Prelude.Just|I
+    bonusEarnings: Kernel.Prelude.Just|I
+    tipAmount: Kernel.Prelude.Just|I
+    cancellationCharges: Kernel.Prelude.Just|I
+    totalRideTime: Kernel.Prelude.Just|I
+    numDriversOnboarded: Kernel.Prelude.Just|I
+    numFleetsOnboarded: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+
+  queries:
+    findByDriverIdAndDate:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, merchantLocalDate]
+
+    updateByDriverId:
+      kvFunction: updateOneWithKV
+      params: [totalEarnings, numRides, totalDistance, tollCharges, bonusEarnings, totalRideTime]
+      where:
+        and: [driverId, merchantLocalDate]
+
+    updateReferralStatsByDriverId:
+      kvFunction: updateOneWithKV
+      params: [activatedValidRides, referralEarnings, payoutStatus]
+      where:
+        and: [driverId, merchantLocalDate]
+
+    updateTipAmountByDriverId:
+      kvFunction: updateOneWithKV
+      params: [tipAmount]
+      where:
+        and: [driverId, merchantLocalDate]
+
+    updateReferralCount:
+      kvFunction: updateOneWithKV
+      params: [referralCounts]
+      where:
+        and: [driverId, merchantLocalDate]
+
+    updatePayoutStatusById:
+      kvFunction: updateOneWithKV
+      params: [payoutStatus]
+      where: id
+
+    updatePayoutOrderId:
+      kvFunction: updateOneWithKV
+      params: [payoutOrderId]
+      where: id
+
+    updatePayoutOrderIdAndStatus:
+      kvFunction: updateOneWithKV
+      params: [payoutOrderId, payoutStatus]
+      where: id
+
+    updateNumDriversOnboardedByDriverId:
+      kvFunction: updateOneWithKV
+      params: [numDriversOnboarded]
+      where:
+        and: [driverId, merchantLocalDate]
+
+    updateNumFleetsOnboardedByDriverId:
+      kvFunction: updateOneWithKV
+      params: [numFleetsOnboarded]
+      where:
+        and: [driverId, merchantLocalDate]
+
+    updateMerchantIdAndCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOperatingCityId]
+      where: driverId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+

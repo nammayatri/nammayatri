@@ -1,0 +1,26 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name getOnboardingDocumentConfigs
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/onboarding/document/configs
+token: {{juspay_admin}}
+
+###
+
+# @name getOnboardingRegisterStatus
+
+# INSERT INTO atlas_bpp_dashboard.fleet_member_association (fleet_member_id, fleet_owner_id, enabled, is_fleet_owner) VALUES
+#   ('3680f4b5-dce4-4d03-aa8c-5405690e87bd', 'favorit-fleet-owner-0000000000000000', true, true);
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/onboarding/register/status?driverId=favorit-auto2-0000000000000000000000&onlyMandatoryDocs=true
+token: {{juspay_admin}}

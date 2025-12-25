@@ -28,6 +28,7 @@ default-extensions:
   - DeriveAnyClass
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingStrategies
   - DuplicateRecordFields
   - ExplicitNamespaces
   - FlexibleContexts
@@ -46,6 +47,7 @@ default-extensions:
   - RecordWildCards
   - ScopedTypeVariables
   - StandaloneDeriving
+  - TemplateHaskell
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -77,7 +79,6 @@ dependencies:
   - servant-server
   - singletons
   - uuid
-  - hashmap
   - cereal
   - beam-core
   - beam-mysql

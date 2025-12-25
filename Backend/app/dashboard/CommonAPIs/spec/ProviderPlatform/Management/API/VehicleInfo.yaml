@@ -1,0 +1,38 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+
+module: VehicleInfo
+
+apis:
+  - GET:
+      endpoint: /{rcNo}/list
+      params:
+        rcNo: Text
+      auth: ApiAuthV2
+      response:
+        type: VehicleExtraInformation
+  - POST:
+      endpoint: /update
+      auth: ApiAuthV2
+      request:
+        type: UpdateVehicleInfoReq
+      response:
+        type: APISuccess
+
+types:
+  UpdateVehicleInfoReq:
+    - rcNo: Text
+    - newInfo: "[VehicleInfoPostData]"
+    - derive: "'HideSecrets"
+  VehicleInfoPostData:
+    - questionId: Text
+    - question: Text
+    - answer: Text
+  VehicleInfoAPIEntity:
+    - questionId: Text
+    - question: Text
+    - answer: Text
+  VehicleExtraInformation:
+    - rcNo: Text
+    - mediaUploaded: Bool
+    - vehicleInfo: "[VehicleInfoAPIEntity]"

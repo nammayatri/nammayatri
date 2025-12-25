@@ -28,29 +28,110 @@ library
   exposed-modules:
       Dashboard.Common
       Dashboard.Common.Booking
-      Dashboard.Common.DriverReferral
+      Dashboard.Common.Driver
+      Dashboard.Common.DriverCoins
       Dashboard.Common.Exotel
+      Dashboard.Common.MediaFileDocument
       Dashboard.Common.Merchant
-      Dashboard.Common.Message
       Dashboard.Common.Ride
       Dashboard.Common.SpecialZone
-      Dashboard.ProviderPlatform.Driver
-      Dashboard.ProviderPlatform.Driver.Coin
-      Dashboard.ProviderPlatform.Driver.Registration
-      Dashboard.ProviderPlatform.DriverReferral
-      Dashboard.ProviderPlatform.Merchant
-      Dashboard.ProviderPlatform.Message
-      Dashboard.ProviderPlatform.Revenue
-      Dashboard.ProviderPlatform.Ride
-      Dashboard.ProviderPlatform.Volunteer
-      Dashboard.RiderPlatform.Customer
-      Dashboard.RiderPlatform.Merchant
-      Dashboard.RiderPlatform.Message
-      Dashboard.RiderPlatform.Ride
+      Dashboard.ProviderPlatform.CacAuth
+      Dashboard.ProviderPlatform.Fleet.Driver
+      Dashboard.ProviderPlatform.Fleet.RegistrationV2
+      Dashboard.ProviderPlatform.Management.Driver
+      Dashboard.ProviderPlatform.Management.DriverCoins
+      Dashboard.ProviderPlatform.Management.DriverReferral
+      Dashboard.ProviderPlatform.Management.DriverRegistration
+      Dashboard.ProviderPlatform.Management.MediaFileDocument
+      Dashboard.ProviderPlatform.Management.Merchant
+      Dashboard.ProviderPlatform.Management.Message
+      Dashboard.ProviderPlatform.Management.Ride
+      Dashboard.ProviderPlatform.Operator.Registration
+      Dashboard.RiderPlatform.Management.FRFSTicket
+      Dashboard.RiderPlatform.Management.Merchant
+      Dashboard.RiderPlatform.Management.Ride
+      Dashboard.SafetyPlatform
+      API.Types.ProviderPlatform.Fleet
+      API.Types.ProviderPlatform.Fleet.Driver
+      API.Types.ProviderPlatform.Fleet.Endpoints.Driver
+      API.Types.ProviderPlatform.Fleet.Endpoints.LiveMap
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+      API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+      API.Types.ProviderPlatform.Fleet.LiveMap
+      API.Types.ProviderPlatform.Fleet.Onboarding
+      API.Types.ProviderPlatform.Fleet.RegistrationV2
+      API.Types.ProviderPlatform.Management
+      API.Types.ProviderPlatform.Management.Account
+      API.Types.ProviderPlatform.Management.Booking
+      API.Types.ProviderPlatform.Management.CoinsConfig
+      API.Types.ProviderPlatform.Management.Driver
+      API.Types.ProviderPlatform.Management.DriverCoins
+      API.Types.ProviderPlatform.Management.DriverGoHome
+      API.Types.ProviderPlatform.Management.DriverReferral
+      API.Types.ProviderPlatform.Management.DriverRegistration
+      API.Types.ProviderPlatform.Management.Endpoints.Account
+      API.Types.ProviderPlatform.Management.Endpoints.Booking
+      API.Types.ProviderPlatform.Management.Endpoints.CoinsConfig
+      API.Types.ProviderPlatform.Management.Endpoints.Driver
+      API.Types.ProviderPlatform.Management.Endpoints.DriverCoins
+      API.Types.ProviderPlatform.Management.Endpoints.DriverGoHome
+      API.Types.ProviderPlatform.Management.Endpoints.DriverReferral
+      API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+      API.Types.ProviderPlatform.Management.Endpoints.Media
+      API.Types.ProviderPlatform.Management.Endpoints.MediaFileDocument
+      API.Types.ProviderPlatform.Management.Endpoints.Merchant
+      API.Types.ProviderPlatform.Management.Endpoints.Message
+      API.Types.ProviderPlatform.Management.Endpoints.NammaTag
+      API.Types.ProviderPlatform.Management.Endpoints.Payout
+      API.Types.ProviderPlatform.Management.Endpoints.Revenue
+      API.Types.ProviderPlatform.Management.Endpoints.Ride
+      API.Types.ProviderPlatform.Management.Endpoints.System
+      API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
+      API.Types.ProviderPlatform.Management.Endpoints.Volunteer
+      API.Types.ProviderPlatform.Management.Media
+      API.Types.ProviderPlatform.Management.MediaFileDocument
+      API.Types.ProviderPlatform.Management.Merchant
+      API.Types.ProviderPlatform.Management.Message
+      API.Types.ProviderPlatform.Management.NammaTag
+      API.Types.ProviderPlatform.Management.Payout
+      API.Types.ProviderPlatform.Management.Revenue
+      API.Types.ProviderPlatform.Management.Ride
+      API.Types.ProviderPlatform.Management.System
+      API.Types.ProviderPlatform.Management.VehicleInfo
+      API.Types.ProviderPlatform.Management.Volunteer
+      API.Types.ProviderPlatform.Operator
+      API.Types.ProviderPlatform.Operator.Driver
+      API.Types.ProviderPlatform.Operator.Endpoints.Driver
+      API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement
+      API.Types.ProviderPlatform.Operator.Endpoints.Registration
+      API.Types.ProviderPlatform.Operator.FleetManagement
+      API.Types.ProviderPlatform.Operator.Registration
+      API.Types.RiderPlatform.Management
+      API.Types.RiderPlatform.Management.Booking
+      API.Types.RiderPlatform.Management.Customer
+      API.Types.RiderPlatform.Management.Endpoints.Booking
+      API.Types.RiderPlatform.Management.Endpoints.Customer
+      API.Types.RiderPlatform.Management.Endpoints.FRFSTicket
+      API.Types.RiderPlatform.Management.Endpoints.Invoice
+      API.Types.RiderPlatform.Management.Endpoints.Media
+      API.Types.RiderPlatform.Management.Endpoints.Merchant
+      API.Types.RiderPlatform.Management.Endpoints.NammaTag
+      API.Types.RiderPlatform.Management.Endpoints.Ride
+      API.Types.RiderPlatform.Management.Endpoints.SosMedia
+      API.Types.RiderPlatform.Management.Endpoints.System
+      API.Types.RiderPlatform.Management.FRFSTicket
+      API.Types.RiderPlatform.Management.Invoice
+      API.Types.RiderPlatform.Management.Media
+      API.Types.RiderPlatform.Management.Merchant
+      API.Types.RiderPlatform.Management.NammaTag
+      API.Types.RiderPlatform.Management.Ride
+      API.Types.RiderPlatform.Management.SosMedia
+      API.Types.RiderPlatform.Management.System
   other-modules:
       Paths_dashboard_helper_api
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -58,6 +139,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -85,16 +167,21 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      TemplateHaskell
   ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
+    , casing
+    , cassava
     , deriving-aeson
     , esqueleto
     , euler-hs
     , extra
+    , hashable
     , mobility-core
     , openapi3
     , persistent
@@ -105,11 +192,16 @@ library
     , servant-multipart
     , servant-openapi3
     , servant-server
+    , shared-services
     , singletons
+    , singletons-th
+    , special-zone-a
     , template-haskell
     , text
     , time
+    , vector
     , wai
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

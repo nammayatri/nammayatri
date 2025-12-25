@@ -1,0 +1,90 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+  CallService: Kernel.External.Call.Types
+
+CallStatus:
+  tableName: call_status
+
+  types:
+    CallAttemptStatus:
+      enum: "Attempted, Resolved, Failed, Pending"
+
+  fields:
+    id : Id CallStatus
+    callId : Text
+    entityId : Maybe Text
+    dtmfNumberUsed : Maybe Text
+    status : Kernel.External.Call.Interface.Types.CallStatus
+    recordingUrl : Maybe Text
+    conversationDuration : Int
+    merchantId : Maybe Text
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+    callService : Maybe CallService
+    callError : Maybe Text
+    callAttempt : Maybe CallAttemptStatus
+    createdAt: UTCTime
+    aiCallAnalyzed: Maybe Bool
+
+  constraints:
+    id: PrimaryKey
+    callId: "!SecondaryKey" # forcing to be a secondary key
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    updateCallStatus:
+      kvFunction: updateWithKV
+      params: [conversationDuration, recordingUrl, status, callAttempt]
+      where: id
+
+    updateCallStatusCallId:
+      kvFunction: updateWithKV
+      params: [callId]
+      where: id
+
+    updateCallError:
+      kvFunction: updateWithKV
+      params: [callError, callService, merchantId]
+      where: id
+
+    updateCallStatusInformation:
+      kvFunction: updateWithKV
+      params: [dtmfNumberUsed, merchantId, callService]
+      where: id
+
+    findByCallId:
+      kvFunction: findOneWithKV
+      where: callId
+
+    updateAiCallAnalyzed:
+      kvFunction: updateWithKV
+      params: [aiCallAnalyzed]
+      where: callId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  sqlType:
+    callId: character varying (255)
+    recordingUrl: character varying (255)
+    status: character varying (255)
+    conversationDuration: bigint
+    dtmfNumberUsed: character varying (255)
+    entityId: character varying (36)
+    merchantId: character varying (36)
+    merchantOperatingCityId: character varying(36)
+    aiCallAnalyzed: boolean
+
+  default:
+    entityId: "'UNKNOWN'"
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+  excludedDefaultQueries:
+    - create
+

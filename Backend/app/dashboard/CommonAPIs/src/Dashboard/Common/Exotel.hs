@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Dashboard.Common.Exotel
   ( module Dashboard.Common.Exotel,
@@ -34,7 +33,7 @@ import Servant hiding (Summary)
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data ExotelEndpoint
   = ExotelHeartbeatEndpoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "ExotelEndpoint"
 

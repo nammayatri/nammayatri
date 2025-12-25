@@ -20,7 +20,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
-import android.provider.Settings;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -30,8 +29,8 @@ import com.clevertap.android.sdk.pushnotification.NotificationInfo;
 import com.clevertap.android.sdk.pushnotification.fcm.CTFcmMessageHandler;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
 import org.json.JSONArray;
@@ -47,6 +46,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
@@ -56,44 +56,48 @@ import java.util.concurrent.Executors;
 import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
+import in.juspay.mobility.app.overlayMessage.MessagingView;
+import in.juspay.mobility.app.overlayMessage.Service;
+import in.juspay.mobility.common.services.TLSSocketFactory;
 
-public class MyFirebaseMessagingService extends FirebaseMessagingService {
+public  class MyFirebaseMessagingService {
 
     private static final ArrayList<BundleUpdateCallBack> bundleUpdate = new ArrayList<>();
     private static final ArrayList<ShowNotificationCallBack> showNotificationCallBacks = new ArrayList<>();
     public static final HashMap<String, Long> clearedRideRequest = new HashMap<>();
+
+    public static final Hashtable<String, String> notificationIdsReceived = new Hashtable<>();
     private static final String LOG_TAG = "FirebaseMessagingService";
 
-    @Override
-    public void onNewToken(@NonNull String newToken) {
-        super.onNewToken(newToken);
+
+    public static void onNewToken(Context context, @NonNull String newToken) {
         Log.e("newToken", newToken);
-        if(newToken.equals(" ") || newToken.equals("__failed") || newToken.equals("null") || newToken.equals("(null)") || newToken.equals("")){
+        if(newToken.equals(" ") || newToken.equals("__failed") || newToken.equals("null") || newToken.equals("(null)") || newToken.isEmpty()){
             Task<String> tokenTask = FirebaseMessaging.getInstance().getToken();
             tokenTask.addOnCompleteListener(task -> {
                 if (task.isSuccessful()) {
                     String token = task.getResult();
                     Log.d("TAG", "token: " + token);
-                    handleFCMToken(token);
+                    handleFCMToken(context,token);
                 }
             });
-        }else handleFCMToken(newToken);
+        }else handleFCMToken(context,newToken);
         Log.e("newToken", newToken);
     }
 
-    private void handleFCMToken (String newToken){
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(
-                this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+    private static void handleFCMToken (Context context, String newToken){
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putString("FCM_TOKEN", newToken);
         editor.apply();
-        CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(this);
+        CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(context);
         if (cleverTapAPI != null) {
             cleverTapAPI.pushFcmRegistrationId(newToken,true);
         }
         String regToken = sharedPref.getString("", "null");
         if (!regToken.equals("null") && !regToken.equals("__failed")) {
-            updateFCMToken(newToken);
+            updateFCMToken(context,newToken);
         }
     }
 
@@ -117,284 +121,521 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         void callBundleUpdate();
     }
 
-    @Override
-    public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
-        Log.e("onMessageReceived", remoteMessage.getData().toString());
-        firebaseLogEventWithParams("notification_received", "type", remoteMessage.getData().get("notification_type"));
+    public static  void onMessageReceived(Context context, @NonNull RemoteMessage remoteMessage) {
+        Log.e("onMessageReceived FCM", remoteMessage.getData().toString());
+        NotificationUtils.firebaseLogEventWithParams(context, "notification_received", "type", remoteMessage.getData().get("notification_type"));
 
-        super.onMessageReceived(remoteMessage);
         JSONObject payload = new JSONObject();
         JSONObject notification_payload = new JSONObject();
         JSONObject entity_payload = new JSONObject();
         try {
-            if (remoteMessage.getData().size() > 0) {
+            if (!remoteMessage.getData().isEmpty()) {
                 Bundle extras = new Bundle();
                 for (Map.Entry<String, String> entry : remoteMessage.getData().entrySet()) {
                     extras.putString(entry.getKey(), entry.getValue());
                 }
-                CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(this);
-                if (cleverTapAPI != null) {
-                    cleverTapAPI.pushNotificationViewedEvent(extras);
-                }
 
                 NotificationInfo info = CleverTapAPI.getNotificationInfo(extras);
                 if (info.fromCleverTap) {
-                    new CTFcmMessageHandler().createNotification(getApplicationContext(), remoteMessage);
-                } else {
-                    payload.put("notification_type", remoteMessage.getData().get("notification_type"));
-                    payload.put("entity_ids", remoteMessage.getData().get("entity_ids"));
-                    payload.put("entity_type", remoteMessage.getData().get("entity_type"));
-                    payload.put("show_notification", remoteMessage.getData().get("show_notification"));
+                    new CTFcmMessageHandler().createNotification(context, remoteMessage);
+                    return;
+                }
 
-                    String title;
-                    String body;
-                    String imageUrl;
+                String title;
+                String body;
+                String imageUrl;
+                String messageId = remoteMessage.getMessageId();
 
-                    if (remoteMessage.getData().containsKey("notification_json") && remoteMessage.getData().get("notification_json") != null) {
-                        String notificationData = remoteMessage.getData().get("notification_json");
-                        if (notificationData != null) {
-                            notification_payload = new JSONObject(notificationData);
-                        }
-                    }
-                    if (remoteMessage.getData().containsKey("entity_data")) {
-                        String notificationType = remoteMessage.getData().get("notification_type");
-                        if (notificationType != null && notificationType.equals("NEW_RIDE_AVAILABLE")) {
-                            String entityPayload = remoteMessage.getData().get("entity_data");
-                            if (entityPayload != null) {
-                                entity_payload = new JSONObject(entityPayload);
-                            }
-                        }
-                    }
-
-                    RemoteMessage.Notification notification = remoteMessage.getNotification();
-                    if (notification != null) {
-                        title = notification.getTitle();
-                        body = notification.getBody();
-                        imageUrl = remoteMessage.getData().get("image-url");
-                    } else {
-                        title = notification_payload.get("title").toString();
-                        body = notification_payload.get("body").toString();
-                        if (notification_payload.has("imageUrl")) {
-                            imageUrl = notification_payload.get("imageUrl").toString();
-                        } else if (notification_payload.has("icon")){
-                            imageUrl = notification_payload.get("icon").toString();
-                        } else {
-                            imageUrl = null;
-                        }
-                    }
-
-                    SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                    String notificationType = (String) payload.get("notification_type");
-                    stopChatService(notificationType, sharedPref);
-                    String key = getString(R.string.service);
-                    String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
-                    switch (notificationType) {
-                        case NotificationTypes.DRIVER_NOTIFY:
-                            if (remoteMessage.getData().containsKey("driver_notification_payload")) {
-                                String driverNotification = remoteMessage.getData().get("driver_notification_payload");
-                                if (driverNotification != null){
-                                    JSONObject driverNotificationJsonObject = new JSONObject(driverNotification);
-                                    showOverlayMessage(driverNotificationJsonObject);
-                                    if (driverNotificationJsonObject.has("showPushNotification") && !driverNotificationJsonObject.isNull("showPushNotification") ? driverNotificationJsonObject.getBoolean("showPushNotification") : false) {
-                                       NotificationUtils.showNotification(this, title, body, payload, null);
-                                    }
-                                }
-                            }
-                            break;
-
-                        case NotificationTypes.TRIGGER_SERVICE:
-                            if (merchantType.equals("DRIVER")) {
-                                FirebaseAnalytics.getInstance(this).logEvent("notification_trigger_service", new Bundle());
-                                RideRequestUtils.restartLocationService(this);
-                            }
-                            break;
-
-                        case NotificationTypes.NEW_RIDE_AVAILABLE:
-                            if(sharedPref.getString("DISABLE_WIDGET", "null").equals("true") && sharedPref.getString("REMOVE_CONDITION", "false").equals("false")) {
-                                if (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))  showRR(entity_payload, payload);
-                            }else showRR(entity_payload, payload);
-                            break;
-
-                        case NotificationTypes.CLEARED_FARE:
-                            sharedPref.edit().putString(getString(R.string.CLEAR_FARE), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
-                            NotificationUtils.showAllocationNotification(this, payload, entity_payload);
-                            startWidgetService("CLEAR_FARE", payload, entity_payload);
-                            break;
-
-                        case NotificationTypes.CANCELLED_PRODUCT:
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                                NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                            }
-                            sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
-                            if (sharedPref.getString("MAPS_OPENED", "null").equals("true")) {
-                                startMainActivity();
-                            } else {
-                                startWidgetService(getString(R.string.ride_cancelled), payload, entity_payload);
-                            }
-                            break;
-
-                        case NotificationTypes.DRIVER_QUOTE_INCOMING:
-                            if (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause")) {
-                                NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                            }
-                            break;
-
-                        case NotificationTypes.TRIP_FINISHED:
-                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                            if (merchantType.equals("USER")) {
-                                sharedPref.edit().putInt("RIDE_COUNT", sharedPref.getInt("RIDE_COUNT", 0) + 1).apply();
-                                sharedPref.edit().putString("COMPLETED_RIDE_COUNT", String.valueOf(sharedPref.getInt("RIDE_COUNT", 0))).apply();
-                            }
-                            break;
-
-                        case NotificationTypes.DRIVER_ASSIGNMENT:
-                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                            sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
-                            sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.DRIVER_ASSIGNMENT)).apply();
-                            startMainActivity();
-                            break;
-
-                        case NotificationTypes.TRIP_STARTED:
-                            if (payload.get("show_notification").equals("true")) {
-                                NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                            }
-                            break;
-
-                        case NotificationTypes.BUNDLE_UPDATE:
-                            try {
-                                if (bundleUpdate.size() != 0) {
-                                    for (int i = 0; i < bundleUpdate.size(); i++) {
-                                        bundleUpdate.get(i).callBundleUpdate();
-                                    }
-                                } else {
-                                    firebaseLogEventWithParams("unable_to_update_bundle", "reason", "Main Activity instance is null");
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                firebaseLogEventWithParams("exception_in_bundle_update _fcm", "exception", e.toString());
-                            }
-                            break;
-
-                        case NotificationTypes.CANCELLED_SEARCH_REQUEST:
-                            sharedPref.edit().putString(getString(R.string.CANCELLED_SEARCH_REQUEST), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
-                            NotificationUtils.showAllocationNotification(this, payload, entity_payload);
-                            startWidgetService("CLEAR_FARE", payload, entity_payload);
-                            break;
-
-                        case NotificationTypes.NEW_MESSAGE:
-                            sharedPref.edit().putString("ALERT_RECEIVED", "true").apply();
-                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                            break;
-
-                        case NotificationTypes.REGISTRATION_APPROVED:
-                            sharedPref.edit().putString(getString(R.string.REGISTRATION_APPROVED), "true").apply();
-                            break;
-
-                        case NotificationTypes.REFERRAL_ACTIVATED:
-                            sharedPref.edit().putString("REFERRAL_ACTIVATED", "true").apply();
-                            break;
-
-                        case NotificationTypes.UPDATE_STORAGE:
-                            if (notification_payload.has("storage_key") && notification_payload.has("storage_value")) {
-                                String storage_key = notification_payload.get("storage_key").toString();
-                                String storage_value = notification_payload.get("storage_value").toString();
-                                if (storage_key.equals("update_driver_status") && merchantType.equals("DRIVER")) {
-                                    boolean status = storage_value.equals("SILENT") || storage_value.equals("ONLINE");
-                                    RideRequestUtils.updateDriverStatus(status, storage_value, this, true);
-                                } else
-                                    sharedPref.edit().putString(storage_key, storage_value).apply();
-                            }
-                            NotificationUtils.showAllocationNotification(this, payload, entity_payload);
-                            break;
-
-                        case NotificationTypes.CALL_API:
-                            try {
-                                String endPoint = notification_payload.get("endpoint").toString();
-                                String method = notification_payload.get("method").toString();
-                                JSONObject reqBody = (JSONObject) notification_payload.get("reqBody");
-                                RideRequestUtils.callAPIViaFCM(endPoint, reqBody, method, this);
-
-                            } catch (Exception e) {
-                                Log.e(LOG_TAG, "Error in CALL_API " + e);
-                            }
-                        case NotificationTypes.CHAT_MESSAGE :
-                            try{
-                                String appState = "";
-                                if(sharedPref != null) appState = sharedPref.getString("ACTIVITY_STATUS", "null");
-                                if((appState.equals("onDestroy") || appState.equals("onPause"))) {
-                                    NotificationUtils.createChatNotification(title,body,getApplicationContext());
-                                }
-                            } catch (Exception e) {
-                                Log.e("MyFirebaseMessagingService", "Error in CHAT_MESSAGE " + e);
-                            }
-                            break;
-                        case NotificationTypes.REALLOCATE_PRODUCT:
-                            try {
-                                if (sharedPref.getString("REALLOCATE_PRODUCT_ENABLED", "false").equals("false"))
-                                    break;
-                                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
-                                dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-                                String getCurrTime = dateFormat.format(new Date());
-                                sharedPref.edit().putString(getString(R.string.FINDING_QUOTES_START_TIME), getCurrTime).apply();
-                                sharedPref.edit().putString(getString(R.string.LOCAL_STAGE), getString(R.string.ReAllocated)).apply();
-                                NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                                sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                            break;
-
-                        case NotificationTypes.PAYMENT_OVERDUE:
-
-                        case NotificationTypes.PAYMENT_PENDING:
-                            showOverlayMessage(constructOverlayMessage(notification_payload));
-                            break;
-
-                        case NotificationTypes.JOIN_NAMMAYATRI :
-                            JSONObject jsonObject = new JSONObject();
-                            jsonObject.put("title",title);
-                            jsonObject.put("description",body);
-                            jsonObject.put("imageUrl",imageUrl);
-                            jsonObject.put("buttonText", entity_payload.has("buttonText") && !entity_payload.isNull("buttonText")? entity_payload.getString("buttonText") : "Okay");
-                            jsonObject.put("heading", entity_payload.has("heading") && !entity_payload.isNull("heading")? entity_payload.getString("heading") : "");
-                            sharedPref.edit().putString("SHOW_JOIN_NAMMAYATRI", jsonObject.toString()).apply();
-                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                            break;
-                        case NotificationTypes.UPDATE_BUNDLE :
-                            Intent bundle = new Intent(this,RemoteAssetsDownloader.class);
-                            bundle.putExtra("merchantType",merchantType);
-                            startService(bundle);
-                            break;
-                        case NotificationTypes.FCM_UPDATE_BUNDLE :
-                            if(remoteMessage.getData().containsKey("bundle_payload")){
-                                try {
-                                    Intent fcmBundle = new Intent(this,RemoteAssetsDownloader.class);
-                                    fcmBundle.putExtra("merchantType",merchantType);
-                                    fcmBundle.putExtra("bundleType","FCM");
-                                    fcmBundle.putExtra("payload",remoteMessage.getData().get("bundle_payload"));
-                                    startService(fcmBundle);
-                                }catch (Exception e){
-                                    startFCMBundleUpdateService(remoteMessage, merchantType);
-                                }
-                            }
-                            break;
-
-                        default:
-                            if (payload.get("show_notification").equals("true")) {
-                                NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                            }  // Silent notification
-                            break;
+                if (remoteMessage.getData().containsKey("notification_json") && remoteMessage.getData().get("notification_json") != null) {
+                    String notificationData = remoteMessage.getData().get("notification_json");
+                    if (notificationData != null) {
+                        notification_payload = new JSONObject(notificationData);
                     }
                 }
+                if (remoteMessage.getData().containsKey("entity_data")) {
+                    String notificationType = remoteMessage.getData().get("notification_type");
+                    if (notificationType != null && (notificationType.equals(NotificationTypes.NEW_RIDE_AVAILABLE) || notificationType.equals(NotificationTypes.TRIGGER_FCM) || notificationType.equals(NotificationTypes.EKD_LIVE_CALL_FEEDBACK))) {
+                        String entityPayload = remoteMessage.getData().get("entity_data");
+                        if (entityPayload != null) {
+                            entity_payload = new JSONObject(entityPayload);
+                            payload.put("entity_data", entity_payload);
+                        }
+                    }
+                }
+
+                RemoteMessage.Notification notification = remoteMessage.getNotification();
+                if (notification != null) {
+                    title = notification.getTitle();
+                    body = notification.getBody();
+                    imageUrl = remoteMessage.getData().get("image-url");
+                } else {
+                    title = notification_payload.optString("title");
+                    body = notification_payload.optString("body");
+                    if (notification_payload.has("imageUrl")) {
+                        imageUrl = notification_payload.optString("imageUrl");
+                    } else if (notification_payload.has("icon")) {
+                        imageUrl = notification_payload.optString("icon");
+                    } else {
+                        imageUrl = null;
+                    }
+                }
+
+                payload.put("notification_id", remoteMessage.getData().get("notification_id"));
+                payload.put("notification_type", remoteMessage.getData().get("notification_type"));
+                payload.put("entity_ids", remoteMessage.getData().get("entity_ids"));
+                payload.put("entity_type", remoteMessage.getData().get("entity_type"));
+                payload.put("show_notification", remoteMessage.getData().get("show_notification"));
+                payload.put("title", title);
+                payload.put("body", body);
+                payload.put("imageUrl", imageUrl);
+
+                SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                String notificationType = (String) payload.get("notification_type");
+                String notificationId = remoteMessage.getData().get("notification_id");
+                stopChatService(context, notificationType, sharedPref);
+                String key = context.getString(R.string.service);
+                String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
+                JSONObject notificationData = new JSONObject();
+                String entityDataString = remoteMessage.getData().get("entity_data");
+                if (entityDataString != null) {
+                    try {
+                        JSONObject entityData = new JSONObject(entityDataString);
+                        if (entityData.has("rideTime")) {
+                            notificationData.put("rideTime", entityData.getString("rideTime"));
+                            payload.put("rideTime", entityData.getString("rideTime"));
+                        }
+                        if (entityData.has("bookingId")) {
+                            notificationData.put("bookingId", entityData.getString("bookingId"));
+                        }
+                    } catch (JSONException e) {
+                        Log.e("MyFirebaseMessagingService", "Error parsing entity_data: " + e.getMessage());
+                        FirebaseCrashlytics.getInstance().recordException(e);
+                    }
+                }
+                notificationData.put("title", title)
+                        .put("msg", body);
+                if (entityDataString != null) {
+                    notificationData.put("entityData", entityDataString.replace("\"", "\\\""));
+                }
+                NotificationUtils.triggerUICallbacks(notificationType, notificationData.toString());
+                switch (notificationType) {
+                    case NotificationTypes.EDIT_STOP:
+                    case NotificationTypes.NEW_STOP_ADDED:
+                        if (remoteMessage.getData().containsKey("entity_data")) {
+                            String entityPayload = remoteMessage.getData().get("entity_data");
+                            if (entityPayload != null) {
+                                JSONObject driverPayloadJsonObject = new JSONObject(entityPayload);
+                                addUpdateStop(context,driverPayloadJsonObject);
+                                if (driverPayloadJsonObject.has("isEdit") && !driverPayloadJsonObject.isNull("isEdit")) {
+                                    String stopStatus = driverPayloadJsonObject.optBoolean("isEdit", false) ? "EDIT_STOP" : "ADD_STOP";
+                                    payload.put("stopStatus", stopStatus);
+                                    NotificationUtils.showNotification(context, title, body, payload, null, messageId);
+                                }
+                            }
+                        }
+                        break;
+                    case NotificationTypes.DRIVER_NOTIFY:
+                    case NotificationTypes.DRIVER_NOTIFY_LOCATION_UPDATE:
+                        if (remoteMessage.getData().containsKey("driver_notification_payload")) {
+                            String driverNotification = remoteMessage.getData().get("driver_notification_payload");
+                            if (driverNotification != null) {
+                                JSONObject driverNotificationJsonObject = new JSONObject(driverNotification);
+                                if (notificationType.equals(NotificationTypes.DRIVER_NOTIFY_LOCATION_UPDATE)) {
+                                    if (remoteMessage.getData().containsKey("entity_data")) {
+                                        String entityPayload = remoteMessage.getData().get("entity_data");
+                                        if (entityPayload != null) {
+                                            JSONObject updateLocDetails = new JSONObject(entityPayload);
+                                            driverNotificationJsonObject.put("updateLocDetails", updateLocDetails);
+                                        }
+                                    }
+                                }
+                                showOverlayMessage(context, driverNotificationJsonObject, NotificationTypes.DRIVER_NOTIFY_LOCATION_UPDATE);
+                                if (driverNotificationJsonObject.has("showPushNotification") && !driverNotificationJsonObject.isNull("showPushNotification") && driverNotificationJsonObject.getBoolean("showPushNotification")) {
+                                    NotificationUtils.showNotification(context, title, body, payload, null, messageId);
+                                }
+                            }
+                        }
+                        break;
+                    case NotificationTypes.EDIT_LOCATION:
+                        if (remoteMessage.getData().containsKey("driver_notification_payload")) {
+                            String driverNotification = remoteMessage.getData().get("driver_notification_payload");
+                            String jsonData = remoteMessage.getData().get("entity_data");
+                            if (jsonData != null) {
+                                JSONObject dataModel = new JSONObject(jsonData);
+                                JSONObject driverNotificationModel = new JSONObject(driverNotification);
+                                locationChanged(context, dataModel, driverNotificationModel);
+                            }
+                        }
+                        break;
+                    case NotificationTypes.CANCELLATION_RATE_NUDGE_DAILY :
+                        cancellationNudgeOverlay(context, remoteMessage, NotificationTypes.CANCELLATION_RATE_NUDGE_DAILY);
+                        break;
+                    case NotificationTypes.CANCELLATION_RATE_NUDGE_WEEKLY :
+                        cancellationNudgeOverlay(context, remoteMessage, NotificationTypes.CANCELLATION_RATE_NUDGE_WEEKLY);
+                        break;
+                    case NotificationTypes.DRIVER_STOP_DETECTED :
+                        stopDetectedOverlay(context);
+                    case NotificationTypes.TRIGGER_SERVICE:
+                        if (merchantType.equals("DRIVER")) {
+                            if (title != null && title.equals("You were inactive"))
+                                FirebaseAnalytics.getInstance(context).logEvent("notification_trigger_service_inactive", new Bundle());
+                            FirebaseAnalytics.getInstance(context).logEvent("notification_trigger_service", new Bundle());
+                            RideRequestUtils.restartLocationService(context);
+                        }
+                        break;
+
+                    case NotificationTypes.MARKETING_EVENTS:
+                            if (title != null){
+                                try {
+                                   String destinationPayload = remoteMessage.getData().get("entity_data");
+                                   if (destinationPayload != null){
+                                    JSONArray array =  new JSONArray(destinationPayload);
+                                    for(int i=0; i<array.length(); i++){
+                                        Object item = array.get(i);
+                                        if (item instanceof String) {
+                                            String destination = (String) item;
+                                            System.out.println("Event is :" + title + " , to be logged in : " + destination);
+                                            if (destination.equalsIgnoreCase("FIREBASE")){
+                                                FirebaseAnalytics.getInstance(context).logEvent(title, new Bundle());
+                                            } else if (destination.equalsIgnoreCase("CLEVERTAP")){
+                                                CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(context);
+                                                if (cleverTapAPI != null) {
+                                                    cleverTapAPI.pushEvent(title);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }catch(Exception e){Log.e(LOG_TAG, e.getMessage());}}
+                        break;
+
+                    case NotificationTypes.NEW_RIDE_AVAILABLE:
+                        RideRequestUtils.addRideReceivedEvent(entity_payload, null, null, "ride_request_fcm_received", context);
+                        if (sharedPref.getString("DISABLE_WIDGET", "null").equals("true") && sharedPref.getString("REMOVE_CONDITION", "false").equals("false")) {
+                            if (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))
+                                NotificationUtils.showRR(context, entity_payload, payload, NotificationUtils.RequestSource.FCM);
+                            else {
+                                RideRequestUtils.addRideReceivedEvent(entity_payload, null, null, "ride_request_ignored", context);
+                                NotificationUtils.firebaseLogEventWithParams(context, "ride_ignored", "payload", entity_payload.toString());
+                            }
+                        } else
+                            NotificationUtils.showRR(context, entity_payload, payload, NotificationUtils.RequestSource.FCM);
+                        break;
+
+                    case NotificationTypes.CLEARED_FARE:
+                        sharedPref.edit().putString(context.getString(R.string.CLEAR_FARE), String.valueOf(payload.get(context.getString(R.string.entity_ids)))).apply();
+                        NotificationUtils.showAllocationNotification(context, payload, entity_payload, NotificationUtils.RequestSource.FCM);
+                        NotificationUtils.startWidgetService(context, "CLEAR_FARE", payload, entity_payload, NotificationUtils.RequestSource.FCM);
+                        break;
+
+                    case NotificationTypes.CANCELLED_PRODUCT:
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
+                        }
+                        sharedPref.edit().putString(context.getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
+                        if (sharedPref.getString("MAPS_OPENED", "null").equals("true")) {
+                            NotificationUtils.startMainActivity(context);
+                        } else {
+                            NotificationUtils.startWidgetService(context, context.getString(R.string.ride_cancelled), payload, entity_payload, NotificationUtils.RequestSource.FCM);
+                        }
+                        if (merchantType.equals("DRIVER")) {
+                            NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                        }
+                        break;
+
+                    case NotificationTypes.DRIVER_QUOTE_INCOMING:
+                        if (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause")) {
+                            NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
+                        }
+                        break;
+
+                    case NotificationTypes.TRIP_FINISHED:
+                        NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
+                        if (merchantType.equals("USER")) {
+                            String vehicleCategory = entity_payload.optString("vehicleCategory");
+                            String appNamePrefix = getPackageNamePrefix(context.getPackageName());
+                            String vehicleCategoryKey = getVehicleCategoryKey(vehicleCategory);
+                            NotificationUtils.firebaseLogEventWithParams(context, appNamePrefix + vehicleCategoryKey + "ride_completed_", "vehicle_category", vehicleCategory);
+                            sharedPref.edit().putInt("RIDE_COUNT", sharedPref.getInt("RIDE_COUNT", 0) + 1).apply();
+                            sharedPref.edit().putString("COMPLETED_RIDE_COUNT", String.valueOf(sharedPref.getInt("RIDE_COUNT", 0))).apply();
+                        } else {
+                            NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                        }
+                        break;
+
+                    case NotificationTypes.FIRST_RIDE_EVENT:
+                        if (merchantType.equals("USER")) {
+                            String vehicleCategory = entity_payload.optString("vehicleCategory");
+                            String appNamePrefix = getPackageNamePrefix(context.getPackageName());
+                            String vehicleCategoryKey = getVehicleCategoryKey(vehicleCategory);
+                            NotificationUtils.firebaseLogEventWithParams(context, appNamePrefix + vehicleCategoryKey + "ride_completed_first", "vehicle_category", vehicleCategory);
+                        }
+                        break;
+                    case NotificationTypes.DRIVER_ASSIGNMENT:
+                    case NotificationTypes.TRIP_STARTED:
+                        NotificationUtils.handleNotifications(notificationType, payload, notificationId, context, sharedPref, false);
+                        break;
+
+                    case NotificationTypes.TRIP_UPDATED:
+                        for (ShowNotificationCallBack callbacks : showNotificationCallBacks) {
+                            callbacks.hideInAppNotification("EditDest");
+                        }
+                        if (payload.get("show_notification").equals("true")) {
+                            NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
+                        }
+                        break;
+
+                    case NotificationTypes.BUNDLE_UPDATE:
+                        try {
+                            if (!bundleUpdate.isEmpty()) {
+                                for (int i = 0; i < bundleUpdate.size(); i++) {
+                                    bundleUpdate.get(i).callBundleUpdate();
+                                }
+                            } else {
+                                NotificationUtils.firebaseLogEventWithParams(context, "unable_to_update_bundle", "reason", "Main Activity instance is null");
+                            }
+                        } catch (Exception e) {
+                            Exception exception = new Exception("Error in BUNDLE_UPDATE " + e);
+                            FirebaseCrashlytics.getInstance().recordException(exception);
+                            e.printStackTrace();
+                            NotificationUtils.firebaseLogEventWithParams(context, "exception_in_bundle_update _fcm", "exception", e.toString());
+                        }
+                        break;
+
+                    case NotificationTypes.CANCELLED_SEARCH_REQUEST:
+                        sharedPref.edit().putString(context.getString(R.string.CANCELLED_SEARCH_REQUEST), String.valueOf(payload.get(context.getString(R.string.entity_ids)))).apply();
+                        NotificationUtils.showAllocationNotification(context, payload, entity_payload, NotificationUtils.RequestSource.FCM);
+                        NotificationUtils.startWidgetService(context, "CLEAR_FARE", payload, entity_payload, NotificationUtils.RequestSource.FCM);
+                        break;
+
+                    case NotificationTypes.NEW_MESSAGE:
+                        sharedPref.edit().putString("ALERT_RECEIVED", "true").apply();
+                        NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
+                        break;
+
+                    case NotificationTypes.REGISTRATION_APPROVED:
+                        sharedPref.edit().putString(context.getString(R.string.REGISTRATION_APPROVED), "true").apply();
+                        NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
+                        break;
+
+                    case NotificationTypes.REFERRAL_ACTIVATED:
+                        sharedPref.edit().putString("REFERRAL_ACTIVATED", "true").apply();
+                        break;
+
+                    case NotificationTypes.UPDATE_STORAGE:
+                        if (notification_payload.has("storage_key") && notification_payload.has("storage_value")) {
+                            String storage_key = notification_payload.get("storage_key").toString();
+                            String storage_value = notification_payload.get("storage_value").toString();
+                            if (storage_key.equals("update_driver_status") && merchantType.equals("DRIVER")) {
+                                boolean status = storage_value.equals("SILENT") || storage_value.equals("ONLINE");
+                                RideRequestUtils.updateDriverStatus(status, storage_value, context, true);
+                            } else
+                                sharedPref.edit().putString(storage_key, storage_value).apply();
+                        }
+                        NotificationUtils.showAllocationNotification(context, payload, entity_payload, NotificationUtils.RequestSource.FCM);
+                        break;
+
+                    case NotificationTypes.CALL_API:
+                        try {
+                            String endPoint = notification_payload.get("endpoint").toString();
+                            String method = notification_payload.get("method").toString();
+                            JSONObject reqBody = (JSONObject) notification_payload.get("reqBody");
+                            RideRequestUtils.callAPIViaFCM(endPoint, reqBody, method, context);
+
+                        } catch (Exception e) {
+                            Exception exception = new Exception("Error in CALL_API " + e);
+                            FirebaseCrashlytics.getInstance().recordException(exception);
+                            Log.e(LOG_TAG, "Error in CALL_API " + e);
+                        }
+                    case NotificationTypes.CHAT_MESSAGE:
+                        try {
+                            String appState = "";
+                            if (sharedPref != null)
+                                appState = sharedPref.getString("ACTIVITY_STATUS", "null");
+                            if ((appState.equals("onDestroy") || appState.equals("onPause"))) {
+                                NotificationUtils.createChatNotification(title, body, context);
+                            }
+                        } catch (Exception e) {
+                            Exception exception = new Exception("Error in ChatMessage " + e);
+                            FirebaseCrashlytics.getInstance().recordException(exception);
+                            Log.e("MyFirebaseMessagingService", "Error in CHAT_MESSAGE " + e);
+                        }
+                        break;
+                    case NotificationTypes.REALLOCATE_PRODUCT:
+                        try {
+                            if (sharedPref.getString("REALLOCATE_PRODUCT_ENABLED", "false").equals("false"))
+                                break;
+                            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
+                            dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+                            String getCurrTime = dateFormat.format(new Date());
+                            sharedPref.edit().putString(context.getString(R.string.FINDING_QUOTES_START_TIME), getCurrTime).apply();
+                            sharedPref.edit().putString(context.getString(R.string.LOCAL_STAGE), context.getString(R.string.ReAllocated)).apply();
+                            NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
+                            sharedPref.edit().putString(context.getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
+                        } catch (Exception e) {
+                            Exception exception = new Exception("Error in REALLOCATE_PRODUCT " + e);
+                            FirebaseCrashlytics.getInstance().recordException(exception);
+                            e.printStackTrace();
+                        }
+                        break;
+
+                    case NotificationTypes.PAYMENT_OVERDUE:
+
+                    case NotificationTypes.PAYMENT_PENDING:
+                        showOverlayMessage(context, constructOverlayMessage(notification_payload), NotificationTypes.PAYMENT_PENDING);
+                        break;
+
+                    case NotificationTypes.JOIN_NAMMAYATRI:
+                        JSONObject jsonObject = new JSONObject();
+                        jsonObject.put("title", title);
+                        jsonObject.put("description", body);
+                        jsonObject.put("imageUrl", imageUrl);
+                        jsonObject.put("buttonText", entity_payload.has("buttonText") && !entity_payload.isNull("buttonText") ? entity_payload.getString("buttonText") : "Okay");
+                        jsonObject.put("heading", entity_payload.has("heading") && !entity_payload.isNull("heading") ? entity_payload.getString("heading") : "");
+                        sharedPref.edit().putString("SHOW_JOIN_NAMMAYATRI", jsonObject.toString()).apply();
+                        NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
+                        break;
+                    case NotificationTypes.UPDATE_BUNDLE:
+                        Intent bundle = new Intent(context, RemoteAssetsDownloader.class);
+                        bundle.putExtra("merchantType", merchantType);
+                        context.startService(bundle);
+                        break;
+                    case NotificationTypes.FCM_UPDATE_BUNDLE:
+                        if (remoteMessage.getData().containsKey("bundle_payload")) {
+                            try {
+                                Intent fcmBundle = new Intent(context, RemoteAssetsDownloader.class);
+                                fcmBundle.putExtra("merchantType", merchantType);
+                                fcmBundle.putExtra("bundleType", NotificationUtils.RequestSource.FCM);
+                                fcmBundle.putExtra("payload", remoteMessage.getData().get("bundle_payload"));
+                                context.startService(fcmBundle);
+                            } catch (Exception e) {
+                                Exception exception = new Exception("Error in FCM_UPDATE_BUNDLE " + e);
+                                FirebaseCrashlytics.getInstance().recordException(exception);
+                                startFCMBundleUpdateService(context, remoteMessage, merchantType);
+                            }
+                        }
+                        break;
+                    case NotificationTypes.SAFETY_ALERT:
+                        showSafetyAlert(context, title, body, payload, imageUrl);
+                        break;
+                    case NotificationTypes.EKD_LIVE_CALL_FEEDBACK:
+                        showOverlayMessage(context, payload, NotificationTypes.EKD_LIVE_CALL_FEEDBACK);
+                        break;
+                    default:
+                        if (payload.get("show_notification").equals("true")) {
+                            NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
+                        }  // Silent notification
+                        break;
+                }
+
             }
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception_in_notification", "remoteMessage", remoteMessage.getData().toString());
+            Exception exception = new Exception("Error in exception_in_notification " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
+            NotificationUtils.firebaseLogEventWithParams(context, "exception_in_notification", "remoteMessage", remoteMessage.getData().toString());
         }
     }
 
-    public void startFCMBundleUpdateService(RemoteMessage remoteMessage, String merchantType) {
+    private static String getVehicleCategoryKey(String vehicleCategory) {
+        switch (vehicleCategory) {
+            case "CAB":
+                return "cab_";
+            case "AUTO_RICKSHAW":
+                return "auto_";
+            case "METRO":
+                return "metro_";
+            case "MOTORCYCLE":
+                return "bike_";
+            case "AMBULANCE":
+                return "ambulance_";
+            default:
+                return "not_found_";
+        }
+    }
+
+    private static String getPackageNamePrefix(String appName) {
+        if(appName.contains("nammayatri")){
+            return "ny_";
+        }else if (appName.contains("manayatri")) {
+            return "my_";
+        }else if (appName.contains("yatri")) {
+            return "y_";
+        }else {
+            return "unknown_";
+        }
+    }
+
+    public static void locationChanged(Context context,JSONObject dataModel, JSONObject driverNotification) {
         try {
-            Context context = getApplicationContext();
+            boolean hasAdvancedBooking = dataModel.getBoolean("hasAdvanceBooking");
+            if (hasAdvancedBooking) return;
+            JSONObject originData = dataModel.getJSONObject("origin");
+            String lat = originData.getString("lat");
+            String lon = originData.getString("lon");
+            JSONObject locationChanged = new JSONObject();
+            locationChanged.put("okButtonText", driverNotification.getString("okButtonText"));
+            locationChanged.put("buttonOkVisibility",true);
+            locationChanged.put("imageVisibility",true);
+            locationChanged.put("imageUrl",driverNotification.getString("imageUrl"));
+            locationChanged.put("buttonLayoutVisibility",true);
+            locationChanged.put("titleVisibility",true);
+            JSONArray arr = new JSONArray();
+            arr.put("EDIT_LOCATION");
+            locationChanged.put("actions",arr);
+            locationChanged.put("title",driverNotification.getString("title"));
+            locationChanged.put("lat", lat);
+            locationChanged.put("lon", lon);
+            showOverlayMessage(context,locationChanged, NotificationTypes.EDIT_LOCATION);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e("MyFirebaseMessagingService", "Error in EDIT_LOCATION " + e);
+        }
+    }
+    public static  void stopDetectedOverlay(Context context) {
+        Intent intent = new Intent(context, MessageOverlayService.class);
+        String date = String.valueOf(new Date());
+        intent.putExtra("timestamp", date);
+        intent.putExtra("isStopDetected", true);
+        context.startService(intent);
+    }
+    public static void  cancellationNudgeOverlay(Context context, RemoteMessage remoteMessage, String overlayKey) {
+        try {
+            if (remoteMessage.getData().containsKey("driver_notification_payload")) {
+                String driverNotification = remoteMessage.getData().get("driver_notification_payload");
+                JSONObject driverNotificationModel = new JSONObject(driverNotification);
+                if (driverNotificationModel != null) {
+                    cancellationRateNudgeOverlay(context, driverNotificationModel, overlayKey);
+                }
+            }
+        } catch (JSONException e) {
+            Log.e("MyFirebaseMessagingService", "Error in cancellationNudgeOverlay -> " + overlayKey + " : " + e);
+        }
+    }
+
+    public static void cancellationRateNudgeOverlay(Context context, JSONObject driverNotification, String overlayKey) {
+        try {
+            JSONObject cancellationNudge = new JSONObject();
+            cancellationNudge.put("okButtonText", driverNotification.getString("okButtonText"));
+            cancellationNudge.put("buttonOkVisibility",true);
+            cancellationNudge.put("imageVisibility",true);
+            cancellationNudge.put("imageUrl",driverNotification.getString("imageUrl"));
+            cancellationNudge.put("buttonLayoutVisibility",true);
+            cancellationNudge.put("titleVisibility",true);
+            JSONArray arr = new JSONArray();
+            arr.put(overlayKey);
+            cancellationNudge.put("actions",arr);
+            cancellationNudge.put("title",driverNotification.getString("title"));
+            cancellationNudge.put("description", driverNotification.getString("description"));
+            cancellationNudge.put("descriptionVisibility", driverNotification.getString("descriptionVisibility"));
+            showOverlayMessage(context, cancellationNudge, overlayKey);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e("MyFirebaseMessagingService", "Error in " + overlayKey + " : " + e);
+        }
+    }
+
+    public static void startFCMBundleUpdateService(Context context, RemoteMessage remoteMessage, String merchantType) {
+        try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
                 Intent alarmIntent = new Intent(context, FCMBundleUpdateBroadcastReceiver.class);
@@ -408,24 +649,50 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 if(payload==null){
                     payload = "";
                 }
-                remoteAssetsDownloader.updateBundle(null, new JSONObject(payload), getApplicationContext());
+                remoteAssetsDownloader.updateBundle(null, new JSONObject(payload), context);
             }
         } catch (Exception e) {
+            Exception exception = new Exception("Error in startFCMBundleUpdateService " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             Log.e("FCMBundleUpdateService", "Failed to start BundleUpdateService : " + e);
         }
     }
 
-    private void showRR(JSONObject entity_payload, JSONObject payload){
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.NEW_RIDE_AVAILABLE)).apply();
-        if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))) {
-            startWidgetService(null, payload, entity_payload);
-        } else {
-            NotificationUtils.showAllocationNotification(this, payload, entity_payload);
+    private static void addUpdateStop(Context context,JSONObject driverPayloadJsonObject){
+        try {
+            String stopTitle = driverPayloadJsonObject.has("isEdit") && driverPayloadJsonObject.getBoolean("isEdit") ? context.getString(R.string.customer_edited) : context.getString(R.string.customer_added); // TODO:: Temporary added until context data comes from backend
+            driverPayloadJsonObject.put("title", stopTitle);
+            driverPayloadJsonObject.put("okButtonText", context.getString(R.string.navigate_to_location));
+            driverPayloadJsonObject.put("cancelButtonText", context.getString(R.string.close));
+            driverPayloadJsonObject.put("imageUrl", "https://firebasestorage.googleapis.com/v0/b/jp-beckn-dev.appspot.com/o/do_not%2Fadd_stop.png?alt=media&token=063c3661-3cfe-4950-a043-f7f49ed2c7fc");
+            driverPayloadJsonObject.put("titleVisibility", true);
+            driverPayloadJsonObject.put("buttonOkVisibility", true);
+            driverPayloadJsonObject.put("buttonCancelVisibility", true);
+            driverPayloadJsonObject.put("imageVisibility", true);
+            driverPayloadJsonObject.put("buttonLayoutVisibility", true);
+            driverPayloadJsonObject.put("actions", new JSONArray().put("NAVIGATE"));
+            double editLat = Double.NaN;
+            double editLon = Double.NaN;
+            if (driverPayloadJsonObject.has("stop")) {
+                JSONObject stopObject = driverPayloadJsonObject.getJSONObject("stop");
+                if (stopObject.has("lat")) {
+                    editLat = stopObject.getDouble("lat");
+                }
+                if (stopObject.has("lon")) {
+                    editLon = stopObject.getDouble("lon");
+                }
+            }
+            driverPayloadJsonObject.put("editlat", editLat);
+            driverPayloadJsonObject.put("editlon", editLon);
+            showOverlayMessage(context,driverPayloadJsonObject, NotificationTypes.NEW_STOP_ADDED);
+        }catch (Exception e){
+            Exception exception = new Exception("Error in addUpdateStop " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
+            e.printStackTrace();
+            NotificationUtils.firebaseLogEventWithParams(context, "exception_in_add_or_edit_stop_fcm", "exception", e.toString());
         }
     }
-
-    private void showOverlayMessage(JSONObject payload) {
+    private static void showOverlayMessage(Context context,JSONObject payload, String notificationType) {
         try {
             int delay = payload.optInt("delay", 0);
             HandlerThread handlerThread = new HandlerThread("OverlayHandlerThread");
@@ -434,24 +701,33 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             Handler handler = new Handler(handlerThread.getLooper());
 
             handler.postDelayed(() -> {
-                Intent showMessage = new Intent(getApplicationContext(), OverlayMessagingService.class);
-                showMessage.putExtra("payload", payload.toString());
-                startService(showMessage);
+                try {
+                    Intent showMessage = new Intent(context, Service.class);
+                    showMessage.putExtra("payload", payload.toString());
+                    showMessage.putExtra("notificationType", notificationType);
+                    context.startService(showMessage);
+                } catch (Exception e) {
+                    Exception exception = new Exception("Error in showOverlayMessage " + e);
+                    FirebaseCrashlytics.getInstance().recordException(exception);
+                    Log.e(LOG_TAG, e.getMessage());
+                }
             }, delay * 1000);
 
         } catch (Exception e) {
+            Exception exception = new Exception("Error in showOverlayMessage " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
             e.printStackTrace();
         }
     }
 
     @SuppressLint("StaticFieldLeak")
-    private void updateFCMToken(final String deviceToken) {
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(
-                this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+    private static void updateFCMToken(Context context, final String deviceToken) {
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
         String baseUrl = sharedPref.getString("BASE_URL", "null");
         String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
-        String key = getString(R.string.service);
+        String key = context.getString(R.string.service);
         String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Handler handler = new Handler(Looper.getMainLooper());
@@ -500,73 +776,33 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 Log.i(LOG_TAG, "in result : " + result);
 
             } catch (Exception e) {
+                Exception exception = new Exception("Error in updateFCMToken " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
                 Log.e(LOG_TAG, "Catch in updateFCMToken : " + e);
             }
-            handler.post(() -> {
-                onDestroy();
-                stopForeground(true);
-                stopSelf();
-                executor.shutdown();
-            });
+            handler.post(executor::shutdown);
         });
     }
 
-    private void startWidgetService(String widgetMessage, JSONObject data, JSONObject payload) {
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        Intent widgetService = new Intent(getApplicationContext(), WidgetService.class);
-        String key = getString(R.string.service);
-        String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
-        if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(getApplicationContext()) && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
-            widgetService.putExtra(getResources().getString(R.string.WIDGET_MESSAGE), widgetMessage);
-            widgetService.putExtra("payload", payload != null ? payload.toString() : null);
-            widgetService.putExtra("data", data != null ? data.toString() : null);
-            try {
-                startService(widgetService);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private void startMainActivity() {
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        String key = getString(R.string.service);
-        String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
-        if (merchantType.equals("DRIVER") && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
-            Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-            try {
-                getApplicationContext().startActivity(intent);
-            } catch (Exception e) {
-                firebaseLogEventWithParams("exception", "startMainActivity", e.toString());
-            }
-        }
-    }
-
-    public void firebaseLogEventWithParams(String event, String paramKey, String paramValue) {
-        Bundle params = new Bundle();
-        params.putString(paramKey, paramValue);
-        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-        mFirebaseAnalytics.logEvent(event, params);
-    }
-
-    private void stopChatService(String notificationType, SharedPreferences sharedPref) {
+    private static void stopChatService(Context context,String notificationType, SharedPreferences sharedPref) {
         if (notificationType.equals("TRIP_FINISHED") || notificationType.equals("CANCELLED_PRODUCT") || notificationType.equals("TRIP_STARTED") || notificationType.equals("REALLOCATE_PRODUCT")) {
             try {
-                Intent chatListenerService = new Intent(this, ChatService.class);
-                this.stopService(chatListenerService);
+                Intent chatListenerService = new Intent(context, ChatService.class);
+                context.stopService(chatListenerService);
                 SharedPreferences.Editor editor = sharedPref.edit();
                 editor.putString("READ_MESSAGES", "0");
                 editor.apply();
-                Intent overlayService = new Intent(this, MessageOverlayService.class);
-                this.stopService(overlayService);
+                Intent overlayService = new Intent(context, MessageOverlayService.class);
+                context.stopService(overlayService);
             } catch (Exception e) {
+                Exception exception = new Exception("Error in stopChatService " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
                 Log.e("MyFirebaseMessagingService", "Error in stopChatService : " + e);
             }
         }
     }
 
-    private JSONObject constructOverlayMessage (JSONObject notification_payload) throws JSONException {
+    private static JSONObject constructOverlayMessage (JSONObject notification_payload) throws JSONException {
         JSONObject ob = new JSONObject();
         JSONArray jsonArray = new JSONArray();
         jsonArray.put("OPEN_APP");
@@ -585,29 +821,71 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         return ob;
     }
 
-    private static class NotificationTypes {
-        private static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
-        private static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
-        private static final String CLEARED_FARE = "CLEARED_FARE";
-        private static final String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
-        private static final String DRIVER_QUOTE_INCOMING = "DRIVER_QUOTE_INCOMING";
-        private static final String TRIP_FINISHED = "TRIP_FINISHED";
-        private static final String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
-        private static final String TRIP_STARTED = "TRIP_STARTED";
-        private static final String BUNDLE_UPDATE = "BUNDLE_UPDATE";
-        private static final String CANCELLED_SEARCH_REQUEST = "CANCELLED_SEARCH_REQUEST";
-        private static final String NEW_MESSAGE = "NEW_MESSAGE";
-        private static final String REGISTRATION_APPROVED = "REGISTRATION_APPROVED";
-        private static final String REFERRAL_ACTIVATED = "REFERRAL_ACTIVATED";
-        private static final String UPDATE_STORAGE = "UPDATE_STORAGE";
-        private static final String CALL_API = "CALL_API";
-        private static final String CHAT_MESSAGE = "CHAT_MESSAGE";
-        private static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
-        private static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
-        private static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";
-        private static final String PAYMENT_PENDING = "PAYMENT_PENDING";
-        private static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
-        private static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
-        private static final String FCM_UPDATE_BUNDLE = "FCM_UPDATE_BUNDLE";
+    private static void showSafetyAlert( Context context,String title, String body, JSONObject payload, String imageUrl){
+        try {
+            String notificationBody;
+            String notificationTitle = context.getString(R.string.everything_okay);
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            sharedPref.edit().putString("SAFETY_ALERT_TYPE", body).apply();
+            CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(context);
+            HashMap<String, Object> cleverTapParams = new HashMap<>();
+            cleverTapParams.put("searchRequestId", body);
+            if (cleverTapAPI != null) {
+                cleverTapAPI.pushEvent("ny_user_night_safety_alert", cleverTapParams);
+            }
+            notificationBody = body.equals("Deviation") ? context.getString(R.string.safety_deviation_alert) : context.getString(R.string.we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip);
+            NotificationUtils.showNotification(context, notificationTitle, notificationBody, payload, imageUrl, null);
+        }
+        catch (Exception e) {
+            Exception exception = new Exception("Error in showSafetyAlert " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
+            e.printStackTrace();
+        }
+    }
+    public static class NotificationTypes {
+        public static final String NEW_STOP_ADDED = "ADD_STOP";
+        public static final String EDIT_STOP = "EDIT_STOP";
+        public static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
+        public static final String MARKETING_EVENTS = "MARKETING_EVENTS";
+        public static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
+        public static final String TRIGGER_FCM = "TRIGGER_FCM";
+        public static final String CLEARED_FARE = "CLEARED_FARE";
+        public static final String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
+        public static final String DRIVER_QUOTE_INCOMING = "DRIVER_QUOTE_INCOMING";
+        public static final String TRIP_FINISHED = "TRIP_FINISHED";
+
+        public static final String FIRST_RIDE_EVENT = "FIRST_RIDE_EVENT";
+        public static final String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
+        public static final String TRIP_STARTED = "TRIP_STARTED";
+        public static final String TRIP_UPDATED = "TRIP_UPDATED";
+        public static final String BUNDLE_UPDATE = "BUNDLE_UPDATE";
+        public static final String CANCELLED_SEARCH_REQUEST = "CANCELLED_SEARCH_REQUEST";
+        public static final String NEW_MESSAGE = "NEW_MESSAGE";
+        public static final String REGISTRATION_APPROVED = "REGISTRATION_APPROVED";
+        public static final String REFERRAL_ACTIVATED = "REFERRAL_ACTIVATED";
+        public static final String UPDATE_STORAGE = "UPDATE_STORAGE";
+        public static final String CALL_API = "CALL_API";
+        public static final String CHAT_MESSAGE = "CHAT_MESSAGE";
+        private static final String EDIT_LOCATION = "EDIT_LOCATION";
+        public static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
+        public static final String DRIVER_NOTIFY_LOCATION_UPDATE = "DRIVER_NOTIFY_LOCATION_UPDATE";
+        public static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
+        public static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";
+        public static final String PAYMENT_PENDING = "PAYMENT_PENDING";
+        public static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
+        public static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
+        public static final String FCM_UPDATE_BUNDLE = "FCM_UPDATE_BUNDLE";
+        public static final String COINS_SUCCESS = "COINS_SUCCESS";
+        public static final String SHARE_RIDE = "SHARE_RIDE";
+        public static final String SOS_RESOLVED = "SOS_RESOLVED";
+        public static final String SOS_TRIGGERED = "SOS_TRIGGERED";
+        public static final String SOS_MOCK_DRILL = "SOS_MOCK_DRILL";
+        public static final String FOLLOW_RIDE = "FOLLOW_RIDE";
+        public static final String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
+        public static final String SAFETY_ALERT = "SAFETY_ALERT";
+        public static final String CANCELLATION_RATE_NUDGE_DAILY = "CANCELLATION_RATE_NUDGE_DAILY";
+        public static final String CANCELLATION_RATE_NUDGE_WEEKLY = "CANCELLATION_RATE_NUDGE_WEEKLY";
+        public static final String DRIVER_STOP_DETECTED = "DRIVER_STOP_DETECTED";
+        public static final String EKD_LIVE_CALL_FEEDBACK = "EKD_LIVE_CALL_FEEDBACK";
     }
 }

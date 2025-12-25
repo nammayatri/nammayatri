@@ -1,0 +1,258 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Price: Kernel.Types.Common
+  PriceAPIEntity: Kernel.Types.Common
+  BaseUrl: Kernel.Types.Common
+  ServiceTierType: Domain.Types.ServiceTierType
+  SpecialZoneQuote: Domain.Types.SpecialZoneQuote
+  RentalDetails: Domain.Types.RentalDetails
+  InterCityDetails: Domain.Types.InterCityDetails
+  DriverOffer: Domain.Types.DriverOffer
+  RentalDetailsAPIEntity: Domain.Types.RentalDetails
+  InterCityDetailsAPIEntity: Domain.Types.InterCityDetails
+  DriverOfferAPIEntity: Domain.Action.UI.DriverOffer
+  SpecialZoneQuoteAPIEntity: Domain.Action.UI.SpecialZoneQuote
+  parseBaseUrl: Kernel.Prelude
+  TripTerms: Domain.Types.TripTerms
+  SearchRequest: Domain.Types.SearchRequest
+  QuoteBreakup: Domain.Types.QuoteBreakup
+  FareProductType: Domain.Types.FarePolicy.FareProductType
+  TripCategory: Domain.Types.Common
+  Currency: Kernel.Types.Common
+  showBaseUrl: Kernel.Prelude
+  Distance: Kernel.Types.Common
+  Minutes: Kernel.Types.Common
+  Version: Kernel.Types.Version
+  Device : Kernel.Types.Version
+  DeviceType: Kernel.Types.Version
+  BillingCategory: SharedLogic.Type
+
+Quote:
+  dataName: quote
+
+
+  types:
+    QuoteDetails:
+      enum: OneWayDetails OneWayQuoteDetails, AmbulanceDetails DriverOffer, InterCityDetails InterCityDetails, RentalDetails RentalDetails, DriverOfferDetails DriverOffer, OneWaySpecialZoneDetails SpecialZoneQuote, DeliveryDetails DriverOffer, MeterRideDetails MeterRideQuoteDetails
+      derive': Generic,Show
+
+    OneWayQuoteDetails:
+      distanceToNearestDriver: Distance
+      quoteId: Text
+      derive': Generic,Show
+
+    MeterRideQuoteDetails:
+      quoteId: Text
+
+    QuoteAPIDetails:
+      enum: OneWayAPIDetails OneWayQuoteAPIDetails, AmbulanceAPIDetails DriverOfferAPIEntity, InterCityAPIDetails InterCityDetailsAPIEntity, RentalAPIDetails RentalDetailsAPIEntity, DriverOfferAPIDetails DriverOfferAPIEntity, OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIEntity, DeliveryAPIDetails DriverOfferAPIEntity, MeterRideAPIDetails MeterRideQuoteAPIDetails
+      derive': Generic,Show
+
+    OneWayQuoteAPIDetails:
+      distanceToNearestDriver: HighPrecMeters
+      distanceToNearestDriverWithUnit: Distance
+      quoteId: Text
+      tollCharges: Maybe PriceAPIEntity
+
+    OneWaySpecialZoneQuoteAPIDetails:
+      distanceToNearestDriver: HighPrecMeters
+      quoteId: Text
+
+    MeterRideQuoteAPIDetails:
+      quoteId: Text
+
+    TollChargesInfo:
+      tollCharges: Price
+      tollNames: "[Text]"
+      derive': "Generic, Show"
+
+
+  fields:
+    id : Id Quote
+    requestId : Id SearchRequest
+    estimatedFare : Price
+    discount : Maybe Price
+    estimatedTotalFare : Price
+    estimatedPickupDuration : Maybe Seconds
+    distanceUnit : DistanceUnit
+    providerId : Text
+    providerUrl : BaseUrl
+    itemId : Text
+    tripTerms : Maybe TripTerms
+    tripCategory: Maybe TripCategory
+    quoteDetails : QuoteDetails
+    merchantId : Id Merchant
+    vehicleServiceTierType : ServiceTierType
+    vehicleServiceTierSeatingCapacity : Maybe Int
+    vehicleServiceTierAirConditioned : Maybe Double
+    isAirConditioned: Maybe Bool
+    serviceTierName: Maybe Text
+    serviceTierShortDesc: Maybe Text
+    merchantOperatingCityId : Id MerchantOperatingCity
+    specialLocationTag : Maybe Text
+    specialLocationName : Maybe Text
+    clientBundleVersion : Maybe Version
+    clientSdkVersion : Maybe Version
+    clientConfigVersion : Maybe Version
+    clientDevice : Maybe Device
+    backendConfigVersion : Maybe Version
+    backendAppVersion : Maybe Text
+    isCustomerPrefferedSearchRoute: Maybe Bool
+    isBlockedRoute: Maybe Bool
+    tollChargesInfo: Maybe TollChargesInfo
+    quoteBreakupList : "[QuoteBreakup]"
+    billingCategory: BillingCategory
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    validTill : UTCTime
+    vehicleIconUrl: Maybe BaseUrl
+    isSafetyPlus : Bool
+  derives: "Generic, Show"
+
+  beamFields:
+      quoteDetails: {}
+      tripTerms:
+        tripTermsId: Maybe Text
+      discount:
+        discount: Maybe HighPrecMoney
+        currency: Maybe Currency
+        fareProductType: FareProductType # TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+        distanceToNearestDriver: Maybe HighPrecMeters
+        distanceToNearestDriverValue: Maybe HighPrecDistance
+        rentalDetailsId: Maybe Text
+        driverOfferId: Maybe Text
+        meterRideBppQuoteId: Maybe Text
+        staticBppQuoteId: Maybe Text
+        specialZoneQuoteId: Maybe Text
+      distanceUnit:
+        distanceUnit: Maybe Kernel.Types.Common.DistanceUnit
+      vehicleServiceTierType:
+        vehicleVariant: ServiceTierType
+      clientDevice:
+        clientOsType: Maybe DeviceType
+        clientOsVersion: Maybe Text
+        clientModelName: Maybe Text
+        clientManufacturer: Maybe Text
+      tollChargesInfo:
+        tollCharges : Maybe HighPrecMoney
+        tollNames : Maybe [Text]
+      quoteBreakupList: {}
+
+  beamType:
+    estimatedFare : HighPrecMoney
+    estimatedTotalFare: HighPrecMoney
+    providerUrl: Text
+    merchantOperatingCityId: Maybe Text
+    updatedAt: Maybe UTCTime
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    clientOsVersion: Maybe Text
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
+    vehicleIconUrl: Maybe Text
+    isSafetyPlus: Maybe Bool
+    billingCategory: Maybe BillingCategory
+
+
+  fromTType:
+    providerUrl: parseBaseUrl|MI
+    tripTerms: getTripTerms|M
+    tollChargesInfo: mkTollChargesInfo tollCharges tollNames currency|E
+    quoteBreakupList: Storage.Queries.QuoteBreakup.findAllByQuoteIdT id|EM
+    quoteDetails: (Storage.Queries.Transformers.Quote.toQuoteDetails fareProductType tripCategory distanceToNearestDriver rentalDetailsId meterRideBppQuoteId staticBppQuoteId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue)|EM
+    discount: (Kernel.Types.Common.mkPrice currency <$> discount)|E
+    merchantOperatingCityId: (backfillMOCId merchantOperatingCityId merchantId)|EM
+    estimatedFare: (Kernel.Types.Common.mkPrice currency estimatedFare)|E
+    estimatedTotalFare: (Kernel.Types.Common.mkPrice currency estimatedTotalFare)|E
+    updatedAt: Kernel.Prelude.fromMaybe createdAt|I
+    clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
+    clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
+    clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
+    backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
+    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
+    vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+    isSafetyPlus : Kernel.Prelude.fromMaybe False isSafetyPlus | E
+    billingCategory: Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
+
+  # distanceUnit should be the same for all fields
+  toTType:
+    fareProductType: (Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails))|E
+    discount: (discount <&> (.amount))|E
+    currency: (Just ((.currency) estimatedFare))|E
+    estimatedFare: ((.amount) estimatedFare)|E
+    estimatedTotalFare: ((.amount) estimatedTotalFare)|E
+    tollCharges: (tollChargesInfo <&> ((.amount) . (.tollCharges)))|E
+    tollNames: (tollChargesInfo <&> (.tollNames))|E
+    tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
+    merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
+    distanceToNearestDriver: (Kernel.Types.Common.distanceToHighPrecMeters <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)))|E
+    distanceToNearestDriverValue: (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit) <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails))|E
+    rentalDetailsId: (Storage.Queries.Transformers.Quote.getRentalDetailsId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails))|E
+    driverOfferId: (Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails))|E
+    meterRideBppQuoteId: (Storage.Queries.Transformers.Quote.getMeterRideBppQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails))|E
+    staticBppQuoteId: (Storage.Queries.Transformers.Quote.getStaticBppQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails))|E
+    specialZoneQuoteId: (Storage.Queries.Transformers.Quote.getSpecialZoneQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails))|E
+    providerUrl: showBaseUrl|I
+    updatedAt: Kernel.Prelude.Just|I
+    clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+    clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+    clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
+    backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
+    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
+    clientOsType:  (clientDevice <&> (.deviceType))|E
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    distanceUnit: Kernel.Prelude.Just|I
+    vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+    isSafetyPlus: Kernel.Prelude.Just|I
+    billingCategory: Kernel.Prelude.Just|I
+
+  sqlType:
+    requestId: character varying(255)
+    vehicleIconUrl: character varying(255)
+    estimatedFare: numeric(30,10)
+    discount: numeric(30,2)
+    estimatedTotalFare: numeric(30,2)
+    estimatedPickupDuration: integer
+    providerId: character varying(255)
+    vehicle_variant: character varying(60)
+    distanceToNearestDriver: double precision
+    providerUrl: character varying(255)
+    tripTermsId: character(36)
+    fareProductType: character varying(255)
+    driverOfferId: character(36)
+    meterRideBppQuoteId: character(36)
+    staticBppQuoteId: character(36)
+    specialZoneQuoteId: character(36)
+    currency: character varying(255)
+    distanceUnit: character varying(255)
+
+  default:
+    fareProductType: "'ONE_WAY'"
+    merchantId: "'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51'"
+    itemId: "''"
+
+  constraints:
+    id: PrimaryKey
+    requestId: SecondaryKey
+    driverOfferId: "!SecondaryKey" # forcing to be a secondary key
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllBySRId:
+      kvFunction: findAllWithKVAndConditionalDB
+      where: requestId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - create
+    - createMany

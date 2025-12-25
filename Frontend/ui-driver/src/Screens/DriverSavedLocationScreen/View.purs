@@ -26,6 +26,7 @@ import Data.Either (Either(..))
 import Data.Int (toNumber)
 import Debug (spy)
 import Effect (Effect)
+import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, parseFloat)
 import Engineering.Helpers.Commons as EHC
@@ -37,25 +38,25 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, pure, show, unit, void, ($), (-), (<<<), (<>), (==), (>), (/), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hintColor, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, background, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hintColor, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.DriverSavedLocationScreen.ComponentConfig (confirmDeletePopupConfig, locationListItemConfig, primaryButtonConfig)
 import Screens.DriverSavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.DriverSavedLocationScreen.Transformer (tagAlreadySaved)
-import Screens.Types (DriverSavedLocationScreenState, GoToScrEntryType(..), PredictionItem, SavedLocationScreenType(..))
+import Screens.Types (DriverSavedLocationScreenState, GoToScrEntryType(..), PredictionItem, SavedLocationScreenType(..), LocationSelectType(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 
-screen :: DriverSavedLocationScreenState -> Screen Action DriverSavedLocationScreenState ScreenOutput
+screen :: DriverSavedLocationScreenState -> LoggableScreen Action DriverSavedLocationScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "DriverSavedLocationScreen"
   , globalEvents:
       [ ( \push -> do
-            if initialState.props.viewType == LOCATE_ON_MAP then
-              JB.storeCallBackLocateOnMap push UpdateLocation
+            if initialState.props.viewType == LOCATE_ON_MAP then do
+              void $ runEffectFn2 JB.storeCallBackLocateOnMap (\key lat lon -> push $ UpdateLocation key lat lon) (JB.handleLocateOnMapCallback "DriverSavedLocationScreen")
             else if initialState.props.viewType == GoToList then do
               void $ launchAff $ flowRunner defaultGlobalState
                 $ do
@@ -79,6 +80,8 @@ screen initialState =
             _ = spy "DriverSavedLocationScreen --------action" action
           eval action state
       )
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.driverSavedLocationScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> DriverSavedLocationScreenState -> PrestoDOM (Effect Unit) w
@@ -121,7 +124,7 @@ gotoLocationsList state push visibility' =
         , orientation VERTICAL
         , onAnimationEnd push $ const OnAnimationEnd
         , visibility if visibility' then VISIBLE else GONE
-        , margin $ MarginTop 15
+        , margin $ MarginTop 10
         ]
         [ header push
         , linearLayout
@@ -265,7 +268,7 @@ bottomButtons state push =
             [ weight 1.0
             , height WRAP_CONTENT
             , gravity CENTER
-            , onClick push $ const LocateOnMap
+            , onClick push $ const $ LocateOnMap SET_LOC
             ]
             [ imageView
                 [ height $ V 18
@@ -291,7 +294,7 @@ bottomButtons state push =
             [ weight 1.0
             , height WRAP_CONTENT
             , gravity CENTER
-            , onClick push $ const LocateOnMap
+            , onClick push $ const $ LocateOnMap CURRENT_LOC
             ]
             [ imageView
                 [ height $ V 18
@@ -425,10 +428,10 @@ locationAndMap state push visibility' =
         [ linearLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
-            , id (EHC.getNewIDWithTag "DriverSavedLoc")
+            , id (EHC.getNewIDWithTag "DriverSavedLocationScreen")
             , afterRender
                 ( \action -> do
-                    _ <- (JB.showMap (EHC.getNewIDWithTag "DriverSavedLoc") true "satellite" (19.0) push MAPREADY)
+                    _ <- (JB.showMap (EHC.getNewIDWithTag "DriverSavedLocationScreen") true "satellite" (19.0) 0.0 0.0 push MAPREADY)
                     pure unit
                 )
                 (const AfterRender)
@@ -742,11 +745,13 @@ header push =
     , gravity CENTER_VERTICAL
     ]
     [ imageView
-        [ height $ V 32
-        , width $ V 32
-        , padding $ Padding 4 4 4 4
+        [ height $ V 40
+        , width $ V 40
+        , padding $ Padding 8 8 8 8
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
         , onClick push $ const BackPressed
+        , rippleColor Color.rippleShade
+        , cornerRadius 20.0
         ]
     , textView
         $ [ height WRAP_CONTENT
@@ -754,7 +759,7 @@ header push =
           , text $ getString ADD_A_GOTO_LOC
           , gravity CENTER_VERTICAL
           , color Color.black900
-          , margin $ MarginLeft 15
+          , margin $ MarginLeft 7
           ]
         <> FontStyle.subHeading1 TypoGraphy
     ]

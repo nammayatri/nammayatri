@@ -1,0 +1,21 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+  UTCTime: Kernel.Prelude
+  Int: Kernel.Prelude
+
+module: DemandHotspots
+types:
+  GetDemandHotspotsResp:
+    hotspotsDetails: [HotspotsDetails]
+    createdAt: UTCTime
+    expiryAt: UTCTime
+  HotspotsDetails:
+    location: LatLong
+    frequency: Int
+
+apis:
+  - GET:
+      endpoint: /driver/demandHotspots
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: GetDemandHotspotsResp

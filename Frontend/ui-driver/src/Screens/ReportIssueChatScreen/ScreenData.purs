@@ -21,6 +21,7 @@ import Data.Maybe (Maybe(..))
 import Screens.Types (ReportIssueChatScreenState)
 import Components.ChatView.Controller (config) as ChatView
 import Styles.Colors (black700, black800, blue600, blue800, blue900, green200, grey700, grey800, grey900, transparentGrey, white900) as Color
+import ConfigProvider
 
 initData :: ReportIssueChatScreenState
 initData = {
@@ -41,7 +42,8 @@ initData = {
         addAudioState: addAudioState',
         uploadedImagesIds: [],
         uploadedAudioId: Nothing,
-        options: []
+        options: [],
+        config : getAppConfig appConfig
     },
     props : {
       showSubmitComp: false,
@@ -52,7 +54,8 @@ initData = {
       showRecordModel: false,
       showViewImageModel: false,
       isPopupModelOpen: false,
-      submitIsInProgress: false
+      submitIsInProgress: false,
+      timerId : ""
     }
 }
 
@@ -77,20 +80,13 @@ chatConfig' = ChatView.config {
                      , showHeader = false
                      , showStroke = false
                      , mapsText = "maps"
-                     , grey700 = Color.grey700
-                     , blue600 = Color.blue600
                      , enableSuggestionClick = false
-                     , blue900 = Color.blue900
-                     , transparentGrey = Color.transparentGrey
-                     , green200 = Color.green200
-                     , grey900 = Color.grey900
-                     , grey800 = Color.grey800
-                     , blue800 = Color.blue800
-                     , white900 = Color.white900
                      , showTextEdit = false
                      , spanParent = true
-                     , black800 = Color.black800
-                     , black700 = Color.black700
+                     , footerBanner = {
+                        text : "",
+                        enable : true
+                    }
               }
 
 recordAudioState' = {

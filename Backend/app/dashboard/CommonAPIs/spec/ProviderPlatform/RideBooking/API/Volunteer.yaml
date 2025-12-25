@@ -1,0 +1,62 @@
+imports:
+  Booking: Dashboard.Common
+  Driver: Dashboard.Common
+  VehicleVariant: Dashboard.Common
+  LatLong: Kernel.External.Maps.Types
+
+module: Volunteer
+
+apis:
+  - GET: # BookingInfoAPI
+      endpoint: /{bookingOtp}/booking
+      auth: ApiAuthV2
+      params:
+        bookingOtp: Text
+      response:
+        type: BookingInfoResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP VOLUNTEER VOLUNTEER_BOOKING_INFO
+  - POST: # AssignCreateAndStartOtpRideAPI
+      endpoint: /assign/start
+      name: PostVolunteerAssignStartOtpRide
+      auth: ApiAuthV2
+      request:
+        type: AssignCreateAndStartOtpRideAPIReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: VolunteerAPI AssignCreateAndStartOtpRideEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP VOLUNTEER VOLUNTEER_ASSIGN_CREATE_AND_START_OTP_RIDE
+
+types:
+  BookingInfoResponse:
+    - bookingId: Id Booking
+    - fromLocation: Location
+    - toLocation: Maybe Location
+    - estimatedDistance: Maybe Meters
+    - estimatedDistanceWithUnit: Maybe Distance
+    - estimatedFare: Money
+    - estimatedFareWithCurrency: PriceAPIEntity
+    - estimatedDuration: Maybe Seconds
+    - riderName: Maybe Text
+    - vehicleVariant: VehicleVariant
+  Location:
+    - id: Id Location
+    - lat: Double
+    - lon: Double
+    - address: LocationAddress
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  LocationAddress:
+    - street: Maybe Text
+    - city: Maybe Text
+    - state: Maybe Text
+    - country: Maybe Text
+    - building: Maybe Text
+    - areaCode: Maybe Text
+    - area: Maybe Text
+  AssignCreateAndStartOtpRideAPIReq:
+    - bookingId: Id Booking
+    - driverId: Id Driver
+    - point: LatLong
+    - derive: "'HideSecrets"

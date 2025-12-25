@@ -33,7 +33,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (<<<), (<>), (==), (>), not, void, discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -43,17 +43,22 @@ import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Web.HTML.History (back)
+import Engineering.Helpers.Events as EHE
+import Helpers.Utils as HU
+import Data.Maybe (Maybe(..))
 
-screen :: ST.PermissionsScreenState -> Screen Action ST.PermissionsScreenState ScreenOutput
+screen :: ST.PermissionsScreenState -> LoggableScreen Action ST.PermissionsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "PermissionsScreen"
   , globalEvents : [ (\ push -> do
+    void $ HU.storeCallBackForNotification push FcmNotificationAction
     void $ JB.storeCallBackBatteryUsagePermission push BatteryUsagePermissionCallBack
     void $ JB.storeCallBackNotificationPermission push NotificationPermissionCallBack
     void $ JB.storeCallBackOverlayPermission push OverlayPermissionSwitchCallBack
     void $ if initialState.data.config.permissions.locationPermission then JB.storeCallBackDriverLocationPermission push LocationPermissionCallBack else pure unit
+    let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepScreenLoadedEventName ST.GRANT_PERMISSION)
     pure $ pure unit)]
   , eval:
       ( \state action -> do
@@ -61,6 +66,8 @@ screen initialState =
           let _ = spy "PermissionsScreen --------action" action
           eval state action
       ) 
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.permissionsScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.PermissionsScreenState -> PrestoDOM (Effect Unit) w

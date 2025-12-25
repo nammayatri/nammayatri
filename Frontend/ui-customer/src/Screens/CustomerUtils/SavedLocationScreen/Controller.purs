@@ -18,19 +18,19 @@ module Screens.SavedLocationScreen.Controller where
 
 import Prelude( class Show, pure, unit, bind, map, discard, show, not, void, ($),(==), (&&), (+), (/=), (<>), (||), (>=))
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
-import PrestoDOM (Eval, Visibility(..), continue, exit, continueWithCmd, updateAndExit)
-import Screens.Types(SavedLocationScreenState, SavedLocationData, LocationListItemState, LocationItemType(..))
+import PrestoDOM (Eval, update, Visibility(..), continue, exit, continueWithCmd, updateAndExit)
+import Screens.Types(SavedLocationScreenState, SavedLocationData, LocationListItemState, LocationItemType(..), FavouriteDriverListItemState(..), Favourites(..))
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.SavedLocationCard as SavedLocationCardController
 import Components.PrimaryButton as PrimaryButtonController
 import Components.ErrorModal as ErrorModalController
 import Components.PopUpModal as PopUpModal
-import Services.API(SavedReqLocationAPIEntity(..), SavedLocationsListRes)
+import Services.API(SavedReqLocationAPIEntity(..), SavedLocationsListRes, GetFavouriteDriverListRes(..), FavouriteDriverList(..))
 import Data.String (trim, toLower, split, Pattern(..))
 import Data.Array (filter, (!!), length)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromSaved)
-import JBridge (toast, toggleBtnLoader)
+import JBridge (toggleBtnLoader)
 import Language.Strings(getString)
 import Language.Types(STR(..))
 import Accessor (_list)
@@ -43,6 +43,7 @@ import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.LogEvent (logEvent)
 import Foreign.Object (empty)
 import Effect.Unsafe (unsafePerformEffect)
+import Debug
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -80,33 +81,49 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "countdown_updated"
-      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "popup_dismissed"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      _ -> pure unit
     SavedLocationListAPIResponseAction respList -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "saved_location_list"
+    GetFavouriteDriversListAPIResponseAction respList -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "get_favourite_drivers_list"
+    ChangeView string -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "change_view"
+    ChangeScreen number name id -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "change_screen"
     NoAction -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "no_action"
-
-    
+    Back -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "Go to Back screen when api Fails"
+    GoToDriverProfile id -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "Go to Driver Profile"
 
 data ScreenOutput = EditLocation LocationListItemState
                   | DeleteLocation String
                   | AddLocation SavedLocationScreenState
                   | GoBack
+                  | FavouriteDriverTrips SavedLocationScreenState
+                  | GoToBack SavedLocationScreenState
+                  | DriverProfile SavedLocationScreenState String
 
 data Action = BackPressed Boolean
             | NoAction
             | GenericHeaderAC GenericHeaderController.Action
             | SavedLocationCardAction SavedLocationCardController.Action
             | SavedLocationListAPIResponseAction (SavedLocationsListRes)
+            | GetFavouriteDriversListAPIResponseAction (GetFavouriteDriverListRes)
             | PrimaryButtonAC PrimaryButtonController.Action
             | ErrorModalAC ErrorModalController.Action
             | PopUpModalAction PopUpModal.Action
             | AfterRender
+            | ChangeView Favourites
+            | ChangeScreen String String (Maybe String)
+            | Back
+            | GoToDriverProfile String
 
 eval :: Action -> SavedLocationScreenState -> Eval Action ScreenOutput SavedLocationScreenState
 
 eval (SavedLocationCardAction (SavedLocationCardController.EditLocation cardState)) state = exit $ EditLocation cardState
+
+eval (GoToDriverProfile id) state = exit $ DriverProfile state id
+
+eval (Back) state = exit $ GoToBack state
 
 eval (BackPressed flag) state = do 
   if state.props.showDeleteLocationModel then continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing}}
@@ -122,7 +139,12 @@ eval (SavedLocationCardAction (SavedLocationCardController.DeleteLocation tagNam
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing}}
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ DeleteLocation (fromMaybe "" state.data.deleteTag)
-eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = exit $ GoBack
+eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state =
+  if isParentView FunctionCall 
+    then do 
+      void $ pure $ emitTerminateApp Nothing true
+      continue state
+    else exit $ GoBack
 
 eval (SavedLocationListAPIResponseAction respList) state = do 
   _ <- pure $ EHU.toggleLoader false
@@ -131,9 +153,16 @@ eval (SavedLocationListAPIResponseAction respList) state = do
   let otherLocation = (filter (\x -> not  ((toLower x.tag) == "home" || (toLower x.tag) == "work")) (getSavedLocation (respList ^. _list)))
   continue state{data{savedLocations = home <> work <> otherLocation}, props{apiRespReceived = true}}
 
+eval (GetFavouriteDriversListAPIResponseAction (GetFavouriteDriverListRes respList)) state = do
+  continue state{data{favouriteDriversList = getFavouriteDriverList(respList)}}
+
+eval (ChangeView view) state = continue state{data{current = view}} 
+
+eval (ChangeScreen number name id) state = updateAndExit state $ FavouriteDriverTrips  state { data{ driverNo = number , driverName = name, driverId = id} }
+
 eval (PrimaryButtonAC (PrimaryButtonController.OnClick)) state = do 
   if (length state.data.savedLocations >= 20) then do 
-    _ <- pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
+    _ <- pure $ EHU.showToast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
     _ <- pure $ toggleBtnLoader "" false
     continue state
     else do
@@ -144,7 +173,7 @@ eval (ErrorModalAC (ErrorModalController.PrimaryButtonActionController PrimaryBu
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_add_favourite_click_error_model"
   updateAndExit state $ AddLocation state
 
-eval _ state = continue state
+eval _ state = update state
 
 
 
@@ -177,6 +206,19 @@ getSavedLocation (savedLocation) = (map (\(SavedReqLocationAPIEntity item) ->
   , frequencyCount : Nothing
   , recencyDate : Nothing
   , locationScore : Nothing
+  , dynamicAction : Nothing
+  , types : Nothing
+  }
+  )savedLocation)
+
+getFavouriteDriverList :: (Array FavouriteDriverList) -> Array FavouriteDriverListItemState 
+getFavouriteDriverList (savedLocation) = (map (\(FavouriteDriverList item) -> 
+  { 
+    driverName : item.driverName
+  , driverPhone : item.driverPhone
+  , driverRating : item.driverRating
+  , favCount : item.favCount
+  , id : item.id
   }
   )savedLocation)
 
@@ -209,6 +251,8 @@ getSavedLocationForAddNewAddressScreen (savedLocation) = (map (\ (item) ->
   , frequencyCount : Nothing
   , recencyDate : Nothing
   , locationScore : Nothing
+  , dynamicAction : Nothing
+  , types : Nothing
   }
   ) (savedLocation) ) 
 

@@ -52,11 +52,12 @@ translateOutXAnim config =
 translateInYAnim :: AnimConfig -> PrestoAnim.Animation
 translateInYAnim config =
     PrestoAnim.Animation
-    [ PrestoAnim.duration animateTime
+    [ PrestoAnim.duration config.duration
     , PrestoAnim.fromY config.fromY
     , PrestoAnim.toY config.toY
     , PrestoAnim.tag "slideIn"
     , PrestoAnim.interpolator interpolator
+    , PrestoAnim.delay config.delay
     ] config.ifAnim
 
 translateOutYAnim :: AnimConfig -> PrestoAnim.Animation
@@ -120,6 +121,16 @@ scaleYAnim config =
     [ PrestoAnim.duration 200
     , PrestoAnim.fromScaleY config.fromScaleY
     , PrestoAnim.toScaleY config.toScaleY
+    , PrestoAnim.repeatCount (PrestoAnim.Repeat 0)
+    , PrestoAnim.interpolator interpolator
+    ] config.ifAnim
+
+inverseScaleYAnim :: AnimConfig -> PrestoAnim.Animation
+inverseScaleYAnim config =
+   PrestoAnim.Animation
+    [ PrestoAnim.duration 200
+    , PrestoAnim.fromScaleY config.toScaleY
+    , PrestoAnim.toScaleY config.fromScaleY
     , PrestoAnim.repeatCount (PrestoAnim.Repeat 0)
     , PrestoAnim.interpolator interpolator
     ] config.ifAnim
@@ -366,6 +377,14 @@ screenAnimationFadeInOut screen =
     $ PrestoAnim.exitAnimationSetBackward [fadeOut true]
       screen
 
+emptyScreenAnimation :: forall w. PrestoDOM (Effect Unit) w -> PrestoDOM (Effect Unit) w
+emptyScreenAnimation screen =
+    PrestoAnim.entryAnimationSetForward [PrestoAnim.Animation [PrestoAnim.duration 100] true]
+    $ PrestoAnim.exitAnimationSetForward [PrestoAnim.Animation [PrestoAnim.duration 100] true]
+    $ PrestoAnim.entryAnimationSetBackward [PrestoAnim.Animation [PrestoAnim.duration 100] true]
+    $ PrestoAnim.exitAnimationSetBackward [PrestoAnim.Animation [PrestoAnim.duration 100] true]
+      screen
+
 scaleYAnimWithDelay :: Int -> PrestoAnim.Animation
 scaleYAnimWithDelay delay =
    PrestoAnim.Animation
@@ -380,5 +399,5 @@ scaleYAnimWithDelay delay =
 triggerOnAnimationEnd :: Boolean -> PrestoAnim.Animation
 triggerOnAnimationEnd ifAnim =
   PrestoAnim.Animation
-    [ PrestoAnim.duration 250
+    [ PrestoAnim.duration 10
     ] ifAnim

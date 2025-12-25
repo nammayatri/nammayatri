@@ -1,2 +1,1 @@
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN customer_extra_fee integer;
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN customer_extra_fee integer;

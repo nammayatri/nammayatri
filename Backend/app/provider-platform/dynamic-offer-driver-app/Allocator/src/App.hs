@@ -14,7 +14,10 @@
 
 module App where
 
+import qualified Client.Main as CM
+import qualified Data.Bool as B
 import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
+import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
@@ -37,17 +40,50 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator
+import SharedLogic.Allocator.Jobs.Cautio.InstallationStatus (installationStatus)
+import SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
 import SharedLogic.Allocator.Jobs.Document.VerificationRetry
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
+import SharedLogic.Allocator.Jobs.FCM.RunScheduledFCMS (runScheduledFCMS)
+import SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
+import SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert (sendFleetAlert)
 import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDriver)
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
+import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferralPayoutJobData)
+import SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP (checkExotelCallStatusAndNotifyBAP)
+import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (sendScheduledRideAssignedOnUpdate)
+import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver (sendScheduledRideNotificationsToDriver, sendTagActionNotification)
+import SharedLogic.Allocator.Jobs.SendFeedbackPN (sendFeedbackPN)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
+import SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
+import SharedLogic.Allocator.Jobs.Webhook.Webhook
+import SharedLogic.KaalChakra.Chakras
+import SharedLogic.MediaFileDocument (mediaFileDocumentComplete)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
+
+createCAC :: AppCfg -> IO ()
+createCAC appCfg = do
+  when appCfg.cacConfig.enableCac $ do
+    cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacTenants appCfg.cacConfig.enablePolling
+    case cacStatus of
+      0 -> CM.startCACPolling appCfg.cacTenants
+      _ -> do
+        -- logError "CAC client failed to start"
+        threadDelay 1000000
+        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
+  when appCfg.superPositionConfig.enableSuperPosition $ do
+    superPositionStatus <- CM.initSuperPositionClient appCfg.superPositionConfig.host (fromIntegral appCfg.superPositionConfig.interval) appCfg.superPositionConfig.tenants appCfg.superPositionConfig.enablePolling
+    case superPositionStatus of
+      0 -> CM.runSuperPositionPolling appCfg.superPositionConfig.tenants
+      _ -> do
+        -- logError "CAC super position client failed to start"
+        threadDelay 1000000
+        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
 
 allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle AllocatorJobType
 allocatorHandle flowRt env =
@@ -64,16 +100,38 @@ allocatorHandle flowRt env =
       jobHandlers =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPaymentReminderToDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . unsubscribeDriverForPaymentOverdue)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . softBlockNotifyDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockSoftBlockedDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateSupplyDemand)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateCongestionChargeAvgTaxi)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateDriverFeeForDrivers)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPDNNotificationToDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . startMandateExecutionForDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . notificationAndOrderStatusUpdate)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendOverlayToDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . badDebtCalculation)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendManualPaymentLink)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . retryDocumentVerificationJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendDriverReferralPayoutJobData)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideNotificationsToDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendTagActionNotification)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideAssignedOnUpdate)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . checkExotelCallStatusAndNotifyBAP)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendFleetAlert)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runScheduledFCMS)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendWebhookWithRetryToExternal)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . installationStatus)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . mediaFileDocumentComplete)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendFeedbackPN)
     }
 
 runDriverOfferAllocator ::
@@ -84,7 +142,7 @@ runDriverOfferAllocator configModifier = do
   handlerEnv <- buildHandlerEnv handlerCfg
   hostname <- getPodName
   let loggerRt = L.getEulerLoggerRuntime hostname handlerCfg.appCfg.loggerConfig
-
+  _ <- liftIO $ createCAC handlerCfg.appCfg
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt
@@ -122,4 +180,4 @@ runDriverOfferAllocator configModifier = do
 
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt'
-    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.kvConfigUpdateFrequency $ allocatorHandle flowRt' handlerEnv
+    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ allocatorHandle flowRt' handlerEnv

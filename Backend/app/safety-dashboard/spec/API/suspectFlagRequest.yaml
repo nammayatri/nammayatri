@@ -1,0 +1,83 @@
+imports:
+  Text: Data.Text
+  ShortId: Kernel.Types.Id
+  UTCTime: Kernel.Prelude
+  FlaggedStatus: Domain.Types.Suspect
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  AdminApproval: Domain.Types.SuspectFlagRequest
+  SuspectFlagRequestResp : API.Types.UI.SuspectFlagRequestResp
+  APISuccess: Kernel.Types.APISuccess
+  Summary : API.Types.UI.Notification
+
+importPackageOverrides:
+    Domain.Types.Merchant: lib-dashboard
+    Tools.Auth: lib-dashboard
+    Environment: lib-dashboard
+    Domain.Types.Person : lib-dashboard
+
+
+module : SuspectFlagRequest
+types:
+  SuspectFlagRequestList:
+    flagRequestList : [SuspectFlagRequestResp]
+    summary : Summary
+
+  SuspectFlagRequestResp:
+    id : Text
+    dl : Maybe Text
+    voterId : Maybe Text
+    flaggedStatus : FlaggedStatus
+    flaggedCategory : Text
+    flaggedReason : Text
+    flaggedBy : Text
+    firstName : Text
+    lastName : Text
+    adminApproval : AdminApproval
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  SuspectsApprovalReq:
+    suspectFlagRequestId : Text
+    adminApproval : AdminApproval
+
+  SuspectApprovalReqList:
+    suspectFlagRequestIdList : [Text]
+    adminApproval : AdminApproval
+
+
+
+apis:
+    - GET:
+        endpoint: /list/suspectsFlag
+        auth: DashboardAuth MERCHANT_MAKER
+        query:
+          limit: Int
+          offset: Int
+          dl: Text
+          voterId: Text
+          from: UTCTime
+          to: UTCTime
+          approvalStatus: AdminApproval
+        response:
+          type: API.Types.UI.SuspectFlagRequest.SuspectFlagRequestList
+
+    - POST:
+        endpoint: /process/suspectFlagRequest
+        auth: DashboardAuth MERCHANT_ADMIN
+        request:
+          type: API.Types.UI.SuspectFlagRequest.SuspectApprovalReqList
+        response:
+          type: APISuccess
+
+
+
+
+
+
+
+
+
+
+
+

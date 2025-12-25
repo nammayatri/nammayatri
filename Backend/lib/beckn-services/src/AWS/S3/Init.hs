@@ -17,7 +17,7 @@ module AWS.S3.Init where
 import AWS.S3.Flow
 import AWS.S3.Types
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Kernel.Types.App (MonadFlow)
+import Kernel.Utils.Common
 
 buildS3Env :: (MonadFlow m, CoreMetrics m) => S3Config -> S3Env m
 buildS3Env (S3MockConf m) = do
@@ -26,11 +26,21 @@ buildS3Env (S3MockConf m) = do
   S3Env
     { pathPrefix = m.pathPrefix,
       getH = mockGet baseDir bucketName,
-      putH = mockPut baseDir bucketName
+      putH = mockPut baseDir bucketName,
+      putRawH = mockPutRaw baseDir bucketName,
+      deleteH = mockDelete baseDir bucketName,
+      generateUploadUrlH = mockGenerateUploadUrl baseDir bucketName,
+      generateDownloadUrlH = mockGenerateDownloadUrl baseDir bucketName,
+      headRequestH = mockHeadRequest baseDir bucketName
     }
 buildS3Env (S3AwsConf a) = do
   S3Env
     { pathPrefix = a.pathPrefix,
       getH = get'' a.bucketName,
-      putH = put'' a.bucketName
+      putH = put'' a.bucketName,
+      putRawH = putRaw'' a.bucketName,
+      deleteH = delete'' a.bucketName,
+      generateUploadUrlH = generateUploadUrl' a.bucketName,
+      generateDownloadUrlH = generateDownloadUrl' a.bucketName,
+      headRequestH = headRequest' a.bucketName
     }

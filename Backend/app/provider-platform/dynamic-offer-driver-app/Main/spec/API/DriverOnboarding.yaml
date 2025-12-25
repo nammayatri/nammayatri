@@ -1,0 +1,320 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  DocumentVerificationConfig: Domain.Types.DocumentVerificationConfig
+  DocumentType: Domain.Types.DocumentVerificationConfig
+  DocumentCategory: Domain.Types.DocumentVerificationConfig
+  DocumentApplicableType: Domain.Types.DocumentVerificationConfig
+  DocumentFlowGrouping: Domain.Types.DocumentVerificationConfig
+  FieldType: Domain.Types.DocumentVerificationConfig
+  FieldInfo: Domain.Types.DocumentVerificationConfig
+  ServiceTierType: Domain.Types.Common
+  AirConditionedRestrictionType: Domain.Types.DriverInformation
+  APISuccess: Kernel.Types.APISuccess
+  Centesimal: Kernel.Types.Common
+  UTCTime: Kernel.Prelude
+  Person: Domain.Types.Person
+  PriceAPIEntity: Kernel.Types.Common
+  Money: Kernel.Types.Common
+  Driver: Domain.Types.Person
+  TripCategory: Domain.Types.Common
+  VerifiedBy: Domain.Types.DriverPanCard
+  SelfieFetchStatus: Domain.Types.Image
+  BaseUrl: Servant.Client.Core
+  Minutes: Kernel.Types.Common
+  Image: Domain.Types.Image
+  PanType: Domain.Types.DriverPanCard
+  LinkedRC: Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
+  VehicleCategory: Domain.Types.VehicleCategory
+  FarePolicy: Domain.Types.FarePolicy
+  FareParameters: Domain.Types.FareParameters
+  PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+
+module: DriverOnboardingV2
+types:
+  ValidationStatus:
+    enum: "APPROVED,DECLINED,AUTO_APPROVED,AUTO_DECLINED,NEEDS_REVIEW"
+    derive: "Read"
+  DocumentVerificationConfigList:
+    autos: Maybe [DocumentVerificationConfigAPIEntity]
+    cabs: Maybe [DocumentVerificationConfigAPIEntity]
+    bikes: Maybe [DocumentVerificationConfigAPIEntity]
+    ambulances: Maybe [DocumentVerificationConfigAPIEntity]
+    trucks: Maybe [DocumentVerificationConfigAPIEntity]
+    bus: Maybe [DocumentVerificationConfigAPIEntity]
+    boat: Maybe [DocumentVerificationConfigAPIEntity]
+  DocumentVerificationConfigAPIEntity:
+    documentType: DocumentType
+    documentCategory: Maybe DocumentCategory
+    documentFlowGrouping: DocumentFlowGrouping
+    title: Text
+    description: Maybe Text
+    isMandatory: Bool
+    isMandatoryForEnabling: Bool
+    isDisabled: Bool
+    disableWarning: Maybe Text
+    isHidden: Bool
+    dependencyDocumentType: '[DocumentType]'
+    checkExtraction: Bool
+    checkExpiry: Bool
+    rcNumberPrefixList: '[Text]'
+    filterForOldApks: Maybe Bool
+    applicableTo: DocumentApplicableType
+    documentFields: Maybe [FieldInfo]
+  UpdateAirConditionUpdateRequest:
+    recordType: NewType
+    isAirConditioned: Bool
+  DriverVehicleServiceTiers:
+    tiers: [DriverVehicleServiceTier]
+    canSwitchToRental: Maybe Bool
+    canSwitchToInterCity: Maybe Bool
+    canSwitchToIntraCity: Maybe Bool
+    airConditioned: Maybe AirConditionedTier
+  AirConditionedTier:
+      isWorking: Bool
+      usageRestrictionType: AirConditionedRestrictionType
+      restrictionMessage: Maybe Text
+  DriverVehicleServiceTier:
+    serviceTierType: ServiceTierType
+    name: Text
+    isUsageRestricted: Maybe Bool
+    shortDescription: Maybe Text
+    longDescription: Maybe Text
+    seatingCapacity: Maybe Int
+    airConditioned: Maybe Double
+    luggageCapacity: Maybe Int
+    driverRating: Maybe Centesimal
+    vehicleRating: Maybe Double
+    isDefault: Bool
+    isSelected: Bool
+    priority: Maybe Int
+  RateCardItem:
+    title: Text
+    price: Money
+    priceWithCurrency: PriceAPIEntity
+    derive: Show
+  SSNReq:
+    ssn: Text
+  FarePolicyHour:
+    enum: "Peak,NonPeak,Night"
+  RateCardResp:
+    farePolicyId: Id FarePolicy
+    fareParams: FareParameters
+    serviceTierType: ServiceTierType
+    perKmRate: PriceAPIEntity
+    totalFare: PriceAPIEntity
+    perMinuteRate: Maybe PriceAPIEntity
+    tripCategory: TripCategory
+    farePolicyHour: FarePolicyHour
+    rateCardItems: [RateCardItem]
+  DriverPanReq:
+    panNumber: Text
+    imageId1 : Id Image
+    imageId2 : Maybe (Id Image)
+    consent: Bool
+    nameOnCard: Maybe Text
+    dateOfBirth: Maybe UTCTime
+    consentTimestamp: Maybe UTCTime
+    validationStatus: Maybe ValidationStatus
+    verifiedBy: Maybe VerifiedBy
+    transactionId: Maybe Text
+    nameOnGovtDB: Maybe Text
+    docType: Maybe PanType
+  GetLiveSelfieResp:
+    recordType: NewType
+    image: Text
+  AadhaarCardReq:
+    aadhaarFrontImageId: Maybe (Id Image)
+    aadhaarBackImageId: Maybe (Id Image)
+    maskedAadhaarNumber: Maybe Text
+    nameOnCard: Maybe Text
+    dateOfBirth: Maybe Text
+    address: Maybe Text
+    consent: Bool
+    consentTimestamp: UTCTime
+    validationStatus: ValidationStatus
+    transactionId: Text
+  BankAccountLinkResp:
+    chargesEnabled: Bool
+    detailsSubmitted: Bool
+    accountLink: BaseUrl
+    accountUrlExpiry: UTCTime
+    paymentMode: PaymentMode
+  BankAccountResp:
+    chargesEnabled: Bool
+    detailsSubmitted: Bool
+    paymentMode: PaymentMode
+  HVSdkCallLogReq:
+    txnId: Text
+    hvFlowId: Maybe Text
+    docType: Maybe DocumentType
+    status : Maybe Text
+    callbackResponse : Maybe Text
+    failureReason : Maybe Text
+  CommonDocumentReq:
+    documentType: DocumentType
+    documentData: Text  # JSON string containing all document data
+    imageId: Maybe (Id Image)  # Optional image for documents that need it
+  VehiclePhotosResp:
+    left: [Text]
+    right: [Text]
+    front: [Text]
+    back: [Text]
+    frontInterior: [Text]
+    backInterior: [Text]
+    odometer: [Text]
+  DriverGstinReq:
+    imageId1 : Id Image
+    imageId2 : Maybe (Id Image)
+    gstNumber : Text
+    transactionId : Maybe Text
+    validationStatus : Maybe ValidationStatus
+    verifiedBy : Maybe VerifiedBy
+  FleetRCListRes:
+    recordType: NewType
+    rcs: "[LinkedRC]"
+  LinkToFleetReq:
+    fleetOwnerId: Id Person
+    onboardingVehicleCategory: Maybe VehicleCategory
+    isRevoke: Maybe Bool
+    requestReason: Maybe Text
+
+apis:
+  - GET:
+      endpoint: /onboarding/configs
+      query:
+        onlyVehicle: Bool
+        makeSelfieAadhaarPanMandatory: Bool
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: DocumentVerificationConfigList
+  - GET:
+      endpoint: /driver/rateCard
+      query:
+        vehicleServiceTier: ServiceTierType
+        tripCategory: TripCategory
+        distance: Meters
+        durationInMin: Minutes
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: '[RateCardResp]'
+  - GET:
+      endpoint: /driver/vehiclePhotos
+      mandatoryQuery:
+        rcNo: Text
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: VehiclePhotosResp
+  - GET:
+      endpoint: /driver/vehiclePhotosB64
+      mandatoryQuery:
+        rcNo: Text
+      query:
+        onlyLatest: Bool
+        left: Bool
+        right: Bool
+        front: Bool
+        back: Bool
+        frontInterior: Bool
+        backInterior: Bool
+        odometer: Bool
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: VehiclePhotosResp
+  - POST:
+      endpoint: /driver/updateAirCondition
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: UpdateAirConditionUpdateRequest
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /driver/vehicleServiceTiers
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: DriverVehicleServiceTiers
+  - POST:
+      endpoint: /driver/updateServiceTiers
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DriverVehicleServiceTiers
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /driver/register/ssn
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: SSNReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /driver/backgroundVerification
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /driver/register/pancard
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DriverPanReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /driver/register/bankAccount/link
+      query:
+        paymentMode: PaymentMode
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: BankAccountLinkResp
+  - GET:
+      endpoint: /driver/register/bankAccount/status
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: BankAccountResp
+
+  # GET /driver/register/getLiveSelfie
+  - GET:
+      endpoint: /driver/register/getLiveSelfie
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        status: SelfieFetchStatus
+      response:
+        type: GetLiveSelfieResp
+
+  # POST /driver/register/aadhaarCard
+  - POST:
+      endpoint: /driver/register/aadhaarCard
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: AadhaarCardReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /driver/register/logHvSdkCall
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: HVSdkCallLogReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /driver/register/commonDocument
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: CommonDocumentReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /driver/fleet/rcs
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: FleetRCListRes
+  - POST:
+      endpoint: /driver/linkToFleet
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: LinkToFleetReq
+      response:
+        type: APISuccess

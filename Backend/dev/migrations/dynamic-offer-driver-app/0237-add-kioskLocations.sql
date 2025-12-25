@@ -1,14 +1,3 @@
-CREATE TABLE atlas_driver_offer_bpp.kiosk_location (
-  id CHARACTER(36),
-  merchant_id CHARACTER(36) NOT NULL,
-  address TEXT NOT NULL,
-  landmark TEXT NOT NULL,
-  contact CHARACTER VARYING(15),
-  longitude DOUBLE PRECISION NOT NULL,
-  latitude DOUBLE PRECISION NOT NULL,
-  PRIMARY KEY (id)
-);
-
 INSERT INTO atlas_driver_offer_bpp.kiosk_location (id, merchant_id, landmark, address, contact, longitude, latitude) VALUES
     ( 'f63ec21a-06b8-3fc4-4697-5fd671dfed26', 'favorit0-0000-0000-0000-00000favorit' , 'Hyderbad biryani, Arekere main road', 'Arekere Main Rd, Bengaluru, Karnataka 560076', '06363496571', 77.60114684, 12.88963386),
     ( '14dfd71a-6ea1-0df6-53d7-ced6186203c8', 'favorit0-0000-0000-0000-00000favorit' , 'GBJ park, Marathahalli bridge', 'Jawahar Nagar, Marathahalli, Bengaluru, Karnataka 560037', '09743914738', 77.6931, 12.960529),

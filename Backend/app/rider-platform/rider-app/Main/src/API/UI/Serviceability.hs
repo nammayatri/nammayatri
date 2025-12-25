@@ -26,11 +26,14 @@ import Domain.Types.Person as Person
 import Environment
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant
+import Servant hiding (throwError)
+import qualified SharedLogic.CallBPPInternal as BPPInternal
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Auth
 
 -------- Serviceability----------
@@ -43,6 +46,9 @@ type API =
            :<|> "destination"
              :> ReqBody '[JSON] ServiceabilityReq
              :> Post '[JSON] DServiceability.ServiceabilityRes
+           :<|> "isInterCity"
+             :> ReqBody '[JSON] BPPInternal.IsIntercityReq
+             :> Post '[JSON] BPPInternal.IsIntercityResp
        )
 
 newtype ServiceabilityReq = ServiceabilityReq
@@ -52,13 +58,35 @@ newtype ServiceabilityReq = ServiceabilityReq
 
 handler :: FlowServer API
 handler regToken =
-  checkServiceability origin regToken
-    :<|> checkServiceability destination regToken
+  checkOrignServiceability origin regToken
+    :<|> checkDestinationServiceability destination regToken
+    :<|> checkForIsInterCity regToken
 
-checkServiceability ::
+checkOrignServiceability ::
   (GeofencingConfig -> GeoRestriction) ->
   (Id Person.Person, Id Merchant.Merchant) ->
   ServiceabilityReq ->
   FlowHandler DServiceability.ServiceabilityRes
-checkServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  DServiceability.checkServiceability settingAccessor (personId, merchantId) location True
+checkOrignServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  DServiceability.checkServiceability settingAccessor (personId, merchantId) location True True
+
+checkDestinationServiceability ::
+  (GeofencingConfig -> GeoRestriction) ->
+  (Id Person.Person, Id Merchant.Merchant) ->
+  ServiceabilityReq ->
+  FlowHandler DServiceability.ServiceabilityRes
+checkDestinationServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  DServiceability.checkServiceability settingAccessor (personId, merchantId) location True False
+
+checkForIsInterCity ::
+  (Id Person.Person, Id Merchant.Merchant) ->
+  BPPInternal.IsIntercityReq ->
+  FlowHandler BPPInternal.IsIntercityResp
+checkForIsInterCity (personId, merchantId) req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  eitherResp <- withTryCatch "getIsInterCity:checkForIsInterCity" (BPPInternal.getIsInterCity merchant req)
+  case eitherResp of
+    Left err -> do
+      logDebug $ "Intercity API failed: " <> show err
+      throwError RideNotServiceable
+    Right resp -> return resp

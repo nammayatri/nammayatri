@@ -30,6 +30,7 @@ let rcfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
@@ -50,6 +51,12 @@ let appBackendManagement =
       , token = sec.appBackendToken
       }
 
+let bharatTaxi =
+      { name = common.ServerName.BHARAT_TAXI
+      , url = "http://localhost:3000/"
+      , token = sec.bharatTaxiToken
+      }
+
 let rccfg =
       { connectHost = "localhost"
       , connectPort = 30001
@@ -58,7 +65,29 @@ let rccfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
+
+let cacheConfig = { configsExpTime = +86400 }
+
+let cacConfig =
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenant = "test"
+      , retryConnection = False
+      , cacExpTime = +86400
+      , enablePolling = True
+      , enableCac = False
+      }
+
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
+
+let sendEmailRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+
+let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -66,12 +95,14 @@ in  { esqDBCfg
     , hedisClusterCfg = rccfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
-    , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , hedisMigrationStage = False
+    , cutOffHedisCluster = False
+    , kafkaProducerCfg
     , port = +8017
     , migrationPath =
       [   env:RIDER_DASHBOARD_MIGRATION_PATH as Text
         ? "dev/migrations/rider-dashboard"
+      , "dev/migrations-read-only/rider-dashboard"
       ]
     , autoMigrate = True
     , loggerConfig =
@@ -84,13 +115,23 @@ in  { esqDBCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , authTokenCacheExpiry = +600
     , registrationTokenExpiry = +365
+    , registrationTokenInactivityTimeout = None Integer
+    , updateRestrictedBppRoles = [] : List Text
+    , sendEmailRateLimitOptions
     , encTools
     , exotelToken = ""
-    , dataServers = [ appBackend, appBackendManagement ]
-    , merchantUserAccountNumber = +5
+    , dataServers = [ appBackend, appBackendManagement, bharatTaxi ]
+    , merchantUserAccountNumber = +100
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , slackToken = sec.slackToken
     , slackChannel = "CXXXXXXXXXF"
     , internalEndPointMap = common.internalEndPointMap
+    , cacheConfig
+    , kvConfigUpdateFrequency = +60
+    , cacConfig
+    , internalAuthAPIKey = "ae288466-2add-11ee-be56-0242ac120002"
+    , passwordExpiryDays = None Integer
+    , enforceStrongPasswordPolicy = False
+    , inMemConfig
     }

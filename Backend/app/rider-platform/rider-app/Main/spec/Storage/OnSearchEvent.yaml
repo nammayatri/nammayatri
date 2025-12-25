@@ -1,0 +1,19 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+OnSearchEvent:
+  tableName: on_search_event
+
+  fields:
+    id : Id OnSearchEvent
+    bppId : Text
+    messageId : Text
+    errorCode : Maybe Text
+    errorType : Maybe Text
+    errorMessage : Maybe Text
+    createdAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+  excludedFields: [merchantId, merchantOperatingCityId]

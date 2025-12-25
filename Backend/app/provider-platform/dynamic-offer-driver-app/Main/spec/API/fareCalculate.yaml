@@ -1,0 +1,40 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  LatLong: Kernel.External.Maps.Types
+  FareParameters: Domain.Types.FareParameters
+  FarePolicy: Domain.Types.FarePolicy
+  TripCategory: Domain.Types.Common
+  ServiceTierType: Domain.Types.Common
+  SearchRequest: Domain.Types.SearchRequest
+  Money: Kernel.Types.Common
+  Estimate: Domain.Types.Estimate
+
+module: FareCalculator
+
+types:
+  FareResponse:
+    estimatedFares: "[EstimateApi]"
+  EstimateApi:
+    id: Id Estimate
+    vehicleServiceTier: ServiceTierType
+    vehicleServiceTierName: Maybe Text
+    tripCategory: TripCategory
+    minFare: HighPrecMoney
+    maxFare: HighPrecMoney
+    estimatedDistance: Maybe Meters
+    tollNames: Maybe [Text]
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+apis:
+  - GET:
+      endpoint: /calculateFare
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery :
+        pickupLatLon: LatLong
+        dropLatLon: LatLong
+        distanceWeightage: Int
+
+      response:
+        type: API.Types.UI.FareCalculator.FareResponse

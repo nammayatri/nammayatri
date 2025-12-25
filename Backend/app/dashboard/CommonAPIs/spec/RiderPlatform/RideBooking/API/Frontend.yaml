@@ -1,0 +1,39 @@
+imports:
+  Person: Domain.Types.Person
+  GetPersonFlowStatusRes: Domain.Action.UI.Frontend
+  NotifyEventReq: Domain.Action.UI.Frontend
+  NotifyEventResp: Domain.Action.UI.Frontend
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Action.UI.Frontend: "rider-app"
+
+module: Frontend
+
+apis:
+  - GET: # PersonFlowStatusAPI
+      endpoint: /flowStatus/{customerId}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      query:
+        - isPolling: Bool
+        - checkForActiveBooking: Bool
+      response:
+        type: GetPersonFlowStatusRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS FLOW_STATUS
+  - POST:  # NotifyEventAPI
+      endpoint:  /notifyEvent/{customerId}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: NotifyEventReq
+      response:
+        type: NotifyEventResp
+      migrate:
+        endpoint: FlowStatusAPI NotifyEventEndPoint
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS NOTIFYEVENT
+
+types: {}

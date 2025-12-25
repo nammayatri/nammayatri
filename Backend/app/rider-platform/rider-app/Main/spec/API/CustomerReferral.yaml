@@ -1,0 +1,83 @@
+imports:
+  Centesimal: Kernel.Utils.Common
+  UTCTime: Kernel.Prelude
+  LatLong: Kernel.External.Maps.Types
+  PayoutStatus: Domain.Types.PersonStats
+
+module: CustomerReferral
+types:
+  ReferredCustomers:
+    count: Int
+
+  ApplyCodeReq:
+    code: Text
+    deviceId: Maybe Text
+    androidId: Maybe Text
+    gps: Maybe LatLong
+
+  ReferrerInfo:
+    firstName : Maybe Text
+    middleName : Maybe Text
+    lastName : Maybe Text
+    rating : Maybe Centesimal
+    registeredAt : UTCTime
+    totalRides : Int
+    vehicleNumber : Maybe Text
+    vehicleVariant: Maybe Text
+    applicableServiceTiers: "Maybe [Text]"
+    referrerImageUri : Maybe Text
+  VpaResp:
+    vpa: Text
+    isValid: Bool
+  PayoutItem:
+    amount: HighPrecMoney
+    vpa: Maybe Text
+    payoutAt: UTCTime
+    payoutStatus: PayoutStatus
+    orderId: Text
+  PayoutHistory:
+    history: [PayoutItem]
+  UpdatePayoutVpaReq:
+    vpa: Text
+
+apis:
+  # GET /customerReferralCount
+  - GET:
+      endpoint: /CustomerRefferal/count
+      auth: TokenAuth
+      response:
+        type: "API.Types.UI.CustomerReferral.ReferredCustomers"
+
+  # POST apply code and get referrer info
+  - POST:
+      endpoint: /person/applyReferral
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.CustomerReferral.ApplyCodeReq
+      response:
+        type: API.Types.UI.CustomerReferral.ReferrerInfo
+
+  # GET VerifyVpa
+  - GET:
+      endpoint: /referral/verifyVpa
+      auth: TokenAuth
+      mandatoryQuery:
+        vpa: Text
+      response:
+        type: "API.Types.UI.CustomerReferral.VpaResp"
+
+  # GET ui payout history
+  - GET:
+      endpoint: /referralPayout/history
+      auth: TokenAuth
+      response:
+        type: "API.Types.UI.CustomerReferral.PayoutHistory"
+
+  # Update Payout Vpa
+  - POST:
+      endpoint: /payoutVpa/upsert
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.CustomerReferral.UpdatePayoutVpaReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

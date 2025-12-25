@@ -1,0 +1,14 @@
+imports:
+module: Cac
+types: {}
+apis:
+  - POST:
+      endpoint: /getUiConfigs
+      auth: TokenAuth
+      query:
+        - toss: Int
+        - tenant: Text
+      request:
+        type: "Data.Aeson.Object"
+      response:
+        type: "Data.Aeson.Object"

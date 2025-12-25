@@ -1,19 +1,8 @@
-CREATE TABLE atlas_driver_offer_bpp.exophone (
-    id character(36) PRIMARY KEY NOT NULL,
-    merchant_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.merchant (id),
-    primary_phone character varying(255) NOT NULL,
-    backup_phone character varying(255) NOT NULL,
-    is_primary_down boolean NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT  exophone_unique_primary_phone UNIQUE (primary_phone),
-    CONSTRAINT  exophone_unique_backup_phone UNIQUE (backup_phone)
-);
-
-INSERT INTO atlas_driver_offer_bpp.exophone (id, merchant_id, primary_phone, backup_phone, is_primary_down)
+INSERT INTO atlas_driver_offer_bpp.exophone (id, merchant_id, merchant_operating_city_id, primary_phone, backup_phone, is_primary_down)
     (SELECT
         atlas_driver_offer_bpp.uuid_generate_v4(),
         T1.id,
+        'merchantOpCId',
         unnest (T1.exo_phones),
         unnest (T1.exo_phones),
         false
@@ -21,5 +10,3 @@ INSERT INTO atlas_driver_offer_bpp.exophone (id, merchant_id, primary_phone, bac
     ON CONFLICT DO NOTHING;
 
 ALTER TABLE atlas_driver_offer_bpp.merchant DROP COLUMN exo_phones;
-
-ALTER TABLE atlas_driver_offer_bpp.booking RENAME COLUMN provider_exo_phone TO primary_exophone;

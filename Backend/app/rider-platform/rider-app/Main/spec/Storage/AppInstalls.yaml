@@ -1,0 +1,39 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Version : Kernel.Types.Version
+
+AppInstalls:
+  tableName: app_installs
+
+  fields:
+    id : Id AppInstalls
+    deviceToken : Text
+    source : Text
+    merchantId : Id Merchant
+    appVersion : Maybe Version
+    bundleVersion : Maybe Version
+    platform : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  beamType:
+    bundleVersion: Maybe Text
+    appVersion: Maybe Text
+
+  fromTType:
+    bundleVersion: readBundleVersion|M
+    appVersion: readAppVersion|M
+
+  toTType:
+    bundleVersion: Kernel.Prelude.fmap Kernel.Utils.Version.versionToText|I
+    appVersion: Kernel.Prelude.fmap Kernel.Utils.Version.versionToText|I
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantOperatingCityId]

@@ -1,0 +1,88 @@
+imports:
+  Ride: Dashboard.Common
+  LatLong: Kernel.External.Maps.Types
+  CancellationReasonCode: Dashboard.Common.Booking
+
+module: Ride
+
+apis:
+  - POST: # RideStartAPI
+      endpoint: /{rideId}/start
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      request:
+        type: StartRideReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: RideAPI RideStartEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP RIDES RIDE_START
+  - POST: # RideEndAPI
+      endpoint: /{rideId}/end
+      auth: ApiAuthV2
+      params:
+        rideId: (Id Ride)
+      request:
+        type: EndRideReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: RideAPI RideEndEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP RIDES RIDE_END
+  - GET: # CurrentActiveRideAPI
+      endpoint: /{vehicleNumber}/currentActiveRide
+      auth: ApiAuthV2
+      params:
+        vehicleNumber: Text
+      response:
+        type: (Id Ride)
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP RIDES CURRENT_ACTIVE_RIDE
+  - POST: # RideCancelAPI
+      endpoint: /{rideId}/cancel
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      request:
+        type: CancelRideReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: RideAPI RideCancelEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP RIDES RIDE_CANCEL
+  - POST: # BookingWithVehicleNumberAndPhoneAPI
+      endpoint: /booking/withVehicleNumberAndPhone
+      auth: ApiAuthV2
+      request:
+        type: BookingWithVehicleAndPhoneReq
+      response:
+        type: BookingWithVehicleAndPhoneRes
+      migrate:
+        endpoint: RideAPI BookingWithVehicleNumberAndPhoneEndpoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP RIDES BOOKING_WITH_VEHICLE_NUMBER_AND_PHONE
+
+types:
+  StartRideReq:
+    - point: Maybe LatLong
+    - odometerReadingValue: Maybe Centesimal
+    - derive: "'HideSecrets"
+  EndRideReq:
+    - point: Maybe LatLong
+    - odometerReadingValue: Maybe Centesimal
+    - derive: "'HideSecrets"
+  CancelRideReq:
+    - reasonCode: CancellationReasonCode
+    - additionalInfo: Maybe Text
+    - derive: "'HideSecrets"
+  BookingWithVehicleAndPhoneReq:
+    - vehicleNumber: Text
+    - phoneNumber: Text
+    - countryCode: Text
+    - endRideForDriver: Bool
+    - endRideForVehicle: Bool
+    - derive: "'HideSecrets"
+  BookingWithVehicleAndPhoneRes:
+    - driverId: Text
+    - recordType: NewType
+    - derive: "'HideSecrets"

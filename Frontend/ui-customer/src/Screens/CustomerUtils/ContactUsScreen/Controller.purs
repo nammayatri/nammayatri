@@ -24,7 +24,7 @@ import JBridge (hideKeyboardOnNavigation)
 import Log (printLog)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (pure, unit, class Show, bind, (>), (&&), ($), discard, (==))
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (ContactUsScreenState, ErrorType(..))
@@ -58,12 +58,15 @@ instance loggableAction :: Loggable Action where
         SubjectEditTextActionController act -> case act of
             PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "subject_edit_text_changed" "primary_edit_text" 
             PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "subject_edit_text_focus_changed" "primary_edit_text" 
+            PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen CONTACT_US_SCREEN) "subject_edit_text_image_onclick" "primary_edit_text"
         EmailEditTextActionController act -> case act of
             PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "email_edit_text_changed" "primary_edit_text"
             PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "email_edit_text_focus_changed" "primary_edit_text" 
+            PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen CONTACT_US_SCREEN) "email_edit_text_image_onclick" "primary_edit_text"
         DescriptionEditTextActionController act -> case act of
             PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "description_edit_text_changed" "primary_edit_text"
             PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "description_edit_text_focus_changed" "primary_edit_text" 
+            PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen CONTACT_US_SCREEN) "description_edit_text_image_onclick" "primary_edit_text"
 
 data ScreenOutput = GoBack | GoHome ContactUsScreenState
 
@@ -97,4 +100,4 @@ eval (EmailEditTextActionController (PrimaryEditText.TextChanged id a)) state = 
 eval (DescriptionEditTextActionController (PrimaryEditText.TextChanged id a)) state = continue state{data {description = a},props{btnActive = if ((length state.data.subject > 0 )&& (length state.data.email > 0) && (length a > 0) && (validateEmail state.data.email)) then true else false}}
     
 
-eval _ state = continue state
+eval _ state = update state

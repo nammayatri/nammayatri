@@ -1,0 +1,1 @@
+UPDATE atlas_app.merchant_message SET sender_header = 'YTRISI' where message_key = 'SEND_RIDE_END_OTP'; -- Currently it is only used in YS

@@ -68,7 +68,6 @@ dependencies:
   - servant-server
   - euler-hs
   - unordered-containers
-  - hashmap
   - containers
 
 ghc-options:

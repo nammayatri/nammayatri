@@ -9,6 +9,8 @@
 
 package in.juspay.mobility.app;
 
+import static in.juspay.mobility.app.Utils.DRIVER_STATUS;
+
 import android.animation.ValueAnimator;
 import android.app.ActivityManager;
 import android.app.Service;
@@ -16,6 +18,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
+import android.media.Image;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
@@ -77,16 +80,29 @@ public class WidgetService extends Service {
     private static FirebaseAnalytics mFirebaseAnalytics;
     private int LAYOUT_FLAG;
 
+    private Runnable animationRunnable;
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        SharedPreferences sharedPreferences = this.getSharedPreferences(this.getString(R.string.preference_file_key), MODE_PRIVATE);
+        String driverStatus = sharedPreferences.getString(DRIVER_STATUS,Utils.DRIVER_STATUS_OFFLINE);
+        if (driverStatus.equals(Utils.DRIVER_STATUS_OFFLINE)) {
+            return START_NOT_STICKY;
+        }
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
+        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String intentMessage = intent != null && intent.hasExtra(getResources().getString(R.string.WIDGET_MESSAGE)) ? intent.getStringExtra(getResources().getString(R.string.WIDGET_MESSAGE)) : null;
-        if (intent != null && calculatedTime == 0 && intentMessage == null) {
+        Boolean showNearbySpecialPickup = intent != null && intent.hasExtra("showNearbySpecialPickup") ? intent.getBooleanExtra("showNearbySpecialPickup", false) : null;
+                if (showNearbySpecialPickup != null) {
+            specialPickupNotification(intent, showNearbySpecialPickup);
+        }
+        else if (intent != null && calculatedTime == 0 && intentMessage == null && animationRunnable == null) {
             showSilentNotification(intent);
-        } else {
+                    } else {
             if (intentMessage != null && intentMessage.equals("CLEAR_FARE") && silentRideRequest != null && progressBar != null && dismissRequest != null && handler != null) {
-                removeViewAndRequest(0);
-            } else if (isRemovingInProcess) {
+                removeViewAndRequest(0, intent);
+
+            } else if (isRemovingInProcess || animationRunnable != null) {
                 rideRequestQueue.offer(intent);
             } else if (intentMessage != null && !intentMessage.equals("CLEAR_FARE")) {
                 addMessageToWidget(intent);
@@ -109,13 +125,128 @@ public class WidgetService extends Service {
 
     private float mAngleToRotate;
 
+    private void showViewWithAnimation(View view) {
+        if (view != null) {
+            view.setVisibility(View.VISIBLE);
+            view.setTranslationX(-1500);
+            view.animate().translationX(0)
+                    .setInterpolator(new FastOutLinearInInterpolator())
+                    .setDuration(600)
+                    .start();
+        }
+    }
+
+    private void hideViewWithAnimation(View view) {
+        if (view != null) {
+            view.animate().translationX(-1500)
+                    .setInterpolator(new FastOutLinearInInterpolator())
+                    .setDuration(600)
+                    .start();
+        }
+    }
+
+    private void specialPickupNotification(Intent intent, boolean showNotification) {
+        if (widgetView != null && intent != null) {
+            ImageView notificationDotView = widgetView.findViewById(R.id.notification_dot);
+            if (showNotification) {
+                try {
+                    TextView messageView = widgetView.findViewById(R.id.ride_fare);
+                    TextView messageView2 = widgetView.findViewById(R.id.distance_to_pickup);
+                    ImageView dotView = widgetView.findViewById(R.id.dot_view);
+
+                    MediaPlayer mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.silent_mode_notification_sound);
+                    if (mediaPlayer != null) {
+                        mediaPlayer.start();
+                        mediaPlayer.setOnCompletionListener(MediaPlayer::release);
+                    }
+
+                    String specialPickupMessage = intent.getStringExtra("specialPickupMessage");
+
+                    if (messageView != null && specialPickupMessage != null && notificationDotView != null) {
+                        messageView.setText(specialPickupMessage);
+                        messageView.setVisibility(View.VISIBLE);
+                        messageView.setTextSize(13);
+                        messageView2.setVisibility(View.GONE);
+                        dotView.setVisibility(View.GONE);
+                    }
+
+                    silentRideRequest = widgetView.findViewById(R.id.silent_ride_request_background);
+                    showViewWithAnimation(silentRideRequest);
+
+                    dismissRequest = widgetView.findViewById(R.id.dismiss_silent_reqID);
+                    showViewWithAnimation(dismissRequest);
+
+                    progressBar = widgetView.findViewById(R.id.silent_progress_indicator);
+                    if (progressBar != null) {
+                        progressBar.setIndicatorColor(getColor(R.color.green900));
+                        showViewWithAnimation(progressBar);
+                    }
+
+                    widgetView.post(() -> {
+                        try {
+                            int calculatedWidth = (widgetView.getWidth() / 100) * 85;
+                            int[] ar = new int[100];
+                            for (int i = ar.length - 1, j = 1; i >= 0 && j <= ar.length; i--, j++) {
+                                ar[i] = (calculatedWidth / 100) * j;
+                            }
+
+                            ValueAnimator anim = ValueAnimator.ofInt(ar);
+                            anim.addUpdateListener(valueAnimator -> {
+                                if (progressBar != null) {
+                                    int val = (Integer) valueAnimator.getAnimatedValue();
+                                    ViewGroup.LayoutParams layoutParams = progressBar.getLayoutParams();
+                                    progressBar.setIndicatorColor(getColor(R.color.green900));
+                                    layoutParams.width = val;
+                                    progressBar.setLayoutParams(layoutParams);
+                                } else {
+                                    anim.removeAllUpdateListeners();
+                                    anim.end();
+                                }
+                            });
+                            anim.setDuration(5000);
+                            anim.start();
+
+                        } catch (Exception e) {
+                            Log.e("WidgetService", "Error in specialPickupNotification " + e);
+                            mFirebaseAnalytics.logEvent("Exception_in_specialPickupNotification", null);
+                        }
+                    });
+
+                    dismissRequest.setOnClickListener(view -> {
+                        hideViewWithAnimation(dismissRequest);
+                        if (silentRideRequest != null) silentRideRequest.setVisibility(View.GONE);
+                        if (progressBar != null) progressBar.setVisibility(View.GONE);
+                        view.setVisibility(View.GONE);
+                    });
+
+                    Handler handler = new Handler();
+                    handler.postDelayed(() -> {
+                        if (silentRideRequest != null) hideViewWithAnimation(silentRideRequest);
+                        if (silentRideRequest != null) silentRideRequest.setVisibility(View.GONE);
+                        if (progressBar != null) progressBar.setVisibility(View.GONE);
+                        if (dismissRequest != null) dismissRequest.setVisibility(View.GONE);
+                        if (notificationDotView != null) notificationDotView.setVisibility(View.VISIBLE);
+                    }, getResources().getInteger(R.integer.DURATION_OF_SHOWING_MESSAGE));
+
+                } catch (Exception e) {
+                    Log.e("WidgetService", "Error in specialPickupNotification " + e);
+                    mFirebaseAnalytics.logEvent("Exception_in_specialPickupNotification", null);
+                }
+            } else {
+                if (notificationDotView != null) notificationDotView.setVisibility(View.GONE);
+            }
+        }
+    }
+
     private void showSilentNotification(Intent intent) {
         if(widgetView == null) return;
+        animationRunnable = null;
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
         try {
             // Fetch TextView for fare and distanceToPickup
             TextView fareTextView = widgetView.findViewById(R.id.ride_fare);
             TextView distanceTextView = widgetView.findViewById(R.id.distance_to_pickup);
-
+            ImageView dotView = widgetView.findViewById(R.id.dot_view);
             // Get Current Time in UTC
             final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en"));
             f.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -138,6 +269,7 @@ public class WidgetService extends Service {
                 // Fetch data from entity_payload
                 int fare = entity_payload.getInt("baseFare");
                 int distanceToPickup = entity_payload.getInt("distanceToPickup");
+
                 String searchRequestValidTill = entity_payload.getString("searchRequestValidTill");
 
 
@@ -151,6 +283,7 @@ public class WidgetService extends Service {
                 SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 String fareText = sharedPref.getString("CURRENCY", "₹") + fare;
                 fareTextView.setText(fareText);
+                fareTextView.setTextSize(20);
                 String distanceText;
                 if (distanceToPickup > 1000) {
                     distanceText = (df.format(distanceToPickup / 1000)) + " km pickup";
@@ -158,23 +291,19 @@ public class WidgetService extends Service {
                     distanceText = distanceToPickup + " m pickup";
                 }
                 distanceTextView.setText(distanceText);
+                distanceTextView.setVisibility(View.VISIBLE);
+                dotView.setVisibility(View.VISIBLE);
 
                 silentRideRequest = widgetView.findViewById(R.id.silent_ride_request_background);
                 if (silentRideRequest != null){
-                    // Add silentRideRequest view
-                    silentRideRequest.setVisibility(View.VISIBLE);
-
                     // Start Slide-in animation
-                    silentRideRequest.setTranslationX(-1500);
-                    silentRideRequest.animate().translationX(0)
-                            .setInterpolator(new FastOutLinearInInterpolator())
-                            .setDuration(600)
-                            .start();
+                    showViewWithAnimation(silentRideRequest);
 
                     //onClick Listener for rideRequest
                     silentRideRequest.setOnClickListener(view -> {
                         if (data != null && entity_payload != null) {
-                            NotificationUtils.showAllocationNotification(getApplicationContext(), data, entity_payload);
+                            String requestSource =  intent != null && (intent.hasExtra("requestSource")) ? intent.getStringExtra("requestSource") : "";
+                            NotificationUtils.showAllocationNotification(getApplicationContext(), data, entity_payload, requestSource);
                             silentRideRequest.setVisibility(View.GONE);
                             progressBar.setVisibility(View.GONE);
                             dismissRequest.setVisibility(View.GONE);
@@ -185,26 +314,14 @@ public class WidgetService extends Service {
 
                 dismissRequest = widgetView.findViewById(R.id.dismiss_silent_reqID);
                 if (dismissRequest != null) {
-                    dismissRequest.setVisibility(View.VISIBLE);
-
-                    dismissRequest.setTranslationX(-1500);
-                    dismissRequest.animate().translationX(0)
-                            .setInterpolator(new FastOutLinearInInterpolator())
-                            .setDuration(600)
-                            .start();
+                    showViewWithAnimation(dismissRequest);
                 }
 
                 progressBar = widgetView.findViewById(R.id.silent_progress_indicator);
                 if (progressBar != null) {
                     //Start progress bar :-
-                    progressBar.setVisibility(View.VISIBLE);
+                    showViewWithAnimation(progressBar);
                     progressBar.setIndicatorColor(getColor(R.color.green900));
-
-                    progressBar.setTranslationX(-1500);
-                    progressBar.animate().translationX(0)
-                            .setInterpolator(new FastOutLinearInInterpolator())
-                            .setDuration(600)
-                            .start();
                 }
 
 
@@ -250,7 +367,7 @@ public class WidgetService extends Service {
 
                 //Revert Animation
                 handler = new Handler();
-                removeViewAndRequest(calculatedTime * 1000);
+                removeViewAndRequest(calculatedTime * 1000, intent);
 
                 // Adding dismiss button on widget
                 dismissRequest.setOnClickListener(view -> {
@@ -260,18 +377,37 @@ public class WidgetService extends Service {
                     silentRideRequest = null;
                     progressBar = null;
                     handler.removeCallbacksAndMessages(null);
+                    animationRunnable = null;
                     calculatedTime = 0;
                 });
-                mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
                 mFirebaseAnalytics.logEvent("ny_silent_ride_request", params);
+                RideRequestUtils.addRideReceivedEvent(entity_payload,null,null,"silent_ride_request_popped", this);
             }
         } catch (Exception e) {
             e.printStackTrace();
             calculatedTime = 0;
+            if (mFirebaseAnalytics!=null) mFirebaseAnalytics.logEvent("exception_ny_silent_ride_request", params);
         }
     }
 
-    private void removeViewAndRequest(int delayInMilliSeconds) {
+    private void removeViewAndRequest(int delayInMilliSeconds, Intent intent) {
+        animationRunnable = () -> {
+            if (silentRideRequest != null && progressBar != null && dismissRequest != null) {
+                silentRideRequest.setVisibility(View.GONE);
+                progressBar.setVisibility(View.GONE);
+                dismissRequest.setVisibility(View.GONE);
+                silentRideRequest = null;
+                progressBar = null;
+                dismissRequest = null;
+                calculatedTime = 0;
+                isRemovingInProcess = false;
+                handler.removeCallbacksAndMessages(null);
+                animationRunnable = null;
+                if (rideRequestQueue.size() > 0 && rideRequestQueue.peek() != null) {
+                    showSilentNotification(rideRequestQueue.poll());
+                }
+            }
+        };
         handler.postDelayed(() -> {
             isRemovingInProcess = true;
             if (silentRideRequest != null) {
@@ -289,22 +425,11 @@ public class WidgetService extends Service {
 
             rotationAnimation(floatingWidget, mAngleToRotate, 0.0f);
 
-            handler.postDelayed(() -> {
-                if (silentRideRequest != null && progressBar != null && dismissRequest != null) {
-                    silentRideRequest.setVisibility(View.GONE);
-                    progressBar.setVisibility(View.GONE);
-                    dismissRequest.setVisibility(View.GONE);
-                    silentRideRequest = null;
-                    progressBar = null;
-                    dismissRequest = null;
-                    calculatedTime = 0;
-                    isRemovingInProcess = false;
-                    handler.removeCallbacksAndMessages(null);
-                    if (rideRequestQueue.size() > 0 && rideRequestQueue.peek() != null) {
-                        showSilentNotification(rideRequestQueue.poll());
-                    }
-                }
-            }, 700);
+            handler.postDelayed(animationRunnable, 700);
+            SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            Boolean isOnResume = sharedPref.getString("ACTIVITY_STATUS", "null").equals("onResume");
+            Boolean intentIsForwardRequest = intent != null  && intent.hasExtra("isForwardRequest") ? intent.getBooleanExtra("isForwardRequest", false) : null;
+            if (intentIsForwardRequest && isOnResume) stopService(intent);
         }, delayInMilliSeconds);
     }
 
@@ -376,6 +501,11 @@ public class WidgetService extends Service {
 
     private void addWidgetToWindowManager() {
         if (!Settings.canDrawOverlays(this)) return;
+        SharedPreferences sharedPreferences = this.getSharedPreferences(this.getString(R.string.preference_file_key), MODE_PRIVATE);
+        String driverStatus = sharedPreferences.getString(DRIVER_STATUS,Utils.DRIVER_STATUS_OFFLINE);
+        if (driverStatus.equals(Utils.DRIVER_STATUS_OFFLINE)) {
+            return;
+        }
         float scale = getResources().getDisplayMetrics().density;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             LAYOUT_FLAG = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
@@ -401,12 +531,12 @@ public class WidgetService extends Service {
         imageClose = new ImageView(this);
         try {
             imageClose.setImageResource(R.drawable.ny_ic_close_transparent);
+            imageClose.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.widget_close_gradient, null));
         } catch (Exception e) {
             Log.e("Exception in rendering Image", e.toString());
         }
         imageClose.setPadding(0, 0, 0, (int) (10 * scale + 0.5f));
         imageClose.setVisibility(View.INVISIBLE);
-        imageClose.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.widget_close_gradient, null));
         windowManager.addView(imageClose, closeImageParams);
         windowManager.addView(widgetView, widgetLayoutParams);
         widgetView.setVisibility(View.VISIBLE);

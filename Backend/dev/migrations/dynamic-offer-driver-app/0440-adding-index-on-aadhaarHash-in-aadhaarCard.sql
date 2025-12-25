@@ -1,0 +1,1 @@
+CREATE INDEX idx_aadhaar_number_hash ON atlas_driver_offer_bpp.aadhaar_card USING btree (aadhaar_number_hash);

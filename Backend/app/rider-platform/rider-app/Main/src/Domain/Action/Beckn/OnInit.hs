@@ -14,11 +14,15 @@
 
 module Domain.Action.Beckn.OnInit where
 
+import qualified Domain.Action.Beckn.Common as DCommon
+import Domain.Types
 import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.VehicleVariant as Veh
+import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
@@ -27,82 +31,133 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
+import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
+import Storage.Queries.SafetySettings as QSafety
 import Tools.Error
+import qualified Tools.Metrics as Metrics
+import Tools.Notifications
 
 data OnInitReq = OnInitReq
   { bookingId :: Id Booking,
-    bppBookingId :: Id BPPBooking,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    estimatedTotalFare :: Money,
-    paymentUrl :: Maybe Text
+    bppBookingId :: Maybe (Id BPPBooking),
+    estimatedFare :: Price,
+    discount :: Maybe Price,
+    -- estimatedTotalFare :: Price,
+    paymentUrl :: Maybe Text,
+    paymentId :: Maybe Text,
+    fareBreakups :: [DCommon.DFareBreakup],
+    commission :: Maybe HighPrecMoney
   }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Show, Generic)
 
 data OnInitRes = OnInitRes
   { bookingId :: Id DRB.Booking,
-    bppBookingId :: Id DRB.BPPBooking,
+    bppBookingId :: Maybe (Id DRB.BPPBooking),
     bookingDetails :: DRB.BookingDetails,
-    driverId :: Maybe Text,
     paymentUrl :: Maybe Text,
-    vehicleVariant :: Veh.VehicleVariant,
+    vehicleVariant :: DV.VehicleVariant,
     itemId :: Text,
     fulfillmentId :: Maybe Text,
     bppId :: Text,
     bppUrl :: BaseUrl,
     fromLocation :: DL.Location,
     mbToLocation :: Maybe DL.Location,
-    estimatedTotalFare :: Money,
-    estimatedFare :: Money,
+    estimatedTotalFare :: Price,
+    estimatedFare :: Price,
     riderPhoneCountryCode :: Text,
     riderPhoneNumber :: Text,
     mbRiderName :: Maybe Text,
     transactionId :: Text,
     merchant :: DM.Merchant,
     city :: Context.City,
-    nightSafetyCheck :: Bool
+    nightSafetyCheck :: Bool,
+    isValueAddNP :: Bool,
+    enableFrequentLocationUpdates :: Bool,
+    paymentId :: Maybe Text,
+    enableOtpLessRide :: Bool,
+    tripCategory :: Maybe TripCategory,
+    paymentMode :: Maybe DMPM.PaymentMode
   }
   deriving (Generic, Show)
 
-onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m OnInitRes
+createFareBreakup ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DRB.Booking -> [DCommon.DFareBreakup] -> m ()
+createFareBreakup booking fareParams = do
+  fareBreakups' <- traverse (DCommon.buildFareBreakupV2 booking.getId DFareBreakup.INITIAL_BOOKING) fareParams
+  fareBreakups <- traverse (DCommon.buildFareBreakupV2 booking.getId DFareBreakup.BOOKING) fareParams
+  QFareBreakup.createMany fareBreakups
+  QFareBreakup.createMany fareBreakups'
+
+onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r, Metrics.HasBAPMetrics m r) => OnInitReq -> m (OnInitRes, DRB.Booking)
 onInit req = do
-  void $ QRideB.updateBPPBookingId req.bookingId req.bppBookingId
-  void $ QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedTotalFare req.paymentUrl
+  whenJust req.bppBookingId $ QRideB.updateBPPBookingId req.bookingId
+  void $ QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedFare req.paymentUrl -- TODO : 4th parameter is discounted fare (not implemented)
+  whenJust req.commission $ QRideB.updateCommission req.bookingId . Just
   booking <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  decRider <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId) >>= decrypt
+  person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  decRider <- decrypt person
+  createFareBreakup booking.id req.fareBreakups
+  safetySettings <- QSafety.findSafetySettingsWithFallback booking.riderId (Just person)
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
-  riderPhoneNumber <- decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
-  bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+  riderPhoneNumber <-
+    if isValueAddNP
+      then decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      else pure $ prependZero booking.primaryExophone
+  let bppBookingId = booking.bppBookingId
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow decRider.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
+  now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   let fromLocation = booking.fromLocation
-  let mbToLocation = case booking.bookingDetails of
-        DRB.RentalDetails _ -> Nothing
-        DRB.OneWayDetails details -> Just details.toLocation
-        DRB.DriverOfferDetails details -> Just details.toLocation
-        DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
-  return $
-    OnInitRes
-      { bookingId = booking.id,
-        driverId = booking.driverId,
-        paymentUrl = booking.paymentUrl,
-        itemId = booking.itemId,
-        vehicleVariant = booking.vehicleVariant,
-        fulfillmentId = booking.fulfillmentId,
-        bookingDetails = booking.bookingDetails,
-        bppId = booking.providerId,
-        bppUrl = booking.providerUrl,
-        estimatedTotalFare = booking.estimatedTotalFare,
-        estimatedFare = booking.estimatedFare,
-        fromLocation = fromLocation,
-        mbToLocation = mbToLocation,
-        mbRiderName = decRider.firstName,
-        transactionId = booking.transactionId,
-        merchant = merchant,
-        nightSafetyCheck = decRider.nightSafetyChecks,
-        ..
-      }
+      mbToLocation = getToLocationFromBookingDetails booking.bookingDetails
+      onInitRes =
+        OnInitRes
+          { bookingId = booking.id,
+            paymentUrl = booking.paymentUrl,
+            itemId = booking.bppEstimateId,
+            vehicleVariant = DV.castServiceTierToVariant booking.vehicleServiceTierType,
+            fulfillmentId = booking.fulfillmentId,
+            bookingDetails = booking.bookingDetails,
+            bppId = booking.providerId,
+            bppUrl = booking.providerUrl,
+            estimatedTotalFare = booking.estimatedTotalFare,
+            estimatedFare = booking.estimatedFare,
+            fromLocation = fromLocation,
+            mbToLocation = mbToLocation,
+            mbRiderName = decRider.firstName,
+            transactionId = booking.transactionId,
+            merchant = merchant,
+            nightSafetyCheck = checkSafetySettingConstraint (Just safetySettings.enableUnexpectedEventsCheck) riderConfig now,
+            enableFrequentLocationUpdates = checkSafetySettingConstraint safetySettings.aggregatedRideShareSetting riderConfig now,
+            paymentId = req.paymentId,
+            enableOtpLessRide = isBookingMeterRide booking.bookingDetails || fromMaybe False safetySettings.enableOtpLessRide,
+            tripCategory = booking.tripCategory,
+            paymentMode = booking.paymentMode,
+            ..
+          }
+  Metrics.finishMetricsBap Metrics.INIT merchant.name booking.transactionId booking.merchantOperatingCityId.getId
+  pure (onInitRes, booking)
+  where
+    prependZero :: Text -> Text
+    prependZero str = "0" <> str
+
+    isBookingMeterRide = \case
+      DRB.MeterRideDetails _ -> True
+      _ -> False
+
+    getToLocationFromBookingDetails = \case
+      DRB.RentalDetails _ -> Nothing
+      DRB.OneWayDetails details -> Just details.toLocation
+      DRB.DriverOfferDetails details -> Just details.toLocation
+      DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+      DRB.InterCityDetails details -> Just details.toLocation
+      DRB.AmbulanceDetails details -> Just details.toLocation
+      DRB.DeliveryDetails details -> Just details.toLocation
+      DRB.MeterRideDetails details -> details.toLocation

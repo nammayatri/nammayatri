@@ -26,7 +26,7 @@
     <string name="tap_on">3. Tap on </string>
     <string name="location">Location</string>
     <string name="phone">Phone</string>
-    <string name="includes_pickup_charges_10">ಪಿಕಪ್ ಶುಲ್ಕಗಳು ₹ 10 ಒಳಗೊಂಡಿದೆ</string>
+    <string name="includes_pickup_charges_10">ಪಿಕಪ್ ಶುಲ್ಕಗಳು ₹ {#amount#} ಒಳಗೊಂಡಿದೆ</string>
     <string name="away">ದೂರದಲ್ಲಿದೆ</string>
     <string name="we_made_you_online">ನಾವು ನಿಮ್ಮನ್ನು online ಮಾಡಿದ್ದೇವೆ</string>
     <string name="location_is_turned_on">ಸ್ಥಳ ನವೀಕರಣವನ್ನು ಆನ್ ಮಾಡಲಾಗಿದೆ</string>

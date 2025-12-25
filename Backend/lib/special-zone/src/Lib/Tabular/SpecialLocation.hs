@@ -11,15 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Tabular.SpecialLocation where
 
-import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
@@ -27,8 +24,8 @@ import qualified Lib.Types.SpecialLocation as Domain
 
 deriving instance Read Domain.GatesInfo
 
-derivePersistField "LatLong"
 derivePersistField "Domain.GatesInfo"
+derivePersistField "Domain.SpecialLocationType"
 
 mkPersist
   defaultSqlSettings
@@ -38,7 +35,14 @@ mkPersist
       locationName Text
       category Text
       gates (PostgresList Domain.GatesInfo)
+      merchantId Text Maybe
+      merchantOperatingCityId Text Maybe
+      linkedLocationsIds (PostgresList Text)
+      locationType Domain.SpecialLocationType Maybe
+      priority Int
+      enabled Bool
       createdAt UTCTime
+      updatedAt UTCTime
       Primary id
       deriving Generic
     |]
@@ -49,18 +53,15 @@ instance TEntityKey SpecialLocationT where
   toKey (Id id) = SpecialLocationTKey id
 
 instance FromTType SpecialLocationT Domain.SpecialLocation where
-  fromTType SpecialLocationT {..} =
+  fromTType SpecialLocationT {..} = do
     return $
       Domain.SpecialLocation
         { id = Id id,
           gates = unPostgresList gates,
+          geom = Nothing,
+          linkedLocationsIds = map Id (unPostgresList linkedLocationsIds),
+          locationType = fromMaybe Domain.Closed locationType,
+          merchantId = Id <$> merchantId,
+          merchantOperatingCityId = Id <$> merchantOperatingCityId,
           ..
         }
-
-instance ToTType SpecialLocationT Domain.SpecialLocation where
-  toTType Domain.SpecialLocation {..} =
-    SpecialLocationT
-      { id = getId id,
-        gates = PostgresList gates,
-        ..
-      }

@@ -1,6 +1,10 @@
 let common = ./common.dhall
 
+let genericCommon = ../generic/common.dhall
+
 let sec = ./secrets/dynamic-offer-driver-app.dhall
+
+let appCfg = ./dynamic-offer-driver-app.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
@@ -30,6 +34,7 @@ let hedisCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let hedisClusterCfg =
@@ -40,6 +45,7 @@ let hedisClusterCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let consumerProperties =
@@ -59,12 +65,22 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let kvConfigUpdateFrequency = +10
 
+let cacConfig =
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenant = "test"
+      , retryConnection = False
+      , cacExpTime = +86400
+      , enablePolling = True
+      , enableCac = False
+      }
+
 in  { hedisCfg
     , hedisClusterCfg
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
-    , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , hedisMigrationStage = False
+    , cutOffHedisCluster = False
     , esqDBCfg
     , esqDBReplicaCfg
     , cacheConfig
@@ -74,10 +90,14 @@ in  { hedisCfg
     , availabilityTimeWindowOption
     , granualityPeriodType = common.periodType.Hours
     , httpClientOptions = common.httpClientOptions
+    , metricsPort = +9994
+    , encTools = appCfg.encTools
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/kafka-consumers.log", logRawSql = False }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , kvConfigUpdateFrequency
+    , cacConfig
+    , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
     }

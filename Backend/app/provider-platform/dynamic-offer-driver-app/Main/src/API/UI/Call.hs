@@ -21,26 +21,36 @@ module API.UI.Call
   )
 where
 
+import Data.ByteString.Lazy (fromStrict)
 import qualified Domain.Action.UI.Call as DCall
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Environment
 import Kernel.External.Call.Exotel.Types (ExotelCallStatus)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Version (DeviceType)
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI :<|> BackendBasedDriverCallApi
+data XML
+
+instance Accept XML where
+  contentType _ = "application/xml"
+
+instance MimeRender XML Text where
+  mimeRender _ = fromStrict . encodeUtf8
+
+type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI :<|> BackendBasedDriverCallApi :<|> SDKBasedCallAPI
 
 handler :: FlowServer API
-handler = backendBasedCallHandler :<|> frontendBasedCallHandler :<|> backendBasedDriverCallHandler
+handler = backendBasedCallHandler :<|> frontendBasedCallHandler :<|> backendBasedDriverCallHandler :<|> sdkBasedCallHandler
 
 -------- Initiate a call (Exotel) APIs --------
 type BackendBasedCallAPI =
@@ -100,6 +110,20 @@ type BackendBasedDriverCallApi =
     :> MandatoryQueryParam "RC" Text
     :> Get '[JSON] DCall.CallRes
 
+type SDKBasedCallAPI =
+  "call"
+    :> "twillio"
+    :> ( "accessToken"
+           :> MandatoryQueryParam "bppRideId" (Id SRide.Ride)
+           :> MandatoryQueryParam "user" DCall.EntityType
+           :> MandatoryQueryParam "deviceType" DeviceType
+           :> Get '[JSON] Kernel.Prelude.Text
+           :<|> "connectedEntityTwiml"
+           :> MandatoryQueryParam "bppRideId" (Id SRide.Ride)
+           :> MandatoryQueryParam "user" DCall.EntityType
+           :> Get '[XML] Text
+       )
+
 frontendBasedCallHandler :: FlowServer FrontendBasedCallAPI
 frontendBasedCallHandler =
   getCustomerMobileNumber
@@ -108,6 +132,9 @@ frontendBasedCallHandler =
 backendBasedDriverCallHandler :: FlowServer BackendBasedDriverCallApi
 backendBasedDriverCallHandler =
   getDriverMobileNumber
+
+sdkBasedCallHandler :: FlowServer SDKBasedCallAPI
+sdkBasedCallHandler = getCallTwillioAccessToken :<|> getCallTwillioConnectedEntityTwiml
 
 -- | Try to initiate a call driver -> customer
 initiateCallToCustomer :: Id SRide.Ride -> (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DCall.CallRes
@@ -127,3 +154,9 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus = 
 
 getDriverMobileNumber :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler DCall.CallRes
 getDriverMobileNumber (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DCall.getDriverMobileNumber (driverId, merchantId, merchantOpCityId)
+
+getCallTwillioAccessToken :: Id SRide.Ride -> DCall.EntityType -> DeviceType -> FlowHandler Text
+getCallTwillioAccessToken rideId entity deviceType = withFlowHandlerAPI $ DCall.getCallTwillioAccessToken rideId entity deviceType
+
+getCallTwillioConnectedEntityTwiml :: Id SRide.Ride -> DCall.EntityType -> FlowHandler Text
+getCallTwillioConnectedEntityTwiml rideId entity = withFlowHandlerAPI $ DCall.getCallTwillioConnectedEntityTwiml rideId entity

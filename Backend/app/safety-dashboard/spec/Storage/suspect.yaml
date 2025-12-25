@@ -1,0 +1,368 @@
+imports:
+  UTCTime: Kernel.Prelude
+  ShortId: Kernel.Types.Id
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  FlaggedStatus: Domain.Types.Suspect
+  AdminApproval: Domain.Types.SuspectFlagRequest
+  WebHookHeaders: Domain.Types.MerchantConfigs
+  FlaggedBy : Domain.Types.Suspect
+  Value: Data.Aeson
+  ReportDetails : Domain.Types.Suspect
+
+Suspect:
+  tableName: suspect
+  fields:
+    id : Id Suspect
+    dl : Maybe Text
+    voterId : Maybe Text
+    firstName : Text
+    lastName : Text
+    flaggedStatus : FlaggedStatus
+    flaggedCounter : Int
+    statusChangedReason : Maybe Text
+    flaggedBy : "[FlaggedBy]"
+    flagUpdatedAt : UTCTime
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  sqlType:
+    flaggedBy: "json"
+
+  beamType:
+    flaggedBy: "Value"
+
+  fromTType:
+    flaggedBy: getFlaggedByFromTable|M
+
+  toTType:
+    flaggedBy: convertFlaggedByToTable
+
+  excludedFields: [merchantOperatingCityId,merchantId]
+
+  constraints:
+    id: PrimaryKey
+  types:
+    FlaggedBy:
+      partnerName : Maybe Text
+      flaggedCategory : Text
+      flaggedReason : Maybe Text
+      agentContactNumber : Maybe Text
+      totalComplaintsCount : Maybe Int
+      reportDetails : Maybe ReportDetails
+      derive: "Ord,Eq,Read,'ListInstance"
+    ReportDetails:
+      reportNumber : Maybe Text
+      reportPoliceStation : Maybe Text
+      reportType : ReportType
+      derive: "Ord,Eq,Read,'ListInstance"
+    FlaggedStatus:
+      enum: "Flagged,Confirmed,NotConfirmed"
+      derive: HttpInstance
+    ReportType:
+      enum: "FIR,NCR"
+      derive: HttpInstance
+
+  queries:
+    findByDl:
+      kvFunction: findOneWithKV
+      where: dl
+    findByVoterId:
+      kvFunction: findOneWithKV
+      where: voterId
+    updateFlaggedCounterByDl:
+      kvFunction: updateWithKV
+      params: [flaggedCounter,flaggedStatus, updatedAt,flaggedBy]
+      where: dl
+    updateFlaggedCounterByVoterId:
+      kvFunction: updateWithKV
+      params: [flaggedCounter,flaggedStatus, updatedAt,flaggedBy]
+      where: voterId
+    updateFlaggedStatusById:
+      kvFunction: updateWithKV
+      params: [flaggedStatus, updatedAt]
+      where: id
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
+
+SuspectStatusHistory :
+  tableName: suspect_status_history
+
+  fields:
+    id : Id SuspectStatusHistory
+    dl : Maybe Text
+    voterId : Maybe Text
+    firstName : Maybe Text
+    lastName : Maybe Text
+    flaggedStatus : FlaggedStatus
+    statusChangedReason : Maybe Text
+    flaggedBy : Maybe [FlaggedBy]
+    adminApproval : Maybe AdminApproval
+    approvedBy : Maybe Text
+    merchantShortId : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  sqlType:
+    flaggedBy: "text[]"
+  excludedFields: [merchantOperatingCityId]
+  importPackageOverrides:
+    Domain.Types.Merchant: lib-dashboard
+    Tools.Auth: lib-dashboard
+    Environment: lib-dashboard
+
+  constraints:
+    id: PrimaryKey
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
+SuspectFlagRequest:
+  tableName: suspect_flag_request
+
+  fields:
+    id : Id SuspectFlagRequest
+    dl : Maybe Text
+    voterId : Maybe Text
+    flaggedStatus : FlaggedStatus
+    flaggedCategory : Text
+    flaggedReason : Text
+    flaggedBy : Text
+    firstName : Text
+    lastName : Text
+    mobileNumber : Maybe Text
+    reportDetails : Maybe ReportDetails
+    totalComplaintsCount : Maybe Int
+    adminApproval : AdminApproval
+    approvedBy : Maybe Text
+    merchantShortId : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  excludedFields: [merchantOperatingCityId]
+  importPackageOverrides:
+    Domain.Types.Merchant: lib-dashboard
+    Tools.Auth: lib-dashboard
+    Environment: lib-dashboard
+
+
+  constraints:
+    id: PrimaryKey
+
+  types:
+    AdminApproval:
+      enum: "Pending,Approved,Rejected"
+      derive: HttpInstance
+
+  queries:
+    findBydl:
+      kvFunction: findOneWithKV
+      where: dl
+    findAllByDlAndAdminApprovalAndMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [dl, adminApproval, merchantId]
+    findByMerchantIdAndDl:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, dl]
+    updateAdminApprovalById:
+      kvFunction: updateWithKV
+      params: [adminApproval, updatedAt]
+      where: id
+    findByMerchantIdAndAdminApprovalAndDl:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, adminApproval, dl]
+    findByMerchantIdAndAdminApprovalAndVoterId:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, adminApproval, voterId]
+    findAllByMerchantIdAndDl:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, dl]
+    findAllByMerchantIdAndVoterId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, voterId]
+    findByDlOrVoterId:
+      kvFunction: findOneWithKV
+      where:
+        or: [dl, voterId]
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
+FlaggedCategory:
+  tableName: flagged_category
+
+  fields:
+    id : Id FlaggedCategory
+    name : Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  excludedFields: [merchantOperatingCityId,merchantId]
+  importPackageOverrides:
+    Domain.Types.Merchant: lib-dashboard
+    Tools.Auth: lib-dashboard
+    Environment: lib-dashboard
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findByName:
+      kvFunction: findOneWithKV
+      where: name
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+MerchantConfigs:
+  tableName: merchant_configs
+  fields:
+    id : Id MerchantConfigs
+    webHookHeaders : "[WebHookHeaders]"
+    merchantShortId : Text
+    webHookUrl : Text
+    requestWebHook: Bool
+  sqlType:
+    webHookHeaders: "text[]"
+
+
+
+  excludedFields: [merchantOperatingCityId]
+  constraints:
+    id: PrimaryKey
+  types:
+    WebHookHeaders:
+      key: Text
+      value: Text
+      derive: "Ord,Eq,Read,'ListInstance"
+  queries:
+    findByMerchantId:
+      kvFunction: findOneWithKV
+      where: merchantId
+    findByRequestWebHook:
+      kvFunction: findAllWithKV
+      where: requestWebHook
+    updateRequestWebHookById:
+      kvFunction: updateWithKV
+      params: [requestWebHook, updatedAt]
+      where: id
+
+Notification :
+  tableName: notification
+
+  fields:
+    id : Id Notification
+    notificationCategory : NotificationCategory
+    notificationCount : Int
+    receiverId : Text
+    senderId : Text
+    metadata : Text
+    readStatus : Bool
+    merchantShortId : Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  excludedFields: [merchantOperatingCityId]
+  importPackageOverrides:
+    Domain.Types.Merchant: lib-dashboard
+    Tools.Auth: lib-dashboard
+    Environment: lib-dashboard
+
+  constraints:
+    id: PrimaryKey
+  types:
+    NotificationCategory:
+      enum: "ADMIN_CHANGE_SUSPECT_STATUS,FLAG_REQUEST_UPLOAD,CHANGE_REQUEST_PARTNER_ADMIN,FLAG_REQUEST_APPROVED,PARTNER_FLAGGED_SUSPECT,FLAG_REQUEST_REJECTED,ADMIN_FLAGGED_SUSPECT,ADMIN_CHARGED_SUSPECT,ADMIN_CLEAN_SUSPECT"
+  queries:
+    findByMerchantIdAndreadStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [notificationCategory, readStatus, merchantId]
+    findByReceiverId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [receiverId]
+    updateReadStatusById:
+      kvFunction: updateWithKV
+      params: [readStatus, updatedAt]
+      where: id
+    findByReceiverIdAndId:
+      kvFunction: findOneWithKV
+      where:
+        and: [receiverId, id]
+    findByReceiverIdAndReadStatus:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [receiverId, readStatus]
+
+
+SuspectStatusChangeRequest:
+  tableName: suspect_status_change_request
+
+  fields:
+    id : Id SuspectStatusChangeRequest
+    suspectId : Text
+    reasonToChange : Text
+    merchantShortId : Text
+    reqStatus : AdminApproval
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  excludedFields: [merchantOperatingCityId]
+  importPackageOverrides:
+    Domain.Types.Merchant: lib-dashboard
+    Tools.Auth: lib-dashboard
+    Environment: lib-dashboard
+
+  queries:
+
+    findBySuspectIdAndMerchantId:
+      kvFunction: findOneWithKV
+      where:
+        and: [suspectId, merchantId]
+
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId
+
+    findAllByReqStatus:
+      kvFunction: findAllWithKV
+      where: reqStatus
+
+    findBySuspectId:
+      kvFunction: findOneWithKV
+      where: suspectId
+
+
+PortalConfigs :
+  tableName: portal_configs
+
+  fields:
+    id : Id PortalConfigs
+    value : Text
+    configName : Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  excludedFields: [merchantOperatingCityId,merchantId]
+  importPackageOverrides:
+    Domain.Types.Merchant: lib-dashboard
+    Tools.Auth: lib-dashboard
+    Environment: lib-dashboard
+
+  constraints:
+    id: PrimaryKey
+  queries:
+    findByConfigName:
+      kvFunction: findOneWithKV
+      where: configName

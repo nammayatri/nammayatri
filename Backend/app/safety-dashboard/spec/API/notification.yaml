@@ -1,0 +1,57 @@
+imports:
+  Text: Data.Text
+  FlaggedStatus: Domain.Types.Suspect
+  Merchant: Domain.Types.Merchant
+  APISuccess: Kernel.Types.APISuccess
+  Notification: Domain.Types.Notification
+  Summary : API.Types.UI.Notification
+
+importPackageOverrides:
+    Domain.Types.Merchant: lib-dashboard
+    Tools.Auth: lib-dashboard
+    Environment: lib-dashboard
+    Domain.Types.Person : lib-dashboard
+
+
+module : Notification
+types:
+  NotificationList:
+    list : [Notification]
+    summary : Summary
+
+  Summary:
+     count : Int
+     totalCount : Int
+
+  NotificationReadRequest:
+    id : Text
+
+  UpdateRecieveNotificationStatusRequest:
+    readStatus : Bool
+
+
+apis:
+    - GET:
+        endpoint: /list/notification
+        auth: DashboardAuth DASHBOARD_USER
+        query:
+          limit: Int
+          offset: Int
+          readStatus: Bool
+        response:
+          type: API.Types.UI.Notification.NotificationList
+
+    - POST:
+        endpoint: /read/notification
+        auth: DashboardAuth DASHBOARD_USER
+        request:
+          type: API.Types.UI.Notification.NotificationReadRequest
+        response:
+          type: APISuccess
+    - POST:
+        endpoint: /update/receive/notificationStatus
+        auth: DashboardAuth DASHBOARD_USER
+        request:
+          type: API.Types.UI.Notification.UpdateRecieveNotificationStatusRequest
+        response:
+          type: APISuccess

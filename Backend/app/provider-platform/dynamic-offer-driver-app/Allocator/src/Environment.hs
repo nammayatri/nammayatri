@@ -22,15 +22,23 @@ module Environment
   )
 where
 
+import AWS.S3
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
+import qualified Data.Map.Strict as MS
 import Data.String.Conversions (cs)
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import qualified Kernel.Storage.InMem as IM
+import Kernel.Streaming.Kafka.Commons
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Base64 (Base64)
+import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Utils.App (lookupDeploymentVersion)
@@ -40,10 +48,16 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler (SchedulerType)
 import Lib.Scheduler.Environment (SchedulerConfig (..))
+import Lib.SessionizerMetrics.Prometheus.Internal
+import Lib.SessionizerMetrics.Types.Event hiding (id)
+import Passetto.Client
+import SharedLogic.CallBAPInternal (AppBackendBapInternal)
+import SharedLogic.CallInternalMLPricing (MLPricingInternal)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
+import TransactionLogs.Types
 
 data HandlerCfg = HandlerCfg
   { schedulerConfig :: SchedulerConfig,
@@ -57,6 +71,7 @@ data HandlerEnv = HandlerEnv
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
+    serviceClickhouseEnv :: ClickhouseEnv,
     loggerEnv :: LoggerEnv,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
@@ -75,14 +90,42 @@ data HandlerEnv = HandlerEnv
     coreMetrics :: CoreMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
+    maxNotificationShards :: Int,
+    smsCfg :: SmsConfig,
     version :: DeploymentVersion,
+    eventStreamMap :: [EventStreamMap],
+    eventRequestCounter :: EventCounterMetric,
     jobInfoMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     ltsCfg :: LT.LocationTrackingeServiceConfig,
     schedulerSetName :: Text,
     kvConfigUpdateFrequency :: Int,
-    schedulerType :: SchedulerType
+    nwAddress :: BaseUrl,
+    internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
+    schedulerType :: SchedulerType,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    singleBatchProcessingTempDelay :: NominalDiffTime,
+    enableAPILatencyLogging :: Bool,
+    enableAPIPrometheusMetricLogging :: Bool,
+    ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
+    cacConfig :: CacConfig,
+    modelNamesHashMap :: HMS.HashMap Text Text,
+    searchRequestExpirationSeconds :: NominalDiffTime,
+    searchRequestExpirationSecondsForMultimodal :: NominalDiffTime,
+    s3Env :: S3Env Flow,
+    passettoContext :: PassettoContext,
+    serviceClickhouseCfg :: ClickhouseCfg,
+    kafkaClickhouseCfg :: ClickhouseCfg,
+    broadcastMessageTopic :: KafkaTopic,
+    selfBaseUrl :: BaseUrl,
+    appBackendBapInternal :: AppBackendBapInternal,
+    mlPricingInternal :: MLPricingInternal,
+    inMemEnv :: CF.InMemEnv,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -93,14 +136,22 @@ buildHandlerEnv HandlerCfg {..} = do
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
+  eventRequestCounter <- registerEventRequestCounterMetric
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
-  hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
+  passettoContext <- uncurry mkDefPassettoContext encTools.service
+  hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
+  serviceClickhouseEnv <- createConn driverClickhouseCfg
+  let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
+  let requestId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let sessionId = Nothing
+  let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg ("driver-offer-allocator:" <>)
+      else connectHedisCluster hedisClusterCfg ("dynamic-offer-driver-app:" <>)
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
@@ -108,7 +159,14 @@ buildHandlerEnv HandlerCfg {..} = do
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
-  return HandlerEnv {..}
+  let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
+  let s3Env = buildS3Env s3Config
+  let searchRequestExpirationSeconds' = fromIntegral appCfg.searchRequestExpirationSeconds
+      serviceClickhouseCfg = driverClickhouseCfg
+      searchRequestExpirationSecondsForMultimodal' = fromIntegral appCfg.searchRequestExpirationSecondsForMultimodal
+  inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  let url = Nothing
+  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()
 releaseHandlerEnv HandlerEnv {..} = do

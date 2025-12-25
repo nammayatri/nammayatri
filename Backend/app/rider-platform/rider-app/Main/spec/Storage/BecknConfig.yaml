@@ -1,0 +1,162 @@
+imports:
+  Base64: Kernel.Types.Base64
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  BaseUrl: Servant.Client.Core
+  showBaseUrl: Kernel.Prelude
+  parseBaseUrl: Kernel.Prelude
+  VehicleCategory: BecknV2.OnDemand.Enums
+  Network: BecknV2.FRFS.Enums
+  EBIXConfig: Domain.Types.Extra.IntegratedBPPConfig
+  DIRECTConfig: Domain.Types.Extra.IntegratedBPPConfig
+  CMRLConfig: Domain.Types.Extra.IntegratedBPPConfig
+  ONDCBecknConfig: Domain.Types.Extra.IntegratedBPPConfig
+  CRISConfig: Domain.Types.Extra.IntegratedBPPConfig
+
+BecknConfig:
+  tableName: beckn_config
+
+  fields:
+    id: Id BecknConfig
+    domain: Text
+    subscriberId: Text
+    subscriberUrl: BaseUrl
+    gatewayUrl: BaseUrl
+    registryUrl: BaseUrl
+    uniqueKeyId: Text
+    settlementType: Maybe Text
+    paymentParamsJson: Maybe Text
+    vehicleCategory: VehicleCategory|NoRelation
+    collectedBy: Network
+    staticTermsUrl: Maybe BaseUrl
+    buyerFinderFee: Maybe Text # Becomes Redundant
+    settlementWindow: Maybe Text
+    searchTTLSec: Maybe Int
+    selectTTLSec: Maybe Int
+    initTTLSec: Maybe Int
+    confirmTTLSec: Maybe Int
+    confirmBufferTTLSec: Maybe Int
+    bapIFSC: Maybe Text
+    statusTTLSec: Maybe Int
+    trackTTLSec: Maybe Int
+    ratingTTLSec: Maybe Int
+    cancelTTLSec: Maybe Int
+
+  derives: "Generic,Show,FromJSON,ToJSON"
+
+  default:
+    vehicleCategory: "'CAB'"
+    collectedBy: "'BPP'"
+
+  queries:
+    findByMerchantIdAndDomain:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, domain]
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByMerchantIdDomainandMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, domain, merchantOperatingCityId]
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  beamType:
+    subscriberUrl: Text
+    gatewayUrl: Text
+    registryUrl: Text
+    staticTermsUrl: Maybe Text
+    verifiedBy: Maybe Network
+
+  toTType:
+    subscriberUrl: showBaseUrl|I
+    gatewayUrl: showBaseUrl|I
+    registryUrl: showBaseUrl|I
+    staticTermsUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+
+  fromTType:
+    subscriberUrl: parseBaseUrl|MI
+    gatewayUrl: parseBaseUrl|IM
+    registryUrl: parseBaseUrl|MI
+    staticTermsUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+
+IntegratedBPPConfig:
+  tableName: integrated_bpp_config
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  fields:
+    id: Id IntegratedBPPConfig
+    agencyKey: Text
+    feedKey: Text
+    domain: Text
+    providerConfig: ProviderConfig
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    vehicleCategory: VehicleCategory|NoRelation
+    platformType: PlatformType
+    providerName: Maybe Text
+    isTicketValidOnMultipleRoutes: Maybe Bool
+
+  beamFields:
+    providerConfig:
+      configJSON: Data.Aeson.Value
+
+  default:
+    isTicketValidOnMultipleRoutes: "true"
+
+  types:
+    PlatformType:
+      enum: "MULTIMODAL, PARTNERORG, APPLICATION"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    ProviderConfig:
+      enum: "EBIX EBIXConfig, DIRECT DIRECTConfig, CMRL CMRLConfig, ONDC ONDCBecknConfig, CRIS CRISConfig"
+      derive': "Generic, FromJSON, ToJSON, Eq, Show"
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PlatformType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PlatformType>
+
+  fromTType:
+    providerConfig: Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfig configJSON|EM
+
+
+  toTType:
+    configJSON: Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig|E
+
+  sqlType:
+    configJSON: json
+    platformType: text
+
+  constraints:
+    id: PrimaryKey
+    agencyKey: SecondaryKey
+
+  extraIndexes:
+    - columns: [agencyKey]
+      unique: true
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
+
+  default:
+    vehicleCategory: "'BUS'"
+    platformType: "'APPLICATION'"
+    feedKey: "'UNKNOWN'"
+    agencyKey: "'UNKNOWN'"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByAgencyId:
+      kvFunction: findOneWithKV
+      where:
+        and: [agencyKey]
+

@@ -1,4 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN estimated_duration  double precision;
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN estimated_duration double precision;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN ride_time_estimated_threshold bigint;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN ride_travelled_distance_threshold bigint;

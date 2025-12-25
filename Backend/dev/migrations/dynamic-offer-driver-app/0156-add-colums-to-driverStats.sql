@@ -1,7 +1,4 @@
 -- Adding Columns in Driver Stats
-ALTER TABLE atlas_driver_offer_bpp.driver_stats add COLUMN total_rides int DEFAULT 0 NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.driver_stats add COLUMN total_distance double precision DEFAULT 0 NOT NULL;
-
 -- Updating total distance and total rides in ride_stats table
 UPDATE atlas_driver_offer_bpp.driver_stats
     SET total_rides = ride_counts.count,

@@ -32,7 +32,8 @@ let loggerConfig =
       , prettyPrinting = False
       }
 
-let ConsumerType = < AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS >
+let ConsumerType =
+      < AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS | LOCATION_UPDATE >
 
 let kafkaConfig = { topicName : Text, kafkaKey : Text }
 
@@ -54,9 +55,14 @@ let eventType =
       | Quotes
       | Estimate
       | ExophoneData
+      | AutoCompleteData
+      | RouteCollection
+      | EventTracker
+      | MarketingParamsData
+      | MarketingParamsPreLoginData
       >
 
-let httpClientOptions = { timeoutMs = +2000 }
+let httpClientOptions = { timeoutMs = +200000 }
 
 let shortDurationRetryCfg = { maxRetries = +3, baseCoefficient = +2 }
 
@@ -68,9 +74,49 @@ let ServerName =
       | DRIVER_OFFER_BPP
       | DRIVER_OFFER_BPP_MANAGEMENT
       | SPECIAL_ZONE
+      | BHARAT_TAXI
       >
 
 let SchedulerType = < RedisBased | DbBased >
+
+let loggerConfigT =
+      { level : LogLevel
+      , logToFile : Bool
+      , logToConsole : Bool
+      , logRawSql : Bool
+      , prettyPrinting : Bool
+      , logFilePath : Text
+      }
+
+let smsConfigT =
+      { sessionConfig :
+          { attempts : Integer, authExpiry : Integer, tokenExpiry : Integer }
+      , credConfig :
+          { username : Text
+          , password : Text
+          , otpHash : Text
+          , token : Optional Text
+          }
+      , useFakeSms : Optional Natural
+      , url : Text
+      , sender : Text
+      }
+
+let healthCheckAppCfgT =
+      { graceTerminationPeriod : Integer
+      , healthcheckPort : Integer
+      , notificationMinDelay : Integer
+      , driverInactiveDelay : Integer
+      , smsCfg : smsConfigT
+      , driverInactiveSmsTemplate : Text
+      , driverAllowedDelayForLocationUpdateInSec : Integer
+      , driverLocationHealthCheckIntervalInSec : Integer
+      , loggerConfig : loggerConfigT
+      , batchSize : Integer
+      , numberOfShards : Integer
+      , enabledMerchantCityIds : List Text
+      , fcmNofificationSendCount : Integer
+      }
 
 in  { smsSessionConfig
     , autoMigrate = False
@@ -83,6 +129,7 @@ in  { smsSessionConfig
     , longDurationRetryCfg
     , ServerName
     , S3Config
+    , healthCheckAppCfgT
     , periodType = PeriodType
     , consumerType = ConsumerType
     , kafkaCompression = KafkaCompression

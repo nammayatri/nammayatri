@@ -16,9 +16,10 @@
 module Environment where
 
 import qualified Data.Text as T
-import EulerHS.Prelude hiding (maybe, show)
+import EulerHS.Prelude hiding (maybe)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis
+import Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.CacheFlow as CF
@@ -29,6 +30,9 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Lib.Scheduler (SchedulerType)
 import System.Environment (lookupEnv)
+
+data ProducerType = Rider | Driver
+  deriving (Generic, Read, Show)
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -47,16 +51,19 @@ data AppCfg = AppCfg
     streamName :: Text,
     producerTimestampKey :: Text,
     cacheConfig :: CF.CacheConfig,
+    cacConfig :: CF.CacConfig,
     schedulerSetName :: Text,
     entryId :: Text,
     reviverInterval :: Minutes,
     reviveThreshold :: Seconds,
     maxShards :: Int,
+    producersPerPod :: Int,
     metricsPort :: Int,
     schedulerType :: SchedulerType,
     kvConfigUpdateFrequency :: Int,
     runReviver :: Bool,
-    kafkaProducerCfg :: KafkaProducerCfg
+    kafkaProducerCfg :: KafkaProducerCfg,
+    inMemConfig :: CF.InMemConfig
   }
   deriving (Generic, FromDhall)
 
@@ -64,6 +71,7 @@ data AppEnv = AppEnv
   { esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     maxShards :: Int,
+    producersPerPod :: Int,
     hedisEnv :: HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
@@ -82,25 +90,37 @@ data AppEnv = AppEnv
     streamName :: Text,
     producerTimestampKey :: Text,
     cacheConfig :: CF.CacheConfig,
+    cacConfig :: CF.CacConfig,
     schedulerSetName :: Text,
     entryId :: Text,
     schedulerType :: SchedulerType,
     reviverInterval :: Minutes,
     reviveThreshold :: Seconds,
     runReviver :: Bool,
-    kafkaProducerTools :: KafkaProducerTools
+    kafkaProducerTools :: KafkaProducerTools,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    inMemEnv :: CF.InMemEnv,
+    url :: Maybe Text
   }
   deriving (Generic)
 
-buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv AppCfg {..} = do
-  hedisEnv <- connectHedis hedisCfg id
+buildAppEnv :: AppCfg -> ProducerType -> IO AppEnv
+buildAppEnv AppCfg {..} producerType = do
+  let modifierFunc = (show producerType <>)
+  hedisEnv <- connectHedis hedisCfg modifierFunc
   version <- lookupDeploymentVersion
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
-  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc
+  let requestId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let sessionId = Nothing
+  let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
@@ -111,6 +131,8 @@ buildAppEnv AppCfg {..} = do
       else connectHedisCluster hedisNonCriticalClusterCfg id
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
+  inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  let url = Nothing
   pure $ AppEnv {..}
 
 type FlowHandler = FlowHandlerR AppEnv

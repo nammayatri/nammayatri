@@ -1,9 +1,7 @@
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_dashboard_sms Boolean;
-UPDATE atlas_driver_offer_bpp.transporter_config SET enable_dashboard_sms=false;
+-- LOCAL SYNC
+UPDATE atlas_driver_offer_bpp.transporter_config SET enable_dashboard_sms = true;
+  --WHERE merchant_id = 'favorit0-0000-0000-0000-00000favorit'; -- change merchant id to merchant id of yatri sathi
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN enable_dashboard_sms SET NOT NULL;
-
-UPDATE atlas_driver_offer_bpp.transporter_config SET enable_dashboard_sms = true
-  WHERE merchant_id = 'favorit0-0000-0000-0000-00000favorit'; -- change merchant id to merchant id of yatri sathi
 
 INSERT INTO atlas_driver_offer_bpp.merchant_message (merchant_id, message_key, message) VALUES
     ('favorit0-0000-0000-0000-00000favorit', 'END_RIDE_MESSAGE',

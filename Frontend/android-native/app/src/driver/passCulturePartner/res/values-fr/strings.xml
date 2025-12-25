@@ -27,7 +27,7 @@
     <string name="tap_on"> 3. Appuyez sur</string>
     <string name="location">Emplacement</string>
     <string name="phone"> Téléphone </string>
-    <string name="includes_pickup_charges_10">Comprend les frais de ramassage € 3</string>
+    <string name="includes_pickup_charges_10">Comprend les frais de ramassage € {#amount#}</string>
     <string name="away">loin</string>
     <string name="we_made_you_online">Nous vous avons mis en ligne</string>
     <string name="location_is_turned_on">La localisation est activée</string>
@@ -44,5 +44,8 @@
     <string name="new_ride_available_for_offering">Nouveau trajet disponible pour offrir </string>
     <string name="and">et </string>
     <string name="error_app_not_found">Application introuvable</string>
-    <string name="no_enabled_browser">Aucun navigateur activé trouvé sur votre appareil, veuillez activer ou installer un navigateur </string>
+    <string name="no_enabled_browser">Aucun navigateur activé trouvé sur votre appareil, veuillez activer ou installer un navigateur </string>\
+    <string name="test_request_successful">Test Ride Request Successful!</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"Pas de frais supplémentaires. Pas de pourboire. Pas de frais d'attente."</string>
+    <string name="third_party_booking">"Réservation par un tiers"</string>
 </resources>

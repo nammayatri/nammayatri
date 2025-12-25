@@ -1,39 +1,22 @@
-/*eslint-env node */
-const {merge} = require('webpack-merge');
+const {
+  merge
+} = require('webpack-merge');
 const common = require('./webpack.config.js');
 const webpack = require('webpack');
-var path = require('path');
-const FileManagerPlugin = require('filemanager-webpack-plugin');
 const packageJSON = require("./package.json");
-// const JusPayJSAZipPlugin = require("jsa-tools").JusPayJSAZipPlugin;
+var path = require('path');
 
-
-const devtoolsPath = "../devtools-ios"
-
-const getOutputFileDir = (mode) => mode ==  "development" ? "" :"ios/";
-const getOutputFileName =  (mode) => "v1-index_bundle.js";
-const getOutputFileLocation = (mode) => getOutputFileDir(mode) + getOutputFileName(mode);
+const getOutputFileDir = (mode) => mode == "development" ? "" : "ios/";
+const outputFileName = "index_bundle.js";
+const getOutputFileLocation = (mode) => getOutputFileDir(mode) + outputFileName;
 
 module.exports = (env, argv) => {
   let plugins = [
-      new webpack.DefinePlugin({
-        'window.__OS': JSON.stringify("IOS"),
-        __VERSION__: JSON.stringify(packageJSON.version),
-        "window.configEnv": JSON.stringify(env)
-      }),
-      new FileManagerPlugin({
-        events: {
-          onEnd: {
-            copy: [
-              {
-                source: "./dist/" + getOutputFileLocation(argv.mode),
-                destination: path.join(devtoolsPath,"/lib/HyperSDK/Assets/payments/in.juspay.hyperpay/v1-index_bundle.js")
-              }
-            ]
-          }
-        }
-      }),
-    ]
+    new webpack.DefinePlugin({
+      __VERSION__: JSON.stringify(packageJSON.version),
+      "window.configEnv": JSON.stringify(env)
+    })
+  ]
   return merge(common(env), {
     output: {
       filename: getOutputFileLocation(argv.mode),
@@ -44,7 +27,7 @@ module.exports = (env, argv) => {
       contentBase: path.join(__dirname, 'dist'),
       host: "0.0.0.0",
       inline: false,
-      port: 8082
+      port: 8084
     }
   });
 }

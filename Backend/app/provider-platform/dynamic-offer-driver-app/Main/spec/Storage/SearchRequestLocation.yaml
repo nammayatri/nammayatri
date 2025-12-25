@@ -1,0 +1,59 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+SearchReqLocation:
+  tableName: search_request_location
+  derives: "Generic, ToJSON, FromJSON, ToSchema, Show, Kernel.Utils.GenericPretty.PrettyShow, Kernel.External.Maps.HasCoordinates.HasCoordinates"
+
+
+  fields:
+    id : Id SearchReqLocation
+    lat : Double
+    lon : Double
+    street : Maybe Text
+    door : Maybe Text
+    city : Maybe Text
+    state : Maybe Text
+    country : Maybe Text
+    building : Maybe Text
+    areaCode : Maybe Text
+    area : Maybe Text
+    full_address : Maybe Text
+    instructions : Maybe Text
+    extras : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+
+
+
+  constraints:
+    id: PrimaryKey
+
+
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+
+  sqlType:
+    city: character varying(255)
+    state: character varying(255)
+    country: character varying(255)
+    street: character varying(255)
+    building: character varying(255)
+    areaCode: character varying(255)
+    area: character varying(255)
+    full_address: character varying(255)
+    door: character varying(255)
+
+
+  default:
+
+
+
+  excludedFields: [createdAt, updatedAt]

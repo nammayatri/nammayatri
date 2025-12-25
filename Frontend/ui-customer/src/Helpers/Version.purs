@@ -56,7 +56,7 @@ checkVersion = do
 
   if androidUpdateRequired versionCodeAndroid 
     then do
-      liftFlowBT $ JB.hideLoader
+      liftFlowBT $ JB.hideLoader ""
       modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion}) --TODO:: Make update popUp screen generic if it's used for other purposes also
       appUpdatedFlow <- UI.handleAppUpdatePopUp
       case appUpdatedFlow of
@@ -69,7 +69,8 @@ checkVersion = do
         all (_ /= -1) [majorUpdateIndex, minorUpdateIndex, patchUpdateIndex]
         && forceIOSupdate majorUpdateIndex minorUpdateIndex patchUpdateIndex updatedIOSversion
       ) $ do
-          liftFlowBT $ JB.hideLoader
+          liftFlowBT $ JB.hideLoader ""
+          modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion})
           void $ UI.handleAppUpdatePopUp
           checkVersion
       else pure unit
@@ -117,7 +118,7 @@ updateVersion dbClientVersion dbBundleVersion = do
       ) $ do
           let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
               requiredData = initialData{clientVersion = Just clientVersion, bundleVersion = Just bundleVersion}
-          resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
+          void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
           pure unit
   else pure unit
   where 
@@ -141,7 +142,7 @@ updateVersion dbClientVersion dbBundleVersion = do
 getIosVersion :: Merchant -> IosVersion
 getIosVersion merchant =
   case merchant of
-    NAMMAYATRI  -> mkIOSVersion 1 2 4 false
+    NAMMAYATRI  -> mkIOSVersion 1 3 12 true
     YATRI       -> mkIOSVersion 1 1 0 true
     YATRISATHI  -> mkIOSVersion 0 1 0 false
     _           -> mkIOSVersion 0 1 0 false

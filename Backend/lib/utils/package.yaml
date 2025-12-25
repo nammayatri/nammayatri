@@ -62,6 +62,7 @@ dependencies:
   - exceptions
   - hspec
   - http-client
+  - http-client-tls
   - lens
   - servant
   - servant-client
@@ -80,7 +81,6 @@ dependencies:
   - prometheus-client
   - record-hasfield
   - record-dot-preprocessor
-  - hashmap
   - servant-openapi3
   - openapi3
   - string-conversions
@@ -107,9 +107,17 @@ dependencies:
   - casing
   - postgresql-simple
   - random
+  - process
+  - temporary
   - JuicyPixels
   - JuicyPixels-extra
   - base64-bytestring
+  - http-conduit
+  - yudhishthira
+  - aeson-casing
+  - jwt
+  - process
+  - temporary
 
 ghc-options:
   - -fwrite-ide-info
@@ -131,4 +139,5 @@ library:
     - special-zone-a
     - payment
     - sessionizer-metrics
+    - haskell-cac
 

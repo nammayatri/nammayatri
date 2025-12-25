@@ -15,54 +15,118 @@
 
 module Components.SourceToDestination.View where
 
-import Prelude (Unit, ($), (<>), (/), (<), (>), (==))
+import Prelude (Unit, ($), (<>), (/), (<), (>), (==),(/=), const, map, (-), unit, (+))
 import Effect (Effect)
-import Components.SourceToDestination.Controller (Action,Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), Accessiblity(..), Visibility(..), background, color, ellipsize, fontStyle, relativeLayout, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback, id, accessibilityHint, accessibility)
+import Components.SourceToDestination.Controller (Action(..), Config, PillInfo)
+import PrestoDOM 
 import Common.Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
 import Common.Types.App (LazyCheck(..))
 import Components.SeparatorView.View as SeparatorView
-import Engineering.Helpers.Commons (getNewIDWithTag, os)
+import Engineering.Helpers.Commons (getNewIDWithTag, os, screenWidth)
 import Constants (defaultSeparatorCount, getSeparatorFactor)
+import Data.Array ((!!), length, mapWithIndex)
 import Data.Maybe (Maybe(..), isNothing, fromMaybe)
 import Data.Function.Uncurried (runFn1)
+import Data.String as DS
 import JBridge (getLayoutBounds)
+import Mobility.Prelude (boolToVisibility)
+import PrestoDOM.Animation as PrestoAnim
+import Animation (scaleYAnimWithDelay)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config =
+view push config = 
+  if config.showSourceDestWithStops then viewWithStops push config
+  else
   frameLayout
   [ height WRAP_CONTENT
   , width config.width
   , gravity CENTER_VERTICAL
   , margin config.margin
+  , afterRender push $ const AfterRender
   ][ relativeLayout
       ([ height WRAP_CONTENT
       , width MATCH_PARENT
+      -- , orientation VERTICAL
       ] <> case config.id of
         Just layoutId -> [id $ getNewIDWithTag $ "src_dest_layout_" <> layoutId]
-        Nothing -> [])[ linearLayout
+        Nothing -> [])((if config.destinationTextConfig.text /= "" then [ 
+        linearLayout
         [ height WRAP_CONTENT
         , orientation VERTICAL
         , width MATCH_PARENT
         , margin $ MarginTop config.separatorMargin
+        , visibility $ boolToVisibility config.showDestination
         ][SeparatorView.view $ separatorConfig config
-      , destinationLayout config]
-      , sourceLayout config
+        , destinationLayout config push]
       ]
+       else []) <>
+      [
+      sourceLayout push config
+      ])
     , distanceLayout config
     ]
 
 
-sourceLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
-sourceLayout config =
+viewWithStops :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+viewWithStops push config =
+  frameLayout
+    [ height WRAP_CONTENT
+    , width config.width
+    , gravity CENTER_VERTICAL
+    , margin config.margin
+    , afterRender push $ const AfterRender
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        ]
+        [ relativeLayout
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            ]
+            [ linearLayout[
+              height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , margin config.separatorLayoutMargin
+              ][
+              SeparatorView.view $ (separatorConfig config)]
+            , linearLayout
+                [ height WRAP_CONTENT
+                , orientation VERTICAL
+                , width MATCH_PARENT
+                ]
+                [ linearLayout
+                    [ height WRAP_CONTENT
+                    , orientation VERTICAL
+                    , width MATCH_PARENT
+                    , id $ getNewIDWithTag $ "source_destiniation_view" <> (fromMaybe "" config.id)
+                    , visibility $ boolToVisibility config.showDestination
+                    ]
+                    [ sourceLayout push config
+                    , stopsView config push
+                    ]
+                , destinationLayout config push
+                ]
+            ]
+        ]
+    , distanceLayout config
+    ]
+
+sourceLayout :: forall w. (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+sourceLayout push config =
+  let dateAndAddress = addressAndDate config.sourceTextConfig.text
+      address = dateAndAddress.address
+      date = dateAndAddress.date
+  in
   linearLayout
     [ orientation HORIZONTAL
     , height WRAP_CONTENT
     , width MATCH_PARENT
     , margin config.sourceMargin
     , accessibility DISABLE
+    , afterRender push $ const AfterRender
     ][  imageView
         [ width config.sourceImageConfig.width
         , height config.sourceImageConfig.height
@@ -75,14 +139,14 @@ sourceLayout config =
         , width MATCH_PARENT
         , orientation VERTICAL
         , accessibility ENABLE
-        , accessibilityHint $ "PickUp Location Is " <> config.sourceTextConfig.text
+        , accessibilityHint $ (if date /= "" then "Ride started at : " <> date <> " from " else "") <> "PickUp Location : " <> address
         , gravity CENTER_VERTICAL
         ] <> case config.id of
           Just layoutId -> [id $ getNewIDWithTag $ "source_layout_" <> layoutId]
           Nothing -> [])
           $ [  textView $
             [ text config.sourceTextConfig.text
-            , width MATCH_PARENT
+            , width $ V $ (screenWidth unit) - 20
             , accessibility DISABLE
             , padding config.sourceTextConfig.padding
             , margin config.sourceTextConfig.margin
@@ -108,18 +172,74 @@ sourceLayout config =
               , visibility $ config.horizontalSeperatorConfig.visibility
               , padding $ config.horizontalSeperatorConfig.padding
               ][]
+          , horizontalScrollView
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , margin $ MarginLeft 4
+              , visibility $ config.pillsConfig.visibility
+              , orientation HORIZONTAL
+              ]
+              [ linearLayout
+                  [ width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , orientation HORIZONTAL
+                  , margin $ MarginVertical 16 16
+                  , scrollBarX false
+                  ]
+                  ( map (\item -> mapPill config push item) config.pillsConfig.pillList)
+              ]
           ]
       ]
+
+
+mapPill :: forall w. Config -> (Action -> Effect Unit) -> PillInfo -> PrestoDOM (Effect Unit) w
+mapPill state push pill = 
+  linearLayout 
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , background Color.grey700
+    , stroke ("1," <> Color.grey900)
+    , padding $ Padding 8 6 8 6
+    , cornerRadius 4.0
+    , margin $ MarginHorizontal 4 4
+    , gravity CENTER_VERTICAL
+    ]
+    [ imageView
+        [ width $ V 16
+        , height $ V 16
+        , imageWithFallback pill.imageUrl
+        , visibility pill.imageVisibility
+        , margin $ MarginRight 2
+        , gravity CENTER_VERTICAL
+        ]
+    , textView $ 
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text pill.text
+        , color Color.black800
+        , gravity CENTER_VERTICAL
+        ] <> FontStyle.tags TypoGraphy
+    ]
     
+addressAndDate :: String -> {address :: String, date :: String}
+addressAndDate text = do
+  let dateAndAddress = DS.split(DS.Pattern ("\n")) text
+      address = if length dateAndAddress > 1 then fromMaybe "" (dateAndAddress !! 1) else fromMaybe "" (dateAndAddress !! 0)
+      date = if length dateAndAddress > 1 then fromMaybe "" (dateAndAddress !! 0) else ""
+  {address: address, date: date}
 
-
-destinationLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
-destinationLayout config =
+destinationLayout :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+destinationLayout config push =
+  let dateAndAddress = addressAndDate config.destinationTextConfig.text
+      address = dateAndAddress.address
+      date = dateAndAddress.date
+  in
   linearLayout
   [ orientation HORIZONTAL
   , height WRAP_CONTENT
   , width MATCH_PARENT
   , margin config.destinationMargin
+  , visibility $ boolToVisibility config.showDestination
   ][  linearLayout
       [ height MATCH_PARENT
       , width WRAP_CONTENT
@@ -136,18 +256,20 @@ destinationLayout config =
       , width MATCH_PARENT
       , orientation VERTICAL
       , gravity CENTER_VERTICAL
-      , accessibilityHint $ "Drop Location is : " <> config.destinationTextConfig.text
+      , accessibilityHint $ (if date /= "" then "Trip ended at : " <> date <> " on " else "") <> "Drop Location : " <> address
       , accessibility ENABLE
       ][  textView $
           [ text config.destinationTextConfig.text
           , layoutGravity "center_vertical"
           , padding config.destinationTextConfig.padding
-          , width MATCH_PARENT
+          , width $ V $ (screenWidth unit) - 20
           , margin config.destinationTextConfig.margin
           , color config.destinationTextConfig.color
           , maxLines config.destinationTextConfig.maxLines
           , accessibility DISABLE
+          , clickable config.destinationTextConfig.isClickable
           , ellipsize config.destinationTextConfig.ellipsize
+          , onClick push $ const DestinationClicked 
           ] <> (FontStyle.getFontStyle config.destinationTextConfig.textStyle LanguageStyle)
         , textView $
           [ text config.rideEndedAtConfig.text
@@ -193,7 +315,7 @@ separatorConfig :: Config -> SeparatorView.Config
 separatorConfig config = 
   let count = case config.id of 
                 Nothing -> defaultSeparatorCount  
-                Just layoutId -> (runFn1 getLayoutBounds $ getNewIDWithTag $ "source_layout_" <> layoutId).height / getSeparatorFactor
+                Just layoutId -> (runFn1 getLayoutBounds $ getNewIDWithTag $ "source_destiniation_view" <> layoutId).height / getSeparatorFactor
   in {
     orientation : VERTICAL
   , count : if config.overrideSeparatorCount > 0 then config.overrideSeparatorCount else if count < defaultSeparatorCount then defaultSeparatorCount else count
@@ -201,10 +323,46 @@ separatorConfig config =
   , width : V 2
   , layoutWidth : config.destinationImageConfig.width
   , layoutHeight : config.destinationImageConfig.height
+  , color : Color.black500
   }
 
 getDistanceLayoutHeight :: Config -> Length
-getDistanceLayoutHeight config = if os == "ANDROID" then MATCH_PARENT else 
-  case config.id of
-    Nothing -> MATCH_PARENT
-    Just layoutId -> V $ (runFn1 getLayoutBounds $ getNewIDWithTag $ "src_dest_layout_" <> layoutId).height
+getDistanceLayoutHeight config = 
+  if config.showSourceDestWithStops then V $ (runFn1 getLayoutBounds $ getNewIDWithTag "all_stops_view").height
+  else if os == "ANDROID" then MATCH_PARENT else 
+    case config.id of
+      Nothing -> MATCH_PARENT
+      Just layoutId -> V $ (runFn1 getLayoutBounds $ getNewIDWithTag $ "src_dest_layout_" <> layoutId).height
+
+
+stopsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+stopsView config push =
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , margin $ MarginBottom 16
+    , orientation VERTICAL
+    ]
+    (mapWithIndex (\index item -> stopView item) (config.stops))
+  where
+  stopView name =
+    linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      , margin $ MarginTop 16
+      ]
+      [ imageView
+          [ width config.stopsImageConfig.width
+          , height config.stopsImageConfig.height
+          , accessibility DISABLE
+          , imageWithFallback config.stopsImageConfig.imageUrl
+          , margin config.stopsImageConfig.margin
+          ]
+      , textView
+          $ [ text name
+            , margin $ MarginLeft 16
+            , color Color.greyDavy
+            ]
+          <> FontStyle.body3 LanguageStyle
+      ]

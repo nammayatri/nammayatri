@@ -1,0 +1,208 @@
+imports:
+  Text: Data.Text
+  Maybe: Data.Maybe
+  PassCategory: Domain.Types.PassCategory
+  PassType: Domain.Types.PassType
+  Pass: Domain.Types.Pass
+  PassDocumentType: Domain.Types.Pass
+  PurchasedPass: Domain.Types.PurchasedPass
+  StatusType: Domain.Types.PurchasedPass
+  HighPrecMoney: Kernel.Types.Common
+  ServiceTierType: BecknV2.FRFS.Enums
+  CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
+  Benefit: Domain.Types.Pass
+  APISuccess: Kernel.Types.APISuccess
+  Day: Data.Time
+  Language: Kernel.External.Types
+  CumulativeOfferResp: SharedLogic.Offer
+
+module: Pass
+types:
+  PassCategoryAPIEntity:
+    id: Id PassCategory
+    name: Text
+    description: Text
+    derive: "Show"
+
+  PassTypeAPIEntity:
+    id: Id PassType
+    name: Maybe Text
+    catchline: Maybe Text
+    title: Text
+    description: Maybe Text
+    derive: "Show"
+
+  PassAPIEntity:
+    id: Id Pass
+    amount: HighPrecMoney
+    originalAmount: HighPrecMoney
+    savings: Maybe HighPrecMoney
+    benefit: Maybe Benefit
+    benefitDescription: Text
+    vehicleServiceTierType: "[ServiceTierType]"
+    maxTrips: Maybe Int
+    maxDays: Maybe Int
+    documentsRequired: "[PassDocumentType]"
+    eligibility: Bool
+    name: Maybe Text
+    description: Maybe Text
+    code: Text
+    offer: Maybe CumulativeOfferResp
+    autoApply: Bool
+    derive: "Show"
+
+  PassInfoAPIEntity:
+    passCategory: PassCategoryAPIEntity
+    passTypes: "[PassTypeAPIEntity]"
+    passes: "[PassAPIEntity]"
+    derive: "Show"
+
+  PassVerifyReq:
+    vehicleNumber: Text
+    currentLat: Maybe Double
+    currentLon: Maybe Double
+    stopId: Maybe Text
+    autoActivated: Maybe Bool
+
+  PassSelectionAPIEntity:
+    purchasedPassId: Id PurchasedPass
+    paymentOrder: Maybe CreateOrderResp
+    derive: "Show"
+
+  PassSelectReq:
+    startDate: Day
+    imeiNumber: Text
+    profilePicture: Text
+
+  PassSwitchDeviceIdReq:
+    deviceId: Maybe Text
+    imeiNumber: Maybe Text
+
+  PassUploadProfilePictureReq:
+    purchasedPassId: Id PurchasedPass
+    profilePicture: Text
+    imeiNumber: Text
+
+  PurchasedPassAPIEntity:
+    id: Id PurchasedPass
+    passNumber: Text
+    passEntity: PassDetailsAPIEntity
+    tripsLeft: Maybe Int
+    lastVerifiedVehicleNumber: Maybe Text
+    isAutoVerified: Bool
+    status: StatusType
+    purchaseDate: Day
+    daysToExpire: Int
+    startDate: Day
+    expiryDate: Day
+    deviceMismatch: Bool
+    deviceSwitchAllowed: Bool
+    profilePicture: Maybe Text
+    futureRenewals: [PurchasedPassTransactionAPIEntity]
+    derive: "Show"
+
+  PassDetailsAPIEntity:
+    category: PassCategoryAPIEntity
+    passType: PassTypeAPIEntity
+    passDetails: PassAPIEntity
+    derive: "Show"
+
+  PurchasedPassTransactionAPIEntity:
+    passName: Maybe Text
+    passCode: Text
+    createdAt: UTCTime
+    startDate: Day
+    endDate: Day
+    amount: HighPrecMoney
+    status: StatusType
+    derive: "Show"
+
+apis:
+  - GET:
+      endpoint: /multimodal/pass/availablePasses
+      auth: TokenAuth
+      query:
+        language: Language
+      response:
+        type: "[PassInfoAPIEntity]"
+
+  - POST:
+      endpoint: /multimodal/pass/{passId}/select
+      auth: TokenAuth
+      params:
+        passId: Id Pass
+      query:
+        startDate: Day
+        deviceId: Text
+        imeiNumber: Text
+        profilePicture: Text
+      response:
+        type: PassSelectionAPIEntity
+
+  - POST:
+      endpoint: /multimodal/pass/v2/{passId}/select
+      auth: TokenAuth
+      params:
+        passId: Id Pass
+      request:
+        type: PassSelectReq
+      response:
+        type: PassSelectionAPIEntity
+
+  - GET:
+      endpoint: /multimodal/pass/list
+      auth: TokenAuth
+      query:
+        status: StatusType
+        limit: Int
+        offset: Int
+        language: Language
+        deviceId: Text
+        imeiNumber: Text
+      response:
+        type: "[PurchasedPassAPIEntity]"
+
+  - POST:
+      endpoint: /multimodal/pass/{purchasedPassId}/verify
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      request:
+        type: PassVerifyReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /multimodal/pass/switchDeviceId
+      auth: TokenAuth
+      request:
+        type: PassSwitchDeviceIdReq
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /multimodal/pass/transactions
+      auth: TokenAuth
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[PurchasedPassTransactionAPIEntity]"
+
+  - POST:
+      endpoint: /multimodal/pass/activateToday/{passNumber}
+      auth: TokenAuth
+      params:
+        passNumber: Int
+      query:
+        date: Day
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /multimodal/pass/uploadProfilePicture
+      auth: TokenAuth
+      request:
+        type: PassUploadProfilePictureReq
+      response:
+        type: APISuccess

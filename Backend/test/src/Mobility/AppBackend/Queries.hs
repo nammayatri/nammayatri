@@ -34,7 +34,7 @@ import "rider-app" Storage.Beam.Merchant as BeamM
 --       ]
 --     where_ $ tbl ^. MerchantTId ==. val (toKey merchantId)
 
-updateOrigAndDestRestriction :: MonadFlow m => Id DM.Merchant -> [Text] -> [Text] -> m ()
+updateOrigAndDestRestriction :: (MonadFlow m, EsqDBFlow m r) => Id DM.Merchant -> [Text] -> [Text] -> m ()
 updateOrigAndDestRestriction (K.Id merchantId) originList destinationList =
   updateWithKV
     [ Se.Set BeamM.originRestriction $ Regions originList,

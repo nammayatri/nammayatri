@@ -1,0 +1,181 @@
+imports:
+  DashboardAccessType: API.Types.ProviderPlatform.Management.Endpoints.Account
+  DocumentType: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+  BaseUrl: Kernel.Prelude
+  VehicleCategory: Domain.Types.VehicleCategory # check this
+  DLDetails: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+  RCDetails: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+  Driver: Dashboard.Common
+  APISuccess: Kernel.Types.APISuccess
+
+module: Onboarding
+
+apis:
+  - GET:
+      endpoint: /document/configs
+      auth: ApiAuthV2
+      query:
+        - makeSelfieAadhaarPanMandatory: Bool
+        - onlyVehicle: Bool
+        - role: Role
+      response:
+        type: DocumentVerificationConfigList
+      helperApi:
+        - GET:
+            endpoint: /document/configs/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - makeSelfieAadhaarPanMandatory: Bool
+              - onlyVehicle: Bool
+              - role: Role
+            response:
+              type: DocumentVerificationConfigList
+  - GET:
+      endpoint: /register/status
+      auth: ApiAuthV2
+      query:
+        - driverId: Id Driver
+        - makeSelfieAadhaarPanMandatory: Bool
+        - onboardingVehicleCategory: VehicleCategory
+        - providePrefillDetails: Bool
+        - onlyMandatoryDocs: Bool
+      response:
+        type: StatusRes
+      helperApi:
+        - GET:
+            endpoint: /register/status/{fleetOwnerId}
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - driverId: Id Driver
+              - makeSelfieAadhaarPanMandatory: Bool
+              - onboardingVehicleCategory: VehicleCategory
+              - providePrefillDetails: Bool
+              - onlyMandatoryDocs: Bool
+            response:
+              type: StatusRes
+  - POST:
+      endpoint: /verify/{verifyType}
+      auth: ApiAuthV2
+      params:
+        verifyType: VerifyType
+      request:
+        type: VerifyReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /verify/{verifyType}
+            auth: ApiAuthV2
+            params:
+              verifyType: VerifyType
+            request:
+              type: VerifyReq
+            query:
+                accessType: DashboardAccessType
+                adminApprovalRequired: Bool
+            response:
+              type: VerifyDocumentRes
+
+  - GET:
+      endpoint: /get/referralDetails
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - referralCode: Text
+      response:
+        type: ReferralInfoRes
+      helperApi:
+        - GET:
+            endpoint: /get/referralDetails/{requestorId}
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            mandatoryQuery:
+              - referralCode: Text
+            response:
+              type: ReferralInfoRes
+types:
+  VerifyReq:
+    driverId: Text
+    imageId: Text
+    optionalImageId: Maybe Text
+    identifierNumber: Text
+  VerifyDocumentRes:
+    - enableFleetOwner: Bool
+    - recordType: NewType
+  VerifyType:
+    enum: "VERIFY_PAN,VERIFY_GST,VERIFY_AADHAAR"
+    derive: "HttpInstance"
+  Role:
+    enum: "NORMAL_FLEET, BUSINESS_FLEET"
+    derive: "HttpInstance"
+  DocumentVerificationConfigList:
+    fleet: Maybe [DocumentVerificationConfigAPIEntity]
+    autos: Maybe [DocumentVerificationConfigAPIEntity]
+    cabs: Maybe [DocumentVerificationConfigAPIEntity]
+    bikes: Maybe [DocumentVerificationConfigAPIEntity]
+    ambulances: Maybe [DocumentVerificationConfigAPIEntity]
+    trucks: Maybe [DocumentVerificationConfigAPIEntity]
+    bus: Maybe [DocumentVerificationConfigAPIEntity]
+    boat: Maybe [DocumentVerificationConfigAPIEntity]
+  DocumentVerificationConfigAPIEntity:
+    documentType: DocumentType
+    applicableTo: DocumentApplicableType
+    documentFields: Maybe [FieldInfo]
+    documentFlowGrouping: DocumentFlowGrouping
+    title: Text
+    description: Maybe Text
+    isMandatory: Bool
+    isMandatoryForEnabling: Bool
+    isDisabled: Bool
+    disableWarning: Maybe Text
+    isHidden: Bool
+    dependencyDocumentType: '[DocumentType]'
+    checkExtraction: Bool
+    checkExpiry: Bool
+    rcNumberPrefixList: '[Text]'
+    filterForOldApks: Maybe Bool
+    documentCategory: Maybe DocumentCategory
+  DocumentCategory:
+    enum: "Driver,Vehicle,Permission,Training"
+  DocumentFlowGrouping:
+    enum: "COMMON,STANDARD"
+  FieldType:
+    enum: "FieldText,FieldInt,FieldDouble"
+  FieldInfo:
+    name: Text
+    _type: FieldType
+    isMandatory: Bool
+    regexValidation: Maybe Text
+  DocumentApplicableType:
+    enum: "FLEET,INDIVIDUAL,FLEET_AND_INDIVIDUAL"
+  StatusRes:
+    driverDocuments: [DocumentStatusItem]
+    vehicleDocuments: [VehicleDocumentItem]
+    enabled: Bool
+    manualVerificationRequired: Maybe Bool
+    driverLicenseDetails: Maybe [DLDetails]
+    vehicleRegistrationCertificateDetails: Maybe [RCDetails]
+  DocumentStatusItem:
+    documentType: DocumentType
+    verificationStatus: ResponseStatus
+    verificationMessage: Maybe Text
+    verificationUrl: Maybe BaseUrl
+  ResponseStatus:
+    enum: "NO_DOC_AVAILABLE,PENDING,VALID,FAILED,INVALID,LIMIT_EXCEED,MANUAL_VERIFICATION_REQUIRED,UNAUTHORIZED"
+  VehicleDocumentItem:
+    registrationNo: Text
+    userSelectedVehicleCategory: VehicleCategory
+    verifiedVehicleCategory: Maybe VehicleCategory
+    isVerified: Bool
+    isActive: Bool
+    isApproved: Bool
+    vehicleModel: Maybe Text
+    documents: [DocumentStatusItem]
+    dateOfUpload: UTCTime
+  ReferralInfoRes:
+    personId: Id Driver
+    name: Text

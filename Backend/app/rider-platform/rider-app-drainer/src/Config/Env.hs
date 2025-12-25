@@ -50,3 +50,17 @@ getThreadPerPodCount = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv threadPerP
 
 isPushToKafka :: IO Bool
 isPushToKafka = fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv pushToKafkaEnvKey
+
+-- DB Connection Recovery Configuration
+getDbConnectionRetryMaxAttempts :: IO Int
+getDbConnectionRetryMaxAttempts = fromMaybe defaultDbConnectionRetryMaxAttempts . (>>= readMaybe) <$> SE.lookupEnv dbConnectionRetryMaxAttempts
+
+getDbConnectionRetryDelay :: IO Int
+getDbConnectionRetryDelay = fromMaybe defaultDbConnectionRetryDelay . (>>= readMaybe) <$> SE.lookupEnv dbConnectionRetryDelayEnvKey
+
+-- Batch Create Configuration
+getBatchCreateEnabled :: IO Bool
+getBatchCreateEnabled = fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "BATCHED_CREATE_ENABLED"
+
+getInsertBatchSize :: IO Int
+getInsertBatchSize = fromMaybe 50 . (>>= readMaybe) <$> SE.lookupEnv "INSERT_BATCH_SIZE"

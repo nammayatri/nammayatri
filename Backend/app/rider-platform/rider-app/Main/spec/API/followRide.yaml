@@ -1,0 +1,66 @@
+imports:
+  Text: Data.Text
+  Booking: Domain.Types.Booking
+  PersonDefaultEmergencyNumber: Domain.Types.Person.PersonDefaultEmergencyNumber
+  UTCTime: Kernel.Prelude
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+
+module: FollowRide
+types:
+  Followers:
+    name: Maybe Text
+    bookingId: Id Booking
+    mobileNumber: Text
+    priority: Int
+    personId: Id Person
+
+  ShareRideReq:
+    emergencyContactNumbers: [Text]
+
+  EmergencyContactsStatusRes:
+    details : [ContactsDetail]
+
+  FollowRideCustomerDetailsRes:
+    bookingId: Id Booking
+    customerName: Text
+    customerPhone: Maybe Text
+
+  ContactsDetail:
+    updateTime : UTCTime
+    personId : Id Person
+
+apis:
+  # GET /follow/ride
+  - GET:
+      endpoint: /follow/ride
+      auth: TokenAuth
+      response:
+        type: "[API.Types.UI.FollowRide.Followers]"
+
+  # POST /share/ride
+  - POST:
+      endpoint: /share/ride
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FollowRide.ShareRideReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # GET followRide/ECStatus
+  - GET:
+      endpoint: followRide/ECStatus/{rideId}
+      auth: TokenAuth
+      params:
+        rideId: Id Ride
+      response:
+        type: API.Types.UI.FollowRide.EmergencyContactsStatusRes
+
+  # GET followRide/customerDetails
+  - GET:
+        endpoint: followRide/{rideId}/customerDetails
+        auth: TokenAuth
+        params:
+          rideId: Id Ride
+        response:
+          type: API.Types.UI.FollowRide.FollowRideCustomerDetailsRes

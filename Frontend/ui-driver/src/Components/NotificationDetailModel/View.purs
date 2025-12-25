@@ -31,19 +31,20 @@ import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, screenWidth, getVideoID, getYoutubeData)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), addMediaPlayer, parseNumber)
-import JBridge (renderBase64Image, openUrlInApp, setScaleType, setYoutubePlayer)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseNumber)
+import JBridge (renderBase64Image, openUrlInApp, setScaleType, setYoutubePlayer, addMediaPlayer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, void, discard, ($), (<<<), (<>), (==), (&&), (-), (*), (/))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, progressBar, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollBarY, scrollView, lineHeight, textFromHtml, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, progressBar, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollBarY, scrollView, lineHeight, textFromHtml, imageWithFallback, rippleColor)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (NotificationDetailModelState, YoutubeVideoStatus(..))
 import Services.API (MediaType(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Styles.Types (FontStyle)
-import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (runFn5)
+import Mobility.Prelude (boolToVisibility)
 
 view :: forall w. (Action -> Effect Unit) -> NotificationDetailModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -106,11 +107,11 @@ view push state =
 
                                             url = state.mediaUrl
                                           case mediaType of
-                                            VideoLink -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 ) id (show PLAY)
-                                            PortraitVideoLink -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0 ) id (show PLAY)
+                                            VideoLink -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig "VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
+                                            PortraitVideoLink -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig "PORTRAIT_VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
                                             Image -> renderBase64Image state.mediaUrl (getNewIDWithTag "illustrationView") true "FIT_CENTER"
-                                            Audio -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
-                                            AudioLink -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
+                                            Audio -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl false
+                                            AudioLink -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl false
                                             _ -> pure unit
                                       )
                                       (const NoAction)
@@ -159,7 +160,11 @@ view push state =
           ]
             <> if state.addCommentModelVisibility == VISIBLE then [ addCommentModel state push ] else []
         )
-
+    where 
+      getYoutubeDataConfig videoType videoId = getYoutubeData {
+        videoType = videoType,
+        videoId = videoId
+      }
 addCommentModel :: NotificationDetailModelState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 addCommentModel state push =
   linearLayout
@@ -228,6 +233,31 @@ descriptionAndComment state push =
         , visibility GONE -- TODO :: Change the visibility in next iteration
         , text state.actionText
         ] <> FontStyle.body15 TypoGraphy
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , background Color.blue600
+      , cornerRadius 15.0
+      , padding $ Padding 10 6 10 6
+      , margin $ MarginTop 16
+      , onClick push $ const ShareMessage
+      , gravity CENTER
+      , rippleColor Color.rippleShade
+      , visibility $ boolToVisibility state.shareable
+      ][
+        imageView
+        [ height $ V 16
+        , width $ V 16 
+        , imageUrl "ic_share_blue"
+        , margin $ MarginRight 2
+        ]
+      , textView $
+        [ height WRAP_CONTENT
+        , width  WRAP_CONTENT
+        , text $ getString SHARE
+        , color Color.blue900
+        ] <> FontStyle.body1 LanguageStyle
+      ]
     , if isJust state.comment then customTextView (getString YOUR_COMMENT) FontSize.a_14 Color.black900 (MarginTop 16) $ FontStyle.medium LanguageStyle else textView []
     , linearLayout
         [ height WRAP_CONTENT
@@ -255,14 +285,17 @@ headerLayout state push =
         , height MATCH_PARENT
         , orientation HORIZONTAL
         , gravity CENTER_VERTICAL
+        , padding $ Padding 5 8 5 8
         ]
         [ imageView
-            [ width $ V 55
-            , height $ V 55
+            [ width $ V 40
+            , height $ V 40
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left"
             , gravity CENTER_VERTICAL
             , onClick push $ const BackArrow
-            , padding $ Padding 10 13 10 13
+            , padding $ Padding 7 7 7 7
+            , rippleColor Color.rippleShade
+            , cornerRadius 20.0
             ]
         , textView
             $ [ width WRAP_CONTENT

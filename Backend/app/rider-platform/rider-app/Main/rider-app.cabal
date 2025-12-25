@@ -29,6 +29,15 @@ library
   exposed-modules:
       API
       API.Beckn
+      API.Beckn.FRFS.OnCancel
+      API.Beckn.FRFS.OnConfirm
+      API.Beckn.FRFS.OnInit
+      API.Beckn.FRFS.OnSearch
+      API.Beckn.FRFS.OnSelect
+      API.Beckn.FRFS.OnStatus
+      API.Beckn.FRFS.OnUpdate
+      API.Beckn.IGM.Issue
+      API.Beckn.OnCancel
       API.Beckn.OnConfirm
       API.Beckn.OnInit
       API.Beckn.OnSearch
@@ -36,31 +45,25 @@ library
       API.Beckn.OnStatus
       API.Beckn.OnTrack
       API.Beckn.OnUpdate
+      API.Conductor
       API.Dashboard
-      API.Dashboard.Booking
-      API.Dashboard.Customer
       API.Dashboard.Exotel
-      API.Dashboard.HotSpot
-      API.Dashboard.Issue
-      API.Dashboard.IssueList
-      API.Dashboard.Merchant
-      API.Dashboard.Ride
-      API.Dashboard.RideBooking
-      API.Dashboard.RideBooking.Booking
-      API.Dashboard.RideBooking.Cancel
-      API.Dashboard.RideBooking.Confirm
-      API.Dashboard.RideBooking.Frontend
-      API.Dashboard.RideBooking.Maps
-      API.Dashboard.RideBooking.Profile
-      API.Dashboard.RideBooking.Quote
-      API.Dashboard.RideBooking.Registration
-      API.Dashboard.RideBooking.Search
-      API.Dashboard.RideBooking.Select
-      API.Dashboard.Tickets
+      API.FRFS
+      API.FRFSMetrics
+      API.IGM
       API.Internal
+      API.Internal.Cac
+      API.Internal.DriverArrivalNotf
+      API.Internal.FrequentLocUser
+      API.Internal.FRFS
+      API.Internal.GetPickupInstructions
       API.Internal.Rating
-      API.MetroBeckn
-      API.MetroBeckn.OnSearch
+      API.Internal.RideSearchExpired
+      API.Internal.StopEvents
+      API.Internal.ViolationDetection
+      API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
+      API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
+      API.Types.UI.PartnerBookingStatementExtra
       API.UI
       API.UI.AadhaarVerification
       API.UI.AppInstalls
@@ -69,8 +72,8 @@ library
       API.UI.CallEvent
       API.UI.Cancel
       API.UI.CancellationReason
+      API.UI.CancelSearch
       API.UI.Confirm
-      API.UI.CustomerSupport
       API.UI.Disability
       API.UI.FeedbackForm
       API.UI.Frontend
@@ -78,12 +81,16 @@ library
       API.UI.HotSpot
       API.UI.Issue
       API.UI.Maps
+      API.UI.ParkingBooking
+      API.UI.PartnerOrganizationFRFS
+      API.UI.Pass
       API.UI.Payment
       API.UI.PersonStats
       API.UI.Profile
       API.UI.Quote
       API.UI.Rating
       API.UI.Registration
+      API.UI.RentalsIntercityCache
       API.UI.Ride
       API.UI.Route
       API.UI.SavedReqLocation
@@ -92,17 +99,31 @@ library
       API.UI.Serviceability
       API.UI.Sos
       API.UI.Support
-      API.UI.Webengage.InfoBIPWebhook
-      API.UI.Webengage.Webengage
       API.UI.Whatsapp
       App
       App.Server
       Beckn.ACL.Cancel
       Beckn.ACL.Common
       Beckn.ACL.Confirm
+      Beckn.ACL.FRFS.Cancel
+      Beckn.ACL.FRFS.Confirm
+      Beckn.ACL.FRFS.Init
+      Beckn.ACL.FRFS.OnCancel
+      Beckn.ACL.FRFS.OnConfirm
+      Beckn.ACL.FRFS.OnInit
+      Beckn.ACL.FRFS.OnSearch
+      Beckn.ACL.FRFS.OnSelect
+      Beckn.ACL.FRFS.OnStatus
+      Beckn.ACL.FRFS.OnUpdate
+      Beckn.ACL.FRFS.Search
+      Beckn.ACL.FRFS.Select
+      Beckn.ACL.FRFS.Status
+      Beckn.ACL.FRFS.Utils
+      Beckn.ACL.IGM.Issue
+      Beckn.ACL.IGM.IssueStatus
+      Beckn.ACL.IGM.Utils
       Beckn.ACL.Init
-      Beckn.ACL.Metro.OnSearch
-      Beckn.ACL.Metro.Search
+      Beckn.ACL.OnCancel
       Beckn.ACL.OnConfirm
       Beckn.ACL.OnInit
       Beckn.ACL.OnSearch
@@ -117,6 +138,23 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
+      Beckn.OnDemand.Transformer.Init
+      Beckn.OnDemand.Transformer.OnSearch
+      Beckn.OnDemand.Transformer.Search
+      Beckn.OnDemand.Utils.Common
+      Beckn.OnDemand.Utils.Init
+      Beckn.OnDemand.Utils.OnSearch
+      Domain.Action.Beckn.Common
+      Domain.Action.Beckn.FRFS.Common
+      Domain.Action.Beckn.FRFS.GWLink
+      Domain.Action.Beckn.FRFS.OnCancel
+      Domain.Action.Beckn.FRFS.OnConfirm
+      Domain.Action.Beckn.FRFS.OnInit
+      Domain.Action.Beckn.FRFS.OnSearch
+      Domain.Action.Beckn.FRFS.OnSelect
+      Domain.Action.Beckn.FRFS.OnStatus
+      Domain.Action.Beckn.FRFS.OnUpdate
+      Domain.Action.Beckn.OnCancel
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
       Domain.Action.Beckn.OnSearch
@@ -124,292 +162,1151 @@ library
       Domain.Action.Beckn.OnStatus
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
+      Domain.Action.Dashboard.AppManagement.Customer
+      Domain.Action.Dashboard.AppManagement.EventManagement
+      Domain.Action.Dashboard.AppManagement.EventManagement.Utils
+      Domain.Action.Dashboard.AppManagement.MerchantOnboarding
+      Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
+      Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
+      Domain.Action.Dashboard.AppManagement.Pass
+      Domain.Action.Dashboard.AppManagement.TicketDashboard
+      Domain.Action.Dashboard.AppManagement.Tickets
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
       Domain.Action.Dashboard.Exotel
-      Domain.Action.Dashboard.IssueList
+      Domain.Action.Dashboard.FRFSTicket
+      Domain.Action.Dashboard.Invoice
+      Domain.Action.Dashboard.IssueManagement.Issue
+      Domain.Action.Dashboard.IssueManagement.IssueList
+      Domain.Action.Dashboard.Media
       Domain.Action.Dashboard.Merchant
+      Domain.Action.Dashboard.NammaTag
       Domain.Action.Dashboard.Ride
+      Domain.Action.Dashboard.RideBooking.Booking
+      Domain.Action.Dashboard.RideBooking.Cancel
+      Domain.Action.Dashboard.RideBooking.Confirm
+      Domain.Action.Dashboard.RideBooking.Frontend
+      Domain.Action.Dashboard.RideBooking.Maps
+      Domain.Action.Dashboard.RideBooking.MultiModal
+      Domain.Action.Dashboard.RideBooking.NotifyRideInfo
+      Domain.Action.Dashboard.RideBooking.Profile
+      Domain.Action.Dashboard.RideBooking.Quote
+      Domain.Action.Dashboard.RideBooking.Registration
+      Domain.Action.Dashboard.RideBooking.Search
+      Domain.Action.Dashboard.RideBooking.Select
       Domain.Action.Dashboard.Route
+      Domain.Action.Dashboard.SosMedia
+      Domain.Action.Dashboard.System
+      Domain.Action.Internal.Cac
+      Domain.Action.Internal.DriverArrivalNotf
+      Domain.Action.Internal.FrequentLocUser
+      Domain.Action.Internal.FRFS
+      Domain.Action.Internal.GetPickupInstructions
+      Domain.Action.Internal.Payout
+      Domain.Action.Internal.PickupInstructionHandler
       Domain.Action.Internal.Rating
+      Domain.Action.Internal.RideSearchExpired
+      Domain.Action.Internal.StopEvents
+      Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AppInstalls
+      Domain.Action.UI.AttractionRecommend
+      Domain.Action.UI.BBPS
       Domain.Action.UI.Booking
+      Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
       Domain.Action.UI.Cancel
       Domain.Action.UI.CancellationReason
+      Domain.Action.UI.Conductor.Stats
       Domain.Action.UI.Confirm
-      Domain.Action.UI.CustomerSupport
+      Domain.Action.UI.CRIS
+      Domain.Action.UI.CustomerReferral
+      Domain.Action.UI.DeletedPerson
       Domain.Action.UI.Disability
+      Domain.Action.UI.Dispatcher
+      Domain.Action.UI.DriverOffer
+      Domain.Action.UI.EditLocation
+      Domain.Action.UI.Estimate
+      Domain.Action.UI.EstimateBP
+      Domain.Action.UI.FareBreakup
+      Domain.Action.UI.FavouriteDriver
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
+      Domain.Action.UI.FollowRide
+      Domain.Action.UI.FRFSTicketService
       Domain.Action.UI.Frontend
+      Domain.Action.UI.GetDailyMetrics
       Domain.Action.UI.HotSpot
+      Domain.Action.UI.IGM
+      Domain.Action.UI.Insurance
+      Domain.Action.UI.InsuranceInternal
+      Domain.Action.UI.InterCityDetails
+      Domain.Action.UI.Invoice
+      Domain.Action.UI.InvoiceGeneration
+      Domain.Action.UI.Location
       Domain.Action.UI.Maps
+      Domain.Action.UI.MerchantPaymentMethod
+      Domain.Action.UI.MeterRideInternal
+      Domain.Action.UI.Metrics
+      Domain.Action.UI.Miscellaneous
+      Domain.Action.UI.MultimodalConfirm
+      Domain.Action.UI.NearbyBuses
+      Domain.Action.UI.NearbyDrivers
+      Domain.Action.UI.NyRegularSubscription
+      Domain.Action.UI.ParkingBooking
+      Domain.Action.UI.PartnerBookingStatement
+      Domain.Action.UI.PartnerOrganizationFRFS
+      Domain.Action.UI.Pass
       Domain.Action.UI.Payment
+      Domain.Action.UI.Person
+      Domain.Action.UI.PersonDefaultEmergencyNumber
       Domain.Action.UI.PersonStats
+      Domain.Action.UI.PickupInstructions
+      Domain.Action.UI.Places
+      Domain.Action.UI.PriceBreakup
       Domain.Action.UI.Profile
       Domain.Action.UI.Quote
       Domain.Action.UI.Registration
+      Domain.Action.UI.RentalDetails
+      Domain.Action.UI.RentalsIntercityCache
       Domain.Action.UI.Ride
+      Domain.Action.UI.RidePayment
+      Domain.Action.UI.RiderLocation
       Domain.Action.UI.Route
       Domain.Action.UI.SavedReqLocation
-      Domain.Action.UI.Search.Common
-      Domain.Action.UI.Search.OneWay
-      Domain.Action.UI.Search.Rental
+      Domain.Action.UI.Search
       Domain.Action.UI.Select
       Domain.Action.UI.Serviceability
+      Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
+      Domain.Action.UI.SpecialZoneQuote
       Domain.Action.UI.Support
+      Domain.Action.UI.TicketDashboard
+      Domain.Action.UI.TicketKapture
       Domain.Action.UI.TicketService
-      Domain.Action.UI.Webengage.InfoBIPWebhook
-      Domain.Action.UI.Webengage.Webengage
+      Domain.Action.UI.TrackRoute
+      Domain.Action.UI.TriggerFCM
       Domain.Action.UI.Whatsapp
-      Domain.Types.AadhaarVerification.AadhaarOtp
-      Domain.Types.AadhaarVerification.AadhaarVerification
-      Domain.Types.AppInstalls
-      Domain.Types.BlackListOrg
-      Domain.Types.Booking
       Domain.Types.Booking.API
-      Domain.Types.Booking.BookingLocation
-      Domain.Types.Booking.Type
-      Domain.Types.BookingCancellationReason
-      Domain.Types.CallbackRequest
-      Domain.Types.CallStatus
-      Domain.Types.CancellationReason
+      Domain.Types.CacType
       Domain.Types.Common
-      Domain.Types.DriverOffer
-      Domain.Types.Estimate
-      Domain.Types.Exophone
-      Domain.Types.FarePolicy.FareBreakup
+      Domain.Types.DeliveryDetails
+      Domain.Types.EventManagement
+      Domain.Types.EventManagement.Permissions
+      Domain.Types.Extra.Booking
+      Domain.Types.Extra.CancellationReason
+      Domain.Types.Extra.FeedbackForm
+      Domain.Types.Extra.FRFSCachedQuote
+      Domain.Types.Extra.IntegratedBPPConfig
+      Domain.Types.Extra.InterCityDetails
+      Domain.Types.Extra.MerchantMessage
+      Domain.Types.Extra.MerchantPaymentMethod
+      Domain.Types.Extra.MerchantServiceConfig
+      Domain.Types.Extra.NyRegularSubscription
+      Domain.Types.Extra.PartnerOrgConfig
+      Domain.Types.Extra.PersonFlowStatus
+      Domain.Types.Extra.PlaceNameCache
+      Domain.Types.Extra.PurchasedPass
+      Domain.Types.Extra.RecentLocation
+      Domain.Types.Extra.RentalDetails
+      Domain.Types.Extra.Ride
+      Domain.Types.Extra.RiderConfig
+      Domain.Types.Extra.TicketBooking
+      Domain.Types.Extra.VendorSplitDetails
       Domain.Types.FarePolicy.FareProductType
-      Domain.Types.FeedbackForm
       Domain.Types.Geometry
       Domain.Types.HotSpot
-      Domain.Types.HotSpotConfig
-      Domain.Types.Issue
-      Domain.Types.Location
       Domain.Types.LocationAddress
-      Domain.Types.LocationMapping
-      Domain.Types.Maps.PlaceNameCache
-      Domain.Types.Merchant
-      Domain.Types.Merchant.MerchantMessage
-      Domain.Types.Merchant.MerchantPaymentMethod
-      Domain.Types.Merchant.MerchantServiceConfig
-      Domain.Types.Merchant.MerchantServiceUsageConfig
-      Domain.Types.Merchant.RiderConfig
-      Domain.Types.MerchantConfig
-      Domain.Types.OnSearchEvent
-      Domain.Types.Person
-      Domain.Types.Person.PersonDefaultEmergencyNumber
-      Domain.Types.Person.PersonDisability
-      Domain.Types.Person.PersonFlowStatus
-      Domain.Types.Person.PersonStats
-      Domain.Types.Quote
-      Domain.Types.Rating
-      Domain.Types.RegistrationToken
-      Domain.Types.RentalSlab
-      Domain.Types.Ride
-      Domain.Types.SavedReqLocation
-      Domain.Types.SearchRequest
-      Domain.Types.SearchRequest.SearchReqLocation
-      Domain.Types.Sos
-      Domain.Types.SpecialZoneQuote
-      Domain.Types.TripTerms
-      Domain.Types.VehicleVariant
-      Domain.Types.Webengage
+      Domain.Types.MerchantOnboarding.Handler
+      Domain.Types.RentalsIntercityCache
+      Domain.Types.Route
+      Domain.Types.RouteStopMapping
+      Domain.Types.RouteStopTimeTable
+      Domain.Types.Station
+      Domain.Types.TicketDashboard
+      Domain.Types.TicketKapture
+      Domain.Types.UtilsTH
+      Domain.Types.Yudhishthira
       Environment
-      Lib.Mesh
+      ExternalBPP.CallAPI
+      ExternalBPP.CallAPI.Common
+      ExternalBPP.CallAPI.Init
+      ExternalBPP.CallAPI.Select
+      ExternalBPP.CallAPI.Types
+      ExternalBPP.ExternalAPI.Bus.EBIX.Auth
+      ExternalBPP.ExternalAPI.Bus.EBIX.Order
+      ExternalBPP.ExternalAPI.Bus.EBIX.Payment
+      ExternalBPP.ExternalAPI.Bus.EBIX.Status
+      ExternalBPP.ExternalAPI.CallAPI
+      ExternalBPP.ExternalAPI.Direct.Order
+      ExternalBPP.ExternalAPI.Direct.Status
+      ExternalBPP.ExternalAPI.Direct.Utils
+      ExternalBPP.ExternalAPI.Direct.Verify
+      ExternalBPP.ExternalAPI.Metro.CMRL.Auth
+      ExternalBPP.ExternalAPI.Metro.CMRL.BusinessHour
+      ExternalBPP.ExternalAPI.Metro.CMRL.DurationDetails
+      ExternalBPP.ExternalAPI.Metro.CMRL.Error
+      ExternalBPP.ExternalAPI.Metro.CMRL.FareByOriginDest
+      ExternalBPP.ExternalAPI.Metro.CMRL.FareMatrix
+      ExternalBPP.ExternalAPI.Metro.CMRL.Order
+      ExternalBPP.ExternalAPI.Metro.CMRL.PassengerViewStatus
+      ExternalBPP.ExternalAPI.Metro.CMRL.StationList
+      ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus
+      ExternalBPP.ExternalAPI.Metro.CMRL.UpdateQrReceivedStatus
+      ExternalBPP.ExternalAPI.Subway.CRIS.Auth
+      ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney
+      ExternalBPP.ExternalAPI.Subway.CRIS.ChangeDevice
+      ExternalBPP.ExternalAPI.Subway.CRIS.Encryption
+      ExternalBPP.ExternalAPI.Subway.CRIS.Error
+      ExternalBPP.ExternalAPI.Subway.CRIS.OtpGeneration
+      ExternalBPP.ExternalAPI.Subway.CRIS.ReconTicketEnquiry
+      ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare
+      ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3
+      ExternalBPP.ExternalAPI.Subway.CRIS.SDKData
+      ExternalBPP.ExternalAPI.Subway.CRIS.Types
+      ExternalBPP.ExternalAPI.Subway.CRIS.Uts
+      ExternalBPP.ExternalAPI.Types
+      ExternalBPP.Flow
+      ExternalBPP.Flow.Common
+      ExternalBPP.Flow.Select
+      Lib.JourneyLeg.Bus
+      Lib.JourneyLeg.Common.FRFS
+      Lib.JourneyLeg.Interface
+      Lib.JourneyLeg.Metro
+      Lib.JourneyLeg.Subway
+      Lib.JourneyLeg.Taxi
+      Lib.JourneyLeg.Types
+      Lib.JourneyLeg.Types.Bus
+      Lib.JourneyLeg.Types.Metro
+      Lib.JourneyLeg.Types.Subway
+      Lib.JourneyLeg.Types.Taxi
+      Lib.JourneyLeg.Types.Walk
+      Lib.JourneyLeg.Walk
+      Lib.JourneyModule.Base
+      Lib.JourneyModule.Location
+      Lib.JourneyModule.State.Types
+      Lib.JourneyModule.State.Utils
+      Lib.JourneyModule.Types
+      Lib.JourneyModule.Utils
+      SharedLogic.Booking
+      SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
+      SharedLogic.CallFRFSBPP
+      SharedLogic.CallIGMBPP
+      SharedLogic.Cancel
       SharedLogic.Confirm
+      SharedLogic.CreateFareForMultiModal
+      SharedLogic.EstimateTags
+      SharedLogic.External.BbpsService.Flow
+      SharedLogic.External.LocationTrackingService.API.NearbyDrivers
+      SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute
+      SharedLogic.External.LocationTrackingService.Flow
+      SharedLogic.External.LocationTrackingService.Types
+      SharedLogic.External.Nandi.API.Nandi
+      SharedLogic.External.Nandi.Flow
+      SharedLogic.External.Nandi.Types
+      SharedLogic.FRFSCancel
+      SharedLogic.FRFSConfirm
+      SharedLogic.FRFSFareCalculator
+      SharedLogic.FRFSStatus
+      SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
+      SharedLogic.Insurance
+      SharedLogic.IntegratedBPPConfig
+      SharedLogic.JobScheduler
+      SharedLogic.KaalChakra.Actions
       SharedLogic.LocationMapping
       SharedLogic.Merchant
       SharedLogic.MerchantConfig
+      SharedLogic.MerchantPaymentMethod
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
+      SharedLogic.NyRegularSubscriptionHasher
+      SharedLogic.NySubscription
+      SharedLogic.Offer
+      SharedLogic.OTP
+      SharedLogic.Payment
+      SharedLogic.PaymentVendorSplits
       SharedLogic.Person
+      SharedLogic.PersonDefaultEmergencyNumber
+      SharedLogic.PickupETA
       SharedLogic.PublicTransport
-      Storage.Beam.AadhaarVerification.AadhaarOtpReq
-      Storage.Beam.AadhaarVerification.AadhaarOtpVerify
-      Storage.Beam.AadhaarVerification.AadhaarVerification
-      Storage.Beam.AppInstalls
+      SharedLogic.Quote
+      SharedLogic.Referral
+      SharedLogic.Ride
+      SharedLogic.ScheduledNotifications
+      SharedLogic.Scheduler.Jobs.CallPoliceApi
+      SharedLogic.Scheduler.Jobs.Chakras
+      SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
+      SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail
+      SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
+      SharedLogic.Scheduler.Jobs.CheckRefundStatus
+      SharedLogic.Scheduler.Jobs.CrisRecon
+      SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
+      SharedLogic.Scheduler.Jobs.MetroBusinessHour
+      SharedLogic.Scheduler.Jobs.NyRegularInstance
+      SharedLogic.Scheduler.Jobs.NyRegularMaster
+      SharedLogic.Scheduler.Jobs.PaymentOrderStatusCheck
+      SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
+      SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
+      SharedLogic.Scheduler.Jobs.SafetyCSAlert
+      SharedLogic.Scheduler.Jobs.SafetyIVR
+      SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
+      SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
+      SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
+      SharedLogic.Search
+      SharedLogic.Serviceability
+      SharedLogic.TicketRule.Apply
+      SharedLogic.TicketRule.Core
+      SharedLogic.TicketUtils
+      SharedLogic.Type
       Storage.Beam.BecknRequest
-      Storage.Beam.BlackListOrg
-      Storage.Beam.Booking
-      Storage.Beam.Booking.BookingLocation
-      Storage.Beam.BookingCancellationReason
-      Storage.Beam.CallbackRequest
-      Storage.Beam.CallStatus
-      Storage.Beam.CancellationReason
       Storage.Beam.Common
-      Storage.Beam.Disability
-      Storage.Beam.DisabilityTranslation
-      Storage.Beam.DriverOffer
-      Storage.Beam.Estimate
       Storage.Beam.EstimateBreakup
-      Storage.Beam.Exophone
-      Storage.Beam.FarePolicy.FareBreakup
-      Storage.Beam.FeedbackForm
       Storage.Beam.Geometry
-      Storage.Beam.HotSpotConfig
-      Storage.Beam.Issue
+      Storage.Beam.Geometry.Geometry
+      Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.IssueManagement
-      Storage.Beam.Location
-      Storage.Beam.LocationMapping
-      Storage.Beam.Maps.PlaceNameCache
-      Storage.Beam.Merchant
-      Storage.Beam.Merchant.MerchantMessage
-      Storage.Beam.Merchant.MerchantPaymentMethod
-      Storage.Beam.Merchant.MerchantServiceConfig
-      Storage.Beam.Merchant.MerchantServiceUsageConfig
-      Storage.Beam.Merchant.RiderConfig
-      Storage.Beam.MerchantConfig
-      Storage.Beam.OnSearchEvent
       Storage.Beam.Payment
-      Storage.Beam.Person
-      Storage.Beam.Person.PersonDefaultEmergencyNumber
-      Storage.Beam.Person.PersonDisability
-      Storage.Beam.Person.PersonFlowStatus
-      Storage.Beam.Person.PersonStats
-      Storage.Beam.Quote
-      Storage.Beam.Rating
-      Storage.Beam.RegistrationToken
-      Storage.Beam.RentalSlab
-      Storage.Beam.Ride
-      Storage.Beam.SavedReqLocation
-      Storage.Beam.SearchRequest
-      Storage.Beam.SearchRequest.SearchReqLocation
-      Storage.Beam.Sos
-      Storage.Beam.SpecialZoneQuote
+      Storage.Beam.SchedulerJob
       Storage.Beam.SystemConfigs
-      Storage.Beam.TripTerms
-      Storage.Beam.Webengage
+      Storage.Beam.Yudhishthira
+      Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
+      Storage.CachedQueries.BppDetails
       Storage.CachedQueries.Exophone
-      Storage.CachedQueries.FeedbackForm
+      Storage.CachedQueries.FollowRide
+      Storage.CachedQueries.FRFSConfig
+      Storage.CachedQueries.FRFSGtfsStageFare
       Storage.CachedQueries.HotSpotConfig
+      Storage.CachedQueries.IntegratedBPPConfig
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.MerchantMessage
       Storage.CachedQueries.Merchant.MerchantOperatingCity
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
+      Storage.CachedQueries.Merchant.MerchantPushNotification
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
+      Storage.CachedQueries.Merchant.MerchantState
+      Storage.CachedQueries.Merchant.MultiModalBus
+      Storage.CachedQueries.Merchant.MultiModalSuburban
+      Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig
+      Storage.CachedQueries.OTPRest.Common
+      Storage.CachedQueries.OTPRest.OTPRest
+      Storage.CachedQueries.PartnerOrganization
+      Storage.CachedQueries.PartnerOrgConfig
+      Storage.CachedQueries.PartnerOrgStation
       Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
-      Storage.CachedQueries.SavedLocation
-      Storage.Queries.AadhaarVerification.AadhaarOtp
-      Storage.Queries.AadhaarVerification.AadhaarVerification
-      Storage.Queries.AppInstalls
-      Storage.Queries.BlackListOrg
-      Storage.Queries.Booking
-      Storage.Queries.Booking.BookingLocation
-      Storage.Queries.BookingCancellationReason
-      Storage.Queries.CallbackRequest
-      Storage.Queries.CallStatus
-      Storage.Queries.CancellationReason
-      Storage.Queries.Disability
-      Storage.Queries.DriverOffer
-      Storage.Queries.Estimate
+      Storage.CachedQueries.PickupRoute
+      Storage.CachedQueries.PlaceBasedServiceConfig
+      Storage.CachedQueries.RideRelatedNotificationConfig
+      Storage.CachedQueries.RoutePolylines
+      Storage.CachedQueries.RouteStopTimeTable
+      Storage.CachedQueries.SavedReqLocationExtra
+      Storage.CachedQueries.Sos
+      Storage.CachedQueries.StationsExtraInformation
+      Storage.CachedQueries.Translations
+      Storage.CachedQueries.UiRiderConfig
+      Storage.CachedQueries.ValueAddNP
+      Storage.CachedQueries.VehicleConfig
+      Storage.CachedQueries.WhiteListOrg
+      Storage.Clickhouse.Booking
+      Storage.Clickhouse.BookingCancellationReason
+      Storage.Clickhouse.ConductorStats
+      Storage.Clickhouse.EstimateBreakup
+      Storage.Clickhouse.FareBreakup
+      Storage.Clickhouse.FRFSTicketBooking
+      Storage.Clickhouse.Location
+      Storage.Clickhouse.Person
+      Storage.Clickhouse.QuoteBreakup
+      Storage.Clickhouse.Ride
+      Storage.Clickhouse.Sos
+      Storage.GraphqlQueries.Client
+      Storage.GraphqlQueries.RouteStopTimeTable
+      Storage.GraphqlQueries.Types
+      Storage.Queries.AppInstallsExtra
+      Storage.Queries.BBPSExtra
+      Storage.Queries.BecknConfigExtra
+      Storage.Queries.BookingCancellationReasonExtra
+      Storage.Queries.BookingExtra
+      Storage.Queries.BookingPartiesLinkExtra
+      Storage.Queries.BusinessHourExtra
+      Storage.Queries.CallStatusExtra
+      Storage.Queries.CancellationReasonExtra
+      Storage.Queries.DisabilityExtra
       Storage.Queries.EstimateBreakup
-      Storage.Queries.Exophone
-      Storage.Queries.FareBreakup
-      Storage.Queries.FeedbackForm
+      Storage.Queries.EstimateExtra
+      Storage.Queries.ExophoneExtra
+      Storage.Queries.Extra.Transformers.Ride
+      Storage.Queries.FareBreakupExtra
+      Storage.Queries.FeedbackFormExtra
+      Storage.Queries.FRFSQuoteExtra
+      Storage.Queries.FRFSSearchExtra
+      Storage.Queries.FRFSTicketBookingExtra
+      Storage.Queries.FRFSTicketBookingPaymentExtra
       Storage.Queries.Geometry
-      Storage.Queries.HotSpotConfig
-      Storage.Queries.Issues
-      Storage.Queries.Location
-      Storage.Queries.LocationMapping
-      Storage.Queries.Maps.PlaceNameCache
-      Storage.Queries.Merchant
-      Storage.Queries.Merchant.MerchantMessage
-      Storage.Queries.Merchant.MerchantPaymentMethod
-      Storage.Queries.Merchant.MerchantServiceConfig
-      Storage.Queries.Merchant.MerchantServiceUsageConfig
-      Storage.Queries.Merchant.RiderConfig
-      Storage.Queries.MerchantConfig
-      Storage.Queries.OnSearchEvent
-      Storage.Queries.Person
-      Storage.Queries.Person.PersonDefaultEmergencyNumber
-      Storage.Queries.Person.PersonDisability
-      Storage.Queries.Person.PersonFlowStatus
-      Storage.Queries.Person.PersonStats
-      Storage.Queries.Quote
-      Storage.Queries.Rating
-      Storage.Queries.RegistrationToken
-      Storage.Queries.RentalSlab
-      Storage.Queries.Ride
-      Storage.Queries.SavedReqLocation
-      Storage.Queries.SearchRequest
-      Storage.Queries.SearchRequest.SearchReqLocation
-      Storage.Queries.Sos
-      Storage.Queries.SpecialZoneQuote
-      Storage.Queries.TripTerms
-      Storage.Queries.Webengage
+      Storage.Queries.IntegratedBPPConfigExtra
+      Storage.Queries.IssueExtra
+      Storage.Queries.JourneyExtra
+      Storage.Queries.JourneyLegExtra
+      Storage.Queries.LocationMappingExtra
+      Storage.Queries.MerchantExtra
+      Storage.Queries.MerchantPaymentMethodExtra
+      Storage.Queries.MerchantServiceConfigExtra
+      Storage.Queries.MerchantServiceUsageConfigExtra
+      Storage.Queries.NyRegularSubscriptionExtra
+      Storage.Queries.PartnerOrganizationExtra
+      Storage.Queries.PartnerOrgConfigExtra
+      Storage.Queries.PassCategoryExtra
+      Storage.Queries.PassExtra
+      Storage.Queries.PassTypeExtra
+      Storage.Queries.PassVerifyTransactionExtra
+      Storage.Queries.PersonDefaultEmergencyNumberExtra
+      Storage.Queries.PersonExtra
+      Storage.Queries.PersonStatsExtra
+      Storage.Queries.PlaceBasedServiceConfigExtra
+      Storage.Queries.PopularLocationExtra
+      Storage.Queries.PurchasedPassExtra
+      Storage.Queries.PurchasedPassPaymentExtra
+      Storage.Queries.QueriesExtra.RideLite
+      Storage.Queries.QuoteExtra
+      Storage.Queries.RatingExtra
+      Storage.Queries.RecentLocationExtra
+      Storage.Queries.RegistrationTokenExtra
+      Storage.Queries.RideExtra
+      Storage.Queries.RouteDetailsExtra
+      Storage.Queries.RoutePolylinesExtra
+      Storage.Queries.SafetySettingsExtra
+      Storage.Queries.SavedReqLocationExtra
+      Storage.Queries.SearchRequestExtra
+      Storage.Queries.ServiceCategoryExtra
+      Storage.Queries.ServicePeopleCategoryExtra
+      Storage.Queries.StationsExtraInformationExtra
+      Storage.Queries.TicketBookingExtra
+      Storage.Queries.TicketBookingPeopleCategoryExtra
+      Storage.Queries.TicketBookingServiceCategoryExtra
+      Storage.Queries.TicketBookingServiceExtra
+      Storage.Queries.TicketServiceExtra
+      Storage.Queries.Transformers.AppInstalls
+      Storage.Queries.Transformers.BlackListOrg
+      Storage.Queries.Transformers.Booking
+      Storage.Queries.Transformers.BookingCancellationReason
+      Storage.Queries.Transformers.CancellationReason
+      Storage.Queries.Transformers.Estimate
+      Storage.Queries.Transformers.FRFSQuoteCategory
+      Storage.Queries.Transformers.IntegratedBPPConfig
+      Storage.Queries.Transformers.Journey
+      Storage.Queries.Transformers.JourneyLeg
+      Storage.Queries.Transformers.Merchant
+      Storage.Queries.Transformers.MerchantConfig
+      Storage.Queries.Transformers.MerchantMessage
+      Storage.Queries.Transformers.MerchantPaymentMethod
+      Storage.Queries.Transformers.MerchantServiceConfig
+      Storage.Queries.Transformers.PartnerOrgConfig
+      Storage.Queries.Transformers.Person
+      Storage.Queries.Transformers.Quote
+      Storage.Queries.Transformers.RentalDetails
+      Storage.Queries.Transformers.SearchReqLocation
+      Storage.Queries.Transformers.SearchRequest
+      Storage.Queries.Transformers.ServicePeopleCategory
+      Storage.Queries.Transformers.SpecialZoneQuote
+      Storage.Queries.Transformers.TicketMerchantDetails
+      Storage.Queries.Transformers.TripTerms
+      Storage.Queries.Transformers.WhiteListOrg
+      Storage.Queries.TranslationsExtra
+      Storage.Queries.UiRiderConfigExtra
+      Storage.Queries.VehicleRouteMappingExtra
+      Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH
       Tools.Call
+      Tools.ConfigPilot
+      Tools.Constants
       Tools.Error
       Tools.Event
+      Tools.HTTPManager
+      Tools.Insurance
+      Tools.InvoicePDF
       Tools.JSON
       Tools.Maps
       Tools.Metrics
       Tools.Metrics.BAPMetrics
       Tools.Metrics.BAPMetrics.Types
+      Tools.MultiModal
       Tools.Notifications
       Tools.Payment
+      Tools.Payout
       Tools.Schema
-      Tools.Search
       Tools.SignatureAuth
+      Tools.SignatureResponseBody
       Tools.SMS
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
+      API.Action.Dashboard.AppManagement
+      API.Action.Dashboard.AppManagement.Customer
+      API.Action.Dashboard.AppManagement.EventManagement
+      API.Action.Dashboard.AppManagement.MerchantOnboarding
+      API.Action.Dashboard.AppManagement.Pass
+      API.Action.Dashboard.AppManagement.TicketDashboard
+      API.Action.Dashboard.AppManagement.Tickets
+      API.Action.Dashboard.IssueManagement
+      API.Action.Dashboard.IssueManagement.Issue
+      API.Action.Dashboard.IssueManagement.IssueList
+      API.Action.Dashboard.Management
+      API.Action.Dashboard.Management.Booking
+      API.Action.Dashboard.Management.Customer
+      API.Action.Dashboard.Management.FRFSTicket
+      API.Action.Dashboard.Management.Invoice
+      API.Action.Dashboard.Management.Media
+      API.Action.Dashboard.Management.Merchant
+      API.Action.Dashboard.Management.NammaTag
+      API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.Management.SosMedia
+      API.Action.Dashboard.Management.System
+      API.Action.Dashboard.RideBooking
+      API.Action.Dashboard.RideBooking.Booking
+      API.Action.Dashboard.RideBooking.Cancel
+      API.Action.Dashboard.RideBooking.Confirm
+      API.Action.Dashboard.RideBooking.Frontend
+      API.Action.Dashboard.RideBooking.Maps
+      API.Action.Dashboard.RideBooking.MultiModal
+      API.Action.Dashboard.RideBooking.NotifyRideInfo
+      API.Action.Dashboard.RideBooking.Profile
+      API.Action.Dashboard.RideBooking.Quote
+      API.Action.Dashboard.RideBooking.Registration
+      API.Action.Dashboard.RideBooking.Search
+      API.Action.Dashboard.RideBooking.Select
+      API.Action.UI.AttractionRecommend
+      API.Action.UI.BBPS
+      API.Action.UI.Cac
+      API.Action.UI.CRIS
+      API.Action.UI.CustomerReferral
+      API.Action.UI.DeletedPerson
+      API.Action.UI.Dispatcher
+      API.Action.UI.EditLocation
+      API.Action.UI.EstimateBP
+      API.Action.UI.FavouriteDriver
+      API.Action.UI.FollowRide
+      API.Action.UI.FRFSTicketService
+      API.Action.UI.Insurance
+      API.Action.UI.InsuranceInternal
+      API.Action.UI.Invoice
+      API.Action.UI.MeterRideInternal
+      API.Action.UI.Metrics
+      API.Action.UI.Miscellaneous
+      API.Action.UI.MultimodalConfirm
+      API.Action.UI.NearbyBuses
+      API.Action.UI.NearbyDrivers
+      API.Action.UI.NyRegularSubscription
+      API.Action.UI.ParkingBooking
+      API.Action.UI.PartnerBookingStatement
+      API.Action.UI.Pass
+      API.Action.UI.PickupInstructions
+      API.Action.UI.Places
+      API.Action.UI.PriceBreakup
+      API.Action.UI.RidePayment
+      API.Action.UI.RiderLocation
+      API.Action.UI.SocialLogin
+      API.Action.UI.Sos
+      API.Action.UI.TicketKapture
       API.Action.UI.TicketService
+      API.Action.UI.TrackRoute
+      API.Action.UI.TriggerFCM
+      API.Types.Dashboard.AppManagement
+      API.Types.Dashboard.AppManagement.Customer
+      API.Types.Dashboard.AppManagement.Endpoints.Customer
+      API.Types.Dashboard.AppManagement.Endpoints.EventManagement
+      API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
+      API.Types.Dashboard.AppManagement.Endpoints.Pass
+      API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard
+      API.Types.Dashboard.AppManagement.Endpoints.Tickets
+      API.Types.Dashboard.AppManagement.EventManagement
+      API.Types.Dashboard.AppManagement.MerchantOnboarding
+      API.Types.Dashboard.AppManagement.Pass
+      API.Types.Dashboard.AppManagement.TicketDashboard
+      API.Types.Dashboard.AppManagement.Tickets
+      API.Types.Dashboard.RideBooking
+      API.Types.Dashboard.RideBooking.Booking
+      API.Types.Dashboard.RideBooking.Cancel
+      API.Types.Dashboard.RideBooking.Confirm
+      API.Types.Dashboard.RideBooking.Endpoints.Booking
+      API.Types.Dashboard.RideBooking.Endpoints.Cancel
+      API.Types.Dashboard.RideBooking.Endpoints.Confirm
+      API.Types.Dashboard.RideBooking.Endpoints.Frontend
+      API.Types.Dashboard.RideBooking.Endpoints.Maps
+      API.Types.Dashboard.RideBooking.Endpoints.MultiModal
+      API.Types.Dashboard.RideBooking.Endpoints.NotifyRideInfo
+      API.Types.Dashboard.RideBooking.Endpoints.Profile
+      API.Types.Dashboard.RideBooking.Endpoints.Quote
+      API.Types.Dashboard.RideBooking.Endpoints.Registration
+      API.Types.Dashboard.RideBooking.Endpoints.Search
+      API.Types.Dashboard.RideBooking.Endpoints.Select
+      API.Types.Dashboard.RideBooking.Frontend
+      API.Types.Dashboard.RideBooking.Maps
+      API.Types.Dashboard.RideBooking.MultiModal
+      API.Types.Dashboard.RideBooking.NotifyRideInfo
+      API.Types.Dashboard.RideBooking.Profile
+      API.Types.Dashboard.RideBooking.Quote
+      API.Types.Dashboard.RideBooking.Registration
+      API.Types.Dashboard.RideBooking.Search
+      API.Types.Dashboard.RideBooking.Select
+      API.Types.UI.AttractionRecommend
+      API.Types.UI.BBPS
+      API.Types.UI.CRIS
+      API.Types.UI.CustomerReferral
+      API.Types.UI.DeletedPerson
+      API.Types.UI.Dispatcher
+      API.Types.UI.EditLocation
+      API.Types.UI.EstimateBP
+      API.Types.UI.FavouriteDriver
+      API.Types.UI.FollowRide
+      API.Types.UI.FRFSTicketService
+      API.Types.UI.Insurance
+      API.Types.UI.Invoice
+      API.Types.UI.MeterRideInternal
+      API.Types.UI.Metrics
+      API.Types.UI.Miscellaneous
+      API.Types.UI.MultimodalConfirm
+      API.Types.UI.NearbyBuses
+      API.Types.UI.NearbyDrivers
+      API.Types.UI.NyRegularSubscription
+      API.Types.UI.ParkingBooking
+      API.Types.UI.PartnerBookingStatement
+      API.Types.UI.Pass
+      API.Types.UI.PickupInstructions
+      API.Types.UI.Places
+      API.Types.UI.PriceBreakup
+      API.Types.UI.RidePayment
+      API.Types.UI.RiderLocation
+      API.Types.UI.SocialLogin
+      API.Types.UI.Sos
+      API.Types.UI.TicketKapture
       API.Types.UI.TicketService
+      API.Types.UI.TrackRoute
+      API.Types.UI.TriggerFCM
+      Domain.Types.AadhaarOtpReq
+      Domain.Types.AadhaarOtpVerify
+      Domain.Types.AadhaarVerification
+      Domain.Types.AppInstalls
+      Domain.Types.BBPS
+      Domain.Types.BBPSConfig
+      Domain.Types.BecknConfig
+      Domain.Types.BlackListOrg
+      Domain.Types.Booking
+      Domain.Types.BookingCancellationReason
+      Domain.Types.BookingLocation
+      Domain.Types.BookingPartiesLink
+      Domain.Types.BookingUpdateRequest
+      Domain.Types.BppDetails
       Domain.Types.BusinessHour
+      Domain.Types.CallbackRequest
+      Domain.Types.CallStatus
+      Domain.Types.CancellationReason
+      Domain.Types.Client
+      Domain.Types.ClientPersonInfo
+      Domain.Types.CrisRecon
+      Domain.Types.DeletedPerson
+      Domain.Types.Depot
+      Domain.Types.DepotManager
+      Domain.Types.DeviceVehicleMapping
+      Domain.Types.Disability
+      Domain.Types.DisabilityTranslation
+      Domain.Types.DispatcherHistory
+      Domain.Types.DraftTicketChange
+      Domain.Types.DraftTicketChangeHistory
+      Domain.Types.DriverOffer
+      Domain.Types.Estimate
+      Domain.Types.Exophone
+      Domain.Types.FareBreakup
+      Domain.Types.FeedbackForm
+      Domain.Types.FRFSConfig
+      Domain.Types.FRFSFarePolicy
+      Domain.Types.FRFSGtfsStageFare
+      Domain.Types.FRFSQuote
+      Domain.Types.FRFSQuoteBreakup
+      Domain.Types.FRFSQuoteCategory
+      Domain.Types.FRFSRecon
+      Domain.Types.FRFSRouteFareProduct
+      Domain.Types.FRFSRouteStopStageFare
+      Domain.Types.FRFSSearch
+      Domain.Types.FRFSStageFare
+      Domain.Types.FRFSTicket
+      Domain.Types.FRFSTicketBooking
+      Domain.Types.FRFSTicketBookingBreakup
+      Domain.Types.FRFSTicketBookingFeedback
+      Domain.Types.FRFSTicketBookingPayment
+      Domain.Types.FRFSTicketCategoryMetadataConfig
+      Domain.Types.FRFSTicketDiscount
+      Domain.Types.FRFSVehicleServiceTier
+      Domain.Types.HotSpotConfig
+      Domain.Types.Insurance
+      Domain.Types.InsuranceConfig
+      Domain.Types.IntegratedBPPConfig
+      Domain.Types.InterCityDetails
+      Domain.Types.Issue
+      Domain.Types.Journey
+      Domain.Types.JourneyFeedback
+      Domain.Types.JourneyLeg
+      Domain.Types.JourneyLegMapping
+      Domain.Types.Location
+      Domain.Types.LocationMapping
+      Domain.Types.Merchant
+      Domain.Types.MerchantConfig
+      Domain.Types.MerchantMessage
+      Domain.Types.MerchantOnboarding
+      Domain.Types.MerchantOnboardingStep
+      Domain.Types.MerchantOnboardingStepConfig
       Domain.Types.MerchantOperatingCity
+      Domain.Types.MerchantPaymentMethod
+      Domain.Types.MerchantPushNotification
+      Domain.Types.MerchantServiceConfig
+      Domain.Types.MerchantServiceUsageConfig
+      Domain.Types.MerchantState
+      Domain.Types.MultimodalPreferences
+      Domain.Types.NotificationSoundsConfig
+      Domain.Types.NyRegularInstanceLog
+      Domain.Types.NyRegularSubscription
+      Domain.Types.OnSearchEvent
+      Domain.Types.ParcelDetails
+      Domain.Types.ParkingTransaction
+      Domain.Types.PartnerOrganization
+      Domain.Types.PartnerOrgConfig
+      Domain.Types.PartnerOrgStation
+      Domain.Types.Pass
+      Domain.Types.PassCategory
+      Domain.Types.PassType
+      Domain.Types.PassVerifyTransaction
+      Domain.Types.PaymentCustomer
+      Domain.Types.PaymentTransactionOfferPayout
+      Domain.Types.PayoutConfig
+      Domain.Types.Person
+      Domain.Types.PersonDefaultEmergencyNumber
+      Domain.Types.PersonDisability
+      Domain.Types.PersonFlowStatus
+      Domain.Types.PersonStats
+      Domain.Types.PickupInstructions
+      Domain.Types.PlaceBasedServiceConfig
+      Domain.Types.PlaceNameCache
+      Domain.Types.PopularLocation
+      Domain.Types.PurchasedPass
+      Domain.Types.PurchasedPassPayment
+      Domain.Types.Quote
+      Domain.Types.QuoteBreakup
+      Domain.Types.Rating
+      Domain.Types.RecentLocation
+      Domain.Types.RegistrationToken
+      Domain.Types.RentalDetails
+      Domain.Types.Ride
+      Domain.Types.RiderConfig
+      Domain.Types.RideRelatedNotificationConfig
+      Domain.Types.RouteDetails
+      Domain.Types.RoutePolylines
+      Domain.Types.RouteStopCalender
+      Domain.Types.RouteTripMapping
+      Domain.Types.SafetySettings
+      Domain.Types.SavedReqLocation
+      Domain.Types.SearchReqLocation
+      Domain.Types.SearchRequest
+      Domain.Types.SearchRequestPartiesLink
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
+      Domain.Types.Sos
       Domain.Types.SpecialOccasion
+      Domain.Types.SpecialZoneQuote
+      Domain.Types.StationsExtraInformation
+      Domain.Types.StopFare
+      Domain.Types.StopInformation
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
       Domain.Types.TicketBookingService
       Domain.Types.TicketBookingServiceCategory
+      Domain.Types.TicketMerchantDetails
       Domain.Types.TicketPlace
       Domain.Types.TicketService
+      Domain.Types.TicketSubPlace
+      Domain.Types.Translations
+      Domain.Types.TripTerms
+      Domain.Types.UiRiderConfig
+      Domain.Types.ValueAddNP
+      Domain.Types.VehicleConfig
+      Domain.Types.VehicleRouteMapping
+      Domain.Types.VendorSplitDetails
+      Domain.Types.WhiteListOrg
+      Storage.Beam.AadhaarOtpReq
+      Storage.Beam.AadhaarOtpVerify
+      Storage.Beam.AadhaarVerification
+      Storage.Beam.AmbulanceDetails
+      Storage.Beam.AppInstalls
+      Storage.Beam.BBPS
+      Storage.Beam.BBPSConfig
+      Storage.Beam.BecknConfig
+      Storage.Beam.BlackListOrg
+      Storage.Beam.Booking
+      Storage.Beam.BookingCancellationReason
+      Storage.Beam.BookingLocation
+      Storage.Beam.BookingPartiesLink
+      Storage.Beam.BookingUpdateRequest
+      Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
+      Storage.Beam.CallbackRequest
+      Storage.Beam.CallStatus
+      Storage.Beam.CancellationReason
+      Storage.Beam.Client
+      Storage.Beam.ClientPersonInfo
+      Storage.Beam.CrisRecon
+      Storage.Beam.DeletedPerson
+      Storage.Beam.Depot
+      Storage.Beam.DepotManager
+      Storage.Beam.DeviceVehicleMapping
+      Storage.Beam.Disability
+      Storage.Beam.DisabilityTranslation
+      Storage.Beam.DispatcherHistory
+      Storage.Beam.DraftTicketChange
+      Storage.Beam.DraftTicketChangeHistory
+      Storage.Beam.DriverOffer
+      Storage.Beam.Estimate
+      Storage.Beam.Exophone
+      Storage.Beam.FareBreakup
+      Storage.Beam.FeedbackForm
+      Storage.Beam.FRFSConfig
+      Storage.Beam.FRFSFarePolicy
+      Storage.Beam.FRFSGtfsStageFare
+      Storage.Beam.FRFSQuote
+      Storage.Beam.FRFSQuoteBreakup
+      Storage.Beam.FRFSQuoteCategory
+      Storage.Beam.FRFSRecon
+      Storage.Beam.FRFSRouteFareProduct
+      Storage.Beam.FRFSRouteStopStageFare
+      Storage.Beam.FRFSSearch
+      Storage.Beam.FRFSStageFare
+      Storage.Beam.FRFSTicket
+      Storage.Beam.FRFSTicketBooking
+      Storage.Beam.FRFSTicketBookingBreakup
+      Storage.Beam.FRFSTicketBookingFeedback
+      Storage.Beam.FRFSTicketBookingPayment
+      Storage.Beam.FRFSTicketCategoryMetadataConfig
+      Storage.Beam.FRFSTicketDiscount
+      Storage.Beam.FRFSVehicleServiceTier
+      Storage.Beam.HotSpotConfig
+      Storage.Beam.Insurance
+      Storage.Beam.InsuranceConfig
+      Storage.Beam.IntegratedBPPConfig
+      Storage.Beam.InterCityDetails
+      Storage.Beam.Issue
+      Storage.Beam.Journey
+      Storage.Beam.JourneyFeedback
+      Storage.Beam.JourneyLeg
+      Storage.Beam.JourneyLegMapping
+      Storage.Beam.Location
+      Storage.Beam.LocationMapping
+      Storage.Beam.Merchant
+      Storage.Beam.MerchantConfig
+      Storage.Beam.MerchantMessage
+      Storage.Beam.MerchantOnboarding
+      Storage.Beam.MerchantOnboardingStep
+      Storage.Beam.MerchantOnboardingStepConfig
       Storage.Beam.MerchantOperatingCity
+      Storage.Beam.MerchantPaymentMethod
+      Storage.Beam.MerchantPushNotification
+      Storage.Beam.MerchantServiceConfig
+      Storage.Beam.MerchantServiceUsageConfig
+      Storage.Beam.MerchantState
+      Storage.Beam.MultimodalPreferences
+      Storage.Beam.NotificationSoundsConfig
+      Storage.Beam.NyRegularInstanceLog
+      Storage.Beam.NyRegularSubscription
+      Storage.Beam.OnSearchEvent
+      Storage.Beam.ParcelDetails
+      Storage.Beam.ParkingTransaction
+      Storage.Beam.PartnerOrganization
+      Storage.Beam.PartnerOrgConfig
+      Storage.Beam.PartnerOrgStation
+      Storage.Beam.Pass
+      Storage.Beam.PassCategory
+      Storage.Beam.PassType
+      Storage.Beam.PassVerifyTransaction
+      Storage.Beam.PaymentCustomer
+      Storage.Beam.PaymentTransactionOfferPayout
+      Storage.Beam.PayoutConfig
+      Storage.Beam.Person
+      Storage.Beam.PersonDefaultEmergencyNumber
+      Storage.Beam.PersonDisability
+      Storage.Beam.PersonStats
+      Storage.Beam.PickupInstructions
+      Storage.Beam.PlaceBasedServiceConfig
+      Storage.Beam.PlaceNameCache
+      Storage.Beam.PopularLocation
+      Storage.Beam.PurchasedPass
+      Storage.Beam.PurchasedPassPayment
+      Storage.Beam.Quote
+      Storage.Beam.QuoteBreakup
+      Storage.Beam.Rating
+      Storage.Beam.RecentLocation
+      Storage.Beam.RegistrationToken
+      Storage.Beam.RentalDetails
+      Storage.Beam.Ride
+      Storage.Beam.RiderConfig
+      Storage.Beam.RideRelatedNotificationConfig
+      Storage.Beam.RouteDetails
+      Storage.Beam.RoutePolylines
+      Storage.Beam.RouteStopCalender
+      Storage.Beam.RouteTripMapping
+      Storage.Beam.SafetySettings
+      Storage.Beam.SavedReqLocation
+      Storage.Beam.SearchReqLocation
+      Storage.Beam.SearchRequest
+      Storage.Beam.SearchRequestPartiesLink
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
+      Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
+      Storage.Beam.SpecialZoneQuote
+      Storage.Beam.StationsExtraInformation
+      Storage.Beam.StopFare
+      Storage.Beam.StopInformation
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
       Storage.Beam.TicketBookingService
       Storage.Beam.TicketBookingServiceCategory
+      Storage.Beam.TicketMerchantDetails
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
+      Storage.Beam.TicketSubPlace
+      Storage.Beam.Translations
+      Storage.Beam.TripTerms
+      Storage.Beam.UiRiderConfig
+      Storage.Beam.ValueAddNP
+      Storage.Beam.VehicleConfig
+      Storage.Beam.VehicleRouteMapping
+      Storage.Beam.VendorSplitDetails
+      Storage.Beam.WhiteListOrg
+      Storage.CachedQueries.DeviceVehicleMapping
+      Storage.CachedQueries.FeedbackForm
+      Storage.CachedQueries.FRFSVehicleServiceTier
+      Storage.CachedQueries.InsuranceConfig
+      Storage.CachedQueries.SavedReqLocation
+      Storage.Queries.AadhaarOtpReq
+      Storage.Queries.AadhaarOtpVerify
+      Storage.Queries.AadhaarVerification
+      Storage.Queries.AppInstalls
+      Storage.Queries.BBPS
+      Storage.Queries.BBPSConfig
+      Storage.Queries.BecknConfig
+      Storage.Queries.BlackListOrg
+      Storage.Queries.Booking
+      Storage.Queries.BookingCancellationReason
+      Storage.Queries.BookingLocation
+      Storage.Queries.BookingPartiesLink
+      Storage.Queries.BookingUpdateRequest
+      Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
+      Storage.Queries.CallbackRequest
+      Storage.Queries.CallStatus
+      Storage.Queries.CancellationReason
+      Storage.Queries.Client
+      Storage.Queries.ClientPersonInfo
+      Storage.Queries.CrisRecon
+      Storage.Queries.DeletedPerson
+      Storage.Queries.Depot
+      Storage.Queries.DepotManager
+      Storage.Queries.DeviceVehicleMapping
+      Storage.Queries.Disability
+      Storage.Queries.DisabilityTranslation
+      Storage.Queries.DispatcherHistory
+      Storage.Queries.DraftTicketChange
+      Storage.Queries.DraftTicketChangeHistory
+      Storage.Queries.DriverOffer
+      Storage.Queries.Estimate
+      Storage.Queries.Exophone
+      Storage.Queries.FareBreakup
+      Storage.Queries.FeedbackForm
+      Storage.Queries.FRFSConfig
+      Storage.Queries.FRFSFarePolicy
+      Storage.Queries.FRFSGtfsStageFare
+      Storage.Queries.FRFSQuote
+      Storage.Queries.FRFSQuoteBreakup
+      Storage.Queries.FRFSQuoteCategory
+      Storage.Queries.FRFSRecon
+      Storage.Queries.FRFSRouteFareProduct
+      Storage.Queries.FRFSRouteStopStageFare
+      Storage.Queries.FRFSSearch
+      Storage.Queries.FRFSStageFare
+      Storage.Queries.FRFSTicket
+      Storage.Queries.FRFSTicketBooking
+      Storage.Queries.FRFSTicketBookingBreakup
+      Storage.Queries.FRFSTicketBookingFeedback
+      Storage.Queries.FRFSTicketBookingPayment
+      Storage.Queries.FRFSTicketCategoryMetadataConfig
+      Storage.Queries.FRFSTicketDiscount
+      Storage.Queries.FRFSVehicleServiceTier
+      Storage.Queries.HotSpotConfig
+      Storage.Queries.Insurance
+      Storage.Queries.InsuranceConfig
+      Storage.Queries.IntegratedBPPConfig
+      Storage.Queries.InterCityDetails
+      Storage.Queries.Issue
+      Storage.Queries.Journey
+      Storage.Queries.JourneyFeedback
+      Storage.Queries.JourneyLeg
+      Storage.Queries.JourneyLegMapping
+      Storage.Queries.Location
+      Storage.Queries.LocationMapping
+      Storage.Queries.Merchant
+      Storage.Queries.MerchantConfig
+      Storage.Queries.MerchantMessage
+      Storage.Queries.MerchantOnboarding
+      Storage.Queries.MerchantOnboardingStep
+      Storage.Queries.MerchantOnboardingStepConfig
       Storage.Queries.MerchantOperatingCity
+      Storage.Queries.MerchantPaymentMethod
+      Storage.Queries.MerchantPushNotification
+      Storage.Queries.MerchantServiceConfig
+      Storage.Queries.MerchantServiceUsageConfig
+      Storage.Queries.MerchantState
+      Storage.Queries.MultimodalPreferences
+      Storage.Queries.NotificationSoundsConfig
+      Storage.Queries.NyRegularInstanceLog
+      Storage.Queries.NyRegularSubscription
+      Storage.Queries.OnSearchEvent
+      Storage.Queries.OrphanInstances.AppInstalls
+      Storage.Queries.OrphanInstances.BBPS
+      Storage.Queries.OrphanInstances.BecknConfig
+      Storage.Queries.OrphanInstances.Booking
+      Storage.Queries.OrphanInstances.BookingCancellationReason
+      Storage.Queries.OrphanInstances.BookingPartiesLink
+      Storage.Queries.OrphanInstances.BusinessHour
+      Storage.Queries.OrphanInstances.CallStatus
+      Storage.Queries.OrphanInstances.CancellationReason
+      Storage.Queries.OrphanInstances.Disability
+      Storage.Queries.OrphanInstances.Estimate
+      Storage.Queries.OrphanInstances.Exophone
+      Storage.Queries.OrphanInstances.FareBreakup
+      Storage.Queries.OrphanInstances.FeedbackForm
+      Storage.Queries.OrphanInstances.FRFSQuote
+      Storage.Queries.OrphanInstances.FRFSSearch
+      Storage.Queries.OrphanInstances.FRFSTicketBooking
+      Storage.Queries.OrphanInstances.FRFSTicketBookingPayment
+      Storage.Queries.OrphanInstances.IntegratedBPPConfig
+      Storage.Queries.OrphanInstances.Issue
+      Storage.Queries.OrphanInstances.Journey
+      Storage.Queries.OrphanInstances.JourneyLeg
+      Storage.Queries.OrphanInstances.LocationMapping
+      Storage.Queries.OrphanInstances.Merchant
+      Storage.Queries.OrphanInstances.MerchantPaymentMethod
+      Storage.Queries.OrphanInstances.MerchantServiceConfig
+      Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
+      Storage.Queries.OrphanInstances.NyRegularSubscription
+      Storage.Queries.OrphanInstances.PartnerOrganization
+      Storage.Queries.OrphanInstances.PartnerOrgConfig
+      Storage.Queries.OrphanInstances.Pass
+      Storage.Queries.OrphanInstances.PassCategory
+      Storage.Queries.OrphanInstances.PassType
+      Storage.Queries.OrphanInstances.PassVerifyTransaction
+      Storage.Queries.OrphanInstances.Person
+      Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber
+      Storage.Queries.OrphanInstances.PersonStats
+      Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
+      Storage.Queries.OrphanInstances.PopularLocation
+      Storage.Queries.OrphanInstances.PurchasedPass
+      Storage.Queries.OrphanInstances.PurchasedPassPayment
+      Storage.Queries.OrphanInstances.Quote
+      Storage.Queries.OrphanInstances.Rating
+      Storage.Queries.OrphanInstances.RecentLocation
+      Storage.Queries.OrphanInstances.RegistrationToken
+      Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.RouteDetails
+      Storage.Queries.OrphanInstances.RoutePolylines
+      Storage.Queries.OrphanInstances.SafetySettings
+      Storage.Queries.OrphanInstances.SavedReqLocation
+      Storage.Queries.OrphanInstances.SearchRequest
+      Storage.Queries.OrphanInstances.ServiceCategory
+      Storage.Queries.OrphanInstances.ServicePeopleCategory
+      Storage.Queries.OrphanInstances.StationsExtraInformation
+      Storage.Queries.OrphanInstances.TicketBooking
+      Storage.Queries.OrphanInstances.TicketBookingPeopleCategory
+      Storage.Queries.OrphanInstances.TicketBookingService
+      Storage.Queries.OrphanInstances.TicketBookingServiceCategory
+      Storage.Queries.OrphanInstances.TicketService
+      Storage.Queries.OrphanInstances.Translations
+      Storage.Queries.OrphanInstances.UiRiderConfig
+      Storage.Queries.OrphanInstances.VehicleRouteMapping
+      Storage.Queries.OrphanInstances.WhiteListOrg
+      Storage.Queries.ParcelDetails
+      Storage.Queries.ParkingTransaction
+      Storage.Queries.PartnerOrganization
+      Storage.Queries.PartnerOrgConfig
+      Storage.Queries.PartnerOrgStation
+      Storage.Queries.Pass
+      Storage.Queries.PassCategory
+      Storage.Queries.PassType
+      Storage.Queries.PassVerifyTransaction
+      Storage.Queries.PaymentCustomer
+      Storage.Queries.PaymentTransactionOfferPayout
+      Storage.Queries.PayoutConfig
+      Storage.Queries.Person
+      Storage.Queries.PersonDefaultEmergencyNumber
+      Storage.Queries.PersonDisability
+      Storage.Queries.PersonStats
+      Storage.Queries.PickupInstructions
+      Storage.Queries.PlaceBasedServiceConfig
+      Storage.Queries.PlaceNameCache
+      Storage.Queries.PopularLocation
+      Storage.Queries.PurchasedPass
+      Storage.Queries.PurchasedPassPayment
+      Storage.Queries.Quote
+      Storage.Queries.QuoteBreakup
+      Storage.Queries.Rating
+      Storage.Queries.RecentLocation
+      Storage.Queries.RegistrationToken
+      Storage.Queries.RentalDetails
+      Storage.Queries.Ride
+      Storage.Queries.RiderConfig
+      Storage.Queries.RideRelatedNotificationConfig
+      Storage.Queries.RouteDetails
+      Storage.Queries.RoutePolylines
+      Storage.Queries.RouteStopCalender
+      Storage.Queries.RouteTripMapping
+      Storage.Queries.SafetySettings
+      Storage.Queries.SavedReqLocation
+      Storage.Queries.SearchReqLocation
+      Storage.Queries.SearchRequest
+      Storage.Queries.SearchRequestPartiesLink
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
+      Storage.Queries.Sos
       Storage.Queries.SpecialOccasion
+      Storage.Queries.SpecialZoneQuote
+      Storage.Queries.StationsExtraInformation
+      Storage.Queries.StopFare
+      Storage.Queries.StopInformation
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory
       Storage.Queries.TicketBookingService
       Storage.Queries.TicketBookingServiceCategory
+      Storage.Queries.TicketMerchantDetails
       Storage.Queries.TicketPlace
       Storage.Queries.TicketService
+      Storage.Queries.TicketSubPlace
+      Storage.Queries.Translations
+      Storage.Queries.TripTerms
+      Storage.Queries.UiRiderConfig
+      Storage.Queries.ValueAddNP
+      Storage.Queries.VehicleConfig
+      Storage.Queries.VehicleRouteMapping
+      Storage.Queries.VendorSplitDetails
+      Storage.Queries.WhiteListOrg
   other-modules:
       Paths_rider_app
   hs-source-dirs:
@@ -419,9 +1316,11 @@ library
       ConstraintKinds
       DataKinds
       DefaultSignatures
+      DerivingStrategies
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -449,10 +1348,10 @@ library
       TypeSynonymInstances
       UndecidableInstances
       PackageImports
+      TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
-    , amazonka
     , amazonka-core
     , amazonka-ses
     , base >=4.7 && <5
@@ -464,6 +1363,7 @@ library
     , beckn-spec
     , bytestring
     , casing
+    , cassava
     , cereal
     , containers
     , cryptonite
@@ -472,39 +1372,64 @@ library
     , data-default-class
     , directory
     , euler-hs
+    , external
     , extra
     , filepath
     , geohash ==1.0.1
-    , hashmap
+    , hashable
+    , haskell-cac
+    , http-api-data
+    , http-client
+    , http-client-tls
     , http-media
     , http-types
+    , insert-ordered-containers
+    , json-logic-hs
+    , jwt
     , lens
+    , lens-aeson
     , memory
     , mobility-core
+    , morpheus-graphql-client
+    , mtl
     , openapi3
+    , passetto-client
     , payment
     , persistent
     , postgresql-simple
+    , process
     , prometheus-client
     , prometheus-metrics-ghc
+    , pureMD5
     , random
     , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
+    , regex-compat
+    , regex-posix
+    , resource-pool
+    , scheduler
+    , scientific
     , sequelize
     , servant
     , servant-client
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , servant-xml
     , sessionizer-metrics
     , shared-services
+    , singletons
+    , singletons-th
     , special-zone
     , special-zone-a
+    , split
     , template-haskell
     , text
     , text-conversions
+    , text-format
     , time
+    , transformers
     , unliftio-core
     , unordered-containers
     , utils
@@ -515,6 +1440,9 @@ library
     , wai-middleware-prometheus
     , warp
     , x509
+    , xml-conduit
+    , xmlbf
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -531,9 +1459,11 @@ executable rider-app-exe
       ConstraintKinds
       DataKinds
       DefaultSignatures
+      DerivingStrategies
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -561,10 +1491,10 @@ executable rider-app-exe
       TypeSynonymInstances
       UndecidableInstances
       PackageImports
+      TemplateHaskell
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
-    , amazonka
     , amazonka-core
     , amazonka-ses
     , base >=4.7 && <5
@@ -575,6 +1505,7 @@ executable rider-app-exe
     , beckn-spec
     , bytestring
     , casing
+    , cassava
     , cereal
     , containers
     , cryptonite
@@ -586,32 +1517,55 @@ executable rider-app-exe
     , extra
     , filepath
     , geohash ==1.0.1
-    , hashmap
+    , hashable
+    , http-api-data
+    , http-client
+    , http-client-tls
     , http-media
     , http-types
+    , insert-ordered-containers
+    , json-logic-hs
+    , jwt
     , lens
+    , lens-aeson
     , memory
     , mobility-core
+    , morpheus-graphql-client
+    , mtl
     , openapi3
+    , passetto-client
     , persistent
     , postgresql-simple
+    , process
     , prometheus-client
     , prometheus-metrics-ghc
+    , pureMD5
     , random
     , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
+    , regex-compat
+    , regex-posix
+    , resource-pool
     , rider-app
+    , scheduler
+    , scientific
     , sequelize
     , servant
     , servant-client
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , servant-xml
+    , singletons
+    , singletons-th
+    , split
     , template-haskell
     , text
     , text-conversions
+    , text-format
     , time
+    , transformers
     , unliftio-core
     , unordered-containers
     , uuid
@@ -621,8 +1575,147 @@ executable rider-app-exe
     , wai-middleware-prometheus
     , warp
     , x509
+    , xml-conduit
+    , xmlbf
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -O2 -j4
+
+test-suite rider-app-test
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      FRFS.DirectQR
+      Paths_rider_app
+  hs-source-dirs:
+      test
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DerivingStrategies
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DerivingStrategies
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      PackageImports
+      TemplateHaskell
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , amazonka-core
+    , amazonka-ses
+    , base >=4.7 && <5
+    , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , bytestring
+    , casing
+    , cassava
+    , cereal
+    , containers
+    , cryptonite
+    , cryptostore >=0.2.3.0
+    , dashboard-helper-api
+    , data-default-class
+    , directory
+    , euler-hs
+    , extra
+    , filepath
+    , geohash ==1.0.1
+    , hashable
+    , http-api-data
+    , http-client
+    , http-client-tls
+    , http-media
+    , http-types
+    , insert-ordered-containers
+    , json-logic-hs
+    , jwt
+    , lens
+    , lens-aeson
+    , memory
+    , mobility-core
+    , morpheus-graphql-client
+    , mtl
+    , openapi3
+    , passetto-client
+    , persistent
+    , postgresql-simple
+    , process
+    , prometheus-client
+    , prometheus-metrics-ghc
+    , pureMD5
+    , random
+    , raw-strings-qq
+    , record-dot-preprocessor
+    , record-hasfield
+    , regex-compat
+    , regex-posix
+    , resource-pool
+    , rider-app
+    , safe-exceptions
+    , scheduler
+    , scientific
+    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
+    , servant-server
+    , servant-xml
+    , singletons
+    , singletons-th
+    , split
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+    , template-haskell
+    , text
+    , text-conversions
+    , text-format
+    , time
+    , transformers
+    , unliftio-core
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , wai-extra
+    , wai-middleware-prometheus
+    , warp
+    , x509
+    , xml-conduit
+    , xmlbf
+    , yudhishthira
+  default-language: Haskell2010

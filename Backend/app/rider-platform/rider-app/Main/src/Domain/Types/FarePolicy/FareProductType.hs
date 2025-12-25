@@ -11,16 +11,9 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
+module Domain.Types.FarePolicy.FareProductType
+  ( FareProductType (..),
+  )
+where
 
-module Domain.Types.FarePolicy.FareProductType where
-
-import Kernel.Prelude
-import Kernel.Storage.Esqueleto
-import Tools.Beam.UtilsTH
-
-data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER | ONE_WAY_SPECIAL_ZONE deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
-
-derivePersistField "FareProductType"
-
-$(mkBeamInstancesForEnum ''FareProductType)
+import Domain.Types.Common (FareProductType (..))

@@ -1,0 +1,113 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Version: Kernel.Types.Version
+  Price: Kernel.Types.Common
+  Currency: Kernel.Utils.Common
+  Money: Kernel.Utils.Common
+  Centesimal: Kernel.Utils.Common
+  PriceAPIEntity: Kernel.Types.Common
+  NightShiftInfo: Domain.Types.Extra.RentalDetails
+  Distance: Kernel.Types.Common
+  DistanceUnit: Kernel.Types.Common
+  HighPrecDistance: Kernel.Types.Common
+  Hours: Kernel.Types.Common
+  Minutes: Kernel.Types.Common
+
+InterCityDetails:
+  tableName: inter_city_details
+
+  derives: "Generic, Show"
+
+  fields:
+    id: Id InterCityDetails
+    baseFare: Price
+    perHourCharge: Price
+    perExtraMinRate: Price
+    perExtraKmRate: Price
+    deadKmFare: Price
+    kmPerPlannedExtraHour: Distance
+    plannedPerKmRateOneWay: Price
+    plannedPerKmRateRoundTrip: Price
+    perDayMaxHourAllowance: Hours
+    perDayMaxAllowanceInMins: Maybe Minutes
+    nightShiftInfo: Maybe NightShiftInfo
+    roundTrip: Maybe Bool
+
+  sqlType:
+    baseFare: numeric(30, 2)
+    perHourCharge: numeric(30, 2)
+    perExtraKmRate: numeric(30, 2)
+    perExtraMinRate: numeric(30, 2)
+    deadKmFare: numeric(30, 2)
+    kmPerPlannedExtraHour: numeric(30, 2)
+    plannedPerKmRateOneWay: numeric(30, 2)
+    plannedPerKmRateRoundTrip: numeric(30, 2)
+    perDayMaxHourAllowance: int
+    perDayMaxAllowanceInMins: int
+    nightShiftCharge: numeric(30, 2)
+    currency: character varying(255)
+
+  beamFields:
+    kmPerPlannedExtraHour:
+      kmPerPlannedExtraHour: HighPrecDistance
+      distanceUnit: DistanceUnit
+    baseFare:
+      baseFare: HighPrecMoney
+      currency: Currency
+    nightShiftInfo:
+      nightShiftCharge: Maybe HighPrecMoney
+      nightShiftStart: Maybe TimeOfDay
+      nightShiftEnd: Maybe TimeOfDay
+
+  beamType:
+    perHourCharge: HighPrecMoney
+    perExtraMinRate: HighPrecMoney
+    perExtraKmRate: HighPrecMoney
+    deadKmFare: HighPrecMoney
+    plannedPerKmRateOneWay: HighPrecMoney
+    plannedPerKmRateRoundTrip: HighPrecMoney
+
+  toTType:
+    baseFare: (.amount)|I
+    perHourCharge: (.amount)|I
+    perExtraMinRate: (.amount)|I
+    perExtraKmRate: (.amount)|I
+    plannedPerKmRateOneWay: (.amount)|I
+    plannedPerKmRateRoundTrip: (.amount)|I
+    deadKmFare: (.amount)|I
+    nightShiftCharge: ((.amount) . (.nightShiftCharge)) <$> nightShiftInfo|E
+    currency: (.currency) baseFare|E
+    nightShiftStart: (.nightShiftStart) <$> nightShiftInfo|E
+    nightShiftEnd: (.nightShiftEnd) <$> nightShiftInfo|E
+    kmPerPlannedExtraHour: (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) kmPerPlannedExtraHour) kmPerPlannedExtraHour)|E
+    distanceUnit: ((.unit) kmPerPlannedExtraHour)|E
+
+  fromTType:
+    baseFare: Kernel.Utils.Common.mkPrice (Just currency) baseFare|E
+    perHourCharge: Kernel.Utils.Common.mkPrice (Just currency) perHourCharge|E
+    perExtraMinRate: Kernel.Utils.Common.mkPrice (Just currency) perExtraMinRate|E
+    perExtraKmRate: Kernel.Utils.Common.mkPrice (Just currency) perExtraKmRate|E
+    plannedPerKmRateOneWay: Kernel.Utils.Common.mkPrice (Just currency) plannedPerKmRateOneWay|E
+    plannedPerKmRateRoundTrip: Kernel.Utils.Common.mkPrice (Just currency) plannedPerKmRateRoundTrip|E
+    deadKmFare: Kernel.Utils.Common.mkPrice (Just currency) deadKmFare|E
+    nightShiftInfo: Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo (Kernel.Prelude.roundToIntegral <$> nightShiftCharge) nightShiftCharge nightShiftEnd nightShiftStart (Just currency)|E
+    kmPerPlannedExtraHour: (Kernel.Utils.Common.Distance kmPerPlannedExtraHour distanceUnit)|E
+
+  excludedFields: [merchantId,merchantOperatingCityId]
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  constraints:
+    id: PrimaryKey
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE

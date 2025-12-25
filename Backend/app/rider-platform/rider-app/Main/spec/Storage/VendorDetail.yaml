@@ -1,0 +1,42 @@
+imports:
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  SplitShare: Domain.Types.Extra.VendorSplitDetails
+
+VendorSplitDetails:
+  tableName: vendor_split_details
+  types:
+    SplitType:
+      enum: "FIXED, FLEXIBLE"
+  fields:
+    id : Id VendorSplitDetails
+    integratedBPPConfigId : Id IntegratedBPPConfig
+    vendorId : Text
+    splitType : SplitType
+    includeInSplit : Maybe Bool
+    splitShare : Maybe SplitShare
+
+  fromTType:
+    splitShare: (readMaybe . Data.Text.unpack) =<< splitShare|E
+
+  toTType:
+    splitShare: Just $ show splitShare|E
+
+  beamType:
+    splitShare: Maybe Text
+
+  constraints:
+    id: PrimaryKey
+
+  excludedFields: [merchantId]
+  queries:
+    findAllByIntegratedBPPConfigId:
+      kvFunction: findAllWithKV
+      where: integratedBPPConfigId
+
+    findAllByMerchantOperatingCityIdAndIncludeInSplit:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, includeInSplit]

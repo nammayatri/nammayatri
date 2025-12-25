@@ -1,0 +1,42 @@
+imports:
+  Customer: Dashboard.Common
+  SosReq: API.Types.UI.Sos
+  SosRes: API.Types.UI.Sos
+  Person: Domain.Types.Person
+  DeletedPersonReq: API.Types.UI.DeletedPerson
+  APISuccess: Kernel.Types.APISuccess
+
+importPackageOverrides:
+  API.Types.UI.Sos: "rider-app"
+  Domain.Types.Person: "rider-app"
+  API.Types.UI.DeletedPerson: "rider-app"
+
+module: Customer
+
+types: {}
+
+apis:
+  - POST:
+      endpoint: /{customerId}/sos/create
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: SosReq
+      response:
+        type: SosRes
+      migrate:
+        endpoint: SosAPI CreateSosEndpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CREATE_SOS
+  - POST:
+      endpoint: /{customerId}/deleted/person
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: DeletedPersonReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DeletedPersonAPI CreateDeletedPersonEndpoint
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CREATE_DELETED_PERSON

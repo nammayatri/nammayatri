@@ -1,0 +1,13 @@
+module: Merchant
+types:
+  CityConfigs:
+    localPoliceNumbers : "[Text]"
+    localAmbulanceNumbers : "[Text]"
+    safetyTeamNumbers : "[Text]"
+apis:
+  # Currently used for safety only, can be extended later
+  - GET:
+      endpoint: /cityConfigs
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: CityConfigs

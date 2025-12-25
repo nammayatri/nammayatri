@@ -22,23 +22,31 @@ module SharedLogic.MerchantConfig
     mkCancellationKey,
     mkCancellationByDriverKey,
     blockCustomer,
+    getRidesCountInWindow,
+    checkAuthFraudByIP,
+    customerAuthBlock,
+    blockCustomerByIP,
+    updateCustomerAuthCountersByIP,
+    isIPBlocked,
   )
 where
 
 import Data.Foldable.Extra
-import qualified Domain.Types.Booking.Type as BT
+import qualified Domain.Types.BookingStatus as BT
 import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
-import Kernel.Beam.Functions as B
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
+import Kernel.Storage.Clickhouse.Config
+import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
-import qualified Storage.Queries.Booking as QB
+import qualified Storage.Clickhouse.Booking as CHB
+import qualified Storage.Clickhouse.Person as CHP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as RT
 import Tools.Auth (authTokenCacheKey)
@@ -51,14 +59,14 @@ mkCancellationKey ind idtxt = "Customer:CancellationCount:" <> idtxt <> ":" <> i
 mkCancellationByDriverKey :: Text -> Text -> Text
 mkCancellationByDriverKey ind idtxt = "Customer:CancellationByDriverCount:" <> idtxt <> ":" <> ind
 
-mkTotalRidesKey :: Text -> Text
-mkTotalRidesKey idtxt = "Customer:TotalRidesCount:" <> idtxt
-
 mkSearchCounterKey :: Text -> Text -> Text
 mkSearchCounterKey ind idtxt = "Customer:SearchCounter:" <> idtxt <> ":" <> ind
 
 mkRideWindowCountKey :: Text -> Text -> Text
 mkRideWindowCountKey ind idtxt = "Customer:RidesCount:" <> idtxt <> ":" <> ind
+
+mkAuthCounterKey :: Text -> Text -> Text
+mkAuthCounterKey ind idtxt = "Customer:AuthCount: " <> idtxt <> ":" <> ind
 
 updateSearchFraudCounters :: (CacheFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
 updateSearchFraudCounters riderId merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
@@ -78,11 +86,17 @@ updateCustomerFraudCounters riderId merchantConfigs = Redis.withNonCriticalCross
   where
     incrementCount ind = SWC.incrementWindowCount (mkCancellationKey ind riderId.getId)
 
-updateTotalRidesCounters :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m ()
-updateTotalRidesCounters riderId = Redis.withNonCriticalCrossAppRedis $ do
-  _ <- getTotalRidesCount riderId
-  let key = mkTotalRidesKey riderId.getId
-  void $ Redis.incr key
+updateCustomerAuthCountersByIP :: (CacheFlow m r, MonadFlow m) => Text -> [DMC.MerchantConfig] -> m ()
+updateCustomerAuthCountersByIP clientIP merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
+  mapM_ (\mc -> whenJust mc.fraudAuthCountWindow $ \window -> incrementCount mc.id.getId window) merchantConfigs
+  where
+    incrementCount ind = SWC.incrementWindowCount (mkAuthCounterKey ind clientIP)
+
+updateTotalRidesCounters :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Person.Person -> m ()
+updateTotalRidesCounters rider = do
+  totalRidesCount <- getTotalRidesCountForEndRide rider
+  whenJust totalRidesCount $ \count' -> do
+    QP.updateTotalRidesCount rider.id (Just (count' + 1))
 
 updateTotalRidesInWindowCounters :: (CacheFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
 updateTotalRidesInWindowCounters riderId merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
@@ -90,20 +104,15 @@ updateTotalRidesInWindowCounters riderId merchantConfigs = Redis.withNonCritical
   where
     incrementCount ind = SWC.incrementWindowCount (mkRideWindowCountKey ind riderId.getId)
 
-getTotalRidesCount :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m Int
-getTotalRidesCount riderId = Redis.withNonCriticalCrossAppRedis $ do
-  let key = mkTotalRidesKey riderId.getId
-  mbTotalCount <- Redis.safeGet key
-  case mbTotalCount of
-    Just totalCount -> pure totalCount
-    Nothing -> do
-      totalCount <- B.runInReplica $ QB.findCountByRiderIdAndStatus riderId BT.COMPLETED
-      -- totalCount <- QB.findCountByRiderIdAndStatus riderId BT.COMPLETED
-      Redis.setExp key totalCount 14400
-      pure totalCount
+getTotalRidesCountForEndRide :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Person.Person -> m (Maybe Int)
+getTotalRidesCountForEndRide rider
+  | Just totalRidesCount <- rider.totalRidesCount = pure (Just totalRidesCount)
+  | otherwise = do
+    totalCount <- CHP.findTotalRidesCountByPersonId rider.id
+    maybe (pure Nothing) (pure $ CHB.findCountByRiderIdAndStatus rider.id BT.COMPLETED rider.createdAt) totalCount
 
 getRidesCountInWindow ::
-  (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) =>
   Id Person.Person ->
   Int ->
   Int ->
@@ -113,13 +122,13 @@ getRidesCountInWindow riderId start window currTime =
   Redis.withNonCriticalCrossAppRedis $ do
     let startTime = addUTCTime (fromIntegral (- start)) currTime
         endTime = addUTCTime (fromIntegral window) startTime
-    B.runInReplica $ QB.findCountByRideIdStatusAndTime riderId BT.COMPLETED startTime endTime
+    CHB.findCountByRideIdStatusAndTime riderId BT.COMPLETED startTime endTime
 
-anyFraudDetected :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
-anyFraudDetected riderId merchantOperatingCityId = checkFraudDetected riderId merchantOperatingCityId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides, TotalRidesInWindow]
+anyFraudDetected :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [DMC.MerchantConfig] -> Maybe DSR.SearchRequest -> m (Maybe DMC.MerchantConfig)
+anyFraudDetected riderId merchantOperatingCityId mSearchReq = checkFraudDetected riderId merchantOperatingCityId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides, TotalRidesInWindow] mSearchReq
 
-checkFraudDetected :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [Factors] -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
-checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
+checkFraudDetected :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [Factors] -> [DMC.MerchantConfig] -> Maybe DSR.SearchRequest -> m (Maybe DMC.MerchantConfig)
+checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs mSearchReq = Redis.withNonCriticalCrossAppRedis $ do
   useFraudDetection <- maybe False (.useFraudDetection) <$> CMSUC.findByMerchantOperatingCityId merchantOperatingCityId
   if useFraudDetection
     then findM (\mc -> and <$> mapM (getFactorResult mc) factors) merchantConfigs
@@ -136,9 +145,7 @@ checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs = Red
         MoreSearching -> do
           searchCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkSearchCounterKey mc.id.getId riderId.getId) mc.fraudSearchCountWindow
           pure $ searchCount >= mc.fraudSearchCountThreshold
-        TotalRides -> do
-          totalRidesCount :: Int <- getTotalRidesCount riderId
-          pure $ totalRidesCount <= mc.fraudBookingTotalCountThreshold
+        TotalRides -> pure $ maybe False (\count' -> count' <= mc.fraudBookingTotalCountThreshold && count' > 0) (mSearchReq >>= DSR.totalRidesCount)
         TotalRidesInWindow -> do
           windowValueList <- SWC.getCurrentWindowValues (mkRideWindowCountKey mc.id.getId riderId.getId) mc.fraudRideCountWindow
           let timeInterval = SWC.convertPeriodTypeToSeconds mc.fraudRideCountWindow.periodType
@@ -151,17 +158,39 @@ checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs = Red
               list = zip3 windowValueList intervals keyList
           rideCount <-
             mapM
-              ( \(key, value, windowKey) -> case key of
+              ( \(key, _, _) -> case key of
                   Just res -> return res
-                  Nothing -> do
-                    rideCount <- getRidesCountInWindow riderId value (fromIntegral timeInterval) actualTime
-                    Redis.setExp windowKey rideCount 86400
-                    return rideCount
+                  Nothing -> return 0
               )
               list
 
           let totalRideCount = sum rideCount
           return $ totalRideCount <= mc.fraudRideCountThreshold
+
+checkAuthFraudByIP :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => [DMC.MerchantConfig] -> Text -> m (Bool, Maybe (Id DMC.MerchantConfig))
+checkAuthFraudByIP mc clientIP = Redis.withNonCriticalCrossAppRedis $ do
+  let configsWithThreshold = filter (\mc' -> isJust mc'.fraudAuthCountThreshold) mc
+
+  results <- forM configsWithThreshold $ \selectedMc -> do
+    fraudDetected <- case selectedMc.fraudAuthCountWindow of
+      Nothing -> pure False
+      Just window -> do
+        authCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkAuthCounterKey selectedMc.id.getId clientIP) window
+        let threshold = selectedMc.fraudAuthCountThreshold
+        let isOverThreshold = maybe False (authCount >=) threshold
+
+        when isOverThreshold $ do
+          logInfo $ "Auth fraud detected for IP " <> clientIP <> " with count " <> show authCount
+          SWC.deleteCurrentWindowValues (mkAuthCounterKey selectedMc.id.getId clientIP) window
+
+        pure isOverThreshold
+
+    pure (fraudDetected, if fraudDetected then Just selectedMc.id else Nothing)
+
+  let authFraudDetected = any fst results
+  let fraudMerchantConfigId = listToMaybe [mcId | (True, Just mcId) <- results]
+
+  pure (authFraudDetected, fraudMerchantConfigId)
 
 blockCustomer :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> m ()
 blockCustomer riderId mcId = do
@@ -169,6 +198,39 @@ blockCustomer riderId mcId = do
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
-  -- runNoTransaction $ do
   _ <- RT.deleteByPersonId riderId
   void $ QP.updatingEnabledAndBlockedState riderId mcId True
+
+customerAuthBlock :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> Maybe Minutes -> m ()
+customerAuthBlock riderId mcId blockDurationMinutes = do
+  regTokens <- RT.findAllByPersonId riderId
+  for_ regTokens $ \regToken -> do
+    let key = authTokenCacheKey regToken.token
+    void $ Redis.del key
+
+  blockedUntil <- case blockDurationMinutes of
+    Nothing -> pure Nothing
+    Just mins -> Just . addUTCTime (fromIntegral (mins * 60)) <$> getCurrentTime
+  _ <- RT.deleteByPersonId riderId
+  void $ QP.updatingAuthEnabledAndBlockedState riderId mcId (Just True) blockedUntil
+
+blockCustomerByIP :: (CacheFlow m r, MonadFlow m) => Text -> Maybe (Id DMC.MerchantConfig) -> Maybe Minutes -> m ()
+blockCustomerByIP clientIP _mcId blockDurationMinutes = Redis.withNonCriticalCrossAppRedis $ do
+  let blockKey = "Customer:IPBlocked:" <> clientIP
+  case blockDurationMinutes of
+    Nothing -> return ()
+    Just mins -> do
+      let ttlSeconds = fromIntegral mins * 60
+      void $ Redis.setExp blockKey ("true" :: Text) ttlSeconds
+  logInfo $ "IP " <> clientIP <> " has been blocked for " <> show blockDurationMinutes <> " minutes"
+
+isIPBlocked :: (CacheFlow m r, MonadFlow m) => Text -> m Bool
+isIPBlocked clientIP = Redis.withNonCriticalCrossAppRedis $ do
+  let whitelistKey = "whitelisted_ip:" <> clientIP
+  whitelistResult <- Redis.get whitelistKey
+  case whitelistResult of
+    Just (_ :: Text) -> return False
+    Nothing -> do
+      let blockKey = "Customer:IPBlocked:" <> clientIP
+      blockResult <- Redis.get blockKey
+      return $ isJust (blockResult :: Maybe Text)

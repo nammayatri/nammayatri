@@ -1,0 +1,48 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  AddressResp: Domain.Types.Extra.PlaceNameCache
+
+PlaceNameCache:
+  tableName: place_name_cache
+
+  fields:
+    id: Id PlaceNameCache
+    formattedAddress: Maybe Text
+    plusCode: Maybe Text
+    lat: Double
+    lon: Double
+    placeId: Maybe Text
+    addressComponents: "[AddressResp]"
+    geoHash: Maybe Text
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+
+  constraints:
+    placeId: SecondaryKey
+    geoHash: SecondaryKey
+  sqlType:
+    addressComponents: text[]
+  queries:
+    findPlaceByGeoHash:
+      kvFunction: findAllWithKV
+      where: geoHash
+    findPlaceByPlaceId:
+      kvFunction: findAllWithKV
+      where: placeId
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - updatedAt
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  extraOperation:
+    - EXTRA_DOMAIN_TYPE_FILE

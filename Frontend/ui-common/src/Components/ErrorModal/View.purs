@@ -99,5 +99,6 @@ primaryButtonConfig config = let
       , background = config.buttonConfig.background
       , visibility = config.buttonConfig.visibility
       , margin = config.buttonConfig.margin
+      , enableRipple = config.buttonConfig.enableRipple
       }
   in primaryButtonConfig'

@@ -13,39 +13,71 @@
 -}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.Merchant.Overlay
-  ( findByMerchantOpCityIdPNKeyLangaugeUdf,
-    clearMerchantIdPNKeyLangaugeUdf,
-  )
-where
+module Storage.CachedQueries.Merchant.Overlay where
 
-import Data.Coerce (coerce)
-import Domain.Types.Common
-import Domain.Types.Merchant.MerchantOperatingCity
-import Domain.Types.Merchant.Overlay
+import Domain.Types.MerchantOperatingCity
+import Domain.Types.Overlay
+import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Merchant.Overlay as Queries
+import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Yudhishthira ()
+import qualified Storage.Queries.Overlay as Queries
+import qualified Tools.DynamicLogic as DynamicLogic
 
-findByMerchantOpCityIdPNKeyLangaugeUdf :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
-findByMerchantOpCityIdPNKeyLangaugeUdf id pnKey language udf1 =
-  Hedis.safeGet (makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1) >>= \case
-    Just a -> return . Just $ coerce @(OverlayD 'Unsafe) @Overlay a
-    Nothing -> flip whenJust cacheOverlay /=<< Queries.findByMerchantOpCityIdPNKeyLangaugeUdf id pnKey language udf1
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Overlay -> m ()
+create = Queries.create
 
-cacheOverlay :: CacheFlow m r => Overlay -> m ()
-cacheOverlay pn = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantIdPNKeyLangaugeUdf pn.merchantOperatingCityId pn.overlayKey pn.language pn.udf1
-  Hedis.setExp idKey (coerce @Overlay @(OverlayD 'Unsafe) pn) expTime
+findAllByMerchantOpCityIdInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> [LYT.ConfigVersionMap] -> m [Overlay]
+findAllByMerchantOpCityIdInRideFlow id configVersionMap = findAllByMerchantOpCityId id (Just configVersionMap)
 
-makeMerchantIdPNKeyLangaugeUdf :: Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> Text
-makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1 = "CachedQueries:Overlay:MerchantOpCityId-" <> id.getId <> ":PNKey-" <> show pnKey <> ":ln-" <> show language <> ":udf1-" <> show udf1
+findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategoryInRideFlow :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> Maybe DVC.VehicleCategory -> [LYT.ConfigVersionMap] -> m (Maybe Overlay)
+findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategoryInRideFlow id pnKey language udf1 vehicleCategory configVersionMap = findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory id pnKey language udf1 vehicleCategory (Just configVersionMap)
+
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe [LYT.ConfigVersionMap] -> m [Overlay]
+findAllByMerchantOpCityId id mbConfigVersionMap =
+  DynamicLogic.findAllConfigs
+    (cast id)
+    (LYT.DRIVER_CONFIG LYT.Overlay)
+    mbConfigVersionMap
+    Nothing
+    (Queries.findAllByMerchantOpCityId id)
+
+findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> Maybe DVC.VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> m (Maybe Overlay)
+findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory id pnKey language udf1 vehicleCategory mbConfigVersionMap = do
+  let cacheKey = makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1 vehicleCategory
+  res <-
+    DynamicLogic.findOneConfigWithCacheKey
+      (cast id)
+      (LYT.DRIVER_CONFIG LYT.Overlay)
+      mbConfigVersionMap
+      Nothing
+      (Queries.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory id pnKey language udf1 vehicleCategory)
+      cacheKey
+  case res of
+    Just a -> return $ Just a
+    Nothing -> case vehicleCategory of
+      Nothing -> return Nothing
+      _ -> findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory id pnKey language udf1 Nothing mbConfigVersionMap
+
+makeMerchantIdPNKeyLangaugeUdf :: Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> Maybe DVC.VehicleCategory -> Text
+makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1 mbVehicleCategory = "CachedQueries:Overlay:MerchantOpCityId-" <> id.getId <> ":PNKey-" <> show pnKey <> ":ln-" <> show language <> ":udf1-" <> show udf1 <> maybe "" ((":VehCat-" <>) . show) mbVehicleCategory
 
 ------------------------------------------------------
 
-clearMerchantIdPNKeyLangaugeUdf :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m ()
-clearMerchantIdPNKeyLangaugeUdf merchantOpCityId overlayKey language udf1 = Hedis.del $ makeMerchantIdPNKeyLangaugeUdf merchantOpCityId overlayKey language udf1
+clearMerchantIdPNKeyLangaugeUdf :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> Maybe DVC.VehicleCategory -> m ()
+clearMerchantIdPNKeyLangaugeUdf merchantOpCityId overlayKey language udf1 vehicleCategory =
+  DynamicLogic.clearConfigCacheWithPrefix
+    (makeMerchantIdPNKeyLangaugeUdf merchantOpCityId overlayKey language udf1 vehicleCategory)
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.Overlay)
+    Nothing
+
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
+clearCache merchantOperatingCityId =
+  DynamicLogic.clearConfigCache
+    (cast merchantOperatingCityId)
+    (LYT.DRIVER_CONFIG LYT.Overlay)
+    Nothing

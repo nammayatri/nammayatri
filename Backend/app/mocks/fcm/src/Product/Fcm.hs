@@ -28,7 +28,7 @@ import Types.API.Fcm
 
 sendFcm ::
   Maybe FCMAuthToken ->
-  FCMRequest Value ->
+  FCMRequest Value Value ->
   FlowHandler FCMResponse
 sendFcm _authToken (FCMRequest ntf) = withFlowHandler' $ do
   to <- ntf.fcmToken & fromMaybeM (InvalidRequest "No token")

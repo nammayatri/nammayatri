@@ -1,6 +1,10 @@
-nix_direnv_watch_file \
+source_url https://raw.githubusercontent.com/juspay/omnix/3a82640921c61528b3a4660f2a1611d2a2ca0bed/omnixrc 'sha256-8C2Jb5bHx/0cvm1+9gOlBEdWzbikCWT5UsJWewUAFt4='
+
+watch_file \
     $(find Backend -name "*.cabal" | tr '\n' ' ') \
+    om.yaml \
     Backend/cabal.project \
     Backend/*.nix \
     Backend/nix/*.nix
-use flake .#backend --trace-verbose
+
+use omnix .#backend

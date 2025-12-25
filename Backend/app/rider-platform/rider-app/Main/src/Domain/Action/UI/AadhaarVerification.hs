@@ -16,13 +16,12 @@
 module Domain.Action.UI.AadhaarVerification where
 
 import qualified AWS.S3 as S3
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import Data.Text (pack, unpack)
 import qualified Data.Text as T
-import Data.Time.Format.ISO8601 (iso8601Show)
-import qualified Domain.Types.AadhaarVerification.AadhaarOtp as Domain
-import Domain.Types.AadhaarVerification.AadhaarVerification
-import qualified Domain.Types.AadhaarVerification.AadhaarVerification as VDomain
+import qualified Domain.Types.AadhaarOtpReq as Domain
+import qualified Domain.Types.AadhaarOtpVerify as Domain
+import Domain.Types.AadhaarVerification
+import qualified Domain.Types.AadhaarVerification as VDomain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import Environment
@@ -33,8 +32,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.Merchant as CM
-import qualified Storage.Queries.AadhaarVerification.AadhaarOtp as Query
-import qualified Storage.Queries.AadhaarVerification.AadhaarVerification as QAV
+import qualified Storage.Queries.AadhaarOtpReq as OtpReqQuery
+import qualified Storage.Queries.AadhaarOtpVerify as OtpVerifyQuery
+import qualified Storage.Queries.AadhaarVerification as QAV
 import qualified Storage.Queries.Person as Person
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
@@ -69,7 +69,7 @@ generateAadhaarOtp isDashboard mbMerchant personId req = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   res <- AadhaarVerification.generateAadhaarOtp person.merchantId merchantOperatingCityId req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
-  _ <- Query.createForGenerate aadhaarOtpEntity
+  _ <- OtpReqQuery.create aadhaarOtpEntity
   cacheAadhaarVerifyTries personId tried res.transactionId aadhaarHash isDashboard merchant
   pure res
 
@@ -106,7 +106,7 @@ verifyAadhaarOtp mbMerchant personId req = do
       let merchantOperatingCityId = person.merchantOperatingCityId
       res <- AadhaarVerification.verifyAadhaarOtp person.merchantId merchantOperatingCityId aadhaarVerifyReq
       aadhaarVerifyEntity <- mkAadhaarVerify personId tId res
-      Query.createForVerify aadhaarVerifyEntity
+      OtpVerifyQuery.create aadhaarVerifyEntity
       if res.code == pack "1002"
         then do
           Redis.del key
@@ -117,35 +117,16 @@ verifyAadhaarOtp mbMerchant personId req = do
             Right _ -> do
               aadhaarEntity <- mkAadhaar personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) (Just orgImageFilePath) True
               QAV.create aadhaarEntity
-              Person.updateAadhaarVerifiedState (cast personId) True
+              Person.updateAadhaarVerifiedState True (cast personId)
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
     Nothing -> throwError TransactionIdNotFound
 
 uploadOriginalAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
 uploadOriginalAadhaarImage person image imageType = do
-  orgImageFilePath <- createFilePath (getId person.id) Common.Image "/person-aadhaar-photo/" (parseImageExtension imageType)
-  resultOrg <- try @_ @SomeException $ S3.put (unpack orgImageFilePath) image
+  orgImageFilePath <- S3.createFilePath "/person-aadhaar-photo/" ("person-" <> person.id.getId) S3.Image (parseImageExtension imageType)
+  resultOrg <- withTryCatch "S3:put:uploadOriginalAadhaarImage" $ S3.put (unpack orgImageFilePath) image
   pure (orgImageFilePath, resultOrg)
-
-createFilePath ::
-  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
-  Text ->
-  Common.FileType ->
-  Text ->
-  Text ->
-  m Text
-createFilePath personId fileType identifier imageExtension = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
-  now <- getCurrentTime
-  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-  return
-    ( pathPrefix <> identifier <> "person-" <> personId <> "/"
-        <> show fileType
-        <> "/"
-        <> fileName
-        <> imageExtension
-    )
 
 getImageExtension :: Text -> ImageType
 getImageExtension base64Image = case T.take 1 base64Image of
@@ -181,7 +162,8 @@ mkAadhaarOtp personId res = do
         statusCode = res.statusCode,
         transactionId = res.transactionId,
         requestMessage = res.message,
-        createdAt = now
+        createdAt = now,
+        updatedAt = now
       }
 
 mkAadhaarVerify ::
@@ -201,7 +183,8 @@ mkAadhaarVerify personId tId res = do
         statusCode = res.code,
         transactionId = tId,
         requestMessage = res.message,
-        createdAt = now
+        createdAt = now,
+        updatedAt = now
       }
 
 mkAadhaar ::
@@ -231,5 +214,5 @@ mkAadhaar personId name gender dob aadhaarHash imgPath aadhaarVerified = do
 
 checkForDuplicacy :: DbHash -> Flow ()
 checkForDuplicacy aadhaarHash = do
-  aadhaarInfo <- QAV.findByAadhaarNumberHash aadhaarHash
+  aadhaarInfo <- QAV.findByAadhaarNumberHash (Just aadhaarHash)
   when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked

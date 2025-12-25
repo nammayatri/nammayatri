@@ -1,0 +1,149 @@
+imports:
+  FareParameters: Domain.Types.FareParameters
+  FarePolicy: Domain.Types.FarePolicy
+  TripCategory: Domain.Types.Common
+  Seconds: Kernel.Types.Common
+  ServiceTierType: Domain.Types.Common
+  SearchRequest: Domain.Types.SearchRequest
+  Money: Kernel.Types.Common
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Centesimal: Kernel.Types.Common
+  DriverExtraFeeBounds: Domain.Types.FarePolicy.DriverExtraFeeBounds
+
+Estimate:
+    tableName: estimate
+
+    derives: "Generic,Show,ToJSON,FromJSON,ToSchema"
+
+    beamInstance: MakeTableInstancesWithTModifier []
+
+    fields:
+      id: Id Estimate
+      requestId: Id SearchRequest
+      vehicleServiceTier: ServiceTierType|NoRelation
+      vehicleServiceTierName: Maybe Text
+      tripCategory: TripCategory
+      minFare: HighPrecMoney
+      maxFare: HighPrecMoney
+      dpVersion : Maybe Text
+      currency: Currency
+      estimatedDistance: Maybe Meters
+      estimatedDuration : Maybe Seconds
+      fromLocGeohash: Maybe Text
+      supplyDemandRatioFromLoc : Maybe Double
+      supplyDemandRatioToLoc : Maybe Double
+      mbActualQARFromLocGeohashDistance : Maybe Double
+      mbActualQARFromLocGeohash : Maybe Double
+      mbActualQARCity : Maybe Double
+      mbActualQARFromLocGeohashDistancePast : Maybe Double
+      mbActualQARFromLocGeohashPast : Maybe Double
+      mbActualQARCityPast : Maybe Double
+      driverExtraFeeBounds: Maybe DriverExtraFeeBounds
+      mbCongestionFromLocGeohashDistance : Maybe Double
+      mbCongestionFromLocGeohashDistancePast : Maybe Double
+      mbCongestionFromLocGeohash : Maybe Double
+      mbCongestionFromLocGeohashPast : Maybe Double
+      mbCongestionCity : Maybe Double
+      mbCongestionCityPast : Maybe Double
+      smartTipSuggestion: Maybe HighPrecMoney
+      smartTipReason: Maybe Text
+      congestionMultiplier : Maybe Centesimal
+      distanceUnit: DistanceUnit
+      businessDiscount: Maybe HighPrecMoney
+      fareParams: Maybe FareParameters|WithIdCreate
+      farePolicy: Maybe FarePolicy|NoRelation
+      specialLocationTag: Maybe Text
+      tipOptions: Maybe [Int]
+      isScheduled: Bool
+      isCustomerPrefferedSearchRoute: Maybe Bool
+      isBlockedRoute: Maybe Bool
+      tollNames: Maybe [Text]
+      tollIds: Maybe [Text]
+      eligibleForUpgrade: Bool
+      createdAt: UTCTime
+      updatedAt: UTCTime
+      merchantId: Maybe (Id Merchant)
+      merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+
+    beamFields:
+      farePolicy:
+        farePolicyId: Maybe Text
+      vehicleServiceTier: "vehicleVariant"
+      minFare:
+        minFare: Money
+        minFareAmount: Maybe HighPrecMoney
+      maxFare:
+        maxFare: Money
+        maxFareAmount: Maybe HighPrecMoney
+      currency:
+        currency: Maybe Currency
+
+      driverExtraFeeBounds:
+        driverExtraFeeStartDistance: Maybe Meters
+        driverExtraFeeDistanceUnit: Maybe DistanceUnit
+        driverExtraFeeStepFee: Maybe HighPrecMoney
+        driverExtraFeeDefaultStepFee: Maybe HighPrecMoney
+        driverExtraFeeMinFee: Maybe HighPrecMoney
+        driverExtraFeeMaxFee: Maybe HighPrecMoney
+
+    sqlType:
+      farePolicyId: character varying(36)
+      tipOptions: integer[]
+
+    beamType:
+      updatedAt: Maybe UTCTime
+      isScheduled: Maybe Bool
+      tripCategory: Maybe TripCategory
+      distanceUnit: Maybe DistanceUnit
+      eligibleForUpgrade: Maybe Bool
+
+    constraints:
+      id: PrimaryKey
+      requestId: SecondaryKey
+
+    fromTType:
+      updatedAt: Kernel.Prelude.fromMaybe createdAt|I
+      isScheduled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+      tripCategory: Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer)|I
+      farePolicy: maybe (pure Nothing) ((Storage.Cac.FarePolicy.findById Nothing) . Kernel.Types.Id.Id)|IM
+      driverExtraFeeBounds: Storage.Queries.Transformers.Estimate.mkDriverExtraFeeBounds driverExtraFeeStartDistance driverExtraFeeDistanceUnit driverExtraFeeStepFee driverExtraFeeDefaultStepFee driverExtraFeeMinFee driverExtraFeeMaxFee|E
+      minFare: Kernel.Types.Common.mkAmountWithDefault minFareAmount minFare|E
+      maxFare: Kernel.Types.Common.mkAmountWithDefault maxFareAmount maxFare|E
+      currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+      distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+      eligibleForUpgrade: Kernel.Prelude.fromMaybe False|I
+
+    toTType:
+      updatedAt: Kernel.Prelude.Just|I
+      isScheduled: Kernel.Prelude.Just|I
+      tripCategory: Kernel.Prelude.Just|I
+      driverExtraFeeStartDistance: (driverExtraFeeBounds <&> (.startDistance))|E
+      driverExtraFeeDistanceUnit: (driverExtraFeeBounds <&> (.distanceUnit))|E
+      driverExtraFeeStepFee: (driverExtraFeeBounds <&> (.stepFee))|E
+      driverExtraFeeDefaultStepFee: (driverExtraFeeBounds <&> (.defaultStepFee))|E
+      driverExtraFeeMinFee: (driverExtraFeeBounds <&> (.minFee))|E
+      driverExtraFeeMaxFee: (driverExtraFeeBounds <&> (.maxFee))|E
+      farePolicyId: (Kernel.Types.Id.getId . (.id) <$>)
+      minFare:  Kernel.Prelude.roundToIntegral|I
+      minFareAmount: Kernel.Prelude.Just|I
+      currency: Kernel.Prelude.Just|I
+      maxFare:  Kernel.Prelude.roundToIntegral|I
+      maxFareAmount: Kernel.Prelude.Just|I
+      distanceUnit: Kernel.Prelude.Just|I
+      eligibleForUpgrade: Kernel.Prelude.Just|I
+
+    queries:
+      findById:
+        kvFunction: findOneWithKV
+        where:
+          and: [id]
+      updateSupplyDemandRatioByReqIdAndServiceTier:
+        kvFunction: updateWithKV
+        params: [supplyDemandRatioFromLoc, supplyDemandRatioToLoc]
+        where:
+          and: [requestId,vehicleServiceTier]
+      findEligibleForCabUpgrade:
+        kvFunction: findAllWithKVAndConditionalDB
+        where:
+          and: [requestId, eligibleForUpgrade]

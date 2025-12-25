@@ -1,0 +1,187 @@
+name: Release (Production - Customer)
+
+on:
+  push:
+    branches:
+      - main
+      - hotpushAPK-*
+
+jobs:
+  deploy:
+    if: "contains(github.event.head_commit.message, '[RELEASE-APK]')"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        variant:
+          - name: NammaYatri
+            keystore: ANDROID_KEYSTORE_FILE
+            fastlane_cm: NY
+            key_alias: KEYSTORE_KEY_ALIAS
+            local_properties: LOCAL_PROPERTIES
+            config_path: app/src/user/nammaYatri/assets/juspay
+            config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriconsumer/android/cug/config.json"
+          - name: ManaYatri
+            keystore: ANDROID_KEYSTORE_FILE_MY
+            fastlane_cm: MY
+            key_alias: KEYSTORE_KEY_ALIAS_MY
+            local_properties: LOCAL_PROPERTIES_MY
+            config_path: app/src/user/manaYatri/assets/juspay
+            config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriconsumer/android/cug/config.json"
+          - name: Yatri
+            keystore: ANDROID_KEYSTORE_FILE_Y
+            fastlane_cm: Y
+            key_alias: KEYSTORE_KEY_ALIAS_Y
+            local_properties: LOCAL_PROPERTIES_Y
+            config_path: app/src/user/yatri/assets/juspay
+            config_url: "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriconsumer/android/cug/config.json"
+          # Add more variants as needed
+    defaults:
+      run:
+        working-directory: Frontend/android-native
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3" # Not needed with a .ruby-version file
+          bundler-cache: true # runs 'bundle install' and caches installed gems automatically
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin" # See 'Supported distributions' for available options
+          java-version: "17"
+
+      - name: Cache Ruby - Bundler
+        uses: actions/cache@v2
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-gems-
+
+      - name: Cache Gradle
+        uses: actions/cache@v1
+        with:
+          path: ~/.gradle/caches/
+          key: cache-clean-gradle-${{ matrix.os }}-${{ matrix.jdk }}
+
+      - name: Cache Gradle Wrapper
+        uses: actions/cache@v1
+        with:
+          path: ~/.gradle/wrapper/
+          key: cache-clean-wrapper-${{ matrix.os }}-${{ matrix.jdk }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run Python script to extract JSA files
+        run: python bundleFetch.py "$FASTLANE_CMD"
+        env:
+          FASTLANE_CMD: ${{ matrix.variant.fastlane_cm }}
+
+      - name: Move JSA files to specific path
+        run: |
+          mv -f configs/* "$CONFIG_PATH"
+        env:
+          CONFIG_PATH: ${{ matrix.variant.config_path }}
+
+      - name: Grant Permission to Execute
+        run: chmod +x gradlew
+
+      - name: Install bundle
+        run: |
+          bundle config path vendor/bundle
+          bundle install --jobs 4 --retry 3
+
+      - name: Configure Keystore
+        run: |
+          echo "$ANDROID_KEYSTORE_FILE" > keystore.jks.b64
+          base64 -d -i keystore.jks.b64 > app/keystore.jks
+          echo "storeFile=keystore.jks" >> keystore.properties
+          echo "keyAlias=$KEYSTORE_KEY_ALIAS" >> keystore.properties
+          echo "storePassword=$KEYSTORE_STORE_PASSWORD" >> keystore.properties
+          echo "keyPassword=$KEYSTORE_KEY_PASSWORD" >> keystore.properties
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ secrets[matrix.variant.keystore] }}
+          KEYSTORE_KEY_ALIAS: ${{ secrets[matrix.variant.key_alias] }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+
+      - name: Create Google Services Config file
+        run: |
+          echo "$GOOGLE_SERVICES_SECRET" > google-services.json.b64
+          base64 -d -i google-services.json.b64 > app/google-services.json
+        env:
+          GOOGLE_SERVICES_SECRET: ${{ secrets.GOOGLE_SERVICES_SECRET }}
+
+      - name: Update bools for dynamic assets
+        run: |
+          echo "$DYNAMIC_ASSETS" > bools.xml.b64
+          base64 -d -i bools.xml.b64 > app/src/dev/res/values/bools.xml
+          base64 -d -i bools.xml.b64 > app/src/main/res/values/bools.xml
+        env:
+          DYNAMIC_ASSETS: ${{ secrets.DYNAMIC_ASSETS }}
+
+      - name: Create Local Properties
+        run: |
+          echo "$LOCAL_PROPERTIES" > local.properties.b64
+          base64 -d -i local.properties.b64 > local.properties
+        env:
+          LOCAL_PROPERTIES: ${{ secrets[matrix.variant.local_properties] }}
+
+      - name: Create Google Play Config file
+        run: |
+          echo "$PLAY_CONSOLE_SECRET" > play_config.json.b64
+          base64 -d -i play_config.json.b64 > play_config.json
+        env:
+          PLAY_CONSOLE_SECRET: ${{ secrets.PLAY_CONSOLE_SECRET }}
+
+      - name: Add Configs to local.properties
+        run: |
+          echo "" >> local.properties
+          echo "$ADDITIONAL_LOCAL_PROPERTIES" >> local.properties
+          echo "" >> local.properties
+          echo "$CT_KEYS_PRD" >> local.properties
+        env:
+          ADDITIONAL_LOCAL_PROPERTIES: ${{ secrets.ADDITIONAL_LOCAL_PROPERTIES }}
+          CT_KEYS_PRD: ${{ secrets.CT_KEYS }}
+
+      - name: Distribute app to Production 🚀
+        run: |
+          echo "Hello, world! $FASTLANE_CMD"
+          echo "fastlane_cm: ${{ matrix.variant.name }}"
+          bash releaseApp.sh "$FASTLANE_CMD"
+        env:
+          FASTLANE_CMD: ${{ matrix.variant.fastlane_cm }}
+
+      - name: Increment Version for the app
+        run: |
+          git stash
+          python updateLocalVersion.py customer
+
+      - name: Create Pull Request
+        id: create_pr
+        uses: peter-evans/create-pull-request@v3
+        continue-on-error: true
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: post-release-apk-to-prod
+          title: "[BOT]updating version code and name post successful release"
+          body: "Automated pull request to update versionCode and versionName post release."
+          delete-branch: true
+          commit-message: "[BOT] updating version code and name post successful release"
+          add-paths: |
+            *ions.txt
+
+      - name: Merge Pull Request
+        uses: peter-evans/enable-pull-request-automerge@v3
+        continue-on-error: true
+        with:
+          token: ${{ secrets.RELEASE_ASSET }}
+          merge-method: rebase
+          pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}

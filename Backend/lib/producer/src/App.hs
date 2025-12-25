@@ -16,8 +16,10 @@
 module App (startProducer) where
 
 import Data.Function hiding (id)
+import Debug.Trace as T
 import Environment
 import EulerHS.Interpreters (runFlow)
+import qualified EulerHS.KVConnector.Metrics as KVCM
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as L
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
@@ -32,17 +34,24 @@ import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Time ()
 import qualified Producer.Flow as PF
+import System.Environment (lookupEnv)
+
+getDhallName :: ProducerType -> String
+getDhallName = \case
+  Driver -> "producer"
+  Rider -> "rider-producer"
 
 startProducer :: IO ()
 startProducer = do
-  appCfg :: AppCfg <- readDhallConfigDefault "producer"
+  producerType <- fromMaybe Driver . (>>= readMaybe) <$> lookupEnv "PRODUCER_TYPE"
+  appCfg :: AppCfg <- readDhallConfigDefault $ getDhallName (T.traceShowId producerType)
   Metrics.serve (appCfg.metricsPort)
-  appEnv <- buildAppEnv appCfg
+  appEnv <- buildAppEnv appCfg producerType
   flowRt <- L.createFlowRuntime' (Just $ L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig)
-  startProducerWithEnv flowRt appCfg appEnv
+  startProducerWithEnv flowRt appCfg appEnv producerType
 
-startProducerWithEnv :: L.FlowRuntime -> AppCfg -> AppEnv -> IO ()
-startProducerWithEnv flowRt appCfg appEnv = do
+startProducerWithEnv :: L.FlowRuntime -> AppCfg -> AppEnv -> ProducerType -> IO ()
+startProducerWithEnv flowRt appCfg appEnv producerType = do
   runFlow
     flowRt
     ( ( prepareConnectionRider
@@ -55,7 +64,9 @@ startProducerWithEnv flowRt appCfg appEnv = do
           appCfg.kvConfigUpdateFrequency
       )
         >> L.setOption KafkaConn appEnv.kafkaProducerTools
-        >> L.setOption Tables (KUC.Tables [] [])
+        >> L.setOption Tables KUC.defaultTableData
+        >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
     )
+  let producers = map (\_ -> PF.runProducer) [1 .. appCfg.producersPerPod]
   runFlowR flowRt appEnv $ do
-    loopGracefully $ bool [PF.runProducer] [PF.runReviver, PF.runProducer] appEnv.runReviver
+    loopGracefully $ bool producers ([PF.runReviver producerType] <> producers) appEnv.runReviver

@@ -36,10 +36,11 @@ import Data.String as DS
 import Components.PrimaryButton as PrimaryButton
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils (validateEmail)
-import Screens.HelpAndSupportScreen.Controller (isEmailPresent)
+import Screens.HelpAndSupportScreen.Transformer (isEmailPresent)
+import Screens.HelpAndSupportScreen.ScreenData
 import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, showTitle)
 
-sourceToDestinationConfig :: ST.HelpAndSupportScreenState -> SourceToDestination.Config
+sourceToDestinationConfig :: HelpAndSupportScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let
   config = SourceToDestination.config
   sourceToDestinationConfig' = config
@@ -76,10 +77,12 @@ sourceToDestinationConfig state = let
       , ellipsize = true
       }
     , overrideSeparatorCount = 2
+    , separatorLayoutMargin = (MarginTop 14)
+    , showSourceDestWithStops = true
     }
   in sourceToDestinationConfig'
 
-apiErrorModalConfig :: ST.HelpAndSupportScreenState -> ErrorModal.Config
+apiErrorModalConfig :: HelpAndSupportScreenState -> ErrorModal.Config
 apiErrorModalConfig state = let
   config = ErrorModal.config
   errorModalConfig' = config
@@ -108,7 +111,7 @@ apiErrorModalConfig state = let
     }
   in errorModalConfig'
 
-callConfirmationPopup :: ST.HelpAndSupportScreenState -> PopUpModal.Config
+callConfirmationPopup :: HelpAndSupportScreenState -> PopUpModal.Config
 callConfirmationPopup state = let
     config = PopUpModal.config
     popUpConfig' = config {
@@ -125,20 +128,22 @@ callConfirmationPopup state = let
       , strokeColor = state.data.config.primaryBackground
       , background = state.data.config.popupBackground
       , color = state.data.config.primaryBackground
+      , enableRipple = true
       },
       option2 {
         text = (getString CALL)
       , strokeColor = state.data.config.primaryBackground
       , background = state.data.config.primaryBackground
       , color = state.data.config.primaryTextColor
+      , enableRipple = true
       }
     }
   in popUpConfig'
 
-genericHeaderConfig :: ST.HelpAndSupportScreenState -> GenericHeader.Config 
+genericHeaderConfig :: HelpAndSupportScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
-  btnVisibility = if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  btnVisibility =  config.prefixImageConfig.visibility
   titleVisibility = if showTitle FunctionCall then config.visibility else GONE
   genericHeaderConfig' = config 
     {
@@ -148,6 +153,9 @@ genericHeaderConfig state = let
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , visibility =  btnVisibility
+      , margin = Margin 8 8 8 8 
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       } 
     , textConfig {
         text = (getString HELP_AND_SUPPORT)
@@ -160,7 +168,7 @@ genericHeaderConfig state = let
     }
   in genericHeaderConfig'
 
-deleteGenericHeaderConfig :: ST.HelpAndSupportScreenState -> GenericHeader.Config
+deleteGenericHeaderConfig :: HelpAndSupportScreenState -> GenericHeader.Config
 deleteGenericHeaderConfig state = let
   config = GenericHeader.config
   genericHeaderConfig' = config
@@ -170,7 +178,9 @@ deleteGenericHeaderConfig state = let
         height = V 25
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-      , margin = Margin 12 12 12 12
+      , margin = Margin 8 8 8 8
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       }
     , padding = PaddingVertical 5 5
     , textConfig {
@@ -181,7 +191,7 @@ deleteGenericHeaderConfig state = let
   in genericHeaderConfig'
 
 
-primaryEditTextConfigEmail :: ST.HelpAndSupportScreenState -> PrimaryEditText.Config
+primaryEditTextConfigEmail :: HelpAndSupportScreenState -> PrimaryEditText.Config
 primaryEditTextConfigEmail state = let
     config = PrimaryEditText.config
     primaryEditTextConfig' = config
@@ -206,7 +216,7 @@ primaryEditTextConfigEmail state = let
       }
     in primaryEditTextConfig'
 
-primaryEditTextConfigDescription :: ST.HelpAndSupportScreenState -> PrimaryEditText.Config
+primaryEditTextConfigDescription :: HelpAndSupportScreenState -> PrimaryEditText.Config
 primaryEditTextConfigDescription state = let
     config = PrimaryEditText.config
     primaryEditTextConfig' = config
@@ -234,7 +244,7 @@ primaryEditTextConfigDescription state = let
       }
     in primaryEditTextConfig'
 
-primaryButtonConfigSubmitRequest :: ST.HelpAndSupportScreenState -> PrimaryButton.Config
+primaryButtonConfigSubmitRequest :: HelpAndSupportScreenState -> PrimaryButton.Config
 primaryButtonConfigSubmitRequest state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
@@ -251,7 +261,7 @@ primaryButtonConfigSubmitRequest state = let
       }
   in primaryButtonConfig'
 
-requestDeletePopUp :: ST.HelpAndSupportScreenState -> PopUpModal.Config
+requestDeletePopUp :: HelpAndSupportScreenState -> PopUpModal.Config
 requestDeletePopUp state = let
     config = PopUpModal.config
     popUpConfig' = config {
@@ -270,7 +280,7 @@ requestDeletePopUp state = let
     }
   in popUpConfig'
 
-accountDeletedPopUp :: ST.HelpAndSupportScreenState -> PopUpModal.Config
+accountDeletedPopUp :: HelpAndSupportScreenState -> PopUpModal.Config
 accountDeletedPopUp state = let
     config = PopUpModal.config
     popUpConfig' = config {

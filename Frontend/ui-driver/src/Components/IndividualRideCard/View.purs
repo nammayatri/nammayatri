@@ -140,7 +140,7 @@ tagView config =
       , padding $ Padding 10 4 10 4
       , margin $ MarginRight 5
       ][  imageView
-          [ imageWithFallback $ fetchImage FF_ASSET item.image
+          [ imageWithFallback item.image
           , height $ V 14
           , width $ V 14
           ]
@@ -148,10 +148,11 @@ tagView config =
 
 tagList :: LazyCheck -> Array Tag
 tagList _ = [
-  {background : Colors.yellow200, image : "ny_ic_tip_icon", visibility : true, text : "tipTagVisibility", textColor : ""},
-  {background : Colors.black200, image : "ny_ic_loc_black", visibility : true, text : "gotoTagVisibility", textColor : ""},
-  {background : Colors.purple100, image : "ny_ic_disability_purple", visibility : true, text : "purpleTagVisibility", textColor : ""},
-  {background : Colors.blue100, image : "ny_ic_star", visibility : true, text : "spLocTagVisibility", textColor : ""}
+  {background : Colors.yellow200, image : fetchImage FF_ASSET "ny_ic_tip_icon", visibility : true, text : "tipTagVisibility", textColor : ""},
+  {background : Colors.black200, image : fetchImage FF_ASSET "ny_ic_loc_black", visibility : true, text : "gotoTagVisibility", textColor : ""},
+  {background : Colors.purple100, image : fetchImage FF_ASSET "ny_ic_disability_purple", visibility : true, text : "purpleTagVisibility", textColor : ""},
+  {background : Colors.blue100, image : fetchImage FF_ASSET "ny_ic_star", visibility : true, text : "spLocTagVisibility", textColor : ""},
+  {background : Colors.green100, image : fetchImage COMMON_ASSET "ny_ic_sp_zone_green", visibility : true, text : "specialZonePickup", textColor : ""}
 ]
 
 selectCardView :: forall w. (RideSelectionScreen.Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -294,6 +295,7 @@ sourceAndDestination =
         , width MATCH_PARENT
         , gravity CENTER_VERTICAL
         , background Color.white900
+        , PrestoList.visibilityHolder "showDestination"
         ][  imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_destination"
             , height $ V 16
@@ -464,4 +466,5 @@ separatorConfig =
   , width : V 2
   , layoutWidth : V 12
   , layoutHeight : V 12
+  , color : Color.black500
   }

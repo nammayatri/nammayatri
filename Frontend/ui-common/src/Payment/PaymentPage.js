@@ -10,10 +10,25 @@ function waitTillSeviceLoad (cb,serives,statusChecker) {
   setTimeout(checkPP,10);
 }
 
+function ppInitiateStatus() {
+  if (JBridge.ppInitiateStatus) {
+    let _status = JBridge.ppInitiateStatus();
+    if (window.__OS === "IOS") {
+      _status = _status === "1" ? true : false;
+    }
+    return _status;
+  }
+  return false;
+}
+
 function getInitiatPayload () {
   const innerPayload = Object.assign({},window.__payload.payload);
   const initiatePayload = Object.assign({},window.__payload);
   innerPayload["action"] = "initiate";
+  innerPayload["merchantId"] = "nammayatri";
+  if (innerPayload.clientId.includes("_ios")) {
+    innerPayload["clientId"] = innerPayload.clientId.replace("_ios","");
+  }
   initiatePayload["payload"] = innerPayload;
   initiatePayload["service"] = "in.juspay.hyperpay";
   return initiatePayload;
@@ -47,7 +62,7 @@ export const  killPP = function (services) {
 }
 
 export const initiatePP = function () {
-  if (JBridge.ppInitiateStatus && JBridge.ppInitiateStatus()) {
+  if (ppInitiateStatus()) {
     window.isPPInitiated = true;
     return;
   }
@@ -131,7 +146,7 @@ export const getAvailableUpiApps = function (resultCb) {
       console.log("%cUPIINTENT initiate Result - Initiated", "background:darkblue;color:white;font-size:13px;padding:2px", payload); 
       JOS.startApp("in.juspay.upiintent")(payload)(cb)();
       const process = function() {
-        window.JOS.emitEvent("in.juspay.upiintent")("onMerchantEvent")(["process",JSON.stringify(outerPayload)])(result)();
+        // window.JOS.emitEvent("in.juspay.upiintent")("onMerchantEvent")(["process",JSON.stringify(outerPayload)])(result)();
       }
       callUpiProcess(process,["in.juspay.upiintent"]);
     } catch (err) {
@@ -151,7 +166,7 @@ export const consumeBP = function (unit){
 }
 
 export const checkPPInitiateStatus = function (cb,services = microapps) {
-  if ((JBridge.ppInitiateStatus  && JBridge.ppInitiateStatus()) && window.isPPInitiated || (window.isPPInitiated && checkPPLoadStatus(services))) {
+  if (ppInitiateStatus() && window.isPPInitiated || (window.isPPInitiated && checkPPLoadStatus(services))) {
     cb()();
   } else {
     waitTillSeviceLoad(cb,services,checkPPInitiateStatus);
@@ -181,6 +196,8 @@ export const startPP = function (payload) {
           console.log("%cHyperpay Request ", "background:darkblue;color:white;font-size:13px;padding:2px", payload);
           if (JBridge.processPP) {
             window.processCallBack = cb;
+            console.log("%cHyperpay Callback ", "background:darkblue;color:white;font-size:13px;padding:2px", cb);
+            console.log("inside process call", JSON.stringify(payload));
             JBridge.processPP(JSON.stringify(payload));
           } else {
             if (JOS.isMAppPresent("in.juspay.hyperpay")()){

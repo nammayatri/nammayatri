@@ -1,0 +1,47 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+  Text: Data.Text
+  Id: Kernel.Types.Id
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  MultiModalResponse: Kernel.External.MultiModal.Interface.Types
+  Places: Storage.Queries.OrphanInstances.Places
+  EntityType: Domain.Types.RecentLocation
+  RecentLocation: Domain.Types.RecentLocation
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  HighPrecMoney: Kernel.Types.Common
+module: Places
+
+types:
+  MultiModalLocation:
+    name: Text
+    address: Text
+    lat: Double
+    lon: Double
+    type_: Maybe Text
+    mode: Maybe EntityType
+    rating: Maybe Double
+    fromStationCode: Maybe Text
+    toStationCode: Maybe Text
+    routeCode: Maybe Text
+    multimodalRoutes: Maybe MultiModalResponse
+    recentLocationId: Maybe (Id RecentLocation)
+    fare: Maybe HighPrecMoney
+
+  PlacesRequest:
+    userLat: Double
+    userLon: Double
+    integratedBppConfigId: Id IntegratedBPPConfig
+
+  PlacesResponse:
+    popularLocations: [MultiModalLocation]
+    recentLocations: [MultiModalLocation]
+
+apis:
+  - POST:
+      endpoint: /places
+      auth: TokenAuth
+      request:
+        type: PlacesRequest
+      response:
+        type: PlacesResponse

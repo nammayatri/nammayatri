@@ -15,8 +15,8 @@
 
 module Screens.UploadAdhaarScreen.Controller where
 
-import Prelude (pure, (==), unit, ($), class Show, bind, discard)
-import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import Prelude (pure, (==), unit, ($), class Show, bind, discard, (<>), show)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
 import Screens.Types (UploadAdhaarScreenState)
 import Components.RegistrationModal as RegistrationModalController
 import Components.PrimaryButton as PrimaryButton
@@ -26,9 +26,20 @@ import Effect.Class (liftEffect)
 import JBridge (uploadFile)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
+import Common.Types.App
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (AfterRender) = "AfterRender"
+  show (RegistrationModalAction var1) = "RegistrationModalAction_" <> show var1
+  show (OnboardingHeaderAction var1) = "OnboardingHeaderAction_" <> show var1
+  show (PrimaryButtonAction var1) = "PrimaryButtonAction_" <> show var1
+  show (RemoveUploadedFile _) = "RemoveUploadedFile"
+  show (CallBackImageUpload _ _ _) = "CallBackImageUpload"
+  show (UploadFileAction _) = "UploadFileAction"
+  show (UploadImage) = "UploadImage"
+  show (PreviewImageAction) = "PreviewImageAction"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -67,6 +78,13 @@ data Action = BackPressed
             | UploadImage
             | PreviewImageAction
 
+uploadFileConfig :: UploadFileConfig
+uploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio : false,
+  imageAspectHeight : 0,
+  imageAspectWidth : 0
+}
+
 eval :: Action -> UploadAdhaarScreenState -> Eval Action ScreenOutput UploadAdhaarScreenState
 eval AfterRender state = continue state
 eval BackPressed state = exit GoBack
@@ -77,13 +95,13 @@ eval (PrimaryButtonAction (PrimaryButton.OnClick)) state = exit (GoToBankDetails
 eval (RemoveUploadedFile removeType) state = if(removeType == "front") then continue state{data{imageFront = ""}} else continue state{data{imageBack = ""}}
 eval (UploadFileAction clickedType) state = continueWithCmd (state {props {clickedButtonType = clickedType}}) [ pure UploadImage]
 eval (UploadImage) state = continueWithCmd state [do
-  _ <- liftEffect $ uploadFile false
+  _ <- liftEffect $ uploadFile uploadFileConfig true
   pure NoAction]
 eval (CallBackImageUpload image imageName imagePath) state = if(state.props.clickedButtonType == "front") then continue $ state {data {imageFront = image}}
                                             else if(state.props.clickedButtonType == "back") then continue $ state {data {imageBack = image}}
                                               else continue state
                                               
-eval _ state = continue state
+eval _ state = update state
 
 
 

@@ -8,26 +8,38 @@
  */
 package in.juspay.mobility.app;
 
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
+
 public class SheetModel {
-    private final String pickUpDistance, distanceToBeCovered, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant;
+    private final String pickUpDistance, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, vehicleServiceTier,rideProductType, rideDuration, rideDistance, rideStartTime, rideStartDate, notificationSource, renderedAt ;
     private String requestId;
-    private int startTime;
-    private double updatedAmount;
+    private int startTime, driverDefaultStepFee;
+    private double updatedAmount, parkingCharge;
     private double offeredPrice;
-    private int customerExtraFee;
+    private int customerExtraFee, congestionCharges, petCharges;
+    private final int airConditioned;
+    private final int ventilator;
     private final int baseFare;
     private final int reqExpiryTime;
     private final int driverMinExtraFee;
+    private final int driverPickUpCharges;
     private final int driverMaxExtraFee;
     private final int rideRequestPopupDelayDuration;
     private final int negotiationUnit;
+    private final int tollCharges;
+    private final int stops;
+    private final int coinsRewardedOnGoldTierRide;
 
-    private final Boolean disabilityTag;
-    private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
-    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated;
+    private final Boolean disabilityTag, isFavourite;
+    private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha, distanceToBeCovered;
+    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup, downgradeEnabled, isThirdPartyBooking , roundTrip;
+    private double srcLat, srcLng, destLat, destLng;
 
     public SheetModel(String pickUpDistance,
-                      String distanceToBeCovered,
+                      float distanceToBeCovered,
+                      int tollCharges,
                       String durationToPickup,
                       String sourceAddress,
                       String destinationAddress,
@@ -43,46 +55,149 @@ public class SheetModel {
                       int rideRequestPopupDelayDuration,
                       int negotiationUnit,
                       int customerExtraFee,
+                      int congestionCharges,
+                      int petCharges,
                       String specialLocationTag,
                       String sourcePinCode,
                       String destinationPinCode,
                       String requestedVehicleVariant,
+                      int coinsRewardedOnGoldTierRide,
                       Boolean disabilityTag,
                       Boolean isTranslated,
-                      Boolean gotoTag){
+                      Boolean gotoTag,
+                      int driverPickUpCharges,
+                      double srcLat,
+                      double srcLng,
+                      double destLat,
+                      double destLng,
+                      boolean specialZonePickup,
+                      int driverDefaultStepFee,
+                      boolean downgradeEnabled,
+                      int airConditioned,
+                      int ventilator,
+                      String vehicleServiceTier,
+                      String rideProductType,
+                      String rideDuration,
+                      String rideDistance,
+                      String rideStartTime,
+                      String rideStartDate,
+                      String notificationSource,
+                      Boolean isThirdPartyBooking,
+                      Boolean isFavourite,
+                      double parkingCharge,
+                      String renderedAt,
+                      int stops,
+                      boolean roundTrip
+                      ){
 
+        this.srcLat = srcLat;
+        this.srcLng = srcLng;
+        this.destLat = destLat;
+        this.destLng = destLng;
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
+        this.tollCharges = tollCharges;
         this.sourceArea = sourceArea;
         this.sourceAddress = sourceAddress;
         this.destinationArea = destinationArea;
         this.destinationAddress = destinationAddress;
-        this.updatedAmount = 0;
+        this.updatedAmount = driverDefaultStepFee;
         this.reqExpiryTime = reqExpiryTime;
         this.searchRequestId = searchRequestId;
-        this.offeredPrice = 0;
+        this.offeredPrice = driverDefaultStepFee;
         this.baseFare = baseFare;
         this.startTime = startTime;
         this.driverMinExtraFee = driverMinExtraFee;
         this.driverMaxExtraFee = driverMaxExtraFee;
         this.rideRequestPopupDelayDuration = rideRequestPopupDelayDuration;
         this.negotiationUnit = negotiationUnit;
-        this.buttonIncreasePriceAlpha = 1.0f;
-        this.buttonIncreasePriceClickable = true;
-        this.buttonDecreasePriceAlpha = 0.5f;
-        this.buttonDecreasePriceClickable = false;
+        this.buttonIncreasePriceAlpha = initialIncButtonToggle() ? 1.0f : 0.5f;
+        this.buttonIncreasePriceClickable = initialIncButtonToggle();
+        this.buttonDecreasePriceAlpha = initialDecButtonToggle() ? 1.0f : 0.5f;
+        this.buttonDecreasePriceClickable = initialDecButtonToggle();
         this.currency = currency;
         this.specialLocationTag = specialLocationTag;
         this.customerExtraFee = customerExtraFee;
+        this.petCharges = petCharges;
+        this.congestionCharges = congestionCharges;
         this.sourcePinCode = sourcePinCode;
         this.destinationPinCode = destinationPinCode;
         this.requestedVehicleVariant = requestedVehicleVariant;
+        this.coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRide;
         this.disabilityTag = disabilityTag;
         this.durationToPickup = durationToPickup;
         this.gotoTag = gotoTag;
         this.isTranslated = isTranslated;
+        this.driverPickUpCharges = driverPickUpCharges;
+        this.specialZonePickup = specialZonePickup;
+        this.driverDefaultStepFee = driverDefaultStepFee;
+        this.downgradeEnabled = downgradeEnabled;
+        this.airConditioned = airConditioned;
+        this.ventilator = ventilator;
+        this.vehicleServiceTier = vehicleServiceTier;
+        this.rideProductType = rideProductType;
+        this.rideDuration = rideDuration;
+        this.rideDistance = rideDistance;
+        this.rideStartTime = rideStartTime;
+        this.rideStartDate = rideStartDate;
+        this.notificationSource = notificationSource;
+        this.isThirdPartyBooking = isThirdPartyBooking;
+        this.isFavourite = isFavourite;
+        this.parkingCharge = parkingCharge;
+        this.renderedAt = renderedAt;
+        this.stops = stops;
+        this.roundTrip = roundTrip;
     }
 
+    public String getRenderedAt(){
+        return renderedAt;
+    }
+
+    public boolean getRoundTrip(){return roundTrip;}
+
+    public String getVehicleServiceTier() {
+        return vehicleServiceTier;
+    }
+
+    public int isAirConditioned() {
+        return airConditioned;
+    }
+
+    public int isVentilator() {
+        return ventilator;
+    }
+
+    public String getRideProductType() {
+        return rideProductType;
+    }
+
+    public String getRideDuration() {
+        return rideDuration;
+    }
+
+    public String getRideDistance() {
+        return rideDistance;
+    }
+
+    public String getRideStartDate() {
+        return rideStartDate;
+    }
+
+    public String getRideStartTime() {
+        return rideStartTime;
+    }
+
+    public boolean getSpecialZonePickup(){
+        return specialZonePickup;
+    }
+
+    public int getDriverDefaultStepFee(){
+        return driverDefaultStepFee;
+    }
+
+    public boolean isDowngradeEnabled(){
+        return downgradeEnabled;
+    }
     public boolean isGotoTag() {
         return gotoTag;
     }
@@ -101,7 +216,16 @@ public class SheetModel {
 
     public int getCustomerTip() {return customerExtraFee;}
 
+    public int getCongestionCharges() {return congestionCharges;}
+    public int getPetCharges() {return petCharges;}
+
+    public Boolean isFavourite() {return isFavourite;}
+
+    public int getCoinsForGoldTierRide() {return coinsRewardedOnGoldTierRide;}
+
     public Boolean getDisabilityTag() {return disabilityTag; }
+
+    public Boolean isThirdPartyBooking() {return isThirdPartyBooking;}
 
     public void setOfferedPrice(double offeredPrice) {
         this.offeredPrice = offeredPrice;
@@ -116,6 +240,16 @@ public class SheetModel {
     }
 
     public String getDistanceToBeCovered() {
+        DecimalFormat df = new DecimalFormat("###.##", new DecimalFormatSymbols(new Locale("en", "us")));
+        df.setMaximumFractionDigits(1);
+        return df.format(distanceToBeCovered / 1000);
+    }
+
+    public int getTollCharges() {
+        return tollCharges;
+    }
+
+    public float getDistanceToBeCovFloat() {
         return distanceToBeCovered;
     }
 
@@ -233,5 +367,55 @@ public class SheetModel {
 
     public String getDurationToPickup(){
         return durationToPickup;
+    }
+
+    public String getNotificationSource(){
+        return notificationSource;
+    }
+
+    public int getDriverPickUpCharges() { 
+        return driverPickUpCharges;
+    }
+    
+    public double getSrcLat() {
+        return srcLat;
+    }
+
+    public double getSrcLng() {
+        return srcLng;
+    }
+
+    public double getDestLat() {
+        return destLat;
+    }
+
+    public double getDestLng() {
+        return destLng;
+    }
+
+    public double getParkingCharges() {
+        return parkingCharge;
+    }
+
+    public int getStops() { return stops; }
+
+    private boolean initialIncButtonToggle(){
+        if (offeredPrice <= 0){
+            return true;
+        }else if (offeredPrice >= driverMaxExtraFee){
+            return false;
+        }else {
+            return true;
+        }
+    }
+
+    private boolean initialDecButtonToggle(){
+        if (offeredPrice <= 0){
+            return false;
+        }else if (offeredPrice >= driverMaxExtraFee){
+            return true;
+        }else {
+            return true;
+        }
     }
 }

@@ -20,6 +20,7 @@ import Kernel.Types.Id
 data SpecialLocationPriority = SpecialLocationPriority
   { id :: Id SpecialLocationPriority,
     merchantId :: Text,
+    merchantOperatingCityId :: Text,
     category :: Text,
     pickupPriority :: Int,
     dropPriority :: Int

@@ -1,4 +1,5 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -12,11 +13,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.ServerName where
 
 import Data.Singletons.TH
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Utils.Dhall
@@ -28,8 +29,10 @@ data DataServer = DataServer
   }
   deriving (Generic, FromDhall, Eq, Ord)
 
-data ServerName = APP_BACKEND | APP_BACKEND_MANAGEMENT | DRIVER_OFFER_BPP | DRIVER_OFFER_BPP_MANAGEMENT | SPECIAL_ZONE
+data ServerName = APP_BACKEND | APP_BACKEND_MANAGEMENT | DRIVER_OFFER_BPP | DRIVER_OFFER_BPP_MANAGEMENT | SPECIAL_ZONE | BHARAT_TAXI
   deriving (Generic, FromDhall, Eq, Show, Read, FromJSON, ToJSON, ToSchema, Ord)
+
+$(mkBeamInstancesForEnumAndList ''ServerName)
 
 genSingletons [''ServerName]
 

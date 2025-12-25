@@ -19,18 +19,21 @@ where
 
 import qualified Beckn.ACL.Init as ACL
 import qualified Domain.Action.UI.Confirm as DConfirm
+import Domain.Types
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchRequest
-import qualified Domain.Types.TripTerms as DTripTerms
+import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.VehicleVariant
+import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -38,13 +41,16 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Confirm as SConfirm
-import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import SharedLogic.Type
+import qualified Storage.CachedQueries.BppDetails as CQBPP
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 import Tools.Event
+import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 
 data DOnSelectReq = DOnSelectReq
@@ -55,30 +61,37 @@ data DOnSelectReq = DOnSelectReq
 
 data ProviderInfo = ProviderInfo
   { providerId :: Text,
-    name :: Text,
+    name :: Maybe Text,
     url :: BaseUrl,
-    mobileNumber :: Text,
-    ridesCompleted :: Int
+    mobileNumber :: Maybe Text
   }
 
 data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    estimatedTotalFare :: Money,
+    estimatedFare :: Price,
+    discount :: Maybe Price,
+    -- estimatedTotalFare :: Price,
     quoteDetails :: DriverOfferQuoteDetails,
-    descriptions :: [Text],
-    specialLocationTag :: Maybe Text
+    specialLocationTag :: Maybe Text,
+    serviceTierName :: Maybe Text,
+    serviceTierType :: Maybe DVST.ServiceTierType,
+    serviceTierShortDesc :: Maybe Text,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isBlockedRoute :: Maybe Bool,
+    quoteValidTill :: UTCTime,
+    billingCategory :: BillingCategory,
+    tripCategory :: TripCategory
   }
 
 data DriverOfferQuoteDetails = DriverOfferQuoteDetails
   { driverName :: Text,
-    driverId :: Text,
-    durationToPickup :: Int, -- Seconds?
-    distanceToPickup :: HighPrecMeters,
+    durationToPickup :: Maybe Int, -- Seconds?
+    distanceToPickup :: Maybe HighPrecMeters,
     validTill :: UTCTime,
     rating :: Maybe Centesimal,
-    bppDriverQuoteId :: Text
+    isUpgradedToCab :: Maybe Bool,
+    bppDriverQuoteId :: Text,
+    isSafetyPlus :: Bool
   }
   deriving (Generic, Show)
 
@@ -98,44 +111,56 @@ onSelect ::
 onSelect OnSelectValidatedReq {..} = do
   now <- getCurrentTime
   quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest) quotesInfo
-  logPretty DEBUG "quotes" quotes
   forM_ quotes $ \quote -> do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
-  _ <- QQuote.createMany quotes
-  _ <- QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
-  void $ QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
-  QPFS.clearCache searchRequest.riderId
-
+  QQuote.createMany quotes
+  void $ QEstimate.updateStatus DEstimate.GOT_DRIVER_QUOTE estimate.id
   if searchRequest.autoAssignEnabledV2 == Just True
     then do
       let lowestFareQuote = selectLowestFareQuote quotes
       case lowestFareQuote of
-        Just autoAssignQuote -> do
-          let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quoteId = autoAssignQuote.id, paymentMethodId = searchRequest.selectedPaymentMethodId}
-          dConfirmRes <- SConfirm.confirm dConfirmReq
-          becknInitReq <- ACL.buildInitReq dConfirmRes
-          handle (errHandler dConfirmRes.booking) $ void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
-        Nothing -> Notify.notifyOnDriverOfferIncoming estimate.id quotes person
+        Just (autoAssignQuote, False) -> do
+          -- Lock Description: This is a Lock held between OnSelect which calls Confirm Internally to create Booking and UI Confirm for the Quote, if UI Confirm is OnGoing then the OnSelect will not do Confirm and simply ignore.
+          -- Lock Release: Held for 10 seconds once acquired.
+          isLockAcquired <- SConfirm.tryInitTriggerLock autoAssignQuote.requestId
+          when isLockAcquired $ do
+            merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
+            let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quote = autoAssignQuote, paymentMethodId = searchRequest.selectedPaymentMethodId, paymentInstrument = searchRequest.selectedPaymentInstrument, merchant}
+            dConfirmRes <- SConfirm.confirm dConfirmReq
+            becknInitReq <- ACL.buildInitReqV2 dConfirmRes
+            handle (errHandler dConfirmRes.booking) $ do
+              Metrics.startMetricsBap Metrics.INIT dConfirmRes.merchant.name searchRequest.id.getId dConfirmRes.booking.merchantOperatingCityId.getId
+              void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq searchRequest.merchantId
+        _ -> do
+          bppDetails <- forM ((.providerId) <$> quotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
+          Notify.notifyOnDriverOfferIncoming estimate.id estimate.tripCategory quotes person bppDetails
     else do
-      Notify.notifyOnDriverOfferIncoming estimate.id quotes person
+      bppDetails <- forM ((.providerId) <$> quotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
+      Notify.notifyOnDriverOfferIncoming estimate.id estimate.tripCategory quotes person bppDetails
   where
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking booking
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking booking
       | otherwise = throwM exc
 
-selectLowestFareQuote :: [DQuote.Quote] -> Maybe DQuote.Quote
-selectLowestFareQuote (quoteInfo : quoteInfoArray) =
-  if null quoteInfoArray
-    then Just quoteInfo
-    else do
-      restQuoteResult <- selectLowestFareQuote quoteInfoArray
-      Just $ comparator quoteInfo restQuoteResult
+selectLowestFareQuote :: [DQuote.Quote] -> Maybe (DQuote.Quote, Bool)
+selectLowestFareQuote (quoteInfo : quoteInfoArray) = do
+  quote <-
+    if null quoteInfoArray
+      then Just quoteInfo
+      else do
+        (restQuoteResult, _) <- selectLowestFareQuote quoteInfoArray
+        Just $ comparator quoteInfo restQuoteResult
+  let isUpgradedToCab =
+        case quote.quoteDetails of
+          DQuote.DriverOfferDetails details -> fromMaybe False details.isUpgradedToCab
+          _ -> False
+  Just (quote, isUpgradedToCab)
 selectLowestFareQuote [] = Nothing
 
 comparator :: DQuote.Quote -> DQuote.Quote -> DQuote.Quote
 comparator quote1 quote2 =
-  if quote1.estimatedFare < quote2.estimatedFare
+  if quote1.estimatedFare.amount < quote2.estimatedFare.amount
     then quote1
     else quote2
 
@@ -149,31 +174,55 @@ buildSelectedQuote ::
   m DQuote.Quote
 buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {..} QuoteInfo {..} = do
   uid <- generateGUID
-  tripTerms <- buildTripTerms descriptions
-  driverOffer <- buildDriverOffer estimate.id quoteDetails req
+  let tripTerms = Nothing
+  quoteDetails_ <- buildDriverQuoteDetails tripCategory
   let quote =
         DQuote.Quote
           { id = uid,
-            providerMobileNumber = providerInfo.mobileNumber,
-            providerName = providerInfo.name,
-            providerCompletedRidesCount = providerInfo.ridesCompleted,
             providerId = providerInfo.providerId,
             providerUrl = providerInfo.url,
             createdAt = now,
-            quoteDetails = DQuote.DriverOfferDetails driverOffer,
+            updatedAt = now,
+            quoteDetails = quoteDetails_,
             requestId = estimate.requestId,
             itemId = estimate.itemId,
+            validTill = quoteValidTill,
+            estimatedTotalFare = estimatedFare,
+            estimatedPickupDuration = Nothing,
+            vehicleServiceTierType = fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType,
+            tollChargesInfo =
+              ((,) <$> (estimate.tollChargesInfo <&> (.tollCharges)) <*> (estimate.tollChargesInfo <&> (.tollNames)))
+                <&> \(tollCharges', tollNames') ->
+                  DQuote.TollChargesInfo
+                    { tollCharges = tollCharges',
+                      tollNames = tollNames'
+                    },
+            vehicleServiceTierAirConditioned = estimate.vehicleServiceTierAirConditioned,
+            isAirConditioned = estimate.isAirConditioned,
+            vehicleServiceTierSeatingCapacity = estimate.vehicleServiceTierSeatingCapacity,
+            specialLocationName = estimate.specialLocationName,
+            quoteBreakupList = [], -- Not Handling as Rate Card details not required after Select stage
+            tripCategory = Just tripCategory,
+            vehicleIconUrl = estimate.vehicleIconUrl,
+            isSafetyPlus = quoteDetails.isSafetyPlus,
+            billingCategory = billingCategory,
             ..
           }
   pure quote
+  where
+    buildDriverQuoteDetails = \case
+      Ambulance _ -> DQuote.AmbulanceDetails <$> buildDriverOffer estimate.id quoteDetails req tripCategory
+      Delivery _ -> DQuote.DeliveryDetails <$> buildDriverOffer estimate.id quoteDetails req tripCategory
+      _ -> DQuote.DriverOfferDetails <$> buildDriverOffer estimate.id quoteDetails req tripCategory
 
 buildDriverOffer ::
   MonadFlow m =>
   Id DEstimate.Estimate ->
   DriverOfferQuoteDetails ->
   DSearchRequest.SearchRequest ->
+  TripCategory ->
   m DDriverOffer.DriverOffer
-buildDriverOffer estimateId DriverOfferQuoteDetails {..} searchRequest = do
+buildDriverOffer estimateId DriverOfferQuoteDetails {..} searchRequest tripCategory = do
   uid <- generateGUID
   now <- getCurrentTime
   pure
@@ -181,21 +230,15 @@ buildDriverOffer estimateId DriverOfferQuoteDetails {..} searchRequest = do
       { id = uid,
         merchantId = Just searchRequest.merchantId,
         merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
-        driverId = Just driverId,
         bppQuoteId = bppDriverQuoteId,
         status = DDriverOffer.ACTIVE,
+        createdAt = now,
         updatedAt = now,
+        distanceUnit = searchRequest.distanceUnit,
+        distanceToPickup = convertHighPrecMetersToDistance searchRequest.distanceUnit <$> distanceToPickup,
+        fareProductType = Just $ getFareProductType tripCategory,
         ..
       }
-
-buildTripTerms ::
-  MonadFlow m =>
-  [Text] ->
-  m (Maybe DTripTerms.TripTerms)
-buildTripTerms [] = pure Nothing
-buildTripTerms descriptions = do
-  id <- generateGUID
-  pure . Just $ DTripTerms.TripTerms {..}
 
 validateRequest :: DOnSelectReq -> Flow OnSelectValidatedReq
 validateRequest DOnSelectReq {..} = do

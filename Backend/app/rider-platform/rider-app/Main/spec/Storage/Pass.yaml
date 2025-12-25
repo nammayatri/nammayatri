@@ -1,0 +1,70 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  PassType: Domain.Types.PassType
+  HighPrecMoney: Kernel.Types.Common
+  FRFSVehicleServiceTier: Domain.Types.FRFSVehicleServiceTier
+  Value: Data.Aeson
+  ServiceTierType: BecknV2.FRFS.Enums
+
+Pass:
+  tableName: pass
+
+  types:
+    PassDocumentType:
+      enum: "ProfilePicture,Aadhaar"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+    Benefit:
+      enum: "FullSaving,FixedSaving HighPrecMoney,PercentageSaving HighPrecMoney"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PassDocumentType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PassDocumentType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Benefit>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Benefit>
+
+  fields:
+    id: Id Pass
+    passTypeId: Id PassType
+    code: Text
+    name: Maybe Text
+    description: Maybe Text
+    amount: HighPrecMoney
+    benefitDescription: Text
+    benefit: Maybe Benefit
+    applicableVehicleServiceTiers: "[ServiceTierType]"
+    purchaseEligibilityJsonLogic: "[Value]"
+    redeemEligibilityJsonLogic: "[Value]"
+    maxValidTrips: Maybe Int
+    maxValidDays: Maybe Int
+    verificationValidity: Seconds
+    documentsRequired: "[PassDocumentType]"
+    order: Int
+    enable: Bool
+    autoApply: Bool
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  beamType:
+    verificationValidity: Maybe Seconds
+
+  fromTType:
+    verificationValidity: Kernel.Prelude.fromMaybe 9000|I
+
+  toTType:
+    verificationValidity: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    passTypeId: !SecondaryKey
+
+  sqlType:
+    applicableVehicleServiceTiers: text[]
+    documentsRequired: text[]
+    purchaseEligibilityJsonLogic: jsonb[]
+    redeemEligibilityJsonLogic: jsonb[]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

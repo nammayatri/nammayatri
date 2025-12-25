@@ -1,0 +1,389 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  TicketServiceResp: API.Types.UI.TicketService
+  TicketBookingUpdateSeatsReq: API.Types.UI.TicketService
+  TicketBookingCancelReq: API.Types.UI.TicketService
+  TicketServiceCancelReq: API.Types.UI.TicketService
+  TicketBookingDetails: API.Types.UI.TicketService
+  TicketServiceVerificationResp: API.Types.UI.TicketService
+  TicketFleetVehicleResp: API.Types.UI.TicketService
+  TicketPlaceBookingList: API.Types.UI.TicketService
+  TicketServiceVerificationReq: API.Types.UI.TicketService
+  TicketService: Domain.Types.TicketService
+  TicketBookingService: Domain.Types.TicketBookingService
+  TicketPlace: Domain.Types.TicketPlace
+  TicketSubPlace: Domain.Types.TicketSubPlace
+  TicketBooking: Domain.Types.TicketBooking
+  BankAccountType: Domain.Types.TicketMerchantDetails
+  ContactDetails: Domain.Types.TicketMerchantDetails
+  RequestorRole: Domain.Types.MerchantOnboarding
+  GetFileResponse: Domain.Types.MerchantOnboarding
+  TicketPlaceDashboardDetails: Domain.Types.TicketDashboard
+  CreateOrderResp: Kernel.External.Payment.Interface.Types
+  TicketBookingReq: API.Types.UI.TicketService
+  DirectTicketBookingReq: API.Types.UI.TicketService
+  DirectTicketBookingResp: API.Types.UI.TicketService
+  TicketBookingAPIEntityV2: API.Types.UI.TicketService
+  BookingStatus: Domain.Types.TicketBooking
+  PaymentMethod: Domain.Types.TicketBooking
+  Summary: Dashboard.Common
+
+importPackageOverrides:
+  API.Types.UI.TicketService: "rider-app"
+  Domain.Types.TicketService: "rider-app"
+  Domain.Types.TicketBookingService: "rider-app"
+  Domain.Types.TicketPlace: "rider-app"
+  Domain.Types.TicketBooking: "rider-app"
+  Domain.Types.TicketMerchantDetails: "rider-app"
+  Domain.Types.MerchantOnboarding: "rider-app"
+  Domain.Types.TicketDashboard: "rider-app"
+
+
+module: Tickets
+apiPrefix: ""
+
+apis:
+  - POST: # VerifyBookingDetailsAPI
+      endpoint: /tickets/{personServiceId}/{ticketBookingShortId}/verify
+      name: PostTicketsVerify
+      auth: ApiAuthV2
+      params:
+        personServiceId: Id TicketService
+        ticketBookingShortId: ShortId TicketBookingService
+      query:
+        - fleetOwnerId: Text
+        - vehicleId: Text
+      response:
+        type: TicketServiceVerificationResp
+      migrate:
+        endpoint: TicketsAPI VerifyBookingDetails
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS VERIFY_BOOKING_DETAILS
+  - POST: # GetServicesAPI
+      endpoint: /{ticketPlaceId}/services
+      auth: ApiAuthV2
+      params:
+        ticketPlaceId: Id TicketPlace
+      query:
+        - date: Day
+        - subPlaceId: Id TicketSubPlace
+      response:
+        type: "[TicketServiceResp]"
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS GET_TICKET_SERVICES
+  - GET: # GetTicketPlacesAPI
+      endpoint:  /places
+      auth: ApiAuthV2
+      response:
+        type: "[TicketPlace]"
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS GET_TICKET_PLACES
+  - POST: # UpdateSeatManagementAPI
+      endpoint: /update
+      auth: ApiAuthV2
+      request:
+        type: TicketBookingUpdateSeatsReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS UPDATE_SEAT_MANAGEMENT
+  - POST: # CancelTicketBookingServiceAPI
+      endpoint: /bookings/cancel
+      auth: ApiAuthV2
+      request:
+        type: TicketBookingCancelReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CANCEL_TICKET_BOOKING
+  - POST: # CancelTicketServiceAPI
+      endpoint: /service/cancel
+      auth: ApiAuthV2
+      request:
+        type: TicketServiceCancelReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CANCEL_TICKET_SERVICE
+  - GET: # GetTicketBookingDetailsAPI
+      endpoint: /booking/{ticketBookingShortId}/details
+      auth: ApiAuthV2
+      params:
+        ticketBookingShortId: ShortId TicketBooking
+      response:
+        type: TicketBookingDetails
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS GET_TICKET_BOOKING_DETAILS
+
+  - POST: # RegisterTicketDashboardAPI
+      endpoint: /ticketdashboard/register
+      auth: NoAuth
+      request:
+        type: TicketDashboardRegisterReq
+      response:
+        type: TicketDashboardRegisterResp
+  - POST: # LoginTicketDashboardAPI
+      endpoint: /ticketdashboard/login/auth
+      auth: NoAuth
+      request:
+        type: TicketDashboardLoginReq
+      response:
+        type: APISuccess
+  - POST: # LoginTicketDashboardVerifyAPI
+      endpoint: /ticketdashboard/login/verify
+      auth: NoAuth
+      request:
+        type: TicketDashboardLoginReq
+      response:
+        type: TicketDashboardLoginResp
+  - GET: # GetTicketAggrementTemplateAPI
+      endpoint: /ticketdashboard/agreement/{templateName}
+      auth: ApiAuthV2
+      params:
+        templateName: Text
+      response:
+        type: TicketDashboardAgreementTemplateResp
+  - GET:
+      endpoint: /ticketdashboard/user/info
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - userRole: RequestorRole
+        - requestorRole: RequestorRole
+      response:
+        type: TicketDashboardUserInfo
+  - GET:
+      endpoint: /ticketdashboard/file/{fileId}
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        fileId: Text
+      response:
+        type: GetFileResponse
+  - POST: # RegisterTicketDashboardAPI
+      endpoint: /ticketdashboard/sendverifyotp
+      auth: NoAuth
+      request:
+        type: SendVerifyOtpReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/info
+      auth: ApiAuthV2
+      params:
+        ticketPlaceId: Id TicketPlace
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      response:
+        type: TicketPlaceDashboardDetails
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/update
+      auth: ApiAuthV2
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      request:
+        type: TicketPlaceDashboardDetails
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /ticketdashboard/ticketplaces
+      auth: ApiAuthV2
+      query:
+        - status: Text
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      response:
+        type: "[TicketPlace]"
+  - GET:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/subPlaces
+      auth: ApiAuthV2
+      params:
+        ticketPlaceId: Id TicketPlace
+      response:
+        type: "[TicketSubPlace]"
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/updateSubPlaces
+      auth: ApiAuthV2
+      params:
+        ticketPlaceId: Id TicketPlace
+      request:
+        type: "[TicketSubPlace]"
+      response:
+        type: APISuccess
+  - GET: # GetTicketFleetVehiclesAPI
+      endpoint: /ticket/places/{placeId}/fleet/VehicleAssociation/list
+      name: GetTicketFleetVehicles
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      query:
+        - limit: Int
+        - offset: Int
+        - searchString: Text
+      response:
+        type: "[TicketFleetVehicleResp]"
+  - GET:
+      endpoint: /ticket/places/{placeId}/fleet/VehicleAssociation/list/v2
+      name: getTicketFleetVehiclesV2
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      query:
+        - limit: Int
+        - offset: Int
+        - searchString: Text
+      response:
+        type: "[TicketFleetVehicleResp]"
+  - POST: # VerifyBookingDetailsAPI
+      endpoint: /tickets/{personServiceId}/{ticketServiceShortId}/verify/v2
+      name: PostTicketBookingsVerifyV2
+      auth: ApiAuthV2
+      params:
+        personServiceId: Id TicketService
+        ticketServiceShortId: ShortId TicketBookingService
+      request:
+        type: TicketServiceVerificationReq
+      response:
+        type: TicketServiceVerificationResp
+
+  - POST: # BookTicketFromDashboardAPI
+      endpoint: /ticket/places/{placeId}/book
+      name: PostTicketPlacesBook
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      request:
+        type: TicketBookingReq
+      response:
+        type: CreateOrderResp
+
+  - GET: # GetTicketPlacesForDashboardAPI
+      endpoint: /ticket/places
+      name: GetTicketPlaces
+      auth: ApiAuthV2
+      response:
+        type: "[TicketPlace]"
+
+  - GET: # GetTicketPlaceServicesForDashboardAPI
+      endpoint: /ticket/places/{placeId}/services
+      name: GetTicketPlaceServices
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      query:
+        - date: Day
+        - subPlaceId: Id TicketSubPlace
+      response:
+        type: "[TicketServiceResp]"
+
+  - GET: # GetTicketBookingFromDashboardAPI
+      endpoint: /ticket/booking/{bookingShortId}
+      name: GetTicketBookingDetails
+      auth: ApiAuthV2
+      params:
+        bookingShortId: ShortId TicketBooking
+      response:
+        type: TicketBookingDetails
+
+  - GET: # GetTicketBookingStatusForDashboardAPI
+      endpoint: /dashboard/booking/{userPhoneNumber}/{bookingShortId}/status
+      auth: ApiAuthV2
+      params:
+        userPhoneNumber: Text
+        bookingShortId: ShortId TicketBooking
+      response:
+        type: BookingStatus
+
+  - GET: # GetAllTicketBookingsForDashboardAPI
+      endpoint: /ticket/bookings
+      name: GetAllTicketBookings
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - status: BookingStatus
+      response:
+        type: "[TicketBookingAPIEntityV2]"
+
+  - POST: # CashCollectionAPI
+      endpoint: /ticket/booking/{bookingShortId}/cashCollect
+      name: PostTicketBookingCashCollect
+      auth: ApiAuthV2
+      params:
+        bookingShortId: ShortId TicketBooking
+      response:
+        type: APISuccess
+
+  - POST: # DirectBookTicketFromDashboardAPI
+      endpoint: /ticket/places/{placeId}/directBook
+      name: PostTicketPlacesDirectBook
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      query:
+        requestorId: Text
+      request:
+        type: DirectTicketBookingReq
+      response:
+        type: DirectTicketBookingResp
+
+  - GET: # GetTicketPlaceBookingsAPI
+      endpoint: /ticket/places/{placeId}/bookings/list
+      name: GetTicketPlaceBookings
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      query:
+        - limit: Int
+        - offset: Int
+      mandatoryQuery:
+        status: BookingStatus
+      response:
+        type: TicketPlaceBookingList
+
+types:
+  SendVerifyOtpReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+  TicketDashboardRegisterReq:
+    - firstName: Text
+    - lastName: Text
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - merchantId: Text
+    - city: Maybe Text
+    - email: Maybe Text
+    - otp: Text
+  TicketDashboardRegisterResp:
+    - success: Bool
+    - message: Maybe Text
+    - id: Maybe Text
+  TicketDashboardLoginReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - otp: Maybe Text
+  TicketDashboardLoginResp:
+    - authToken: Maybe Text
+  TicketDashboardAgreementTemplateResp:
+    - template: Text
+  TicketDashboardUserInfo:
+    - firstName: Maybe Text
+    - lastName: Maybe Text
+    - role: RequestorRole
+    - registeredNumber: Text
+    - agreementLetter: Maybe Text
+    - bankAccountNumber: Maybe Text
+    - bankAccountType: Maybe BankAccountType
+    - bankBeneficiaryName: Maybe Text
+    - bankIfsc: Maybe Text
+    - contactDetails: Maybe ContactDetails
+    - docCancelledCheque: Maybe Text
+    - docPan: Maybe Text
+    - gstin: Maybe Text
+    - orgAddress: Maybe Text
+    - orgName: Maybe Text
+    - pan: Maybe Text
+    - state: Maybe Text

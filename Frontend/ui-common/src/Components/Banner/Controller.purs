@@ -18,6 +18,14 @@ module Components.Banner.Controller where
 import Styles.Colors as Color
 import PrestoDOM (Length(..), Margin(..), Padding(..))
 import Font.Style(Style(..))
+import Data.Maybe (Maybe(..))
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
+import Prelude (class Eq, class Show)
+
+instance showAction :: Show Action where
+  show (OnClick) = "OnClick"
+  show (NoAction) = "NoAction"
 
 
 data Action = OnClick
@@ -28,26 +36,41 @@ type Config = {
   backgroundColor :: String,
   title :: String,
   titleColor :: String,
-  actionText :: String,
-  actionTextColor :: String,
   imageUrl :: String,
   imageHeight :: Length,
   imageWidth :: Length,
   isBanner :: Boolean,
-  actionTextStyle :: Style,
   titleStyle :: Style,
   stroke :: String,
   showActionArrow :: Boolean,
-  alertText :: String,
-  alertTextColor :: String,
-  alertTextStyle :: Style,
   alertTextVisibility :: Boolean,
   bannerClickable :: Boolean,
   padding :: Padding,
   margin :: Margin,
   actionTextVisibility :: Boolean,
   titleTextVisibility :: Boolean,
-  imagePadding :: Padding
+  imagePadding :: Padding,
+  cornerRadius :: Number,
+  imageMargin :: Margin,
+  actionText :: TextConfig,
+  alertText :: TextConfig,
+  actionTextImgType :: ArrowType,
+  actionPadding :: Padding
+}
+
+data ArrowType = DownArrow | RightArrow
+
+derive instance genericArrowType :: Generic ArrowType _ 
+instance eqArrowType :: Eq ArrowType where eq = genericEq
+
+type TextConfig = {
+  backgroundColor :: Maybe String,
+  cornerRadius :: Number,
+  padding :: Padding,
+  margin :: Margin,
+  style :: Style,
+  text :: String,
+  textColor :: String
 }
 
 config :: Config
@@ -55,24 +78,40 @@ config = {
     backgroundColor : Color.darkGreen,
     title : "",
     titleColor : Color.darkGreen,
-    actionText : "",
-    actionTextColor : Color.darkGreen,
     imageUrl : "",
     imageHeight : (V 95),
     imageWidth : (V 118),
     isBanner : true,
-    actionTextStyle : ParagraphText,
     titleStyle : Body7,
     stroke : "0,#FFFFFF",
     showActionArrow : true,
-    alertText : "",
-    alertTextColor : "",
-    alertTextStyle : Tags,
     alertTextVisibility : false,
     bannerClickable : true,
     padding : PaddingTop 0,
     margin : MarginTop 12,
     actionTextVisibility : true,
     titleTextVisibility : true,
-    imagePadding : PaddingVertical 5 5
+    imagePadding : PaddingVertical 5 5,
+    imageMargin : MarginRight 5,
+    cornerRadius : 12.0,
+    actionTextImgType : RightArrow,
+    actionText : {
+      backgroundColor : Just Color.transparent,
+      cornerRadius : 0.0,
+      padding : PaddingHorizontal 0 0,
+      margin : MarginTop 0,
+      style : ParagraphText,
+      text : "",
+      textColor : Color.darkGreen
+    },
+    alertText : {
+      backgroundColor : Nothing ,
+      cornerRadius : 0.0,
+      padding : PaddingHorizontal 0 0,
+      margin : MarginTop 0,
+      style : Tags,
+      text : "",
+      textColor : ""
+    },
+    actionPadding : PaddingHorizontal 12 12
 }

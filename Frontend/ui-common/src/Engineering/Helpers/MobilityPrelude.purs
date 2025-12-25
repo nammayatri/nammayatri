@@ -15,12 +15,20 @@
 module Mobility.Prelude where
 
 import Data.String (null,Pattern(..), contains, joinWith, toLower, take, toUpper, drop, trim, split)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe, fromJust)
 import PrestoDOM as PD
 import Prelude
-import Data.Array (elem, cons)
 import Data.Array as DA
 import Data.Foldable (foldl)
+import Data.Number (pi, cos)
+import Data.Tuple (Tuple(..))
+import Data.Int (pow)
+import Data.Function.Uncurried (Fn3(..), runFn3)
+import Data.String as DS
+import Effect (Effect)
+import Data.String.CodeUnits (fromCharArray, toCharArray)
+
+foreign import swapElements :: forall a. Fn3 Int Int (Array a) (Array a)
 
 has :: String -> String -> Boolean
 has msg errorPattern = contains (Pattern errorPattern) msg
@@ -41,6 +49,16 @@ maybeToBool val = toBool $ fromMaybe "" val
 boolToVisibility :: Boolean -> PD.Visibility
 boolToVisibility true = PD.VISIBLE
 boolToVisibility false = PD.GONE
+
+boolToInvisibility :: Boolean -> PD.Visibility
+boolToInvisibility true = PD.VISIBLE
+boolToInvisibility false = PD.INVISIBLE
+
+toggleVisibility :: PD.Visibility -> PD.Visibility
+toggleVisibility visibility = if visibility == PD.VISIBLE then PD.GONE else PD.VISIBLE
+
+reverseString :: String -> String
+reverseString = fromCharArray <<< DA.reverse <<< toCharArray
 
 catMaybeStrings :: Array (Maybe String) -> String
 catMaybeStrings arr = 
@@ -67,4 +85,95 @@ caseInsensitiveCompare str1 str2 =
 
 groupAdjacent :: forall a. Array a -> Array (Array a)
 groupAdjacent [] = []
-groupAdjacent x = cons (DA.take 2 x) (groupAdjacent (DA.drop 2 x))
+groupAdjacent x = DA.cons (DA.take 2 x) (groupAdjacent (DA.drop 2 x))
+
+sortAccToDayName arr = DA.sortBy (\a b -> compare (dayToIndex a) (dayToIndex b)) arr
+
+dayToIndex :: String -> Int
+dayToIndex day =
+  case day of
+    "Mon" -> 0
+    "Tue" -> 1
+    "Wed" -> 2
+    "Thu" -> 3
+    "Fri" -> 4
+    "Sat" -> 5
+    "Sun" -> 6
+    _ -> 7
+
+pseudoRandomInt :: Int -> Tuple Int Int
+pseudoRandomInt seed =
+  let newSeed = (seed * 1103515245 + 12345) `mod` (2 `pow` 31)
+      value = newSeed `mod` 100
+  in Tuple newSeed value
+
+calculateNearbyLocation :: Number -> Number -> {nearByLat:: Number,nearByLon:: Number}
+calculateNearbyLocation lat lon =
+    let
+        distanceInDegrees = 50.0 / 111111.0
+        newLat = lat + distanceInDegrees
+        newLon = lon + distanceInDegrees / cos (lat * pi / 180.0)
+    in
+        {nearByLat: newLat, nearByLon: newLon}
+
+shuffleArray :: forall a. Int -> Array a -> Array a
+shuffleArray seed arr =
+  let len = DA.length arr
+      shuffle :: Int -> Int -> Array a -> Array a
+      shuffle _ 0 array = array
+      shuffle currentSeed i array =
+        let Tuple newSeed randomIndex = pseudoRandomInt currentSeed
+            j = randomIndex `mod` i
+            swapped = runFn3 swapElements i j array
+        in shuffle newSeed (i - 1) swapped
+  in shuffle seed (len - 1) arr
+findStringWithPrefix :: String -> Array String -> Array String
+findStringWithPrefix prefix arr = DA.filter (\item -> startsWith prefix item) arr
+
+startsWith :: String -> String -> Boolean
+startsWith prefix str = DS.take (DS.length prefix) (DS.toLower str) == (DS.toLower prefix)
+
+noView :: forall w . PD.PrestoDOM (Effect Unit) w
+noView = PD.textView [ PD.width $ PD.V 0 , PD.height $ PD.V 0, PD.visibility PD.GONE]
+
+getNumberWithSuffix :: Int -> String
+getNumberWithSuffix n
+  | n `mod` 100 >= 11 && n `mod` 100 <= 13 = show n <> "th"
+  | otherwise = show n <> case n `mod` 10 of
+      1 -> "st"
+      2 -> "nd"
+      3 -> "rd"
+      _ -> "th"
+
+convertMonthsToSeconds :: Int -> Int
+convertMonthsToSeconds months = months * daysPerMonth * secondsPerDay
+  where
+    daysPerMonth = 30 
+    secondsPerDay = 24 * 60 * 60
+
+-- Insert an element at a particular position in an array
+insertAtPosition :: forall a. Int -> a -> Array a -> Array a
+insertAtPosition pos value arr =
+  if pos < 0 || pos > DA.length arr 
+    then arr 
+  else
+    let
+      before = DA.slice 0 pos arr
+      after = DA.slice pos (DA.length arr) arr
+    in
+      DA.concat [before, [value], after]
+
+-- Insert an array at a particular position in an array
+insertArrayAtPosition :: forall a. Int -> Array a -> Array a -> Array a
+insertArrayAtPosition pos value arr =
+  if pos < 0 || pos > DA.length arr 
+    then arr 
+  else
+    let
+      before = DA.slice 0 pos arr
+      after = DA.slice pos (DA.length arr) arr
+    in
+      DA.concat [before, value, after]
+
+layoutWithWeight :: forall w . PD.PrestoDOM (Effect Unit) w
+layoutWithWeight = PD.linearLayout [ PD.weight 1.0 ][]

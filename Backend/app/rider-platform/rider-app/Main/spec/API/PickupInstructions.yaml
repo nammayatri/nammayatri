@@ -1,0 +1,55 @@
+imports:
+  Text: Data.Text
+  Person: Domain.Types.Person
+  PickupInstructions: Domain.Types.PickupInstructions
+  APISuccess: Kernel.Types.APISuccess
+  FileType: AWS.S3
+  FilePath: EulerHS.Prelude
+
+module: PickupInstructions
+
+types:
+  PickupInstructionsReq:
+    lat: Double
+    lon: Double
+    instruction: Text
+    file: "Maybe FilePath"
+
+  ClosestPickupInstructionResp:
+    instruction: "Maybe Text"
+    audioBase64: "Maybe Text"
+
+  DeleteTarget:
+    enum: "Instruction,Audio"
+    derive: "HttpInstance"
+
+apis:
+  # POST /pickupinstructions - Save pickup instructions (with optional media)
+  - POST:
+      endpoint: /pickupinstructions
+      auth: TokenAuth
+      multipart:
+        type: API.Types.UI.PickupInstructions.PickupInstructionsReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # GET /pickupinstructions/closest - Get closest pickup instruction for location
+  - GET:
+      endpoint: /pickupinstructions/closest
+      auth: TokenAuth
+      query:
+        lat: Double
+        lon: Double
+      response:
+        type: API.Types.UI.PickupInstructions.ClosestPickupInstructionResp
+
+  # DELETE /pickupinstructions - Delete specific content from pickup instruction
+  - DELETE:
+      endpoint: /pickupinstructions
+      auth: TokenAuth
+      query:
+        lat: Double
+        lon: Double
+        target: API.Types.UI.PickupInstructions.DeleteTarget
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

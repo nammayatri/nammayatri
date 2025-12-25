@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Tools.Error
   ( module Tools.Error,
@@ -84,6 +83,7 @@ instance IsAPIError RoleError
 data MerchantError
   = MerchantAlreadyExist Text
   | MerchantAccountLimitExceeded Text
+  | UserDisabled
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''MerchantError
@@ -92,13 +92,38 @@ instance IsBaseError MerchantError where
   toMessage = \case
     MerchantAlreadyExist shortId -> Just $ "Merchant with shortId \"" <> show shortId <> "\" already exist."
     MerchantAccountLimitExceeded shortId -> Just $ "Merchant with shortId \"" <> show shortId <> "\" already exist."
+    UserDisabled -> Just "User is disabled. Contact admin"
 
 instance IsHTTPError MerchantError where
   toErrorCode = \case
     MerchantAlreadyExist _ -> "MERCHANT_ALREADY_EXIST"
     MerchantAccountLimitExceeded _ -> "MERCHANT_ACCOUNT_LIMIT_EXCEEDED"
+    UserDisabled -> "USER_DISABLED"
   toHttpCode = \case
     MerchantAlreadyExist _ -> E400
     MerchantAccountLimitExceeded _ -> E400
+    UserDisabled -> E400
 
 instance IsAPIError MerchantError
+
+------------------ CAC ---------------------
+-- This is for temporary implementation of the CAC auth API. This will be depcricated once we have SSO for CAC.
+data CacAuthError = CacAuthError | CacInvalidToken
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CacAuthError
+
+instance IsBaseError CacAuthError where
+  toMessage = \case
+    CacAuthError -> Just "Auth Token Missing !!!!!!!!"
+    CacInvalidToken -> Just "Invalid Auth Token !!!!!!!!"
+
+instance IsHTTPError CacAuthError where
+  toErrorCode = \case
+    CacAuthError -> "CAC_AUTH_ERROR"
+    CacInvalidToken -> "CAC_INVALID_TOKEN"
+  toHttpCode = \case
+    CacAuthError -> E401
+    CacInvalidToken -> E401
+
+instance IsAPIError CacAuthError

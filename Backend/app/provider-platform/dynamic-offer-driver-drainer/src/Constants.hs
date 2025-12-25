@@ -195,3 +195,17 @@ pushToKafkaEnvKey = "PUSH_TO_KAFKA"
 
 kafkaUpdateFailedStream :: String
 kafkaUpdateFailedStream = "driver-kafka-update-failed-stream"
+
+-- DB Connection Recovery Constants
+dbConnectionRetryMaxAttempts :: String
+dbConnectionRetryMaxAttempts = "DB_CONNECTION_RETRY_MAX_ATTEMPTS"
+
+dbConnectionRetryDelayEnvKey :: String
+dbConnectionRetryDelayEnvKey = "DB_CONNECTION_RETRY_DELAY"
+
+-- Default values for DB connection recovery
+defaultDbConnectionRetryMaxAttempts :: Int
+defaultDbConnectionRetryMaxAttempts = 5
+
+defaultDbConnectionRetryDelay :: Int
+defaultDbConnectionRetryDelay = 2000000 -- 2 seconds in microseconds

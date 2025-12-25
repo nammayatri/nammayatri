@@ -1,6 +1,3 @@
-ALTER TABLE atlas_driver_offer_bpp.registration_token
-ADD COLUMN merchant_id TEXT;
-
 UPDATE atlas_driver_offer_bpp.registration_token AS rt
 SET merchant_id = (select p.merchant_id from atlas_driver_offer_bpp.person AS p
     where p.id = rt.entity_id);

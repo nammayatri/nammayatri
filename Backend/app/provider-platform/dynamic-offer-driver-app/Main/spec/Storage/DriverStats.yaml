@@ -1,0 +1,216 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Driver: Domain.Types.Person
+  Currency: Kernel.Types.Common
+  DistanceUnit: Kernel.Types.Common
+  Centesimal: Kernel.Types.Common
+  DriverCoinsFunctionType: Lib.DriverCoins.Types
+
+DriverStats:
+  tableName: driver_stats
+
+
+  fields:
+    driverId : Id Driver
+    idleSince : UTCTime
+    totalRides : Int
+    numDriversOnboarded: Int
+    numFleetsOnboarded: Int
+    totalEarnings : HighPrecMoney
+    bonusEarned : HighPrecMoney
+    lateNightTrips : Int
+    earningsMissed : HighPrecMoney
+    totalDistance : Meters
+    ridesCancelled : Maybe Int
+    totalRidesAssigned : Maybe Int
+    coinCovertedToCashLeft : HighPrecMoney
+    totalCoinsConvertedCash : HighPrecMoney
+    currency : Currency
+    distanceUnit: DistanceUnit
+    rating : Maybe Centesimal
+    totalRatings : Maybe Int
+    totalRatingScore : Maybe Int
+    isValidRating : Maybe Bool
+    updatedAt : UTCTime
+    favRiderCount : Int
+    totalPayoutEarnings: HighPrecMoney
+    totalValidActivatedRides: Int
+    totalReferralCounts: Int
+    totalPayoutAmountPaid: Maybe HighPrecMoney
+    validDriverCancellationTagCount: Int
+    validCustomerCancellationTagCount: Int
+    validCancellationTagsStatsStartDate: Maybe UTCTime
+    safetyPlusRideCount : Int
+    safetyPlusEarnings : HighPrecMoney
+    onlineDuration : Seconds
+    blacklistCoinEvents: Maybe [DriverCoinsFunctionType]
+
+  beamFields:
+    totalEarnings:
+      totalEarnings: Money
+      totalEarningsAmount: Maybe HighPrecMoney
+
+    bonusEarned:
+      bonusEarned: Money
+      bonusEarnedAmount: Maybe HighPrecMoney
+
+    earningsMissed:
+      earningsMissed: Money
+      earningsMissedAmount: Maybe HighPrecMoney
+
+    currency:
+      currency: Maybe Currency
+
+    rating: {}
+
+  beamType:
+    totalDistance: Double
+    numDriversOnboarded: Maybe Int
+    numFleetsOnboarded: Maybe Int
+    coinCovertedToCashLeft: Maybe HighPrecMoney
+    totalCoinsConvertedCash: Maybe HighPrecMoney
+    distanceUnit: Maybe DistanceUnit
+    totalValidActivatedRides: Maybe Int
+    totalReferralCounts: Maybe Int
+    totalPayoutEarnings: Maybe HighPrecMoney
+    validDriverCancellationTagCount: Maybe Int
+    validCustomerCancellationTagCount: Maybe Int
+    safetyPlusRideCount: Maybe Int
+    safetyPlusEarnings:  Maybe HighPrecMoney
+    onlineDuration: Maybe Seconds
+
+  fromTType:
+    totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
+    bonusEarned: Kernel.Types.Common.mkAmountWithDefault bonusEarnedAmount bonusEarned|E
+    earningsMissed: Kernel.Types.Common.mkAmountWithDefault earningsMissedAmount earningsMissed|E
+    coinCovertedToCashLeft: Kernel.Prelude.fromMaybe 0|I
+    totalCoinsConvertedCash: Kernel.Prelude.fromMaybe 0|I
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    totalDistance: Kernel.Types.Common.Meters $ GHC.Float.double2Int totalDistance|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit|E
+    rating: Storage.Queries.Transformers.DriverStats.getRating totalRatings totalRatingScore|EM
+    totalPayoutEarnings: Storage.Queries.Transformers.DailyStats.getHighPrecMoney|I
+    totalValidActivatedRides: Kernel.Prelude.fromMaybe 0|I
+    totalReferralCounts: Kernel.Prelude.fromMaybe 0|I
+    validDriverCancellationTagCount: Kernel.Prelude.fromMaybe 0|I
+    validCustomerCancellationTagCount: Kernel.Prelude.fromMaybe 0|I
+    numDriversOnboarded: Kernel.Prelude.fromMaybe 0|I
+    numFleetsOnboarded: Kernel.Prelude.fromMaybe 0|I
+    safetyPlusRideCount: Kernel.Prelude.fromMaybe 0|I
+    safetyPlusEarnings: Kernel.Prelude.fromMaybe 0|I
+    onlineDuration: Kernel.Prelude.fromMaybe 0|I
+
+  toTType:
+    totalDistance: getTotalDistance
+    totalEarnings: Kernel.Prelude.roundToIntegral totalEarnings|E
+    currency: Kernel.Prelude.Just|I
+    bonusEarned: Kernel.Prelude.roundToIntegral bonusEarned|E
+    totalEarningsAmount: Kernel.Prelude.Just|I
+    bonusEarnedAmount: Kernel.Prelude.Just|I
+    earningsMissed: Kernel.Prelude.roundToIntegral earningsMissed|E
+    earningsMissedAmount: Kernel.Prelude.Just|I
+    coinCovertedToCashLeft: Kernel.Prelude.Just|I
+    totalCoinsConvertedCash: Kernel.Prelude.Just|I
+    distanceUnit: Kernel.Prelude.Just|I
+    totalPayoutEarnings: Kernel.Prelude.Just|I
+    totalPayoutEarningsAmount:  Kernel.Prelude.Just|I
+    totalValidActivatedRides: Kernel.Prelude.Just|I
+    totalReferralCounts: Kernel.Prelude.Just|I
+    validDriverCancellationTagCount: Kernel.Prelude.Just|I
+    validCustomerCancellationTagCount: Kernel.Prelude.Just|I
+    numDriversOnboarded: Kernel.Prelude.Just|I
+    numFleetsOnboarded: Kernel.Prelude.Just|I
+    safetyPlusRideCount: Kernel.Prelude.Just|I
+    safetyPlusEarnings: Kernel.Prelude.Just|I
+    onlineDuration: Kernel.Prelude.Just|I
+
+  constraints:
+    driverId: PrimaryKey
+
+
+  queries:
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: driverId
+
+    updatePayoutEarningsByDriverId:
+      kvFunction: updateOneWithKV
+      params: [totalPayoutEarnings]
+      where: driverId
+
+    updateTotalValidRidesAndPayoutEarnings:
+      kvFunction: updateOneWithKV
+      params: [totalValidActivatedRides, totalPayoutEarnings]
+      where: driverId
+
+    updateTotalReferralCount:
+      kvFunction: updateOneWithKV
+      params: [totalReferralCounts]
+      where: driverId
+
+    updateTotalPayoutAmountPaid:
+      kvFunction: updateOneWithKV
+      params: [totalPayoutAmountPaid]
+      where: driverId
+
+    updateValidDriverCancellationTagCount:
+      kvFunction: updateOneWithKV
+      params: [validDriverCancellationTagCount]
+      where: driverId
+
+    updateValidCustomerCancellationTagCount:
+      kvFunction: updateOneWithKV
+      params: [validCustomerCancellationTagCount]
+      where: driverId
+
+    updateNumDriversOnboarded:
+      kvFunction: updateOneWithKV
+      params: [numDriversOnboarded]
+      where: driverId
+
+    updateNumFleetsOnboarded:
+      kvFunction: updateOneWithKV
+      params: [numFleetsOnboarded]
+      where: driverId
+
+    updateOnlineDuration:
+      kvFunction: updateOneWithKV
+      params: [onlineDuration]
+      where: driverId
+
+    # setMissedEarnings: -- beam Field checkUp DSL Fix needed
+    #   kvFunction: updateOneWithKV
+    #   params: [earningsMissedAmount,earningsMissed]
+    #   where: driverId
+  sqlType:
+    totalEarnings: double precision
+    earningsMissed: double precision
+    totalDistance: double precision
+    bonusEarned: double precision
+    blacklistCoinEvents: text[]
+
+
+  default:
+    totalRides: "0"
+    numDriversOnboarded: "0"
+    numFleetsOnboarded: "0"
+    totalDistance: "0"
+    totalEarnings: "0"
+    bonusEarned: "0"
+    lateNightTrips: "0"
+    earningsMissed: "0"
+    coinCovertedToCashLeft: "0"
+    totalCoinsConvertedCash: "0"
+    favRiderCount: "0"
+    validDriverCancellationTagCount: "0"
+    validCustomerCancellationTagCount: "0"
+    onlineDuration: "0"
+    blacklistCoinEvents: "'{}'"
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+

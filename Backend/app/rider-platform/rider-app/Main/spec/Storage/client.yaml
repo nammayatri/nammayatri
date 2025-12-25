@@ -1,0 +1,12 @@
+imports:
+  ShortId: Kernel.Types.Id
+  Merchant: Domain.Types.Merchant
+
+Client:
+  tableName: client
+
+  fields:
+    id: Id Client
+    shortId: ShortId Client
+
+  excludedFields: [merchantOperatingCityId]

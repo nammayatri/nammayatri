@@ -11,19 +11,19 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   ( DriverPoolBatchesConfig (..),
     BatchSplitByPickupDistance (..),
     HasDriverPoolBatchesConfig,
     PoolSortingType (..),
+    OnRideRadiusConfig (..),
+    BatchSplitByPickupDistanceOnRide (..),
   )
 where
 
 import Database.Beam.Backend
-import EulerHS.Prelude hiding (id)
+import Kernel.Prelude
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForList)
@@ -33,9 +33,25 @@ data BatchSplitByPickupDistance = BatchSplitByPickupDistance
     batchSplitDelay :: Seconds
   }
   deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data BatchSplitByPickupDistanceOnRide = BatchSplitByPickupDistanceOnRide
+  { batchSplitSize :: Int,
+    batchSplitDelay :: Seconds
+  }
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OnRideRadiusConfig = OnRideRadiusConfig
+  { onRideRadius :: Meters,
+    batchNumber :: Int
+  }
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForList ''BatchSplitByPickupDistance)
+$(mkBeamInstancesForList ''BatchSplitByPickupDistanceOnRide)
+$(mkBeamInstancesForList ''OnRideRadiusConfig)
 
 data DriverPoolBatchesConfig = DriverPoolBatchesConfig
   { driverBatchSize :: Int,
@@ -48,11 +64,17 @@ type HasDriverPoolBatchesConfig r =
   ( HasField "driverPoolBatchesCfg" r DriverPoolBatchesConfig
   )
 
-data PoolSortingType = Intelligent | Random
+data PoolSortingType = Intelligent | Random | Tagged
   deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, FromDhall)
+  deriving anyclass (FromJSON, ToJSON, FromDhall, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be BatchSplitByPickupDistance where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be BatchSplitByPickupDistanceOnRide where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be OnRideRadiusConfig where
   sqlValueSyntax = autoSqlValueSyntax
 
 $(mkBeamInstancesForEnum ''PoolSortingType)

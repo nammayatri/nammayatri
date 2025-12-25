@@ -1,0 +1,227 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  TicketServiceResp: API.Types.UI.TicketService
+  TicketBookingUpdateSeatsReq: API.Types.UI.TicketService
+  TicketBookingCancelReq: API.Types.UI.TicketService
+  TicketServiceCancelReq: API.Types.UI.TicketService
+  TicketBookingDetails: API.Types.UI.TicketService
+  TicketServiceVerificationResp: API.Types.UI.TicketService
+  TicketService: Domain.Types.TicketService
+  ServiceCategory: Domain.Types.ServiceCategory
+  ServicePeopleCategory: Domain.Types.ServicePeopleCategory
+  TicketBookingService: Domain.Types.TicketBookingService
+  TicketPlace: Domain.Types.TicketPlace
+  TicketBooking: Domain.Types.TicketBooking
+  BankAccountType: Domain.Types.TicketMerchantDetails
+  ContactDetails: Domain.Types.TicketMerchantDetails
+  RequestorRole: Domain.Types.MerchantOnboarding
+  GetFileResponse: Domain.Types.MerchantOnboarding
+  TicketPlaceDashboardDetails: Domain.Types.TicketDashboard
+  File: Dashboard.Common
+  FileType: AWS.S3
+  FilePath: Kernel.Prelude
+  BasicInformation: Domain.Types.EventManagement
+  TicketPlaceDef: Domain.Types.EventManagement
+  TicketServiceDef: Domain.Types.EventManagement
+  ServiceCategoryDef: Domain.Types.EventManagement
+  ServicePeopleCategoryDef: Domain.Types.EventManagement
+  BusinessHourDef: Domain.Types.EventManagement
+  DraftStatus: Domain.Types.DraftTicketChange
+
+importPackageOverrides:
+  API.Types.UI.TicketService: "rider-app"
+  Domain.Types.TicketService: "rider-app"
+  Domain.Types.TicketBookingService: "rider-app"
+  Domain.Types.TicketPlace: "rider-app"
+  Domain.Types.TicketBooking: "rider-app"
+  Domain.Types.TicketMerchantDetails: "rider-app"
+  Domain.Types.MerchantOnboarding: "rider-app"
+  Domain.Types.TicketDashboard: "rider-app"
+  Domain.Types.EventManagement: "rider-app"
+
+
+module: EventManagement
+apiPrefix: ""
+
+apis:
+  - GET:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/def
+      auth: ApiAuthV2
+      response:
+        type: TicketPlaceDef
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        ticketPlaceId: Id TicketPlace
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/cleardraft
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        ticketPlaceId: Id TicketPlace
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/submitDraft
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        ticketPlaceId: Id TicketPlace
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/cancelSubmitDraft
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        ticketPlaceId: Id TicketPlace
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/reviewDraft
+      auth: ApiAuthV2
+      request:
+        type: ReviewDraftReq
+      response:
+        type: APISuccess
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      params:
+        ticketPlaceId: Id TicketPlace
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/create
+      auth: ApiAuthV2
+      request:
+        type: BasicInformation
+      response:
+        type: TicketPlaceDef
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/update/basicInfo
+      auth: ApiAuthV2
+      request:
+        type: BasicInformation
+      response:
+        type: TicketPlaceDef
+      params:
+        ticketPlaceId: Id TicketPlace
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/updateService
+      auth: ApiAuthV2
+      request:
+        type: TicketServiceDef
+      response:
+        type: TicketPlaceDef
+      params:
+        ticketPlaceId: Id TicketPlace
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/delService/{serviceId}
+      auth: ApiAuthV2
+      response:
+        type: TicketPlaceDef
+      params:
+        ticketPlaceId: Id TicketPlace
+        serviceId: Id TicketService
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/service/{serviceId}/updateCategory
+      auth: ApiAuthV2
+      request:
+        type: ServiceCategoryDef
+      response:
+        type: TicketPlaceDef
+      params:
+        ticketPlaceId: Id TicketPlace
+        serviceId: Id TicketService
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/service/{serviceId}/delCategory/{categoryId}
+      auth: ApiAuthV2
+      response:
+        type: TicketPlaceDef
+      params:
+        ticketPlaceId: Id TicketPlace
+        serviceId: Id TicketService
+        categoryId: Id ServiceCategory
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+  - POST:
+      endpoint: /ticketdashboard/ticketPlace/{ticketPlaceId}/category/{categoryId}/updatePeople
+      auth: ApiAuthV2
+      request:
+        type: ServicePeopleCategoryDef
+      response:
+        type: TicketPlaceDef
+      params:
+        ticketPlaceId: Id TicketPlace
+        serviceId: Id TicketService
+        categoryId: Id ServiceCategory
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+  - POST:
+      endpoint: /ticketdashboard/ticketPlace/{ticketPlaceId}/category/{categoryId}/delPeople/{peopleId}
+      auth: ApiAuthV2
+      response:
+        type: TicketPlaceDef
+      params:
+        ticketPlaceId: Id TicketPlace
+        serviceId: Id TicketService
+        categoryId: Id ServiceCategory
+        peopleId: Id ServicePeopleCategory
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+  - GET:
+      endpoint: /ticketdashboard/ticketplace/drafts
+      auth: ApiAuthV2
+      response:
+        type: "[TicketPlaceDef]"
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+      mandatoryQuery:
+        - limit: Int
+        - offset: Int
+        - status: DraftStatus
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/recommend
+      auth: ApiAuthV2
+      request:
+        type: "[RecommendToggleReq]"
+      response:
+        type: APISuccess
+      query:
+        - requestorId: Text
+        - requestorRole: RequestorRole
+types:
+  RecommendToggleReq:
+    - placeId: Id TicketPlace
+    - recommend: Bool
+  ReviewStatus:
+    enum: "APPROVE,REJECT"
+    derive: "HttpInstance"
+  ReviewDraftReq:
+    - message: Maybe Text
+    - status: ReviewStatus

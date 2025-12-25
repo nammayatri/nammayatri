@@ -5,11 +5,11 @@ import Screens.TicketBookingFlow.PlaceDetails.ComponentConfig
 
 import Animation as Anim
 import Animation.Config (translateYAnimConfig, translateYAnimMapConfig, removeYAnimFromTopConfig)
-import Common.Types.App as Common
+import Domain.Payments as PP
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
-import Data.Array (length, uncons, cons, take, drop, find, elem, mapWithIndex, filter, null)
+import Data.Array (foldr, length, uncons, cons, take, drop, find, elem, mapWithIndex, filter, null, sortBy, groupBy, (:))
 import Data.Foldable (or)
 import Data.String (Pattern(..), Replacement(..), replace)
 import Data.String as DS
@@ -21,16 +21,18 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (incrOrDecrTimeFrom, getCurrentDatev2, getMinutesBetweenTwoUTChhmmss, fetchImage, FetchImageFrom(..), decodeError, convertUTCToISTAnd12HourFormat, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer)
 import JBridge as JB
-import Prelude (not, Unit, discard, void, bind, const, pure, unit, ($), (&&), (/=), (&&), (<<<), (+), (<>), (==), map, show, (||), show, (-), (>), (>>=), mod, negate, (<=), (>=), (<))
-import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), shimmerFrameLayout, afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, clickable, id, imageUrl, maxLines, ellipsize, lineHeight, fillViewport)
+import Prelude (not, Unit, discard, void, bind, const, pure, unit, ($), (&&), (/=), (&&), (<<<), (+), (<>), (==), map, show, (||), show, (-), (>), (>>=), mod, negate, (<=), (>=), (<),(>>>),(<$>))
+import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), shimmerFrameLayout, afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, clickable, id, imageUrl, maxLines, ellipsize, lineHeight, fillViewport, alpha)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TicketBookingFlow.PlaceDetails.Controller (Action(..), ScreenOutput, eval, getLimitOfDaysAccToPlaceType)
 import Screens.Types as ST
 import Styles.Colors as Color
+import Data.Ord (compare)
+import Data.Array.NonEmpty as DAN
 
 import Resources.Constants -- TODO:: Replace these constants with API response
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag, convertUTCTimeToISTTimeinHHMMSS)
-import Services.API (BookingStatus(..), TicketPlaceResponse(..), TicketPlaceResp(..), TicketServiceResp(..), PlaceType(..), BusinessHoursResp(..), PeopleCategoriesResp(..), TicketCategoriesResp(..), TicketServicesResponse(..), SpecialDayType(..))
+import Services.API (ServiceExpiry(..), BookingStatus(..), TicketPlaceResponse(..), TicketPlaceResp(..), TicketServiceResp(..), PlaceType(..), BusinessHoursResp(..), PeopleCategoriesResp(..), TicketCategoriesResp(..), TicketServicesResponse(..), SpecialDayType(..))
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import Halogen.VDom.DOM.Prop (Prop)
 import Data.Array (catMaybes, head, (..), any)
@@ -53,9 +55,12 @@ import PaymentPage (consumeBP)
 import Engineering.Helpers.Commons as EHC
 import Data.Ord (comparing)
 import Data.Function.Uncurried (runFn3)
-import Mobility.Prelude (groupAdjacent)
+import Mobility.Prelude (groupAdjacent, sortAccToDayName, boolToVisibility)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Data.Tuple (Tuple(..), fst, snd)
+import Resources.LocalizableV2.Strings (getStringV2)
+import Resources.LocalizableV2.Types
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
@@ -65,8 +70,8 @@ screen initialState =
   , globalEvents : [getPlaceDataEvent]
   , eval :
     \action state -> do
-        let _ = spy "ZooTicketBookingFlow action " action
-        let _ = spy "ZooTicketBookingFlow state " state
+        let _ = spy "ZooTicketBookingFlow PlaceDetails action " action
+        let _ = spy "ZooTicketBookingFlow PlaceDetails state " state
         eval action state
   }
   where
@@ -76,10 +81,10 @@ screen initialState =
     pure $ pure unit
 
   getPlaceDataEvent' push = do
-    if (any (_ == initialState.props.currentStage) [ST.DescriptionStage]) then do
+    if (any (_ == initialState.props.currentStage) [ST.DescriptionStage,ST.ChooseTicketStage]) then do
       case initialState.data.placeInfo of
         Just (TicketPlaceResp place) -> do
-          servicesResp <- Remote.getTicketPlaceServicesBT place.id
+          servicesResp <- Remote.getTicketPlaceServicesBT place.id initialState.data.dateOfVisit
           lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData (Just $ TicketPlaceResp place) (Just servicesResp)
         Nothing -> lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData Nothing Nothing
     else pure unit
@@ -87,121 +92,145 @@ screen initialState =
 
 view :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-    PrestoAnim.animationSet [Anim.fadeIn true]  $ relativeLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , background Color.white900
-    , onBackPressed push $ const BackPressed
-    ]
-    [ shimmerView state
-    , linearLayout 
+  PrestoAnim.animationSet [Anim.fadeIn true]  $ relativeLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.white900
+  , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+  , onBackPressed push $ const BackPressed
+  ]
+  [ shimmerView state
+  , linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , background Color.white900
+      , orientation VERTICAL
+      , visibility if (state.props.currentStage == ST.DescriptionStage && state.props.showShimmer) then GONE else VISIBLE
+      , margin $ MarginBottom if state.props.currentStage == ST.BookingConfirmationStage then 0 else 84
+      ]
+      [ headerView state push
+      , linearLayout
+        [ height $ V 1
+        , width MATCH_PARENT
+        , background Color.grey900
+        ] []
+      , serviceClosedView
+      , separatorView Color.greySmoke
+      , linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
-        , background Color.white900
-        , orientation VERTICAL
-        , visibility if (state.props.currentStage == ST.DescriptionStage && state.props.showShimmer) then GONE else VISIBLE
-        , margin $ MarginBottom if state.props.currentStage == ST.BookingConfirmationStage then 0 else 84
-        ]
-        [ headerView state push
-        , linearLayout
-          [ height $ V 1 
-          , width MATCH_PARENT
-          , background Color.grey900
-          ] []
-        , serviceClosedView 
-        , separatorView Color.greySmoke
-        , scrollView
+        ][  scrollView
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , background Color.white900
             , afterRender push $ const AfterRender
             , fillViewport true
             ]
-            [ linearLayout
-                [ height MATCH_PARENT
-                , width MATCH_PARENT
-                , gravity CENTER
-                , orientation VERTICAL
-                ]
-                (mainView state push)
-            ]
-        ]
-    , actionsView state push
-    ]
+            [placesView state push]
+      ]]
+  , actionsView state push
+  ]
   where
-  actionsView state push =
-    case state.props.currentStage of
-      ST.BookingConfirmationStage -> linearLayout [ visibility GONE ] []
-      ST.TicketInfoStage -> linearLayout [ visibility GONE ] []
-      ST.DescriptionStage -> generalActionButtons state push
-      _ -> generalActionButtons state push
-  allowFutureBooking services = foldl (\acc service -> acc || service.allowFutureBooking) false services
+    actionsView state push =
+      case state.props.currentStage of
+        ST.BookingConfirmationStage -> linearLayout [ visibility GONE ] []
+        ST.TicketInfoStage -> linearLayout [ visibility GONE ] []
+        ST.DescriptionStage -> generalActionButtons state push
+        _ -> generalActionButtons state push
+    allowFutureBooking services = foldl (\acc service -> acc || service.allowFutureBooking) false services
+    
+    serviceClosedView = 
+      let (mbStartEndDate) = case head state.data.servicesInfo of
+            Just serviceCat -> case head serviceCat.serviceCategories of
+              Just category -> case category.operationalDate of
+                      Just (date :: ST.OperationalDate) -> (Tuple (Just date.startDate) (Just date.endDate))
+                      Nothing -> (Tuple Nothing Nothing)
+              Nothing -> (Tuple Nothing Nothing)
+            Nothing -> (Tuple Nothing Nothing)
+      in
+      if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (placeClosed state.data.placeInfo) then (headerBannerView push state ("Booking closed currently. Opens after " <> getOpeningTiming state.data.placeInfo))
+      else if (state.props.currentStage == ST.ChooseTicketStage) && (allowFutureBooking state.data.servicesInfo) && (placeClosedToday state.data.placeInfo state.data.dateOfVisit) then (headerBannerView push state ("Services closed for today. Tickets are available next day onwards"))
+      else if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (shouldHurry  state.data.placeInfo) then (headerBannerView push state ("Hurry! Booking closes at " <> getClosingTiming state.data.placeInfo))
+      else if (state.props.currentStage == ST.ChooseTicketStage) && (checkIfSameDayBookingNotAllowedForToday state) then (headerBannerView push state ("Same-day booking is not allowed. Please select a future date for ticket booking."))
+      else if (state.props.currentStage == ST.ChooseTicketStage) && (not $ isVisitDateWithinOperationalDate state) then (headerBannerView push state ("The selected date is outside the available booking period. Please choose a date between " <> fromMaybe "" (fst mbStartEndDate) <> " and " <> fromMaybe "" (snd mbStartEndDate)))
+      else linearLayout [height $ V 0][]
 
-  serviceClosedView = if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (placeClosed state.data.placeInfo) then (headerBannerView push state ("Booking closed currently. Opens after " <> getOpeningTiming state.data.placeInfo))
-                      else if (state.props.currentStage == ST.ChooseTicketStage) && (allowFutureBooking state.data.servicesInfo) && (placeClosedToday state.data.placeInfo state.data.dateOfVisit) then (headerBannerView push state ("Services closed for today. Tickets are available next day onwards"))
-                      else if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (shouldHurry  state.data.placeInfo) then (headerBannerView push state ("Hurry! Booking closes at " <> getClosingTiming state.data.placeInfo))
-                      else linearLayout [][]
-
-  shouldHurry mbPlaceInfo = do
-    case mbPlaceInfo of
-      Nothing -> false
-      Just (TicketPlaceResp pInfo) -> case pInfo.closeTimings of
+    shouldHurry mbPlaceInfo =
+      case mbPlaceInfo of
         Nothing -> false
-        Just closeTime -> do
-          let currentTime = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
-          if currentTime < (convertUTCTimeToISTTimeinHHMMSS closeTime) then 
-            case (getMinutesBetweenTwoUTChhmmss currentTime (convertUTCTimeToISTTimeinHHMMSS closeTime)) of
-              Nothing -> false
-              Just mins -> mins < 15
-          else false
+        Just (TicketPlaceResp pInfo) -> case pInfo.closeTimings of
+          Nothing -> false
+          Just closeTime ->
+            let currentTime = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
+            in
+            if currentTime < (convertUTCTimeToISTTimeinHHMMSS closeTime) then
+              case (getMinutesBetweenTwoUTChhmmss currentTime (convertUTCTimeToISTTimeinHHMMSS closeTime)) of
+                Nothing -> false
+                Just mins -> mins < 15
+            else false
 
-  getOpeningTiming mbPlaceInfo = do
-    case mbPlaceInfo of
-      Nothing -> ""
-      Just (TicketPlaceResp pInfo) -> case pInfo.openTimings of
+    getOpeningTiming mbPlaceInfo =
+      case mbPlaceInfo of
         Nothing -> ""
-        Just time -> do
-          let openTime = fromMaybe "" (convertUTCToISTAnd12HourFormat time)
-          (replace (Pattern "00:00") (Replacement "12:00") openTime)
+        Just (TicketPlaceResp pInfo) -> case pInfo.openTimings of
+          Nothing -> ""
+          Just time ->
+            let openTime = fromMaybe "" (convertUTCToISTAnd12HourFormat time)
+            in (replace (Pattern "00:00") (Replacement "12:00") openTime)
 
-  getClosingTiming mbPlaceInfo = do
-    case mbPlaceInfo of
-      Nothing -> ""
-      Just (TicketPlaceResp pInfo) -> case pInfo.closeTimings of
+    getClosingTiming mbPlaceInfo =
+      case mbPlaceInfo of
         Nothing -> ""
-        Just time -> do
-          let closeTime = fromMaybe "" (convertUTCToISTAnd12HourFormat time)
-          (replace (Pattern "00:00") (Replacement "12:00") closeTime)
+        Just (TicketPlaceResp pInfo) -> case pInfo.closeTimings of
+          Nothing -> ""
+          Just time ->
+            let closeTime = fromMaybe "" (convertUTCToISTAnd12HourFormat time)
+            in (replace (Pattern "00:00") (Replacement "12:00") closeTime)
 
-  headerView state push =
-    GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+    headerView state push =
+      GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
 
-  mainView state push =
-    if (state.props.currentStage == ST.DescriptionStage) 
-      then
-        case state.data.placeInfo of
-          Just placeInfo -> descriptionStateMainView state push placeInfo
-          Nothing -> [ noDataView state push "No ticketing zones in this area" ]
-    else if (state.props.currentStage == ST.ChooseTicketStage) then [chooseTicketsView state push]
-    else []
+    placesView state push =
+      linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , orientation VERTICAL
+      ]
+      [ if (state.props.currentStage == ST.ChooseTicketStage) then chooseTicketsView state push else textView[visibility GONE]
+      , if (state.props.currentStage == ST.DescriptionStage) 
+          then 
+            case state.data.placeInfo of
+              Just placeInfo -> descriptionWithPlaceIconView push state placeInfo
+              Nothing -> noDataView state push "No ticketing zones in this area"
+          else textView[visibility GONE]
+      ]
 
-  descriptionStateMainView state push placeInfo = 
-    let (API.TicketPlaceResp place) = placeInfo
-    in[ linearLayout
-        [ width $ MATCH_PARENT
-        , height $ V 360
-        , gravity CENTER
-        , margin $ MarginBottom 15
-        ][  imageView
+    descriptionWithPlaceIconView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> API.TicketPlaceResp -> PrestoDOM (Effect Unit) w
+    descriptionWithPlaceIconView push state placeInfo =
+      let (API.TicketPlaceResp place) = placeInfo
+      in
+        linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        ]
+        [ linearLayout
+          [ width $ MATCH_PARENT
+          , height $ V 360
+          , gravity CENTER
+          , margin $ MarginBottom 15
+          ]
+          [ imageView
             [ height $ V $ (screenWidth unit) + 50
             , width  $ V $ (screenWidth unit) + 50
             , imageUrl $ fromMaybe "" place.iconUrl -- TODO:: Need to replace this default icon
             , layoutGravity "center"
             ]
+          ]
+        , descriptionView state push placeInfo
         ]
-      , descriptionView state push placeInfo
-      ]
-  
+
 noDataView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> String -> PrestoDOM (Effect Unit) w
 noDataView state push msg =
   linearLayout
@@ -214,7 +243,9 @@ noDataView state push msg =
     [ textView $
       [ text msg
       , color Color.black900
-      ] <> FontStyle.h3 TypoGraphy 
+      , width $ MATCH_PARENT
+      , height WRAP_CONTENT
+      ] <> FontStyle.h3 TypoGraphy
     ]
 
 shimmerView :: forall w . ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
@@ -238,7 +269,7 @@ shimmerView state =
         , height WRAP_CONTENT
         , orientation VERTICAL
         , margin (MarginTop 258)
-        ] (DA.mapWithIndex 
+        ] (DA.mapWithIndex
             (\index item ->
                 linearLayout
                   [ width MATCH_PARENT
@@ -257,40 +288,41 @@ generalActionButtons state push =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , gravity BOTTOM
+    , background Color.transparent
     ][  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , margin $ MarginBottom 16
+        , padding $ PaddingBottom 16
         , orientation VERTICAL
         , background Color.white900
         ]
-        $ [ linearLayout  
+        $ [ linearLayout
             [ height $ V 1
             , width MATCH_PARENT
             , margin $ MarginBottom 16
             , background Color.grey900
             ][]
         ] <>
-          if state.props.currentStage == ST.ChooseTicketStage then 
+          if state.props.currentStage == ST.ChooseTicketStage then
             [PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig1 state) ]
             else  [PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state) ]
       ]
 
 descriptionView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> TicketPlaceResp -> PrestoDOM (Effect Unit) w
-descriptionView state push (TicketPlaceResp placeInfo) = 
+descriptionView state push (TicketPlaceResp placeInfo) =
   linearLayout[
     height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , margin $ MarginHorizontal 16 16 
-  ][  textView $ 
+  , margin $ MarginHorizontal 16 16
+  ][  textView $
       [ text placeInfo.name
       , color Color.black900
-      ] <> FontStyle.h3 TypoGraphy 
-    , textView $ 
+      ] <> FontStyle.h3 TypoGraphy
+    , textView $
       [ text (fromMaybe placeInfo.name placeInfo.description)
-      , color Color.black800 
-      ] <> FontStyle.body1 TypoGraphy 
+      , color Color.black800
+      ] <> FontStyle.body1 TypoGraphy
     , locationView state push placeInfo.mapImageUrl placeInfo.lat placeInfo.lon
     , serviceBreakUpView state push state.data.servicesInfo (TicketPlaceResp placeInfo)
   ]
@@ -308,8 +340,10 @@ termsAndConditionsView termsAndConditions isMarginTop =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       ][ textView $
-         [ textFromHtml $ " &#8226;&ensp; " <> item
+         [ textFromHtml $ " •  " <> item
          , color Color.black700
+         , height WRAP_CONTENT
+         , width WRAP_CONTENT
          ] <> FontStyle.tags TypoGraphy
       ]
   ) termsAndConditions )
@@ -317,12 +351,12 @@ termsAndConditionsView termsAndConditions isMarginTop =
 locationView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Maybe String -> Maybe Number -> Maybe Number -> PrestoDOM (Effect Unit) w
 locationView state push icon lat lon =
   linearLayout
-  [ height WRAP_CONTENT 
+  [ height WRAP_CONTENT
   , width MATCH_PARENT
   , margin $ MarginTop 24
   , orientation VERTICAL
   , onClick push (const $ OpenGoogleMap lat lon)
-  ][  textView $ 
+  ][  textView $
       [ text "Location"
       , color Color.black800
       , margin $ MarginBottom 8
@@ -330,20 +364,20 @@ locationView state push icon lat lon =
     , imageView
       [ height $ V 200
       , width MATCH_PARENT
-      , cornerRadius 8.0 
+      , cornerRadius 8.0
       , layoutGravity "center_horizontal"
       , imageUrl $ fromMaybe "" icon -- TODO:: Need to replace this default icon
       ]
   ]
 
-serviceBreakUpView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Array ST.TicketServiceData -> TicketPlaceResp -> PrestoDOM (Effect Unit) w
-serviceBreakUpView state push services (TicketPlaceResp ticketPlaceResp) =
+serviceBreakUpView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) ->  Array ST.TicketServiceData -> TicketPlaceResp -> PrestoDOM (Effect Unit) w
+serviceBreakUpView state push servicesv2 (TicketPlaceResp ticketPlaceResp) =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , cornerRadius 8.0 
+  , cornerRadius 8.0
   , background Color.blue600
-  , orientation VERTICAL 
+  , orientation VERTICAL
   , padding $ Padding 20 20 20 20
   , margin $ MarginTop 24
   ][  linearLayout
@@ -351,8 +385,6 @@ serviceBreakUpView state push services (TicketPlaceResp ticketPlaceResp) =
       , width MATCH_PARENT
       , orientation VERTICAL
       ](map ( \item ->
-              let transformedServiceData = transformBusinessHours item.businessHours item.timeIntervalData
-              in
               linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
@@ -362,74 +394,99 @@ serviceBreakUpView state push services (TicketPlaceResp ticketPlaceResp) =
                   , color Color.black800
                   , margin $ MarginVertical 10 10
                   ] <> FontStyle.subHeading1 TypoGraphy
-                , businessHoursView push state item.serviceName transformedServiceData
-                , feesBreakUpView push state item.serviceName transformedServiceData
-              ]) 
-      services)
+                , linearLayout
+                  [ width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , orientation VERTICAL
+                  ]( map (\cat ->
+                     let singleServiceCategory = (length item.serviceCategories) == 1
+                         transformedServiceCatData = transformServiceCatData cat
+                     in
+                     linearLayout
+                     [ width MATCH_PARENT
+                     , height WRAP_CONTENT
+                     , orientation VERTICAL
+                     ][ linearLayout
+                        [ width MATCH_PARENT
+                        , height WRAP_CONTENT
+                        , orientation HORIZONTAL
+                        , visibility $ if singleServiceCategory then GONE else VISIBLE
+                        , margin $ MarginBottom 10
+                        ][  imageView
+                            [ width $ V 20
+                            , height $ V 20
+                            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_entry"
+                            , margin $ MarginRight 5
+                            ]
+                          , textView $
+                            [ text $ cat.categoryName <> " : "
+                            , color $ Color.black800
+                            ] <> FontStyle.body6 TypoGraphy
+                        ]
+                      , businessHoursView push state item.serviceName transformedServiceCatData (not singleServiceCategory)
+                      , feesBreakUpView push state item.serviceName transformedServiceCatData (not singleServiceCategory)
+                     ]
+
+                  ) item.serviceCategories)
+              ])
+      servicesv2)
     , termsAndConditionsView ticketPlaceResp.termsAndConditions false
   ]
 
   where
-    transformBusinessHours bhs slotTimeIntervals = do
-      let mbSelectedMaxOperationalDaysBH = findMaxOperationalDays slotTimeIntervals
-      case mbSelectedMaxOperationalDaysBH of
-        Nothing -> { timings : [], fees : []} 
-        Just slotTimeIntervalInfo -> do
-          let bhId = case head slotTimeIntervalInfo.slot of
-                        Nothing -> maybe "" (\x -> x.bhourId) (head slotTimeIntervalInfo.timeIntervals)
-                        Just slot -> slot.bhourId
-          { timings : map (getBusinessHoursAndTimings) slotTimeIntervals, fees : getFeesForService bhId bhs} 
+    transformServiceCatData category =
+      let bhData = map getBusinessHoursAndTimings category.operationalDays
+          groupedData = groupBy (\a b -> a.val == b.val) $ sortBy (\item1 item2 -> compare item1.val item2.val ) bhData
+          groupedAndSortedData = DA.concat $ map generateBHConcatenatedData groupedData
+          finalSortedData = DA.sortBy (\a b -> compare (indexOf (DS.take 3 a.key) daysOrder) (indexOf (DS.take 3 b.key) daysOrder) ) groupedAndSortedData
+      in {timings : finalSortedData, fees : map (getFeeForPeopleCat (length category.peopleCategories == 1)) category.peopleCategories }
 
-    getBusinessHoursAndTimings slotTimeInterval = 
+    generateBHConcatenatedData nanarr =
+      let arr = DAN.toArray nanarr
+      in [{key : concatKeys $ sortAccToDayName $ concatKeysArr arr, val : maybe "" (\obj -> obj.val) (arr DA.!! 0)}]
+
+    concatKeysArr arr = DA.concat $ map (\obj -> obj.key) arr
+    concatKeys arr = foldr (\obj acc -> if not DS.null acc then obj <> ", " <> acc else  obj ) "" arr
+
+    daysOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    indexOf x xs = maybe 8 (\idx -> idx) (DA.findIndex (_ == x) xs)
+
+    getFeeForPeopleCat isSinglePC peopleCat  = {key : getCategoryNameMap peopleCat.peopleCategoryName isSinglePC, val :  "₹" <>  show peopleCat.pricePerUnit }
+
+    getCategoryNameMap catName isSinglePC = case catName, isSinglePC  of
+                                              "Adult", true         -> "Per Person"
+                                              "Adult", false        -> "Visitors above the age of 5 years"
+                                              "Kid", true           -> "Per Person"
+                                              "Kid", false          -> "Up to the age of 5 years"
+                                              "Cruise", _           -> "Per Person"
+                                              "Passenger Vessel", _ -> "Per Person"
+                                              _, _                  -> catName
+
+    getBusinessHoursAndTimings slotTimeInterval =
       let timeIntervalString = joinWith " , " (map getTimeIntervals slotTimeInterval.timeIntervals)
           slotIntervalString = joinWith " , " (map get12HoursFormat slotTimeInterval.slot)
-          finalSlotTimeIntervalString = slotIntervalString <> (if (slotIntervalString /= "" && timeIntervalString /= "") then (",") else "") <> timeIntervalString
-      in { key : joinWith ", " (map (\x -> DS.take 3 x ) slotTimeInterval.operationalDays), 
-           val : if finalSlotTimeIntervalString == "" then "Closed" else finalSlotTimeIntervalString
+          finalSlotTimeIntervalString = slotIntervalString <> (if (not DS.null slotIntervalString && not DS.null timeIntervalString) then (",") else "") <> timeIntervalString
+      in { key : map (\x -> DS.take 3 x ) slotTimeInterval.operationalDays,
+           val : if DS.null finalSlotTimeIntervalString then "Closed" else finalSlotTimeIntervalString
          }
 
+    get12HoursFormat slot = replace (Pattern "00:00") (Replacement "12:00") $ fromMaybe "" (convertUTCToISTAnd12HourFormat slot.slot)
 
-    get12HoursFormat slot = case (convertUTCToISTAnd12HourFormat slot.slot) of
-       Nothing -> ""
-       Just sl -> sl
-
-    getTimeIntervals timeInterval = if timeInterval.startTime == "" then 
-                                      if timeInterval.endTime /= "" then " till " <>  (fromMaybe "" (convertUTCToISTAnd12HourFormat timeInterval.endTime)) 
+    getTimeIntervals timeInterval = if DS.null timeInterval.startTime then
+                                      if not DS.null timeInterval.endTime then " till " <>  replace (Pattern "00:00") (Replacement "12:00") (fromMaybe "" (convertUTCToISTAnd12HourFormat timeInterval.endTime))
                                       else ""
-                                    else (fromMaybe "" (convertUTCToISTAnd12HourFormat timeInterval.startTime)) <> if timeInterval.endTime /= "" then " to " <>  (fromMaybe "" (convertUTCToISTAnd12HourFormat timeInterval.endTime)) else " onwards"
+                                    else replace (Pattern "00:00") (Replacement "12:00") (fromMaybe "" (convertUTCToISTAnd12HourFormat timeInterval.startTime))
+                                         <> if not DS.null timeInterval.endTime then " to " <>  replace (Pattern "00:00") (Replacement "12:00") (fromMaybe "" (convertUTCToISTAnd12HourFormat timeInterval.endTime)) else " onwards"
 
-    getFeesForService bhId bhs = do
-      case (find (\bh -> bh.bhourId == bhId) bhs) of
-        Nothing -> []
-        Just bh -> map (getCategoryMap (length bh.categories == 1)) bh.categories
 
-    getCategoryMap isSingleCategory cat  = { key : cat.categoryName, val : map (getPCMap isSingleCategory (length cat.peopleCategories == 1)) cat.peopleCategories, disableCategory : isSingleCategory}
-
-    getPCMap isSingleCategory isSinglePC pc = {key : getCategoryNameMap pc.peopleCategoryName isSingleCategory isSinglePC , val : "₹" <>  show pc.pricePerUnit }
-
-    getCategoryNameMap catName isSingleCat isSinglePC = case catName, isSinglePC, isSingleCat  of 
-                                                      "Adult", true, _ -> "Per Person"
-                                                      "Adult", _, true -> "Visitors above the age of 5 years"
-                                                      "Adult", _, _    -> "Adult (5+ years)"
-                                                      "Kid", true, _ -> "Per Person"
-                                                      "Kid", _, true -> "Up to the age of 5 years"
-                                                      "Kid", _, _    -> "Child (<5 years)"
-                                                      _, true, _       -> "Per Unit"
-                                                      _, _, _          -> "Per Person"
-
-    findMaxOperationalDays :: Array ST.SlotsAndTimeIntervalData -> Maybe ST.SlotsAndTimeIntervalData
-    findMaxOperationalDays [] = Nothing
-    findMaxOperationalDays xs = case uncons xs of
-                                  Nothing -> Nothing
-                                  Just {head: x, tail: ys} ->  Just $ foldl (\maxElem elem -> if length elem.operationalDays > length maxElem.operationalDays then elem else maxElem) x ys
-
-businessHoursView :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> String -> ST.TiketingListTransformedData -> PrestoDOM (Effect Unit) w
-businessHoursView push sate serviceName screenData =
+businessHoursView :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> String -> ST.TiketingListTransformedData -> Boolean -> PrestoDOM (Effect Unit) w
+businessHoursView push sate serviceName screenData paddingEnabled =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , margin $ MarginBottom 10
+  , padding $ if paddingEnabled then PaddingLeft 15 else PaddingLeft 0
   ][  imageView
       [ width $ V 20
       , height $ V 20
@@ -449,24 +506,23 @@ businessHoursView push sate serviceName screenData =
           [ width $ MATCH_PARENT
           , height $ WRAP_CONTENT
           , orientation VERTICAL
-          ] (map (\item ->  
+          ] (map (\item ->
                   textView $
                     [ textFromHtml $ "<b>" <> item.key <> " : " <> "</b>" <> item.val
                     , gravity LEFT
-                    , textSize FontSize.a_14
-                    , fontStyle $ FontStyle.bold LanguageStyle
-                    ] <>  FontStyle.body1 TypoGraphy
+                    ] <>  FontStyle.paragraphText TypoGraphy
             ) screenData.timings)
         ]
   ]
 
-feesBreakUpView :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> String -> ST.TiketingListTransformedData -> PrestoDOM (Effect Unit) w
-feesBreakUpView push state serviceName screenData =
+feesBreakUpView :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> String -> ST.TiketingListTransformedData -> Boolean -> PrestoDOM (Effect Unit) w
+feesBreakUpView push state serviceName screenData paddingEnabled =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , margin $ MarginBottom 10
+  , padding $ if paddingEnabled then PaddingLeft 15 else PaddingLeft 0
   ][  imageView
       [ width $ V 20
       , height $ V 20
@@ -486,26 +542,19 @@ feesBreakUpView push state serviceName screenData =
           [ width $ MATCH_PARENT
           , height $ WRAP_CONTENT
           , orientation VERTICAL
-          ] (map (\item ->  
+          ] (map (\item ->
                     linearLayout
                     [ width MATCH_PARENT
                     , height WRAP_CONTENT
                     , orientation HORIZONTAL
-                    ][  textView
-                        [ width $ V 100
-                        , text $ item.key <> " : "
-                        , color Color.black700
-                        , textSize FontSize.a_14
-                        , fontStyle $ FontStyle.bold LanguageStyle
-                        , visibility $ if item.disableCategory then GONE else VISIBLE
-                        ] 
-                     ,  priceView item.val item.disableCategory
+                    ][  textView $
+                        [ textFromHtml $ "<b>" <> item.key <> " : " <> "</b>" <> item.val
+                        , gravity LEFT
+                        ] <> FontStyle.paragraphText TypoGraphy
                     ]
-          
           ) screenData.fees)
       ]
   ]
-
 
 priceView :: forall w . Array ST.KeyVal -> Boolean -> PrestoDOM (Effect Unit) w
 priceView prices categoryDisabled =
@@ -523,28 +572,35 @@ priceView prices categoryDisabled =
             , gravity LEFT
             , textSize $ if categoryDisabled then FontSize.a_14 else FontSize.a_12
             ] <> ( if categoryDisabled then [fontStyle $ FontStyle.bold LanguageStyle] else (FontStyle.body1 TypoGraphy) )
-              
+
           , textView $
             [ text item.val
             , gravity LEFT
             , textSize FontSize.a_12
-            ] <> FontStyle.body1 TypoGraphy 
-        ]  
+            ] <> FontStyle.body1 TypoGraphy
+        ]
   ) prices)
 
 
 chooseTicketsView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-chooseTicketsView state push = 
-  let serviceData = (convertServicesDataToTicketsData state.props.selectedOperationalDay state.data.servicesInfo)
-      filteredServiceData = DA.filter (\ticket -> not (null ticket.timeIntervals && null (getFilteredSlots ticket.slot state))) serviceData
-      slotsStillThere = DA.filter (\ticket -> not (null ticket.timeIntervals) || not (null ticket.slot)) serviceData
+chooseTicketsView state push =
+  let filteredServiceDatav2  = filterServiceDataAccordingToOpDay state.props.selectedOperationalDay state.data.servicesInfo
+      filteresServiceCatData = map (\service -> service { serviceCategories = (getFilteredServiceCategories state service.expiry service.serviceCategories) } ) state.data.servicesInfo
+      mbStartEndDate = case head filteresServiceCatData of
+          Just serviceCat -> case head serviceCat.serviceCategories of
+            Just category -> case category.operationalDate of
+                    Just (date :: ST.OperationalDate) -> (Tuple (Just date.startDate) (Just date.endDate))
+                    Nothing -> (Tuple Nothing Nothing)
+            Nothing -> (Tuple Nothing Nothing)
+          Nothing -> (Tuple Nothing Nothing)
   in
-  PrestoAnim.animationSet [Anim.fadeIn true]  $  
+  PrestoAnim.animationSet [Anim.fadeIn ( state.props.currentStage == ST.ChooseTicketStage)]  $
   linearLayout[
     height MATCH_PARENT
-  , width MATCH_PARENT
+  , width $ V $ screenWidth unit
   , background Color.grey700
   , padding $ Padding 16 24 16 16
+  , visibility $ boolToVisibility $ state.props.currentStage == ST.ChooseTicketStage
   , orientation VERTICAL
   ] $ [ linearLayout
         [ width $ MATCH_PARENT
@@ -552,175 +608,122 @@ chooseTicketsView state push =
         , orientation VERTICAL
         , visibility $ if checkIfDateOfTripVisible state.data.servicesInfo then VISIBLE else GONE
         , margin $ MarginBottom 20
-        ][  textView $ 
+        ][  textView $
             [ text "Date of Trip"
             , color Color.black900
+            , height WRAP_CONTENT
+            , width MATCH_PARENT
             , margin $ MarginBottom 9
-            ] <> FontStyle.subHeading1 TypoGraphy 
+            ] <> FontStyle.subHeading1 TypoGraphy
           , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
-            , cornerRadius 8.0 
+            , cornerRadius 8.0
             , background Color.white900
             , stroke $ "1," <> if state.props.validDate || (state.data.dateOfVisit == "") then Color.grey900 else Color.red
             , padding $ Padding 20 15 20 15
             , onClick (\action -> do
                       _ <- push action
-                      JB.datePicker "" push $ DatePicker "DATE_OF_VISIT"
+                      JB.datePicker (if isSameDayBookingAllowed state.data.placeInfo then "" else "MINIMUM_NEXT_DATE") push $ DatePicker "DATE_OF_VISIT"
                 ) (const NoAction)
             ][  imageView
-                [ height $ V 22 
+                [ height $ V 22
                 , width $ V 22
                 , margin $ MarginRight 8
                 , layoutGravity "bottom"
-                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_calendar" 
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_calendar"
                 ]
-              , textView $ 
-                [ text $ if DS.null state.data.dateOfVisit then "Select Date Of Visit" else (convertUTCtoISC state.data.dateOfVisit "dddFull, DD/MM/YY")
+              , textView $
+                [ text $ if state.data.dateOfVisit == "" then "Select Date Of Visit" else (convertUTCtoISC state.data.dateOfVisit "dddFull, DD/MM/YY")
                 , color Color.black800
+                , width MATCH_PARENT
+                , height WRAP_CONTENT
                 ] <> FontStyle.h3 TypoGraphy
             ]
           , textView $
             [ text $ getMessageForSelectedDate state -- Tickets are available for upto 90 days in advance
-            , visibility if state.props.validDate || (DS.null state.data.dateOfVisit) then GONE else VISIBLE
-            , color Color.red 
+            , visibility if state.props.validDate || state.data.dateOfVisit == "" then GONE else VISIBLE
+            , color Color.red
             , margin $ MarginVertical 8 8
             ] <> FontStyle.tags TypoGraphy
         ]
-      , if (null filteredServiceData) && not (null slotsStillThere) then (noDataView state push "Services closed for today. Tickets are available next day onwards")
-        else if null filteredServiceData then (noDataView state push "No services available for selected date")
+      , if length filteredServiceDatav2 == 0 then (noDataView state push "No services available for selected date")
+        else if (checkIfServiceClosedForToday filteredServiceDatav2) then (noDataView state push "Services closed for today. Tickets are available next day onwards") -- refactor this
+        else if checkIfSameDayBookingNotAllowedForToday state then (noDataView state push "Same-day booking is not allowed. Please select a future date for ticket booking.")
+        else if not $ isVisitDateWithinOperationalDate state then (noDataView state push ("The selected date is outside the available booking period. Please choose a date between " <> fromMaybe "" (fst mbStartEndDate) <> " and " <> fromMaybe "" (snd mbStartEndDate)) )
         else (linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        ](map (ticketInputView push state) filteredServiceData))
+        ](map (serviceInputView push state) filteresServiceCatData))
       , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , gravity BOTTOM
+        , margin $ MarginTop 20
+        -- , gravity BOTTOM
         , onClick push $ const ToggleTermsAndConditions
         ][  imageView
             [ height $ V 16
-            , width $ V 16 
+            , width $ V 16
             , layoutGravity "center_vertical"
             , margin $ MarginRight 8
             , imageWithFallback $ fetchImage FF_COMMON_ASSET (if state.props.termsAndConditionsSelected then "ny_ic_checked" else "ny_ic_unchecked")
             ]
-          , textView $ 
+          , textView $
             [ text "I agree to the"
             , color Color.black800
             ] <> FontStyle.body1 TypoGraphy
-          , textView $ 
+          , textView $
             [ text " Terms & Conditions"
             , color Color.blue900
             , onClick (\action -> do
                     _<- push action
-                    _ <- JB.openUrlInApp $ getTermsAndConditionsUrl state.data.placeInfo
+                    _ <- JB.openUrlInApp $ getTermsAndConditionsUrlV2 state.data.placeInfo
                     pure unit
                     ) (const NoAction)
             ] <> FontStyle.body1 TypoGraphy
         ]
       , termsAndConditionsView (getTermsAndConditions state.data.placeInfo) true
   ]
-  where 
-    checkIfDateOfTripVisible services = foldl (\acc service -> acc || service.allowFutureBooking) false services 
+  where
+    checkIfDateOfTripVisible services = foldl (\acc service -> acc || service.allowFutureBooking) false services
     getTermsAndConditions placeInfo = maybe [] (\(TicketPlaceResp x ) -> x.termsAndConditions) placeInfo
+    getTermsAndConditionsUrlV2 placeInfo = maybe "" (\(TicketPlaceResp x ) -> case x.termsAndConditionsUrl of
+      Just url -> url
+      Nothing -> getTermsAndConditionsUrl placeInfo) placeInfo
+
     getTermsAndConditionsUrl placeInfo = maybe "" (\(TicketPlaceResp x ) -> case x.name of
                                                                               "Alipore Zoo" -> "https://docs.google.com/document/d/1Aa5PRGaTTZM4HDdmvU_7_59B58wCQ0-bRezbsu-Inqw"
                                                                               "Kolkata Heritage River Cruise" -> "https://docs.google.com/document/d/1pOirWof7bnNDoYBFgyKknddKPoKE-7SZK6eFPncAmyQ/edit#heading=h.nq90u3fvhtgz"
                                                                               "Millenium Park Shipping Jetty" -> "https://docs.google.com/document/d/1pOirWof7bnNDoYBFgyKknddKPoKE-7SZK6eFPncAmyQ/edit#heading=h.nq90u3fvhtgz"
+                                                                              "Nicco Park" -> "https://assets.moving.tech/beckn/jatrisaathi/user/docs/T_&_C_Nicco_Park.pdf"
                                                                               _ -> ""
-                                         ) placeInfo 
+                                         ) placeInfo
     getMessageForSelectedDate state = do
       if (getCurrentDatev2 "") < state.data.dateOfVisit then "Date Error! Booking allowed only upto " <> show (getLimitOfDaysAccToPlaceType state) <> " days in advance"
       else "Tickets are available current day onwards"
 
+    checkIfServiceClosedForToday services = maybe true (\_ -> false) $ find (\service -> not DA.null (getFilteredServiceCategories state service.expiry service.serviceCategories)) services
 
-convertServicesDataToTicketsData :: String -> Array ST.TicketServiceData -> Array ST.Ticket
-convertServicesDataToTicketsData selectedOperationalDay services = map createServiceTicket services
-  where
-  createServiceTicket :: ST.TicketServiceData -> ST.Ticket
-  createServiceTicket service =
-    let  slotTIInfo = getTimeIntervalDataForSelectedBH service.timeIntervalData selectedOperationalDay
-    in
-    { title : service.serviceName <> " Fee"
-    , shortDesc : service.shortDesc
-    , ticketID : service.id
-    , isExpanded : service.isExpanded
-    , businessHours : map (convertToTicketBusinessHours service.id) service.businessHours
-    , timeIntervals : slotTIInfo.timeIntervals
-    , slot : slotTIInfo.slot
-    , selectedBHid : service.selectedBHid
-    , selectedSlot : service.selectedSlot
-    , expiry : service.expiry
-    }
-
-  getTimeIntervalDataForSelectedBH :: Array ST.SlotsAndTimeIntervalData -> String -> { timeIntervals :: Array ST.TimeInterval, slot :: Array ST.SlotInterval}
-  getTimeIntervalDataForSelectedBH slotsTimeIntervalInfo selectedOperationalDay =
-    let mbSlotTimeInterval = find (\sti -> selectedOperationalDay `elem` sti.operationalDays) slotsTimeIntervalInfo
-    in maybe  { timeIntervals : [], slot : [] }  (\x -> { timeIntervals : x.timeIntervals, slot : x.slot } )  mbSlotTimeInterval
-
-  convertToTicketBusinessHours :: String -> ST.BusinessHoursData -> ST.TicketBusinessHoursOptionData
-  convertToTicketBusinessHours serviceId serviceBusinessHr =
-    { ticketID : serviceId,
-      bhourId :serviceBusinessHr.bhourId,
-      categories : map (convertToTicketCategories serviceId) serviceBusinessHr.categories,
-      operationalDays : serviceBusinessHr.operationalDays
-    }
-
-  convertToTicketCategories :: String -> ST.TicketCategoriesData -> ST.TicketCategoriesOptionData
-  convertToTicketCategories serviceId category =
-    { ticketID : serviceId,
-      categoryName : category.categoryName,
-      categoryId : category.categoryId,
-      availableSeats : category.availableSeats,
-      allowedSeats : category.allowedSeats,
-      bookedSeats : category.bookedSeats,
-      peopleCategories : map (convertServiceTicketOption serviceId)  category.peopleCategories,
-      isSelected : category.isSelected
-    }
-
-  convertServiceTicketOption :: String -> ST.PeopleCategoriesRespData -> ST.TicketPeopleCategoriesOptionData
-  convertServiceTicketOption ticketId peopleCategory =
-    { ticketID : ticketId
-    , title : (ticketInfoMap peopleCategory.peopleCategoryName) <> " (₹" <> (show peopleCategory.pricePerUnit) <> " per " <> (unitInfoMap peopleCategory.peopleCategoryName) <> ")"
-    , currentValue : peopleCategory.currentValue
-    , subcategory : peopleCategory.peopleCategoryName
-    , pricePerUnit : peopleCategory.pricePerUnit
-    , ticketLimitCrossed : peopleCategory.ticketLimitCrossed
-    , peopleCategoryId : peopleCategory.peopleCategoryId
-    }
-
-  -- need to add this data at backend
-  ticketInfoMap "CameraUnit" = "Devices"
-  ticketInfoMap peopleCategoryName = peopleCategoryName <> " Ticket"
-
-  unitInfoMap "Adult" = "person"
-  unitInfoMap "Kid" = "person"
-  unitInfoMap "CameraUnit" = "device"
-  unitInfoMap _ = "unit"
-
-ticketInputView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.Ticket -> PrestoDOM (Effect Unit) w
-ticketInputView push state ticket = 
+serviceInputView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.TicketServiceData -> PrestoDOM (Effect Unit) w
+serviceInputView push state service =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  ] $ [] <> (if isValid ticket then [individualTicketView push state ticket] else [])
-  where
-    isValid ticket = not (null ticket.timeIntervals && null (getFilteredSlots ticket.slot state))
+  ] $ [] <>  [individualServiceView push state service]
 
-
-individualTicketView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.Ticket -> PrestoDOM (Effect Unit) w
-individualTicketView push state ticket =
-  let valBH =  (findValidBusinessHour state.props.selectedOperationalDay ticket.selectedBHid ticket.timeIntervals ticket.slot state ticket.businessHours ticket.expiry)
-      bookingClosedForService = (not state.props.validDate) || not (validHourPresent state.props.selectedOperationalDay ticket.selectedBHid ticket.timeIntervals ticket.slot state ticket.businessHours ticket.expiry)
+individualServiceView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.TicketServiceData -> PrestoDOM (Effect Unit) w
+individualServiceView push state service =
+  let bookingClosedForService = (not state.props.validDate) || (not isValid service.serviceCategories)
+      listOfShortDesc = maybe [] extractListItems service.shortDesc
+      headingOfShortDesc =  service.shortDesc >>= extractHeading
   in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , cornerRadius 8.0 
-  , background Color.white900 
+  , cornerRadius 8.0
+  , background Color.white900
   , orientation VERTICAL
   , padding $ Padding 20 20 20 20
   , margin $ MarginBottom 20
@@ -730,100 +733,109 @@ individualTicketView push state ticket =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , clickable (not bookingClosedForService)
-      , onClick push $ const (ToggleTicketOption ticket.ticketID)
+      , onClick push $ const (ToggleTicketOption service.id)
       ][  linearLayout
           [ weight 1.0
           , height WRAP_CONTENT
           , orientation VERTICAL
           ][ textView $
-             [ text ticket.title
+             [ text service.serviceName
              , color $ if bookingClosedForService then Color.black600 else Color.black800
              ] <> FontStyle.h2 TypoGraphy
-          ,  textView $
-             [ text $ fromMaybe "" ticket.shortDesc
-             , color $ if bookingClosedForService then Color.greyDark else Color.black800
-             , visibility $ maybe GONE (\x -> VISIBLE) ticket.shortDesc
-             ] <> FontStyle.body1 TypoGraphy
+          , textView $
+             [  text $ fromMaybe "" headingOfShortDesc
+              , padding $ PaddingVertical 4 4
+              , visibility $ maybe GONE (\x -> VISIBLE) headingOfShortDesc
+              , color $ if bookingClosedForService then Color.greyDark else Color.black800
+             ] <> FontStyle.body2 TypoGraphy
+          ,  linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , gravity CENTER_VERTICAL
+              ](map (shortDescListView push bookingClosedForService) listOfShortDesc)
+          ,  if length service.serviceCategories == 1 then
+               case service.serviceCategories DA.!! 0 of
+                 Nothing -> linearLayout [height $ V 0][]
+                 Just val -> textView $
+                              [ text $ val.categoryName
+                              , color $ if bookingClosedForService then Color.greyDark else Color.black700
+                              , visibility $ if val.categoryName == "all" then GONE else VISIBLE
+                              ] <> FontStyle.body1 TypoGraphy
+             else linearLayout [height $ V 0][]
           ]
-        , imageView 
-          [ height $ V 20 
-          , width $ V 20 
+        -- , linearLayout
+        --   [weight 1.0][]
+        , imageView
+          [ height $ V 20
+          , width $ V 20
           , margin $ MarginLeft 10
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET if (ticket.isExpanded && not bookingClosedForService) then "ny_ic_checked" else "ny_ic_unchecked" 
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET if (service.isExpanded && not bookingClosedForService) then "ny_ic_checked" else "ny_ic_unchecked"
           ]
       ]
-  ] <> (if ticket.isExpanded && (not bookingClosedForService) then [individualTicketBHView push state valBH ticket] else [])
+  ] <> (if service.isExpanded && (not bookingClosedForService) then [individualServiceBHView push state service] else [] )--[individualTicketBHView push state valBH service] else [])
   where
-    validHourPresent selOperationalDay selBHId timeIntervals slots state bhs expiry = 
-      if null timeIntervals && null slots then false
-      else case selBHId of 
-        Nothing -> do
-          let now = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
-              currentDate = convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD"
-              selTimeInterval = timeIntervals DA.!! 0
-          if currentDate == state.data.dateOfVisit then
-            case selTimeInterval of
-              Nothing -> not $ null slots
-              Just sti -> do
-                let startTime = if not (DS.null sti.startTime) then convertUTCTimeToISTTimeinHHMMSS sti.startTime else ""
-                    endTime = if not (DS.null sti.endTime) then convertUTCTimeToISTTimeinHHMMSS sti.endTime else ""
-                case expiry of
-                  API.InstantExpiry val -> do
-                    if not (DS.null startTime) then do
-                      let newStartTime = runFn3 incrOrDecrTimeFrom startTime val false
-                      if (now > newStartTime) then 
-                        if not (DS.null endTime) then do
-                          if (now < endTime) then true
-                          else false 
-                        else (length slots > 0)
-                      else (length slots > 0)
-                    else 
-                        if not (DS.null endTime)  then do
-                          if (now < endTime) then true
-                          else false 
-                        else (length slots > 0)
-                  _ ->  if not (DS.null endTime) then do
-                          if (now < endTime) then true
-                          else false 
-                        else  (length slots > 0)
-          else true
-        Just bhId -> true
+    isValid serviceCategories = foldl (\acc serviceCategory -> acc || isServiceCatValid state service.expiry serviceCategory.validOpDay serviceCategory.operationalDate) false serviceCategories
+    extractHeading :: String -> Maybe String
+    extractHeading html = do
+      startIndex <- DS.indexOf (Pattern "<h") html
+      endIndex <- DS.indexOf (Pattern "</h") html
+      let startContentIndex = startIndex + DS.length "<h >"
+      pure $ DS.take (endIndex - startContentIndex) (DS.drop startContentIndex html)
 
-    findValidBusinessHour selOperationalDay selBHId timeIntervals slot state bhs expiry = 
-      if null timeIntervals && null slot then Nothing
-      else case selBHId of 
-        Nothing ->
-          let now = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
-              currentDate = convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD"
-              selTimeInterval = timeIntervals DA.!! 0
+    extractListItems :: String -> Array String
+    extractListItems html = DA.reverse $ extractListItemsHelper html []
+
+    extractListItemsHelper :: String -> Array String -> Array String
+    extractListItemsHelper html acc =
+      case DS.indexOf (Pattern "<li>") html of
+        Nothing -> acc
+        Just startIndex ->
+          let
+            afterOpenTag = DS.drop (startIndex + 4) html
           in
-          case selTimeInterval of
-              Nothing -> Nothing
-              Just sti -> do
-                let startTime = if not (DS.null sti.startTime) then convertUTCTimeToISTTimeinHHMMSS sti.startTime else ""
-                    endTime = if  not (DS.null sti.endTime) then convertUTCTimeToISTTimeinHHMMSS sti.endTime else ""
-                if currentDate == state.data.dateOfVisit then do
-                    case expiry of
-                      API.InstantExpiry val -> do
-                        if not (DS.null startTime) then do
-                          let newStartTime = runFn3 incrOrDecrTimeFrom startTime val false
-                          if (now > newStartTime) then 
-                              if  not (DS.null endTime) then do
-                                if (now < endTime) then find (\bh -> bh.bhourId == sti.bhourId && selOperationalDay `elem` bh.operationalDays) bhs
-                                else Nothing 
-                              else find (\bh -> bh.bhourId == sti.bhourId && selOperationalDay `elem` bh.operationalDays) bhs
-                          else
-                              if  not (DS.null endTime) then do
-                                if (now < endTime) then find (\bh -> bh.bhourId == sti.bhourId && selOperationalDay `elem` bh.operationalDays) bhs
-                                else Nothing 
-                              else Nothing
-                        else Nothing
-                      _ ->  if  not (DS.null endTime) then do
-                              if (now < endTime) then find (\bh -> bh.bhourId == sti.bhourId && selOperationalDay `elem` bh.operationalDays) bhs
-                              else Nothing 
-                            else Nothing
-                else find (\bh -> bh.bhourId == sti.bhourId && selOperationalDay `elem` bh.operationalDays) bhs
-        Just bhId -> find (\bh -> bh.bhourId == bhId && selOperationalDay `elem` bh.operationalDays) bhs
+            case DS.indexOf (Pattern "</li>") afterOpenTag of
+              Nothing -> acc
+              Just endIndex ->
+                let
+                  content = DS.take endIndex afterOpenTag
+                  trimmedContent = trim content
+                  remainingHtml = DS.drop (endIndex + 5) afterOpenTag
+                in
+                  extractListItemsHelper remainingHtml (trimmedContent : acc)
+
+    trim :: String -> String
+    trim = trimStart >>> trimEnd
+
+    trimStart :: String -> String
+    trimStart str =
+      case DS.indexOf (Pattern " ") str of
+        Just 0 -> trimStart (DS.drop 1 str)
+        _ -> str
+
+    trimEnd :: String -> String
+    trimEnd str =
+      let len = DS.length str
+      in if len > 0 && (DS.take 1 (DS.drop (len - 1) str) == " ")
+        then trimEnd (DS.take (len - 1) str)
+        else str
+
+shortDescListView :: forall w. (Action -> Effect Unit) -> Boolean -> String -> PrestoDOM (Effect Unit) w
+shortDescListView push bookingClosedForService str =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 0 0 0 4
+    , orientation HORIZONTAL
+    , gravity CENTER_VERTICAL
+    ][
+      dotView (Color.black800) (MarginHorizontal 6 6) 5,
+      textView $
+      [ textFromHtml str
+      , color $ if bookingClosedForService then Color.greyDark else Color.black800
+      , visibility $ boolToVisibility $ not $ str == ""
+      ] <> FontStyle.body3 TypoGraphy
+    ]
 
 placeClosed :: Maybe TicketPlaceResp -> Boolean
 placeClosed mbPlaceInfo = case mbPlaceInfo of
@@ -844,24 +856,31 @@ placeClosedToday mbPlaceInfo dateOfVisit = case mbPlaceInfo of
       in
       (currentDate == dateOfVisit) && (maybe false (\closeTime -> currentTime > convertUTCTimeToISTTimeinHHMMSS closeTime) pInfo.closeTimings)
 
-individualTicketBHView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> Maybe ST.TicketBusinessHoursOptionData -> ST.Ticket -> PrestoDOM (Effect Unit) w
-individualTicketBHView push state valBH ticket =
-  PrestoAnim.animationSet [
-    Anim.translateInYAnim translateYAnimConfig { duration = 3000 , fromY = -10 , toY = 0}
-  ] $ 
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  ] $ [
-  ] 
-    <> (case valBH of 
-          Nothing -> []
-          Just bh -> if DA.length bh.categories > 1 then [selectDestinationView push state bh.categories] else (map (incrementDecrementView push state) (convertBHToPeopleCategory bh.categories)))
-    <> (if DA.length ticket.slot > 0 then [timeSlotView push state ticket.ticketID ticket.selectedBHid ticket.slot] else [])
+individualServiceBHView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.TicketServiceData -> PrestoDOM (Effect Unit) w
+individualServiceBHView push state service =
+  let mbSelectedCategory = find (\elem -> elem.isSelected) service.serviceCategories
+  in PrestoAnim.animationSet
+       [ if EHC.os == "ANDROID"
+         then Anim.translateInYAnim translateYAnimConfig { duration = 300 , fromY = 10 , toY = 0}
+         else Anim.fadeIn true
+       ]
+       $ linearLayout
+           [ height WRAP_CONTENT
+           , width MATCH_PARENT
+           , orientation VERTICAL
+           ]
+           $ [] <> (if DA.length service.serviceCategories > 1
+                   then maybe [] (\selServiceCat -> [multipleServiceCategory push state service.id service.selectedBHId service.serviceCategories selServiceCat]) mbSelectedCategory
+                   else maybe [] (\selServiceCat -> if shouldDisplayIncDscView selServiceCat.validOpDay service.selectedBHId
+                                                   then map (incrementDecrementView push state service.id selServiceCat.categoryId selServiceCat) selServiceCat.peopleCategories
+                                                   else []
+                                  ) mbSelectedCategory)
+                   <> maybe [] (\selServiceCat -> [timeSlotView push state service.id selServiceCat.categoryId service.selectedBHId (getSlots selServiceCat.validOpDay)]) mbSelectedCategory
+  where
+    getSlots mbOpDay = maybe [] (\opDayElem -> opDayElem.slot) mbOpDay
 
-selectDestinationView :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> Array ST.TicketCategoriesOptionData -> PrestoDOM (Effect Unit) w
-selectDestinationView push state categories =
+multipleServiceCategory :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> String -> Maybe String -> Array ST.ServiceCategory -> ST.ServiceCategory -> PrestoDOM (Effect Unit) w
+multipleServiceCategory push state serviceId selectedBHId categories selectedCategory =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -870,7 +889,8 @@ selectDestinationView push state categories =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      ] (map (incrementDecrementView push state) (convertBHToPeopleCategory filteredCategories))
+      ] ( if (shouldDisplayIncDscView selectedCategory.validOpDay selectedBHId) then (map (incrementDecrementView push state serviceId selectedCategory.categoryId selectedCategory) selectedCategory.peopleCategories)
+          else [] )
     , textView $
       [ text "Select your ticket category"
       , color Color.black800
@@ -880,12 +900,17 @@ selectDestinationView push state categories =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      ] (map (selectDestinationViewPill push state) categories)
+      ] (map (selectDestinationViewPill push state serviceId) categories)
   ]
-  where filteredCategories = DA.filter (\category -> category.isSelected) categories
 
-timeSlotView :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> String -> Maybe String -> Array ST.SlotInterval -> PrestoDOM (Effect Unit) w
-timeSlotView push state ticketID selectedBHid slots = 
+
+shouldDisplayIncDscView :: Maybe ST.OperationalDaysData -> Maybe String -> Boolean
+shouldDisplayIncDscView validOpDay selectedBHId =
+  let slots = maybe [] (\opDayElem -> opDayElem.slot) validOpDay
+  in (if DA.null slots then true  else maybe false (\_ -> true) selectedBHId)
+
+timeSlotView :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> String -> String -> Maybe String -> Array ST.SlotInterval -> PrestoDOM (Effect Unit) w
+timeSlotView push state serviceId serviceCatId selectedBHId slots =
   let filteredSlots = getFilteredSlots slots state
   in
   linearLayout
@@ -902,11 +927,11 @@ timeSlotView push state ticketID selectedBHid slots =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      ] ( map (timeSlotRowView push ticketID selectedBHid) (convertTimeSlotsToGroupedArray filteredSlots))
+      ] ( map (timeSlotRowView push serviceId serviceCatId selectedBHId) (convertTimeSlotsToGroupedArray filteredSlots))
   ]
 
-timeSlotRowView :: forall w . (Action -> Effect Unit) -> String -> Maybe String -> Array ST.SlotInterval -> PrestoDOM (Effect Unit) w
-timeSlotRowView push ticketID selectedBHid slotArr =
+timeSlotRowView :: forall w . (Action -> Effect Unit) -> String -> String -> Maybe String -> Array ST.SlotInterval -> PrestoDOM (Effect Unit) w
+timeSlotRowView push serviceId serviceCatId selectedBHId slotArr =
   let len = DA.length slotArr
   in linearLayout
      [ width $ MATCH_PARENT
@@ -916,13 +941,14 @@ timeSlotRowView push ticketID selectedBHid slotArr =
      ] $ [
      ] <> (case slotArr DA.!! 0 of
              Nothing -> []
-             Just val -> [timeSlotPillView push ticketID selectedBHid val len true])
+             Just val -> [timeSlotPillView push serviceId serviceCatId selectedBHId val len true])
        <> (case slotArr DA.!! 1 of
              Nothing -> []
-             Just val -> [timeSlotPillView push ticketID selectedBHid val len false])
+             Just val -> [timeSlotPillView push serviceId serviceCatId selectedBHId val len false])
 
-timeSlotPillView :: forall w . (Action -> Effect Unit) -> String ->  Maybe String -> ST.SlotInterval -> Int -> Boolean  -> PrestoDOM (Effect Unit) w
-timeSlotPillView push ticketID selectedBHid slotInterval len isfirst =
+
+timeSlotPillView :: forall w . (Action -> Effect Unit) -> String -> String -> Maybe String -> ST.SlotInterval -> Int -> Boolean  -> PrestoDOM (Effect Unit) w
+timeSlotPillView push serviceId serviceCatId selectedBHid slotInterval len isfirst =
   linearLayout
   [ weight 1.0
   , height WRAP_CONTENT
@@ -930,11 +956,11 @@ timeSlotPillView push ticketID selectedBHid slotInterval len isfirst =
   , background $ (if selectedBHid == Just slotInterval.bhourId then Color.blue600 else Color.white900)
   , padding $ Padding 16 8 16 8
   , gravity CENTER
-  , onClick push (const $ SelectSlot ticketID slotInterval)
+  , onClick push (const $ SelectSlot serviceId serviceCatId slotInterval)
   , cornerRadius 8.0
   , margin $ if len == 1 then Margin 0 0 0 0 else if isfirst then MarginRight 5 else MarginLeft 5
   ][ textView $
-     [ text $ fromMaybe "" $ convertUTCToISTAnd12HourFormat slotInterval.slot
+     [ text $ replace (Pattern "00:00") (Replacement "12:00") $ fromMaybe "" $ convertUTCToISTAnd12HourFormat slotInterval.slot
      , width $ V 100
      , gravity CENTER
      , color $ (if selectedBHid == Just slotInterval.bhourId then Color.blue800 else Color.black700)
@@ -942,13 +968,13 @@ timeSlotPillView push ticketID selectedBHid slotInterval len isfirst =
      ]
   ]
 
-selectDestinationViewPill :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.TicketCategoriesOptionData -> PrestoDOM (Effect Unit) w
-selectDestinationViewPill push state category =
+selectDestinationViewPill :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> String -> ST.ServiceCategory -> PrestoDOM (Effect Unit) w
+selectDestinationViewPill push state serviceId category =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
-  , onClick push (const $ SelectDestination category)
+  , onClick push (const $ SelectServiceCategory serviceId category)
   , padding $ Padding 16 16 16 16
   , stroke $ "1," <> (if category.isSelected then Color.blue800 else Color.grey900)
   , cornerRadius 8.0
@@ -956,7 +982,7 @@ selectDestinationViewPill push state category =
   , background $ (if category.isSelected then Color.blue600 else Color.white900)
   , gravity CENTER
   ][  imageView
-      [ imageWithFallback $ fetchImage FF_COMMON_ASSET if category.isSelected then "ny_ic_radio_selected_blue" else "ny_ic_radio_unselected" 
+      [ imageWithFallback $ fetchImage FF_COMMON_ASSET if category.isSelected then "ny_ic_radio_selected_blue" else "ny_ic_radio_unselected"
       , width $ V 20
       , height $ V 20
       , margin $ MarginRight 8
@@ -970,20 +996,20 @@ selectDestinationViewPill push state category =
       [weight 1.0][]
   ]
 
-incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.TicketPeopleCategoriesOptionData -> PrestoDOM (Effect Unit) w
-incrementDecrementView push state pcCategory  =
+incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState-> String -> String -> ST.ServiceCategory -> ST.PeopleCategoriesData -> PrestoDOM (Effect Unit) w
+incrementDecrementView push state  serviceId serviceCatId serviceCategory pcCategory =
   let ticketLimit = getTicketIncrementLimit state
   in
   PrestoAnim.animationSet [
-    Anim.translateInYAnim translateYAnimConfig { duration = 3000 , fromY = -5, toY = 0}
-  ] $ 
+    Anim.translateInYAnim translateYAnimConfig { duration = 300 , fromY = -5, toY = 0}
+  ] $
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
   , margin $ MarginTop 24
   ][  textView $
-      [ text pcCategory.title 
+      [ text $ (ticketInfoMap pcCategory.peopleCategoryName) <> " (₹" <> (show pcCategory.pricePerUnit) <> " per " <> (unitInfoMap pcCategory.peopleCategoryName) <> ")"
       , color Color.black800
       , margin $ MarginBottom 8
       ] <> FontStyle.subHeading1 TypoGraphy
@@ -994,15 +1020,17 @@ incrementDecrementView push state pcCategory  =
       , padding $ Padding 4 4 4 4
       , cornerRadius 8.0
       , background Color.white900
-      , stroke $ "1," <> Color.grey900
+      , gravity CENTER_VERTICAL
+      , stroke $ if serviceCategory.noRemainingTicketAvailable then "1," <> Color.red900 else  "1," <> Color.grey900
       ][  textView $
           [ background Color.grey700
           , text "-"
           , gravity CENTER
           , cornerRadius 4.0
-          , width WRAP_CONTENT
+          , width $ V 72
+          , height $ V 36
           , padding $ Padding 28 1 28 7
-          , onClick push $ const (DecrementTicket pcCategory ticketLimit)
+          , onClick push $ const (DecrementTicket serviceId serviceCatId pcCategory ticketLimit serviceCategory)
           , height WRAP_CONTENT
           ] <> FontStyle.body10 TypoGraphy
         , textView $
@@ -1019,19 +1047,36 @@ incrementDecrementView push state pcCategory  =
           , color Color.yellow900
           , padding $ Padding 28 1 28 7
           , cornerRadius 4.0
-          , onClick push $ const (IncrementTicket pcCategory ticketLimit)
-          , width WRAP_CONTENT
-          , height WRAP_CONTENT
+          , width $ V 72
+          , height $ V 36
+          , alpha if serviceCategory.noRemainingTicketAvailable then 0.5 else 1.0
+          , onClick push $ const (IncrementTicket serviceId serviceCatId pcCategory ticketLimit serviceCategory)
           , gravity CENTER
           ] <> FontStyle.body10 TypoGraphy
       ]
     , textView $
       [ text $ "Upto " <> show ticketLimit <> " tickets can only be booked at a time"
       , visibility $ if pcCategory.ticketLimitCrossed then VISIBLE else GONE
-      , color Color.red 
+      , color Color.red
+      , margin $ MarginTop 8
+      ] <> FontStyle.tags TypoGraphy
+    , textView $
+      [ text $ getStringV2 no_remaining_tickets
+      , visibility $ if serviceCategory.noRemainingTicketAvailable then VISIBLE else GONE
+      , color Color.red900
       , margin $ MarginTop 8
       ] <> FontStyle.tags TypoGraphy
   ]
+
+  where
+    -- need to add this data at backend
+    ticketInfoMap "CameraUnit" = "Devices"
+    ticketInfoMap peopleCategoryName = peopleCategoryName <> " Ticket"
+
+    unitInfoMap "Adult" = "person"
+    unitInfoMap "Kid" = "person"
+    unitInfoMap "CameraUnit" = "device"
+    unitInfoMap _ = "unit"
 
 separatorView :: forall w. String -> PrestoDOM (Effect Unit) w
 separatorView color =
@@ -1042,16 +1087,18 @@ separatorView color =
   ][]
 
 getTicketStatusImage :: BookingStatus -> String
-getTicketStatusImage status = fetchImage FF_COMMON_ASSET $ case status of 
+getTicketStatusImage status = fetchImage FF_COMMON_ASSET $ case status of
   Pending -> "ny_ic_transaction_pending"
   Booked -> "ny_ic_white_tick"
   Failed -> "ny_ic_payment_failed"
+  Cancelled -> "ny_ic_cancelled"
 
 getTicketStatusBackgroundColor :: BookingStatus -> {bgColor :: String, statusText :: String }
-getTicketStatusBackgroundColor status = case status of 
+getTicketStatusBackgroundColor status = case status of
   Pending -> { bgColor : Color.yellow900, statusText : "Pending" }
   Booked ->  { bgColor : Color.green900, statusText : "Booked" }
   Failed ->  { bgColor : Color.red900, statusText : "Cancelled" }
+  Cancelled ->  { bgColor : Color.red900, statusText : "Cancelled" }
 
 getTicketBackgroundColor :: String -> String
 getTicketBackgroundColor ticketServiceName = case ticketServiceName of
@@ -1088,7 +1135,7 @@ getTicketImage :: String -> String
 getTicketImage ticketServiceName = case ticketServiceName of
   "Entrance Fee" -> fetchImage FF_ASSET "ny_ic_ticket"
   _ -> fetchImage FF_ASSET "ny_ic_ticket_black"
- 
+
 getPillBackgroundColor :: String -> String
 getPillBackgroundColor ticketServiceName = case ticketServiceName of
   "Entrance Fee" -> Color.black6000
@@ -1102,7 +1149,7 @@ getPillInfoColor ticketServiceName = case ticketServiceName of
   "Videography Fee" -> Color.black800
   "Aquarium Fee" ->  Color.white900
   _ -> Color.white900
-  
+
 getLeftButtonForSlider :: String -> Boolean -> String
 getLeftButtonForSlider ticketServiceName buttonDisabled = case ticketServiceName of
   "Entrance Fee" -> if buttonDisabled then "" else fetchImage FF_ASSET "ny_ic_chevron_left_white"
@@ -1151,7 +1198,7 @@ dotView color layMargin size =
   ][]
 
 textContentView :: forall w. String -> String -> Margin -> (forall properties. (Array (Prop properties))) -> PrestoDOM (Effect Unit) w
-textContentView textString textColor textMargin fontSt = 
+textContentView textString textColor textMargin fontSt =
   textView
   ([ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -1184,7 +1231,7 @@ shareTicketView state push =
     , imageWithFallback $ fetchImage FF_ASSET $ getShareButtonIcon state.props.activeListItem.ticketServiceName
     , margin $ MarginRight 8
     ]
-  , textView $ 
+  , textView $
     [ height $ WRAP_CONTENT
     , width $ WRAP_CONTENT
     , padding $ PaddingBottom 5
@@ -1206,8 +1253,8 @@ commonTV push text' color' fontStyle marginTop gravity' action =
   ] <> fontStyle
 
 keyValueView :: (Action -> Effect Unit) -> ST.TicketBookingScreenState -> String -> String -> Int -> forall w . PrestoDOM (Effect Unit) w
-keyValueView push state key value index = 
-  linearLayout 
+keyValueView push state key value index =
+  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
@@ -1222,7 +1269,7 @@ keyValueView push state key value index =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , margin $ MarginHorizontal 5 5
-      ][ textView $ 
+      ][ textView $
         [ text key
         , margin $ MarginRight 8
         , color Color.black700
@@ -1230,8 +1277,8 @@ keyValueView push state key value index =
       , linearLayout
         [ width MATCH_PARENT
         , gravity RIGHT
-        ][ if index == 1 then bookingForView state else 
-           textView $ 
+        ][ if index == 1 then bookingForView state else
+           textView $
             [ text value
             , color Color.black800
             , onClick push $ const $ if key == "Booking ID" || key == "Transaction ID" then Copy value else NoAction -- needs refactoring
@@ -1241,11 +1288,11 @@ keyValueView push state key value index =
   ]
 
 bookingForView :: forall w. ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
-bookingForView state = 
+bookingForView state =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    ](map ( \item -> 
+    ](map ( \item ->
       textView $
       [ text item
       , padding $ Padding 6 4 6 4
@@ -1280,13 +1327,13 @@ headerBannerView push state message =
      ] <> FontStyle.subHeading1 TypoGraphy
   ]
 
-getTransactionConfig :: Common.PaymentStatus -> {image :: String, title :: String, statusTimeDesc :: String}
-getTransactionConfig status = 
+getTransactionConfig :: PP.PaymentStatus -> {image :: String, title :: String, statusTimeDesc :: String}
+getTransactionConfig status =
   case status of
-    Common.Success -> {image : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", statusTimeDesc : "Your ticket has been generated below", title : "Your booking is Confirmed!"}
-    Common.Pending -> {image : fetchImage FF_COMMON_ASSET "ny_ic_transaction_pending", statusTimeDesc : "Please check back in a few minutes.", title : "Your booking is Pending!"}
-    Common.Failed  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_payment_failed", statusTimeDesc : "Please retry booking.", title : "Booking Failed!"}
-    Common.Scheduled  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_pending", statusTimeDesc : "", title : ""}
+    PP.Success -> {image : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", statusTimeDesc : "Your ticket has been generated below", title : "Your booking is Confirmed!"}
+    PP.Pending -> {image : fetchImage FF_COMMON_ASSET "ny_ic_transaction_pending", statusTimeDesc : "Please check back in a few minutes.", title : "Your booking is Pending!"}
+    PP.Failed  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_payment_failed", statusTimeDesc : "Please retry booking.", title : "Booking Failed!"}
+    PP.Scheduled  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_pending", statusTimeDesc : "", title : ""}
 
 convertTimeSlotsToGroupedArray :: Array ST.SlotInterval -> Array (Array ST.SlotInterval)
 convertTimeSlotsToGroupedArray slots = groupAdjacent slots
@@ -1298,18 +1345,83 @@ getTicketIncrementLimit state = case state.data.placeInfo of
     "HeritageSite" -> 4
     _ -> 100
 
-getFilteredSlots :: Array ST.SlotInterval -> ST.TicketBookingScreenState -> Array ST.SlotInterval
-getFilteredSlots slots state = 
-  let currentDate = convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD"
-  in
-  if currentDate == (convertUTCtoISC state.data.dateOfVisit "YYYY-MM-DD") then do
-    let currentTime = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
-    filter (\slot -> (convertUTCTimeToISTTimeinHHMMSS slot.slot) > currentTime) slots
-  else slots
+filterServiceDataAccordingToOpDay :: String -> Array ST.TicketServiceData -> Array ST.TicketServiceData
+filterServiceDataAccordingToOpDay selectedOpDay services = do
+  DA.concat $ map modifyServiceData services
+  where
+    modifyServiceData :: ST.TicketServiceData -> Array ST.TicketServiceData
+    modifyServiceData service =
+      let serviceCategoriesAccToSelOpDay =  DA.concat $ map modifySerivceCategories service.serviceCategories in
+      if DA.null serviceCategoriesAccToSelOpDay then []
+      else [service { serviceCategories = serviceCategoriesAccToSelOpDay}]
 
-convertBHToPeopleCategory :: Array ST.TicketCategoriesOptionData -> Array ST.TicketPeopleCategoriesOptionData
-convertBHToPeopleCategory categories = do
-  let mbCurrentCategory = DA.head categories
-  case mbCurrentCategory of
-    Nothing -> []
-    Just category -> category.peopleCategories
+    modifySerivceCategories :: ST.ServiceCategory -> Array ST.ServiceCategory
+    modifySerivceCategories serviceCategory =
+      let operationalDaysAccToSelOpDay = maybe [] (\elem -> [elem]) (find (\opDayElem -> selectedOpDay `elem` opDayElem.operationalDays) serviceCategory.operationalDays)
+      in
+      if DA.null operationalDaysAccToSelOpDay then []
+      else if fromMaybe false serviceCategory.isClosed then []
+      else [serviceCategory { operationalDays = operationalDaysAccToSelOpDay}]
+
+
+getFilteredServiceCategories :: ST.TicketBookingScreenState -> ServiceExpiry -> Array ST.ServiceCategory -> Array ST.ServiceCategory
+getFilteredServiceCategories state expiry serviceCategories =  filter (\serviceCat -> isServiceCatValid state expiry serviceCat.validOpDay serviceCat.operationalDate) serviceCategories
+
+isServiceCatValid :: ST.TicketBookingScreenState -> ServiceExpiry -> Maybe ST.OperationalDaysData -> Maybe ST.OperationalDate -> Boolean
+isServiceCatValid state expiry mbValidOpDay mbOperationalDate = maybe false (\opday -> (not DA.null (getFilteredSlots opday.slot state)) || (getFilteredTime opday.timeIntervals)) mbValidOpDay
+  where
+    getFilteredTime timeIntervals =
+      let now = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
+          currentDate = convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD"
+          selTimeInterval = timeIntervals DA.!! 0
+      in
+      if currentDate == state.data.dateOfVisit then
+        case selTimeInterval of
+          Nothing -> false
+          Just sti ->
+            let startTime = if not DS.null sti.startTime then convertUTCTimeToISTTimeinHHMMSS sti.startTime else ""
+                endTime = if not DS.null  sti.endTime then convertUTCTimeToISTTimeinHHMMSS sti.endTime else ""
+                newEndTime = if not DS.null endTime then case expiry of
+                                  API.InstantExpiry val -> runFn3 incrOrDecrTimeFrom endTime val false
+                                  _ -> endTime
+                             else ""
+            in
+            if not DS.null startTime && not DS.null newEndTime then (true || now > startTime) && now < newEndTime
+            else if not DS.null startTime then (true || now > startTime)
+            else if not DS.null newEndTime then now < newEndTime
+            else false
+      else maybe true (\oplDate -> state.data.dateOfVisit <= oplDate.endDate && state.data.dateOfVisit >= oplDate.startDate) mbOperationalDate
+
+getFilteredSlots :: Array ST.SlotInterval -> ST.TicketBookingScreenState -> Array ST.SlotInterval
+getFilteredSlots slots state =
+      let currentDate = convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD" in
+      if currentDate == (convertUTCtoISC state.data.dateOfVisit "YYYY-MM-DD") then do
+        let currentTime = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
+        filter (\slot -> (convertUTCTimeToISTTimeinHHMMSS slot.slot) > currentTime) slots
+      else slots
+
+checkIfSameDayBookingNotAllowedForToday :: ST.TicketBookingScreenState -> Boolean
+checkIfSameDayBookingNotAllowedForToday state =
+      let isTodayDate = (getCurrentDatev2 "") == state.data.dateOfVisit
+          allowSameDayBooking = isSameDayBookingAllowed state.data.placeInfo
+      in
+        not allowSameDayBooking && isTodayDate
+
+isSameDayBookingAllowed placeInfo = case placeInfo of
+      Just (TicketPlaceResp placeInfo) -> fromMaybe true placeInfo.allowSameDayBooking
+      Nothing -> true
+  
+isVisitDateWithinOperationalDate :: ST.TicketBookingScreenState -> Boolean
+isVisitDateWithinOperationalDate state = 
+  let visitDate = convertUTCtoISC state.data.dateOfVisit "YYYY-MM-DD"
+      _ = spy "visitDate" visitDate
+      _ = spy "state.data.servicesInfo" state.data.servicesInfo
+      withinOperationDate = foldl 
+        (\acc1 (service :: ST.TicketServiceData) -> acc1 || 
+          foldl (\acc (serviceCategory :: ST.ServiceCategory) -> 
+            let _ = spy "serviceCategory.operationalDate" (maybe true (\oplDate -> visitDate <= oplDate.endDate && visitDate >= oplDate.startDate) serviceCategory.operationalDate)
+            in acc || maybe true (\oplDate -> visitDate <= oplDate.endDate && visitDate >= oplDate.startDate) serviceCategory.operationalDate) false service.serviceCategories)
+         false state.data.servicesInfo
+      
+      _ = spy "withinOperationDate" withinOperationDate
+  in withinOperationDate

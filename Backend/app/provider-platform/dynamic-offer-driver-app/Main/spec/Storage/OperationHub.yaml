@@ -1,0 +1,70 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+OperationHub:
+  tableName: operation_hub
+
+  fields:
+    id : Id OperationHub
+    name : Text
+    address : Text
+    lat: Double
+    lon: Double
+    mobileNumber: Text
+    description: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findAllByCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+OperationHubRequests:
+  tableName: operation_hub_requests
+  types:
+    RequestType:
+      enum: "ONBOARDING_INSPECTION, REGULAR_INSPECTION"
+      derive: "HttpInstance"
+    RequestStatus:
+      enum: "PENDING, APPROVED, REJECTED"
+      derive: "HttpInstance"
+  fields:
+    id : Id OperationHubRequests
+    operationHubId : Id OperationHub
+    requestType : RequestType
+    registrationNo: Text
+    requestStatus: RequestStatus
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    operatorId: Maybe (Id Person)
+    remarks: Maybe Text
+    fulfilledAt: Maybe UTCTime
+    creatorId: Id Person
+  sqlType:
+    requestStatus: character varying(255)
+    requestType: character varying(255)
+  constraints:
+    id: PrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  queries:
+    updateStatusWithDetails:
+      kvFunction: updateOneWithKV
+      params: [requestStatus, remarks, fulfilledAt, operatorId]
+      where: id
+
+    findByCreatorRCStatusAndType:
+      kvFunction: findAllWithKV
+      where:
+        and: [creatorId, requestStatus, requestType, registrationNo]

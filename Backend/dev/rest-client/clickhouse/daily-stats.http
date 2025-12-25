@@ -1,0 +1,139 @@
+# @name insertDailyStatsSample
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+INSERT INTO atlas_driver_offer_bpp.daily_stats VALUES (
+    'id1',
+    'favorit-suv-000000000000000000000001',
+    '2025-09-02',
+    150.0,
+    10.0,
+    5,
+    0.0,
+    20.0,
+    now()
+),
+(
+    'id2',
+    'favorit-suv-000000000000000000000002',
+    '2025-09-02',
+    100.0,
+    10.0,
+    15,
+    15.0,
+    10.0,
+    now()
+);
+
+###
+# @name insertDriverStatsSample
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+INSERT INTO atlas_driver_offer_bpp.driver_stats (driver_id, total_rides, total_rating_score, valid_driver_cancellation_tag_count, acceptation_count, total_request_count, version) VALUES (
+    'favorit-suv-000000000000000000000001',
+    7,
+    30,
+    1,
+    8,
+    10,
+    now()
+),
+(
+    'favorit-suv-000000000000000000000002',
+    10,
+    40,
+    4,
+    15,
+    20,
+    now()
+);
+
+
+###
+# @name selectDriverStats
+
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+# SELECT * FROM atlas_driver_offer_bpp.driver_stats FINAL
+# FORMAT JSON
+
+select sum(ds.total_rides*ds.rating) as weighted_rating_sum, sum(ds.total_rides) as net_total_rides, sum(ds.valid_driver_cancellation_tag_count) as valid_driver_cancellation_tag_count from atlas_driver_offer_bpp.driver_stats as ds final where ds.driver_id in ('favorit-suv-000000000000000000000001', 'favorit-suv-000000000000000000000002')
+FORMAT JSON
+
+###
+# @name selectAllDailyStats
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+SELECT driver_id, sum(num_rides) as rideSum
+FROM atlas_driver_offer_bpp.daily_stats
+WHERE merchant_local_date >= '2025-08-28'
+AND merchant_local_date <= '2025-08-28'
+GROUP BY driver_id
+HAVING rideSum > threshold
+FORMAT JSON
+
+###
+# @name selectDailyStatsByDriver
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+SELECT * FROM atlas_driver_offer_bpp.daily_stats
+FORMAT JSON
+
+###
+# @name deleteDailyStatsById
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+DELETE FROM atlas_driver_offer_bpp.daily_stats
+WHERE id = 'ds-1'
+
+###
+# @name deleteAllRecordsFromDailyStats
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+TRUNCATE TABLE atlas_driver_offer_bpp.daily_stats
+
+###
+
+###
+# @name selectDailyStatsByDriver
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+SELECT
+    driver_id,
+    merchant_local_date,
+    total_earnings,
+    total_distance,
+    num_rides,
+    cancellation_charges,
+    bonus_earnings
+FROM atlas_driver_offer_bpp.daily_stats FINAL
+WHERE driver_id = '0df556ae-8f30-4069-8816-34ac895d34ed' and merchant_local_date = '2024-01-01'
+group by toSta
+FORMAT JSON
+
+###
+
+# @name selectDailyStatsByDriverAndWeek
+POST http://localhost:8123
+Authorization: Basic default:
+content-type: text/html
+
+select driver_id from atlas_driver_offer_bpp.daily_stats where driver_id in (select driver_id from atlas_driver_offer_bpp.driver_operator_association where operator_id = 'favorit-operator-0-0000-000000000000') and merchant_local_date >= '2025-08-22' and merchant_local_date <= '2025-08-22' group by driver_id having sum(num_rides) > 10
+FORMAT JSON
+
+###

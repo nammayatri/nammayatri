@@ -20,8 +20,36 @@ import Data.Function hiding (id)
 import Data.Maybe
 import IssueManagement.Domain.Types.Issue.IssueTranslation
 import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as BeamIT
-import Kernel.Beam.Functions
+import IssueManagement.Storage.BeamFlow
+import IssueManagement.Tools.UtilsTH
+import Kernel.External.Types (Language)
 import Kernel.Types.Id
+
+create :: BeamFlow m r => IssueTranslation -> m ()
+create = createWithKV
+
+updateByPrimaryKey :: BeamFlow m r => IssueTranslation -> m ()
+updateByPrimaryKey IssueTranslation {..} =
+  updateWithKV
+    [ Set BeamIT.sentence sentence,
+      Set BeamIT.translation translation,
+      Set BeamIT.createdAt createdAt,
+      Set BeamIT.updatedAt updatedAt
+    ]
+    [And [Is BeamIT.id $ Eq (getId id)]]
+
+findIssueTranslationByLanguageAndSentence :: BeamFlow m r => Language -> Text -> m (Maybe IssueTranslation)
+findIssueTranslationByLanguageAndSentence language sentence =
+  findOneWithKV
+    [ And
+        [ Is BeamIT.language $ Eq language,
+          Is BeamIT.sentence $ Eq sentence
+        ]
+    ]
+
+findAllBySentence :: BeamFlow m r => Text -> m [IssueTranslation]
+findAllBySentence sentence =
+  findAllWithKV [Is BeamIT.sentence $ Eq sentence]
 
 instance FromTType' BeamIT.IssueTranslation IssueTranslation where
   fromTType' BeamIT.IssueTranslationT {..} = do
@@ -29,16 +57,14 @@ instance FromTType' BeamIT.IssueTranslation IssueTranslation where
       Just
         IssueTranslation
           { id = Id id,
-            sentence = sentence,
-            translation = translation,
-            language = language
+            merchantId = Id merchantId,
+            ..
           }
 
 instance ToTType' BeamIT.IssueTranslation IssueTranslation where
   toTType' IssueTranslation {..} = do
     BeamIT.IssueTranslationT
       { id = getId id,
-        sentence = sentence,
-        translation = translation,
-        language = language
+        merchantId = getId merchantId,
+        ..
       }

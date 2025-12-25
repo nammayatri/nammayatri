@@ -18,12 +18,11 @@ import qualified AWS.S3 as S3
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Message.Message as Domain
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Message as Domain
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
-import qualified IssueManagement.Domain.Types.MediaFile as MF
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQ
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Types (Language (ENGLISH))
@@ -32,14 +31,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Storage.Beam.IssueManagement ()
-import qualified Storage.Queries.Message.Message as MQ
-import qualified Storage.Queries.Message.MessageReport as MRQ
+import qualified Storage.Queries.Message as MQ
+import qualified Storage.Queries.MessageReport as MRQ
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 
 data MediaFileApiResponse = MediaFileApiResponse
   { url :: Text,
-    fileType :: MF.MediaType
+    fileType :: S3.FileType
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -54,6 +53,7 @@ data MessageAPIEntityResponse = MessageAPIEntityResponse
     likeStatus :: Bool,
     likeCount :: Int,
     viewCount :: Int,
+    shareable :: Bool,
     alwaysTriggerOnOnboarding :: Bool,
     messageId :: Id Domain.Message,
     mediaFiles :: [MediaFileApiResponse]
@@ -86,6 +86,7 @@ messageList (driverId, _, _) mbLimit mbOffset = do
             likeStatus = messageReport.likeStatus,
             likeCount = rawMessage.likeCount,
             viewCount = rawMessage.viewCount,
+            shareable = rawMessage.shareable,
             alwaysTriggerOnOnboarding = rawMessage.alwaysTriggerOnOnboarding,
             messageId = rawMessage.id,
             mediaFiles = mediaFilesApiType
@@ -111,6 +112,7 @@ getMessage (driverId, _, _) messageId = do
             likeStatus = messageReport.likeStatus,
             likeCount = rawMessage.likeCount,
             viewCount = rawMessage.viewCount,
+            shareable = rawMessage.shareable,
             alwaysTriggerOnOnboarding = rawMessage.alwaysTriggerOnOnboarding,
             messageId = rawMessage.id,
             mediaFiles = mediaFilesApiType

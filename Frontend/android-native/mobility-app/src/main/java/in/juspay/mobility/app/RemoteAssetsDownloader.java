@@ -146,7 +146,7 @@ public class RemoteAssetsDownloader extends Service {
         }
     }
 
-    public String appendSdkNameAndVersion(String file, Context context) {
+    public static String appendSdkNameAndVersion(String file, Context context) {
         final int dotPosition = file.lastIndexOf('.');
         int versionId = context.getResources().getIdentifier("godel_version", "string", context.getPackageName());
         String version = context.getString(versionId);

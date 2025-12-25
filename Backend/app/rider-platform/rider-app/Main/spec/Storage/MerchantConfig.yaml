@@ -1,0 +1,68 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+
+MerchantConfig:
+  tableName: merchant_config
+  derives: "Generic, Show, ToJSON, FromJSON, ToSchema,Eq"
+  fields:
+    id : Id MerchantConfig
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+    fraudBookingCancellationCountThreshold : Int
+    fraudBookingCancellationCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    fraudBookingTotalCountThreshold : Int
+    fraudBookingCancelledByDriverCountThreshold : Int
+    fraudBookingCancelledByDriverCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    fraudSearchCountThreshold : Int
+    fraudSearchCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    fraudRideCountThreshold : Int
+    fraudRideCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    fraudAuthCountThreshold : Maybe Int
+    fraudAuthCountWindow : Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    createdAt : Maybe UTCTime
+    updatedAt : Maybe UTCTime
+    enabled : Bool
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, enabled]
+
+  sqlType:
+    fraudBookingCancellationCountWindow: json
+    fraudRideCountWindow: json
+    fraudBookingCancelledByDriverCountWindow: json
+    fraudSearchCountWindow: json
+    fraudAuthCountWindow: json
+
+  default:
+    fraudBookingCancellationCountWindow: |-
+      '{"period":24, "periodType":"Hours"}'
+    fraudRideCountWindow: |-
+      '{"period":24, "periodType":"Hours"}'
+    fraudBookingCancelledByDriverCountThreshold: "5"
+    fraudBookingCancelledByDriverCountWindow: |-
+      '{"period":24, "periodType":"Hours"}'
+    fraudSearchCountThreshold: "5"
+    fraudSearchCountWindow: |-
+      '{"period":24, "periodType":"Hours"}'
+    fraudRideCountThreshold: "0"
+    fraudAuthCountThreshold: "8"
+    fraudAuthCountWindow: |-
+      '{"period":20, "periodType":"Minutes"}'
+    enabled: "True"
+
+
+
+
+

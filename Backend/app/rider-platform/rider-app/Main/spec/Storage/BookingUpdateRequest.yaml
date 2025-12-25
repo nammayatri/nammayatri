@@ -1,0 +1,81 @@
+imports:
+  Booking: Domain.Types.Booking
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Price: Kernel.Types.Common
+
+
+BookingUpdateRequest:
+  tableName: booking_update_request
+  types:
+    BookingUpdateRequestStatus:
+      enum: "SOFT,CONFIRM"
+      derive: "HttpInstance"
+    ErrorObj:
+      errorCode: Text
+      errorMessage: Text
+
+  beamInstance: MakeTableInstancesWithTModifier []
+
+  fields:
+    id: Id BookingUpdateRequest
+    bookingId: Id Booking
+    status: BookingUpdateRequestStatus
+    travelledDistance: Maybe HighPrecMeters
+    estimatedDistance : Maybe HighPrecMeters
+    estimatedFare : Maybe HighPrecMoney
+    totalDistance : Maybe HighPrecMeters
+    currentPointLat : Maybe Double
+    currentPointLon : Maybe Double
+    oldEstimatedFare : HighPrecMoney
+    oldEstimatedDistance : Maybe HighPrecMeters
+    errorObj : Maybe ErrorObj
+    distanceUnit : DistanceUnit
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  beamType:
+    distanceUnit: Maybe DistanceUnit
+
+  beamFields:
+    errorObj:
+      errorCode: Maybe Text
+      errorMessage: Maybe Text
+
+  fromTType:
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    errorObj: Domain.Types.BookingUpdateRequest.ErrorObj <$> errorCode <*> errorMessage|E
+
+  toTType:
+    distanceUnit: Kernel.Prelude.Just|I
+    errorCode: (.errorCode) <$> errorObj|E
+    errorMessage: (.errorMessage) <$> errorObj|E
+
+
+  constraints:
+    id: PrimaryKey
+    bookingId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        and: [id]
+    findAllByBookingId:
+      kvFunction: findAllWithKV
+      where:
+        and: [bookingId]
+    updateMultipleById:
+      kvFunction: updateOneWithKV
+      params: [travelledDistance, estimatedDistance, estimatedFare, totalDistance, currentPointLat, currentPointLon, updatedAt]
+      where: id
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+    updateErrorObjById:
+      kvFunction: updateOneWithKV
+      params: [errorObj, updatedAt]
+      where: id

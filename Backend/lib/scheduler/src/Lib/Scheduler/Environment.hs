@@ -11,7 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Scheduler.Environment where
 
@@ -21,22 +21,24 @@ import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
+import Kernel.Storage.Beam.SystemConfigs
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, HedisFlow, disconnectHedis)
 import Kernel.Storage.Queries.SystemConfigs as QSC
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (FromDhall)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.IOLogging (LoggerEnv, releaseLoggerEnv)
-import Lib.Scheduler.JobStorageType.DB.Lib ()
+import Lib.Scheduler.JobStorageType.DB.Table
 import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types
 
@@ -46,6 +48,7 @@ data SchedulerConfig = SchedulerConfig
   { loggerConfig :: LoggerConfig,
     metricsPort :: Int,
     esqDBCfg :: EsqDBConfig,
+    esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
@@ -68,12 +71,15 @@ data SchedulerConfig = SchedulerConfig
     graceTerminationPeriod :: Seconds,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    kafkaProducerCfg :: KafkaProducerCfg
+    cacConfig :: CacConfig,
+    kafkaProducerCfg :: KafkaProducerCfg,
+    inMemConfig :: InMemConfig
   }
   deriving (Generic, FromDhall)
 
 data SchedulerEnv = SchedulerEnv
   { esqDBEnv :: EsqDBEnv,
+    esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
@@ -103,9 +109,17 @@ data SchedulerEnv = SchedulerEnv
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     maxThreads :: Int,
+    maxShards :: Int,
     jobInfoMap :: JobInfoMap,
     kvConfigUpdateFrequency :: Int,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
+    cacConfig :: CacConfig,
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    inMemEnv :: InMemEnv,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -119,13 +133,19 @@ releaseSchedulerEnv SchedulerEnv {..} = do
 
 type SchedulerM = FlowR SchedulerEnv
 
-type JobCreator r m = (HasField "jobInfoMap" r (M.Map Text Bool), HasField "schedulerSetName" r Text, JobMonad r m)
+type HasJobInfoMap r = HasField "jobInfoMap" r (M.Map Text Bool)
 
-type JobExecutor r m = (HasField "streamName" r Text, HasField "groupName" r Text, HasField "schedulerSetName" r Text, JobMonad r m)
+type JobCreatorEnv r = (HasJobInfoMap r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text)
 
-type JobMonad r m = (HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m)
+type JobCreator r m = (JobCreatorEnv r, JobMonad r m)
 
-runSchedulerM :: SchedulerConfig -> SchedulerEnv -> SchedulerM a -> IO a
+type JobExecutorEnv r = (HasField "streamName" r Text, HasField "maxShards" r Int, HasField "groupName" r Text, HasField "schedulerSetName" r Text)
+
+type JobExecutor r m = (JobExecutorEnv r, JobMonad r m)
+
+type JobMonad r m = (HasSchemaName SchedulerJobT, HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m, EsqDBFlow m r)
+
+runSchedulerM :: HasSchemaName SystemConfigsT => SchedulerConfig -> SchedulerEnv -> SchedulerM a -> IO a
 runSchedulerM schedulerConfig env action = do
   let loggerRt = L.getEulerLoggerRuntime Nothing env.loggerConfig
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
@@ -134,7 +154,7 @@ runSchedulerM schedulerConfig env action = do
       ( ( prepareConnectionDriver
             ConnectionConfigDriver
               { esqDBCfg = schedulerConfig.esqDBCfg,
-                esqDBReplicaCfg = schedulerConfig.esqDBCfg,
+                esqDBReplicaCfg = schedulerConfig.esqDBReplicaCfg,
                 hedisClusterCfg = schedulerConfig.hedisClusterCfg
               }
             env.kvConfigUpdateFrequency
@@ -145,11 +165,12 @@ runSchedulerM schedulerConfig env action = do
       fork
         "Fetching Kv configs"
         ( forever $ do
-            kvConfigs <-
-              QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
-                >>= fromMaybeM (InternalError "Couldn't find kv_configs table for scheduler app")
-            L.setOption KBT.Tables kvConfigs
+            handleExceptions $ do
+              kvConfigs <- QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
+              L.setOption KBT.Tables (fromMaybe KUC.defaultTableData kvConfigs)
             threadDelay (env.kvConfigUpdateFrequency * 1000000)
         )
       pure flowRt
     runFlowR flowRt' env action
+  where
+    handleExceptions = handle (\(e :: SomeException) -> L.logError ("KV_FETCH_FAILED_ALLOCATOR" :: Text) $ "Error fetching kv configs: " <> show e)

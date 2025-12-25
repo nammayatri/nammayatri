@@ -54,6 +54,7 @@ initData = {
         otpEdtFocused : false,
         editTextVal : "",
         attemptLeft : "",
-        countryCodeOptionExpanded : false
+        countryCodeOptionExpanded : false,
+        autoFillOTPEnabled: false
     }
 }

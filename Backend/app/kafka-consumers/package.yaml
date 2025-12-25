@@ -28,6 +28,7 @@ default-extensions:
   - DeriveAnyClass
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingStrategies
   - DuplicateRecordFields
   - ExplicitNamespaces
   - FlexibleContexts
@@ -48,6 +49,7 @@ default-extensions:
   - RecordWildCards
   - ScopedTypeVariables
   - StandaloneDeriving
+  - TemplateHaskell
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -70,7 +72,6 @@ dependencies:
   - time
   - errors
   - servant-server
-  - hashmap
   - bytestring
   - streamly
   - openapi3
@@ -90,6 +91,9 @@ dependencies:
   - beam-postgres
   - postgresql-simple
   - sequelize
+  - warp
+  - uuid
+  - beckn-spec
 
 ghc-options:
   - -Wall
@@ -150,3 +154,4 @@ executables:
     dependencies:
       - kafka-consumers
       - mobility-core
+      - beckn-spec

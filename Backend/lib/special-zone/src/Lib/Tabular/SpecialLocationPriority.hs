@@ -11,10 +11,8 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Tabular.SpecialLocationPriority where
@@ -30,10 +28,10 @@ mkPersist
     SpecialLocationPriorityT sql=special_location_priority
       id Text
       merchantId Text
+      merchantOperatingCityId Text
       category Text
       pickupPriority Int
       dropPriority Int
-
       Primary id
       deriving Generic
     |]

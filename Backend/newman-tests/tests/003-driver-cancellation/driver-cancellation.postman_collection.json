@@ -1,0 +1,1673 @@
+{
+  "info": {
+    "_postman_id": "5e1d7146-b160-4c41-92aa-b55ade20d471",
+    "name": "NammaYatri | BLR | Driver Cancellation Flow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "29211606"
+  },
+  "item": [
+    {
+      "name": "LoginAndSetDriverLocation",
+      "item": [
+        {
+          "name": "Auth",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Local",
+                  "postman.setEnvironmentVariable(\"driver_merchant_id\", \"favorit0-0000-0000-0000-00000favorit\");",
+                  "pm.variables.set(\"mobile_number\", \"6666666666\");",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "var jsonData = JSON.parse(responseBody);",
+                  "postman.setEnvironmentVariable(\"driver_authId\", jsonData.authId);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"mobileNumber\": \"{{mobile_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL_namma_P}}/auth",
+              "host": [
+                "{{baseURL_namma_P}}"
+              ],
+              "path": [
+                "auth"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Auth Verification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "var jsonData = JSON.parse(responseBody);",
+                  "postman.setEnvironmentVariable(\"driver_token\", jsonData.token);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disabledSystemHeaders": {
+              "connection": true,
+              "accept-encoding": true,
+              "accept": true,
+              "user-agent": true
+            }
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json;charset=utf-8",
+                "disabled": true
+              },
+              {
+                "key": "Accept",
+                "value": "application/json;charset=utf-8",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"otp\": \"7891\",\n    \"deviceToken\": \"doDpYhFKfEoJgGTjTbJSDj:APA91bE8vTiYAVx89Q0vKCo0zRp7K2SyJukMjADCithsfhsd0jlNPyR18BUdav-ocA0gcMvkwp8XhE0dOkVvXou-DfSs7LHjOotRlTEX1suQQTya0wOWn7UUCTZAFip_GYMCavSDzpEE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL_namma_P}}/auth/:authId/verify",
+              "host": [
+                "{{baseURL_namma_P}}"
+              ],
+              "path": [
+                "auth",
+                ":authId",
+                "verify"
+              ],
+              "variable": [
+                {
+                  "key": "authId",
+                  "value": "{{driver_authId}}",
+                  "description": "(Requir"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Set Online/Offline",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{driver_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json;charset=utf-8"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=\"ONLINE\"",
+              "host": [
+                "{{baseURL_namma_P}}"
+              ],
+              "path": [
+                "driver",
+                "setActivity"
+              ],
+              "query": [
+                {
+                  "key": "active",
+                  "value": "true",
+                  "description": "(Required) "
+                },
+                {
+                  "key": "mode",
+                  "value": "\"ONLINE\""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "const body = JSON.parse(responseBody);",
+                  "postman.setEnvironmentVariable(\"vehicle_variant\", body.linkedVehicle.variant);",
+                  "postman.setEnvironmentVariable(\"driver_id\", body.id);",
+                  "postman.setEnvironmentVariable(\"driver_mode\", body.mode);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{driver_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL_namma_P}}/driver/profile",
+              "host": [
+                "{{baseURL_namma_P}}"
+              ],
+              "path": [
+                "driver",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Set Driver Location",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var moment = require('moment');",
+                  "postman.setEnvironmentVariable(\"current_time\", moment.utc().format(\"YYYY-MM-DDTHH:mm:ssZ\"));",
+                  "",
+                  "// Bangalore",
+                  "postman.setEnvironmentVariable(\"origin-lat\", 12.8980387);",
+                  "postman.setEnvironmentVariable(\"origin-lon\", 77.6068045);",
+                  "",
+                  "postman.setEnvironmentVariable(\"dest-lat\", 12.9325404);",
+                  "postman.setEnvironmentVariable(\"dest-lon\", 77.6287519);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "// Add delay before next request",
+                  "setTimeout(function(){}, 2000);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{driver_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json;charset=utf-8"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json;charset=utf-8"
+              },
+              {
+                "key": "vt",
+                "value": "{{vehicle_variant}}",
+                "type": "text"
+              },
+              {
+                "key": "mId",
+                "value": "{{driver_merchant_id}}",
+                "type": "text"
+              },
+              {
+                "key": "dm",
+                "value": "{{driver_mode}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n    {\n        \"pt\": {\n             \"lat\": {{origin-lat}},\n             \"lon\": {{origin-lon}}\n        },\n        \"ts\": \"{{current_time}}\",\n        \"acc\": 1,\n        \"v\": 5\n    }\n]\n\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_lts}}/driver/location",
+              "host": [
+                "{{baseUrl_lts}}"
+              ],
+              "path": [
+                "driver",
+                "location"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "LoginCustomerAndSelectEstimate",
+      "item": [
+        {
+          "name": "Auth",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "var jsonData = JSON.parse(responseBody);",
+                  "postman.setEnvironmentVariable(\"customer_authId\", jsonData.authId);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json;charset=utf-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"mobileNumber\": \"8888888888\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\" : \"NAMMA_YATRI\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_app}}/auth",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "auth"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Auth Verification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "var jsonData = JSON.parse(responseBody);",
+                  "const customer_token = jsonData.token;",
+                  "postman.setEnvironmentVariable(\"customer_token\", customer_token);",
+                  "console.log('customer_token', customer_token);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json;charset=utf-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"otp\": \"7891\",\n    \"deviceToken\": \"doDpYhFKfEoJgGTjTbJSDj:APA91bE8vTiYAVx89Q0vKCo0zRp7K2SyJukMjADCithsfhsd0jlNPyR18BUdav-ocA0gcMvkwp8XhE0dOkVvXou-DfSs7LHjOotRlTEX1suQQTya0wOWn7UUCTZAFip_GYMCavSDzpEE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_app}}/auth/:authId/verify",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "auth",
+                ":authId",
+                "verify"
+              ],
+              "variable": [
+                {
+                  "key": "authId",
+                  "value": "{{customer_authId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disabledSystemHeaders": {}
+          },
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json;charset=utf-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\" : \"Test User NY\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_app}}/profile",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true,
+            "disabledSystemHeaders": {}
+          },
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json;charset=utf-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_app}}/profile",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Origin Serviceability",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const oLatCurr = postman.getEnvironmentVariable(\"origin-lat\");",
+                  "const oLonCurr = postman.getEnvironmentVariable(\"origin-lon\");",
+                  "",
+                  "if (!oLatCurr || !oLonCurr) {",
+                  "    postman.setEnvironmentVariable(\"origin-lat\", oLatNew);",
+                  "    postman.setEnvironmentVariable(\"origin-lon\", oLonNew);",
+                  "}",
+                  "",
+                  "// Bangalore",
+                  "const oLatNew = 12.8980387;",
+                  "const oLonNew = 77.6068045;",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "token",
+                "value": "{{customer_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \n    \"location\" : {\n        \"lat\": {{origin-lat}},\n        \"lon\": {{origin-lon}}\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_app}}/serviceability/origin",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "serviceability",
+                "origin"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Destination Serviceability",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const dLatCurr = postman.getEnvironmentVariable(\"dest-lat\");",
+                  "const dLonCurr = postman.getEnvironmentVariable(\"dest-lon\");",
+                  "",
+                  "if (!dLatCurr || !dLonCurr) {",
+                  "    postman.setEnvironmentVariable(\"dest-lat\", dLatNew);",
+                  "    postman.setEnvironmentVariable(\"dest-lon\", dLonNew);",
+                  "}",
+                  "",
+                  "// Bangalore",
+                  "const dLatNew = 12.9325404;",
+                  "const dLonNew = 77.6287519;",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "token",
+                "value": "{{customer_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \n    \"location\" : {\n        \"lat\": {{dest-lat}},\n        \"lon\": {{dest-lon}}\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_app}}/serviceability/destination",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "serviceability",
+                "destination"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ride Search",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var moment = require('moment');",
+                  "postman.setEnvironmentVariable(\"current_time\", moment.utc().format(\"YYYY-MM-DDTHH:mm:ssZ\"));",
+                  "",
+                  "const oLatCurr = postman.getEnvironmentVariable(\"origin-lat\");",
+                  "const oLonCurr = postman.getEnvironmentVariable(\"origin-lon\");",
+                  "const dLatCurr = postman.getEnvironmentVariable(\"dest-lat\");",
+                  "const dLonCurr = postman.getEnvironmentVariable(\"dest-lon\");",
+                  "",
+                  "if (!oLatCurr || !oLonCurr || !dLatCurr || !dLonCurr) {",
+                  "    postman.setEnvironmentVariable(\"origin-lat\", oLatNew);",
+                  "    postman.setEnvironmentVariable(\"origin-lon\", oLonNew);",
+                  "    postman.setEnvironmentVariable(\"dest-lat\", dLatNew);",
+                  "    postman.setEnvironmentVariable(\"dest-lon\", dLonNew);",
+                  "}",
+                  "",
+                  "// Bangalore",
+                  "const oLatNew = 12.8980387;",
+                  "const oLonNew = 77.6068045;",
+                  "const dLatNew = 12.9325404;",
+                  "const dLonNew = 77.6287519;",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "const body = JSON.parse(responseBody);",
+                  "const searchId = body.searchId",
+                  "postman.setEnvironmentVariable(\"customer_searchId\", searchId);",
+                  "console.log('searchId', searchId);"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json;charset=utf-8"
+              },
+              {
+                "warning": "This is a duplicate header and will be overridden by the token header generated by Postman.",
+                "key": "token",
+                "value": "{{customer_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fareProductType\": \"ONE_WAY\",\n    \"contents\": {\n        \"startTime\": \"{{current_time}}\",\n        \"estimatedRentalDistance\": 30000,\n        \"estimatedRentalDuration\": 7200,\n        \"origin\": {\n            \"address\": {\n                \"area\": \"8th Block Koramangala\",\n                \"areaCode\": \"560047\",\n                \"building\": \"Juspay Buildings\",\n                \"city\": \"Bangalore\",\n                \"country\": \"India\",\n                \"door\": \"#444\",\n                \"street\": \"18th Main\",\n                \"state\": \"Karnataka\"\n            },\n            \"gps\": {\n                    \"lat\": {{origin-lat}},\n                    \"lon\": {{origin-lon}}\n                }\n        },\n        \"destination\": {\n            \"address\": {\n                \"area\": \"6th Block Koramangala\",\n                \"areaCode\": \"560047\",\n                \"building\": \"Juspay Apartments\",\n                \"city\": \"Bangalore\",\n                \"country\": \"India\",\n                \"door\": \"#444\",\n                \"street\": \"18th Main\",\n                \"state\": \"Karnataka\"\n            },\n            \"gps\": {\n                    \"lat\": {{dest-lat}},\n                    \"lon\": {{dest-lon}}\n                }\n        }\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_app}}/rideSearch",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "rideSearch"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ride Search Estimates or Quotes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "const body = JSON.parse(responseBody);",
+                  "const vehicleVariant = \"SUV\"",
+                  "",
+                  "const retry = 5;",
+                  "let count = postman.getEnvironmentVariable(\"rseq_count\");",
+                  "if (count == null || count == undefined) {",
+                  "    count = 0;",
+                  "    postman.setEnvironmentVariable(\"rseq_count\", count);",
+                  "}",
+                  "",
+                  "if (count > retry) {",
+                  "    throw Error('No estimates or quotes available')",
+                  "}",
+                  "",
+                  "let estimate_id = null;",
+                  "if(body.estimates.length > 0) {",
+                  "    estimate_id = body.estimates.find(estimate => estimate.vehicleVariant == vehicleVariant).id;",
+                  "    console.log('customer_estimate_id', estimate_id);",
+                  "}",
+                  "postman.setEnvironmentVariable(\"customer_estimate_id\", estimate_id);",
+                  "",
+                  "let quote_id = null;",
+                  "if(body.quotes.length > 0) {",
+                  "    quote_id = body.quotes.find(quote => quote.onDemandCab.vehicleVariant == vehicleVariant).onDemandCab.id;",
+                  "    console.log('customer_quote_id', quote_id);",
+                  "}",
+                  "postman.setEnvironmentVariable(\"customer_quote_id\", quote_id);",
+                  "",
+                  "if (count <= retry && body.estimates.length == 0 && body.quotes.length == 0) {",
+                  "    count++;",
+                  "    postman.setEnvironmentVariable(\"rseq_count\", count);",
+                  "    postman.setNextRequest(\"Ride Search Estimates or Quotes\");",
+                  "}",
+                  "",
+                  "setTimeout(function(){}, 1000);",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl_app}}/rideSearch/:searchId/results",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "rideSearch",
+                ":searchId",
+                "results"
+              ],
+              "variable": [
+                {
+                  "key": "searchId",
+                  "value": "{{customer_searchId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Select A Ride Estimate (Auto Assign - Skip Confirm)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"autoAssignEnabledV2\" : true, \"autoAssignEnabled\" : true }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_app}}/estimate/:estimateId/select2",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "estimate",
+                ":estimateId",
+                "select2"
+              ],
+              "variable": [
+                {
+                  "key": "estimateId",
+                  "value": "{{customer_estimate_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "DriverOfferQuote",
+      "item": [
+        {
+          "name": "Nearby Customer Ride Requests",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "const body = JSON.parse(responseBody);",
+                  "const sReqForD = body.searchRequestsForDriver",
+                  "",
+                  "const retry = 5;",
+                  "let count = postman.getEnvironmentVariable(\"ncrr_count\");",
+                  "if (count == null || count == undefined) {",
+                  "    count = 0;",
+                  "    postman.setEnvironmentVariable(\"ncrr_count\", count);",
+                  "}",
+                  "",
+                  "let searchTryId = null;",
+                  "if(sReqForD.length > 0 || count > retry) {",
+                  "    searchTryId = sReqForD[0].searchTryId;",
+                  "}",
+                  "postman.setEnvironmentVariable(\"driver_search_request_id\", searchTryId);",
+                  "",
+                  "if (count <= retry && body.searchRequestsForDriver.length == 0) {",
+                  "    count++;",
+                  "    postman.setEnvironmentVariable(\"ncrr_count\", count);",
+                  "    postman.setNextRequest(\"Nearby Customer Ride Requests\");",
+                  "}",
+                  "setTimeout(function(){}, 1000);",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{driver_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json;charset=utf-8"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest",
+              "host": [
+                "{{baseURL_namma_P}}"
+              ],
+              "path": [
+                "driver",
+                "nearbyRideRequest"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Quote Customer For Ride",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{driver_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json;charset=utf-8"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json;charset=utf-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"searchTryId\": \"{{driver_search_request_id}}\",\n  \"response\": \"Accept\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond",
+              "host": [
+                "{{baseURL_namma_P}}"
+              ],
+              "path": [
+                "driver",
+                "searchRequest",
+                "quote",
+                "respond"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Driver Cancellation",
+      "item": [
+        {
+          "name": "Customer - OTP For Latest Ride Booked",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "const body = JSON.parse(responseBody);",
+                  "",
+                  "const retry = 5;",
+                  "let count = postman.getEnvironmentVariable(\"otp_count\");",
+                  "if (count == null || count == undefined) {",
+                  "    count = 0;",
+                  "    postman.setEnvironmentVariable(\"otp_count\", count);",
+                  "}",
+                  "if (count > retry) {",
+                  "    throw Error('No active booking found');",
+                  "}",
+                  "",
+                  "if (body.list.length != 0) {",
+                  "    let bookings = body.list.find ((booking) => booking.status == \"CONFIRMED\");",
+                  "    if(bookings) {",
+                  "        postman.setEnvironmentVariable(\"ride_otp\", bookings.bookingDetails.contents.otpCode);    ",
+                  "    }",
+                  "",
+                  "    bookings = body.list.find ((booking) => booking.status == \"TRIP_ASSIGNED\");",
+                  "    if(bookings) {",
+                  "        postman.setEnvironmentVariable(\"ride_otp\", bookings.rideList[0].rideOtp);",
+                  "        const customer_ride_id = bookings.rideList[0].id;",
+                  "        postman.setEnvironmentVariable(\"customer_ride_id\", customer_ride_id);",
+                  "        const customer_bookingId = bookings.id;",
+                  "        postman.setEnvironmentVariable(\"customer_bookingId\", customer_bookingId);",
+                  "        console.log('customer_ride_id', customer_ride_id);",
+                  "        console.log('customer_bookingId', customer_bookingId);",
+                  "    }",
+                  "}",
+                  "",
+                  "if (count <= retry && body.list.length == 0) {",
+                  "    count++;",
+                  "    postman.setEnvironmentVariable(\"otp_count\", count);",
+                  "    postman.setNextRequest(\"Customer - OTP For Latest Ride Booked\");",
+                  "}",
+                  "",
+                  "setTimeout(function(){}, 1000);",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl_app}}/rideBooking/list?limit=20&onlyActive=true",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "rideBooking",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "onlyActive",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Driver - RideId Of Newly Booked Ride",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  "",
+                  "const body = JSON.parse(responseBody);",
+                  "",
+                  "const retry = 5;",
+                  "let count = postman.getEnvironmentVariable(\"driver_rideList_count\");",
+                  "if (count == null || count == undefined) {",
+                  "    count = 0;",
+                  "    postman.setEnvironmentVariable(\"driver_rideList_count\", count);",
+                  "}",
+                  "if (count > retry) {",
+                  "    throw Error('No active driver ride found');",
+                  "}",
+                  "",
+                  "if (body.list.length != 0) {",
+                  "    const rideList = body.list.find((ride) => ride.status=\"NEW\");",
+                  "    postman.setEnvironmentVariable(\"driver_ride_id\", rideList.id);",
+                  "    console.log(\"driver_ride_id\", rideList.id);",
+                  "}",
+                  "",
+                  "if (count <= retry && body.list.length == 0) {",
+                  "    count++;",
+                  "    postman.setEnvironmentVariable(\"driver_rideList_count\", count);",
+                  "    postman.setNextRequest(\"Driver - RideId Of Newly Booked Ride\");",
+                  "}",
+                  "",
+                  "setTimeout(function(){}, 1000);",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{driver_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1",
+              "host": [
+                "{{baseURL_namma_P}}"
+              ],
+              "path": [
+                "driver",
+                "ride",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Driver - Ride Cancellation",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.variables.set(\"ride-end-lat\", \"12.932008\");",
+                  "pm.variables.set(\"ride-end-lon\", \"77.620154\");"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "\"// Assert if request was successful\",",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', request),",
+                  "        console.log('res', responseBody)",
+                  "        pm.response.to.have.status(200)",
+                  "    }",
+                  "});",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disabledSystemHeaders": {}
+          },
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{driver_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"reasonCode\": \"CancellationReasonCode asf\",\n    \"additionalInfo\": \"Adf\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL_namma_P}}/driver/ride/:rideId/cancel",
+              "host": [
+                "{{baseURL_namma_P}}"
+              ],
+              "path": [
+                "driver",
+                "ride",
+                ":rideId",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "rideId",
+                  "value": "{{driver_ride_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

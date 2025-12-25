@@ -21,7 +21,7 @@ import Components.RatingCard.Controller (Action(..), RatingCardConfig, FeedbackI
 import Components.SourceToDestination as SourceToDestination
 import Data.Array (mapWithIndex, (!!), any, elem, find, head, filter, length)
 import Data.Maybe (fromMaybe)
-import Data.String (split, Pattern(..))
+import Data.String (split, Pattern(..), null)
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, os)
 import Font.Size as FontSize
@@ -30,7 +30,7 @@ import JBridge (getBtnLoader, getKeyInSharedPrefKeys)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&), map, (<$>), (||),show)
-import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView, adjustViewWithKeyboard, accessibilityHint, accessibility)
+import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView, adjustViewWithKeyboard, accessibilityHint, accessibility, hintColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -51,7 +51,7 @@ view push state =
     , gravity BOTTOM
     , onClick push $ const BackPressed
     , background Color.black9000
-  ][  currentRatingView push state 
+  ][  currentRatingView push state
     , linearLayout
       [height WRAP_CONTENT
       , width MATCH_PARENT
@@ -61,10 +61,10 @@ view push state =
       , background Color.white900
       ][PrimaryButton.view (push <<< PrimaryButtonAC ) (state.primaryButtonConfig)]
   ]
-  
+
 
 currentRatingView :: forall w. (Action -> Effect Unit) -> RatingCardConfig -> PrestoDOM (Effect Unit) w
-currentRatingView push state = 
+currentRatingView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -76,11 +76,11 @@ currentRatingView push state =
   , clickable true
   , alignParentBottom "true,-1"
   , onClick push $ const NoAction
-  ][  scrollView 
+  ][  scrollView
       [ height if os == "IOS" then (V 500) else WRAP_CONTENT
       , width MATCH_PARENT
-      , scrollBarY false 
-      ][ linearLayout 
+      , scrollBarY false
+      ][ linearLayout
          [ height WRAP_CONTENT
          , width MATCH_PARENT
          , orientation VERTICAL
@@ -94,23 +94,23 @@ currentRatingView push state =
 
 -------------------------------------------------- feedbackPillView ---------------------------------------------------
 feedbackPillView :: forall w. RatingCardConfig -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-feedbackPillView state push = 
+feedbackPillView state push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER_VERTICAL
     , padding (PaddingBottom 16)
-    ](map  
-      (\list1 ->  
+    ](map
+      (\list1 ->
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation HORIZONTAL
         , gravity CENTER_HORIZONTAL
         , margin $ MarginBottom 6
-        ](map 
-            (\item -> 
+        ](map
+            (\item ->
               let isSelected = checkPillSelected item.text state.data.feedbackList item.id
               in
                 linearLayout
@@ -133,13 +133,13 @@ feedbackPillView state push =
                       ]
                   ]
             )list1
-          ) 
+          )
       ) (getFeedbackPillData state.data.rating state.feedbackPillData)
-    ) 
+    )
 
 getFeedbackPillData :: Int -> Array (Array (Array FeedbackItem)) -> Array (Array FeedbackItem)
 getFeedbackPillData rating feedbackPillData = fromMaybe [] $ (feedbackPillData) !! (rating - 1)
-                            
+
 checkPillSelected :: String -> Array FeedbackAnswer -> String -> Boolean
 checkPillSelected feedbackItem feedbackList itemId =
   let
@@ -162,12 +162,12 @@ editTextView state push =
   , orientation HORIZONTAL
   , margin $ MarginBottom 24
   , padding $ Padding 16 16 16 0
-  ][  imageView 
+  ][  imageView
       [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_message_square"
-      , height $ V 16 
-      , width $ V 16 
-      , margin $ if os == "ANDROID" then MarginRight 9 else  Margin 0 6 9 0 
-      ]                   
+      , height $ V 16
+      , width $ V 16
+      , margin $ if os == "ANDROID" then MarginRight 9 else  Margin 0 6 9 0
+      ]
     , (if os == "ANDROID" then editText else multiLineEditText)
       $
       [ height MATCH_PARENT
@@ -175,14 +175,15 @@ editTextView state push =
       , gravity LEFT
       , padding $ Padding 0 0 0 0
       , background Color.grey800
-      , color Color.black 
+      , color Color.black
       , hint state.feedbackPlaceHolder
       , weight 1.0
+      , accessibilityHint $ if not $ null state.data.feedback then state.data.feedback else state.feedbackPlaceHolder
+      , hintColor Color.black700
       , pattern "[^\n]*,255"
-      , singleLine false 
-      , onChange push FeedbackChanged 
+      , singleLine false
+      , onChange push FeedbackChanged
       ] <> FontStyle.body3 LanguageStyle
-
   ]
 
 ------------------------starRatingView--------------------------
@@ -197,7 +198,7 @@ starRatingView state push =
     , padding (PaddingBottom 16)
     , cornerRadius 8.0
     ][ imageView [
-        imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_driver_avatar"
+        imageWithFallback state.driverImage
         , height $ V 56
         , width $ V 56
         , cornerRadius 50.0
@@ -222,8 +223,8 @@ starRatingView state push =
           , gravity CENTER
           ] <> FontStyle.h3 LanguageStyle
       , imageView [
-          width $ V 16 
-        , height $ V 16 
+          width $ V 16
+        , height $ V 16
         , accessibility DISABLE
         , onClick push $ const BackPressed
         , gravity CENTER
@@ -253,7 +254,7 @@ starRatingView state push =
     ]
 
 feedbackBasedOnRatingView :: forall w . RatingCardConfig -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-feedbackBasedOnRatingView state push = 
+feedbackBasedOnRatingView state push =
     textView
         [ height WRAP_CONTENT
         , width $ V (screenWidth unit - 64)

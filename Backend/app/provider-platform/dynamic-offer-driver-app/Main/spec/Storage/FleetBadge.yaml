@@ -1,0 +1,52 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  VehicleCategory: Domain.Types.VehicleCategory
+  FleetBadgeType: Domain.Types.FleetBadgeType
+
+FleetBadge:
+  tableName: fleet_badge
+
+  fields:
+    id: Id FleetBadge
+    personId: Maybe (Id Person)
+    badgeName: Text
+    badgeType: FleetBadgeType|NoRelation
+    fleetOwnerId: Id Person
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    badgeRank: Maybe Text
+
+  default:
+    badgeType: "'DRIVER'"
+
+  constraints:
+    id: PrimaryKey
+    fleetOwnerId: SecondaryKey
+    badgeName: SecondaryKey
+    badgeType: SecondaryKey
+
+  queries:
+    findOneBadgeByNameAndBadgeTypeAndFleetOwnerId:
+      kvFunction: findOneWithKV
+      where:
+        and: [fleetOwnerId, badgeName, badgeType]
+    findAllBadgesByNameAndBadgeTypeAndFleetOwnerIds:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [fleetOwnerId]
+          - eq: [badgeName, badgeType]
+    updateBadgeNameAndRankById:
+      kvFunction: updateOneWithKV
+      params:
+        - badgeName
+        - badgeRank
+        - updatedAt
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

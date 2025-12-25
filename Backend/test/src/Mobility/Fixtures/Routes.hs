@@ -25,10 +25,25 @@ defaultSearchReq =
   OneWaySearch $
     OneWaySearchReq
       { origin = SearchReqLocation (LatLong 10.0739 76.2733) defaultSearchReqAddress,
-        destination = SearchReqLocation (LatLong 10.5449 76.4356) defaultSearchReqAddress,
+        destination = Just $ SearchReqLocation (LatLong 10.5449 76.4356) defaultSearchReqAddress,
         isSourceManuallyMoved = Nothing,
+        stops = Just [SearchReqLocation (LatLong 10.0749 76.2733) defaultSearchReqAddress],
+        startTime = Nothing,
         isSpecialLocation = Nothing,
-        isReallocationEnabled = Nothing
+        isReallocationEnabled = Nothing,
+        isDestinationManuallyMoved = Nothing,
+        quotesUnifiedFlow = Nothing,
+        sessionToken = Nothing,
+        placeNameSource = Nothing,
+        driverIdentifier = Nothing,
+        fareParametersInRateCard = Nothing,
+        isMeterRideSearch = Just False,
+        recentLocationId = Nothing,
+        platformType = Nothing,
+        subscriptionId = Nothing,
+        isReserveRide = Nothing,
+        verifyBeforeCancellingOldBooking = Just True,
+        numberOfLuggages = Nothing
       }
 
 defaultSearchReqAddress :: LocationAddress
@@ -43,7 +58,10 @@ defaultSearchReqAddress =
       areaCode = Nothing,
       area = Nothing,
       ward = Nothing,
-      placeId = Nothing
+      placeId = Nothing,
+      instructions = Nothing,
+      title = Nothing,
+      extras = Nothing
     }
 
 type LocationUpdates = NonEmpty (NonEmpty LatLong)
@@ -81,10 +99,25 @@ searchReqFromUpdatesList updList =
         OneWaySearch $
           OneWaySearchReq
             { origin = SearchReqLocation (NE.head $ NE.head updList) defaultSearchReqAddress,
-              destination = SearchReqLocation (NE.last $ NE.last updList) defaultSearchReqAddress,
+              destination = Just $ SearchReqLocation (NE.last $ NE.last updList) defaultSearchReqAddress,
               isSourceManuallyMoved = Nothing,
+              stops = Just $ NE.toList $ (\x -> SearchReqLocation x defaultSearchReqAddress) <$> NE.head updList,
               isSpecialLocation = Nothing,
-              isReallocationEnabled = Nothing
+              isReallocationEnabled = Nothing,
+              startTime = Nothing,
+              isDestinationManuallyMoved = Nothing,
+              quotesUnifiedFlow = Nothing,
+              sessionToken = Nothing,
+              placeNameSource = Nothing,
+              driverIdentifier = Nothing,
+              fareParametersInRateCard = Nothing,
+              isMeterRideSearch = Just False,
+              recentLocationId = Nothing,
+              platformType = Nothing,
+              subscriptionId = Nothing,
+              isReserveRide = Nothing,
+              verifyBeforeCancellingOldBooking = Just True,
+              numberOfLuggages = Nothing
             }
    in (origin, destination, req)
 
@@ -94,10 +127,25 @@ mkSearchReqFromLocations origin destination =
         OneWaySearch $
           OneWaySearchReq
             { origin = SearchReqLocation origin defaultSearchReqAddress,
-              destination = SearchReqLocation destination defaultSearchReqAddress,
+              destination = Just $ SearchReqLocation destination defaultSearchReqAddress,
+              stops = Nothing,
               isSourceManuallyMoved = Nothing,
               isSpecialLocation = Nothing,
-              isReallocationEnabled = Nothing
+              startTime = Nothing,
+              isReallocationEnabled = Nothing,
+              isDestinationManuallyMoved = Nothing,
+              quotesUnifiedFlow = Nothing,
+              sessionToken = Nothing,
+              placeNameSource = Nothing,
+              driverIdentifier = Nothing,
+              fareParametersInRateCard = Nothing,
+              isMeterRideSearch = Just False,
+              recentLocationId = Nothing,
+              platformType = Nothing,
+              subscriptionId = Nothing,
+              isReserveRide = Nothing,
+              verifyBeforeCancellingOldBooking = Just True,
+              numberOfLuggages = Nothing
             }
    in (origin, destination, req)
 

@@ -1,0 +1,13 @@
+imports: {}
+
+module: Insurance
+types: {}
+
+apis:
+  - GET:
+      endpoint: /insurance/{referenceId}
+      params:
+        referenceId: Text
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "SharedLogic.CallBAPInternal.InsuranceAPIEntity"

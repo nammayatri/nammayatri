@@ -68,9 +68,12 @@ library
       StandaloneDeriving
       PackageImports
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  extra-libraries:
+      cac_client
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers
@@ -79,12 +82,14 @@ library
     , either
     , euler-hs
     , exceptions
+    , external
     , extra
     , generic-lens
-    , hashmap
+    , haskell-cac
     , hspec
     , mobility-core
     , openapi3
+    , passetto-client
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
@@ -96,12 +101,14 @@ library
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , sessionizer-metrics
     , singletons
     , stm
     , string-conversions
     , text
     , text-conversions
     , time
+    , unordered-containers
     , uuid
     , wai
     , warp
@@ -152,9 +159,12 @@ executable driver-offer-allocator-exe
       StandaloneDeriving
       PackageImports
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  extra-libraries:
+      cac_client
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , bytestring
     , containers
     , cryptonite
@@ -162,12 +172,14 @@ executable driver-offer-allocator-exe
     , either
     , euler-hs
     , exceptions
+    , external
     , extra
     , generic-lens
-    , hashmap
+    , haskell-cac
     , hspec
     , mobility-core
     , openapi3
+    , passetto-client
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
@@ -185,6 +197,7 @@ executable driver-offer-allocator-exe
     , text
     , text-conversions
     , time
+    , unordered-containers
     , uuid
     , wai
     , warp

@@ -1,0 +1,57 @@
+# access tokens with different roles
+@customer = {{bap-dashboard/token/YATRI/customer}}
+@driver = {{bap-dashboard/token/YATRI/driver}}
+@juspay_ops = {{bap-dashboard/token/YATRI/juspay_ops}}
+@juspay_admin = {{bap-dashboard/token/YATRI/juspay_admin}}
+@customer_service = {{bap-dashboard/token/YATRI/customer_service}}
+
+# @name healthcheck
+GET {{bap-dashboard-host}}
+
+###
+
+# @name CustomerRideSearchAPI
+
+@customerId = 00000000-0000-0000-0000-000000000001
+
+POST {{bap-dashboard-host}}/bap/YATRI/rideBooking/search/{{customerId}}/rideSearch
+content-type: application/json
+token: {{juspay_admin}}
+
+{
+  "fareProductType" : "ONE_WAY",
+  "contents" : {
+    "origin": {
+      "address": {
+          "street": "60 Feet Rd",
+          "state": "Karnataka",
+          "door": "",
+          "country": "India",
+          "city": "Davanagere'test",
+          "building": " ",
+          "areaCode": "",
+          "area": "Vidyanagar"
+      },
+      "gps": {
+          "lat": 14.445332,
+          "lon": 75.919028
+      }
+    },
+    "destination": {
+      "address": {
+              "street": "Hadadi Rd",
+              "state": "Karnataka",
+              "door": "",
+              "country": "India",
+              "city": "Davanagere",
+              "building": "207",
+              "areaCode": "",
+              "area": "Nituvalli"
+          },
+      "gps": {
+          "lat": 14.441555,
+          "lon": 75.922259
+      }
+    }
+  }
+}

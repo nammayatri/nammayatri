@@ -2,6 +2,8 @@ let common = ./common.dhall
 
 let sec = ./secrets/rider-app.dhall
 
+let genericCommon = ../generic/common.dhall
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -30,6 +32,7 @@ let hedisCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let hedisClusterCfg =
@@ -40,6 +43,14 @@ let hedisClusterCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
+      }
+
+let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
+
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
       }
 
 let consumerProperties =
@@ -48,6 +59,28 @@ let consumerProperties =
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
       }
+
+let kafkaClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_kafka"
+      , tls = False
+      , retryInterval = [ +0 ]
+      }
+
+let serviceClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_app"
+      , tls = False
+      , retryInterval = [ +0 ]
+      }
+
+let dashboardClickhouseCfg = serviceClickhouseCfg
 
 let kafkaConsumerCfg =
       { topicNames = [ "rider-app-events-updates" ], consumerProperties }
@@ -59,17 +92,30 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let kvConfigUpdateFrequency = +10
 
+let cacConfig =
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenant = "test"
+      , retryConnection = False
+      , cacExpTime = +86400
+      , enablePolling = True
+      , enableCac = False
+      }
+
+let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+
 in  { hedisCfg
     , hedisClusterCfg
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
-    , hedisMigrationStage = True
+    , hedisMigrationStage = False
     , cutOffHedisCluster = False
     , esqDBCfg
     , esqDBReplicaCfg
     , cacheConfig
     , dumpEvery = +10
     , kafkaConsumerCfg
+    , metricsPort = +9083
     , timeBetweenUpdates = +10
     , availabilityTimeWindowOption
     , granualityPeriodType = common.periodType.Hours
@@ -77,9 +123,21 @@ in  { hedisCfg
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/kafka-consumers-person-stats.log"
-            , logRawSql = False
+            , logRawSql = True
             }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , kvConfigUpdateFrequency
+    , cacConfig
+    , kafkaClickhouseCfg
+    , serviceClickhouseCfg
+    , dashboardClickhouseCfg
+    , encTools
+    , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
+    , kafkaProducerCfg
+    , kafkaReadBatchDelay = +10
+    , kafkaReadBatchSize = +10
+    , consumerStartTime = Some +14
+    , consumerEndTime = Some +20
+    , inMemConfig
     }

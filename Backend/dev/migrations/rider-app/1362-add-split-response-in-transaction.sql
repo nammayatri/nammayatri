@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.payment_transaction ADD COLUMN split_settlement_response json;

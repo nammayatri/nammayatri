@@ -1,0 +1,80 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Currency: Kernel.Types.Common
+  DistanceUnit: Kernel.Types.Common
+  Centesimal: Kernel.Types.Common
+
+FleetOperatorStats:
+  tableName: fleet_operator_stats
+
+  fields:
+    fleetOperatorId : Text
+    totalRatingCount : Maybe Int
+    totalRatingScore : Maybe Int
+    driverFirstSubscription : Maybe Int
+    inspectionCompleted : Maybe Int
+    acceptationRequestCount : Maybe Int
+    totalRequestCount : Maybe Int
+    customerCancellationCount : Maybe Int
+    driverCancellationCount : Maybe Int
+    totalDistance : Maybe Meters
+    totalCompletedRides : Maybe Int
+    totalEarning : Maybe HighPrecMoney
+    currency : Maybe Currency
+    distanceUnit : Maybe DistanceUnit
+
+  beamType:
+    totalDistance: Maybe Double
+    totalEarning: Maybe HighPrecMoney
+
+  fromTType:
+    totalDistance: Kernel.Prelude.fmap (Kernel.Types.Common.Meters . GHC.Float.double2Int) totalDistance|E
+
+  toTType:
+    totalDistance: getTotalDistance
+
+  constraints:
+    fleetOperatorId: PrimaryKey
+
+  queries:
+
+    deleteByFleetOperatorId:
+      kvFunction: deleteWithKV
+      where: fleetOperatorId
+
+    updateTotalRatingCountAndTotalRatingScoreByFleetOperatorId:
+      kvFunction: updateOneWithKV
+      params: [totalRatingCount, totalRatingScore]
+      where: fleetOperatorId
+
+    updateDriverFirstSubscriptionByFleetOperatorId:
+      kvFunction: updateOneWithKV
+      params: [driverFirstSubscription]
+      where: fleetOperatorId
+
+    updateInspectionCompletedByFleetOperatorId:
+      kvFunction: updateOneWithKV
+      params: [inspectionCompleted]
+      where: fleetOperatorId
+
+    updateCustomerCancellationCountByFleetOperatorId:
+      kvFunction: updateOneWithKV
+      params: [customerCancellationCount]
+      where: fleetOperatorId
+
+    updateDriverCancellationCountByFleetOperatorId:
+      kvFunction: updateOneWithKV
+      params: [driverCancellationCount]
+      where: fleetOperatorId
+
+    updateDistanceEarningAndCompletedRidesByFleetOperatorId:
+      kvFunction: updateOneWithKV
+      params: [totalDistance, totalEarning, totalCompletedRides]
+      where: fleetOperatorId
+
+    updateRequestCountsByFleetOperatorId:
+      kvFunction: updateOneWithKV
+      params: [acceptationRequestCount, totalRequestCount]
+      where: fleetOperatorId
+

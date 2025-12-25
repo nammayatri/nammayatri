@@ -16,41 +16,32 @@
 module Storage.CachedQueries.Person.PersonFlowStatus where
 
 import Domain.Types.Person
-import Domain.Types.Person.PersonFlowStatus
+import Domain.Types.PersonFlowStatus
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, MonadFlow)
-import qualified Storage.Queries.Person.PersonFlowStatus as Queries
+import Kernel.Utils.Common (CacheFlow)
 
-create :: MonadFlow m => PersonFlowStatus -> m ()
-create = Queries.create
-
-getStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> m (Maybe FlowStatus)
+getStatus :: CacheFlow m r => Id Person -> m (Maybe FlowStatus)
 getStatus personId =
   Hedis.safeGet (makeFlowStatusKey personId) >>= \case
     Just a -> return a
-    Nothing -> flip whenJust (cachedStatus personId) /=<< Queries.getStatus personId
+    Nothing -> pure $ Just IDLE
 
-updateStatus :: MonadFlow m => Id Person -> FlowStatus -> m ()
-updateStatus = Queries.updateStatus
-
-deleteByPersonId :: MonadFlow m => Id Person -> m ()
-deleteByPersonId = Queries.deleteByPersonId
-
-updateToIdleMultiple :: MonadFlow m => [Id Person] -> UTCTime -> m ()
-updateToIdleMultiple = Queries.updateToIdleMultiple
-
-cachedStatus :: CacheFlow m r => Id Person -> FlowStatus -> m ()
-cachedStatus personId flowStatus = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+updateStatus :: CacheFlow m r => Id Person -> FlowStatus -> m ()
+updateStatus personId flowStatus = do
+  let expTime = 3 * 60 -- 3 minutes
   let personIdKey = makeFlowStatusKey personId
   Hedis.setExp personIdKey flowStatus expTime
+
+updateToIdleMultiple :: CacheFlow m r => [Id Person] -> UTCTime -> m ()
+updateToIdleMultiple personIds _ = do
+  forM_ personIds $ \personId -> do
+    updateStatus personId IDLE
 
 makeFlowStatusKey :: Id Person -> Text
 makeFlowStatusKey personId = "CachedQueries:Person:FlowStatus-" <> personId.getId
 
-clearCache :: MonadFlow m => CacheFlow m r => Id Person -> m ()
+clearCache :: CacheFlow m r => Id Person -> m ()
 clearCache personId = do
   Hedis.del (makeFlowStatusKey personId)

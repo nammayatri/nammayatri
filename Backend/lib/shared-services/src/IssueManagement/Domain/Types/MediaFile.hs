@@ -11,25 +11,18 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module IssueManagement.Domain.Types.MediaFile where
 
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
+import AWS.S3 (FileType (..))
 import Kernel.Prelude
 import Kernel.Types.Id
 
-data MediaType = Video | Audio | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink
-  deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
-
-$(mkBeamInstancesForEnum ''MediaType)
-
 data MediaFile = MediaFile
   { id :: Id MediaFile,
-    _type :: MediaType,
+    _type :: FileType,
     url :: Text,
+    s3FilePath :: Maybe Text,
     createdAt :: UTCTime
   }
   deriving (Generic, FromJSON, Eq, ToJSON, ToSchema, Show)

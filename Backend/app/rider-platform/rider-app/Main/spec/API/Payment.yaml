@@ -1,0 +1,77 @@
+imports:
+  CustomerCardListResp: Kernel.External.Payment.Interface.Types
+  CustomerId: Kernel.External.Payment.Interface.Types
+  PaymentMethodId: Kernel.External.Payment.Interface.Types
+  APISuccess: Kernel.Types.APISuccess
+  Ride: Domain.Types.Ride
+  PriceAPIEntity: Kernel.Types.Common
+  CreateCustomerResp : Kernel.External.Payment.Interface.Types
+
+module: RidePayment
+types:
+  SetupIntentResponse:
+    setupIntentClientSecret: Text
+    customerId: CustomerId
+    ephemeralKey: Text
+  PaymentIntentResponse:
+    paymentIntentClientSecret: Text
+    customerId: CustomerId
+    ephemeralKey: Text
+  PaymentMethodsResponse:
+    list: CustomerCardListResp
+    defaultPaymentMethodId: Maybe PaymentMethodId
+  AddTipRequest:
+    recordType: NewType
+    amount: PriceAPIEntity
+apis:
+  - GET:
+      endpoint: /payment/methods
+      auth: TokenAuth
+      response:
+        type: PaymentMethodsResponse
+  - POST:
+      endpoint: /payment/methods/{paymentMethodId}/makeDefault
+      params:
+        paymentMethodId: PaymentMethodId
+      auth: TokenAuth
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /payment/intent/setup
+      auth: TokenAuth
+      response:
+        type: SetupIntentResponse
+  - GET:
+      endpoint: /payment/intent/payment
+      auth: TokenAuth
+      response:
+        type: PaymentIntentResponse
+  - POST:
+      endpoint: /payment/{rideId}/method/{paymentMethodId}/update
+      auth: TokenAuth
+      params:
+        rideId: Id Ride
+        paymentMethodId: PaymentMethodId
+      response:
+        type: APISuccess
+  - DELETE:
+      endpoint: /payment/methods/{paymentMethodId}/delete
+      auth: TokenAuth
+      params:
+        paymentMethodId: PaymentMethodId
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /payment/{rideId}/addTip
+      auth: TokenAuth
+      params:
+        rideId: Id Ride
+      request:
+        type: AddTipRequest
+      response:
+        type: APISuccess
+  - GET:
+      endpoint : /payment/customer
+      auth: TokenAuth
+      response:
+        type: CreateCustomerResp

@@ -15,7 +15,7 @@
 
 module Components.MobileNumberEditor.Controller where
 
-import Prelude((<>), negate)
+import Prelude((<>), negate, class Show, show)
 import Font.Size as FontSize
 import Common.Styles.Colors as Color
 import Font.Style (Style(..)) 
@@ -24,6 +24,13 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(.
 import Common.Types.App
 import Animation.Config (AnimConfig, animConfig)
 import PrestoDOM.Animation as PrestoAnim
+
+instance showAction :: Show Action where
+  show (TextChanged _ _) = "TextChanged"
+  show (FocusChanged _) = "FocusChanged"
+  show (CountryCodeSelected var1) = "CountryCodeSelected_" <> show var1
+  show (ShowOptions) = "ShowOptions"
+  show (CloseOptions) = "CloseOptions"
 
 data Action = TextChanged String String | FocusChanged Boolean | CountryCodeSelected CountryCodeObj | ShowOptions | CloseOptions 
 
@@ -216,7 +223,7 @@ config = {
     , background : Color.white900
     , stroke : "1,"<>Color.grey900
     , cornerRadius : 8.0 
-    , margin : MarginTop 0
+    , margin : MarginTop 10
   }
   , countryCodeOptionElementConfig :{ 
     height : WRAP_CONTENT

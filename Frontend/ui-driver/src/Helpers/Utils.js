@@ -6,7 +6,6 @@ const Android = window.Android;
 let timerIdForTimeout;
 const allTimerIID = [];
 let uniqueId = 0;
-let countDownInMinutesId = null;
 const microapps = ["in.juspay.hyperpay", "in.juspay.ec", "in.juspay.upiintent"];
 let popupType = null;
 
@@ -23,31 +22,45 @@ export const getOs = function () {
 };
 
 export const clampNumber = function (number) {
-  return function(originalMax) {
-    return function(newMax) {
+  return function (originalMax) {
+    return function (newMax) {
       const originalMin = 0;
       const newMin = 0;
       const originalRange = originalMax - originalMin;
       const newRange = newMax - newMin;
-      
+
       const percentage = (number - originalMin) / originalRange;
-      
+
       return Math.floor(newMin + percentage * newRange);
     }
   }
 }
 
+export const decodeError = function (er) {
+  return function (key) {
+    try {
+      const errorPayload = JSON.parse(er)[key];
+      if (errorPayload === null)
+        return "";
+      return errorPayload.toString();
+    } catch (e) {
+      console.log(e);
+      return "";
+    }
+  }
+};
+
 export const parseNumber = function (num) {
   num = num.toString();
-  let lastThree = num.substring(num.length-3);
-  const otherNumbers = num.substring(0,num.length-3);
-  if(otherNumbers != "")
+  let lastThree = num.substring(num.length - 3);
+  const otherNumbers = num.substring(0, num.length - 3);
+  if (otherNumbers != "")
     lastThree = "," + lastThree;
   const res = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree;
   return res;
 }
 
-export const startTimer = function(input) {
+export const startTimer = function (input) {
   return function (isCountDown) {
     return function (cb) {
       return function (action) {
@@ -84,37 +97,37 @@ export const startTimer = function(input) {
 }
 
 
-export const clearTimer = function (a)
-{ if(timerIdForTimeout){
-  clearTimeout(timerIdForTimeout);
-}
-if(window.timerId){
-  clearInterval(window.timerId);
-}
+export const clearTimer = function (a) {
+  if (timerIdForTimeout) {
+    clearTimeout(timerIdForTimeout);
+  }
+  if (window.timerId) {
+    clearInterval(window.timerId);
+  }
 };
 
 
-export const clearAllTimer = function(a) {
+export const clearAllTimer = function (a) {
   console.log("allTimerIID");
   console.log(allTimerIID);
-  while(allTimerIID.length > 0){
+  while (allTimerIID.length > 0) {
     clearInterval(parseInt(allTimerIID.pop()));
   }
 }
-export const setRefreshing = function (id){
-  return function (bool){
+export const setRefreshing = function (id) {
+  return function (bool) {
     if (window.__OS == "ANDROID") {
       const cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setRefreshing:b_" + bool + ";"
-      Android.runInUI(cmd,null)
+      Android.runInUI(cmd, null)
     }
   }
 }
 
-export const setEnabled = function (id){
-  return function (bool){
+export const setEnabled = function (id) {
+  return function (bool) {
     if (window.__OS == "ANDROID") {
       const cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setEnabled:b_" + bool + ";"
-      Android.runInUI(cmd,null)
+      Android.runInUI(cmd, null)
     }
   }
 }
@@ -122,7 +135,7 @@ export const setEnabled = function (id){
 export const decodeErrorCode = function (a) {
   try {
     const errorCodee = JSON.parse(a).errorCode;
-    return  errorCodee;
+    return errorCodee;
   } catch (e) {
     console.log(e);
     return " ";
@@ -132,30 +145,40 @@ export const decodeErrorCode = function (a) {
 export const decodeErrorMessage = function (a) {
   try {
     const errorMessagee = JSON.parse(a).errorMessage;
-    if(errorMessagee === null)
-    {
+    if (errorMessagee === null) {
       return "";
     }
-    return  errorMessagee;
+    return errorMessagee;
   } catch (e) {
     console.log(e);
     return " ";
   }
 };
 
+export const decodeErrorPayload = function (a) {
+  try {
+    const errorPayload = JSON.parse(a).errorPayload;
+    if (errorPayload === null) {
+      return {};
+    }
+    return errorPayload;
+  } catch (e) {
+    console.log(e);
+    return {};
+  }
+};
+
 export const convertKmToM = function (dist) {
-  try{
+  try {
     const distance = parseInt(dist);
-    if (distance<1000)
-    {
+    if (distance < 1000) {
       return ((distance.toString()) + "m");
     }
-    else
-    {
-      const disKm = distance/1000;
+    else {
+      const disKm = distance / 1000;
       return (((disKm.toFixed(1)).toString()) + "km");
     }
-  }catch(e){
+  } catch (e) {
     console.log(e);
     console.log("error in convertKmToM----------------------------------");
   }
@@ -166,7 +189,7 @@ export const differenceBetweenTwoUTC = function (str1) {
     const curr1 = new Date(str1);
     const departure = new Date(str2);
     console.log(departure + " , " + curr1 + "STR");
-    let diff =(curr1.getTime() - departure.getTime())/ 1000;
+    let diff = (curr1.getTime() - departure.getTime()) / 1000;
     diff = (Math.round(diff));
     return diff
   };
@@ -176,15 +199,45 @@ export const differenceBetweenTwoUTC = function (str1) {
 export const storeCallBackForNotification = function (cb) {
   return function (action) {
     return function () {
-      try {
-        const callback = callbackMapper.map(function (notificationType) {
-          cb(action(notificationType))();
-        });
-        window.onResumeListeners = [];
-        JBridge.storeCallBackForNotification(callback);
+        try {
+         const callback = callbackMapper.map(function (notificationType, notificationBody) {
+            if (window.whitelistedNotification.has(notificationType)) {
+              window.notificationType = notificationType;
+              let parsedBody;
+              try {
+                parsedBody = JSON.parse(notificationBody);
+              } catch (error) {
+                console.error("Failed to parse notificationBody:", error);
+                parsedBody = {
+                  title : "",
+                  msg : ""
+                };
+              }
+              const { title, msg } = parsedBody;
+              cb(action(notificationType)({title : title, message : msg}))();
+            }
+          });
+          window.onResumeListeners = [];
+          JBridge.storeCallBackForNotification(callback);
+        }
+        catch (error) {
+          console.log("Error occurred in storeCallBackForNotification ------", error);
+        }
       }
-      catch (error){
-        console.log("Error occurred in storeCallBackForNotification ------", error);
+    }
+  }
+
+export const storeCallBackForAddRideStop = function (cb) {
+  return function (action) {
+    return function () {
+      try {
+        const callback = callbackMapper.map(function (addStopLocation) {
+          cb(action(addStopLocation))();
+        });
+        window.JBridge.storeCallBackForAddRideStop(callback);
+      }
+      catch (error) {
+        console.log("Error occurred in storeCallBackForAddRideStop ------", error);
       }
     }
   }
@@ -211,19 +264,15 @@ export const getDatebyCount = function (count) {
   return today;
 }
 
-export const hideSplash = JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"hide_splash"}))()
+export const hideSplash = JOS.emitEvent("java","onEvent",JSON.stringify({ event: "hide_splash" }))
 
 export const currentPosition = function (str) {
-  return function() {
+  return function () {
     JBridge.currentPosition(str);
   }
 }
 
-export const toStringJSON = function (attr) {
-  return JSON.stringify(attr);
-};
-
-export const getTime = function (unit){
+export const getTime = function (unit) {
   return Date.now();
 }
 
@@ -231,13 +280,13 @@ export const toInt = function (val) {
   return parseInt(val);
 }
 
-export const secondsLeft = function (time){
+export const secondsLeft = function (time) {
   const validity = new Date(time).getTime();
   const now = new Date().getTime();
-  if (validity <= now){
+  if (validity <= now) {
     return parseInt(1);
-  }else{
-    return parseInt((validity - now)/1000);
+  } else {
+    return parseInt((validity - now) / 1000);
   }
 }
 
@@ -251,15 +300,30 @@ export const storeCallBackTime = function (cb) {
   return function (action) {
     return function () {
       try {
-        const callback = callbackMapper.map(function (time, lat, lng) {
-          cb(action(time)(lat)(lng))();
+        const callback = callbackMapper.map(function (time, lat, lng, errorCode) {
+          cb(action(time)(lat)(lng)(errorCode))();
         });
         JBridge.storeCallBackTime(callback);
       }
-      catch (error){
+      catch (error) {
         console.log("Error occurred in storeCallBackTime ------", error);
       }
     }
+  }
+}
+
+export const onMarkerClickCallbackMapper = function (cb) {
+  return function (action) {
+    try {
+      const callback = callbackMapper.map(function (tag, lat, lng) {
+        cb(action(tag)(lat)(lng))();
+      });
+      return callback;
+    }
+    catch (error) {
+      console.log("Error occurred in onMarkerClickCallbackMapper ------", error);
+    }
+    return "";
   }
 }
 
@@ -275,98 +339,39 @@ export const shuffle = function (array) {
   return shuffled
 }
 
-export const getTimeStampString = function (utcTime){
+export const getTimeStampString = function (utcTime) {
   const createdDate = new Date(utcTime);
   const currentDate = new Date();
-  const diff = (currentDate.getTime() - createdDate.getTime())/ 1000;
+  const diff = (currentDate.getTime() - createdDate.getTime()) / 1000;
   const seconds = (Math.round(diff));
-  if (seconds <0) return "";
-  const d = Math.floor(seconds / (3600*24));
-  const h = Math.floor(seconds % (3600*24) / 3600);
+  if (seconds < 0) return "";
+  const d = Math.floor(seconds / (3600 * 24));
+  const h = Math.floor(seconds % (3600 * 24) / 3600);
   const m = Math.floor(seconds % 3600 / 60);
   const s = Math.floor(seconds % 60);
-  if      (d > 0) return d + (d == 1 ? " day " : " days")
+  if (d > 0) return d + (d == 1 ? " day " : " days")
   else if (h > 0) return h + (h == 1 ? " hour " : " hours")
   else if (m > 0) return m + (m == 1 ? " minute " : " minutes")
-  else            return s + (s == 1 ? " second" : " seconds")
+  else return s + (s == 1 ? " second" : " seconds")
 }
 
-export const clearFocus = function (id) {
-  return JBridge.clearFocus(id)
-}
 
-export const addMediaPlayer = function (id) {
-  return function(source) {
-    return function () {
-      JBridge.addMediaPlayer(id,source);
-    }
-  };
-};
-
-export const saveAudioFile = function (source) {
-  return function() {
-    return JBridge.saveAudioFile(source);
-  }
-}
-
-export const uploadMultiPartData = function (path) {
-  return function (url) {
-    return function(fileType) {
-      return function() {
-        return JBridge.uploadMultiPartData(path, url, fileType);
-      }
-    }
-  }
-}
-
-export const startAudioRecording = function (id) {
-  return function() {
-    return JBridge.startAudioRecording();
-  }
-};
-
-export const stopAudioRecording = function (id) {
-  return function() {
-    return JBridge.stopAudioRecording();
-  }
-}
-
-export const renderBase64ImageFile = function (base64Image) {
-  return function(id) {
-    return function (fitCenter) {
-      return function (imgScaleType){
-        return function () {
-          try{
-            return JBridge.renderBase64ImageFile(base64Image, id, fitCenter, imgScaleType);
-          }catch (err){
-            return JBridge.renderBase64ImageFile(base64Image, id, fitCenter);
-          }
-        }
-      }  
-    }
-  }
-}
-
-export const removeMediaPlayer = function (id) {
-  return function () {
-    JBridge.removeMediaPlayer();
-  };
-};
-
-export const getPeriod = function(date) {
+export const getPeriod = function (date) {
   const currentDate = new Date();
   const pastDate = new Date(date);
   const diff = Math.floor(currentDate.getTime() - pastDate.getTime());
-  const days = Math.floor(diff/(1000 * 60 * 60 * 24));
-  const months = Math.floor(days/31);
-  const years = Math.floor(months/12);
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const months = Math.floor(days / 31);
+  const years = Math.floor(months / 12);
   const period = years > 0 ? years : months > 0 ? months : days > 0 ? days : 0
   const periodType = years > 0 ? "Yrs" : months > 0 ? "Months" : days > 0 ? "Days" : "new"
-  return {period : Math.abs(period)
-    , periodType : periodType}
+  return {
+    period: Math.abs(period)
+    , periodType: periodType
+  }
 }
 
-export const getMerchantId = function(id) {
+export const getMerchantId = function (id) {
   return window.merchantID;
 }
 
@@ -380,16 +385,16 @@ function getFileName(url) {
   return out ? out[0] : url;
 }
 
-function constructDownloadObject (root,url) {
+function constructDownloadObject(root, url) {
   const download = {};
-  Object.assign(download,({
-    "filePath" : root.concat(getFileName(url)),
-    "location" : url
+  Object.assign(download, ({
+    "filePath": root.concat(getFileName(url)),
+    "location": url
   }));
   return download;
 }
 
-function getDownloadObject(assets,bundles,apps,dependencies) {
+function getDownloadObject(assets, bundles, apps, dependencies) {
   const files = [];
   apps.forEach((app) => {
 
@@ -401,77 +406,115 @@ function getDownloadObject(assets,bundles,apps,dependencies) {
 
 
 
-    assetsKey.forEach((key) => {if (typeof assetsBlock[key] == "string") assetsList.push(assetsBlock[key])})
+    assetsKey.forEach((key) => { if (typeof assetsBlock[key] == "string") assetsList.push(assetsBlock[key]) })
 
-    files.push(constructDownloadObject(root,bundles[app]));
+    files.push(constructDownloadObject(root, bundles[app]));
 
     assetsList.forEach((url) => {
-      files.push(constructDownloadObject(root,url));
+      files.push(constructDownloadObject(root, url));
     });
   });
   return files;
 }
 
-export const preFetch = function() {
+export const preFetch = function () {
   let configPackage = {};
   try {
-    if (top.configPackage) configPackage = Object.assign({},top.configPackage)
+    if (top.configPackage) configPackage = Object.assign({}, top.configPackage)
     else configPackage = JSON.parse(JBridge.loadFileInDUI("config.json"));
-  }catch (err){
-    window.JBridge.firebaseLogEventWithParams("pre_fetch_failed", "config_read_failed",err);
+  } catch (err) {
+    window.JBridge.firebaseLogEventWithParams("pre_fetch_failed", "config_read_failed", err);
   }
 
   const JOSFlags = JOS.getJOSflags();
   let assets = {};
   let bundles = {};
   if (JOSFlags && JOSFlags.isCUGUser) {
-    assets = Object.assign(assets,configPackage.new.assets)
-    bundles = Object.assign(bundles,configPackage.new.package)
+    assets = Object.assign(assets, configPackage.new.assets)
+    bundles = Object.assign(bundles, configPackage.new.package)
   } else {
-    assets = Object.assign(assets,configPackage.live.assets)
-    bundles = Object.assign(bundles,configPackage.live.package)
+    assets = Object.assign(assets, configPackage.live.assets)
+    bundles = Object.assign(bundles, configPackage.live.package)
   }
-  return getDownloadObject(assets,bundles,configPackage.app_list,configPackage.dependencies);
+  return getDownloadObject(assets, bundles, configPackage.app_list, configPackage.dependencies);
 }
 
-// TODO NEED TO REFACTOR 
-export const renewFile = function(filePath,fileLocation,cb) {
-  JBridge.renewFile(fileLocation,filePath,callbackMapper.map(function(result) {
+// TODO NEED TO REFACTOR
+export const renewFile = function (filePath, fileLocation, cb) {
+  JBridge.renewFile(fileLocation, filePath, callbackMapper.map(function (result) {
     cb(result)();
   }));
 }
 
-export const isYesterday = function (dateString){
+export const isYesterday = function (dateString) {
   try {
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1);
     const date = new Date(dateString);
     return (yesterday.toDateString() == date.toDateString());
-  }catch(error){
+  } catch (error) {
     console.error(error);
   }
   return false;
 }
 
-export const isDateGreaterThan = function(dateString){
+export const isDateNDaysAgo = function (dateString, n) {
+  try {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() - n);
+    const date = new Date(dateString);
+    return date.toDateString() <= targetDate.toDateString();
+  } catch (error) {
+    console.error("error in isDateNDaysAgo function : " + error);
+  }
+  return false;
+}
+
+export const isMoreThanXMs = function(timestamp, millis) {
+  try {
+    if(timestamp === "__failed") return true;
+    const timestampDate = new Date(timestamp);
+    const now = Date.now();
+    const timestampTime = timestampDate.getTime();
+    const timeDifference = now - timestampTime;
+
+    return timeDifference > millis;
+  } catch (error) {
+    console.log(error);
+    return false
+  }
+}
+
+export const isToday = function (dateString) {
+  try {
+    const today = new Date()
+    const date = new Date(dateString);
+    return (today.toDateString() == date.toDateString());
+  } catch (error) {
+    console.error(error);
+  }
+  return false;
+}
+
+export const isDateGreaterThan = function (dateString) {
   try {
     const currDate = new Date();
     const futureDate = new Date(dateString);
     return currDate > futureDate;
-  }catch(error){
+  } catch (error) {
     console.error("error", error);
   }
   return false;
 }
 
-export const getPopupObject = function (just, nothing, key){
+export const getPopupObject = function (just, nothing, key) {
   try {
     const val = JBridge.getFromSharedPrefs(key);
     if (val == "__failed") {
       return nothing;
-    } 
+    }
     return just(JSON.parse(val));
-  } catch( e ){
+  } catch (e) {
     console.warn(e);
   }
   return nothing;
@@ -508,20 +551,20 @@ export const _generateQRCode = function (data, id, size, margin, sc) {
   }
 }
 
-export const downloadQR = function (id){
+export const downloadQR = function (id) {
   if (window.JBridge.downloadLayoutAsImage)
     return window.JBridge.downloadLayoutAsImage(id);
 }
 
 
-export const getPixels = function (){
+export const getPixels = function () {
   if (window.parent.devicePixelRatio) {
     return window.parent.devicePixelRatio;
   } else {
     return window.JBridge.getPixels();
   }
 }
-export const getDeviceDefaultDensity = function (){
+export const getDeviceDefaultDensity = function () {
   if (window.JBridge.getSessionInfo) {
     const sessionInfo = JSON.parse(window.JBridge.getSessionInfo())
     return sessionInfo.screen_ppi;
@@ -530,26 +573,6 @@ export const getDeviceDefaultDensity = function (){
   }
 }
 
-export const countDownInMinutes = function (seconds, cb, action) {
-  let sec;
-  function convertInMinutesFormat() {
-    sec = sec - 60;
-    const minutes = Math.floor(sec / 60);
-    cb(action(countDownInMinutesId)(minutes + 1)(sec))();
-  }
-  try {
-    sec = seconds - 5; //5 seconds buffer
-    if (sec <= 0) {
-      cb(action(countDownInMinutesId)("")(0))();
-    } else {
-      if (countDownInMinutesId) clearInterval(countDownInMinutesId);
-      countDownInMinutesId = setInterval(convertInMinutesFormat, 60000); //setting interval of 1 min
-      cb(action(countDownInMinutesId)(Math.floor(sec / 60) + 1)(sec))();
-    }
-  } catch (error) {
-    console.error("Error occured ", error);
-  }
-}
 
 export const istToUtcDate = function (dateStr) {
   try {
@@ -562,7 +585,7 @@ export const istToUtcDate = function (dateStr) {
   }
 };
 
-export const setValueToLocalStore = function (key,value){
+export const setValueToLocalStore = function (key, value) {
   JBridge.setInSharedPrefs(key, value);
 }
 
@@ -578,4 +601,119 @@ export const getPopupType = function (just, nothing) {
     popupType = null;
     return just(localPopup);
   }
+};
+
+export const renderSlider = function (cb) {
+  return function (action) {
+    return function (config) {
+      const { id, stepFunctionForCoinConversion, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId } = config;
+      const callback = callbackMapper.map(function (val) {
+        cb(action(parseInt(val)))();
+      });
+      try {
+        window.JBridge.renderSlider(id, callback, stepFunctionForCoinConversion, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId);
+      } catch (error) {
+        // backward compatibility
+        console.error("Calling renderSlider without stepFunctionForCoinConversion : ", error);
+        window.JBridge.renderSlider(id, callback, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId);
+      }
+    }
+  }
 }
+
+// This can be used in future for activityResultListeners
+// window.activityResultListeners[requestCode] = function (reqCode, bundle) {
+//   cb(reqCode)(bundle)();
+// };
+export const requestKeyboardShow = function (id) {
+  return function () {
+    const delayInMilliseconds = 100;
+    setTimeout(function () {
+      window.JBridge.requestKeyboardShow(id);
+    }, delayInMilliseconds);
+  }
+}
+
+export const getLocationName = function (cb) {
+  return function (lat) {
+    return function (lng) {
+      return function (defaultText) {
+        return function (action) {
+          return function () {
+            const callback = callbackMapper.map(function (resultLat, resultLon, result) {
+              const decodedString = decodeURIComponent(result).replace(/\+/g, " ");
+              cb(action(parseFloat(resultLat))(parseFloat(resultLon))(decodedString))();
+            });
+            return window.JBridge.getLocationName(lat, lng, defaultText, callback);
+          }
+        }
+      }
+    }
+  }
+}
+
+export const extractKeyByRegex = (regex, text) => {
+  const matches = text.match(regex);
+  return matches ? matches[0] : "";
+}
+
+export const performHapticFeedback = function () {
+  if (window.JBridge.performHapticFeedback) {
+    return window.JBridge.performHapticFeedback();
+  }
+}
+export function percentageToAngle(numerator, denominator, segmentAngle, segments) {
+    if (denominator === 0) {
+        return 0;
+    }
+    let percentage = (numerator / denominator) * 100;
+    for (let segment of segments) {
+        if (percentage >= segment.min && percentage <= segment.max) {
+            let mappedDegree = ((percentage - segment.min) * segmentAngle) / (segment.max - segment.min);
+            return Math.round(mappedDegree * 100) / 100; // Round to 2 decimal places
+        }
+    }
+    return segmentAngle;
+}
+
+
+export function rentalPickupTimeFormat(input) {
+  const date = new Date(input);
+  date.setMinutes(date.getMinutes() + date.getTimezoneOffset() + 330);
+  let hours = date.getHours();
+  let minutes = date.getMinutes();
+  let ampm = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12 || 12;
+  const day = date.getDate();
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = monthNames[date.getMonth()];
+  const today = new Date();
+  today.setMinutes(today.getMinutes() + today.getTimezoneOffset() + 330);
+  const isToday = today.toDateString() === date.toDateString();
+  return `${isToday ? 'Today' : 'Tomorrow'} ${hours}:${minutes.toString().padStart(2, '0')}${ampm} - ${day} ${month}`;
+}
+
+
+export const convertEpochToDateFormat = function (str) {
+    try {
+      // Convert epoch seconds to milliseconds if needed
+      const epochTime = str.toString().length === 10 ? str * 1000 : str;
+      const date = new Date(epochTime);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.error("Invalid epoch time:", str);
+        return "";
+      }
+      
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0"); // January is 0!
+      const year = date.getFullYear();
+      
+      // Return in dd/mm/yyyy format
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      console.error("Error in convertEpochToDateFormat:", error);
+      return "";
+    }
+};

@@ -35,6 +35,8 @@ public class ViewPagerItem {
 
     public int getImageHeight() { return imageConfig.optInt("height", 260);}
 
+    public boolean isImageUrl() { return imageConfig.optBoolean("isUrl", false);};
+
     public String getImageBgColor() { return imageConfig.optString("bgColor", "#FFFFFF");}
 
     public JSONObject getDescriptionMargin() {return descriptionConfig.optJSONObject("margin");}
@@ -65,5 +67,5 @@ public class ViewPagerItem {
 
     public int getCarouselGravity() {return gravity;}
 
-
+    public String getImage () {return imageConfig.optString("image" , "");}
 }

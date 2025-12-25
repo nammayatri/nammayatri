@@ -1,0 +1,105 @@
+# Cline's Rules of EngagementAdd commentMore actions
+
+This file contains rules and guidelines learned from user feedback to improve my performance and avoid repeating mistakes. I must adhere to these rules in all future tasks.
+
+## 1. Command Execution with `nix develop`
+
+- **Exact Syntax is Critical:** I must execute `nix develop` commands *exactly* as specified by the user.
+- **No Unsolicited Quoting:** Specifically for the `-c` flag, I must **NEVER** add double quotes around the command string unless explicitly told to. This is a strict rule.
+- **Correct Format for `run-generator`:** The required format is `nix develop .#backend -c , run-generator --apply-hint`. The leading comma is part of the command and must be included.
+- **Correct Format for other commands:** For other commands like `cabal repl`, the comma should be omitted: `nix develop .#backend -c cabal repl rider-app`.
+- **No Unsolicited Quoting:** Specifically for the `-c` flag, I must **NEVER** add double quotes around the command string unless explicitly told to. This is a strict rule.
+
+## 2. Namma DSL Generator Errors
+
+- **"Type not determined" Error:** When the `alchemist-generator-exe` fails with a `"Type" type not determined` error, the root cause is almost always a missing or incorrect type import in the relevant `.yaml` specification file.
+- **Troubleshooting Steps:**
+    1.  Identify the type that could not be determined from the error message.
+    2.  Locate the `.yaml` file where this type is being used.
+    3.  Check the `imports:` section at the top of the YAML file.
+    4.  Ensure that the type (and its containing module) is correctly imported. For example, if using `PlatformType` from `Domain.Types.IntegratedBPPConfig`, the import should be `PlatformType: Domain.Types.IntegratedBPPConfig`.
+
+## 3. Code Refactoring and Module Usage
+
+- **Augment, Don't Recreate:** When instructed to add functionality to an existing module, I must modify that module directly. I should not create a new, separate file for the new functionality unless explicitly instructed to do so. This keeps the codebase clean and organized.
+
+## 4. General Principles
+
+- **Analyze Errors Before Retrying:** I must not blindly retry a failed command. I need to carefully analyze the error message, form a hypothesis about the root cause, and apply a specific fix before attempting to run the command again.
+- **Incorporate Feedback Immediately:** All user corrections and guidelines should be immediately integrated into my workflow and, if appropriate, documented in this `.clinerules` file.
+- **Comprehensive File Scanning:** During planning, always perform a comprehensive scan of all relevant files to identify all usages and potential impacts of proposed changes. This ensures nothing is missed during implementation.
+
+## 5. Compilation with `cabal repl`
+
+- **Use Existing Session:** When a compilation fails, I must use the existing `cabal repl` session and run `:r` to continue the compilation from where it left off. This avoids recompiling from the beginning.
+- **Correct Directory:** All `cabal` commands must be run from the `Backend` directory.
+
+## 6. Code Cleanup
+- **Remove Deprecated Code:** I must remove any deprecated or dead functions from the code.
+- **Avoid merge markers:** I must not leave any merge markers like `>>>>>>>` in the code.
+
+## 7. Consistency
+- **Update All Occurrences:** When a variable, function, or type is changed, all its occurrences and usages in the codebase must be updated accordingly to maintain consistency and prevent errors.
+
+## 8. Cache Key Naming Convention
+- **`tableNameInCamelCase:keyName`:** When defining cache keys in `Storage.CachedQueries` modules, the convention is to use the table name in camel case, followed by a colon, and then the key name. For example, `gtfsFeedInfo:someKey`.
+
+## 9. `replace_in_file` Fallback
+- **Use `write_to_file` after 3 failures:** If `replace_in_file` fails three consecutive times on the same section of code, use `write_to_file` as a fallback to unblock the task.
+
+## 10. Query File Naming and Location Conventions
+- **Table Query Files:** Table query functions are typically found in `Queries.<TableName>.hs` or `Queries.<TableName>Extra.hs`.
+- **Cached Query Files:** Cached query files are typically found in `CachedQueries/<TableName>.hs`.
+- **Location:** These files can be located in either `src/` or `src-read-only/` directories.
+
+## 11. Function Existence Verification
+- **Verify Before Use:** Before using any function from a query module (e.g., `QRoute`, `QStation`, `QRSM`), I must verify its existence and exact name. If direct file reading is not possible, I should infer the most likely name based on common patterns and available context, and be prepared to correct if compilation errors indicate a mismatch.
+
+## 12. Auto-generated Files
+- **Do Not Manually Delete Generated Files:** Files that are auto-generated from YAML specifications (whether in `src/` or `src-read-only/`) should not be manually deleted. Removing the corresponding definition from the YAML source will trigger automatic cleanup during code generation.
+
+## 13. `write_to_file` Content
+- **Only Raw Content:** When using `write_to_file`, only provide the raw file content. Do not include any surrounding XML tags (like `<final_file_content>`) or system-generated text.
+
+## 14. Cabal Commands Directory
+- **Execute in Backend Directory:** Always ensure that `cabal` commands are executed from the `Backend` directory. Prepend commands with `cd Backend &&` if the current working directory is not `Backend`.
+
+## 15. Do not edit `src-read-only` files
+- **Do Not Edit `src-read-only` Files Directly:** Files in `src-read-only` are auto-generated. I must not edit them directly. Instead, I should modify the corresponding `.yaml` specification file and run the generator.
+
+## 15. Core Operating Principles for File Edits
+
+1.  **Prioritize Accuracy and Avoid Loops:** Your primary goal is to apply changes correctly without getting stuck. It is better to be slow and successful than fast and stuck in a loop.
+2.  **Handle Widespread Changes Methodically:** When a prompt requires changing the same text in multiple files or multiple locations within one file (like a global find-and-replace), you MUST NOT create a single plan to edit all locations at once. This leads to "Diff Edit Mismatch" errors.
+3.  **Adopt a Sequential, File-by-File Strategy:**
+    *   **Step A: Plan.** First, identify all files and line numbers that require changes. List them for me.
+    *   **Step B: Execute One File at a Time.** Process only the *first* file on your list. Apply ALL necessary changes within that single file in one operation if possible.
+    *   **Step C: Verify and Repeat.** After you have successfully modified a file, re-read the list of remaining files and proceed to the next one. Do not rely on your original plan's line numbers for subsequent files, as they may have changed. Re-scan if necessary.
+4.  **Error Handling for "Diff Edit Mismatch":**
+    *   If you encounter a "Diff Edit Mismatch" error, **DO NOT RETRY THE EXACT SAME OPERATION.** The file has changed, and your patch is invalid.
+    *   Instead, stop and report the failure. State which file and line you were trying to edit.
+    *   Then, re-scan the file's current content to create a new, valid patch.
+    *   If it fails a second time on the same file, stop completely and ask me how to proceed. **Do not enter a retry loop.**
+
+## 16. Haskell Type-Driven Debugging
+- **Principle:** When facing compilation errors, unexpected behavior, or any blocker in Haskell, **always thoroughly examine the types** of the functions, variables, expressions, and data constructors involved. Type mismatches, incorrect assumptions about types, or misuse of type constructors are common sources of errors.
+- **Action:**
+    1.  **Identify Error Location:** Pinpoint the exact location of the error from the compiler message or runtime behavior.
+    2.  **Inspect Signatures:** Use `:type` in GHCi (if available/applicable via MCP tool) or manually inspect type signatures of all relevant functions, data constructors, and variables in the problematic code section.
+    3.  **Verify Argument Compatibility:** Ensure that arguments passed to functions precisely match their expected types. Pay attention to type variables and constraints.
+    4.  **Sum Types (ADTs) and Constructors:**
+        *   Be aware that data constructors with arguments are functions (e.g., `Just :: a -> Maybe a`). They cannot be directly compared for equality using `==` as if they were simple enum values.
+        *   Always use pattern matching (`case ... of`, function clauses, `let` patterns) to deconstruct and check variants of sum types.
+        *   Example: To check if `myProviderConfig` is an `ONDC` variant (where `ONDC` takes an argument):
+            ```haskell
+            -- Correct:
+            isONDCVariant :: ProviderConfig -> Bool
+            isONDCVariant pc = case pc of
+                                 ONDC _ -> True
+                                 _      -> False
+            -- or inline:
+            -- ... case config.providerConfig of { ONDC _ -> True; _ -> False } ...
+            ```
+    5.  **Monadic Contexts:** Pay close attention to operations within monadic contexts (`m`). Ensure that functions are correctly lifted (e.g., using `fmap`, `<$>`, `>>=`, `pure`, `return`) and that types align within `do` blocks or other monadic expressions.
+    6.  **Type Classes:** Verify that all type class constraints are satisfied for the types being used.
+- **Benefit:** This systematic, type-centric approach is crucial in Haskell and helps pinpoint the root cause of many errors more effectively than trial-and-error, especially when the compiler's error messages might seem indirect.

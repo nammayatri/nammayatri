@@ -11,8 +11,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.EstimateBreakup where
 
@@ -25,7 +23,7 @@ data EstimateBreakupT f = EstimateBreakupT
   { id :: B.C f Text,
     estimateId :: B.C f Text,
     title :: B.C f Text,
-    priceCurrency :: B.C f Text,
+    priceCurrency :: B.C f Currency,
     priceValue :: B.C f HighPrecMoney
   }
   deriving (Generic, B.Beamable)

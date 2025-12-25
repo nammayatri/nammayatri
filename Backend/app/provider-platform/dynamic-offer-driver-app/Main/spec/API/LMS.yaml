@@ -1,0 +1,255 @@
+imports:
+  LmsCategory: Domain.Types.LmsModule
+  LmsModule: Domain.Types.LmsModule
+  LmsCertificate: Domain.Types.LmsCertificate
+  LmsBonus: Domain.Types.LmsModule
+  VehicleVariant: Domain.Types.VehicleVariant
+  Person : Domain.Types.Person
+  Maybe: Data.Maybe
+  Text: Data.Text
+  Bool: Kernel.Prelude
+  Language: Kernel.External.Types
+  LmsModuleVideoInformation: Domain.Types.LmsModuleVideoInformation
+  Int: Kernel.Prelude
+  Bool: Kernel.Prelude
+  QuestionModuleMapping: Domain.Types.QuestionModuleMapping
+  QuizQuestion: Domain.Types.LmsEnumTypes
+  QuizOptions: Domain.Types.QuestionInformation
+  QuestionInformation: Domain.Types.QuestionInformation
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  ModuleCompletionStatus: Domain.Types.DriverModuleCompletion
+  UTCTime: Kernel.Prelude
+  APISuccess: Kernel.Types.APISuccess
+  ReelButtonConfig: Domain.Types.ReelsData
+  ModuleCompletionCriteria: Domain.Types.LmsModule
+  OptionEntity: Domain.Types.QuestionInformation
+  ModuleSection : Domain.Types.LmsModule
+
+module: LmsModule
+
+types:
+  LmsGetModuleRes:
+    completed: "[LmsModuleRes]"
+    remaining: "[LmsModuleRes]"
+
+  LmsModuleRes:
+    moduleId : Id LmsModule
+    category : LmsCategory
+    duration : Int
+    noOfVideos : Int
+    rank : Int
+    variant : Maybe VehicleVariant
+    name : Text
+    description : Text
+    thumbnailImage : Text
+    moduleCompletionStatus : ModuleCompletionStatus
+    completedAt :  Maybe UTCTime
+    noOfVideosCompleted : Int
+    moduleCompletionCriteria : ModuleCompletionCriteria
+    languagesAvailableForQuiz : "[Language]"
+    languagesAvailableForVideos : "[Language]"
+    bonusCoins : Maybe Int
+    totalQuizCoins : Maybe Int
+    certificationEnabled : Maybe Bool
+    moduleSection: Maybe ModuleSection
+    bonusEarnedVal : Maybe Int
+    moduleAlreadyCompleted : Maybe Bool
+
+  LmsGetVideosRes:
+    completed: "[LmsVideoRes]"
+    pending : "[LmsVideoRes]"
+    selectedModuleInfo : LmsTranslatedModuleInfoRes
+    quizEnabled : Bool
+    quizStatus: LmsEntityCompletionStatus
+
+  LmsEntityCompletionStatus:
+    enum: "ENTITY_COMPLETED, ENTITY_INCOMPLETE"
+
+  LmsTranslatedModuleInfoRes:
+    moduleId : Id LmsModule
+    category : LmsCategory
+    duration : Int
+    noOfVideos : Int
+    rank : Int
+    variant : Maybe VehicleVariant
+    name : Text
+    description : Text
+    thumbnailImage : Text
+    moduleCompletionCriteria : ModuleCompletionCriteria
+    languagesAvailableForQuiz : "[Language]"
+    languagesAvailableForVideos : "[Language]"
+
+  LmsVideoRes:
+    videoId : Id LmsModuleVideoInformation
+    moduleId : Id LmsModule
+    language : Language
+    url : Text
+    ytVideoId : Text
+    duration : Int
+    completedWatchCount : Int
+    viewCount : Int
+    thumbnailImage : Text
+    title : Text
+    description : Text
+    thresholdEnabled : Bool
+    startThresholdInPercentage : Maybe Int
+    completedThresholdInPercentage : Maybe Int
+    videoCompletionStatus : LmsEntityCompletionStatus
+    attemptNumber : Int
+    rank : Int
+    completedAt : UTCTime
+    sideButtonConfig : "[[ReelButtonConfig]]"
+    bottomButtonConfig : "[[ReelButtonConfig]]"
+
+  LmsGetQuizRes:
+    questions: "[LmsQuestionRes]"
+    selectedModuleInfo: LmsTranslatedModuleInfoRes
+
+  LmsQuestionRes:
+    questionId : Id QuestionModuleMapping
+    moduleId : Id LmsModule
+    language: Language
+    question: QuizQuestion
+    options: QuizOptions
+    previousHistory: Maybe LmsQuizHistory
+    questionCoins : Maybe Int
+
+  QuizOptions:
+    enum: "SingleSelect Options, MultiSelect Options"
+
+  Options:
+    options: "[OptionEntity]"
+    derive: "Eq, Show"
+
+  LmsQuizHistory:
+    attemptNumber: Int
+    selectedOptions : "[Text]"
+    status: LmsQuestionStatus
+    coinsEarned: Maybe Int
+
+  LmsQuestionStatus:
+    enum: "CORRECT, INCORRECT"
+
+  VideoUpdateAPIReq:
+    moduleId: Id LmsModule
+    videoId: Id LmsModuleVideoInformation
+    language: Language
+
+  QuestionConfirmReq:
+    questionId: Id QuestionModuleMapping
+    moduleId : Id LmsModule
+    language: Language
+    selectedOption: SelectedOption
+
+  SelectedOption:
+    enum: "SingleSelectedOption Text, MultiSelectedOption [Text]"
+
+  QuestionConfirmRes:
+    validation: QuestionValidation
+    validationRes: SelectedOptionValidation
+    bonusEarned: Maybe Bool
+    coinsEarned: Maybe Bool
+
+  QuestionValidation:
+    enum: "CORRECT_ANSWER, INCORRECT_ANSWER"
+
+  SelectedOptionValidation:
+    enum: "SingleSelectedOptionValidation ValidationResult, MultiSelectedOptionValidation [ValidationResult]"
+
+  ValidationResult:
+    id: Text
+    isCorrect: Bool
+    derive: "Show,Eq"
+
+  LmsCertificateRes:
+    certificateInfo : Maybe CertificateInfo
+
+  CertificateInfo:
+    certificateId : Id LmsCertificate
+    moduleId : Id LmsModule
+    driverId : Id Person
+    certificateCourseName : Text
+    certificateOwnerName : Text
+    completedAt : Maybe UTCTime
+
+  BonusRes:
+    coins : Maybe Int
+
+apis:
+  - GET:
+      endpoint: /lms/listAllModules
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        variant: VehicleVariant
+        language: Language
+        limit: Int
+        offset: Int
+        moduleSection: ModuleSection
+      response:
+        type: API.Types.UI.LmsModule.LmsGetModuleRes
+
+  - GET:
+      endpoint: /lms/{moduleId}/listAllVideos
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        moduleId: Id LmsModule
+      query:
+        language: Language
+      response:
+        type: API.Types.UI.LmsModule.LmsGetVideosRes
+
+  - GET:
+      endpoint: /lms/{moduleId}/listAllQuiz
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        moduleId: Id LmsModule
+      query:
+        language: Language
+      response:
+        type: "API.Types.UI.LmsModule.LmsGetQuizRes"
+
+  - GET:
+      endpoint: /lms/{moduleId}/getCertificate
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        moduleId: Id LmsModule
+      response:
+        type: "API.Types.UI.LmsModule.LmsCertificateRes"
+
+  - GET:
+      endpoint: /lms/getAllCertificates
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "[API.Types.UI.LmsModule.CertificateInfo]"
+
+  - GET:
+      endpoint: /lms/{moduleId}/getBonusCoins
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        moduleId: Id LmsModule
+      response:
+        type: "API.Types.UI.LmsModule.BonusRes"
+
+  - POST:
+      endpoint: /lms/markVideoAsStarted
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.LmsModule.VideoUpdateAPIReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /lms/markVideoAsCompleted
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.LmsModule.VideoUpdateAPIReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /lms/question/confirm
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.LmsModule.QuestionConfirmReq
+      response:
+        type: API.Types.UI.LmsModule.QuestionConfirmRes

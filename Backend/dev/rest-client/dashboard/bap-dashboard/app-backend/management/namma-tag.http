@@ -1,0 +1,205 @@
+# access tokens with different roles
+@customer = {{bap-dashboard/token/YATRI/customer}}
+@driver = {{bap-dashboard/token/YATRI/driver}}
+@juspay_ops = {{bap-dashboard/token/YATRI/juspay_ops}}
+@juspay_admin = {{bap-dashboard/token/YATRI/juspay_admin}}
+@customer_service = {{bap-dashboard/token/YATRI/customer_service}}
+
+# @name healthcheck
+GET {{bap-dashboard-host}}
+
+###
+
+# @name dailyRidesQueryCreate
+
+POST {{bap-dashboard-host}}/bap/YATRI/nammaTag/query/create
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "chakra": "Daily",
+    "queryName" : "dailyRides",
+    "queryResults":
+    [
+      { "resultName" : "userId",
+        "resultDefault" : {
+          "tag" : "TEXT",
+          "contents" : "NotFound"
+        }
+      },
+      { "resultName" : "totalRides",
+        "resultDefault" : {
+          "tag" : "INT",
+          "contents" : 0
+        }
+      },
+      { "resultName" : "totalDistance",
+        "resultDefault" : {
+          "tag" : "DOUBLE",
+          "contents" : 0
+        }
+      },
+      { "resultName" : "totalFare",
+        "resultDefault" : {
+          "tag" : "DOUBLE",
+          "contents" : 0
+        }
+      }
+      ],
+    "queryText":
+      "SELECT\n
+          driver_id as userId,\n
+          count(id) as totalRides,\n
+          sum(chargeable_distance) as totalDistance,\n
+          sum(fare) as totalFare\n
+        FROM atlas_driver_offer_bpp.ride\n
+        WHERE created_at >= date_sub (day, 3650, toStartOfDay (now ()))\n
+          AND created_at < toStartOfDay (now ())\n
+          AND {usersSetCondition}\n
+        GROUP BY driver_id\n
+        ORDER BY driver_id ASC LIMIT {limit} OFFSET {offset}"
+}
+
+###
+
+# @name dailyRidesQueryUpdate
+
+POST {{bap-dashboard-host}}/bap/YATRI/nammaTag/query/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "chakra": "Daily",
+    "queryName" : "dailyRides",
+    "queryResults":
+    [
+      { "resultName" : "userId",
+        "resultDefault" : {
+          "tag" : "TEXT",
+          "contents" : "UserNotFound"
+        }
+      },
+      { "resultName" : "totalRides",
+        "resultDefault" : {
+          "tag" : "INT",
+          "contents" : 0
+        }
+      },
+      { "resultName" : "totalDistance",
+        "resultDefault" : {
+          "tag" : "DOUBLE",
+          "contents" : 0
+        }
+      },
+      { "resultName" : "totalFare",
+        "resultDefault" : {
+          "tag" : "DOUBLE",
+          "contents" : 0
+        }
+      }
+      ],
+    "queryText":
+      "select   \n
+          driver_id as userId,\n
+          count(id) as totalRides,\n
+          sum(chargeable_distance) as totalDistance,\n
+          sum(fare) as totalFare\n
+        FROM atlas_driver_offer_bpp.ride\n
+        WHERE created_at >= date_sub (day, 3650, toStartOfDay (now ()))\n
+          AND created_at < toStartOfDay (now ())\n
+          AND {usersSetCondition}\n
+        GROUP BY driver_id\n
+        ORDER BY driver_id ASC LIMIT {limit} OFFSET {offset}"
+}
+
+###
+
+# @name dailyRidesQueryDelete
+
+DELETE {{bap-dashboard-host}}/bap/YATRI/nammaTag/query/delete
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "chakra": "Daily",
+    "queryName" : "dailyRides1"
+}
+
+###
+
+# @name CustomerSpeedTagCreate
+
+POST {{bap-dashboard-host}}/bap/YATRI/nammaTag/tag/create
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+  "tag": "KaalChakraTag",
+  "contents": {
+    "tagCategory": "CustomerTags",
+    "tagName": "CustomerSpeed",
+    "description": "",
+    "tagPossibleValues": {
+      "tag": "Tags",
+      "contents": [
+        "FAST_CUSTOMER",
+        "SLOW_CUSTOMER"
+      ]
+    },
+    "tagChakra": "Daily",
+    "tagValidity": 24,
+    "tagRule": {
+      "tag": "RuleEngine",
+      "contents": {
+        "if": [
+          {
+            "and": [
+              {
+                ">=": [
+                  {
+                    "var": "dailyRides.totalRides"
+                  },
+                  2
+                ]
+              },
+              {
+                ">=": [
+                  {
+                    "var": "dailyRides.totalDistance"
+                  },
+                  100
+                ]
+              },
+              {
+                "<=": [
+                  {
+                    "var": "dailyCancellations.cancellationsCount"
+                  },
+                  2
+                ]
+              }
+            ]
+          },
+          "FAST_CUSTOMER",
+          "SLOW_CUSTOMER"
+        ]
+      }
+    }
+  }
+}
+
+###
+
+###
+
+# @name updateCustomerTag
+
+@customerId = ec34eede-5a3e-4a41-89d4-7290a0d7a629
+
+POST {{bap-dashboard-host}}/bap/YATRI/nammaTag/{{customerId}}/updateCustomerTag
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "tag" : "CustomerSpeed#FAST_CUSTOMER",
+  "isAddingTag" : true
+}

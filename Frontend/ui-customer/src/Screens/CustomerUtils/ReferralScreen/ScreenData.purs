@@ -16,8 +16,9 @@
 module Screens.ReferralScreen.ScreenData where
 
 import ConfigProvider
-import Screens.Types (ReferralScreenState)
+import Screens.Types (ReferralScreenState, ReferralType(..), ReferralStage(..))
 import Foreign.Object (empty)
+import Data.Maybe (Maybe(..))
 
 initData :: ReferralScreenState
 initData =
@@ -27,5 +28,15 @@ initData =
   , isInvalidCode: false
   , isExpandReference: false
   , config : getAppConfig appConfig
-  , logField : empty 
+  , logField : empty
+  , referralType : GET_REFERRED
+  , showQRCodePopUp : false
+  , referralComponentProps : {  stage : NO_REFERRAL_STAGE
+                              , referralCode : Nothing
+                              , applyButtonActive : false 
+                              , showReferredUserInfoPopup : false
+                              , showReferralProgramInfoPopup : false
+                              , isInvalidCode : false
+                              , isFocused : false
+                             }
   }

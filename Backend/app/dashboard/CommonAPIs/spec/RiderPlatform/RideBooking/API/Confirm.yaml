@@ -1,0 +1,34 @@
+imports:
+  Person: Domain.Types.Person
+  Quote: Domain.Types.Quote
+  PaymentMethodId: Kernel.External.Payment.Interface
+  ConfirmRes: API.UI.Confirm
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Types.Quote: "rider-app"
+  API.UI.Confirm: "rider-app"
+  Domain.Types.Extra.MerchantPaymentMethod: "rider-app"
+
+module: Confirm
+
+apis:
+  - POST:  # CustomerConfirmAPI
+      endpoint: /rideSearch/{customerId}/quotes/{quoteId}/confirm
+      name: PostConfirmRideSearchQuotes
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        quoteId: Id Quote
+      query:
+        - paymentMethodId: PaymentMethodId
+        - paymentInstrument: PaymentInstrument
+        - isAdvancedBookingEnabled: Bool
+      response:
+        type: ConfirmRes
+      migrate:
+        endpoint: ConfirmAPI ConfirmEndPoint
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS CONFIRM
+
+types: {}

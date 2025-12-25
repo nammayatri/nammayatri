@@ -1,0 +1,441 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EmailOTPConfig: Email.Types
+  EmailMagicLinkConfig: Email.Types
+  EmailBusinessVerificationConfig: Email.Types
+  KaptureConfig: IssueManagement.Common
+  ExotelMapping: Domain.Types.Extra.RiderConfig
+  VehicleServiceTierOrderConfig: Domain.Types.Extra.RiderConfig
+  Value: Data.Aeson
+  NominalDiffTime: Kernel.Prelude
+  Seconds: Kernel.Types.Common
+  CxAgentDetails: IssueManagement.Common
+  GeneralVehicleType: Kernel.External.MultiModal.Interface.Types
+  ServiceTierType : Domain.Types.ServiceTierType
+  RentalsConfig: Domain.Types.RentalsIntercityCache
+  IntercitySearchLocation: Domain.Types.RentalsIntercityCache
+  VehicleVariant: Domain.Types.VehicleVariant
+  Minutes: Kernel.Types.Common
+  TimeOfDay: Data.Time
+  JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
+
+RiderConfig:
+  types:
+    RingBucketCfg:
+      derive: "Eq"
+      radiusInMeters: Meters
+      vehVariant: VehicleVariant
+      size: Int
+    BusTrackingConfig:
+      derive: "Eq"
+      maxScoreDistanceInMeters: Double
+      goodScoreDistanceInMeters: Double
+      fairScoreDistanceInMeters: Double
+      maxScore: Double
+      goodScore: Double
+      fairScore: Double
+      thresholdFactor: Double
+      thresholdSeconds: Double
+      movementThresholdInMeters: Double
+    BusTierSortingConfig:
+      derive: "Eq"
+      tier: BecknV2.FRFS.Enums.ServiceTierType
+      rank: Int
+    ServiceTierRelationshipCfg: # move it to integrated bpp config if required in future 🙂
+      derive: "Eq"
+      serviceTierType: BecknV2.FRFS.Enums.ServiceTierType
+      vehicleType: BecknV2.OnDemand.Enums.VehicleCategory
+      canBoardIn: "[BecknV2.FRFS.Enums.ServiceTierType]"
+    ServiceTierSource:
+      enum: "NANDI,QUOTES"
+    SpecialVehicleNotificationConfig:
+      derive: "Eq"
+      vehicleNo: Text
+      notificationTitle: Text
+      notificationMessage: Text
+
+  tableName: rider_config
+
+  derives: "Show, Generic, ToJSON, FromJSON, Eq"
+
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    enableLocalPoliceSupport: Bool
+    enableIGMIssueFlow: Bool
+    metroBookingAllowed: Maybe Bool
+    suburbanBookingAllowed: Maybe Bool
+    busBookingAllowed: Maybe Bool
+    localPoliceNumber: Maybe Text
+    enableSupportForSafety: Bool
+    videoFileSizeUpperLimit: Int
+    timeDiffFromUtc: Seconds
+    enableEmergencyContactAddedMessage: Bool
+    safetyCheckStartTime: Seconds
+    safetyCheckEndTime: Seconds
+    trackingShortUrlPattern: Text
+    specialZoneRadius: Int
+    appUrl: Text
+    collectAutoCompleteData: Maybe Bool
+    distanceWeightage: Int
+    collectMMIRouteData: Maybe Bool
+    isAvoidToll: Bool
+    autoUnblockSafetyCenterAfterDays: Int
+    placeNameCacheExpiryDays: Maybe Int
+    bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
+    kaptureQueue: Text # deprecated
+    kaptureConfig: IssueManagement.Common.KaptureConfig
+    emailOtpConfig: Maybe Email.Types.EmailOTPConfig
+    emailMagicLinkConfig: Maybe Email.Types.EmailMagicLinkConfig
+    emailBusinessVerificationConfig: Maybe Email.Types.EmailBusinessVerificationConfig
+    ivrTriggerDelay: NominalDiffTime
+    executePaymentDelay: NominalDiffTime
+    cancellationPaymentDelay: NominalDiffTime
+    policeTriggerDelay: NominalDiffTime
+    exotelAppIdMapping: Maybe ExotelMapping
+    hardLimitForSafetyJobs: Int
+    exotelStatusCheckSchedulerDelay: Int
+    incidentReportSupport: Bool
+    settleCancellationFeeBeforeNextRide: Maybe Bool
+    cxAgentDetails: "Maybe [CxAgentDetails]"
+    csAlertTriggerDelay: NominalDiffTime
+    avgSpeedInKmPerHr: Kilometers
+    sensitiveWords: "Maybe [Text]"
+    sensitiveWordsForExactMatch: "Maybe [Text]"
+    payoutBatchSize: Maybe Int
+    payoutBatchDelay: NominalDiffTime
+    makeMultiModalSearch: Bool
+    maximumWalkDistance: Meters
+    minimumWalkDistance: Meters
+    permissibleModes: "Maybe [GeneralVehicleType]"
+    busTransitTypes: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
+    subwayTransitTypes: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
+    journeyOptionsSortingType: Maybe JourneyOptionsSortingType
+    maxAllowedPublicTransportLegs: Int
+    driverReferredSearchReqExpiry: Maybe Seconds
+    dynamicLogicUpdatePassword: Text
+    feedbackAlertRatingThreshold: Int
+    postRideSafetyNotificationDelay: NominalDiffTime
+    useUserSettingsForSafetyIVR: Bool
+    payoutReferralProgram: Bool
+    payoutReferralStartDate: UTCTime
+    thresholdCancellationPercentageToBlock: Maybe Int
+    minRidesToBlock: Maybe Int
+    minRidesToShowCancellationRate: Maybe Int
+    autoSendBookingDetailsViaWhatsapp: Maybe Bool
+    multimodalTesting: Bool
+    isFirstReferredRideEnabled: Bool
+    excludedVehicleVariants: "Maybe [ServiceTierType]"
+    rentalsConfig: "Maybe [RentalsConfig]"
+    intercitySearchLocations : "Maybe [IntercitySearchLocation]"
+    payoutReferralThresholdPerDay: Int
+    payoutReferralThresholdPerMonth: Int
+    variantListForNearByReq: "Maybe [VehicleVariant]"
+    nearByDriverRingBucketCfg: "Maybe [RingBucketCfg]"
+    nearbyDriverSearchRadius: Maybe Double
+    isDeviceIdCheckDisabled: Maybe Bool
+    enableBusFiltering: Maybe Bool
+    fareCacheRentalsConfig: "Maybe [RentalsConfig]"
+    fareCacheInterCitySearchLocations : "Maybe [IntercitySearchLocation]"
+    blockedUntilInMins : Maybe Minutes
+    ticketAssetDomain: Maybe Text
+    qrTicketRestrictionStartTime: Maybe TimeOfDay
+    qrTicketRestrictionEndTime: Maybe TimeOfDay
+    ticketingPermissionConfig: Maybe Value
+    userServiceTierOrderConfig: "[VehicleServiceTierOrderConfig]"
+    defaultServiceTierOrderConfig: "[ServiceTierType]"
+    boostSearchPreSelectionServiceTierConfig: "[VehicleServiceTierOrderConfig]"
+    noOfRideRequestsConfig: Int
+    busTrackingConfig: "Maybe BusTrackingConfig"
+    busTierSortingConfig: "Maybe [BusTierSortingConfig]"
+    pickupInstructionsThreshold: Int
+    pickupInstructionsProximityMeters: Int
+    enableMultiModalForAllUsers: Maybe Bool
+    nyRegularSubscriptionBatchSize: Maybe Int
+    nyRegularExecutionTimeOffsetMinutes: Maybe Int
+    nyRegularMinGapSeconds: Seconds
+    initiateFirstMultimodalJourney: Bool
+    enableAutoJourneyRefund: Bool
+    refundBufferTTLSec: Maybe Seconds
+    filterWalkAndUnspecifiedTransitModes: Bool
+    nyRegularMasterJobNextRunOffsetSeconds: NominalDiffTime
+    refundStatusUpdateInterval: NominalDiffTime
+    refundStatusUpdateRetries: Int
+    sourceOfServiceTier: ServiceTierSource
+    domainRouteCalculationEnabledModes: "Maybe [GeneralVehicleType]"
+    upcomingBusThresholdSec: Maybe Seconds
+    serviceTierRelationshipCfg: "Maybe [ServiceTierRelationshipCfg]"
+    busScanRouteCalculationEnabledModes: "Maybe Bool"
+    trackVehicleKeyExpiry: Maybe Int
+    distanceToNearestStopThreshold: Maybe Int
+    validateSetOnboardingVehicleRequest: Maybe Bool
+    domainPublicTransportDataVersion: Maybe Int
+    updateTicketValidityInSecondsPostSetOnboarding: Maybe Seconds
+    enableRideEndOffers: Bool
+    metricsBlacklistPatterns: "Maybe [Text]"
+    dashboardMediaFileUrlPattern : Maybe Text
+    maxNearbyBuses: Maybe Int
+    nearbyBusSearchRadius: Maybe Double
+    enableOnlinePaymentRide: Maybe Bool
+    nearbyBusMaxTimeThreshold: Maybe Int
+    specialVehicleNotificationConfigs: "Maybe [SpecialVehicleNotificationConfig]"
+    offerListCacheVersion: Maybe Text
+    frfsMetricsApiKey: Maybe Text
+    subwayRestrictionStartTime: Maybe TimeOfDay
+    subwayRestrictionEndTime: Maybe TimeOfDay
+    nearbyBusRadiusBucketStep: Maybe Meters
+    singleModeWalkSpeed: Maybe Double
+
+  beamType:
+    ivrTriggerDelay: Maybe Seconds
+    policeTriggerDelay: Maybe Seconds
+    hardLimitForSafetyJobs: Maybe Seconds
+    exotelStatusCheckSchedulerDelay: Maybe Seconds
+    incidentReportSupport: Maybe Bool
+    enableIGMIssueFlow: Maybe Bool
+    csAlertTriggerDelay: Maybe Seconds
+    avgSpeedInKmPerHr: Maybe Kilometers
+    payoutBatchDelay: Maybe Seconds
+    executePaymentDelay: Maybe Seconds
+    cancellationPaymentDelay: Maybe Seconds
+    makeMultiModalSearch: Maybe Bool
+    maximumWalkDistance: Maybe Meters
+    minimumWalkDistance: Maybe Meters
+    maxAllowedPublicTransportLegs: Maybe Int
+    dynamicLogicUpdatePassword: Maybe Text
+    feedbackAlertRatingThreshold: Maybe Int
+    postRideSafetyNotificationDelay: Maybe Seconds
+    useUserSettingsForSafetyIVR: Maybe Bool
+    payoutReferralProgram: Maybe Bool
+    multimodalTesting: Maybe Bool
+    payoutReferralStartDate: Maybe UTCTime
+    isFirstReferredRideEnabled: Maybe Bool
+    payoutReferralThresholdPerDay: Maybe Int
+    payoutReferralThresholdPerMonth: Maybe Int
+    variantListForNearByReq: Maybe [Text]
+    nearByDriverRingBucketCfg: Maybe Value
+    fareCacheRentalsConfig : Maybe Value
+    fareCacheInterCitySearchLocations : Maybe Value
+    userServiceTierOrderConfig: Maybe Value
+    defaultServiceTierOrderConfig: Maybe [ServiceTierType]
+    boostSearchPreSelectionServiceTierConfig: Maybe Value
+    noOfRideRequestsConfig: Maybe Int
+    busTrackingConfig: Maybe Value
+    busTierSortingConfig: Maybe Value
+    specialVehicleNotificationConfigs: Maybe Value
+    serviceTierRelationshipCfg: Maybe Value
+    pickupInstructionsThreshold: Maybe Int
+    pickupInstructionsProximityMeters: Maybe Int
+    initiateFirstMultimodalJourney: Maybe Bool
+    nyRegularMinGapSeconds: Maybe Seconds
+    enableAutoJourneyRefund: Maybe Bool
+    filterWalkAndUnspecifiedTransitModes: Maybe Bool
+    nyRegularMasterJobNextRunOffsetSeconds: Maybe Seconds
+    refundStatusUpdateInterval: Maybe Seconds
+    refundStatusUpdateRetries: Maybe Int
+    sourceOfServiceTier: Maybe ServiceTierSource
+    enableRideEndOffers: Maybe Bool
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    frfsMetricsApiKey: !SecondaryKey
+
+  intermediateTransformers:
+    fromTType:
+      - now: Kernel.Types.Common.getCurrentTime|EM
+      - payoutReferralStartDate_: fromMaybe now payoutReferralStartDate|E
+  fromTType:
+    ivrTriggerDelay: fromMaybe 3000 (Kernel.Utils.Common.secondsToNominalDiffTime <$> ivrTriggerDelay)|E
+    executePaymentDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> executePaymentDelay)|E
+    cancellationPaymentDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> cancellationPaymentDelay)|E
+    policeTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> policeTriggerDelay)|E
+    hardLimitForSafetyJobs: fromMaybe 21600 ((.getSeconds) <$> hardLimitForSafetyJobs)|E
+    exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E
+    incidentReportSupport: fromMaybe False incidentReportSupport|E
+    enableIGMIssueFlow: fromMaybe False enableIGMIssueFlow|E
+    csAlertTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> csAlertTriggerDelay)|E
+    avgSpeedInKmPerHr: fromMaybe 20 avgSpeedInKmPerHr|E
+    payoutBatchDelay: fromMaybe 10 (Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutBatchDelay)|E
+    makeMultiModalSearch: fromMaybe False makeMultiModalSearch|E
+    maximumWalkDistance: fromMaybe 600 maximumWalkDistance|E
+    minimumWalkDistance: fromMaybe 100 minimumWalkDistance|E
+    maxAllowedPublicTransportLegs: fromMaybe (2) maxAllowedPublicTransportLegs|E
+    dynamicLogicUpdatePassword: fromMaybe "dummy-password" dynamicLogicUpdatePassword|E
+    feedbackAlertRatingThreshold: fromMaybe 3 feedbackAlertRatingThreshold|E
+    postRideSafetyNotificationDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> postRideSafetyNotificationDelay)|E
+    useUserSettingsForSafetyIVR: fromMaybe False useUserSettingsForSafetyIVR|E
+    payoutReferralProgram: fromMaybe False payoutReferralProgram|E
+    payoutReferralStartDate: payoutReferralStartDate_|E
+    multimodalTesting: fromMaybe False multimodalTesting|E
+    isFirstReferredRideEnabled: fromMaybe False isFirstReferredRideEnabled|E
+    payoutReferralThresholdPerDay: fromMaybe 5 payoutReferralThresholdPerDay|E
+    payoutReferralThresholdPerMonth: fromMaybe 50 payoutReferralThresholdPerMonth|E
+    variantListForNearByReq: variantListForNearByReq >>= traverse (readMaybe . Data.Text.unpack)|E
+    nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Kernel.Utils.JSON.valueToMaybe|E
+    fareCacheRentalsConfig : fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
+    userServiceTierOrderConfig: fromMaybe [] (userServiceTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
+    defaultServiceTierOrderConfig: fromMaybe Domain.Types.ServiceTierType.allServiceTiersTypes defaultServiceTierOrderConfig|E
+    boostSearchPreSelectionServiceTierConfig: fromMaybe [] (boostSearchPreSelectionServiceTierConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
+    busTierSortingConfig: (busTierSortingConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
+    serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Kernel.Utils.JSON.valueToMaybe)|E
+    noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
+    busTrackingConfig: busTrackingConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    specialVehicleNotificationConfigs: (specialVehicleNotificationConfigs >>= Kernel.Utils.JSON.valueToMaybe)|E
+    pickupInstructionsThreshold: fromMaybe 4 pickupInstructionsThreshold|E
+    pickupInstructionsProximityMeters: fromMaybe 10 pickupInstructionsProximityMeters|E
+    initiateFirstMultimodalJourney: fromMaybe False initiateFirstMultimodalJourney|E
+    enableAutoJourneyRefund: fromMaybe False enableAutoJourneyRefund|E
+    nyRegularMinGapSeconds: fromMaybe 900 nyRegularMinGapSeconds|E
+    filterWalkAndUnspecifiedTransitModes: fromMaybe False filterWalkAndUnspecifiedTransitModes|E
+    nyRegularMasterJobNextRunOffsetSeconds: fromMaybe 86400 (Kernel.Utils.Common.secondsToNominalDiffTime <$> nyRegularMasterJobNextRunOffsetSeconds)| E
+    refundStatusUpdateInterval: fromMaybe 43200 (Kernel.Utils.Common.secondsToNominalDiffTime <$> refundStatusUpdateInterval)| E
+    refundStatusUpdateRetries: fromMaybe 5 refundStatusUpdateRetries|E
+    sourceOfServiceTier: fromMaybe (Domain.Types.RiderConfig.NANDI) sourceOfServiceTier|E
+    enableRideEndOffers: fromMaybe False enableRideEndOffers|E
+
+  toTType:
+    ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    executePaymentDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    cancellationPaymentDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    policeTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    hardLimitForSafetyJobs: Just $ Kernel.Types.Common.Seconds hardLimitForSafetyJobs|E
+    exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
+    incidentReportSupport: Just incidentReportSupport|E
+    enableIGMIssueFlow: Just enableIGMIssueFlow|E
+    csAlertTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    avgSpeedInKmPerHr: Just avgSpeedInKmPerHr|E
+    payoutBatchDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    makeMultiModalSearch: Just makeMultiModalSearch|E
+    maximumWalkDistance: Just maximumWalkDistance|E
+    minimumWalkDistance: Just minimumWalkDistance|E
+    maxAllowedPublicTransportLegs: Just maxAllowedPublicTransportLegs|E
+    dynamicLogicUpdatePassword: Just dynamicLogicUpdatePassword|E
+    feedbackAlertRatingThreshold: Just feedbackAlertRatingThreshold|E
+    postRideSafetyNotificationDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    useUserSettingsForSafetyIVR: Just useUserSettingsForSafetyIVR|E
+    payoutReferralProgram: Just payoutReferralProgram|E
+    payoutReferralStartDate: Just payoutReferralStartDate|E
+    multimodalTesting: Just multimodalTesting|E
+    isFirstReferredRideEnabled: Just isFirstReferredRideEnabled|E
+    payoutReferralThresholdPerDay: Just payoutReferralThresholdPerDay|E
+    payoutReferralThresholdPerMonth: Just payoutReferralThresholdPerMonth|E
+    variantListForNearByReq: variantListForNearByReq >>= Just . map show|E
+    nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Just . Data.Aeson.toJSON|E
+    fareCacheRentalsConfig : fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
+    fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
+    userServiceTierOrderConfig: (Just . Data.Aeson.toJSON)|I
+    defaultServiceTierOrderConfig: Just defaultServiceTierOrderConfig|E
+    boostSearchPreSelectionServiceTierConfig: (Just . Data.Aeson.toJSON)|I
+    busTierSortingConfig: (busTierSortingConfig >>= Just . Data.Aeson.toJSON)|E
+    serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Just . Data.Aeson.toJSON)|E
+    noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
+    busTrackingConfig: busTrackingConfig >>= Just . Data.Aeson.toJSON|E
+    specialVehicleNotificationConfigs: (specialVehicleNotificationConfigs >>= Just . Data.Aeson.toJSON)|E
+    pickupInstructionsThreshold: Just pickupInstructionsThreshold|E
+    pickupInstructionsProximityMeters: Just pickupInstructionsProximityMeters|E
+    initiateFirstMultimodalJourney: Just initiateFirstMultimodalJourney|E
+    enableAutoJourneyRefund: Just enableAutoJourneyRefund|E
+    nyRegularMinGapSeconds: Just nyRegularMinGapSeconds|E
+    filterWalkAndUnspecifiedTransitModes: Just filterWalkAndUnspecifiedTransitModes|E
+    nyRegularMasterJobNextRunOffsetSeconds: (Just  . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    refundStatusUpdateInterval: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    refundStatusUpdateRetries: Just refundStatusUpdateRetries|E
+    sourceOfServiceTier: Just sourceOfServiceTier|E
+    enableRideEndOffers: Just enableRideEndOffers|E
+
+
+  default:
+    enableLocalPoliceSupport: "false"
+    enableIGMIssueFlow: "false"
+    enableSupportForSafety: "false"
+    videoFileSizeUpperLimit: "15000000"
+    enableEmergencyContactAddedMessage: "true"
+    appUrl: "'nammayatri.in/link/rider/rmxw'"
+    timeDiffFromUtc: "19800"
+    safetyCheckStartTime: "75600"
+    safetyCheckEndTime: "21600"
+    trackingShortUrlPattern: "'nammayatri.in/t/'"
+    specialZoneRadius: "150"
+    distanceWeightage: "70"
+    isAvoidToll: "true"
+    autoUnblockSafetyCenterAfterDays: "14"
+    kaptureQueue: "''"
+    kaptureConfig: '''{"kaptureQueue":"", "disposition":""}'''
+    exotelStatusCheckSchedulerDelay: "120"
+    avgSpeedInKmPerHr: "20"
+    makeMultiModalSearch: "false"
+    maximumWalkDistance: "600"
+    minimumWalkDistance: "100"
+    permissibleModes: "'{Walk, Bus, MetroRail, Subway}'"
+    busTransitTypes: "'{ORDINARY,NON_AC,SPECIAL,EXECUTIVE,EXPRESS,AC}'"
+    subwayTransitTypes: "'{FIRST_CLASS,SECOND_CLASS}'"
+    domainRouteCalculationEnabledModes: "'{Bus, Subway}'"
+    busScanRouteCalculationEnabledModes: "true"
+    maxAllowedPublicTransportLegs: "2"
+    postRideSafetyNotificationDelay : "60"
+    useUserSettingsForSafetyIVR: "false"
+    payoutReferralProgram: "false"
+    payoutReferralStartDate: "'2024-12-20 12:00:00.000000+00'"
+    multimodalTesting: "false"
+    blockedUntilInMins: "1440"
+    busTrackingConfig: '''{"maxScoreDistanceInMeters":15.0,"goodScoreDistanceInMeters":30.0,"fairScoreDistanceInMeters":45.0,"maxScore":10.0,"goodScore":7.0,"fairScore":4.0,"thresholdFactor":0.5,"thresholdSeconds":30.0,"movementThresholdInMeters":25.0}'''
+    enableMultiModalForAllUsers: "false"
+    initiateFirstMultimodalJourney: "false"
+    enableAutoJourneyRefund: "false"
+    filterWalkAndUnspecifiedTransitModes: "false"
+    upcomingBusThresholdSec: "3600"
+    sourceOfServiceTier: "'NANDI'"
+    trackVehicleKeyExpiry: "900"
+    distanceToNearestStopThreshold: "200"
+    validateSetOnboardingVehicleRequest: "false"
+    enableOnlinePaymentRide: "false"
+  queries:
+    findByMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId
+
+    findExotelAppletMappingByMOCID:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId
+    findByFrfsMetricsApiKey:
+      kvFunction: findOneWithKV
+      where: frfsMetricsApiKey
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  sqlType:
+    emailOtpConfig: "json"
+    emailMagicLinkConfig: "json"
+    emailBusinessVerificationConfig: "json"
+    kaptureConfig: "json"
+    exotelAppIdMapping: "json"
+    cxAgentDetails: text []
+    sensitiveWords: text []
+    sensitiveWordsForExactMatch: text []
+    permissibleModes: text []
+    busTransitTypes: text []
+    subwayTransitTypes: text []
+    domainRouteCalculationEnabledModes: text []
+    excludedVehicleVariants: text []
+    rentalsConfig: text []
+    intercitySearchLocations : text []
+    variantListForNearByReq: text []
+    nearByDriverRingBucketCfg: "json"
+    fareCacheRentalsConfig : "json"
+    fareCacheInterCitySearchLocations : "json"
+    userServiceTierOrderConfig : "json"
+    defaultServiceTierOrderConfig: text []
+    boostSearchPreSelectionServiceTierConfig: "json"
+    blockedUntilInMins: int
+    ticketingPermissionConfig: "json"
+    busTrackingConfig: "json"
+    busTierSortingConfig: "json"
+    specialVehicleNotificationConfigs: "json"
+    serviceTierRelationshipCfg: "json"
+    metricsBlacklistPatterns: text []
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE

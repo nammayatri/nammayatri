@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "in.juspay.mobility.app";
+
+package notification_service;
+
+// Message for acknowledging notifications
+message NotificationAck {
+  string id = 1;
+}
+
+// Message for the entity associated with the notification
+message Entity {
+  string id = 1;
+  string type = 2;
+  string data = 3;  // JSON data as string
+}
+
+// Structure of a notification payload
+message NotificationPayload {
+  string id = 1;
+  string category = 2;
+  string title = 3;
+  string body = 4;
+  string show = 5;
+  Entity entity = 6;
+}
+
+// Notification service with a single Bi-directional RPC method
+service Notification {
+  // The RPC method for streaming notifications based on acknowledgments
+  rpc StreamPayload(stream NotificationAck) returns (stream NotificationPayload);
+}

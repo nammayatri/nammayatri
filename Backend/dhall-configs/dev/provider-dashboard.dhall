@@ -30,6 +30,12 @@ let rcfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
+      }
+
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
       }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
@@ -70,6 +76,7 @@ let rccfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let specialZone =
@@ -78,18 +85,36 @@ let specialZone =
       , token = sec.specialZoneToken
       }
 
+let cacheConfig = { configsExpTime = +86400 }
+
+let cacConfig =
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenant = "test"
+      , retryConnection = False
+      , cacExpTime = +86400
+      , enablePolling = True
+      , enableCac = False
+      }
+
+let sendEmailRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+
+let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
-    , hedisMigrationStage = True
-    , cutOffHedisCluster = True
+    , hedisMigrationStage = False
+    , cutOffHedisCluster = False
+    , kafkaProducerCfg
     , port = +8018
     , migrationPath =
       [   env:PROVIDER_DASHBOARD_MIGRATION_PATH as Text
         ? "dev/migrations/provider-dashboard"
+      , "dev/migrations-read-only/provider-dashboard"
       ]
     , autoMigrate = True
     , loggerConfig =
@@ -102,14 +127,29 @@ in  { esqDBCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , authTokenCacheExpiry = +600
     , registrationTokenExpiry = +365
+    , registrationTokenInactivityTimeout = None Integer
+    , updateRestrictedBppRoles = [ "FLEET_OWNER", "OPERATOR" ]
+    , sendEmailRateLimitOptions
     , encTools
     , exotelToken = sec.exotelToken
     , dataServers =
-      [ driverOfferBpp, driverOfferBppManagement, appBackend, specialZone ]
-    , merchantUserAccountNumber = +5
+      [ driverOfferBpp
+      , driverOfferBppManagement
+      , appBackend
+      , appBackendManagement
+      , specialZone
+      ]
+    , merchantUserAccountNumber = +100
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , slackToken = sec.slackToken
     , slackChannel = "CXXXXXXXXXF"
     , internalEndPointMap = common.internalEndPointMap
+    , cacheConfig
+    , cacConfig
+    , kvConfigUpdateFrequency = +60
+    , internalAuthAPIKey = "ae288466-2add-11ee-be56-0242ac120002"
+    , passwordExpiryDays = None Integer
+    , enforceStrongPasswordPolicy = False
+    , inMemConfig
     }

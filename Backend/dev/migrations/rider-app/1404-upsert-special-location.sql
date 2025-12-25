@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.special_location ADD COLUMN enabled boolean NOT NULL DEFAULT true;

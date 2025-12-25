@@ -70,7 +70,9 @@ dependencies:
   - directory
   - yaml
   - filepath
+  - turtle
   - namma-dsl
+  - extra
 
 ghc-options:
   - -Wall

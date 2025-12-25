@@ -1,0 +1,73 @@
+imports:
+  Person: Domain.Types.Person
+  Role: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+  Money: Kernel.Types.Common
+
+DriverReferral:
+  tableName: driver_referral
+
+  fields:
+    referralCode : Id DriverReferral
+    dynamicReferralCode: Maybe Text
+    dynamicReferralCodeValidTill: Maybe UTCTime ## if validity is passed while during a ride, we will extend the same referralCode for endRide + 10 minutes.
+    driverId : Id Person
+    role : Role
+    linkedAt : UTCTime
+
+  default:
+    role: "'DRIVER'"
+
+  beamType:
+    role: Maybe Role
+
+  fromTType:
+    role: Kernel.Prelude.fromMaybe Domain.Types.Person.DRIVER|I
+
+  toTType:
+    role: Kernel.Prelude.Just|I
+
+  constraints:
+    referralCode: PrimaryKey
+    dynamicReferralCode: "!SecondaryKey"
+    driverId: SecondaryKey
+
+  queries:
+    findByReferralCodeAndMerchantCityId:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, referralCode]
+
+    findByDynamicReferralCodeAndMerchantCityIdAndDriversIn:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - merchantOperatingCityId
+          - dynamicReferralCode
+          - in:
+              - driverId: driverIds
+
+    updateDynamicReferralCode:
+      kvFunction: updateOneWithKV
+      params: [dynamicReferralCode, dynamicReferralCodeValidTill, merchantOperatingCityId, merchantId] ## including here just to backfill
+      where: driverId
+
+    findByRefferalCode:
+      kvFunction: findOneWithKV
+      where: referralCode
+
+    findById:
+      kvFunction: findOneWithKV
+      where: driverId
+
+    updateMerchantIdAndCityIdByDriverId:
+      kvFunction: updateWithKV
+      params: [merchantId, merchantOperatingCityId]
+      where: driverId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -16,11 +16,12 @@
 module Screens.MyRidesScreen.ScreenData where
 
 import Data.Maybe (Maybe(..))
-import Screens.Types (AnimationState(..), MyRidesScreenState, IndividualRideCardState, ZoneType(..))
+import Screens.Types (AnimationState(..), MyRidesScreenState, IndividualRideCardState, ZoneType(..), FareProductType(..))
 import Services.API (BookingLocationAPIEntity(..))
 import ConfigProvider
 import Prelude ((<>))
 import Foreign.Object (empty)
+import Common.Types.App as CTP
 
 initData :: MyRidesScreenState
 initData =
@@ -32,11 +33,15 @@ initData =
       , receivedResponse: false
       , apiFailure: false
       , fromNavBar: true
+      , optionsVisibility: true
+      , fromBanner : false
+      , refreshLoader : false
+      , scrollEnable : false
       }
   , data:
       { selectedItem: dummyIndividualCard
       , offsetValue: 0
-      , loadMoreText: "LoadMore"
+      , loadMoreText: true
       , config: getAppConfig appConfig
       , logField : empty
       , isSrcServiceable: true
@@ -59,6 +64,8 @@ dummyBookingDetails =
     , lon: 0.0
     , placeId : Nothing
     , ward : Nothing
+    , extras : Nothing
+    , instructions : Nothing
     }
 
 dummyIndividualCard :: IndividualRideCardState
@@ -73,8 +80,10 @@ dummyIndividualCard = {
     driverImage : "",
     isCancelled :  "",
     isSuccessfull :  "",
+    isScheduled : "",
     rating : 0,
     driverName : "",
+    driverPhoneNumber : Nothing,
     rideStartTime : "",
     rideEndTime : "",
     vehicleNumber : "",
@@ -105,4 +114,22 @@ dummyIndividualCard = {
   , zoneType : NOZONE
   , vehicleVariant : Nothing
   , isSrcServiceable : true
+  , optionsVisibility : false
+  , merchantExoPhone : ""
+  , serviceTierName : Nothing
+  , totalTime : ""
+  , vehicleModel : ""
+  , rideStartTimeUTC : ""
+  , providerName : ""
+  , providerType : CTP.ONUS
+  , showRepeatRide : ""
+  , rideType : ONE_WAY
+  , estimatedDistance : 0
+  , estimatedDuration : 0
+  , estimatedFare : 0
+  , showDestination : ""
+  , rideScheduledTime : ""
+  , isAirConditioned : Nothing
+  , rideCreatedAt : ""
+  , rideStatus : ""
 }

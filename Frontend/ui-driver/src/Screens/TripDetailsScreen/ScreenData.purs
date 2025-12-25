@@ -16,10 +16,10 @@
 module Screens.TripDetailsScreen.ScreenData where
 
 import Data.Maybe (Maybe(..))
-import Screens.Types (TripDetailsScreenState, PaymentMode(..))
+import Screens.Types as ST
 import MerchantConfig.DefaultConfig as DC
 
-initData :: TripDetailsScreenState
+initData :: ST.TripDetailsScreenState
 initData = {
   data: {
       tripId : "",
@@ -32,7 +32,7 @@ initData = {
       source : "" ,
       destination : "",
       totalAmount : 0,
-      paymentMode : CASH,
+      paymentMode : ST.CASH,
       status : "",
       vehicleType : "",
       customerExtraFee : Nothing,
@@ -42,7 +42,21 @@ initData = {
       specialZoneLayoutBackground : "",
       specialZoneImage : "",
       specialZoneText : "",
-      config : DC.config
+      goBackTo : ST.Earning,
+      config : DC.config,
+      specialZonePickup : false ,
+      tollCharge : 0.0,
+      rideType : "",
+      tripStartTime : Nothing,
+      tripEndTime : Nothing,
+      vehicleModel : "",
+      acRide : Nothing,
+      vehicleServiceTier : "",
+      tripType : ST.Rental,
+      parkingCharge : 0.0,
+      stops : [],
+      isInsured : false,
+      certificateUrl : ""
   },
   props: {
     rating : 4,

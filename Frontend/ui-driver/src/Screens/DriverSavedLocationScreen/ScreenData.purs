@@ -20,13 +20,14 @@ import Prelude
 
 import Common.Types.App as Common
 import Data.Maybe (Maybe(..))
-import Screens.Types (DriverSavedLocationScreenState, SavedLocationScreenType(..))
+import Screens.Types (DriverSavedLocationScreenState, SavedLocationScreenType(..), LocationSelectType(..))
 import ConfigProvider
 
 initData :: DriverSavedLocationScreenState
 initData =
   { data:
       { address: ""
+      , config : getAppConfig appConfig
       , currentLat: Nothing
       , currentLon: Nothing
       , maxGotoLocations : (getAppConfig appConfig).gotoConfig.maxGotoLocations
@@ -44,10 +45,12 @@ initData =
               { place: ""
               , lat: 0.0
               , lon: 0.0
+              , driverInsideThreshold : false
               }
           , address: ""
           , tag: ""
           }
+      , locationSelectType : SET_LOC
       }
   , props:
       { viewType: GoToList

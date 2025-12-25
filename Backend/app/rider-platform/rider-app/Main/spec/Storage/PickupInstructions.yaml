@@ -1,0 +1,73 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+
+PickupInstructions:
+  tableName: pickup_instructions
+  derives: Generic,Show,FromJSON,ToJSON
+  fields:
+    id: Id PickupInstructions
+    personId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    geohash: Text
+    instruction: Text
+    mediaFileId: "Maybe (Id MediaFile)"
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    id: character(36)
+    personId: character(36)
+    merchantId: character(36)
+    merchantOperatingCityId: character(36)
+    geohash: character(12)
+    instruction: character(150)
+    mediaFileId: character(36)
+
+  constraints:
+    id: PrimaryKey
+    personId: SecondaryKey
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+  queries:
+    findByPersonId:
+      kvFunction: findAllWithKV
+      where: personId
+
+    updateInstructionById:
+      kvFunction: updateOneWithKV
+      params: [geohash, instruction, mediaFileId]
+      where: id
+
+    deleteByPersonIdAndLocation:
+      kvFunction: deleteWithKV
+      where:
+        and: [personId, geohash]
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+    findByPersonIdAndGeohash:
+      kvFunction: findOneWithKV
+      where:
+        and: [personId, geohash]
+
+    findOldestByPersonId:
+      kvFunction: findAllWithOptionsKV
+      where: personId
+      orderBy:
+        field: updatedAt
+        order: asc
+      limit: 1
+
+    updateMediaFileById:
+      kvFunction: updateOneWithKV
+      params: [mediaFileId]
+      where: id

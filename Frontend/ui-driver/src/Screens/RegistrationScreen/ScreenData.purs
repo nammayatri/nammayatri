@@ -19,45 +19,52 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Language.Strings (getString)
-import Common.Types.Config (CityConfig)
+import MerchantConfig.Types (CityConfig)
 import Prelude (class Eq)
 import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
 import ConfigProvider
 import Foreign.Object (empty)
+import Screens.Types as ST
+import Prelude (class Eq, class Show)
+import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
+import Data.Generic.Rep (class Generic)
+import Data.Show.Generic (genericShow)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Data.Array as DA
+import Common.Types.App as Common
+import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 initData :: RegistrationScreenState
 initData = {
       data: {
         activeIndex : 1,
-        registerationSteps : [
-          {
-            stageName : "Driving License",
-            stage : DRIVING_LICENSE_OPTION
-          },
-          {
-            stageName : "Vehicle Registration",
-            stage : VEHICLE_DETAILS_OPTION
-          },
-          {
-            stageName : "Grant Permission",
-            stage : GRANT_PERMISSION
-          },
-          {
-            stageName : "Namma Yatri Plan",
-            stage : SUBSCRIPTION_PLAN
-          }
-        ],
+        registerationStepsCabs : [],
+        registerationStepsAuto : [],
+        registerationStepsBike : [],
+        registerationStepsAmbulance : [],
+        registerationStepsTruck : [],
+        registerationStepsBus : [],
         drivingLicenseStatus : NOT_STARTED,
         vehicleDetailsStatus : NOT_STARTED,
         permissionsStatus : NOT_STARTED,
-        subscriptionStatus : NOT_STARTED,
+        vehicleTypeMismatch : false,
+        documentStatusList : [],
+        variantList : [],
         phoneNumber : "",
         lastUpdateTime : "",
-        cityConfig : dummyCityConfig,
+        cityConfig : defaultCityConfig,
         config : getAppConfig appConfig,
         referralCode : "",
         referral_code_input_data : "",
-        logField : empty
+        logField : empty,
+        enteredDL : "",
+        enteredRC : "",
+        vehicleCategory : Nothing,
+        linkedRc : Nothing,
+        accessToken : "",
+        hvTxnId : Nothing,
+        hvFlowId : Nothing
       },
       props: {
         limitReachedFor : Nothing,
@@ -65,20 +72,17 @@ initData = {
         isValidReferralCode : true,
         enterOtpFocusIndex : 0,
         enterReferralCodeModal : false,
-        referralCodeSubmitted : false
+        referralCodeSubmitted : false,
+        contactSupportView : true,
+        contactSupportModal : ST.HIDE,
+        selectedVehicleIndex : Nothing,
+        optionalDocsExpanded : true,
+        confirmChangeVehicle : false,
+        refreshAnimation : false,
+        driverEnabled : false,
+        menuOptions : false,
+        manageVehicle : false,
+        manageVehicleCategory : Nothing,
+        dontAllowHvRelaunch : false
       }
   }
-
-dummyCityConfig :: CityConfig
-dummyCityConfig = {
-                    cityName : "",
-                    mapImage : "",
-                    cityCode : "",
-                    showSubscriptions : false,
-                    cityLat : 0.0,
-                    cityLong : 0.0,
-                    supportNumber : "",
-                    languageKey : "",
-                    showDriverReferral : false,
-                    uploadRCandDL : true
-                  }

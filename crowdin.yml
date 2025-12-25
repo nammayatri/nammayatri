@@ -1,0 +1,10 @@
+# adding the required sources and translation path for ui-driver and ui-customer
+# 1. "source" - the location from where the crowdin will get the source strings that needs to be translated
+# 2. "translation" - the location where translations are being stored
+# 3. %two_lettes_code% - placeholder provided by crowdin to get the two letter code of translated language
+
+files:
+  - source: /Frontend/ui-customer/src/generated/source/main_locale.json
+    translation: /Frontend/ui-customer/src/generated/translations/%two_letters_code%.json
+  - source: /Frontend/ui-driver/src/generated/source/main_locale.json
+    translation: /Frontend/ui-driver/src/generated/translations/%two_letters_code%.json

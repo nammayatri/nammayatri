@@ -25,6 +25,9 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => BeamFPSS.FullFarePolicySlabsDetailsSlab -> m ()
+create = createWithKV
+
 findAll' ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DFP.FarePolicy ->
@@ -47,7 +50,9 @@ instance FromTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicyS
         ( KTI.Id farePolicyId,
           DFP.FPSlabsDetailsSlab
             { startDistance = startDistance,
-              baseFare = baseFare,
+              baseFare = mkAmountWithDefault baseFareAmount baseFare,
+              currency = fromMaybe INR currency,
+              distanceUnit = fromMaybe Meter distanceUnit,
               waitingChargeInfo =
                 ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
                   DFP.WaitingChargeInfo
@@ -71,11 +76,14 @@ instance ToTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySla
       { id = Nothing,
         farePolicyId = farePolicyId,
         startDistance = startDistance,
-        baseFare = baseFare,
-        platformFeeCharge = DFP.platformFeeCharge <$> platformFeeInfo,
-        platformFeeCgst = DFP.cgst <$> platformFeeInfo,
-        platformFeeSgst = DFP.sgst <$> platformFeeInfo,
-        waitingCharge = DFP.waitingCharge <$> waitingChargeInfo,
+        baseFare = roundToIntegral baseFare,
+        baseFareAmount = Just baseFare,
+        currency = Just currency,
+        distanceUnit = Just distanceUnit,
+        platformFeeCharge = (.platformFeeCharge) <$> platformFeeInfo,
+        platformFeeCgst = (.cgst) <$> platformFeeInfo,
+        platformFeeSgst = (.sgst) <$> platformFeeInfo,
+        waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge,
-        freeWatingTime = DFP.freeWaitingTime <$> waitingChargeInfo
+        freeWatingTime = (.freeWaitingTime) <$> waitingChargeInfo
       }

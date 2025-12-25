@@ -1,0 +1,30 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  VehicleCategory: Domain.Types.VehicleCategory
+
+DriverOperatorAssociation:
+  tableName: driver_operator_association
+
+  fields:
+    id: Id DriverOperatorAssociation
+    operatorId: Text
+    isActive: Bool
+    driverId: Id Person
+    associatedOn: Maybe UTCTime
+    associatedTill: Maybe UTCTime
+    onboardingVehicleCategory: Maybe VehicleCategory
+
+  constraints:
+    id: PrimaryKey
+    operatorId: "!SecondaryKey"
+    driverId: "!SecondaryKey"
+
+  sqlType:
+    id: text
+    operatorId: text
+    driverId: text
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -49,7 +49,7 @@ import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<), discard, void, not, (||))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
@@ -61,9 +61,15 @@ import Types.App (defaultGlobalState)
 import Screens.RegistrationScreen.ComponentConfig (logoutPopUp) as LP
 import Data.String.Common as DSC
 import ConfigProvider
+import Components.OptionsMenu as OptionsMenu
+import Data.Array as DA
+import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
+import Components.BottomDrawerList as BottomDrawerList
+import Engineering.Helpers.Events as EHE
+import Helpers.Utils as HU
 
 
-screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
+screen :: ST.UploadDrivingLicenseState -> LoggableScreen Action ST.UploadDrivingLicenseState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -71,6 +77,7 @@ screen initialState =
   , globalEvents : [(\push -> do
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     _ <- runEffectFn1 consumeBP unit
+    let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepScreenLoadedEventName ST.DRIVING_LICENSE_OPTION)
     if initialState.props.successfulValidation then do
       _ <- launchAff $ flowRunner defaultGlobalState $ redirectScreen push RedirectScreen
       pure unit
@@ -79,10 +86,13 @@ screen initialState =
               if initialState.props.validateProfilePicturePopUp  then  lift $ lift $ doAff do liftEffect $ push $ AfterRender  else pure unit 
     pure $ pure unit)]
   , eval : \action state -> do
-      let _ = printLog  "UploadDrivingLicenseScreen state -----" state
+      let _ = spy  "UploadDrivingLicenseScreen state -----" state
           _ = spy "UploadDrivingLicenseScreen action -----" action
       eval action state
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.uploadDrivingLicenseScreenLogWhitelist
   }
+
 
 view
   :: forall w
@@ -94,7 +104,7 @@ view push state =
   frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  ]([
+  ] $ [
 linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -132,7 +142,6 @@ linearLayout
                       , visibility $ fromMaybeVisibility state.data.dateOfIssue
                       ] <> FontStyle.body3 TypoGraphy
                 , enterLicenceNumber state push
-                , if state.data.cityConfig.uploadRCandDL then reEnterLicenceNumber state push else dummyLinearLayout
                 , dateOfBirth push state
                 , dateOfIssue push state
                 , howToUpload push state
@@ -172,16 +181,27 @@ linearLayout
       width MATCH_PARENT
     , height MATCH_PARENT
       ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_date_of_issue"}] else linearLayout [][]
+    , if state.props.contactSupportModal /= ST.HIDE then BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state) else linearLayout[][]
     , if state.props.openGenericMessageModal then 
       linearLayout[
       width MATCH_PARENT
     , height MATCH_PARENT
       ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_DL_IMAGE), openGenericMessageModal : state.props.openGenericMessageModal, buttonText : (getString NEXT) }] else linearLayout [][]
-  ] <> if state.props.logoutPopupModal then [logoutPopupModal push state] else []
+  ] <> if DA.any (_ == true) [state.props.logoutPopupModal, state.props.confirmChangeVehicle] then [ popupModal push state ] else []
     <> if state.props.imageCaptureLayoutView then [imageCaptureLayout push state] else []
     <> if state.props.validateProfilePicturePopUp then [validateProfilePictureModal push state] else []
-    <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] )
-  
+    <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else []
+    <> if state.props.menuOptions then [menuOptionModal push state] else []
+
+menuOptionModal :: forall w. (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+menuOptionModal push state = 
+  linearLayout 
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , padding $ PaddingTop 55
+    , background Color.blackLessTrans
+    ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
+
 headerView :: forall w. ST.UploadDrivingLicenseState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
 
@@ -395,13 +415,13 @@ headerLayout state push =
         , padding (Padding 6 4 6 4)
         , margin (MarginRight 10)
         , background Color.lightBlue
-        , stroke ("1," <> Color.blueBtn)
+        , stroke ("1," <> Color.brightBlue)
         , alpha 0.8
         ][ textView
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , text (getString HELP)
-            , color Color.blueBtn
+            , color Color.brightBlue
             , gravity CENTER
             , fontStyle $ FontStyle.semiBold LanguageStyle
             , clickable true
@@ -557,14 +577,18 @@ howToUpload push state =
     ]
   ]
 
-logoutPopupModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
-logoutPopupModal push state =
-  linearLayout
-  [ width MATCH_PARENT
-  , height MATCH_PARENT
-  , background Color.blackLessTrans
-  ][ PopUpModal.view (push <<<PopUpModalLogoutAction) (LP.logoutPopUp Language) ]
-
+popupModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+popupModal push state =
+    linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , background Color.blackLessTrans
+    ][ PopUpModal.view (push <<< action) popupConfig ] 
+    where 
+      action = if state.props.logoutPopupModal then PopUpModalLogoutAction 
+                else ChangeVehicleAC
+      popupConfig = if state.props.logoutPopupModal then (LP.logoutPopUp Language)
+                    else changeVehicleConfig FunctionCall
 
 validateProfilePictureModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
 validateProfilePictureModal push state =

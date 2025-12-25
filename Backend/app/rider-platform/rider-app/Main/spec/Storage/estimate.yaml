@@ -1,0 +1,301 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  SearchRequest: Domain.Types.SearchRequest
+  Price: Kernel.Types.Common
+  BaseUrl: Servant.Client.Core
+  Centesimal: Kernel.Types.Common
+  LatLong: Kernel.External.Maps
+  ServiceTierType: Domain.Types.ServiceTierType
+  TripTerms: Domain.Types.TripTerms
+  PrettyShow: Kernel.Utils.GenericPretty
+  Money: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  parseBaseUrl: Kernel.Prelude
+  showBaseUrl: Kernel.Prelude
+  Device : Kernel.Types.Version
+  DeviceType: Kernel.Types.Version
+  EstimateStatus: Domain.Types.EstimateStatus
+  Version: Kernel.Types.Version
+  Minutes: Kernel.Types.Common
+  TripCategory: Domain.Types.Common
+  VehicleCategory : BecknV2.OnDemand.Enums
+
+Estimate:
+  tableName: estimate
+  beamInstance: MakeTableInstancesWithTModifier [("oldNightShiftCharge", "night_shift_multiplier")]
+  derives: "Generic,Show"
+
+  types:
+    BPPEstimate: {}
+
+    FareRange:
+      minFare: Price
+      maxFare: Price
+      derive': "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
+
+    EstimateBreakup:
+      id : Id EstimateBreakup
+      estimateId : Id Estimate
+      title : Text
+      price : EstimateBreakupPrice
+      derive': "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
+
+    EstimateBreakupPrice:
+      recordType: NewType
+      value: Price
+      derive': "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
+
+    NightShiftInfo:
+      nightShiftCharge : Price
+      oldNightShiftCharge : Maybe Centesimal
+      nightShiftStart : TimeOfDay
+      nightShiftEnd : TimeOfDay
+      derive': "Generic, Show"
+
+    BusinessDiscountInfo:
+      businessDiscount: Price
+      businessDiscountPercentage: Double
+      derive': "Generic, Show"
+
+    TollChargesInfo:
+      tollCharges: Price
+      tollNames: "[Text]"
+      derive': "Generic, Show"
+
+    WaitingCharges:
+      waitingChargePerMin: Maybe Price
+      derive': "Generic, Show"
+
+  fields:
+    id : Id Estimate
+    requestId : Id SearchRequest
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+    bppEstimateId : Id BPPEstimate
+    estimatedFare : Price
+    discount : Maybe Price
+    estimatedTotalFare : Price
+    totalFareRange : FareRange
+    estimatedDuration : Maybe Seconds
+    estimatedStaticDuration: Maybe Seconds
+    estimatedDistance : Maybe Distance
+    estimatedPickupDuration : Maybe Seconds
+    device : Maybe Text
+    providerId : Text
+    providerUrl : BaseUrl
+    providerName : Text
+    providerMobileNumber : Text
+    providerCompletedRidesCount : Int
+    vehicleServiceTierType : ServiceTierType
+    vehicleServiceTierSeatingCapacity : Maybe Int
+    vehicleServiceTierAirConditioned : Maybe Double
+    vehicleCategory: Maybe VehicleCategory
+    isAirConditioned: Maybe Bool
+    itemId : Text
+    tripTerms : Maybe TripTerms
+    estimateBreakupList : "[EstimateBreakup]"
+    nightShiftInfo : Maybe NightShiftInfo
+    businessDiscountInfo : Maybe BusinessDiscountInfo
+    status : EstimateStatus|NoRelation
+    waitingCharges : WaitingCharges
+    driversLocation : "[LatLong]"
+    specialLocationTag : Maybe Text
+    specialLocationName : Maybe Text
+    serviceTierName : Maybe Text
+    serviceTierShortDesc : Maybe Text
+    clientSdkVersion: Maybe Version
+    clientBundleVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
+    clientDevice: Maybe Device
+    tollChargesInfo: Maybe TollChargesInfo
+    isCustomerPrefferedSearchRoute: Maybe Bool
+    isBlockedRoute: Maybe Bool
+    distanceUnit: DistanceUnit
+    tripCategory: Maybe TripCategory
+    tipOptions: Maybe [Int]
+    updatedAt : UTCTime
+    createdAt : UTCTime
+    validTill : UTCTime
+    vehicleIconUrl : Maybe BaseUrl
+    smartTipSuggestion: Maybe HighPrecMoney
+    boostSearchPreSelectionServiceTierConfig : "Maybe [ServiceTierType]"
+    smartTipReason: Maybe Text
+    isInsured: Bool
+    qar : Maybe Double
+    estimateTags: Maybe [Text]
+    insuredAmount: Maybe Text
+    isMultimodalSearch: Maybe Bool
+
+  constraints:
+    id: PrimaryKey
+    requestId: SecondaryKey
+    bppEstimateId: SecondaryKey
+
+  beamFields:
+    totalFareRange:
+      minTotalFare: HighPrecMoney
+      maxTotalFare: HighPrecMoney
+      currency: Maybe Currency
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
+
+    vehicleServiceTierType:
+      vehicleVariant: ServiceTierType
+
+    estimatedDistance:
+      estimatedDistance: Maybe HighPrecMeters
+      estimatedDistanceValue: Maybe HighPrecDistance
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
+
+    tripTerms:
+      tripTermsId: Maybe Text
+
+    nightShiftInfo:
+      nightShiftCharge : Maybe Money
+      nightShiftChargeAmount : Maybe HighPrecMoney
+      oldNightShiftCharge : Maybe Centesimal
+      nightShiftStart : Maybe TimeOfDay
+      nightShiftEnd : Maybe TimeOfDay
+
+    businessDiscountInfo:
+      businessDiscount: Maybe HighPrecMoney
+      businessDiscountPercentage: Maybe Double
+
+    tollChargesInfo:
+      tollCharges : Maybe HighPrecMoney
+      tollNames : Maybe [Text]
+
+    waitingCharges:
+      waitingChargePerMin: Maybe Money
+      waitingChargePerMinAmount: Maybe HighPrecMoney
+    estimateBreakupList: {}
+
+  beamType:
+    discount: Maybe HighPrecMoney
+    estimatedTotalFare: HighPrecMoney
+    estimatedFare: HighPrecMoney
+    providerUrl: Text
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    clientOsVersion: Maybe Text
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
+    vehicleIconUrl: Maybe Text
+    isInsured: Maybe Bool
+
+  fromTType:
+    totalFareRange: mkFareRange
+    nightShiftInfo: mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShiftStart oldNightShiftCharge currency|E
+    businessDiscountInfo: mkBusinessDiscountInfo businessDiscount businessDiscountPercentage currency|E
+    tollChargesInfo: mkTollChargesInfo tollCharges tollNames currency|E
+    estimateBreakupList: Storage.Queries.EstimateBreakup.findAllByEstimateIdT (Kernel.Types.Id.Id id)|EM
+    waitingCharges: Domain.Types.Estimate.WaitingCharges $ Kernel.Types.Common.mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin|E
+    tripTerms: mKTripTerms|M
+    providerUrl: parseBaseUrl|MI
+    discount: Kernel.Types.Common.mkPrice currency <$> discount|E
+    estimatedFare: Kernel.Types.Common.mkPrice currency estimatedFare|E
+    estimatedTotalFare: Kernel.Types.Common.mkPrice currency estimatedTotalFare|E
+    estimatedDistance: Kernel.Types.Common.mkDistanceWithDefault distanceUnit estimatedDistanceValue <$> estimatedDistance|E
+    clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
+    clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
+    clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
+    backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
+    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
+    vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+    isInsured: Kernel.Prelude.fromMaybe False isInsured|E
+
+  toTType:
+    maxTotalFare: (mkMaxTotalFare totalFareRange)|E
+    minTotalFare:  (mkMinTotalFare totalFareRange)|E
+    waitingChargePerMin: ((.waitingChargePerMin) waitingCharges <&> (.amountInt))|E
+    waitingChargePerMinAmount: ((.waitingChargePerMin) waitingCharges <&> (.amount))|E
+    estimatedFare: ((.amount) estimatedFare)|E
+    estimatedTotalFare: ((.amount) estimatedTotalFare)|E
+    discount: (discount <&> (.amount))|E
+    currency: (Kernel.Prelude.Just $ (.currency) estimatedFare)|E
+    providerUrl: showBaseUrl|I
+    tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
+    tollCharges: (tollChargesInfo <&> ((.amount) . (.tollCharges)))|E
+    tollNames: (tollChargesInfo <&> (.tollNames))|E
+    businessDiscount: (businessDiscountInfo <&> ((.amount) . (.businessDiscount)))|E
+    businessDiscountPercentage: (businessDiscountInfo <&> (.businessDiscountPercentage))|E
+    nightShiftCharge: (mknightShiftCharge nightShiftInfo)|E
+    nightShiftChargeAmount: (mknightShiftChargeAmount nightShiftInfo)|E
+    oldNightShiftCharge: ((.oldNightShiftCharge) =<< nightShiftInfo)|E
+    nightShiftStart: (nightShiftInfo <&> (.nightShiftStart))|E
+    nightShiftEnd: (nightShiftInfo <&> (.nightShiftEnd))|E
+    estimatedDistance: (Kernel.Types.Common.distanceToHighPrecMeters <$> estimatedDistance)|E
+    estimatedDistanceValue: (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance)|E
+    distanceUnit: Kernel.Prelude.Just|I
+    clientBundleVersion: (fmap Kernel.Utils.Version.versionToText clientBundleVersion)|E
+    clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+    clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
+    backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
+    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
+    clientOsType:  (clientDevice <&> (.deviceType))|E
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+    isInsured: Kernel.Prelude.Just isInsured|E
+
+  sqlType:
+    estimatedFare: numeric(30,10)
+    vehicleIconUrl: character varying(255)
+    estimatedTotalFare: numeric(30,2)
+    providerId: character varying(255)
+    providerUrl: character varying(255)
+    providerName: character varying(255)
+    providerMobileNumber: character varying(255)
+    vehicleVariant: character varying(255)
+    tripTermsId: character varying(36)
+    minTotalFare: numeric(30,2)
+    maxTotalFare: numeric(30,2)
+    driversLocation: "text[]"
+    waitingChargePerMin: double precision
+    status: character varying(255)
+    nightShiftCharge: integer
+    currency: character varying(255)
+    estimatedPickupDuration: integer
+    tipOptions: integer[]
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllBySRId:
+      kvFunction: findAllWithKVAndConditionalDB
+      where: requestId
+
+    findByBPPEstimateId:
+      kvFunction: findOneWithKV
+      where: bppEstimateId
+
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [updatedAt, status]
+      where: id
+
+    findBySRIdAndStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [status,requestId]
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+

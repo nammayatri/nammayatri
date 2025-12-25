@@ -15,11 +15,10 @@
 module Beckn.Types.Core.Taxi.OnSelect.Fulfillment
   ( module Beckn.Types.Core.Taxi.OnSelect.Fulfillment,
     module Reexport,
-    FulfillmentType (..),
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.FulfillmentInfo (FulfillmentType (..), stripPrefixUnderscoreAndRemoveNullFields)
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo (stripPrefixUnderscoreAndRemoveNullFields)
 import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Agent
 import Beckn.Types.Core.Taxi.Search.StartInfo
@@ -32,9 +31,9 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,
     start :: StartInfo,
-    end :: StopInfo,
+    end :: Maybe StopInfo,
     vehicle :: Vehicle,
-    _type :: FulfillmentType,
+    _type :: Text,
     agent :: Agent
   }
   deriving (Generic, Show)

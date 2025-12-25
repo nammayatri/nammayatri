@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE ApplicativeDo #-}
 
 module Domain.Action.UI.DriverOnboarding.AadhaarVerification where
 
@@ -19,42 +18,56 @@ import qualified AWS.S3 as S3
 import Codec.Picture
 import Codec.Picture.Extra
 import Codec.Picture.Types
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Base64.Lazy as B64L
 import qualified Data.ByteString.Lazy as LBS
 import Data.Text (pack, unpack)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Time.Format.ISO8601 (iso8601Show)
+import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
+import qualified Domain.Types.AadhaarCard as DAadhaarCard
+import qualified Domain.Types.AadhaarCard as VDomain
+import qualified Domain.Types.AadhaarOtpReq as DAR
+import qualified Domain.Types.AadhaarOtpVerify as DAV
+import qualified Domain.Types.DocumentVerificationConfig as ODC
 import Domain.Types.DriverInformation (DriverInformation)
-import qualified Domain.Types.DriverOnboarding.AadhaarOtp as Domain
-import Domain.Types.DriverOnboarding.AadhaarVerification
-import qualified Domain.Types.DriverOnboarding.AadhaarVerification as VDomain
-import Domain.Types.DriverOnboarding.Error
+import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Beam.Functions
-import Kernel.External.Encryption (DbHash, getDbHash)
-import Kernel.Prelude
+import Kernel.External.Encryption (DbHash, encrypt, getDbHash)
+import Kernel.Prelude hiding (null)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
+import qualified Kernel.Types.Documents as Documents
+import qualified Kernel.Types.Documents as KTD
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.DriverImage as CQDI
-import Storage.CachedQueries.Merchant.TransporterConfig as CTC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.AadhaarCard as QAadhaarCard
+import qualified Storage.Queries.AadhaarOtpReq as QueryAR
+import qualified Storage.Queries.AadhaarOtpVerify as QueryAV
+import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverOnboarding.AadhaarOtp as Query
-import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as Q
-import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as QAV
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as Person
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
+import qualified Tools.Verification as Verification
+import Utils.Common.Cac.KeyNameConstants
 
 data VerifyAadhaarOtpReq = VerifyAadhaarOtpReq
   { otp :: Int,
@@ -71,6 +84,18 @@ data UnVerifiedDataReq = UnVerifiedDataReq
 
 data ImageType = JPG | PNG | UNKNOWN deriving (Generic, Show, Eq)
 
+data DriverAadhaarReq = DriverAadhaarReq
+  { aadhaarNumber :: Maybe Text,
+    aadhaarFrontImageId :: Text,
+    aadhaarBackImageId :: Maybe Text,
+    consent :: Bool,
+    driverId :: Text,
+    aadhaarName :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+type DriverAadhaarRes = APISuccess
+
 generateAadhaarOtp ::
   Bool ->
   Maybe DM.Merchant ->
@@ -81,7 +106,7 @@ generateAadhaarOtp ::
 generateAadhaarOtp isDashboard mbMerchant personId merchantOpCityId req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  when driverInfo.blocked $ throwError DriverAccountBlocked
+  when driverInfo.blocked $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   when (driverInfo.aadhaarVerified) $ throwError AadhaarAlreadyVerified
   aadhaarHash <- getDbHash req.aadhaarNumber
   checkForDuplicacy aadhaarHash
@@ -91,11 +116,11 @@ generateAadhaarOtp isDashboard mbMerchant personId merchantOpCityId req = do
   let tryKey = makeGenerateOtpTryKey person.id
   numberOfTries :: Maybe Int <- Redis.safeGet tryKey
   let tried = fromMaybe 0 numberOfTries
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (isDashboard || tried < transporterConfig.onboardingTryLimit) $ throwError (GenerateAadhaarOtpExceedLimit personId.getId)
   res <- AadhaarVerification.generateAadhaarOtp person.merchantId merchantOpCityId req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
-  _ <- Query.createForGenerate aadhaarOtpEntity
+  _ <- QueryAR.create aadhaarOtpEntity
   cacheAadhaarVerifyTries personId tried res.transactionId aadhaarHash isDashboard
   pure res
 
@@ -117,7 +142,7 @@ verifyAadhaarOtp ::
 verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound (getId personId))
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound (getId personId))
-  when (driverInfo.blocked) $ throwError DriverAccountBlocked
+  when (driverInfo.blocked) $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   when (driverInfo.aadhaarVerified) $ throwError AadhaarAlreadyVerified
   whenJust mbMerchant $ \merchant -> do
     -- merchant access checking
@@ -134,7 +159,7 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
               }
       res <- AadhaarVerification.verifyAadhaarOtp person.merchantId merchantOpCityId aadhaarVerifyReq
       aadhaarVerifyEntity <- mkAadhaarVerify personId tId res
-      Query.createForVerify aadhaarVerifyEntity
+      QueryAV.create aadhaarVerifyEntity
       if res.code == pack "1002"
         then do
           Redis.del key
@@ -143,10 +168,11 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
           case resultOrg of
             Left err -> throwError $ InternalError ("Aadhaar Verification failed due to S3 upload failure, Please try again : " <> show err)
             Right _ -> do
-              aadhaarEntity <- mkAadhaar personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) Nothing True (Just orgImageFilePath)
-              Q.create aadhaarEntity
-              DriverInfo.updateAadhaarVerifiedState (cast personId) True
-              Status.statusHandler (person.id, person.merchantId, merchantOpCityId) Nothing
+              aadhaarEntity <- mkAadhaar person.merchantId person.merchantOperatingCityId personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) Nothing True (Just orgImageFilePath)
+              QAadhaarCard.create aadhaarEntity
+              DriverInfo.updateAadhaarVerifiedState True (cast personId)
+              let onlyMandatoryDocs = Just True
+              void $ Status.statusHandler (person.id, person.merchantId, merchantOpCityId) (Just True) Nothing Nothing (Just False) onlyMandatoryDocs Nothing
               uploadCompressedAadhaarImage person merchantOpCityId res.image imageType >> pure ()
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
@@ -158,7 +184,7 @@ fetchAndCacheAadhaarImage driver driverInfo =
     then case driverInfo.compAadhaarImagePath of
       Just path -> Just <$> CQDI.getDriverImageByDriverId driverInfo.driverId path
       Nothing -> do
-        aadhaarVerification <- runInReplica (QAV.findByDriverId driverInfo.driverId) >>= fromMaybeM (InternalError $ "Count not find aadhaar verification data for the provided user : " <> getId driverInfo.driverId)
+        aadhaarVerification <- runInReplica (QAadhaarCard.findByPrimaryKey driverInfo.driverId) >>= fromMaybeM (InternalError $ "Count not find aadhaar verification data for the provided user : " <> getId driverInfo.driverId)
         case aadhaarVerification.driverImagePath of
           Nothing -> backfillAadhaarImage driver driver.merchantOperatingCityId aadhaarVerification
           Just imgPath -> do
@@ -170,7 +196,7 @@ fetchAndCacheAadhaarImage driver driverInfo =
               Right _ -> CQDI.cacheDriverImageByDriverId driverInfo.driverId compImage >> return (Just compImage)
     else pure Nothing
 
-backfillAadhaarImage :: (MonadFlow m, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m), CacheFlow m r, EsqDBFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> AadhaarVerification -> m (Maybe Text)
+backfillAadhaarImage :: (MonadFlow m, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m), CacheFlow m r, EsqDBFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> VDomain.AadhaarCard -> m (Maybe Text)
 backfillAadhaarImage person merchantOpCityId aadhaarVerification =
   case aadhaarVerification.driverImage of
     Nothing -> return Nothing
@@ -180,7 +206,7 @@ backfillAadhaarImage person merchantOpCityId aadhaarVerification =
       case resultOrg of
         Left _ -> return $ Just image
         Right _ -> do
-          QAV.updateDriverImagePath person.id orgImageFilePath
+          QAadhaarCard.updateDriverImagePath (Just orgImageFilePath) person.id
           (compImage, resultComp) <- uploadCompressedAadhaarImage person merchantOpCityId image imageType
           case resultComp of
             Left _ -> return $ Just image
@@ -188,20 +214,20 @@ backfillAadhaarImage person merchantOpCityId aadhaarVerification =
 
 uploadOriginalAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Text -> ImageType -> m (Text, Either SomeException ())
 uploadOriginalAadhaarImage person image imageType = do
-  orgImageFilePath <- createFilePath (getId person.id) Common.Image "/driver-aadhaar-photo/" (parseImageExtension imageType)
-  resultOrg <- try @_ @SomeException $ S3.put (unpack orgImageFilePath) image
+  orgImageFilePath <- S3.createFilePath "/driver-aadhaar-photo/" ("driver-" <> getId person.id) S3.Image (parseImageExtension imageType)
+  resultOrg <- withTryCatch "S3:put:uploadOriginalAadhaarImage" $ S3.put (unpack orgImageFilePath) image
   pure (orgImageFilePath, resultOrg)
 
 uploadCompressedAadhaarImage :: (HasField "s3Env" r (S3.S3Env m), MonadFlow m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> ImageType -> m (Text, Either SomeException ())
 uploadCompressedAadhaarImage person merchantOpCityId image imageType = do
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound (merchantOpCityId.getId))
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound (merchantOpCityId.getId))
   let mbconfig = transporterConfig.aadhaarImageResizeConfig
-  compImageFilePath <- createFilePath (getId person.id) Common.Image "/driver-aadhaar-photo-resized/" (parseImageExtension imageType)
+  compImageFilePath <- S3.createFilePath "/driver-aadhaar-photo-resized/" ("driver-" <> getId person.id) S3.Image (parseImageExtension imageType)
   compImage <- maybe (return image) (\cfg -> fromMaybe image <$> resizeImage cfg.height cfg.width image imageType) mbconfig
-  resultComp <- try @_ @SomeException $ S3.put (unpack compImageFilePath) compImage
+  resultComp <- withTryCatch "S3:put:uploadCompressedAadhaarImage" $ S3.put (unpack compImageFilePath) compImage
   case resultComp of
     Left err -> logDebug ("Failed to Upload Compressed Aadhaar Image to S3 : " <> show err)
-    Right _ -> QDI.updateCompAadhaarImagePath (cast person.id) compImageFilePath
+    Right _ -> QDI.updateCompAadhaarImagePath (Just compImageFilePath) (cast person.id)
   pure (compImage, resultComp)
 
 resizeImage :: MonadFlow m => Int -> Int -> Text -> ImageType -> m (Maybe Text)
@@ -239,34 +265,17 @@ parseImageExtension ext = case ext of
   PNG -> ".png"
   _ -> ""
 
-createFilePath ::
-  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
-  Text ->
-  Common.FileType ->
-  Text ->
-  Text ->
-  m Text
-createFilePath driverId fileType identifier imageExtension = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
-  now <- getCurrentTime
-  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-  return
-    ( pathPrefix <> identifier <> "driver-" <> driverId <> "/"
-        <> show fileType
-        <> "/"
-        <> fileName
-        <> imageExtension
-    )
-
 unVerifiedAadhaarData ::
   Id Person.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   UnVerifiedDataReq ->
   Flow APISuccess
-unVerifiedAadhaarData personId req = do
-  mAadhaarCard <- Q.findByDriverId personId
+unVerifiedAadhaarData personId merchantId merchantOpCityId req = do
+  mAadhaarCard <- QAadhaarCard.findByPrimaryKey personId
   when (isJust mAadhaarCard) $ throwError AadhaarDataAlreadyPresent
-  aadhaarEntity <- mkAadhaar personId req.driverName req.driverGender req.driverDob Nothing Nothing False Nothing
-  Q.create aadhaarEntity
+  aadhaarEntity <- mkAadhaar merchantId merchantOpCityId personId req.driverName req.driverGender req.driverDob Nothing Nothing False Nothing
+  QAadhaarCard.create aadhaarEntity
   return Success
 
 makeTransactionIdAndAadhaarHashKey :: Id Person.Person -> Text
@@ -279,19 +288,20 @@ mkAadhaarOtp ::
   (MonadGuid m, MonadTime m) =>
   Id Person.Person ->
   AadhaarVerification.AadhaarVerificationResp ->
-  m Domain.AadhaarOtpReq
+  m DAR.AadhaarOtpReq
 mkAadhaarOtp personId res = do
   id <- generateGUID
   now <- getCurrentTime
   return $
-    Domain.AadhaarOtpReq
+    DAR.AadhaarOtpReq
       { id,
         driverId = personId,
         requestId = res.requestId,
         statusCode = res.statusCode,
         transactionId = res.transactionId,
         requestMessage = res.message,
-        createdAt = now
+        createdAt = now,
+        updatedAt = now
       }
 
 mkAadhaarVerify ::
@@ -299,23 +309,26 @@ mkAadhaarVerify ::
   Id Person.Person ->
   Text ->
   AadhaarVerification.AadhaarOtpVerifyRes ->
-  m Domain.AadhaarOtpVerify
+  m DAV.AadhaarOtpVerify
 mkAadhaarVerify personId tId res = do
   id <- generateGUID
   now <- getCurrentTime
   return $
-    Domain.AadhaarOtpVerify
+    DAV.AadhaarOtpVerify
       { id,
         driverId = personId,
         requestId = res.request_id,
         statusCode = res.code,
         transactionId = tId,
         requestMessage = res.message,
-        createdAt = now
+        createdAt = now,
+        updatedAt = now
       }
 
 mkAadhaar ::
   (MonadGuid m, MonadTime m) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id Person.Person ->
   Text ->
   Text ->
@@ -324,24 +337,159 @@ mkAadhaar ::
   Maybe Text ->
   Bool ->
   Maybe Text ->
-  m VDomain.AadhaarVerification
-mkAadhaar personId name gender dob aadhaarHash img aadhaarVerified imgPath = do
+  m VDomain.AadhaarCard
+mkAadhaar merchantId merchantOpCityId personId name gender dob aadhaarHash img aadhaarVerified imgPath = do
   now <- getCurrentTime
   return $
-    VDomain.AadhaarVerification
+    VDomain.AadhaarCard
       { driverId = personId,
-        driverName = name,
-        driverGender = gender,
-        driverDob = dob,
-        driverImage = img,
+        aadhaarFrontImageId = Nothing,
+        aadhaarBackImageId = Nothing,
+        maskedAadhaarNumber = Nothing,
         aadhaarNumberHash = aadhaarHash,
-        isVerified = aadhaarVerified,
+        nameOnCard = Just name,
+        driverGender = Just gender,
+        dateOfBirth = Just dob,
+        address = Nothing,
+        consent = True,
+        consentTimestamp = now,
+        driverImage = img,
+        driverImagePath = imgPath,
+        verificationStatus = bool KTD.INVALID KTD.VALID aadhaarVerified,
+        merchantOperatingCityId = merchantOpCityId,
+        merchantId = merchantId,
         createdAt = now,
-        updatedAt = now,
-        driverImagePath = imgPath
+        updatedAt = now
       }
 
 checkForDuplicacy :: DbHash -> Flow ()
 checkForDuplicacy aadhaarHash = do
-  aadhaarInfo <- Q.findByAadhaarNumberHash aadhaarHash
+  aadhaarInfo <- QAadhaarCard.findByAadhaarNumberHash (Just aadhaarHash)
   when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked
+
+verifyAadhaar ::
+  DPan.VerifiedBy ->
+  Maybe DM.Merchant ->
+  (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  DriverAadhaarReq ->
+  Maybe Bool ->
+  Flow Bool
+verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req adminApprovalRequired = do
+  externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
+  whenJust req.aadhaarNumber $ \aadhaarNumber -> do
+    checkSlidingWindowLimitWithOptions (makeVerifyAadhaarHitsCountKey aadhaarNumber) externalServiceRateLimitOptions
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  (blocked, driverDocument) <- DVRC.getDriverDocumentInfo person
+  when blocked $ throwError AccountBlocked
+  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  case (transporterConfig.allowDuplicateAadhaar, req.aadhaarNumber) of
+    (Just False, Just aadhaarNumber) -> do
+      aadhaarHash <- getDbHash aadhaarNumber
+      aadhaarInfoList <- QAadhaarCard.findAllByEncryptedAadhaarNumber (Just aadhaarHash)
+      when (length aadhaarInfoList > 1) $ throwError AadhaarAlreadyLinked
+      aadhaarPersonDetails <- Person.getDriversByIdIn (map (.driverId) aadhaarInfoList)
+      let getRoles = map (.role) aadhaarPersonDetails
+      when (person.role `elem` getRoles) $ throwError AadhaarAlreadyLinked
+    _ -> pure ()
+  whenJust mbMerchant $ \merchant -> do
+    unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
+  image1 <- DVRC.getDocumentImage person.id req.aadhaarFrontImageId ODC.AadhaarCard
+  image2 <- case req.aadhaarBackImageId of
+    Just backImageId -> do
+      image <- DVRC.getDocumentImage person.id backImageId ODC.AadhaarCard
+      return $ Just image
+    Nothing -> return Nothing
+  let extractReq =
+        Verification.ExtractAadhaarImageReq
+          { image1 = image1,
+            image2 = image2,
+            driverId = person.id.getId,
+            consent = if req.consent then "yes" else "no"
+          }
+  let runBody = do
+        aadhaarInfo <- QAadhaarCard.findByPrimaryKey person.id
+        whenJust aadhaarInfo $ \aadhaarInfoData -> do
+          when (aadhaarInfoData.verificationStatus == Documents.VALID) $ throwError AadhaarAlreadyLinked
+        resp <- Verification.extractAadhaarImage person.merchantId merchantOpCityId extractReq
+        mbAadhaarNumber <- case resp.extractedAadhaar of
+          Just extractedAadhaarData -> do
+            let extractedAadhaarOutputData = extractedAadhaarData.extraction_output
+            let extractedAadhaarNumber = removeSpaceAndDash <$> extractedAadhaarOutputData.id_number
+            let extractedNameOnCard = extractedAadhaarOutputData.name_on_card
+            logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
+            logInfo ("req.aadhaarName: " <> show req.aadhaarName)
+            when (verifyBy /= DPan.FRONTEND_SDK) $ case req.aadhaarNumber of
+              Just aadhaarNumber ->
+                unless (extractedAadhaarNumber == Just aadhaarNumber) $
+                  throwImageError (Id req.aadhaarFrontImageId) $
+                    ImageDocumentNumberMismatch
+                      (maybe "null" maskText extractedAadhaarNumber)
+                      (maskText aadhaarNumber)
+              Nothing -> throwError (InvalidRequest "Aadhaar number is required")
+            when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
+              DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedAadhaarOutputData.name_on_card extractedAadhaarOutputData.date_of_birth Nothing ODC.AadhaarCard driverDocument
+            aadhaarCard <- makeAadhaarCardEntity person.id extractedAadhaarOutputData req
+            QAadhaarCard.upsertAadhaarRecord aadhaarCard
+            return extractedAadhaarNumber
+          Nothing -> throwImageError (Id req.aadhaarFrontImageId) ImageExtractionFailed
+        whenJust mbAadhaarNumber $ \aadhaarNumber -> do
+          case person.role of
+            Person.FLEET_OWNER -> do
+              encryptedAadhaarNumber <- encrypt aadhaarNumber
+              QFOI.updateAadhaarImage (Just encryptedAadhaarNumber) (Just req.aadhaarFrontImageId) req.aadhaarBackImageId person.id
+            Person.DRIVER -> do
+              encryptedAadhaarNumber <- encrypt aadhaarNumber
+              DIQuery.updateAadhaarNumber (Just encryptedAadhaarNumber) person.id
+            _ -> pure ()
+  if DVRC.isNameCompareRequired transporterConfig verifyBy
+    then Redis.withWaitOnLockRedisWithExpiry (DVRC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+    else runBody
+  res <- case person.role of
+    Person.DRIVER -> do
+      fork "enabling driver if all the mandatory document is verified" $ do
+        now <- getCurrentTime
+        merchantOpCity <-
+          CQMOC.findById merchantOpCityId
+            >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+        driverImages <- IQuery.findAllByPersonId transporterConfig personId
+        let driverImagesInfo = IQuery.DriverImagesInfo {driverId = personId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
+        let onlyMandatoryDocs = Just True
+            shouldActivateRc = False
+        void $ SStatus.statusHandler' (Just person) driverImagesInfo Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
+      pure False
+    role | DCommon.checkFleetOwnerRole role -> DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
+    _ -> pure False
+  pure res
+  where
+    makeAadhaarCardEntity driverId extractedAadhaar aadhaarReq = do
+      currTime <- getCurrentTime
+      (aadhaarHash, maskedAadhaarNumber) <- case aadhaarReq.aadhaarNumber of
+        Just aadhaarNumber -> do
+          aadhaarHash <- getDbHash aadhaarNumber
+          let maskedAadhaarNumber = maskText aadhaarNumber
+          return (Just aadhaarHash, Just maskedAadhaarNumber)
+        Nothing -> return (Nothing, Nothing)
+      return $
+        DAadhaarCard.AadhaarCard
+          { driverId = driverId,
+            createdAt = currTime,
+            updatedAt = currTime,
+            aadhaarNumberHash = aadhaarHash,
+            dateOfBirth = extractedAadhaar.date_of_birth,
+            driverGender = extractedAadhaar.gender,
+            aadhaarBackImageId = Id <$> aadhaarReq.aadhaarBackImageId,
+            aadhaarFrontImageId = Just (Id aadhaarReq.aadhaarFrontImageId),
+            address = extractedAadhaar.address,
+            verificationStatus = Documents.VALID,
+            consent = aadhaarReq.consent,
+            consentTimestamp = currTime,
+            driverImage = Nothing,
+            driverImagePath = Nothing,
+            maskedAadhaarNumber = maskedAadhaarNumber,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOpCityId,
+            nameOnCard = extractedAadhaar.name_on_card
+          }
+
+    makeVerifyAadhaarHitsCountKey :: Text -> Text
+    makeVerifyAadhaarHitsCountKey aadhaarNumber = "VerifyAadhaar:aadhaarNumberHits:" <> aadhaarNumber <> ":hitsCount"

@@ -2,14 +2,15 @@ module Screens.TicketBookingFlow.TicketList.Controller where
 
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, discard, pure, map, unit, min, max, bind, ($), not, (+), (-), (==), (*), (<>), show, void, (+), (==), (-), show, (&&), (>), (/=), (||), (<=), (>=), (<))
-import PrestoDOM (Eval, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
+import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (TicketBookingScreenState, TicketBookingScreenStage(..), TicketServiceI(..))
-import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
+import Helpers.Utils (getDateAfterNDaysv2, getCurrentDatev2)
+import Engineering.Helpers.Utils (compareDate)
 import Effect.Uncurried (runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
-import Screens.Types (TimeInterval, TicketBookingScreenState, TicketBookingItem(..), HomeScreenState, TicketServiceData, PeopleCategoriesRespData, TicketPeopleCategoriesOptionData, PeopleCategoriesRespData, BusinessHoursData, TicketCategoriesData, TicketCategoriesData, TicketCategoriesOptionData, SlotsAndTimeIntervalData(..), SlotInterval(..))
+import Screens.Types (TimeInterval, TicketBookingScreenState, TicketBookingItem(..), HomeScreenState, SlotInterval(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
@@ -21,15 +22,17 @@ import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUT
 import Resources.Constants
 import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), BusinessHoursResp(..), TicketServiceResp(..), PeopleCategoriesResp(..), BookingStatus(..), PeopleCategoriesResp(..), TicketCategoriesResp(..), PlaceType(..))
 import Data.Int (ceil)
-import Common.Types.App as Common
+import Domain.Payments as PP
 import Screens.TicketBookingFlow.TicketList.ScreenData as TicketBookingScreenData
 import Data.Function.Uncurried as Uncurried
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 import JBridge as JB
 import Services.API (ServiceExpiry(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Screens.TicketBookingFlow.TicketList.Transformer (transformRespToStateData, getValidBHid, getValidTimeIntervals)
+import Screens.TicketBookingFlow.TicketList.Transformer (transformRespToStateDatav2)
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -73,7 +76,7 @@ eval (UpdatePlacesData placeData Nothing) state = do
 
 eval (UpdatePlacesData placeData (Just (TicketServicesResponse serviceData))) state = do
   let selectedOpDay = convertUTCtoISC (getCurrentUTC "") "dddFull"
-      servicesInfo = mapWithIndex (\i it -> transformRespToStateData (i==0) it state selectedOpDay) serviceData
+      servicesInfo = mapWithIndex (\i it -> transformRespToStateDatav2 (i==0) it state selectedOpDay) serviceData
   continue state { data { placeInfo = placeData, servicesInfo = servicesInfo}, props {selectedOperationalDay = selectedOpDay, showShimmer = false } }
 
 eval BackPressed state = do
@@ -92,8 +95,8 @@ eval (GetBookingInfo bookingShortId bookingStatus) state = do
 
 eval (PaymentStatusAction status) state =
   case status of 
-    "Booked" -> continue state{props{paymentStatus = Common.Success}}
-    "Failed" -> continue state{props{paymentStatus = Common.Failed}}
+    "Booked" -> continue state{props{paymentStatus = PP.Success}}
+    "Failed" -> continue state{props{paymentStatus = PP.Failed}}
     _ -> continue state
 
 eval (OpenGoogleMap lat long) state = do
@@ -103,11 +106,11 @@ eval (OpenGoogleMap lat long) state = do
 
 eval (Copy text) state = continueWithCmd state [ do 
     void $ pure $ JB.copyToClipboard text
-    void $ pure $ JB.toast (getString COPIED)
+    void $ pure $ EHU.showToast (getString COPIED)
     pure NoAction
   ]
 
-eval _ state = continue state
+eval _ state = update state
 
 
 getLimitOfDaysAccToPlaceType :: TicketBookingScreenState -> Int

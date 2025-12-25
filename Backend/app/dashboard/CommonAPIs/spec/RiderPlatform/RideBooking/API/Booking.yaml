@@ -1,0 +1,45 @@
+imports:
+  Booking: Domain.Types.Booking
+  BookingStatus: Domain.Types.BookingStatus
+  Person: Domain.Types.Person
+  BookingAPIEntity: Domain.Types.Booking.API
+  BookingListRes: Domain.Action.UI.Booking
+  Integer: EulerHS.Prelude
+
+importPackageOverrides:
+  Domain.Types.Booking: "rider-app"
+  Domain.Types.Person: "rider-app"
+  Domain.Types.Booking.API: "rider-app"
+  Domain.Action.UI.Booking: "rider-app"
+
+module: Booking
+
+apis:
+  - POST:  # CustomerBookingStatusAPI
+      endpoint:  /ridebooking/{rideBookingId}/{customerId}
+      name: PostBookingStatus
+      auth: ApiAuthV2
+      params:
+        rideBookingId: Id Booking
+        customerId: Id Person
+      response:
+        type: BookingAPIEntity
+      migrate:
+        endpoint: RBooking RideStatusEndPoint
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS BOOKING_STATUS
+  - GET: # CustomerBookingListAPI
+      endpoint: /list/{customerId}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      query:
+        - limit: Integer
+        - offset: Integer
+        - onlyActive: Bool
+        - status: BookingStatus
+      response:
+        type: BookingListRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS BOOKINGLIST
+
+types: {}

@@ -1,0 +1,239 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Language: Kernel.External.Types
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  LocalTime: Data.Time
+  Driver: Domain.Types.Person
+  MessageDynamicFieldsType: Domain.Types.Extra.MessageReport
+  Message: Domain.Types.Message
+
+
+Message:
+  tableName: message
+  beamInstance: MakeTableInstancesWithTModifier [("messageType", "type")]
+
+  types:
+    MessageTranslation:
+      language: Language
+      title: Text
+      description: Text
+      shortDescription: Text
+      label: Maybe Text
+      createdAt: UTCTime
+
+    MessageType:
+      enum: "Action Text, Read"
+
+    RawMessage:
+      id : Id Message
+      _type : MessageType
+      title : Text
+      description : Text
+      shortDescription : Text
+      label : Maybe Text
+      likeCount : Int
+      viewCount : Int
+      shareable: Bool
+      alwaysTriggerOnOnboarding : Bool
+      mediaFiles : "[Id MediaFile]"
+      merchantId : Id Merchant
+      createdAt : UTCTime
+
+    MessageDict:
+      defaultMessage : RawMessage
+      translations : Data.Map.Map Text RawMessage
+
+  fields:
+    id : Id Message
+    _type : MessageType
+    title : Text
+    description : Text
+    shortDescription : Text
+    label : Maybe Text
+    likeCount : Int
+    viewCount : Int
+    mediaFiles : "[Id MediaFile]"
+    messageTranslations : "[MessageTranslation]"
+    alwaysTriggerOnOnboarding : Bool
+    shareable: Bool
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+    createdAt : UTCTime
+
+  beamType:
+    alwaysTriggerOnOnboarding: Maybe Bool
+    createdAt: LocalTime
+    merchantOperatingCityId: Maybe Text
+    shareable: Maybe Bool
+
+
+  beamFields:
+    _type:
+      messageType: MessageType
+
+    messageTranslations: {}
+
+  constraints:
+    id: PrimaryKey
+
+  fromTType:
+    messageTranslations: Storage.Queries.Transformers.Message.getMsgTranslations id|EM
+    merchant: getMerchantId|M
+    alwaysTriggerOnOnboarding: Kernel.Prelude.fromMaybe False alwaysTriggerOnOnboarding|E
+    createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
+    _type: messageType|E
+    merchantOperatingCityId: Storage.Queries.Transformers.Message.getMerchantOperatingCityId merchantId|EM
+    shareable: Kernel.Prelude.fromMaybe False shareable|E
+
+  toTType:
+    alwaysTriggerOnOnboarding: Kernel.Prelude.Just|I
+    createdAt: Data.Time.utcToLocalTime Data.Time.utc createdAt|E
+    merchantOperatingCityId: Kernel.Prelude.Just (Kernel.Types.Id.getId merchantOperatingCityId)|E
+    messageType: _type|E
+    shareable: Kernel.Prelude.Just|I
+
+  sqlType:
+    likeCount: integer
+    viewCount: integer
+    label: character varying (255)
+    title: character varying (255)
+    type: character (100)
+    mediaFiles: text[]
+
+  queries:
+    updateShareable:
+      kvFunction: updateOneWithKV
+      params: [shareable]
+      where: id
+
+  default:
+    likeCount: "0"
+    viewCount: "0"
+    mediaFiles: "ARRAY[]::TEXT[]"
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+  - create
+  - createMany
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+MessageReport:
+  tableName: message_report
+
+  types:
+    DeliveryStatus:
+      enum: "Success, Failed, Queued, Sending"
+
+  fields:
+    messageId : Id Message
+    driverId : Id Driver
+    deliveryStatus : DeliveryStatus
+    readStatus : Bool
+    likeStatus : Bool
+    reply : Maybe Text
+    messageDynamicFields : MessageDynamicFieldsType
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  beamType:
+    messageDynamicFields: Data.Aeson.Value
+    createdAt: LocalTime
+    updatedAt: LocalTime
+
+  constraints:
+    driverId: PrimaryKey
+    messageId: PrimaryKey
+
+  fromTType:
+    messageDynamicFields: getMessageDynamicFields
+    createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
+    updatedAt: Data.Time.localTimeToUTC Data.Time.utc updatedAt|E
+
+  toTType:
+    messageDynamicFields: Data.Aeson.toJSON messageDynamicFields|E
+    createdAt: Data.Time.utcToLocalTime Data.Time.utc createdAt|E
+    updatedAt: Data.Time.utcToLocalTime Data.Time.utc updatedAt|E
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: messageId
+
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: driverId
+
+
+  sqlType:
+    deliveryStatus: character (36)
+    messageDynamicFields: json
+
+
+  default:
+    likeStatus: "false"
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+MessageTranslation:
+  tableName: message_translation
+
+
+  fields:
+    messageId : Id Message
+    language : Language
+    title : Text
+    label : Maybe Text
+    description : Text
+    shortDescription : Text
+    createdAt : UTCTime
+
+  beamType:
+    createdAt: LocalTime
+
+  constraints:
+    messageId: PrimaryKey
+
+
+
+  queries:
+    findByMessageIdAndLanguage:
+      kvFunction: findOneWithKV
+      where:
+        and: [messageId, language]
+
+    findByMessageId:
+      kvFunction: findAllWithKV
+      where: messageId
+
+  fromTType:
+    createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
+
+  toTType:
+    createdAt: Data.Time.utcToLocalTime Data.Time.utc createdAt|E
+
+
+
+  sqlType:
+    title: character varying (255)
+    label: character varying (255)
+
+
+  extraOperations:
+
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

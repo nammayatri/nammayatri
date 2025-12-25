@@ -1,0 +1,32 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+
+MetaData:
+  tableName: meta_data
+
+  fields:
+    driverId : Id Person
+    device : Maybe Text
+    deviceOS : Maybe Text
+    deviceDateTime : Maybe UTCTime
+    appPermissions : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  beamInstance: MakeTableInstancesWithTModifier [("deviceOS", "device_o_s")]
+
+  constraints:
+    driverId: PrimaryKey
+
+  queries:
+    updateMetaData:
+      kvFunction: updateOneWithKV
+      params: [device ,deviceOS ,deviceDateTime ,appPermissions]
+      where: driverId
+
+  excludedFields: [merchantOperatingCityId, merchantId]

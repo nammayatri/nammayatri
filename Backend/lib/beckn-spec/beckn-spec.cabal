@@ -64,6 +64,7 @@ library
       Beckn.Types.Core.Taxi.API.Cancel
       Beckn.Types.Core.Taxi.API.Confirm
       Beckn.Types.Core.Taxi.API.Init
+      Beckn.Types.Core.Taxi.API.OnCancel
       Beckn.Types.Core.Taxi.API.OnConfirm
       Beckn.Types.Core.Taxi.API.OnInit
       Beckn.Types.Core.Taxi.API.OnSearch
@@ -88,7 +89,6 @@ library
       Beckn.Types.Core.Taxi.Common.Descriptor
       Beckn.Types.Core.Taxi.Common.FareProductType
       Beckn.Types.Core.Taxi.Common.FulfillmentInfo
-      Beckn.Types.Core.Taxi.Common.FulfillmentType
       Beckn.Types.Core.Taxi.Common.Gps
       Beckn.Types.Core.Taxi.Common.ItemCode
       Beckn.Types.Core.Taxi.Common.Location
@@ -168,10 +168,12 @@ library
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.NewMessageEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.QuoteRepetitionEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.StopArrivedEvent
       Beckn.Types.Core.Taxi.Rating
       Beckn.Types.Core.Taxi.Rating.FeedbackForm
       Beckn.Types.Core.Taxi.Search
@@ -191,10 +193,55 @@ library
       Beckn.Types.Core.Taxi.Track.Order
       Beckn.Types.Core.Taxi.Update
       Beckn.Types.Core.Taxi.Update.UpdateEvent
+      Beckn.Types.Core.Taxi.Update.UpdateEvent.AddStopEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.EditLocationEvent
+      Beckn.Types.Core.Taxi.Update.UpdateEvent.EditStopEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent.Payment
       Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType
+      BecknV2.FRFS.APIs
+      BecknV2.FRFS.Enums
+      BecknV2.FRFS.Types
+      BecknV2.FRFS.Utils
+      BecknV2.IGM.APIs
+      BecknV2.OnDemand.Enums
+      BecknV2.OnDemand.Tags
+      BecknV2.OnDemand.Types
+      BecknV2.OnDemand.Utils.Common
+      BecknV2.OnDemand.Utils.Context
+      BecknV2.OnDemand.Utils.Payment
+      BecknV2.Utils
+      Domain.SharedLogic.Cancel
+      Domain.Tools.Error
+      Domain.Types
+      Domain.Types.Alert
+      Domain.Types.Alert.AlertRequestData
+      Domain.Types.Alert.AlertRequestStatus
+      Domain.Types.Alert.AlertRequestType
+      Domain.Types.Alert.DetectionData
+      Domain.Types.BookingStatus
+      Domain.Types.EmptyDynamicParam
+      Domain.Types.EstimateStatus
+      Domain.Types.FareProductType
+      Domain.Types.FleetBadgeType
+      Domain.Types.FRFSQuoteCategorySpec
+      Domain.Types.FRFSQuoteCategoryType
+      Domain.Types.FRFSRouteDetails
+      Domain.Types.FRFSTicketBookingStatus
+      Domain.Types.FRFSTicketStatus
+      Domain.Types.ParcelType
+      Domain.Types.PaymentMode
+      Domain.Types.RefereeLink
+      Domain.Types.RideStatus
+      Domain.Types.ServiceTierType
+      Domain.Types.StationType
+      Domain.Types.Trip
+      Domain.Types.VehicleCategory
+      Domain.Types.VehicleVariant
+      Domain.Utils
+      IGM.Enums
+      IGM.Types
+      IGM.Utils
   other-modules:
       Paths_beckn_spec
   hs-source-dirs:
@@ -206,6 +253,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -224,6 +272,7 @@ library
       RankNTypes
       RecordWildCards
       ScopedTypeVariables
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -260,6 +309,7 @@ library
     , hspec
     , http-media
     , hw-kafka-client
+    , insert-ordered-containers
     , jwt
     , kleene
     , lattices
@@ -280,6 +330,7 @@ library
     , record-dot-preprocessor
     , record-hasfield
     , regex-applicative
+    , regex-posix
     , relude
     , resource-pool
     , resourcet
@@ -294,6 +345,7 @@ library
     , servant-server
     , stm
     , string-conversions
+    , syb
     , tasty
     , tasty-hunit
     , template-haskell

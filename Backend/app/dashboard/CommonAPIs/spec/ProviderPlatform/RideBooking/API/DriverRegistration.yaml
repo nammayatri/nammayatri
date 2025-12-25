@@ -1,0 +1,45 @@
+imports:
+  FCMRecipientToken: Kernel.External.Notification.FCM.Types
+  AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
+  AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
+  AuthVerifyReq: Dashboard.ProviderPlatform.Management.DriverRegistration
+
+module: DriverRegistration
+apiPrefix: driver
+helperApiPrefix: ""
+
+apis:
+  - POST: # AuthAPI
+      endpoint: /auth
+      auth: ApiAuthV2
+      request:
+        type: AuthReq
+      response:
+        type: AuthRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS AUTH
+  - POST: # VerifyAPI
+      endpoint: /{authId}/verify
+      auth: ApiAuthV2
+      params:
+        authId: Text
+      request:
+        type: AuthVerifyReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS VERIFY
+      helperApi:
+        - POST: # VerifyAPI
+            endpoint: /{authId}/{mbFleet}/{fleetOwnerId}/verify
+            auth: ApiAuthV2
+            params:
+              authId: Text
+              mbFleet: Bool
+              fleetOwnerId: Text
+            request:
+              type: AuthVerifyReq
+            response:
+              type: APISuccess
+
+types: {}

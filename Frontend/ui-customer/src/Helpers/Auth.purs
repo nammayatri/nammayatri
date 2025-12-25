@@ -33,6 +33,7 @@ import Data.Function.Uncurried (runFn3)
 import JBridge (emitJOSEvent)
 import Accessor (_authData, _maskedMobileNumber, _id)
 import Data.Lens ((^.))
+import SessionCache (setValueInWindow)
 
 validateSignaturePayload :: SignatureAuthData -> (Either ErrorResponse TriggerSignatureOTPResp) -> FlowBT String Boolean
 validateSignaturePayload signatureAuth resp = 
@@ -55,8 +56,13 @@ validateSignaturePayload signatureAuth resp =
     updateCustomerDetails person mobileNumber = do
       lift $ lift $ setLogField "customer_id" $ encode $ person^._id
       setValueToLocalStore CUSTOMER_ID $ person^._id
-      setValueToLocalStore MOBILE_NUMBER mobileNumber
+      void $ pure $ setValueInWindow (show MOBILE_NUMBER) mobileNumber
 
+
+upateTokenFromHybridFlow :: Maybe String -> FlowBT String Unit
+upateTokenFromHybridFlow appToken = 
+  -- void $ pure $ spy "AppTOken Updated" appToken  
+  setValueToLocalStore REGISTERATION_TOKEN $ fromMaybe "__hybriTokenFailed" appToken 
 
 
 validateToken :: Maybe SignatureAuthData -> FlowBT String Boolean

@@ -23,7 +23,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow)
 import Prelude (bind, pure, ($), (<$>), discard)
 import PrestoDOM.Core (getPushFn)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import PrestoDOM.List as PrestoList
 import Screens.NotificationsScreen.Controller (ScreenOutput(..))
 import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
@@ -37,18 +37,29 @@ notifications = do
   (GlobalState state) <- getState
   push <- lift $ lift $ liftFlow $ getPushFn Nothing "NotificationsScreen"
   notificationListItem <- lift $ lift $ PrestoList.preComputeListItem $ NotificationCard.view push
-  act <- lift $ lift $ runScreen $ NotificationsScreen.screen state.notificationScreen { shimmerLoader = AnimatedIn } notificationListItem
+  act <- lift $ lift $ runLoggableScreen $ NotificationsScreen.screen state.notificationScreen { shimmerLoader = AnimatedIn } notificationListItem
   case act of
     RefreshScreen state -> App.BackT $ App.NoBack <$> pure (REFRESH_SCREEN state)
     LoaderOutput updatedState -> App.BackT $ App.NoBack <$> (pure $ LOAD_NOTIFICATIONS updatedState)
     GoBack -> do
       modifyScreenState $ NotificationsScreenStateType (\notificationScreen → NotificationsScreenData.initData)
       App.BackT $ pure App.GoBack
-    GoToRidesScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_RIDE_HISTORY_SCREEN)
-    GoToHomeScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_HOME_SCREEN )
-    GoToProfileScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_PROFILE_SCREEN )
-    GoToReferralScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_REFERRAL_SCREEN)
-    GoToCurrentRideFlow -> do
+    GoToRidesScreen updatedState -> do
+      modifyScreenState $ NotificationsScreenStateType (\notificationScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_RIDE_HISTORY_SCREEN)
+    GoToHomeScreen updatedState -> do
+      modifyScreenState $ NotificationsScreenStateType (\notificationScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_HOME_SCREEN )
+    GoToProfileScreen updatedState -> do
+      modifyScreenState $ NotificationsScreenStateType (\notificationScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_PROFILE_SCREEN )
+    GoToReferralScreen updatedState -> do
+      modifyScreenState $ NotificationsScreenStateType (\notificationScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_REFERRAL_SCREEN)
+    EarningsScreen updatedState -> do
+      modifyScreenState $ NotificationsScreenStateType (\notificationScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_EARNINGS_SCREEN)
+    GoToCurrentRideFlow updatedState ->  do
       modifyScreenState $ NotificationsScreenStateType (\notificationScreen → NotificationsScreenData.initData)
       App.BackT $ App.NoBack <$> (pure $ CHECK_RIDE_FLOW_STATUS)
     SubscriptionScreen updatedState -> App.BackT $ App.NoBack <$> (pure $ NOTIFICATION_SCREEN_NAV GoToSubscription)

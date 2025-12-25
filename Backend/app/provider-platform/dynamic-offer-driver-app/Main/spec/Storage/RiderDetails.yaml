@@ -1,0 +1,176 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EncryptedHashedField: Kernel.External.Encryption
+  DriverReferral: Domain.Types.DriverReferral
+  Person: Domain.Types.Person
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+
+
+RiderDetails:
+  tableName: rider_details
+
+  types:
+    PayoutFlagReason:
+        enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists,RideConstraintInvalid"
+
+  fields:
+    id : Id RiderDetails
+    mobileCountryCode : Text
+    mobileNumber : EncryptedHashedField e Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    referralCode : Maybe (Id DriverReferral)
+    referredByDriver : Maybe (Id Person)
+    referredAt : Maybe UTCTime
+    hasTakenValidRide : Bool
+    hasTakenValidRideAt : Maybe UTCTime
+    cancellationDues : HighPrecMoney
+    cancelledRides : Int
+    totalBookings : Int
+    completedRides : Int
+    validCancellations : Int
+    cancellationDueRides : Int
+    cancellationDuesPaid : HighPrecMoney
+    noOfTimesCanellationDuesPaid : Int
+    noOfTimesWaiveOffUsed : Int
+    waivedOffAmount : HighPrecMoney
+    currency : Currency
+    disputeChancesUsed : Int
+    merchantId : Id Merchant
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    otpCode : Maybe Text
+    nightSafetyChecks : Bool
+    firstRideId: Maybe Text
+    payoutFlagReason: Maybe PayoutFlagReason
+    isDeviceIdExists: Maybe Bool
+    isFlagConfirmed: Maybe Bool
+    bapId: Maybe Text
+
+  fromTType:
+    currency: fromMaybe Kernel.Types.Common.INR currency|E
+    cancelledRides: fromMaybe 0 cancelledRides|E
+    totalBookings: fromMaybe 0 totalBookings|E
+    completedRides: fromMaybe 0 completedRides|E
+    validCancellations: fromMaybe 0 validCancellations|E
+    cancellationDueRides: fromMaybe 0 cancellationDueRides|E
+    cancellationDuesPaid: fromMaybe 0 cancellationDuesPaid|E
+    noOfTimesCanellationDuesPaid: fromMaybe 0 noOfTimesCanellationDuesPaid|E
+    noOfTimesWaiveOffUsed: fromMaybe 0 noOfTimesWaiveOffUsed|E
+    waivedOffAmount: fromMaybe 0 waivedOffAmount|E
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+    cancelledRides: Kernel.Prelude.Just|I
+    totalBookings: Kernel.Prelude.Just|I
+    completedRides: Kernel.Prelude.Just|I
+    validCancellations: Kernel.Prelude.Just|I
+    cancellationDueRides: Kernel.Prelude.Just|I
+    cancellationDuesPaid: Kernel.Prelude.Just|I
+    noOfTimesCanellationDuesPaid: Kernel.Prelude.Just|I
+    noOfTimesWaiveOffUsed: Kernel.Prelude.Just|I
+    waivedOffAmount: Kernel.Prelude.Just|I
+
+  beamType:
+    currency: Maybe Currency
+    cancelledRides : Maybe Int
+    totalBookings : Maybe Int
+    completedRides : Maybe Int
+    validCancellations : Maybe Int
+    cancellationDueRides : Maybe Int
+    cancellationDuesPaid : Maybe HighPrecMoney
+    noOfTimesCanellationDuesPaid : Maybe Int
+    noOfTimesWaiveOffUsed : Maybe Int
+    waivedOffAmount : Maybe HighPrecMoney
+  constraints:
+    id: PrimaryKey
+    mobileNumberHash: "!SecondaryKey" # forcing to be a secondary key
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    updateHasTakenValidRide:
+      kvFunction: updateOneWithKV
+      params: [hasTakenValidRide, hasTakenValidRideAt]
+      where: id
+
+    updateOtpCode:
+      kvFunction: updateOneWithKV
+      params: [otpCode]
+      where: id
+
+    findAllReferredByDriverId:
+      kvFunction: findAllWithDb
+      where: referredByDriver
+
+    # findByMobileNumberHashAndMerchant:
+    #   kvFunction: findOneWithKV
+    #   where:
+    #     and: [mobileNumberHash, merchantId]
+
+    # updateReferralInfo:
+    #   kvFunction: updateWithKV
+    #   params: [referralCode, referredByDriver, referredAt]
+    #   where:
+    #     and: [mobileNumberHash, merchantId]
+
+    updateNightSafetyChecks:
+      kvFunction: updateOneWithKV
+      params: [nightSafetyChecks]
+      where: id
+
+    updateCancellationDues:
+      kvFunction: updateOneWithKV
+      params: [cancellationDues]
+      where: id
+
+    updateDisputeChancesUsed:
+      kvFunction: updateOneWithKV
+      params: [disputeChancesUsed]
+      where: id
+
+    updateDisputeChancesUsedAndCancellationDues:
+      kvFunction: updateOneWithKV
+      params: [disputeChancesUsed, cancellationDues]
+      where: id
+
+    updateFirstRideIdAndFlagReason:
+      kvFunction: updateOneWithKV
+      params: [firstRideId, payoutFlagReason]
+      where: id
+
+    updateFlagReasonAndIsDeviceIdExists:
+      kvFunction: updateOneWithKV
+      params: [payoutFlagReason,isDeviceIdExists]
+      where: id
+
+    updateIsDeviceIdExists:
+      kvFunction: updateOneWithKV
+      params: [isDeviceIdExists]
+      where: id
+
+    updateIsFlagConfirmed:
+      kvFunction: updateOneWithKV
+      params: [isFlagConfirmed]
+      where: id
+
+    updatePayoutFlagReason:
+      kvFunction: updateOneWithKV
+      params: [payoutFlagReason]
+      where: id
+
+  sqlType:
+    mobileCountryCode: character varying(255)
+    mobileNumberEncrypted: character varying(255)
+    mobileNumberHash: bytea
+    referralCode: character varying(15)
+    referredByDriver: character varying(255)
+    bapId: character varying(255)
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantId, createdAt, updatedAt]

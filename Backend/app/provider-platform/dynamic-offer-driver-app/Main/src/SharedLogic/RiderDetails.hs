@@ -15,6 +15,7 @@
 module SharedLogic.RiderDetails where
 
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RiderDetails as DRD
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -22,13 +23,21 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.RiderDetails as QRD
 
-getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Text -> Text -> UTCTime -> Bool -> m (DRD.RiderDetails, Bool)
-getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now nightSafetyCheck =
-  QRD.findByMobileNumberAndMerchant customerPhoneNumber merchantId >>= \case
-    Nothing -> fmap (,True) . encrypt =<< buildRiderDetails
+getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Currency -> Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity) -> Text -> Text -> Text -> Bool -> m (DRD.RiderDetails, Bool)
+getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCountryCode customerPhoneNumber bapId nightSafetyCheck = do
+  now <- getCurrentTime
+  QRD.findByMobileNumberAndMerchantAndBapId customerPhoneNumber merchantId bapId >>= \case
+    Nothing -> do
+      riderD <- QRD.findByMobileNumberAndMerchant customerPhoneNumber merchantId
+      case riderD of
+        Nothing -> fmap (,True) . encrypt =<< buildRiderDetails now
+        Just riderDetails -> do
+          let updatedRiderDetails = riderDetails{bapId = Just bapId}
+          QRD.updateByPrimaryKey updatedRiderDetails
+          return (updatedRiderDetails, False)
     Just a -> return (a, False)
   where
-    buildRiderDetails = do
+    buildRiderDetails now = do
       id <- generateGUID
       otp <- generateOTPCode
       return $
@@ -45,7 +54,23 @@ getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now nig
             hasTakenValidRide = False,
             hasTakenValidRideAt = Nothing,
             otpCode = Just otp,
-            cancellationDues = 0,
+            cancellationDues = 0.0,
+            cancellationDuesPaid = 0.0,
+            noOfTimesCanellationDuesPaid = 0,
+            noOfTimesWaiveOffUsed = 0,
+            waivedOffAmount = 0.0,
+            currency,
             disputeChancesUsed = 0,
-            nightSafetyChecks = nightSafetyCheck
+            nightSafetyChecks = nightSafetyCheck,
+            firstRideId = Nothing,
+            payoutFlagReason = Nothing,
+            isDeviceIdExists = Nothing,
+            isFlagConfirmed = Nothing,
+            cancelledRides = 0,
+            totalBookings = 0,
+            completedRides = 0,
+            validCancellations = 0,
+            cancellationDueRides = 0,
+            merchantOperatingCityId = mbMerchantOperatingCityId,
+            bapId = Just bapId
           }

@@ -1,0 +1,18 @@
+imports:
+  Text: Data.Text
+
+module: Miscellaneous
+types:
+  QRScanTestResp:
+    result: Maybe Text
+    err: Maybe Text
+  QRScanTestReq:
+    base64Image: Text
+apis:
+  - POST:
+      endpoint: /misc/testScanQR
+      auth: TokenAuth
+      request:
+        type: QRScanTestReq
+      response:
+        type: QRScanTestResp

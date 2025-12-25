@@ -16,7 +16,7 @@
 module Screens.AboutUsScreen.Controller where
 
 import Prelude (class Show, pure, unit, discard, bind, (>=), (==), (||), ($), (&&), (+), (<>), (-), show)
-import PrestoDOM (Eval, exit, continue, updateAndExit)
+import PrestoDOM (Eval, update, exit, continue, updateAndExit)
 import Screens.Types (AboutUsScreenState)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -29,7 +29,13 @@ import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
 import Data.Array (elem)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed _) = "BackPressed"
+  show (NoAction) = "NoAction"
+  show (AfterRender) = "AfterRender"
+  show (ShowDemoPopUp) = "ShowDemoPopUp"
+  show (PopUpModalDemoModeAction var1) = "PopUpModalDemoModeAction_" <> show var1
+  show (TermsAndConditionAction) = "TermsAndConditionAction"
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of 
     AfterRender -> trackAppScreenRender appId "screen" (getScreen ABOUT_US_SCREEN)
@@ -47,12 +53,14 @@ instance loggableAction :: Loggable Action where
       PopUpModal.ETextController act -> case act of 
         PrimaryEditTextController.TextChanged valId newVal -> trackAppTextInput appId (getScreen ABOUT_US_SCREEN) "popup_modal_password_text_changed" "primary_edit_text"
         PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ABOUT_US_SCREEN) "popup_modal_password_text_focus_changed" "primary_edit_text"
+        PrimaryEditTextController.TextImageClicked -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "popup_modal" "text_image_onclick"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "popup_modal" "no_action"
       PopUpModal.CountDown seconds status timerID -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "popup_modal_cancel_confirmation" "countdown_onclick"
-      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "popup_dismissed"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "secondary_text_clicked"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      _ -> pure unit
     TermsAndConditionAction -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "t_&_c"
     NoAction -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "in_screen" "no_action"
     
@@ -78,7 +86,7 @@ eval (PopUpModalDemoModeAction (PopUpModal.OnImageClick)) state = continue state
 eval (PopUpModalDemoModeAction (PopUpModal.ETextController (PrimaryEditTextController.TextChanged valId newVal))) state = do
   _ <- pure $ setValueToLocalStore DEMO_MODE_PASSWORD newVal
   continue state{ props{ enableConfirmPassword = (validateDemoMode newVal) }}
-eval _ state = continue state
+eval _ state = update state
 
 validateDemoMode :: String -> Boolean
 validateDemoMode newVal = length newVal >= 7 && newVal `elem` ["7891234", "8917234", "9178234", "1789234","7891789","7891788", "7891567", "7891678"]

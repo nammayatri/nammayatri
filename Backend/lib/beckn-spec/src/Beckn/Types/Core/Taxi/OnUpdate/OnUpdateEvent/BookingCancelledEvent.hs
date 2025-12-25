@@ -19,7 +19,7 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent
 where
 
 import Beckn.Types.Core.Taxi.Common.CancellationSource as Reexport
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_BOOKING_CANCELLED))
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_CANCELLED))
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, name)
@@ -41,14 +41,14 @@ instance ToJSON BookingCancelledEvent where
         -- <> "update_target" .= update_target
         <> "state" .= state
         <> "cancellation_reason" .= cancellation_reason
-        <> "fulfillment" .= (("state" .= ("descriptor" .= (("code" .= RIDE_BOOKING_CANCELLED <> "name" .= A.String "Ride Cancelled") :: A.Object) :: A.Object)) :: A.Object)
+        <> "fulfillment" .= (("state" .= ("descriptor" .= (("code" .= RIDE_CANCELLED <> "name" .= A.String "Ride Cancelled") :: A.Object) :: A.Object)) :: A.Object)
 
 -- <> "fulfillment" .= (("state" .= (("code" .= RIDE_BOOKING_CANCELLED) :: A.Object)) :: A.Object)
 
 instance FromJSON BookingCancelledEvent where
   parseJSON = withObject "BookingCancelledEvent" $ \obj -> do
     update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "descriptor") >>= (.: "code")
-    unless (update_type == RIDE_BOOKING_CANCELLED) $ fail "Wrong update_type."
+    unless (update_type == RIDE_CANCELLED) $ fail "Wrong update_type."
     BookingCancelledEvent
       <$> obj .: "id"
       -- <*> obj .: "update_target"

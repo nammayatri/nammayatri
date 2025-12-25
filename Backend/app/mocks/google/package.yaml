@@ -28,6 +28,7 @@ default-extensions:
   - DeriveAnyClass
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingStrategies
   - DuplicateRecordFields
   - ExplicitNamespaces
   - FlexibleContexts
@@ -47,6 +48,7 @@ default-extensions:
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
+  - TemplateHaskell
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -63,6 +65,7 @@ dependencies:
   - beckn-spec
   - bytestring
   - euler-hs
+  - passetto-client
   - record-dot-preprocessor
   - record-hasfield
   - text
@@ -73,6 +76,7 @@ dependencies:
   - persistent-postgresql
   - esqueleto
   - template-haskell
+  - passetto-client
   - containers
   - unordered-containers
 

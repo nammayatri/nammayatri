@@ -3,11 +3,12 @@ plugins {
 }
 
 android {
-    compileSdk 33
+    compileSdk 34
+    namespace "in.juspay.mobility.common"
 
     defaultConfig {
-        minSdk 21
-        targetSdkVersion 33
+        minSdk 24
+        targetSdkVersion 34
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -35,12 +36,11 @@ android {
 
 
 dependencies {
-
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.6.0'
-    implementation project(':mobility-app')
-    implementation 'in.juspay:hyper:2.1.20-nammayatri.13'
-    compileOnly 'in.juspay:hypersdk:2.1.14'
+
+    implementation 'in.juspay:hyper:2.1.33-nammayatri.17'
+    compileOnly 'in.juspay:hypersdk:2.1.33-nammayatri.17'
     implementation 'com.facebook.shimmer:shimmer:0.5.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
@@ -52,4 +52,6 @@ dependencies {
     implementation 'com.google.android.play:review:2.0.1'
     compileOnly 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
     implementation 'androidx.browser:browser:1.2.0'
+    implementation "androidx.exifinterface:exifinterface:1.0.0"
+    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
 }

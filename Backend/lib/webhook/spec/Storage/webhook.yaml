@@ -1,0 +1,31 @@
+imports:
+  UTCTime: Kernel.Prelude
+  ShortId: Kernel.Types.Id
+  Value: Data.Aeson
+  WebhookEvent: Domain.Types.WebhookExtra
+  WebhookStatus: Domain.Types.WebhookExtra
+  WebhookDeliveryType : Domain.Types.WebhookExtra
+
+Webhook:
+  tableName: webhook
+  derives: "Generic"
+  fields:
+    id : Id Webhook
+    shortId : ShortId Webhook
+    extMerchantName : Text
+    eventName: WebhookEvent
+    merchantId : Text
+    city : Text
+    status : WebhookStatus
+    webhookData : Value
+    createdAt : UTCTime
+    lastTriedAt : UTCTime
+    responseCode : Maybe Text
+    responseMessage : Maybe Text
+    retryCount : Int
+    mode : WebhookDeliveryType
+    batchId : Text
+  defaultQueryTypeConstraint: "(Lib.Webhook.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+  extraOperations:
+    - EXTRA_QUERY_FILE

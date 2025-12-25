@@ -1,0 +1,35 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Ride: Domain.Types.Ride
+  Person: Domain.Types.Person
+
+CancellationCharges:
+  tableName: cancellation_charges
+  derives: Generic
+
+  fields:
+    id : Id CancellationCharges
+    driverId : Id Person
+    rideId : Maybe (Id Ride)
+    cancellationCharges : HighPrecMoney
+    currency: Currency
+
+  beamFields:
+    currency:
+      currency: Maybe Currency
+
+  fromTType:
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+
+  sqlType:
+    cancellationCharges: integer
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+

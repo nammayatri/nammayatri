@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.issue_option ADD COLUMN mandatory_uploads text[] DEFAULT '{}';

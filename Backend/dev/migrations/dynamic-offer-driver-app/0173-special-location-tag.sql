@@ -1,10 +1,6 @@
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD column special_location_tag text;
-ALTER TABLE atlas_driver_offer_bpp.estimate ADD column special_location_tag text;
-ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD column special_location_tag text;
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD column special_location_tag text;
-ALTER TABLE atlas_driver_offer_bpp.search_request ADD column "area" text;
 ALTER TABLE atlas_driver_offer_bpp.search_request_special_zone ADD column "area" text;
-ALTER TABLE atlas_driver_offer_bpp.booking ADD column "area" text;
+--ALTER TABLE atlas_driver_offer_bpp.booking ADD column "area" text;
 ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD column "description" text;
 CREATE TABLE atlas_driver_offer_bpp.special_location_priority (
   id character(36) NOT NULL PRIMARY KEY,
@@ -96,14 +92,6 @@ INSERT INTO atlas_driver_offer_bpp.special_location_priority (id, merchant_id, c
       3
   FROM atlas_driver_offer_bpp.merchant AS T1;
 
-CREATE TABLE atlas_driver_offer_bpp.fare_product (
-  id character(36) NOT NULL PRIMARY KEY,
-  merchant_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.merchant (id),
-  fare_policy_id character(36) NOT NULL REFERENCES atlas_driver_offer_bpp.fare_policy (id),
-  vehicle_variant character varying(60) NOT NULL,
-  "area" text NOT NULL,
-  flow character varying(60) NOT NULL
-);
 CREATE INDEX idx_fare_product ON atlas_driver_offer_bpp.fare_product USING btree (merchant_id, vehicle_variant, "area");
 -- NOTE :
 -- FlowType should be Either All NORMAL or All RIDE_OTP for all VehicleVariants & Area of a Merchant.
@@ -111,14 +99,17 @@ CREATE INDEX idx_fare_product ON atlas_driver_offer_bpp.fare_product USING btree
 
 -- Default Fare Product with Normal Estimates For All Merchants
 -- Details : 4 Default Entries for 4 vehicle variants Per Merchant (Mandatory)
-INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, "area", flow)
+INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, "area", enabled, merchant_operating_city_id, time_bounds, trip_category)
     SELECT
         md5(random()::text || clock_timestamp()::text)::uuid,
         T1.merchant_id,
         T1.id,
         T1.vehicle_variant,
         'Default',
-        'NORMAL'
+        true,
+        'namma-yatri-0-0000-0000-00000000city',
+        'Unbounded',
+        'OneWay_OneWayOnDemandDynamicOffer'
     FROM atlas_driver_offer_bpp.fare_policy AS T1;
 
 -- Special Location Fare Product with RideOTP Quotes For All Merchants
@@ -127,14 +118,17 @@ CREATE TEMPORARY TABLE pickup_drop_table (
   pickup_drop_type text
 );
 INSERT INTO pickup_drop_table (pickup_drop_type) VALUES ('Pickup'), ('Drop');
-INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, "area", flow)
+INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, "area", enabled, merchant_operating_city_id, time_bounds, trip_category)
     SELECT
         md5(random()::text || clock_timestamp()::text)::uuid,
         T2.merchant_id,
         T2.id,
         T2.vehicle_variant,
         concat(T3.pickup_drop_type, '_', T1.id),
-        'RIDE_OTP'
+        true,
+        'namma-yatri-0-0000-0000-00000000city',
+        'Unbounded',
+        'OneWay_OneWayRideOtp'
     FROM atlas_driver_offer_bpp.special_location AS T1
     CROSS JOIN atlas_driver_offer_bpp.fare_policy AS T2
     CROSS JOIN pickup_drop_table AS T3;

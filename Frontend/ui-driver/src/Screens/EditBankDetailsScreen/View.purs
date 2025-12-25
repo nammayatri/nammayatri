@@ -15,11 +15,11 @@
 
 module Screens.EditBankDetailsScreen.View where
 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, visibility, onBackPressed, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, visibility, onBackPressed, afterRender, imageWithFallback)
 import Screens.EditBankDetailsScreen.Controller (Action(..), ScreenOutput, eval, getTitleFromList)
 import Screens.EditBankDetailsScreen.ScreenData (viewsItemList, ListOptions(..))
 import Screens.Types as ST
-import Prelude (Unit, const, map, ($), (==))
+import Prelude (Unit, const, map, ($), (==), (<>))
 import Language.Strings (getString)
 import Animation as Anim
 import Language.Types (STR(..))
@@ -30,15 +30,17 @@ import Effect (Effect)
 import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
+import Data.Maybe (Maybe(..))
 
-screen :: ST.EditBankDetailsScreenState -> Screen Action ST.EditBankDetailsScreenState ScreenOutput
+screen :: ST.EditBankDetailsScreenState -> LoggableScreen Action ST.EditBankDetailsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "EditBankDetailsScreen"
   , globalEvents : []
   , eval
+  , parent : Nothing
+  , logWhitelist : initialState.data.config.logWhitelistConfig.editBankDetailsScreenLogWhitelist
   }
 
 view
@@ -112,7 +114,7 @@ headerLayout state push heading =
         , height WRAP_CONTENT
         , text (getString EDIT)
         , margin (MarginRight 10)
-        , color Color.blueBtn
+        , color Color.brightBlue
         , gravity RIGHT
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , visibility if state.props.isInEditBankDetailsScreen then GONE else VISIBLE

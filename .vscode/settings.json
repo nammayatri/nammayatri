@@ -1,47 +1,54 @@
 {
-  "search.useIgnoreFiles": true,
-  // Disabled until https://github.com/nammayatri/nammayatri/issues/737
-  // "editor.formatOnType": true,
-  // "editor.formatOnSave": true,
-  "haskell.formattingProvider": "ormolu",
-  "haskell.manageHLS": "PATH",
-  "rest-client.environmentVariables": {
-    "$shared": {
-      "fmd/domain": "nic2004:60232"
+    "files.watcherExclude": {
+        "**/.direnv/**": true,
+        "**/result/**": true,
+        "**/result-*/**": true
     },
-    "dev": {
-      "app-host": "http://localhost:8013/v2",
-      "transporter-host": "http://localhost:8014/v2",
-      "public-transport-bap-host": "http://localhost:8023",
-      "mock-public-transport-bpp-host": "http://localhost:8091",
-      "app-token": "ea37f941-427a-4085-a7d0-96240f166672",
-      "app-token2": "003df941-427a-4085-a7d0-96240f166672",
-      "coordinator-token": "ea37f941-427a-4085-a7d0-96240f166672",
-      "driver-token": "001df941-427a-4085-a7d0-96240f166672",
-      "driver-offer-bpp-auto-token1": "favorit-auto1-0000000000000000-token",
-      "driver-offer-bpp-auto-token2": "favorit-auto2-0000000000000000-token",
-      "gw/url": "http://localhost:8015/v1",
-      "gw/nsdl/url": "https://pilot-gateway-1.beckn.nsdl.co.in",
-      "rg/beckn-one/url": "https://beckn-one.succinct.in/subscribers",
-      "rg/nsdl/url": "https://pilot-gateway-1.beckn.nsdl.co.in",
-      "rg/url": "http://localhost:8020",
-      "bap-dashboard-host": "http://localhost:8017",
-      "bpp-dashboard-host": "http://localhost:8018",
-      "bap-dashboard/token/YATRI/customer": "512e0a7b-e521-4d6b-a0c4-8713ae345bf2",
-      "bap-dashboard/token/YATRI/driver": "223ed551-c9f8-4bae-b49a-30a696424b7f",
-      "bap-dashboard/token/YATRI/juspay_ops": "e789b47f-2e39-47a2-b297-33f8fd4b87d0",
-      "bap-dashboard/token/YATRI/juspay_admin": "0f3378e2-da5b-4eac-a0f6-397ca48358de",
-      "bap-dashboard/token/YATRI/customer_service": "07ef2a2a-b014-4a86-b1c0-e453e8b0b66e",
-      "bpp-dashboard/token/YATRI_PARTNER/customer": "512e0a7b-e521-4d6b-a0c4-8713ae345bf2",
-      "bpp-dashboard/token/YATRI_PARTNER/driver": "223ed551-c9f8-4bae-b49a-30a696424b7f",
-      "bpp-dashboard/token/YATRI_PARTNER/juspay_ops": "e789b47f-2e39-47a2-b297-33f8fd4b87d0",
-      "bpp-dashboard/token/YATRI_PARTNER/juspay_admin": "0f3378e2-da5b-4eac-a0f6-397ca48358de",
-      "bpp-dashboard/token/YATRI_PARTNER/customer_service": "07ef2a2a-b014-4a86-b1c0-e453e8b0b66e",
-      "bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer": "7a207d9a-0fcd-49f1-86dd-2292ab6af5f2",
-      "bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver": "65913d60-41a8-41f5-a35f-92f9b8af030d",
-      "bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops": "b0ff7e6b-c101-4234-94fa-32985c4dc0e1",
-      "bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin": "1460d294-8c69-44b9-811a-c370949d056e",
-      "bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service": "5425f717-3838-476a-a6ed-58a7a71c6c57"
+    // https://github.com/microsoft/vscode/issues/98594#issuecomment-658533647
+    "search.followSymlinks": false,
+    "search.useIgnoreFiles": true,
+    // Disabled until https://github.com/nammayatri/nammayatri/issues/737
+    // "editor.formatOnType": true,
+    "editor.formatOnSave": false,
+    "haskell.formattingProvider": "ormolu",
+    "haskell.manageHLS": "PATH",
+    "rest-client.environmentVariables": {
+        "$shared": {
+            "fmd/domain": "nic2004:60232"
+        },
+        "dev": {
+            "app-host": "http://localhost:8013/v2",
+            "transporter-host": "http://localhost:8014/v2",
+            "public-transport-bap-host": "http://localhost:8023",
+            "mock-public-transport-bpp-host": "http://localhost:8091",
+            "app-token": "ea37f941-427a-4085-a7d0-96240f166672",
+            "app-token2": "003df941-427a-4085-a7d0-96240f166672",
+            "coordinator-token": "ea37f941-427a-4085-a7d0-96240f166672",
+            "driver-token": "001df941-427a-4085-a7d0-96240f166672",
+            "driver-offer-bpp-auto-token1": "favorit-auto1-0000000000000000-token",
+            "driver-offer-bpp-auto-token2": "favorit-auto2-0000000000000000-token",
+            "gw/url": "http://localhost:8015/v1",
+            "gw/nsdl/url": "https://pilot-gateway-1.beckn.nsdl.co.in",
+            "rg/beckn-one/url": "https://beckn-one.succinct.in/subscribers",
+            "rg/nsdl/url": "https://pilot-gateway-1.beckn.nsdl.co.in",
+            "rg/url": "http://localhost:8020",
+            "bap-dashboard-host": "http://localhost:8017",
+            "bpp-dashboard-host": "http://localhost:8018",
+            "bap-dashboard/token/YATRI/customer": "512e0a7b-e521-4d6b-a0c4-8713ae345bf2",
+            "bap-dashboard/token/YATRI/driver": "223ed551-c9f8-4bae-b49a-30a696424b7f",
+            "bap-dashboard/token/YATRI/juspay_ops": "e789b47f-2e39-47a2-b297-33f8fd4b87d0",
+            "bap-dashboard/token/YATRI/juspay_admin": "0f3378e2-da5b-4eac-a0f6-397ca48358de",
+            "bap-dashboard/token/YATRI/customer_service": "07ef2a2a-b014-4a86-b1c0-e453e8b0b66e",
+            "bpp-dashboard/token/YATRI_PARTNER/customer": "512e0a7b-e521-4d6b-a0c4-8713ae345bf2",
+            "bpp-dashboard/token/YATRI_PARTNER/driver": "223ed551-c9f8-4bae-b49a-30a696424b7f",
+            "bpp-dashboard/token/YATRI_PARTNER/juspay_ops": "e789b47f-2e39-47a2-b297-33f8fd4b87d0",
+            "bpp-dashboard/token/YATRI_PARTNER/juspay_admin": "0f3378e2-da5b-4eac-a0f6-397ca48358de",
+            "bpp-dashboard/token/YATRI_PARTNER/customer_service": "07ef2a2a-b014-4a86-b1c0-e453e8b0b66e",
+            "bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer": "7a207d9a-0fcd-49f1-86dd-2292ab6af5f2",
+            "bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver": "65913d60-41a8-41f5-a35f-92f9b8af030d",
+            "bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops": "b0ff7e6b-c101-4234-94fa-32985c4dc0e1",
+            "bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin": "1460d294-8c69-44b9-811a-c370949d056e",
+            "bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service": "5425f717-3838-476a-a6ed-58a7a71c6c57"
+        }
     }
-  }
 }

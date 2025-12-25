@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MainActivity"
-    android:id="@+id/main_layout_backup">
+    android:id="@+id/main_layout">
 
     <include layout="@layout/splash_fallback"/>
 

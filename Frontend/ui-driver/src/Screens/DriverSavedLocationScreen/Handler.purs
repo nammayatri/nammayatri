@@ -23,7 +23,7 @@ import Data.Number as Number
 import Engineering.Helpers.BackTrack (getState)
 import Helpers.Utils (getCurrentLocation, LatLon(..))
 import Prelude (bind, ($), pure, (<$>), discard, show)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.DriverSavedLocationScreen.Controller (ScreenOutput(..))
 import Screens.DriverSavedLocationScreen.View as DriverSavedLocationScreen
 import Storage (KeyStore(..), getValueToLocalNativeStore)
@@ -34,7 +34,7 @@ import Data.Array as DA
 driverSavedLocationScreen :: FlowBT String DRIVE_SAVED_LOCATION_OUTPUT
 driverSavedLocationScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ DriverSavedLocationScreen.screen state.driverSavedLocationScreen
+  action <- lift $ lift $ runLoggableScreen $ DriverSavedLocationScreen.screen state.driverSavedLocationScreen
   case action of
     GoBack updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{ data { driverGotoState { savedLocationCount = DA.length updatedState.data.savedLocationsArray}}})

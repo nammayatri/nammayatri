@@ -1,14 +1,16 @@
 plugins {
     id 'com.android.library'
+    id 'com.google.protobuf'
 }
 
 android {
-    compileSdk 33
+    compileSdk 34
     // publishNonDefault true
+    namespace "in.juspay.mobility.app"
 
     defaultConfig {
-        minSdk 23
-        targetSdk 33
+        minSdk 24
+        targetSdk 34
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -38,19 +40,48 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    sourceSets {
+        main {
+            assets {
+                srcDirs 'src/main/assets'
+            }
+        }
+    }
+}
+
+def cameraxVersion = "1.1.0-alpha05"
+
+protobuf {
+    protoc { artifact = 'com.google.protobuf:protoc:3.21.7' }
+    plugins {
+        grpc { artifact = 'io.grpc:protoc-gen-grpc-java:1.61.0' }
+    }
+
+    generateProtoTasks {
+        all().each { task ->
+            task.builtins {
+                java { option 'lite' }
+            }
+            task.plugins {
+                grpc {
+                    option 'lite'
+                }
+            }
+        }
+    }
 }
 
 dependencies {
+    implementation project(':mobility-common')
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.6.0'
-    implementation 'com.google.android.play:app-update:2.0.0'
+    implementation 'com.google.android.play:app-update:2.1.0'
     implementation 'androidx.work:work-runtime:2.7.1'
     implementation 'com.google.android.gms:play-services-maps:18.1.0'
     implementation 'com.google.firebase:firebase-analytics'
-    implementation platform('com.google.firebase:firebase-bom:32.2.0')
+    implementation platform('com.google.firebase:firebase-bom:32.7.1')
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-messaging'
-    api 'com.theartofdev.edmodo:android-image-cropper:2.8.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
     implementation 'com.airbnb.android:lottie:5.2.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
@@ -60,19 +91,40 @@ dependencies {
     implementation 'com.google.firebase:firebase-firestore'
     implementation 'com.google.firebase:firebase-auth'
     implementation 'androidx.browser:browser:1.2.0'
-    implementation 'in.juspay:hypersdk:2.1.20-nammayatri.13'
+   implementation 'in.juspay:hypersdk:2.1.33-nammayatri.17'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
-    implementation 'com.facebook.android:facebook-android-sdk:4.42.0'
+    implementation ('com.facebook.android:facebook-android-sdk:4.42.0') {
+        exclude group: 'com.android.support', module: 'customtabs'
+        exclude group: 'com.android.support', module: 'support-media-compat'
+        exclude group: 'com.android.support', module: 'support-compat'
+    }
     implementation 'com.facebook.shimmer:shimmer:0.5.0'
-    implementation 'com.github.bumptech.glide:glide:4.15.1'
+    implementation 'com.github.bumptech.glide:glide:4.12.0'
     implementation 'com.google.android.gms:play-services-auth:20.5.0'
-    implementation 'com.clevertap.android:clevertap-android-sdk:5.0.0'
+    implementation 'com.clevertap.android:clevertap-android-sdk:6.0.0'
     implementation 'com.android.installreferrer:installreferrer:2.2'
     implementation 'com.google.maps.android:android-maps-utils:2.4.0'
     implementation 'com.google.mlkit:translate:17.0.1'
     implementation("com.google.firebase:firebase-crashlytics-ndk")
     implementation 'com.google.firebase:firebase-perf'
+    implementation "androidx.media3:media3-exoplayer:1.1.1"
+    implementation "androidx.media3:media3-exoplayer-dash:1.1.1"
+    implementation "androidx.media3:media3-ui:1.1.1"
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
+    implementation 'androidx.camera:camera-view:1.0.0-alpha25'
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    implementation 'com.google.android.material:material:1.6.0'
+    implementation "androidx.camera:camera-core:${cameraxVersion}"
+    implementation "androidx.camera:camera-camera2:${cameraxVersion}"
+    implementation "androidx.camera:camera-lifecycle:${cameraxVersion}"
+
+    // GRPC Dependencies
+    implementation 'io.grpc:grpc-okhttp:1.61.0' // CURRENT_GRPC_VERSION
+    implementation 'io.grpc:grpc-protobuf-lite:1.61.0' // CURRENT_GRPC_VERSION
+    implementation 'io.grpc:grpc-stub:1.61.0' // CURRENT_GRPC_VERSION
+    implementation 'org.apache.tomcat:annotations-api:6.0.53'
+    implementation 'com.google.android.flexbox:flexbox:3.0.0'
+    implementation 'com.google.code.gson:gson:2.10.1'
 }

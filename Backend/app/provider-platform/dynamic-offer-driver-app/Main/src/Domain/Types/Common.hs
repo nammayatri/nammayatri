@@ -1,17 +1,71 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
+{-# OPTIONS_GHC -Wno-orphans #-}
 
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+module Domain.Types.Common
+  ( module Domain.Types.Common,
+    module Domain.Types,
+    module Data.Time.Calendar,
+  )
+where
 
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+import qualified BecknV2.OnDemand.Enums as Enums
+import Data.Aeson
+import Data.Time.Calendar
+import Domain.Types
+import qualified Domain.Types.Alert.AlertRequestData as DTAAD
+import qualified Domain.Types.Alert.AlertRequestStatus as DTAAS
+import qualified Domain.Types.Alert.AlertRequestType as DTAAT
+import qualified Domain.Types.FleetBadgeType as DFBT
+import qualified Domain.Types.ParcelType as DTPT
+import qualified Domain.Types.VehicleCategory as DTVC
+import qualified Domain.Types.VehicleVariant as DTVV
+import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
+import Kernel.Utils.TH
+import Tools.Beam.UtilsTH
 
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+$(mkBeamInstancesForEnumAndList ''ServiceTierType)
+$(mkBeamInstancesForEnumAndList ''DTVV.VehicleVariant)
+$(mkBeamInstancesForEnumAndList ''DTVC.VehicleCategory)
+$(mkBeamInstancesForEnumAndList ''Enums.VehicleCategory)
+$(mkBeamInstancesForEnum ''TripCategory)
+$(mkBeamInstancesForEnum ''TripParty)
+$(mkBeamInstancesForEnum ''DTAAT.AlertRequestType)
+$(mkHttpInstancesForEnum ''DTAAT.AlertRequestType)
+$(mkBeamInstancesForEnum ''DTAAS.AlertRequestStatus)
+$(mkHttpInstancesForEnum ''DTAAS.AlertRequestStatus)
+$(mkBeamInstancesForEnumAndList ''DTAAD.AlertRequestData)
+$(mkFromHttpInstanceForEnum ''DTAAD.AlertRequestData)
+$(mkBeamInstancesForEnumAndList ''DFBT.FleetBadgeType)
+$(mkHttpInstancesForEnum ''DFBT.FleetBadgeType)
+$(mkBeamInstancesForEnumAndList ''DTPT.ParcelType)
 
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+data DriverMode = ONLINE | OFFLINE | SILENT
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
+instance CH.ClickhouseValue DriverMode
 
-module Domain.Types.Common where
+data SearchRequestForDriverResponse = Accept | Reject | Pulled
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data UsageSafety = Safe | Unsafe
+instance CH.ClickhouseValue SearchRequestForDriverResponse
+
+$(mkHttpInstancesForEnum ''SearchRequestForDriverResponse)
+
+$(mkBeamInstancesForEnumAndList ''SearchRequestForDriverResponse)
+
+$(mkHttpInstancesForEnum ''DriverMode)
+
+$(mkBeamInstancesForEnumAndList ''DriverMode)
+$(mkBeamInstancesForEnum ''DayOfWeek)
+
+data MediaFileDocumentType = VehicleVideo deriving (Eq, Ord, Show, Read, Generic, ToSchema)
+
+-- Type with single constructor will be serialized as empty list by default, that's why manual instances required
+instance ToJSON MediaFileDocumentType where
+  toJSON VehicleVideo = String "VehicleVideo"
+
+instance FromJSON MediaFileDocumentType where
+  parseJSON (String "VehicleVideo") = pure VehicleVideo
+  parseJSON _ = fail "VehicleVideo expected"
+
+$(mkBeamInstancesForEnumAndList ''MediaFileDocumentType)

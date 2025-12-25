@@ -127,7 +127,7 @@ in  upstream
       , "tuples"
       , "unsafe-coerce"
       ]
-    , repo = "https://github.com/juspay/purescript-presto.git"
+    , repo = "https://github.com/RitikaHanish/purescript-presto.git"
     , version = "update/github-purescript-presto"
     }
   with backtrack =
@@ -136,8 +136,8 @@ in  upstream
     , repo = "https://github.com/juspay/purescript-backtrack.git"
     , version = "update/github-purescript-backtrack-repo"
     }
-  with presto-dom =
-    { dependencies =
+  with presto-dom = 
+  { dependencies =
       [ "effect"
       , "prelude"
       , "hyrule"
@@ -251,8 +251,8 @@ in  upstream
       , "maybe"
       , "strings"
       ]
-    , repo = "https://github.com/juspay/purescript-tracker.git"
-    , version = "update/github-purescript-tracker-repo"
+    , repo = "https://github.com/nammayatri/purescript-tracker.git"
+    , version = "master"
     }
   with otp-reader =
     { dependencies =

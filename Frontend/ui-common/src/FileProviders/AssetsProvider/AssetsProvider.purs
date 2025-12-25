@@ -37,31 +37,59 @@ import Foreign.Object (Object, lookup)
 import Presto.Core.Utils.Encoding (defaultDecode)
 import ConfigProvider (loadFileInDUI)
 import DecodeUtil (parseJSON)
+import Presto.Core.Types.Language.Flow
+import Data.String (Pattern(..), Replacement(..), replaceAll, toLower)
+import Engineering.Helpers.Commons
+import Data.Foldable (foldM)
+import Debug
 
 foreign import getFromTopWindow :: EffectFn1 String Foreign
 
 foreign import getCUGUser :: Fn1 Unit Boolean
 
+foreign import getOS :: Fn1 String String
+
 foreign import isUseLocalAssets :: Fn1 Unit Boolean
 
 foreign import renewFile :: EffectFn3 String String (Boolean -> Effect Unit) Unit
 
+foreign import getMJOS :: String -> Foreign
 
-fetchAssets :: Effect Unit
+foreign import getClientIdFromSession :: String -> String
+
+foreign import getJOSFlags :: Fn1 String JOSFlags
+
+getClientID :: Unit -> String
+getClientID _ = replaceAll (Pattern "_ios") (Replacement "") (getClientIdFromSession "")
+
+generateBaseUrl :: Fn1 String String
+generateBaseUrl =
+  mkFn1 \clientId -> do
+    let
+      flags = runFn1 getJOSFlags "unit"
+
+      env = if flags.isCUGUser then "cug" else "release"
+
+      os = toLower $ runFn1 getOS "unit"
+
+      url = baseUrl
+    url <> "/" <> clientId <> "/" <> os <> "/" <> env <> "/" <> "config.json"
+
+baseUrl :: String
+baseUrl = "https://assets.juspay.in/hyper/bundles/in.juspay.merchants"
+
+fetchAssets ::forall st. Flow st Unit
 fetchAssets = do
   if runFn1 isUseLocalAssets unit then
     pure unit
   else do
-    config <- runEffectFn1 getFromTopWindow "configPackage"
-    (decodedConfig :: AssetConfig) <- case runExcept (decode config) of
-      Right dConfig -> pure dConfig
-      Left _ -> do
-        let configFile = loadFileInDUI $ "config" <> Constants.dotJSON
-        case runExcept (decode $ parseJSON $ configFile) of
-          Right dConfig -> pure dConfig
-          Left _ -> throw "prefetch_failed"
-    files <- runEffectFn1 getDownloadList decodedConfig
-    fold $ map (\item -> launchAff_ $ void $ download item.path item.location) files
+    let configFile = getMJOS $ "config" <> Constants.dotJSON
+    decodedConfig <- liftFlow $ case runExcept (decode $ configFile) of
+                                  Right dConfig -> pure dConfig
+                                  Left _ -> throw "prefetch_failed"
+    files <- liftFlow $ runEffectFn1 getDownloadList decodedConfig
+    void $  doAff $ download "config.json" $ generateBaseUrl (getClientID unit)
+    void $ oneOf $ map (\item -> doAff $ download item.path item.location) files
 
 download :: String -> String -> Aff Boolean
 download filepath location = makeAff \cb -> runEffectFn3 renewFile filepath location (cb <<< Right) $> nonCanceler
@@ -107,13 +135,13 @@ getDownloadList =
               else do acc <> runFn3 getAssetFiles assets bundle root
           )
           []
-          apps
+          (apps)
 
 getAssetFiles ∷ Fn3 (Maybe.Maybe AssetsListBlock) (Maybe.Maybe String) String (Array RenewFile)
 getAssetFiles =
   mkFn3 \assets bundle root -> do
     let
-      assetsList = catMaybes $ getAssetListBlock (Maybe.fromMaybe emptyAssets assets)
+      assetsList = catMaybes $ getAssetListBlock (Maybe.fromMaybe (emptyAssets unit) assets)
     case bundle of
       Maybe.Nothing -> []
       Maybe.Just currentBundle -> do
@@ -213,11 +241,14 @@ instance showAssetsListBlock :: Show AssetsListBlock where
 instance decodeAssetsListBlock :: Decode AssetsListBlock where
   decode = defaultDecode
 
-emptyAssets :: AssetsListBlock
-emptyAssets =
+emptyAssets :: Unit -> AssetsListBlock
+emptyAssets _ =
   AssetsListBlock
     { configuration: Maybe.Nothing
     , config: Maybe.Nothing
     , icons: Maybe.Nothing
     , strings: Maybe.Nothing
     }
+
+type JOSFlags
+  = { isCUGUser :: Boolean }

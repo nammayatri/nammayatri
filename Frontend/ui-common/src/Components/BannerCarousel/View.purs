@@ -22,32 +22,58 @@ import Common.Types.App (LazyCheck(..))
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, root)
+import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, root, backgroundColor,accessibility ,accessibilityHint, Accessiblity(..))
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
 import Styles.Colors as Color
+import Engineering.Helpers.Commons
 
 
 view :: forall w a. (a -> Effect Unit) -> (Config (Action -> a)) -> PrestoDOM (Effect Unit) w
 view push config =
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
+    , width $ V $ screenWidth unit
     , padding $ PaddingHorizontal 16 16
     , root true
-    ][ bannerView push config]
+    , accessibilityHintHolder "accessibilityHint"
+    ][ 
+      bannerView push config
+    , imageBannerView push config
+    ]
 
+
+imageBannerView :: forall w a. (a -> Effect Unit) -> (Config (Action -> a)) -> PrestoDOM (Effect Unit) w
+imageBannerView push config = 
+  let bannerHeight = 
+        case config.bannerSize of
+          Just "small" -> V 130
+          Just "medium" -> V 130
+          Just "large" -> V 280
+          Just _ -> V 130
+          Nothing -> V 130
+  in 
+    imageView $ [
+      height bannerHeight
+    , width MATCH_PARENT
+    , imageUrlHolder "imageBannerUrl"
+    , visibilityHolder "imageBannerVisibility"
+    , accessibilityHintHolder "accessibilityHint"
+    , margin $ MarginTop if os == "IOS" then  15 else 0
+    ] <> maybe ([]) (\action -> [onClickHolder push $ (action <<< OnClick)]) config.action
 
 
 bannerView :: forall w a. (a -> Effect Unit) -> (Config (Action -> a)) -> PrestoDOM (Effect Unit) w
 bannerView push config = 
   linearLayout
     ([ height WRAP_CONTENT
-    , width MATCH_PARENT
+    , width $ V $ (screenWidth unit) - 32
     , cornerRadiusHolder "cornerRadiusMain"
     , backgroundHolder "backgroundColor"
     , visibilityHolder "visibility"
     , gravity CENTER
+    , accessibility ENABLE
+    , accessibilityHint $ "swipe to see other options"
     ] <> maybe ([]) (\action -> [onClickHolder push $ (action <<< OnClick)]) config.action)
     [ linearLayout
         [ height WRAP_CONTENT
@@ -77,16 +103,36 @@ bannerView push config =
               , visibility if config.titleTextVisibility then VISIBLE else GONE
               ]
             <> (FontStyle.getFontStyle config.titleStyle LanguageStyle)
-        , linearLayout
+        , imageView
+          [ height $ V 40
+          , width $ V 120
+          , margin $ MarginTop 5
+          , imageUrlHolder "actionImageUrl"
+          , visibilityHolder "actionImageVisibility"
+          ]  
+          , linearLayout
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , visibility GONE
             , visibilityHolder "actionTextVisibility"
+            , margin $ MarginTop 10
+            , gravity CENTER_VERTICAL
+            , cornerRadiusHolder "actionTextCornerRadius"
+            , backgroundHolder "actionTextBackgroundColour"
+            , padding $ Padding 10 4 10 4
             ]
-            [ textView
+            [ imageView
+                [ height $ V 16
+                , width $ V 16
+                , imageUrlHolder "actionIconUrl"
+                , visibilityHolder "actionIconVisibility"
+                , margin $ MarginRight 4
+                ]
+            , textView
                 $ [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , gravity LEFT
+                  , textSize FontSize.a_8
                   , textHolder "actionText"
                   , colorHolder "actionTextColor"
                   , padding $ PaddingBottom 2
@@ -96,24 +142,35 @@ bannerView push config =
                 $ [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , gravity LEFT
-                  , textFromHtml "&rarr;"
+                  , text "→"
                   , colorHolder "actionTextColor"
                   , padding $ PaddingBottom 3
                   , margin $ MarginLeft 5
+                  , visibilityHolder "actionArrowIconVisibility"
+                  ]
+                <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
+            , textView
+                $ [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , gravity LEFT
+                  , text "↓"
+                  , colorHolder "actionTextColor"
+                  , padding $ PaddingBottom 3
+                  , margin $ MarginLeft 5
+                  , visibilityHolder "actionBottomArrowIconVisibility"
                   ]
                 <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
             ]
-        ]
+            ]
     , linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , gravity CENTER_VERTICAL
-        , padding $ PaddingVertical 5 5
+        , padding $ Padding 0 5 0 5
         ]
         [ imageView
             [ height config.imageHeight
             , width config.imageWidth
-            , margin $ MarginRight 5
+            , gravity RIGHT
             , imageUrlHolder "bannerImageUrl"
             ]
         ]

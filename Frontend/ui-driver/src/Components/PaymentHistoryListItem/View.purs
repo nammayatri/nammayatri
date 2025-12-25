@@ -2,7 +2,7 @@ module Components.PaymentHistoryListItem.View where
 
 import Animation (translateInXForwardAnim)
 import Common.Types.App (LazyCheck(..))
-import Common.Types.App (PaymentStatus(..))
+import Domain.Payments (PaymentStatus(..))
 import Components.PaymentHistoryListItem.Controller (Action(..), Config)
 import Effect (Effect)
 import Engineering.Helpers.Commons (convertUTCtoISC, screenWidth, formatCurrencyWithCommas)

@@ -1,7 +1,6 @@
 @token1 = {{driver-offer-bpp-auto-token1}}
 @token2 = {{driver-offer-bpp-auto-token2}}
-
-@driverId = favorit-auto1-0000000000000000000000
+@driverId = favorit-auto2-0000000000000000000000
 @driver-offer-bpp-host = http://localhost:8016
 @location-tracking-service-host = http://localhost:8081
 @merchantId = favorit0-0000-0000-0000-00000favorit
@@ -32,10 +31,13 @@ token: {{adminToken}}
 }
 
 ###
+
+# driverId is taken from token in DEV move
+
 # @name updateInitial
 POST {{location-tracking-service-host}}/ui/driver/location
-token: {{token1}}
-mId: {{merchantId}}
+token: {{driverId}}
+mid: {{merchantId}}
 vt: AUTO_RICKSHAW
 dm: ONLINE
 content-type: application/json
@@ -55,9 +57,12 @@ content-type: application/json
 ###
 
 # @name setActive
+# UPDATE atlas_driver_offer_bpp.person SET merchant_id = 'favorit0-0000-0000-0000-00000favorit' WHERE id = 'favorit-auto1-0000000000000000000000'
+# UPDATE atlas_driver_offer_bpp.registration_token SET merchant_id = 'favorit0-0000-0000-0000-00000favorit' WHERE id = 'favorit-auto1-0000000000000000000000'
+
 POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true&mode="ONLINE"
 content-type: application/json
-token: {{token1}}
+token: {{token2}}
 
 ###
 
@@ -75,7 +80,7 @@ token: {{app-token}}
           "state": "Karnataka",
           "door": "",
           "country": "India",
-          "city": "Davanagere",
+          "city": "Davanagere'test",
           "building": " ",
           "areaCode": "",
           "area": "Vidyanagar"
@@ -130,23 +135,30 @@ content-type: application/json
 token: {{app-token}}
 
 {
-  "customerExtraFee" : 10,
+  "customerExtraFeeWithCurrency" : {
+        "amount": 10,
+        "currency" : "INR"
+        },
   "autoAssignEnabled" : false,
   "autoAssignEnabledV2" : false,
-  "paymentMethodId" : null
+  "paymentMethodId" : null,
+  "paymentInstrument" :
+    { "instrumentType": "Cash",
+      "instrumentName": null
+    }
 }
 
 ###
 
 # @name nearbySearchRequest
 GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
-token: {{token1}}
+token: {{token2}}
 
 ###
 
 # @name offerQuote
 POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/respond
-token: {{token1}}
+token: {{token2}}
 content-type: application/json
 
 {
@@ -170,7 +182,7 @@ token: {{app-token}}
 
 # POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm?paymentMethodId={{paymentMethodId}}
 
-POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm
+POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm?paymentInstrument=Cash
 content-type: application/json
 token: {{app-token}}
 
@@ -200,7 +212,19 @@ token: {{app-token}}
 
 # @name driverList
 GET {{driver-offer-bpp-host}}/ui/driver/ride/list?limit=100&offset=0
-token: {{token1}}
+token: {{token2}}
+
+###
+
+# @name driverArrivedPickup
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/arrived/pickup
+token: {{token2}}
+content-type: application/json
+
+{
+    "lat": 14.445332,
+    "lon": 75.919028
+}
 
 ###
 
@@ -209,7 +233,7 @@ token: {{token1}}
 
 # @name startRide
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/start
-token: {{token1}}
+token: {{token2}}
 content-type: application/json
 
 {
@@ -226,8 +250,8 @@ content-type: application/json
 
 # @name update1
 POST {{location-tracking-service-host}}/ui/driver/location
-token: {{token1}}
-mId: {{merchantId}}
+token: {{driverId}}
+mid: {{merchantId}}
 vt: AUTO_RICKSHAW
 dm: ONLINE
 content-type: application/json
@@ -270,10 +294,11 @@ content-type: application/json
 
 ###
 
+
 # @name update2
 POST {{location-tracking-service-host}}/ui/driver/location
-token: {{token1}}
-mId: {{merchantId}}
+token: {{driverId}}
+mid: {{merchantId}}
 vt: AUTO_RICKSHAW
 dm: ONLINE
 content-type: application/json
@@ -314,7 +339,7 @@ content-type: application/json
 
 # @name rideEnd
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end
-token: {{token1}}
+token: {{token2}}
 content-type: application/json
 
 {
@@ -328,12 +353,12 @@ content-type: application/json
 
 # @name rideCancelByDriver
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/cancel
-token: {{token1}}
+token: {{token2}}
 content-type: application/json
 
 {
-  "reasonCode": "OTHER",
-  "additionalInfo" : "Rider is too cute"
+  "reasonCode": "CUSTOMER_NO_SHOW",
+  "additionalInfo" : "User does not showed after 4 minutes"
 }
 
 ###
@@ -364,17 +389,3 @@ content-type: application/json
   "rating" : 5,
   "feedbackDetails": "The ride was good"
 }
-
-###
-
-# @name disputeCancellationDues
-POST {{app-host}}/dispute/cancellationDues
-content-type: application/json
-token: {{app-token}}
-
-###
-
-# @name getCancellationDuesDetails
-GET {{app-host}}/get/cancellationDuesDetails
-content-type: application/json
-token: {{app-token}}

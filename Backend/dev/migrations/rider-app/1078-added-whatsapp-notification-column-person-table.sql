@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.person ADD COLUMN whatsapp_notification_enroll_status character varying(255);

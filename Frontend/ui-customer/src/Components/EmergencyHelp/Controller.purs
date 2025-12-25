@@ -21,7 +21,7 @@ import Styles.Types
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
 import Components.PopUpModal.Controller as PopUpModalController
 import MerchantConfig.Types (AppConfig)
-import PrestoDOM (Eval, continue, exit, continueWithCmd)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
 import Screens.Types (Contact)
 import Styles.Colors as Color
 import ConfigProvider

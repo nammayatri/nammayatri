@@ -12,32 +12,35 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module IssueManagement.Tools.Error where
 
 import EulerHS.Prelude
 import Kernel.Types.Error.BaseError.HTTPError
 
-newtype IssueReportError
-  = IssueReportDoNotExist Text
+data IssueReportError
+  = IssueReportDoesNotExist Text
+  | IssueReportAlreadyExists Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''IssueReportError
 
 instance IsBaseError IssueReportError where
   toMessage = \case
-    IssueReportDoNotExist issueReportId -> Just $ "IssueReport with issueReportId \"" <> show issueReportId <> "\" do not exist."
+    IssueReportDoesNotExist issueReportId -> Just $ "IssueReport with issueReportId " <> issueReportId <> " does not exist."
+    IssueReportAlreadyExists rideId -> Just $ "An issue report already exists for the selected category and rideId-" <> rideId
 
 instance IsHTTPError IssueReportError where
-  toErrorCode (IssueReportDoNotExist _) = "ISSUE_REPORT_DO_NOT_EXIST"
-  toHttpCode (IssueReportDoNotExist _) = E400
+  toErrorCode (IssueReportDoesNotExist _) = "ISSUE_REPORT_DOES_NOT_EXIST"
+  toErrorCode (IssueReportAlreadyExists _) = "ISSUE_REPORT_ALREADY_EXISTS"
+  toHttpCode (IssueReportDoesNotExist _) = E400
+  toHttpCode (IssueReportAlreadyExists _) = E400
 
 instance IsAPIError IssueReportError
 
 data IssueOptionError
   = IssueOptionNotFound Text
-  | IssueOptionDoNotExist Text
+  | IssueOptionDoesNotExist Text
   | IssueOptionInvalid Text Text
   deriving (Eq, Show, IsBecknAPIError)
 
@@ -45,26 +48,26 @@ instanceExceptionWithParent 'HTTPException ''IssueOptionError
 
 instance IsBaseError IssueOptionError where
   toMessage = \case
-    IssueOptionNotFound issueOptionId -> Just $ "IssueOption with issueOptionId \"" <> show issueOptionId <> "\" not found."
-    IssueOptionDoNotExist issueOptionId -> Just $ "IssueOption with issueOptionId \"" <> show issueOptionId <> "\" do not exist."
-    IssueOptionInvalid issueOptionId issueCategoryId -> Just $ "IssueOption with issueOptionId \"" <> show issueOptionId <> "\" not linked to IssueCategory with issueCategoryId \"" <> show issueCategoryId <> "\"."
+    IssueOptionNotFound issueOptionId -> Just $ "IssueOption with issueOptionId-" <> issueOptionId <> " not found."
+    IssueOptionDoesNotExist issueOptionId -> Just $ "IssueOption with issueOptionId-" <> issueOptionId <> " does not exist."
+    IssueOptionInvalid issueOptionId issueCategoryId -> Just $ "IssueOption with issueOptionId-" <> issueOptionId <> " not linked to IssueCategory with issueCategoryId " <> show issueCategoryId <> "."
 
 instance IsHTTPError IssueOptionError where
   toErrorCode = \case
     IssueOptionNotFound _ -> "ISSUE_OPTION_NOT_FOUND"
-    IssueOptionDoNotExist _ -> "ISSUE_OPTION_DO_NOT_EXIST"
+    IssueOptionDoesNotExist _ -> "ISSUE_OPTION_DOES_NOT_EXIST"
     IssueOptionInvalid _ _ -> "ISSUE_OPTION_INVALID"
 
   toHttpCode = \case
     IssueOptionNotFound _ -> E500
-    IssueOptionDoNotExist _ -> E400
+    IssueOptionDoesNotExist _ -> E400
     IssueOptionInvalid _ _ -> E400
 
 instance IsAPIError IssueOptionError
 
 data MediaFileError
   = FileSizeExceededError Text
-  | FileDoNotExist Text
+  | FileDoesNotExist Text
   | FileFormatNotSupported Text
   deriving (Eq, Show, IsBecknAPIError)
 
@@ -73,11 +76,11 @@ instanceExceptionWithParent 'HTTPException ''MediaFileError
 instance IsHTTPError MediaFileError where
   toErrorCode = \case
     FileSizeExceededError _ -> "FILE_SIZE_EXCEEDED"
-    FileDoNotExist _ -> "FILE_DO_NOT_EXIST"
+    FileDoesNotExist _ -> "FILE_DOES_NOT_EXIST"
     FileFormatNotSupported _ -> "FILE_FORMAT_NOT_SUPPORTED"
   toHttpCode = \case
     FileSizeExceededError _ -> E400
-    FileDoNotExist _ -> E400
+    FileDoesNotExist _ -> E400
     FileFormatNotSupported _ -> E400
 
 instance IsAPIError MediaFileError
@@ -85,27 +88,67 @@ instance IsAPIError MediaFileError
 instance IsBaseError MediaFileError where
   toMessage = \case
     FileSizeExceededError fileSize -> Just $ "Filesize is " <> fileSize <> " Bytes, which is more than the allowed 10MB limit."
-    FileDoNotExist fileId -> Just $ "MediaFile with fileId \"" <> show fileId <> "\" do not exist."
-    FileFormatNotSupported fileFormat -> Just $ "MediaFile with fileFormat \"" <> show fileFormat <> "\" not supported."
+    FileDoesNotExist fileId -> Just $ "MediaFile with fileId-" <> fileId <> " does not exist."
+    FileFormatNotSupported fileFormat -> Just $ "MediaFile with fileFormat " <> show fileFormat <> " not supported."
 
 data IssueCategoryError
   = IssueCategoryNotFound Text
-  | IssueCategoryDoNotExist Text
+  | IssueCategoryDoesNotExist Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''IssueCategoryError
 
 instance IsBaseError IssueCategoryError where
   toMessage = \case
-    IssueCategoryNotFound issueCategoryId -> Just $ "IssueCategory with issueCategoryId \"" <> show issueCategoryId <> "\" not found."
-    IssueCategoryDoNotExist issueCategoryId -> Just $ "IssueCategory with issueCategoryId \"" <> show issueCategoryId <> "\" do not exist."
+    IssueCategoryNotFound issueCategoryId -> Just $ "IssueCategory with issueCategoryId-" <> issueCategoryId <> " not found."
+    IssueCategoryDoesNotExist issueCategoryId -> Just $ "IssueCategory with issueCategoryId-" <> issueCategoryId <> " does not exist."
 
 instance IsHTTPError IssueCategoryError where
   toErrorCode = \case
     IssueCategoryNotFound _ -> "ISSUE_CATEGORY_NOT_FOUND"
-    IssueCategoryDoNotExist _ -> "ISSUE_CATEGORY_DO_NOT_EXIST"
+    IssueCategoryDoesNotExist _ -> "ISSUE_CATEGORY_DOES_NOT_EXIST"
   toHttpCode = \case
     IssueCategoryNotFound _ -> E500
-    IssueCategoryDoNotExist _ -> E400
+    IssueCategoryDoesNotExist _ -> E400
 
 instance IsAPIError IssueCategoryError
+
+data IssueMessageError
+  = IssueMessageNotFound Text
+  | IssueMessageDoesNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''IssueMessageError
+
+instance IsBaseError IssueMessageError where
+  toMessage = \case
+    IssueMessageNotFound issueMessageId -> Just $ "IssueMessage with issueMessageId-" <> issueMessageId <> " not found."
+    IssueMessageDoesNotExist issueMessageId -> Just $ "IssueMessage with issueMessageId-" <> issueMessageId <> " does not exist."
+
+instance IsHTTPError IssueMessageError where
+  toErrorCode = \case
+    IssueMessageNotFound _ -> "ISSUE_MESSAGE_NOT_FOUND"
+    IssueMessageDoesNotExist _ -> "ISSUE_MESSAGE_DOES_NOT_EXIST"
+  toHttpCode = \case
+    IssueMessageNotFound _ -> E500
+    IssueMessageDoesNotExist _ -> E400
+
+instance IsAPIError IssueMessageError
+
+newtype IssueConfigError
+  = IssueConfigNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''IssueConfigError
+
+instance IsBaseError IssueConfigError where
+  toMessage = \case
+    IssueConfigNotFound merchantOpCityId -> Just $ "IssueConfig with merchantOperatingCityId-" <> merchantOpCityId <> " not found."
+
+instance IsHTTPError IssueConfigError where
+  toErrorCode = \case
+    IssueConfigNotFound _ -> "ISSUE_CONFIG_NOT_FOUND"
+  toHttpCode = \case
+    IssueConfigNotFound _ -> E500
+
+instance IsAPIError IssueConfigError

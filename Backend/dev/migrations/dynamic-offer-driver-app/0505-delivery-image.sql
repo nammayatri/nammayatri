@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.media_file ADD COLUMN s3_file_path text;

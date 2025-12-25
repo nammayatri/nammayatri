@@ -21,7 +21,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Screens.UploadDrivingLicenseScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.UploadDrivingLicenseScreen.View as UploadDrivingLicenseScreen
 import Types.App (FlowBT, GlobalState(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..),ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
@@ -30,7 +30,7 @@ import Types.ModifyScreenState (modifyScreenState)
 uploadDrivingLicense :: FlowBT String UPLOAD_DRIVER_LICENSE_SCREENOUTPUT
 uploadDrivingLicense = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ UploadDrivingLicenseScreen.screen state.uploadDrivingLicenseScreen
+  action <- lift $ lift $ runLoggableScreen $ UploadDrivingLicenseScreen.screen state.uploadDrivingLicenseScreen
   case action of
     GoBack updatedState -> do
       modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> updatedState
@@ -45,3 +45,9 @@ uploadDrivingLicense = do
     AddVehicleDetailsScreen -> App.BackT $ App.BackPoint <$> (pure $ GOTO_VEHICLE_DETAILS_SCREEN)
     LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOGOUT_ACCOUNT
     GoToRegisteration -> App.BackT $ App.BackPoint <$> pure GOTO_ONBOARDING_FLOW
+    ChangeVehicle updatedState -> do
+      modifyScreenState $ UploadDrivingLicenseScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CHANGE_VEHICLE_FROM_DL_SCREEN)
+    SelectLang updatedState -> do
+      modifyScreenState $ UploadDrivingLicenseScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CHANGE_LANG_FROM_DL_SCREEN)

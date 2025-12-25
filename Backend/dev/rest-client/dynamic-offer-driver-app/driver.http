@@ -2,6 +2,8 @@
 @driver-offer-bpp-host = http://localhost:8016
 @token = 503d9b3b-18ef-4101-a68c-0bac45e3406e
 
+@token2 = {{driver-offer-bpp-auto-token2}}
+
 @today = {{$localDatetime 'YYYY-MM-DD'}}
 
 # @name setActive
@@ -57,3 +59,11 @@ content-type: application/json
 }
 
 ###
+
+# @name rateCard
+GET {{driver-offer-bpp-host}}/ui/driver/rateCard
+  ?tripCategory=Rental_OnDemandStaticOffer
+  &vehicleServiceTier="AUTO_RICKSHAW"
+  &durationInMin=100
+content-type: application/json
+token: {{token2}}

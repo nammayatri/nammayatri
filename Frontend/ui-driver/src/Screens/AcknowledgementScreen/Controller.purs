@@ -2,15 +2,19 @@ module Screens.AcknowledgementScreen.Controller where
 
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
-import Prelude (class Show, bind, pure, ($), unit)
-import PrestoDOM (Eval, continue, exit)
+import Prelude (class Show, bind, pure, ($), unit, show, (<>))
+import PrestoDOM (Eval, update, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (AcknowledgementScreenState)
-import Common.Types.App as Common
+import Domain.Payments as PP
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (BackPressed) = "BackPressed"
+  show (AfterRender) = "AfterRender"
+  show (NoAction) = "NoAction"
+  show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" "AcknowledgementScreen"
@@ -33,7 +37,7 @@ eval BackPressed state = continue state
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
   case state.props.paymentStatus of
-    Common.Failed -> exit RetryPayment
+    PP.Failed -> exit RetryPayment
     _             -> exit HomeScreen
 
-eval _ state = continue state
+eval _ state = update state

@@ -1,0 +1,64 @@
+imports:
+  Text: Data.Text
+  Suspects: Domain.Types.Suspect
+  ShortId: Kernel.Types.Id
+  UTCTime: Kernel.Prelude
+  FlaggedStatus: Domain.Types.Suspect
+  APISuccess: Kernel.Types.APISuccess
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  SuspectUploadReq: API.Types.UI.SuspectUploadReq
+  ReportDetails: Domain.Types.Suspect
+
+importPackageOverrides:
+    Domain.Types.Merchant: lib-dashboard
+    Tools.Auth: lib-dashboard
+    Environment: lib-dashboard
+    Domain.Types.Person : lib-dashboard
+
+
+module: Suspect
+types:
+  SuspectUploadReq:
+    dl : Maybe Text
+    voterId : Maybe Text
+    firstName : Text
+    lastName : Text
+    flaggedReason : Text
+    flaggedCategory : Text
+    mobileNumber : Maybe Text
+    reportDetails : Maybe ReportDetails
+    totalComplaintsCount : Maybe Int
+
+  SuspectBulkUploadReq:
+    suspects : [SuspectUploadReq]
+
+  SuspectBulkUploadResp:
+    dlList : [Maybe Text]
+    voterIdList : [Maybe Text]
+    message : Text
+
+  SuspectFlagStatusChangeReq:
+    voterId : Maybe Text
+    dl : Maybe Text
+    reasonToChange : Text
+
+
+apis:
+  # POST /Upload/suspect/bulk
+  - POST:
+      endpoint: /upload/suspect/bulk
+      auth: DashboardAuth MERCHANT_MAKER
+      request:
+        type: API.Types.UI.Suspect.SuspectBulkUploadReq
+      response:
+        type: API.Types.UI.Suspect.SuspectBulkUploadResp
+
+  - POST:
+      endpoint: /change/flag
+      auth: DashboardAuth MERCHANT_ADMIN
+      request:
+        type: API.Types.UI.Suspect.SuspectFlagStatusChangeReq
+      response:
+        type: APISuccess
+

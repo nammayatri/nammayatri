@@ -2,9 +2,6 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN driver
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN driver_max_extra_fee DROP NOT NULL;
 
 ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN fare_policy_type DROP NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN waiting_time_estimated_threshold DROP NOT NULL;
-
-ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN night_shift_charge integer;
 
 CREATE TABLE atlas_driver_offer_bpp.fare_parameters_progressive_details (
   fare_parameters_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_driver_offer_bpp.fare_parameters(id),
@@ -144,7 +141,6 @@ ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN waiting_time_estimat
 -------------------------------------------------------------------------------------------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant DROP COLUMN fare_policy_type;
-ALTER TABLE atlas_driver_offer_bpp.estimate DROP COLUMN waiting_time_estimated_threshold;
 
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN dead_km_fare;
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters DROP COLUMN extra_km_fare;

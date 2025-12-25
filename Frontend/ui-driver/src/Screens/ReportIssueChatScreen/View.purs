@@ -19,46 +19,50 @@ import Animation (screenAnimation, screenAnimationFadeInOut)
 import Common.Types.App (LazyCheck(..))
 import Components.ChatView.Controller (makeChatComponent')
 import Data.Array (length)
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC)
 import Font.Style (bold)
 import Helpers.Utils (getCurrentUTC, fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, not, pure, show, unit, ($), (&&), (-), (<<<), (<>), (>), (||))
+import Prelude (Unit, bind, const, not, pure, show, unit, ($), (&&), (-), (<<<), (<>), (>), (||), discard, void)
 import PrestoDOM (linearLayout)
 import PrestoDOM.Elements.Elements (frameLayout, imageView, relativeLayout, textView)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
-import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width, clickable)
-import PrestoDOM.Types.Core (Corners(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Position(..), PrestoDOM, Screen, Visibility(..))
-import Screens.ReportIssueChatScreen.ComponentConfig (cancelButtonConfig, doneButtonConfig, primaryEditTextConfig)
+import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width, clickable, rippleColor)
+import PrestoDOM.Types.Core (Corners(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Position(..), PrestoDOM, LoggableScreen, Visibility(..))
+import Screens.ReportIssueChatScreen.ComponentConfig (cancelButtonConfig, doneButtonConfig, primaryEditTextConfig, viewImageModelConfig, addImageModelConfig, recordAudioModelConfig, addAudioModelConfig)
 import Screens.ReportIssueChatScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (ReportIssueChatScreenState)
 import Components.AddAudioModel (view) as AddAudioModel
 import Components.AddImagesModel (view) as AddImagesModel
 import Components.ChatView as ChatView
-import Styles.Colors (black800, black900, black9000, blue900, blueBtn, blueTextColor, grey900, greyLight, lightGreyBlue, white900) as Color
+import Styles.Colors (black800, black900, black9000, blue900, brightBlue, blueTextColor, grey900, greyLight, lightGreyBlue, white900, rippleShade) as Color
 import Font.Size (a_16, a_20, a_14, a_17, a_18) as FontSize
 import Font.Style (h3, semiBold) as FontStyle
-import JBridge (storeCallBackImageUpload) as JB
+import JBridge (storeCallBackImageUpload, storeCallBackUploadMultiPartData) as JB
 import Components.PrimaryButton.View (view) as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.RecordAudioModel.View (view) as RecordAudioModel
 import Data.String (length, trim) as STR
 import Components.ViewImageModel.View (view) as ViewImageModel
+import Effect.Uncurried (runEffectFn2)
 
-screen :: ReportIssueChatScreenState -> Screen Action ReportIssueChatScreenState ScreenOutput
+screen :: ReportIssueChatScreenState -> LoggableScreen Action ReportIssueChatScreenState ScreenOutput
 screen initialState =
     { initialState
     , view
     , name : "ReportIssueChatScreen"
     , globalEvents : [(\push -> do
-        _ <- JB.storeCallBackImageUpload push ImageUploadCallback
+        void $ JB.storeCallBackImageUpload push ImageUploadCallback
+        void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
         pure $ pure unit)
     ]
     , eval
-    }
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.reportIssueChatScreenLogWhitelist
+  }
 
 view :: forall w . (Action -> Effect Unit) -> ReportIssueChatScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -101,6 +105,7 @@ view push state =
      <>  if state.props.showViewImageModel then [viewImageModel state push] else []
      )
 
+
 -------------------------------------------------- headerLayout --------------------------
 headerLayout :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 headerLayout state push =
@@ -118,19 +123,21 @@ headerLayout state push =
         , padding $ Padding 5 16 5 16
         ]
         [ imageView
-            [ width $ V 30
-            , height $ V 30
+            [ width $ V 40
+            , height $ V 40
             , imageUrl "ny_ic_chevron_left"
             , onClick push $ const BackPressed
-            , padding $ Padding 2 2 2 2
+            , padding $ Padding 7 7 7 7
             , margin $ MarginLeft 5
+            , rippleColor Color.rippleShade
+            , cornerRadius 20.0
             ]
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text state.data.categoryName
               , textSize FontSize.a_18
-              , margin $ MarginLeft 20
+              , margin $ MarginLeft 10
               , weight 1.0
               , color Color.black900
               ]
@@ -185,7 +192,7 @@ chatView push state =
   , afterRender push (do
       if state.props.isReversedFlow
       then
-        pure $ SendMessage (makeChatComponent' (getString ASK_DETAILS_MESSAGE_REVERSED) "Bot" ((convertUTCtoISC (getCurrentUTC "") "hh:mm A")) "Text" 500) true
+        pure $ SendMessage (makeChatComponent' (getString ASK_DETAILS_MESSAGE_REVERSED) Nothing Nothing Nothing "Bot" (getCurrentUTC "") "Text" 500) true
       else
         pure ShowOptions
     )
@@ -287,7 +294,7 @@ submitView push state =
     , linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , background Color.blueBtn
+    , background Color.brightBlue
     , cornerRadius 32.0
     , padding (PaddingVertical 12 12)
     , orientation HORIZONTAL
@@ -341,17 +348,16 @@ helperView push state =
    ]
 
 addAudioModel :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-addAudioModel state push = AddAudioModel.view (push <<< AddAudioModelAction) (state.data.addAudioState)
---  "https://file-examples.com/storage/fe0b804ac5640668798b8d0/2017/11/file_example_MP3_5MG.mp3"]})
+addAudioModel state push = AddAudioModel.view (push <<< AddAudioModelAction) (addAudioModelConfig state)
 
 addImageModel :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-addImageModel state push = AddImagesModel.view (push <<< AddImagesModelAction) (state.data.addImagesState)
+addImageModel state push = AddImagesModel.view (push <<< AddImagesModelAction) (addImageModelConfig state)
 
 recordAudioModel :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-recordAudioModel state push = RecordAudioModel.view (push <<< RecordAudioModelAction) state.data.recordAudioState
+recordAudioModel state push = RecordAudioModel.view (push <<< RecordAudioModelAction) (recordAudioModelConfig state)
 
 viewImageModel :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-viewImageModel state push = ViewImageModel.view (push <<< ViewImageModelAction) state.data.viewImageState
+viewImageModel state push = ViewImageModel.view (push <<< ViewImageModelAction) (viewImageModelConfig state)
 
 callCustomerModel :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 callCustomerModel state push = 

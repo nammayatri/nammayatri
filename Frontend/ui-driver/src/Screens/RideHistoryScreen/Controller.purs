@@ -30,28 +30,46 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Array (union, (!!), filter, length)
 import Data.Int (ceil)
 import Data.Int (fromString, toNumber)
-import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.Number (fromString) as NUM
 import Data.Show (show)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getRideLabelData, convertUTCtoISC, getRequiredTag, incrementValueOfLocalStoreKey)
+import Helpers.Utils (checkSpecialPickupZone, setRefreshing, setEnabled, parseFloat, getRideLabelData, convertUTCtoISC, getRequiredTag, incrementValueOfLocalStoreKey)
 import JBridge (cleverTapCustomEvent, metaLogEvent, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-import PrestoDOM (Eval, ScrollState(..), continue, exit, updateAndExit)
+import PrestoDOM (Eval, update, ScrollState(..), continue, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
-import Resource.Constants (decodeAddress, tripDatesCount)
+import Resource.Constants (decodeAddress, tripDatesCount, rideTypeConstructor)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..), DisabilityType(..))
+import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..), DisabilityType(..), TripType(..))
 import Services.API (RidesInfo(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Styles.Colors as Color
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (Dummy) = "Dummy"
+  show (OnFadeComplete _) = "OnFadeComplete"
+  show (Refresh) = "Refresh"
+  show (BackPressed) = "BackPressed"
+  show (SelectTab _) = "SelectTab"
+  show (BottomNavBarAction var1) = "BottomNavBarAction_" <> show var1
+  show (IndividualRideCardAction var1) = "IndividualRideCardAction_" <> show var1
+  show (RideHistoryAPIResponseAction _) = "RideHistoryAPIResponseAction"
+  show (Loader) = "Loader"
+  show (Scroll _) = "Scroll"
+  show (ErrorModalActionController var1) = "ErrorModalActionController_" <> show var1
+  show (NoAction) = "NoAction"
+  show (AfterRender) = "AfterRender"
+  show (ScrollStateChanged _) = "ScrollStateChanged"
+  show (DatePickerAC var1) = "DatePickerAC_" <> show var1
+  show (ShowDatePicker) = "ShowDatePicker"
+  show (GenericHeaderAC var1) = "GenericHeaderAC_" <> show var1
+  show (PaymentHistoryModelAC var1) = "PaymentHistoryModelAC_" <> show var1
+  show (OpenPaymentHistory) = "OpenPaymentHistory"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -151,6 +169,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
       let _ = unsafePerformEffect $ logEvent state.logField "ny_driver_alert_click"
       exit $ GoToNotification
     "Rankings" -> do
+      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_BENEFITS
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
     "Join" -> do
@@ -164,8 +183,8 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
 
 eval (IndividualRideCardAction (IndividualRideCardController.Select index)) state = do
   let filteredRideList = rideListFilter state.currentTab state.rideList
-      updateState = state { selectedItem = (fromMaybe dummyCard (filteredRideList !! index)) }
-  updateAndExit updateState $ GoToTripDetails updateState
+      update = state { selectedItem = (fromMaybe dummyCard (filteredRideList !! index)) }
+  updateAndExit update $ GoToTripDetails update
 
 eval Loader state = exit $ LoaderOutput state{loaderButtonVisibility = false}
 
@@ -202,12 +221,12 @@ eval (PaymentHistoryModelAC (PaymentHistoryModel.PaymentHistoryListItemAC (Payme
   let updatedData = map (\item -> if item.id == id then item{isSelected = not item.isSelected} else item) state.data.paymentHistory.paymentHistoryList
   continue state{data{paymentHistory { paymentHistoryList = updatedData}}}
 
-eval _ state = continue state
+eval _ state = update state
 
 rideHistoryListTransformer :: Array RidesInfo -> Array ItemState
 rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
   let accessibilityTag = (getDisabilityType ride.disabilityTag)
-      specialLocationConfig = getRideLabelData ride.specialLocationTag
+      specialLocationConfig = getRideLabelData ride.specialLocationTag false
     in 
       {
       date : toPropValue (convertUTCtoISC (ride.createdAt) "D MMM"),
@@ -228,19 +247,20 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
       id : toPropValue ride.shortRideId,
       updatedAt : toPropValue ride.updatedAt,
       source : toPropValue (decodeAddress (ride.fromLocation) false),
-      destination : toPropValue (decodeAddress (ride.toLocation) false),
+      destination : toPropValue (maybe "" (\toLocation ->decodeAddress (toLocation) false) ride.toLocation),
       amountColor: toPropValue (case (ride.status) of
                     "COMPLETED" -> Color.black800
                     "CANCELLED" -> Color.red
                     _ -> Color.black800),
       riderName : toPropValue $ fromMaybe "" ride.riderName,
-      spLocTagVisibility : toPropValue if (isJust ride.specialLocationTag && (getRequiredTag ride.specialLocationTag) /= Nothing) then "visible" else "gone",
+      spLocTagVisibility : toPropValue if (isJust ride.specialLocationTag && (getRequiredTag ride.specialLocationTag false) /= Nothing) then "visible" else "gone",
       specialZoneText : toPropValue $ specialLocationConfig.text,
       specialZoneImage : toPropValue $ specialLocationConfig.imageUrl,
       specialZoneLayoutBackground : toPropValue $ specialLocationConfig.backgroundColor,
       gotoTagVisibility : toPropValue if isJust ride.driverGoHomeRequestId then "visible" else "gone",
       purpleTagVisibility : toPropValue if isJust ride.disabilityTag then "visible" else "gone",
-      tipTagVisibility : toPropValue if isJust ride.customerExtraFee then "visible" else "gone"
+      tipTagVisibility : toPropValue if isJust ride.customerExtraFee then "visible" else "gone",
+      specialZonePickup : toPropValue if (checkSpecialPickupZone ride.specialLocationTag) then "visible" else "gone"
     }) list )
 
 getDisabilityType :: Maybe String -> Maybe DisabilityType
@@ -252,9 +272,9 @@ getDisabilityType disabilityString = case disabilityString of
                                       _ -> Nothing
 
 rideListResponseTransformer :: Array RidesInfo -> Array IndividualRideCardState
-rideListResponseTransformer list = 
+rideListResponseTransformer = 
     map (\(RidesInfo ride) -> 
-      let specialLocationConfig = getRideLabelData ride.specialLocationTag
+      let specialLocationConfig = getRideLabelData ride.specialLocationTag false
       in
       { date : (convertUTCtoISC (ride.createdAt) "D MMM"),
         time : (convertUTCtoISC (ride.createdAt )"h:mm A"),
@@ -274,19 +294,31 @@ rideListResponseTransformer list =
         driverSelectedFare : ride.driverSelectedFare  ,
         vehicleColor : ride.vehicleColor  ,
         id : ride.shortRideId,
+        rideId : ride.id,
         updatedAt : ride.updatedAt,
         source : (decodeAddress (ride.fromLocation) false),
-        destination : (decodeAddress (ride.toLocation) false),
+        destination : maybe "" (\toLocation -> decodeAddress toLocation false) ride.toLocation,
         vehicleType : ride.vehicleVariant,
         riderName : fromMaybe "" ride.riderName,
         customerExtraFee : ride.customerExtraFee,
         purpleTagVisibility : isJust ride.disabilityTag,
         gotoTagVisibility : isJust ride.driverGoHomeRequestId,
-        spLocTagVisibility : ride.specialLocationTag /= Nothing && (getRequiredTag ride.specialLocationTag) /= Nothing,
+        spLocTagVisibility : ride.specialLocationTag /= Nothing && (getRequiredTag ride.specialLocationTag false) /= Nothing,
         specialZoneLayoutBackground : specialLocationConfig.backgroundColor,
         specialZoneImage : specialLocationConfig.imageUrl,
-        specialZoneText : specialLocationConfig.text
-      }) list
+        specialZoneText : specialLocationConfig.text,
+        specialZonePickup : checkSpecialPickupZone ride.specialLocationTag,
+        tripType : rideTypeConstructor ride.tripCategory,
+        tollCharge : fromMaybe 0.0 ride.tollCharges,
+        rideType : ride.vehicleServiceTierName,
+        tripStartTime : ride.tripStartTime,
+        tripEndTime : ride.tripEndTime,
+        acRide : ride.isVehicleAirConditioned,
+        vehicleServiceTier : ride.vehicleServiceTier,
+        parkingCharge : fromMaybe 0.0 ride.parkingCharge,
+        stops : fromMaybe [] ride.stops,
+        isInsured : fromMaybe false ride.isInsured
+      }) 
 
 
 prestoListFilter :: String -> Array ItemState -> Array ItemState
@@ -311,6 +343,7 @@ dummyCard =  {
     driverSelectedFare : 0,
     vehicleColor : "",
     id : "",
+    rideId : "",
     updatedAt : "",
     source : "",
     destination : "",
@@ -322,5 +355,16 @@ dummyCard =  {
     spLocTagVisibility : false,
     specialZoneLayoutBackground : "",
     specialZoneImage : "",
-    specialZoneText : ""
+    specialZoneText : "",
+    specialZonePickup : false,
+    tripType : OneWay,
+    tollCharge : 0.0,
+    rideType : "",
+    tripStartTime : Nothing,
+    tripEndTime : Nothing,
+    acRide : Nothing,
+    vehicleServiceTier : "",
+    parkingCharge : 0.0,
+    stops : [],
+    isInsured : false
   }

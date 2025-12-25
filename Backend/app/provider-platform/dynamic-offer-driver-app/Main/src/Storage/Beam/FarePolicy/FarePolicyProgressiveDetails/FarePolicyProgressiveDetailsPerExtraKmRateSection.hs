@@ -11,13 +11,12 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FarePolicy as Domain
+import Domain.Types.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Id as KTI
@@ -27,6 +26,8 @@ data FarePolicyProgressiveDetailsPerExtraKmRateSectionT f = FarePolicyProgressiv
   { -- id :: B.C f Text,
     farePolicyId :: B.C f Text,
     startDistance :: B.C f Meters,
+    distanceUnit :: B.C f (Maybe DistanceUnit),
+    baseFareDepreciation :: B.C f (Maybe HighPrecMoney),
     perExtraKmRate :: B.C f HighPrecMoney
   }
   deriving (Generic, B.Beamable)
@@ -44,3 +45,4 @@ type FullFarePolicyProgressiveDetailsPerExtraKmRateSection = (KTI.Id Domain.Fare
 $(enableKVPG ''FarePolicyProgressiveDetailsPerExtraKmRateSectionT ['farePolicyId] [])
 
 $(mkTableInstances ''FarePolicyProgressiveDetailsPerExtraKmRateSectionT "fare_policy_progressive_details_per_extra_km_rate_section")
+$(mkCacParseInstanceList ''FarePolicyProgressiveDetailsPerExtraKmRateSection)

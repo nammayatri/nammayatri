@@ -15,7 +15,7 @@
 
 module Screens.EditAadhaarDetailsScreen.View where
 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, visibility, onBackPressed, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, visibility, onBackPressed, afterRender, imageWithFallback)
 import Screens.EditAadhaarDetailsScreen.Controller (Action(..), ScreenOutput, eval, getTitleFromList)
 import Screens.EditAadhaarDetailsScreen.ScreenData (viewsItemList, ListOptions(..))
 import Screens.Types as ST
@@ -31,14 +31,17 @@ import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Data.Maybe (Maybe(..))
 
-screen :: ST.EditAadhaarDetailsScreenState -> Screen Action ST.EditAadhaarDetailsScreenState ScreenOutput
+screen :: ST.EditAadhaarDetailsScreenState -> LoggableScreen Action ST.EditAadhaarDetailsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "EditAadhaarDetailsScreen"
   , globalEvents : []
   , eval
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.editAadhaarDetailsScreenLogWhitelist
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.EditAadhaarDetailsScreenState -> PrestoDOM (Effect Unit) w
@@ -108,7 +111,7 @@ headerLayout state push heading =
         , height WRAP_CONTENT
         , text (getString EDIT)
         , margin (MarginRight 10)
-        , color Color.blueBtn
+        , color Color.brightBlue
         , gravity RIGHT
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , visibility if state.props.isInEditAadharDetailsScreen then GONE else VISIBLE
@@ -170,7 +173,7 @@ aadhaarDetailsView state push =
                        , height WRAP_CONTENT
                        , margin (MarginLeft 10)
                        , text (getString PREVIEW)
-                       , color Color.blueBtn
+                       , color Color.brightBlue
                        , visibility if (optionItem.title == AADHAAR_NUMBER) then GONE else VISIBLE
                        ] <> FontStyle.subHeading1 LanguageStyle
                     ]

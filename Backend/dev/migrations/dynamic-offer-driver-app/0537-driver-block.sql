@@ -1,0 +1,1 @@
+CREATE INDEX idx_driver_block_transactions_driverId ON atlas_driver_offer_bpp.driver_block_transactions USING btree (driver_id);

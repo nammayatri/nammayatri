@@ -20,7 +20,7 @@ import Foreign.Object (empty)
 import ConfigProvider
 import Prelude ((-))
 import Resource.Constants (tripDatesCount)
-import Screens.Types (AnimationState(..), RideHistoryScreenState)
+import Screens.Types (AnimationState(..), RideHistoryScreenState, TripType(..))
 
 initData :: RideHistoryScreenState
 initData = {
@@ -56,7 +56,19 @@ initData = {
     spLocTagVisibility : false,
     specialZoneLayoutBackground : "",
     specialZoneImage : "",
-    specialZoneText : ""
+    specialZoneText : "",
+    specialZonePickup : false,
+    tripType : OneWay,
+    tollCharge : 0.0,
+    rideType : "",
+    tripStartTime : Nothing,
+    tripEndTime : Nothing,
+    acRide : Nothing,
+    vehicleServiceTier : ""
+  , parkingCharge : 0.0
+  , stops : []
+  , rideId : ""
+  , isInsured : false
   },
   offsetValue: 0,
   loaderButtonVisibility: false,

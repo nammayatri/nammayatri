@@ -1,0 +1,14 @@
+imports:
+module: Cac
+types: {}
+apis:
+  - POST:
+      endpoint: /driver/getUiConfigs
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - toss: Int
+        - tenant: Text
+      request:
+        type: "Data.Aeson.Object"
+      response:
+        type: "Data.Aeson.Object"

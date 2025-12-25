@@ -1,15 +1,2 @@
-ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN certificate_number_hash bytea;
-ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN certificate_number_encrypted character varying(255);
-
-ALTER TABLE atlas_driver_offer_bpp.driver_license ADD COLUMN license_number_hash bytea;
-ALTER TABLE atlas_driver_offer_bpp.driver_license ADD COLUMN license_number_encrypted character varying(255);
-
-ALTER TABLE atlas_driver_offer_bpp.driver_license DROP CONSTRAINT unique_number;
-ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate DROP CONSTRAINT unique_rc_id;
-
-ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate DROP COLUMN certificate_number;
-ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate DROP COLUMN driver_id;
-ALTER TABLE atlas_driver_offer_bpp.driver_license DROP COLUMN license_number;
-
 ALTER TABLE atlas_driver_offer_bpp.driver_license ADD CONSTRAINT unique_number UNIQUE (license_number_hash);
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD CONSTRAINT unique_rc_id UNIQUE (certificate_number_hash, fitness_expiry);

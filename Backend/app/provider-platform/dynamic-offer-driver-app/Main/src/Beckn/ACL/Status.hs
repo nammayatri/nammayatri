@@ -12,12 +12,16 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.Status where
+module Beckn.ACL.Status
+  ( buildStatusReqV2,
+  )
+where
 
-import qualified Beckn.Types.Core.Taxi.API.Status as Status
-import qualified Domain.Action.Beckn.Status as DStatus
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified Data.UUID as UUID
+import qualified Domain.Types.Beckn.Status as DStatus
 import EulerHS.Prelude
-import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -25,17 +29,19 @@ import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import Tools.Error
 
-buildStatusReq ::
-  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
+buildStatusReqV2 ::
+  (HasFlowEnv m r '["_version" ::: Text]) =>
   Subscriber.Subscriber ->
-  Status.StatusReq ->
+  Spec.StatusReq ->
   m DStatus.DStatusReq
-buildStatusReq subscriber req = do
-  validateContext Context.STATUS req.context
-  unless (subscriber.subscriber_id == req.context.bap_id) $
+buildStatusReqV2 subscriber req = do
+  ContextV2.validateContext Context.STATUS req.statusReqContext
+  unless (Just subscriber.subscriber_id == req.statusReqContext.contextBapId) $
     throwError (InvalidRequest "Invalid bap_id")
 
-  let bookingId = Id req.message.order_id
+  statusReqMessageRefId <- req.statusReqMessage.statusReqMessageRefId & fromMaybeM (InvalidRequest "Invalid statusReqMessageRefId")
+  transactionId <- (fmap UUID.toText req.statusReqContext.contextTransactionId) & fromMaybeM (InvalidRequest "TransactionId not found")
+  let bookingId = Just $ Id statusReqMessageRefId
   return $
     DStatus.StatusReq
       { ..

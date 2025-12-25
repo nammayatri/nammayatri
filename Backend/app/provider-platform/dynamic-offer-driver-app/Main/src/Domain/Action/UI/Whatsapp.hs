@@ -15,7 +15,7 @@
 module Domain.Action.UI.Whatsapp (module Domain.Action.UI.Whatsapp, module Reexport) where
 
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (ServiceFlow)
@@ -39,5 +39,5 @@ whatsAppOptAPI (personId, merchantId_, merchantOpCityId) OptAPIRequest {..} = do
   mobileNo <- mapM decrypt mobileNumber >>= fromMaybeM (InvalidRequest "Person is not linked with any mobile number")
   unless (whatsappNotificationEnrollStatus == Just status) $
     void $ Whatsapp.whatsAppOptAPI merchantId_ merchantOpCityId $ OptApiReq {phoneNumber = mobileNo, method = status}
-  void $ QP.updateWhatsappNotificationEnrollStatus personId $ Just status
+  void $ QP.updateWhatsappNotificationEnrollStatus (Just status) personId
   return Success

@@ -11,27 +11,24 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
-module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
-  ( module Reexport,
-    module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab,
-  )
-where
+module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab where
 
+import Data.Aeson as DA
 import Domain.Types.Common
-import Domain.Types.FarePolicy.Common as Reexport
-import Kernel.Prelude
+import Domain.Types.FarePolicy.Common as DFPC
+import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
-    baseFare :: Money,
-    waitingChargeInfo :: Maybe WaitingChargeInfo,
+    distanceUnit :: DistanceUnit,
+    baseFare :: HighPrecMoney,
+    waitingChargeInfo :: Maybe DFPC.WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge
+    nightShiftCharge :: Maybe DFPC.NightShiftCharge,
+    currency :: Currency
   }
   deriving (Generic, Show, Eq, ToSchema)
 
@@ -40,6 +37,12 @@ type FPSlabsDetailsSlab = FPSlabsDetailsSlabD 'Safe
 instance FromJSON (FPSlabsDetailsSlabD 'Unsafe)
 
 instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
+
+-- FIXME remove
+instance FromJSON (FPSlabsDetailsSlabD 'Safe)
+
+-- FIXME remove
+instance ToJSON (FPSlabsDetailsSlabD 'Safe)
 
 data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee HighPrecMoney
   deriving stock (Show, Eq, Read, Ord, Generic)
@@ -51,24 +54,5 @@ data PlatformFeeInfo = PlatformFeeInfo
     sgst :: Double
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
-
------------------------------------------------------------------------------------------------------------------------------------------
-------------------------------------------------APIEntity--------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------------
-
-data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
-  { startDistance :: Meters,
-    baseFare :: Money,
-    waitingChargeInfo :: Maybe WaitingChargeInfo,
-    platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge
-  }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
-
-makeFPSlabsDetailsSlabAPIEntity :: FPSlabsDetailsSlab -> FPSlabsDetailsSlabAPIEntity
-makeFPSlabsDetailsSlabAPIEntity FPSlabsDetailsSlab {..} =
-  FPSlabsDetailsSlabAPIEntity
-    { ..
-    }
 
 $(mkBeamInstancesForJSON ''PlatformFeeCharge)

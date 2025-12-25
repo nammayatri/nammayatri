@@ -14,10 +14,10 @@
 
 module Beckn.ACL.Track where
 
-import qualified Beckn.Types.Core.Taxi.API.Track as Track
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.Track as DTrack
 import EulerHS.Prelude
-import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -25,16 +25,17 @@ import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import Tools.Error
 
-buildTrackReq ::
-  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
+buildTrackReqV2 ::
+  (HasFlowEnv m r '["_version" ::: Text]) =>
   Subscriber.Subscriber ->
-  Track.TrackReq ->
+  Spec.TrackReq ->
   m DTrack.DTrackReq
-buildTrackReq subscriber req = do
-  validateContext Context.TRACK req.context
-  unless (subscriber.subscriber_id == req.context.bap_id) $
+buildTrackReqV2 subscriber req = do
+  ContextV2.validateContext Context.TRACK req.trackReqContext
+  bap_id <- req.trackReqContext.contextBapId & fromMaybeM (InvalidRequest "Missing bap_id")
+  unless (subscriber.subscriber_id == bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
-  let bookingId = Id req.message.order_id
+  let bookingId = Id req.trackReqMessage.trackReqMessageOrderId
   return $
     DTrack.TrackReq
       { ..

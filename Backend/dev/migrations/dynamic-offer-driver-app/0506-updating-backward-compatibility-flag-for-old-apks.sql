@@ -1,0 +1,2 @@
+update atlas_driver_offer_bpp.document_verification_config set filter_for_old_apks = true where merchant_id in (select id from atlas_driver_offer_bpp.merchant where short_id = 'NAMMA_YATRI_PARTNER') and document_type in ('AadhaarCard', 'PanCard', 'ProfilePhoto');
+update atlas_driver_offer_bpp.document_verification_config set filter_for_old_apks = false where not (merchant_id in (select id from atlas_driver_offer_bpp.merchant where short_id = 'NAMMA_YATRI_PARTNER') and document_type in ('AadhaarCard', 'PanCard', 'ProfilePhoto'));

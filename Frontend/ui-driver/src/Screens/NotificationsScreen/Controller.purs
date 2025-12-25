@@ -17,6 +17,9 @@ module Screens.NotificationsScreen.Controller where
 
 import Prelude
 
+import Common.Styles.Colors as Color
+import Common.Types.App (YoutubeData)
+import Common.Types.App (YoutubeData)
 import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Components.ErrorModal as ErrorModalController
 import Components.NotificationCard.Controller as NotificationCardAC
@@ -27,18 +30,21 @@ import Components.PrimaryEditText as PrimaryEditText
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), union, length, unionBy, any, filter) as Array
+import Data.Function.Uncurried (runFn5)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop, joinWith, trim)
 import Data.String.CodeUnits (charAt)
-import Debug (spy)
+import PrestoDOM.Core (getPushFn)
 import Effect.Aff (launchAff)
-import Helpers.Utils (getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, parseNumber, incrementValueOfLocalStoreKey)
+import Effect.Uncurried (runEffectFn1)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner, getImageUrl)
-import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent, setYoutubePlayer)
+import Helpers.Utils (getTimeStampString, setEnabled, setRefreshing, parseNumber, incrementValueOfLocalStoreKey)
+import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent, setYoutubePlayer, removeMediaPlayer, shareTextMessage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import PrestoDOM (Eval, ScrollState(..), Visibility(..), continue, exit, toPropValue, continueWithCmd)
+import PrestoDOM (Eval, update, ScrollState(..), Visibility(..), continue, exit, toPropValue, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (AnimationState(..), NotificationCardState, NotificationDetailModelState, NotificationsScreenState, NotificationCardPropState, YoutubeVideoStatus(..))
 import Services.API (MediaFileApiResponse(..), MediaType(..), MessageAPIEntityResponse(..), MessageListRes(..), MessageType(..))
@@ -50,9 +56,22 @@ import Data.Function.Uncurried (runFn3)
 import Common.Types.App(YoutubeData)
 import PrestoDOM.List as PrestoList
 import Common.Styles.Colors as Color
+import Helpers.Utils (getCityConfig)
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (OnFadeComplete _) = "OnFadeComplete"
+  show (Refresh) = "Refresh"
+  show (BackPressed) = "BackPressed"
+  show (ErrorModalActionController var1) = "ErrorModalActionController_" <> show var1
+  show (NotificationCardClick var1) = "NotificationCardClick_" <> show var1
+  show (Scroll _) = "Scroll"
+  show (ScrollStateChanged _) = "ScrollStateChanged"
+  show (NotificationDetailModelAC var1) = "NotificationDetailModelAC_" <> show var1
+  show (MessageListResAction _) = "MessageListResAction"
+  show (NoAction) = "NoAction"
+  show (LoadMore) = "LoadMore"
+  show (BottomNavBarAction var1) = "BottomNavBarAction_" <> show var1
+  show (YoutubeVideoStatus _) = "YoutubeVideoStatus"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -62,12 +81,13 @@ data ScreenOutput
   = RefreshScreen NotificationsScreenState
   | GoBack
   | LoaderOutput NotificationsScreenState
-  | GoToHomeScreen
-  | GoToRidesScreen
-  | GoToReferralScreen
-  | GoToProfileScreen
-  | GoToCurrentRideFlow
+  | GoToHomeScreen NotificationsScreenState
+  | GoToRidesScreen NotificationsScreenState
+  | GoToReferralScreen NotificationsScreenState
+  | GoToProfileScreen NotificationsScreenState
+  | GoToCurrentRideFlow NotificationsScreenState
   | SubscriptionScreen NotificationsScreenState
+  | EarningsScreen NotificationsScreenState
 
 data Action
   = OnFadeComplete String
@@ -82,6 +102,7 @@ data Action
   | NoAction
   | LoadMore
   | BottomNavBarAction BottomNavBar.Action
+  | YoutubeVideoStatus String
 
 eval :: Action -> NotificationsScreenState -> Eval Action ScreenOutput NotificationsScreenState
 eval Refresh state = exit $ RefreshScreen state
@@ -90,15 +111,16 @@ eval BackPressed state = do
   if state.notifsDetailModelVisibility == VISIBLE && state.notificationDetailModelState.addCommentModelVisibility == GONE then
     continueWithCmd state { notifsDetailModelVisibility = GONE }
       [ do
-          _ <- pure $ runFn3 setYoutubePlayer youtubeData (getNewIDWithTag "youtubeView") $ show PAUSE
-          _ <- removeMediaPlayer ""
+          push <- getPushFn Nothing "NotificationDetailModel"
+          _ <- pure $ runFn5 setYoutubePlayer youtubeData (getNewIDWithTag "youtubeView") (show PAUSE) push YoutubeVideoStatus
+          void $ runEffectFn1 removeMediaPlayer ""
           _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
           pure NoAction
       ]
   else if state.notificationDetailModelState.addCommentModelVisibility == VISIBLE then
     continue state { notificationDetailModelState { addCommentModelVisibility = GONE, comment = Nothing} }
   else
-    exit $ if state.deepLinkActivated then GoToCurrentRideFlow else GoBack
+    exit $ if state.deepLinkActivated then GoToCurrentRideFlow state else GoToHomeScreen state
 
 
 eval (NotificationCardClick (NotificationCardAC.Action1Click index)) state = do
@@ -107,6 +129,13 @@ eval (NotificationCardClick (NotificationCardAC.Action1Click index)) state = do
     Just notificationItem -> continue state { notificationDetailModelState = notifisDetailStateTransformer notificationItem, notifsDetailModelVisibility = VISIBLE }
 
 eval (NotificationCardClick (NotificationCardAC.Action2Click index)) state = continue state
+
+eval (NotificationCardClick (NotificationCardAC.ShareClick index)) state = 
+  case state.notificationList Array.!! index of
+      Nothing -> update state
+      Just notificationItem -> do 
+        let _ = shareMessageWithId (notifisDetailStateTransformer notificationItem) state
+        continue state
 
 eval (NotificationCardClick (NotificationCardAC.IllutrationClick index)) state = do
   case state.notificationList Array.!! index of
@@ -117,6 +146,10 @@ eval (NotificationDetailModelAC NotificationDetailModel.BackArrow) state =
   continueWithCmd state
     [ pure BackPressed
     ]
+
+eval (NotificationDetailModelAC NotificationDetailModel.ShareMessage) state = do
+  let _ = shareMessageWithId state.notificationDetailModelState state
+  continue state
 
 eval (NotificationDetailModelAC (NotificationDetailModel.LikeMessage)) state = do
   let likes = if state.notificationDetailModelState.likeStatus then state.notificationDetailModelState.likeCount - 1 else state.notificationDetailModelState.likeCount + 1
@@ -237,28 +270,38 @@ eval LoadMore state = do
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
   case item of
     "Home" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit GoToHomeScreen
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit $ GoToHomeScreen state
     "Rides" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit GoToRidesScreen
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit $ GoToRidesScreen state
+    "Earnings" -> do
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit $ EarningsScreen state
     "Profile" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit GoToProfileScreen
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit $ GoToProfileScreen state
     "Rankings" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit $ GoToReferralScreen
+      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_BENEFITS
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit $ GoToReferralScreen state
     "Join" -> do 
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
       let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      void $ pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      void $ pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       exit $ SubscriptionScreen state
     _ -> continue state
 
-eval _ state = continue state
+eval _ state = update state
+
+shareMessageWithId :: NotificationDetailModelState ->  NotificationsScreenState -> Unit
+shareMessageWithId message state = 
+  let cityConfig = getCityConfig state.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION)
+      _ = shareTextMessage "Share Message" $ "Hey! Check out this message from Namma Yatri " <> "\n" <> message.title <> "\n " <> cityConfig.referral.domain <> "/p?vp=alerts&messageId=" <> message.messageId
+  in unit
 
 notifisDetailStateTransformer :: NotificationCardState -> NotificationDetailModelState
 notifisDetailStateTransformer selectedItem =
@@ -273,17 +316,20 @@ notifisDetailStateTransformer selectedItem =
   , commentBtnActive: false
   , messageId: selectedItem.messageId
   , notificationNotSeen: selectedItem.notificationNotSeen
-  , imageUrl: getImageUrl $ selectedItem.mediaUrl
+  , imageUrl: getImageUrl selectedItem.mediaUrl ""
   , mediaType: selectedItem.mediaType
   , likeCount : selectedItem.likeCount
   , likeStatus : selectedItem.likeStatus
   , viewCount: selectedItem.viewCount
+  , shareable: selectedItem.shareable
   }
 
 notificationListTransformer :: Array MessageAPIEntityResponse -> Array NotificationCardState
-notificationListTransformer notificationArray =
-  ( map
-      ( \(MessageAPIEntityResponse notificationItem) ->
+notificationListTransformer notificationArray = map notificationTransformer notificationArray
+  
+
+notificationTransformer :: MessageAPIEntityResponse -> NotificationCardState
+notificationTransformer (MessageAPIEntityResponse notificationItem) =
           let
             (MediaFileApiResponse media) = (fromMaybe dummyMedia ((notificationItem.mediaFiles) Array.!! 0))
           in
@@ -299,8 +345,8 @@ notificationListTransformer notificationArray =
             , comment: notificationItem.reply
             , imageUrl:
                 case media.fileType of
-                  VideoLink -> getImageUrl $ media.url
-                  PortraitVideoLink -> getImageUrl media.url
+                  VideoLink -> getImageUrl media.url ""
+                  PortraitVideoLink -> getImageUrl media.url ""
                   Video -> ""
                   ImageLink -> media.url
                   Image -> ""
@@ -309,11 +355,9 @@ notificationListTransformer notificationArray =
             , mediaType: Just media.fileType
             , likeCount : notificationItem.likeCount
             , viewCount : notificationItem.viewCount
+            , shareable : fromMaybe false notificationItem.shareable
             , likeStatus : notificationItem.likeStatus
             }
-      )
-      notificationArray
-  )
 
 propValueTransformer :: Array MessageAPIEntityResponse -> Array NotificationCardPropState
 propValueTransformer notificationArray =
@@ -321,7 +365,7 @@ propValueTransformer notificationArray =
       ( \(MessageAPIEntityResponse notificationItem) ->
           let
             (MediaFileApiResponse media) = (fromMaybe dummyMedia ((notificationItem.mediaFiles) Array.!! 0))
-            videoThumbnail = getImageUrl $ media.url
+            videoThumbnail = getImageUrl media.url ""
           in
             { mediaUrl: toPropValue $ media.url
             , description: toPropValue $ notificationCardDesc notificationItem.description
@@ -340,6 +384,9 @@ propValueTransformer notificationArray =
             , illustrationVisibility: toPropValue if Array.any (_ == media.fileType) [ VideoLink, Audio, Image, PortraitVideoLink, ImageLink ] then "visible" else "gone"
             , playBtnVisibility: toPropValue $ if media.fileType == VideoLink || media.fileType == PortraitVideoLink then "visible" else "gone"
             , playButton: toPropValue "ny_ic_play_btn"
+            , likeCountVisibility : toPropValue $ "visible"
+            , shareCountVisibility : toPropValue $ if fromMaybe false notificationItem.shareable then "visible" else "gone"
+            , viewCountVisibility : toPropValue $ "visible"
             , imageUrl:
                 toPropValue
                   $ case media.fileType of
@@ -381,6 +428,8 @@ youtubeData =
   , videoId: ""
   , videoType: ""
   , videoHeight : 0
+  , showFullScreen : false
+  , hideFullScreenButton : false
   }
 
 splitUrlsAndText :: String -> Array String

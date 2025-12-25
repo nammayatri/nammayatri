@@ -32,7 +32,11 @@ import Screens (ScreenName(..), getScreen)
 import Timers (clearTimerWithId)
 
 instance showAction :: Show Action where
-    show _ = ""
+  show (BackPressed ) = "BackPressed"
+  show (NoAction ) = "NoAction"
+  show (PopUpCallBack _) = "PopUpCallBack"
+  show (RideAllocationModalAction var1) = "RideAllocationModalAction_" <> show var1
+  show (AfterRender ) = "AfterRender"
 
 instance loggableAction :: Loggable Action where
     performLog action appId = case action of
@@ -101,7 +105,7 @@ eval (PopUpCallBack stringifyPayload) state = do
 
   let availableRide = (transformAllocationData entityPayload)
   continue state { data { availableRides = state.data.availableRides <> availableRide } }
-eval _ state = continue state
+eval _ state = update state
 
 transformAllocationData :: AllocationData -> Array Rides 
 transformAllocationData ride = [{

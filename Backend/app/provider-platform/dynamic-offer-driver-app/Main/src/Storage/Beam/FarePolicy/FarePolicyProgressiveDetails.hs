@@ -11,13 +11,12 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.FarePolicy.FarePolicyProgressiveDetails where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.FarePolicy as Domain
+import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
+import Domain.Types.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -25,8 +24,16 @@ import Tools.Beam.UtilsTH
 data FarePolicyProgressiveDetailsT f = FarePolicyProgressiveDetailsT
   { farePolicyId :: B.C f Text,
     baseDistance :: B.C f Meters,
+    distanceUnit :: B.C f (Maybe DistanceUnit),
     baseFare :: B.C f Money,
     deadKmFare :: B.C f Money,
+    pickupChargesMin :: B.C f (Maybe Money),
+    pickupChargesMax :: B.C f (Maybe Money),
+    pickupChargesMinAmount :: B.C f (Maybe HighPrecMoney),
+    pickupChargesMaxAmount :: B.C f (Maybe HighPrecMoney),
+    baseFareAmount :: B.C f (Maybe HighPrecMoney),
+    deadKmFareAmount :: B.C f (Maybe HighPrecMoney),
+    currency :: B.C f (Maybe Currency),
     waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
     freeWatingTime :: B.C f (Maybe Minutes), -- FIXME typo
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
@@ -44,3 +51,5 @@ type FarePolicyProgressiveDetails = FarePolicyProgressiveDetailsT Identity
 $(enableKVPG ''FarePolicyProgressiveDetailsT ['farePolicyId] [])
 
 $(mkTableInstances ''FarePolicyProgressiveDetailsT "fare_policy_progressive_details")
+
+$(mkCacParseInstance ''FarePolicyProgressiveDetailsT)

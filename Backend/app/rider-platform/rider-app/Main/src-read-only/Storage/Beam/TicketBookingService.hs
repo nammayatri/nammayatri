@@ -1,26 +1,28 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Storage.Beam.TicketBookingService where
 
+import qualified Data.Aeson
+import qualified Data.Time
 import qualified Database.Beam as B
 import qualified Domain.Types.BusinessHour
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.TicketBooking
+import Domain.Types.Common ()
 import qualified Domain.Types.TicketBookingService
-import qualified Domain.Types.TicketService
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data TicketBookingServiceT f = TicketBookingServiceT
   { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    assignmentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bHourId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bookedSeats :: B.C f Kernel.Prelude.Int,
     btype :: B.C f Domain.Types.BusinessHour.BusinessHourType,
+    cancelledSeats :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     expiryDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     id :: B.C f Kernel.Prelude.Text,
@@ -30,14 +32,15 @@ data TicketBookingServiceT f = TicketBookingServiceT
     ticketBookingId :: B.C f Kernel.Prelude.Text,
     ticketServiceId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vendorSplitDetails :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     verificationCount :: B.C f Kernel.Prelude.Int,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))
+    visitDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table TicketBookingServiceT where
-  data PrimaryKey TicketBookingServiceT f = TicketBookingServiceId (B.C f Kernel.Prelude.Text)
-    deriving (Generic, B.Beamable)
+  data PrimaryKey TicketBookingServiceT f = TicketBookingServiceId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
   primaryKey = TicketBookingServiceId . id
 
 type TicketBookingService = TicketBookingServiceT Identity

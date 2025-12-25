@@ -21,7 +21,6 @@ import Common.Types.App (FlowBT)
 handleApiError :: forall e st. Error.ApiErrorHandler e st => e -> ErrorResponse -> FlowBT String st Unit
 handleApiError errorHandler err = do
   let apiError = Error.toApiError (Error.parseApiResponseError err) errorHandler
-  Error.handleAllErrors errorHandler
   case apiError of
     Error.NetworkError netErr -> Error.handleNetworkError netErr errorHandler
     Error.ServerError msg -> Error.handleServerError msg errorHandler

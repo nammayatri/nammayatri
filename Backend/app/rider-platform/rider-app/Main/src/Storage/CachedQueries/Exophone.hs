@@ -21,7 +21,6 @@ module Storage.CachedQueries.Exophone
     updateAffectedPhones,
     deleteByMerchantOperatingCityId,
     clearCache,
-    clearAllCache,
     findByPrimaryPhone,
     findByMerchantOperatingCityIdAndService,
   )
@@ -79,8 +78,8 @@ clearCache merchantOperatingCityId exophones = do
     Hedis.del (makePhoneKey exophone.primaryPhone)
     Hedis.del (makePhoneKey exophone.backupPhone)
 
-clearAllCache :: Hedis.HedisFlow m r => m ()
-clearAllCache = Hedis.delByPattern patternKey
+-- clearAllCache :: Hedis.HedisFlow m r => m ()
+-- clearAllCache = Hedis.delByPattern patternKey
 
 -- test with empty list
 cacheExophones :: CacheFlow m r => Id DMOC.MerchantOperatingCity -> [Exophone] -> m ()
@@ -110,15 +109,12 @@ makePhoneKey phone = "CachedQueries:Exophones:Phone-" <> phone
 makeMerchantOperatingCityIdAndServiceKey :: Id DMOC.MerchantOperatingCity -> CallService -> Text
 makeMerchantOperatingCityIdAndServiceKey merchantOperatingCityId service = "CachedQueries:Exophones:MerchantOperatingCityId-" <> merchantOperatingCityId.getId <> ":CallService-" <> show service
 
-patternKey :: Text
-patternKey = "CachedQueries:Exophones:*"
-
 -- create :: Exophone -> Esq.SqlDB ()
-create :: MonadFlow m => Exophone -> m ()
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Exophone -> m ()
 create = Queries.create
 
-updateAffectedPhones :: MonadFlow m => [Text] -> m ()
+updateAffectedPhones :: (MonadFlow m, EsqDBFlow m r) => [Text] -> m ()
 updateAffectedPhones = Queries.updateAffectedPhones
 
-deleteByMerchantOperatingCityId :: MonadFlow m => Id DMOC.MerchantOperatingCity -> m ()
+deleteByMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
 deleteByMerchantOperatingCityId = Queries.deleteByMerchantOperatingCityId

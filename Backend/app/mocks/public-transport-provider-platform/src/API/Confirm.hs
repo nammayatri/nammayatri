@@ -84,7 +84,7 @@ transactionOk context order = do
 
 cancelTransaction :: TrStatus -> Context -> Order -> MockM AppEnv ()
 cancelTransaction trStatus ctx order = do
-  let ctx' = ctx {action = ON_CANCEL}
+  let ctx' = ctx {action = ON_CANCEL} :: Context
       onCancelReq = BecknCallbackReq ctx' (Right $ OnCancelMessage $ failedTransaction trStatus order)
   logOutput INFO $ "editing order with orderId=" <> order.id <> "; payment failed"
   _ <- Redis.editOrder (failedTransaction trStatus) order.id

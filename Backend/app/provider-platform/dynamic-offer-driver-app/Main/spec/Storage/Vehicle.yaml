@@ -1,0 +1,131 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  UTCTime: Kernel.Prelude
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  ServiceTierType: Domain.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
+  VehicleVariant: Domain.Types.VehicleVariant
+  UpgradedTier: Domain.Types.UpgradedTier
+  Value: Data.Aeson
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+Vehicle:
+  tableName: vehicle
+
+  types:
+    RegistrationCategory:
+      enum: "COMMERCIAL,PERSONAL,OTHER,PUBLIC"
+      derive: "HttpInstance"
+    VehicleAPIEntity:
+      driverId: Id Person
+      variant: VehicleVariant
+      serviceTierType: Maybe ServiceTierType
+      model: Text
+      color: Text
+      vehicleName: Maybe Text
+      registrationNo: Text
+      category: Maybe VehicleCategory
+      capacity: Maybe Int
+      createdAt: UTCTime
+      vehicleImageId: Maybe (Id MediaFile)
+
+  fields:
+    driverId: Id Person
+    merchantId: Id Merchant
+    variant: VehicleVariant|NoRelation
+    model: Text
+    color: Text
+    vehicleName: Maybe Text
+    registrationNo: Text
+    capacity: Maybe Int
+    category: Maybe VehicleCategory|NoRelation
+    make: Maybe Text
+    size: Maybe Text
+    energyType: Maybe Text
+    registrationCategory: Maybe RegistrationCategory
+    vehicleClass: Text
+    airConditioned: Maybe Bool
+    downgradeReason: Maybe Text
+    oxygen: Maybe Bool
+    ventilator: Maybe Bool
+    luggageCapacity: Maybe Int
+    mYManufacturing: Maybe Day
+    vehicleRating: Maybe Double
+    selectedServiceTiers: "[ServiceTierType]"
+    vehicleTags: Maybe [Text]
+    ruleBasedUpgradeTiers: Maybe [UpgradedTier]
+    vehicleImageId: Maybe (Id MediaFile)
+
+  beamType:
+    ruleBasedUpgradeTiers: Maybe Value
+  fromTType:
+    category: Domain.Types.VehicleVariant.getVehicleCategory category variant |E
+    ruleBasedUpgradeTiers: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< ruleBasedUpgradeTiers|E
+  toTType:
+    ruleBasedUpgradeTiers: Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers|E
+  default:
+    selectedServiceTiers: "'{}'"
+
+  sqlType:
+    selectedServiceTiers: text[]
+    ruleBasedUpgradeTiers: "json"
+
+  constraints:
+    driverId: PrimaryKey
+    registrationNo: SecondaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - updateByPrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: driverId
+    findByRegistrationNo:
+      kvFunction: findOneWithKV
+      where: registrationNo
+    updateVehicleName:
+      kvFunction: updateWithKV
+      params: [vehicleName]
+      where: driverId
+    updateVehicleModel:
+      kvFunction: updateWithKV
+      params: [model]
+      where: driverId
+    updateSelectedServiceTiers:
+      kvFunction: updateOneWithKV
+      params: [selectedServiceTiers]
+      where: driverId
+    updateAirConditioned:
+      kvFunction: updateWithKV
+      params: [airConditioned, downgradeReason]
+      where: driverId
+    updateOxygen:
+      kvFunction: updateWithKV
+      params: [oxygen]
+      where: driverId
+    updateVentilator:
+      kvFunction: updateWithKV
+      params: [ventilator]
+      where: driverId
+    updateManufacturing:
+      kvFunction: updateWithKV
+      params: [mYManufacturing]
+      where: driverId
+    deleteByDriverid:
+      kvFunction: deleteWithKV
+      where: driverId
+    updateRuleBasedUpgradeTiers:
+      kvFunction: updateOneWithKV
+      params: [ruleBasedUpgradeTiers]
+      where: driverId
+    updateVehicleImageId:
+      kvFunction: updateOneWithKV
+      params: [vehicleImageId]
+      where: driverId

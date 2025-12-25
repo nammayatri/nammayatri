@@ -1,0 +1,346 @@
+imports:
+  TripCategory: Domain.Types.Common
+  Area: Lib.Types.SpecialLocation
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Money: Kernel.Types.Common
+  RiderDetails: Domain.Types.RiderDetails
+  Location: Domain.Types.Location
+  Seconds: Kernel.Types.Common
+  FareParameters: Domain.Types.FareParameters
+  ServiceTierType: Domain.Types.Common
+  MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
+  City: Kernel.Types.Beckn.Context
+  Country: Kernel.Types.Beckn.Context
+  Currency: Kernel.Utils.Common
+  Estimate: Domain.Types.Estimate
+  DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
+  TripParty: Domain.Types.Trip
+  ConfigVersionMap: Lib.Yudhishthira.Types
+  Value: Data.Aeson
+  ParcelType: Domain.Types.ParcelType
+  BillingCategory: SharedLogic.Type
+  PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
+  PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+
+Booking:
+  derives: "Generic,Show,FromJSON,ToJSON"
+  types:
+    BookingStatus:
+      enum: "NEW,TRIP_ASSIGNED,COMPLETED,CANCELLED,REALLOCATED"
+      derive: "HttpInstance"
+    BookingType:
+      enum: "SpecialZoneBooking,NormalBooking"
+
+  fields:
+    id: Id Booking
+    transactionId: Text
+    quoteId: Text
+    status: BookingStatus
+    hasStops: Maybe Bool
+    dynamicPricingLogicVersion: Maybe Int
+    estimatedCongestionCharge: Maybe HighPrecMoney
+    tripCategory: TripCategory
+    specialZoneOtpCode: Maybe Text
+    specialLocationTag: Maybe Text
+    disabilityTag: Maybe Text
+    area: Maybe Area
+    providerId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    fromLocGeohash: Maybe Text
+    toLocGeohash: Maybe Text
+    primaryExophone: Text
+    bapId: Text
+    billingCategory: BillingCategory
+    bapUri: Text
+    bapCity: Maybe City
+    bapCountry: Maybe Country
+    startTime: UTCTime
+    riderId: Maybe (Id RiderDetails)
+    fromLocation: Location
+    toLocation: Maybe Location
+    stops: "[Location]"
+    vehicleServiceTier: ServiceTierType
+    vehicleServiceTierName: Text
+    vehicleServiceTierSeatingCapacity: Maybe Int
+    vehicleServiceTierAirConditioned: Maybe Double # deprecated
+    isAirConditioned: Maybe Bool
+    estimatedDistance: Maybe Meters
+    maxEstimatedDistance: Maybe HighPrecMeters
+    estimatedFare: HighPrecMoney
+    currency: Currency
+    estimatedDuration: Maybe Seconds
+    fareParams: FareParameters
+    riderName: Maybe Text
+    paymentMethodId: Maybe (Id MerchantPaymentMethod)
+    tollNames: Maybe [Text]
+    tollIds: Maybe [Text]
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    paymentUrl: Maybe Text
+    stopLocationId: Maybe (Id Location)
+    distanceToPickup: Maybe Meters
+    distanceUnit: DistanceUnit
+    returnTime: Maybe UTCTime
+    roundTrip: Maybe Bool
+    isScheduled: Bool
+    estimateId: Maybe (Id Estimate)
+    paymentId: Maybe Text
+    isDashboardRequest: Bool
+    senderDetails: Maybe DeliveryPersonDetails
+    receiverDetails: Maybe DeliveryPersonDetails
+    parcelType: Maybe ParcelType
+    parcelQuantity: Maybe Int
+    initiatedAs: Maybe TripParty
+    isReferredRide: Maybe Bool
+    isSafetyPlus : Bool
+    isPetRide: Bool
+    configInExperimentVersions: "[ConfigVersionMap]"
+    coinsRewardedOnGoldTierRide: Maybe Int
+    isInsured: Bool
+    insuredAmount: Maybe Text
+    exotelDeclinedCallStatusReceivingTime: Maybe UTCTime
+    numberOfLuggages: Maybe Int
+    paymentInstrument: Maybe PaymentInstrument
+    paymentMode: Maybe PaymentMode
+    commission: Maybe HighPrecMoney
+
+  excludedFields:
+    - merchantId
+
+  beamType:
+    currency: Maybe Currency
+    tripCategory: Maybe TripCategory
+    riderId: Maybe Text
+    vehicleServiceTierName: Maybe Text
+    #estimatedFare: HighPrecMoney
+    paymentMethodId: Maybe Text
+    stopLocationId: Maybe Text
+    distanceToPickup: Maybe HighPrecMeters
+    isScheduled: Maybe Bool
+    merchantOperatingCityId: Maybe Text
+    distanceUnit: Maybe DistanceUnit
+    isDashboardRequest: Maybe Bool
+    configInExperimentVersions: Maybe Value
+    isSafetyPlus : Maybe Bool
+    isInsured: Maybe Bool
+    isPetRide: Maybe Bool
+    billingCategory: Maybe BillingCategory
+
+  beamFields:
+    tripCategory:
+      tripCategory: Maybe TripCategory
+      bookingType: BookingType
+    fromLocation:
+      fromLocationId: Maybe Text
+    stops: {}
+    toLocation:
+      toLocationId: Maybe Text
+    vehicleServiceTier:
+      vehicleVariant: ServiceTierType
+    fareParams:
+      fareParametersId: Text
+    senderDetails:
+      senderId: Maybe (Id RiderDetails)
+      senderName: Maybe Text
+      senderPrimaryExophone: Maybe Text
+    receiverDetails:
+      receiverId: Maybe (Id RiderDetails)
+      receiverName: Maybe Text
+      receiverPrimaryExophone: Maybe Text
+
+  toTType:
+    currency: Just currency|E
+    tripCategory: (Just tripCategory)|E
+    vehicleServiceTierName: (Just vehicleServiceTierName)|E
+    #estimatedFare: Kernel.Prelude.realToFrac|I
+    distanceToPickup: (Kernel.Prelude.realToFrac <$> distanceToPickup)|E
+    isScheduled: (Just isScheduled)|E
+    bookingType: Storage.Queries.Transformers.Booking.getBookingTypeFromTripCategory tripCategory|E
+    fromLocationId: (Just $ Kernel.Types.Id.getId $ (.id) fromLocation)|E
+    toLocationId: ((Kernel.Types.Id.getId . (.id)) <$> toLocation)|E
+    vehicleVariant: vehicleServiceTier|E
+    fareParametersId: (Kernel.Types.Id.getId $ (.id) fareParams)|E
+    merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
+    distanceUnit: Kernel.Prelude.Just|I
+    isDashboardRequest: (Just isDashboardRequest)|E
+    senderId: (Kernel.Types.Id.getId <$> (senderDetails <&> (.id)))|E
+    senderName: (senderDetails <&> (.name))|E
+    senderPrimaryExophone: (senderDetails <&> (.primaryExophone))|E
+    receiverId: (Kernel.Types.Id.getId <$> (receiverDetails <&> (.id)))|E
+    receiverName: (receiverDetails <&> (.name))|E
+    receiverPrimaryExophone: (receiverDetails <&> (.primaryExophone))|E
+    configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
+    isSafetyPlus : Just isSafetyPlus|E
+    isInsured: Just isInsured|E
+    isPetRide: Just isPetRide|E
+    billingCategory: Just billingCategory|E
+
+  intermediateTransformers:
+    fromTType:
+      - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
+      - fromAndToLocation': Storage.Queries.Transformers.Booking.fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerId merchantOperatingCityId|EM
+      - merchant: Storage.CachedQueries.Merchant.findById (Kernel.Types.Id.Id providerId) >>= fromMaybeM (Kernel.Types.Error.MerchantNotFound providerId)|EM
+      - senderAndReceiverDetails: Storage.Queries.Transformers.Booking.getSenderAndReceiverDetails tripCategory senderId senderName senderPrimaryExophone receiverId receiverName receiverPrimaryExophone|EM
+  fromTType:
+    currency: fromMaybe Kernel.Types.Common.INR currency|E
+    tripCategory: getTripCategory
+    merchantOperatingCityId: Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity|EM
+    fareParams: 'Storage.Queries.FareParameters.findById (Kernel.Types.Id.Id fareParametersId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("FareParameters not found for booking: " <> show id))|EM'
+    fromLocation: fst fromAndToLocation'|E
+    toLocation: snd fromAndToLocation'|E
+    vehicleServiceTier: vehicleVariant|E
+    stops: Storage.Queries.Transformers.Booking.getStops id hasStops|EM
+    vehicleServiceTierName: fromMaybe (show vehicleVariant) vehicleServiceTierName|E
+    #estimatedFare: Kernel.Prelude.roundToIntegral estimatedFare|E
+    isScheduled: fromMaybe False isScheduled|E
+    distanceToPickup: Kernel.Prelude.roundToIntegral <$> distanceToPickup|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    isDashboardRequest: fromMaybe False isDashboardRequest|E
+    senderDetails: fst <$> senderAndReceiverDetails|E
+    receiverDetails: snd <$> senderAndReceiverDetails|E
+    configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
+    isSafetyPlus: fromMaybe False isSafetyPlus|E
+    isInsured: fromMaybe False isInsured|E
+    isPetRide: fromMaybe False isPetRide|E
+    billingCategory: fromMaybe SharedLogic.Type.PERSONAL billingCategory|E
+
+  sqlType:
+    status: character varying(255)
+    bapId: character varying(255)
+    bapUri: character varying(255)
+    fromLocationId: character varying(36)
+    toLocationId: character varying(36)
+    vehicleVariant: character varying(255)
+    estimatedFare: double precision
+    estimatedDistance: double precision
+    quoteId: character varying(36)
+    fareParametersId: character varying(36)
+    riderName: character varying(255)
+    primaryExophone: character varying(255)
+    bookingType: character(36)
+    specialZoneOtpCode: character(4)
+    transactionId: character(36)
+    maxEstimatedDistance: double precision
+    distanceToPickup: double precision
+    currency: character varying(255)
+    tollNames: "text[]"
+    tollIds: "text[]"
+    estimateId: character varying(255)
+    configInExperimentVersions: "json"
+
+  default:
+    bookingType: "'NormalBooking'"
+
+  queries:
+    updateEstimatedDistanceAndFare:
+      kvFunction: updateOneWithKV
+      params: [estimatedFare, estimatedDistance]
+      where: id
+
+  constraints:
+    id: PrimaryKey
+    specialZoneOtpCode: "!SecondaryKey" # forcing to be a secondary key
+    quoteId: "!SecondaryKey" # forcing to be a secondary key
+    transactionId: "!SecondaryKey" # forcing to be a secondary key
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+BookingLocation:
+  derives: "Generic,Show,Eq,Kernel.External.Maps.HasCoordinates.HasCoordinates"
+
+  types:
+    LocationAddress:
+      street: Maybe Text
+      door: Maybe Text
+      city: Maybe Text
+      state: Maybe Text
+      country: Maybe Text
+      building: Maybe Text
+      areaCode: Maybe Text
+      area: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
+      derive': "Generic,Show,Eq"
+    BookingLocationAPIEntity:
+      lat: Double
+      lon: Double
+      street: Maybe Text
+      city: Maybe Text
+      state: Maybe Text
+      country: Maybe Text
+      building: Maybe Text
+      areaCode: Maybe Text
+      area: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
+      derive': "Generic,FromJSON,ToJSON,Show,Data.OpenApi.ToSchema"
+
+  fields:
+    id: Id BookingLocation
+    lat: Double
+    lon: Double
+    address: LocationAddress
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamFields:
+    address:
+      street: Maybe Text
+      door: Maybe Text
+      city: Maybe Text
+      state: Maybe Text
+      country: Maybe Text
+      building: Maybe Text
+      areaCode: Maybe Text
+      area: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
+
+  toTType:
+    street: (.street)|I
+    door: (.door)|I
+    city: (.city)|I
+    state: (.state)|I
+    country: (.country)|I
+    building: (.building)|I
+    areaCode: (.areaCode)|I
+    area: (.area)|I
+    instructions: (.instructions)|I
+    extras: (.extras)|I
+
+  fromTType:
+    address: mkLocationAddress
+
+  sqlType:
+    city: character varying(255)
+    state: character varying(255)
+    country: character varying(255)
+    street: character varying(255)
+    building: character varying(255)
+    areaCode: character varying(255)
+    area: character varying(255)
+    door: character varying(255)
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateAddress:
+      kvFunction: updateOneWithKV
+      params: [address]
+      where: id
+
+  excludedDefaultQueries:
+    - createMany
+    - findByPrimaryKey
+    - updateByPrimaryKey

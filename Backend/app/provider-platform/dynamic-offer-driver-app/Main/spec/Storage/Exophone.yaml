@@ -1,0 +1,50 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Text: Data.Text
+  CallService: Kernel.External.Call.Types
+
+Exophone:
+  tableName: exophone
+
+  types:
+    ExophoneType:
+      enum: "CALL_RIDE, END_RIDE, CALL_DELIVERY_SENDER, CALL_DELIVERY_RECEIVER"
+
+  fields:
+    id : Id Exophone
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+    primaryPhone : Text
+    backupPhone : Text
+    isPrimaryDown : Bool
+    exophoneType : ExophoneType
+    callService : CallService
+
+  constraints:
+    id: PrimaryKey
+    primaryPhone: "!SecondaryKey" # forcing to be a secondary key
+    backupPhone: "!SecondaryKey" # forcing to be a secondary key
+
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+    findByMerchantOpCityIdServiceAndExophoneType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, callService, exophoneType]
+
+    deleteByMerchantOpCityId:
+      kvFunction: deleteWithKV
+      where: merchantOperatingCityId
+
+  default :
+    exophoneType : "'CALL_RIDE'"
+    callService : "'Exotel'"
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

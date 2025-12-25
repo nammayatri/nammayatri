@@ -15,40 +15,54 @@
 
 module Screens.DriverDetailsScreen.Controller where
 
-import Prelude (class Show, unit, (/=), ($), (<>), (>), (-), (==), (||), (<=), (+),(<),(<=), pure, bind, discard,(&&),show, not)
-import PrestoDOM (Eval, continue, exit, continueWithCmd)
-import Screens.Types (DriverDetailsScreenState, KeyboardModalType(..))
-import PrestoDOM.Types.Core (class Loggable)
-import Language.Strings (getString)
-import Language.Types(STR(..))
 import Common.Types.App (LazyCheck(..))
-import Screens.DriverDetailsScreen.ComponentConfig (ListOptions(..))
-import Effect.Class (liftEffect)
-import JBridge (renderBase64Image, toast)
-import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress,trackAppScreenEvent)
-import Helpers.Utils (getTime,differenceBetweenTwoUTC)
-import Types.App (GlobalState(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), FlowBT,  ScreenType(..))
-import Storage (KeyStore(..),getValueToLocalStore)
-import Screens (ScreenName(..), getScreen)
+import Common.Types.App (OptionButtonList)
 import Components.InAppKeyboardModal as InAppKeyboardModal
-import Debug (spy)
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButtonController
+import Components.SelectListModal as SelectListModal
+import Data.Array as Array
+import Data.Function.Uncurried (runFn2)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (take, length, drop)
 import Data.String.CodeUnits (charAt)
-import Data.Int (fromString)
-import Helpers.Utils(toStringJSON,getGenderIndex)
-import Components.SelectListModal as SelectListModal
-import Components.PrimaryButton as PrimaryButtonController
-import Common.Types.App (OptionButtonList)
-import Data.Array as Array
-import Components.PopUpModal as PopUpModal
+import Debug (spy)
+import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
+import Helpers.Utils (getGenderIndex)
+import JBridge (renderBase64Image, toast, differenceBetweenTwoUTC)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
+import Prelude (class Show, unit, (/=), ($), (<>), (>), (-), (==), (||), (<=), (+), (<), (<=), pure, bind, discard, (&&), show, not)
+import PrestoDOM (Eval, update, continue, exit, continueWithCmd)
+import PrestoDOM.Types.Core (class Loggable)
+import Screens (ScreenName(..), getScreen)
+import Screens.DriverDetailsScreen.ComponentConfig (ListOptions(..))
+import Screens.Types (DriverDetailsScreenState, KeyboardModalType(..))
+import Storage (KeyStore(..), getValueToLocalStore)
+import Types.App (GlobalState(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), FlowBT, ScreenType(..))
 
 
 
 
 instance showAction :: Show Action where
-  show _ = ""
+  show (NoAction) = "NoAction"
+  show (BackPressed) = "BackPressed"
+  show (CallBackImageUpload _ _ _) = "CallBackImageUpload"
+  show (RenderBase64Image) = "RenderBase64Image"
+  show (AfterRender) = "AfterRender"
+  show (UploadFileAction) = "UploadFileAction"
+  show (ClickAddAlternateButton) = "ClickAddAlternateButton"
+  show (InAppKeyboardModalMobile var1) = "InAppKeyboardModalMobile_" <> show var1
+  show (InAppKeyboardModalOtp var1) = "InAppKeyboardModalOtp_" <> show var1
+  show (PopUpModalAction var1) = "PopUpModalAction_" <> show var1
+  show (GenderSelectionModalAction var1) = "GenderSelectionModalAction_" <> show var1
+  show (ClickRemoveAlternateNumber) = "ClickRemoveAlternateNumber"
+  show (ClickEditAlternateNumber) = "ClickEditAlternateNumber"
+  show (PopUpModalActions var1) = "PopUpModalActions_" <> show var1
+  show (GenderSelectionOpen) = "GenderSelectionOpen"
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen DRIVER_DETAILS_SCREEN)
@@ -139,11 +153,10 @@ eval UploadFileAction state = continue state
 eval NoAction state = continue state
 
 eval ClickAddAlternateButton state = do
-  _ <- pure $ spy "Alternate Number" (getValueToLocalStore SET_ALTERNATE_TIME)
   let curr_time = getCurrentUTC ""
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
-  let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
-  if(time_diff <= 600) then do
+  let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time
+  if(time_diff <= 600 && time_diff > 0) then do
     pure $ toast (getString TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER)
     continue state
   else
@@ -153,8 +166,8 @@ eval ClickEditAlternateNumber state = do
   _ <- pure $ spy " Edit Alternate Number" ""
   let curr_time = getCurrentUTC ""
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
-  let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
-  if(time_diff <= 600) then do
+  let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time
+  if(time_diff <= 600 && time_diff > 0) then do
    pure $ toast (getString TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER)
    continue state
   else
@@ -239,7 +252,7 @@ eval (GenderSelectionModalAction (SelectListModal.Button2 PrimaryButtonControlle
     _ <- pure $ spy "Gender Selected " genderSelected
     exit (UpdateGender state {data = state.data{driverGender = Just (fromMaybe dummyOptions genderSelected).reasonCode},props = state.props{genderSelectionModalShow = false}})
 
-eval _ state = continue state
+eval _ state = update state
 
 genders :: LazyCheck -> Array OptionButtonList
 genders dummy =

@@ -1,10 +1,8 @@
-ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN search_repeat_type character varying(255);
 UPDATE atlas_driver_offer_bpp.search_try AS T1 SET search_repeat_type = 'INITIAL'
   WHERE T1.search_repeat_counter = 0 AND T1.created_at > now () - interval '6 hour';
 UPDATE atlas_driver_offer_bpp.search_try AS T1 SET search_repeat_type = 'REALLOCATION'
   WHERE T1.search_repeat_counter IS NULL AND T1.created_at > now () - interval '6 hour';
 
-ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN base_fare integer;
 UPDATE atlas_driver_offer_bpp.search_try AS T1 SET base_fare = (
     SELECT T2.base_fare FROM atlas_driver_offer_bpp.search_request_for_driver AS T2
     WHERE T2.search_try_id = T1.id
@@ -28,5 +26,3 @@ UPDATE atlas_driver_offer_bpp.search_try AS T1 SET base_fare = (
 
 ALTER TABLE atlas_driver_offer_bpp.search_try ALTER COLUMN search_repeat_type SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.search_try ALTER COLUMN base_fare SET NOT NULL;
-
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver DROP COLUMN base_fare;

@@ -192,10 +192,12 @@
     "progress_circle": true,
     "progress_loader": true,
     "progressbar_clip": true,
-    "rectangle_9506": true,
+    "tip_banner_rectangle": true,
     "rotate_drawable": true,
     "round_circle": true,
     "round_corner_layout": true,
+    "round_corner": true,
+    "round_corner_button": true,
     "rounded_corner_background": true,
     "shape_profile_drawable": true,
     "widget_close_gradient": true

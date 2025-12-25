@@ -1,0 +1,13 @@
+
+-- PLEASE RUN IN PROD ONLY :-
+
+update atlas_driver_offer_bpp.document_verification_config set "order" = 1 where merchant_id not in ('b7269e46-933a-40c0-b636-7903d29a31b4', '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f') and vehicle_category IN ('AUTO_CATEGORY', 'CAR') and document_type = 'VehicleRegistrationCertificate';
+update atlas_driver_offer_bpp.document_verification_config set "order" = 2 where merchant_id not in ('b7269e46-933a-40c0-b636-7903d29a31b4', '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f') and vehicle_category IN ('AUTO_CATEGORY', 'CAR') and document_type = 'DriverLicense';
+update atlas_driver_offer_bpp.document_verification_config set "order" = 3 where merchant_id not in ('b7269e46-933a-40c0-b636-7903d29a31b4', '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f') and vehicle_category IN ('AUTO_CATEGORY', 'CAR') and document_type = 'ProfilePhoto';
+update atlas_driver_offer_bpp.document_verification_config set "order" = 4 where merchant_id not in ('b7269e46-933a-40c0-b636-7903d29a31b4', '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f') and vehicle_category IN ('AUTO_CATEGORY', 'CAR') and document_type = 'AadhaarCard';
+update atlas_driver_offer_bpp.document_verification_config set "order" = 5 where merchant_id not in ('b7269e46-933a-40c0-b636-7903d29a31b4', '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f') and vehicle_category IN ('AUTO_CATEGORY', 'CAR') and document_type = 'PanCard';
+update atlas_driver_offer_bpp.document_verification_config set "order" = 6 where merchant_id not in ('b7269e46-933a-40c0-b636-7903d29a31b4', '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f') and vehicle_category IN ('AUTO_CATEGORY', 'CAR') and document_type = 'Permissions';
+update atlas_driver_offer_bpp.document_verification_config set "order" = 7 where merchant_id not in ('b7269e46-933a-40c0-b636-7903d29a31b4', '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f') and vehicle_category IN ('AUTO_CATEGORY', 'CAR') and document_type = 'VehiclePermit';
+update atlas_driver_offer_bpp.document_verification_config set "order" = 8 where merchant_id not in ('b7269e46-933a-40c0-b636-7903d29a31b4', '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f') and vehicle_category IN ('AUTO_CATEGORY', 'CAR') and document_type = 'VehicleFitnessCertificate';
+update atlas_driver_offer_bpp.document_verification_config set "order" = 9 where merchant_id not in ('b7269e46-933a-40c0-b636-7903d29a31b4', '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f') and vehicle_category IN ('AUTO_CATEGORY', 'CAR') and document_type = 'VehicleInsurance';
+update atlas_driver_offer_bpp.document_verification_config set "order" = 10 where merchant_id not in ('b7269e46-933a-40c0-b636-7903d29a31b4', '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f') and vehicle_category IN ('AUTO_CATEGORY', 'CAR') and document_type = 'VehiclePUC';

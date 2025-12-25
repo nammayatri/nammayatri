@@ -1,26 +1,21 @@
-module RemoteConfigs where
+{-
 
-import Prelude
-import DecodeUtil (decodeForeignObject)
-import Foreign (Foreign)
-import RemoteConfig.Utils (fetchRemoteConfigString)
+  Copyright 2022-23, Juspay India Pvt Ltd
 
-foreign import getSubsRemoteConfig :: String -> Foreign
+  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
 
-subscriptionConfig :: String -> SubsRemoteConfig
-subscriptionConfig key = do
-    let conf = getSubsRemoteConfig $ fetchRemoteConfigString key
-    decodeForeignObject conf subscriptionRemoteConfig
+  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
 
-type SubsRemoteConfig = {
-    max_dues_limit :: Number,
-    low_dues_warning_limit :: Number,
-    high_due_warning_limit :: Number
-}
+  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 
-subscriptionRemoteConfig :: SubsRemoteConfig
-subscriptionRemoteConfig = {
-    max_dues_limit : 100.0,
-    low_dues_warning_limit : 25.0,
-    high_due_warning_limit : 75.0
-}
+  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
+module RemoteConfig (module Reexport) where
+
+import RemoteConfig.Types as Reexport
+import RemoteConfig.Utils as Reexport
+import Common.RemoteConfig as Reexport
+

@@ -15,19 +15,25 @@
 
 module Screens.SelectLanguageScreen.Handler where
 
+import Prelude
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>))
 import Screens.SelectLanguageScreen.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.SelectLanguageScreen.View as SelectLanguageScreen
-import Types.App (GlobalState(..), FlowBT, SELECT_LANGUAGE_SCREEN_OUTPUT(..))
+import Types.App (GlobalState(..), FlowBT, SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..))
 import Constants as Constants
+import Types.ModifyScreenState (modifyScreenState)
 
 selectLanguageScreen :: FlowBT String SELECT_LANGUAGE_SCREEN_OUTPUT
 selectLanguageScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ SelectLanguageScreen.screen state.selectedLanguageScreen
+  action <- lift $ lift $ runLoggableScreen $ SelectLanguageScreen.screen state.selectedLanguageScreen
   case action of
-    GoBack -> App.BackT $ App.NoBack <$> pure CHANGE_LANGUAGE
+    GoBack updatedState -> App.BackT $ App.NoBack <$> (pure $ CHANGE_LANGUAGE updatedState)
+    GoToPreviousScreen -> App.BackT $ pure App.GoBack
+    LanguageConfirmed updatedState -> do
+      modifyScreenState $ SelectLanguageScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ LANGUAGE_CONFIRMED updatedState)

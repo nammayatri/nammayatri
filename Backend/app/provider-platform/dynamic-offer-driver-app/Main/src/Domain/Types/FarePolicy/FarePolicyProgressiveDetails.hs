@@ -15,24 +15,37 @@
 module Domain.Types.FarePolicy.FarePolicyProgressiveDetails
   ( module Reexport,
     module Domain.Types.FarePolicy.FarePolicyProgressiveDetails,
+    WaitingChargeInfo (..),
+    NightShiftCharge (..),
+    WaitingCharge (..),
+    PickupCharges (..),
+    PickupChargesWithCurrency (..),
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
+import Data.Aeson.Types
+import Data.List.NonEmpty
 import Domain.Types.Common
-import Domain.Types.FarePolicy.Common as Reexport
+import Domain.Types.FarePolicy.Common
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as Reexport
-import Kernel.Prelude
+import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection as Reexport
+import Kernel.Prelude as KP
 import Kernel.Types.Common
 
 data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
-  { baseFare :: Money,
+  { baseFare :: HighPrecMoney,
     baseDistance :: Meters,
+    distanceUnit :: DistanceUnit,
     perExtraKmRateSections :: NonEmpty (FPProgressiveDetailsPerExtraKmRateSectionD s),
-    deadKmFare :: Money,
+    perMinRateSections :: Maybe (NonEmpty FPProgressiveDetailsPerMinRateSection),
+    deadKmFare :: HighPrecMoney,
+    pickupCharges :: PickupCharges,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge
+    nightShiftCharge :: Maybe NightShiftCharge,
+    currency :: Currency
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 type FPProgressiveDetails = FPProgressiveDetailsD 'Safe
 
@@ -40,23 +53,27 @@ instance FromJSON (FPProgressiveDetailsD 'Unsafe)
 
 instance ToJSON (FPProgressiveDetailsD 'Unsafe)
 
+-- FIXME remove
+instance FromJSON (FPProgressiveDetailsD 'Safe)
+
+-- FIXME remove
+instance ToJSON (FPProgressiveDetailsD 'Safe)
+
 -----------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------
 
 data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
   { baseFare :: Money,
+    baseFareWithCurrency :: PriceAPIEntity,
     baseDistance :: Meters,
     perExtraKmRateSections :: NonEmpty FPProgressiveDetailsPerExtraKmRateSectionAPIEntity,
+    perMinRateSections :: Maybe (NonEmpty FPProgressiveDetailsPerMinRateSectionAPIEntity),
     deadKmFare :: Money,
-    waitingChargeInfo :: Maybe WaitingChargeInfo,
-    nightShiftCharge :: Maybe NightShiftCharge
+    pickupCharges :: PickupChargesApiEntity,
+    pickupChargesWithCurrency :: PickupChargesWithCurrency,
+    deadKmFareWithCurrency :: PriceAPIEntity,
+    waitingChargeInfo :: Maybe Common.WaitingChargeInfoAPIEntity,
+    nightShiftCharge :: Maybe Common.NightShiftChargeAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-makeFPProgressiveDetailsAPIEntity :: FPProgressiveDetails -> FPProgressiveDetailsAPIEntity
-makeFPProgressiveDetailsAPIEntity FPProgressiveDetails {..} =
-  FPProgressiveDetailsAPIEntity
-    { perExtraKmRateSections = makeFPProgressiveDetailsPerExtraKmRateSectionAPIEntity <$> perExtraKmRateSections,
-      ..
-    }

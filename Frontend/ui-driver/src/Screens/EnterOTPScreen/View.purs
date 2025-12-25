@@ -16,7 +16,7 @@
 module Screens.EnterOTPScreen.View where
 import Data.Maybe (Maybe(..))
 import Prelude (Unit, const, bind, pure, unit, ($), (<<<), (<>), (==), (>), discard)
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback, textFromHtml)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback, textFromHtml)
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
@@ -40,7 +40,7 @@ import Data.Ring ((-))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Locale.Utils
 
-screen :: ST.EnterOTPScreenState -> Screen Action ST.EnterOTPScreenState ScreenOutput
+screen :: ST.EnterOTPScreenState -> LoggableScreen Action ST.EnterOTPScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -48,8 +48,10 @@ screen initialState =
   , globalEvents : [ (\push -> do
                       _ <- pure $ HU.clearTimer ""
                       _ <- HU.startTimer 10 true push TIMERACTION
-                      pure (pure unit)) ] <> if (DS.length initialState.data.otp) > 0 then [] else [ HU.startOtpReciever AutoFill ]
+                      pure (pure unit)) ] <> if (DS.length initialState.data.otp) > 0 then [] else [] --[ HU.startOtpReciever AutoFill ]
   , eval
+  , parent : Nothing
+  , logWhitelist: initialState.data.config.logWhitelistConfig.enterOTPScreenLogWhitelist
   }
 
 view

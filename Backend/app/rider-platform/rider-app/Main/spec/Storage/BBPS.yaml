@@ -1,0 +1,122 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  LocationAddress: Domain.Types.LocationAddress
+  MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
+  PaymentStatus: BecknV2.OnDemand.Enums
+  BaseUrl: Kernel.Types.Common
+  Value: Data.Aeson
+  DbHash: Kernel.External.Encryption
+  EncryptedField: Kernel.External.Encryption
+  AsEncrypted: Kernel.External.Encryption
+  Person: Domain.Types.Person
+
+
+BBPSConfig:
+  tableName: bbps_config
+  derives: "Generic"
+
+  fields:
+    bbpsServerUrl: Text
+    bbpsAgentId: Text
+    bbpsSignatureKey: EncryptedField 'AsEncrypted Text
+    merchantId: Id Merchant
+  excludedFields: [merchantOperatingCityId]
+
+  beamType:
+    bbpsSignatureKey: Text
+  fromTType:
+    bbpsSignatureKey: Encrypted bbpsSignatureKey|E
+  toTType:
+    bbpsSignatureKey: bbpsSignatureKey & unEncrypted|E
+  constraints:
+    merchantId: PrimaryKey
+  queries:
+    findByMerchantId:
+      kvFunction: findOneWithKV
+      where: merchantId
+  sqlType:
+    bbpsSignatureKey: text
+
+BBPS:
+  tableName: bbps
+  types:
+    Tag:
+      value: Text
+      name: Text
+    BBPSPaymentStatus:
+      enum: "NEW,PENDING,SUCCESS,FAILED,REFUND_PENDING,REFUND_INITIATED,REFUND_FAILED,REFUNDED,CONFIRMATION_PENDING,CONFIRMATION_FAILED,AWAITING_BBPS_CONFIRMATION"
+      derive: "HttpInstance"
+    BBPSSessionPayload:
+      token: Text
+    BBPSPaymentMode:
+      enum: "UPI,Debit_Card,Credit_Card,Others"
+
+  fields:
+    refId: Id BBPS
+    refShortId: ShortId BBPS
+    customerId: Id Person
+    billerId: Text
+    customerMobileNumber: Text
+    status: BBPSPaymentStatus
+    amount: HighPrecMoney
+    transType: Text
+    customerParams: "Maybe [Tag]"
+    paymentTxnId: Maybe Text
+    paymentMode: Maybe BBPSPaymentMode
+    paymentInformation: "Maybe [Tag]"
+    errorMessage: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  beamType:
+    paymentInformation: Maybe Value
+    customerParams: Maybe Value
+  sqlType:
+    customerParams: "json"
+    paymentInformation: "json"
+
+  toTType:
+    customerParams: Kernel.Prelude.toJSON <$> customerParams|E
+    paymentInformation: Kernel.Prelude.toJSON <$> paymentInformation|E
+
+  fromTType:
+    customerParams: ((\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customerParams)|E
+    paymentInformation: ((\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< paymentInformation)|E
+
+  constraints:
+    refId: PrimaryKey
+    customerId: SecondaryKey
+
+  queries:
+    updateStatusByRefId:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: refId
+    updatePaymentInformationAndStatusByRefId:
+      kvFunction: updateOneWithKV
+      params:
+       - paymentTxnId
+       - paymentMode
+       - paymentInformation
+       - status
+      where: refId
+    updateStatusAndErrorMessageByRefId:
+      kvFunction: updateOneWithKV
+      params:
+        - status
+        - errorMessage
+      where: refId
+    findByRefId:
+      kvFunction: findOneWithKV
+      where: refId
+    findAllByCustomerId:
+      kvFunction: findAllWithOptionsKV
+      orderBy:
+        field: createdAt
+        order: desc
+      where: customerId
+
+  extraOperations:
+    - GENERATE_INDEXES
+    - EXTRA_QUERY_FILE

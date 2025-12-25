@@ -25,22 +25,24 @@ import com.google.android.play.core.install.model.AppUpdateType;
 import com.google.android.play.core.install.model.InstallStatus;
 import com.google.android.play.core.install.model.UpdateAvailability;
 
+import java.lang.ref.WeakReference;
+
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 
 public class MobilityAppUpdate {
 
-    private AppUpdateManager appUpdateManager;
+    private final AppUpdateManager appUpdateManager;
     private static int updateType;
 
 
     private static final int REQUEST_CODE_UPDATE_APP = 587;
-    private String LOG_TAG = "MobilityAppUpdate";
+    private final String LOG_TAG = "MobilityAppUpdate";
 
-    Context context;
+    WeakReference<Activity> activity;
 
-    public MobilityAppUpdate(Context context) {
-        this.context =context;
-        appUpdateManager = AppUpdateManagerFactory.create(context);
+    public MobilityAppUpdate(Activity activity) {
+        this.activity = new WeakReference<>(activity);
+        appUpdateManager = AppUpdateManagerFactory.create(activity.getApplicationContext());
     }
 
     public void checkAndUpdateApp(MobilityRemoteConfigs remoteConfigs) {
@@ -67,7 +69,7 @@ public class MobilityAppUpdate {
                 return;
             }
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
-                    && appUpdateInfo.isUpdateTypeAllowed(updateType)) {
+                    && appUpdateInfo.isUpdateTypeAllowed(updateType) && this.activity.get() != null) {
                 Log.d(LOG_TAG, "Inside update");
                 try {
                     appUpdateManager.startUpdateFlowForResult(
@@ -76,7 +78,7 @@ public class MobilityAppUpdate {
                             // Or 'AppUpdateType.FLEXIBLE' for flexible updates.
                             updateType,
                             // The current activity making the update request.
-                            (Activity) this.context,
+                            this.activity.get(),
                             // Include a request code to later monitor this update request.
                             REQUEST_CODE_UPDATE_APP
                     );
@@ -92,17 +94,19 @@ public class MobilityAppUpdate {
     }
 
     private void popupSnackbarForCompleteUpdate() {
-        try{
-            Snackbar snackbar =
-                    Snackbar.make(
-                            ((Activity) this.context).findViewById(android.R.id.content),
-                            "An update has just been downloaded.",
-                            Snackbar.LENGTH_INDEFINITE);
-            snackbar.setAction("RESTART", view -> appUpdateManager.completeUpdate());
-            snackbar.setActionTextColor(Color.parseColor("#FCC32C"));
-            snackbar.show();
-        }catch (Exception e){
-            e.printStackTrace();
+        if (this.activity.get() != null) {
+            try{
+                Snackbar snackbar =
+                        Snackbar.make(
+                                (this.activity.get()).findViewById(android.R.id.content),
+                                "An update has just been downloaded.",
+                                Snackbar.LENGTH_INDEFINITE);
+                snackbar.setAction("RESTART", view -> appUpdateManager.completeUpdate());
+                snackbar.setActionTextColor(Color.parseColor("#FCC32C"));
+                snackbar.show();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
         }
     }
 }

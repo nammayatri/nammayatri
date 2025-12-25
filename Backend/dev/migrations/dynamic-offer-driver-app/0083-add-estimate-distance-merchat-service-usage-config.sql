@@ -1,3 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_estimated_pickup_distances text;
-UPDATE atlas_driver_offer_bpp.merchant_service_usage_config SET get_estimated_pickup_distances ='Google';
-ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ALTER COLUMN get_estimated_pickup_distances SET NOT NULL;

@@ -15,9 +15,12 @@
 module API.UI.Payment
   ( API,
     handler,
+    S2SAPI,
+    handlerS2S,
   )
 where
 
+import qualified Data.Text
 import qualified Domain.Action.UI.Payment as DPayment
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
@@ -25,17 +28,22 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Interface as Payment
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.API as Payment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Person as QP
 import Tools.Auth
 
 type API =
   TokenAuth
     :> Payment.API "rideId" "rideId" DRide.Ride DRide.Ride Payment.CreateOrderResp
+
+type S2SAPI =
+  "s2s" :> "payment" :> Capture "orderId" (Id DOrder.PaymentOrder) :> Capture "customerId" (Id DP.Person) :> "status" :> Header "api-key" Data.Text.Text :> Get '[JSON] DPayment.PaymentStatusResp
 
 handler :: FlowServer API
 handler authInfo =
@@ -43,6 +51,9 @@ handler authInfo =
     :<|> getStatus authInfo
     :<|> getOrder authInfo
     :<|> createOrder authInfo -- Fix properly
+
+handlerS2S :: FlowServer S2SAPI
+handlerS2S = getStatusS2S
 
 createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DRide.Ride -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails rideId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails rideId
@@ -52,3 +63,8 @@ getStatus tokenDetails orderId = withFlowHandlerAPI $ DPayment.getStatus tokenDe
 
 getOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
 getOrder tokenDetails orderId = withFlowHandlerAPI $ DPayment.getOrder tokenDetails orderId
+
+getStatusS2S :: Id DOrder.PaymentOrder -> Id DP.Person -> Maybe Data.Text.Text -> FlowHandler DPayment.PaymentStatusResp
+getStatusS2S orderId personId mbApiKey = withFlowHandlerAPI $ do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound "Person not found")
+  DPayment.getStatusS2S orderId personId person.merchantId mbApiKey

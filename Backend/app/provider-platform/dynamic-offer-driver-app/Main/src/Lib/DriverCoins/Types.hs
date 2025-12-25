@@ -15,39 +15,56 @@
 
 module Lib.DriverCoins.Types
   ( DriverCoinsEventType (..),
-    DriverCoinsFunctionType (..),
+    DCoins.DriverCoinsFunctionType (..),
+    DCoins.CoinMessage (..),
+    DCoins.CoinStatus (..),
+    DCoins.MetroRideType (..),
+    DCoins.isMetroRideType,
+    CancellationType (..),
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
+import Domain.Types.CancellationReason
+import Domain.Types.Ride
 import Kernel.Prelude
 import Kernel.Types.Common (Meters)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import qualified Text.Show (show)
 
-data DriverCoinsFunctionType
-  = OneOrTwoStarRating
-  | RideCompleted
-  | FiveStarRating
-  | BookingCancellation
-  | CustomerReferral
-  | DriverReferral
-  | EightPlusRidesInOneDay
-  | PurpleRideCompleted
-  | LeaderBoardTopFiveHundred
-  | TrainingCompleted
-  | BulkUploadFunction
-  deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
+data CancellationType
+  = CancellationByCustomer
+  | CancellationByDriver
+  deriving (Generic, ToJSON, FromJSON)
 
 data DriverCoinsEventType
-  = Rating {ratingValue :: Int, chargeableDistance :: Maybe Meters}
-  | EndRide {isDisabled :: Bool, chargeableDistance_ :: Meters}
-  | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters}
-  | DriverToCustomerReferral {chargeableDistance :: Maybe Meters}
+  = Rating {ratingValue :: Int, ride :: Ride}
+  | EndRide {isDisabled :: Bool, coinsRewardedOnGoldTierRide :: Maybe Int, ride :: Ride, metroRideType :: DCoins.MetroRideType}
+  | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters, cancelledBy :: CancellationType, cancellationReason :: CancellationReasonCode}
+  | DriverToCustomerReferral {ride :: Ride}
   | CustomerToDriverReferral
   | LeaderBoard
   | Training
   | BulkUploadEvent
-  deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
+  | LMS
+  | LMSBonus
+  deriving (Generic, ToJSON, FromJSON)
 
-$(mkBeamInstancesForEnum ''DriverCoinsEventType)
+driverCoinsEventTypeToString :: DriverCoinsEventType -> String
+driverCoinsEventTypeToString = \case
+  Rating {} -> "Rating"
+  EndRide {} -> "EndRide"
+  Cancellation {} -> "Cancellation"
+  DriverToCustomerReferral {} -> "DriverToCustomerReferral"
+  CustomerToDriverReferral {} -> "CustomerToDriverReferral"
+  LeaderBoard -> "LeaderBoard"
+  Training -> "Training"
+  BulkUploadEvent -> "BulkUploadEvent"
+  LMS -> "LMS"
+  LMSBonus -> "LMSBonus"
 
-$(mkBeamInstancesForEnum ''DriverCoinsFunctionType)
+instance Show CancellationType where
+  show CancellationByCustomer = "CancellationByCustomer"
+  show CancellationByDriver = "CancellationByDriver"
+
+instance Show DriverCoinsEventType where
+  show = driverCoinsEventTypeToString

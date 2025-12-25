@@ -83,6 +83,15 @@ getBaseUrl dummy = do
       let Config config = getConfig
       in (config.baseUrl)
 
+getCustomerBaseUrl :: String -> String
+getCustomerBaseUrl dummy =  getValueToLocalNativeStoreConfig "CUSTOMER_BASE_URL"
+
+getCustomerToken :: String -> String
+getCustomerToken dummy = getValueToLocalNativeStoreConfig "CUSTOMER_REG_TOKEN"
+
+getSpecialZoneBaseUrl :: String -> String
+getSpecialZoneBaseUrl dummy = ""
+
 getFingerPrint :: String -> String
 getFingerPrint dummy = do
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "" || (getKeyInSharedPrefKeysConfig "MOBILE_NUMBER_KEY") == "") then

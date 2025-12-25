@@ -1,0 +1,509 @@
+imports:
+  Text: Data.Text
+  Maybe: Data.Maybe
+  Station: Domain.Types.Station
+  StationType: Domain.Types.StationType
+  FRFSQuoteType: Domain.Types.FRFSQuote
+  FRFSTicketCategoryMetadataConfig: Domain.Types.FRFSTicketCategoryMetadataConfig
+  FRFSQuote: Domain.Types.FRFSQuote
+  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
+  FRFSTicketBooking: Domain.Types.FRFSTicketBooking
+  FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
+  TimeBound: Kernel.Types.TimeBound
+  FRFSTicketStatus: Domain.Types.FRFSTicketStatus
+  HighPrecMoney: Kernel.Types.Common
+  PriceAPIEntity: Kernel.Types.Common
+  FRFSSearch: Domain.Types.FRFSSearch
+  VehicleCategory: BecknV2.FRFS.Enums
+  ServiceTierType: BecknV2.FRFS.Enums
+  CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
+  City: Kernel.Types.Beckn.Context
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Meters: Kernel.Types.Common
+  LatLong: Kernel.External.Maps.Types
+  RouteStopInfo: SharedLogic.FRFSUtils
+  PlatformType: Domain.Types.IntegratedBPPConfig
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  RecentLocation: Domain.Types.RecentLocation
+  TimeOfDay: Date.Time
+  FRFSQuoteCategory: Domain.Types.FRFSQuoteCategory
+  QuoteCategoryMetadata: Domain.Types.FRFSQuoteCategory
+  BusLocation: API.Types.UI.RiderLocation
+  CrisSdkResponse: API.Types.UI.MultimodalConfirm
+
+module: FRFSTicketService
+types:
+  FRFSDiscoverySearchAPIReq:
+    city: City
+    vehicleType: VehicleCategory
+
+  FRFSSearchAPIReq:
+    fromStationCode: Text
+    toStationCode: Text
+    routeCode: Maybe Text
+    serviceTier: Maybe ServiceTierType
+    quantity: Int
+    searchAsParentStops: Maybe Bool
+    recentLocationId: Maybe (Id RecentLocation)
+    busLocationData: Maybe [BusLocation]
+    vehicleNumber: Maybe Text
+
+  FRFSSearchAPIRes:
+    searchId: Id FRFSSearch
+    quotes: [FRFSQuoteAPIRes] # For Sync Search API, we return the quotes for the search.
+
+  FRFSQuoteAPIRes:
+    quoteId: Id FRFSQuote
+    _type: FRFSQuoteType
+    vehicleType: VehicleCategory
+    quantity: Int
+    price: HighPrecMoney
+    priceWithCurrency: PriceAPIEntity
+    stations: [FRFSStationAPI]
+    routeStations: "Maybe [FRFSRouteStationsAPI]"
+    validTill: UTCTime
+    discountedTickets: Maybe Int
+    eventDiscountAmount: Maybe HighPrecMoney
+    integratedBppConfigId: Id IntegratedBPPConfig
+    categories: [CategoryInfoResponse]
+
+    derive: "Show"
+
+  FRFSDiscountRes:
+    code: Text
+    price: PriceAPIEntity
+    title: Text
+    description: Text
+    tnc: Text
+    eligibility: Bool
+    derive: "Show"
+
+  FRFSTicketCategoryRes:
+    quoteCategoryId: Id FRFSQuoteCategory
+    category: Text
+    price: PriceAPIEntity
+    offeredPrice: PriceAPIEntity
+    title: Text
+    description: Maybe Text
+    tnc: Maybe Text
+    code: Maybe Text
+    eligibility: Bool
+    derive: "Show"
+
+  CategoryInfoResponse:
+    categoryId: Id FRFSQuoteCategory
+    categoryName: FRFSQuoteCategoryType
+    categoryMeta: Maybe QuoteCategoryMetadata
+    categoryPrice: PriceAPIEntity
+    categoryOfferedPrice: PriceAPIEntity
+    categoryFinalPrice: Maybe PriceAPIEntity
+    categorySelectedQuantity: Int
+    derive: "Show"
+
+  FRFSCategorySelectionReq:
+    quoteCategoryId: Id FRFSQuoteCategory
+    quantity: Int
+
+  CrisSdkResponse:
+    osType: Text
+    osBuildVersion: Text
+    bookAuthCode: Text
+    latency: Maybe Int
+    derive: "Show"
+
+  FRFSQuoteConfirmReq:
+    offered: Maybe [FRFSCategorySelectionReq]
+    crisSdkResponse: Maybe CrisSdkResponse
+    enableOffer: Maybe Bool
+    ticketQuantity: Maybe Int # TODO: To Be Deprecated
+    childTicketQuantity: Maybe Int # TODO: To Be Deprecated
+
+  FRFSTicketCategoryMetadataAPIEntity:
+    title: Text
+    description: Text
+    tnc: Text
+    category: FRFSQuoteCategoryType
+    derive: "Show"
+
+  FRFSQuoteCategoryAPIEntity:
+    bppItemId: Text
+    categoryMetadata: Maybe FRFSTicketCategoryMetadataAPIEntity
+    price: PriceAPIEntity # Single Item Quantity Price without any passes or offers determined in OnSearch.
+    offeredPrice: PriceAPIEntity # Single Item Quantity Discounted Price determined in OnSearch that would be less than or equal to `price`.
+    finalPrice: Maybe PriceAPIEntity # Single Item Quantity Final Price determined in OnInit that the customer would actually pay.
+    selectedQuantity: Int
+    derive: "Show"
+
+  FRFSTicketBookingStatusAPIRes:
+    bookingId: Id FRFSTicketBooking
+    status: FRFSTicketBookingStatus
+    city: City
+    updatedAt: UTCTime
+    _type: FRFSQuoteType
+    quoteCategories: [FRFSQuoteCategoryAPIEntity]
+    quantity: Maybe Int # TODO: To Be Deprecated, use `quoteCategories` instead.
+    vehicleType: VehicleCategory
+    price: Maybe HighPrecMoney # TODO: To Be Deprecated, use `quoteCategories` instead.
+    priceWithCurrency: Maybe PriceAPIEntity # TODO: To Be Deprecated, use `quoteCategories` instead.
+    validTill: UTCTime
+    payment: Maybe FRFSBookingPaymentAPI
+    tickets: [FRFSTicketAPI]
+    stations: [FRFSStationAPI]
+    routeStations: "Maybe [FRFSRouteStationsAPI]"
+    createdAt: UTCTime
+    discountedTickets: Maybe Int
+    eventDiscountAmount: Maybe HighPrecMoney
+    isFareChanged: Maybe Bool
+    googleWalletJWTUrl: Maybe Text
+    integratedBppConfigId: Id IntegratedBPPConfig
+    derive: "Show"
+
+  FRFSVehicleServiceTierAPI:
+    _type: ServiceTierType
+    providerCode: Text
+    shortName: Text
+    longName: Text
+    description: Text
+    isAirConditioned: Maybe Bool
+    derive: "Show"
+
+  FRFSRouteStationsAPI:
+    code: Text
+    shortName: Text
+    longName: Text
+    startPoint: LatLong
+    endPoint: LatLong
+    color: Maybe Text
+    stations: [FRFSStationAPI]
+    travelTime: Maybe Seconds
+    vehicleServiceTier: Maybe FRFSVehicleServiceTierAPI
+    priceWithCurrency: PriceAPIEntity
+    sequenceNum: Maybe Int
+    derive: "Show"
+
+  FRFSTicketAPI:
+    status: FRFSTicketStatus
+    scannedByVehicleNumber: Maybe Text
+    qrData: Text
+    validTill: UTCTime
+    ticketNumber: Text
+    description: Maybe Text
+    createdAt: UTCTime
+    derive: "Show"
+
+  FRFSBookingPaymentAPI:
+    status: FRFSBookingPaymentStatusAPI
+    paymentOrder: Maybe CreateOrderResp
+    transactionId: Maybe Text
+    derive: "Show"
+
+  FRFSBookingPaymentStatusAPI:
+    enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED"
+
+  FRFSStationAPI:
+    name: Maybe Text
+    code: Text
+    routeCodes: Maybe [Text]
+    lat: Maybe Double
+    lon: Maybe Double
+    timeTakenToTravelUpcomingStop: Maybe Seconds
+    address: Maybe Text
+    stationType: Maybe StationType
+    color: Maybe Text
+    distance: Maybe Meters
+    sequenceNum: Maybe Int
+    towards: Maybe Text
+    integratedBppConfigId: Id IntegratedBPPConfig
+    parentStopCode: Maybe Text
+    derive: "Show"
+
+  FRFSCanCancelStatus:
+    cancellationCharges: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
+    isCancellable: Maybe Bool
+
+  FRFSCancelStatus:
+    cancellationCharges: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
+
+  FRFSConfigAPIRes:
+    bookingStartTime: UTCTime
+    bookingEndTime: UTCTime
+    roundTripTicketLimit: Int
+    oneWayTicketLimit: Int
+    metroStationTtl: Int
+    discount: Int
+    customDates: [Text]
+    customEndTime: Text
+    isEventOngoing: Bool
+    isCancellationAllowed: Bool
+    freeTicketInterval: Maybe Int
+    maxFreeTicketCashback: Maybe Int
+    ticketsBookedInEvent: Int
+    providerId: Maybe Text
+    derive: "Show"
+
+  FRFSRouteAPI:
+    code: Text
+    shortName: Text
+    longName: Text
+    startPoint: LatLong
+    endPoint: LatLong
+    totalStops: Maybe Int
+    stops: Maybe [FRFSStationAPI]
+    waypoints: Maybe [LatLong]
+    timeBounds: Maybe TimeBound
+    integratedBppConfigId: Id IntegratedBPPConfig
+    derive: "Show"
+
+  AutocompleteRes:
+    routes: [FRFSRouteAPI]
+    stops: [FRFSStationAPI]
+
+  FRFSTicketVerifyReq:
+    qrData: Text
+
+  BookingFareAcceptedReq:
+    isFareAccepted: Bool
+
+  BookingFeedbackReq:
+    feedbackDetails: Text
+
+  FRFSBookingFeedbackReq:
+    enum: "BookingFareAccepted BookingFareAcceptedReq, BookingFeedback BookingFeedbackReq"
+
+  FRFSPossibleStopsReq:
+    stationCodes: [Text]
+
+apis:
+  # Get FRFS Config
+  - GET:
+      endpoint: /frfs/config
+      mandatoryQuery:
+        city: City
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
+
+  # Get Start stop or Routes suggestions based on User's input or nearby stops if user input is unknown
+  - GET:
+      endpoint: /frfs/autocomplete
+      auth: TokenAuth
+      mandatoryQuery:
+        city: City
+        location: LatLong
+        vehicleType: VehicleCategory
+      query:
+        input: Text
+        limit: Int
+        offset: Int
+        platformType: PlatformType
+      response:
+        type: "API.Types.UI.FRFSTicketService.AutocompleteRes"
+
+  # GET metro/bus routes for the merchant city
+  - GET:
+      endpoint: /frfs/routes
+      auth: TokenAuth
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+        city: City
+      query:
+        startStationCode: Text
+        endStationCode: Text
+      response:
+        type: "[API.Types.UI.FRFSTicketService.FRFSRouteAPI]"
+
+  # GET metro/bus stops for the merchant city
+  # - Get all stations when routeCode and startStationCode is Unknown.
+  # - Get all stations on a Route when only routeCode is Known.
+  # - Get all end stations when startStationCode is Unknown, further filter if routeCode is also Unknown.
+  - GET:
+      endpoint: /frfs/stations
+      auth: TokenAuth
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+      query:
+        city: City
+        routeCode: Text
+        startStationCode: Text
+        endStationCode: Text
+        location: LatLong
+        platformType: PlatformType
+        minimalData: Bool
+      response:
+        type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
+
+  # POST stations by codes - bulk station lookup
+  - POST:
+      endpoint: /frfs/stations/possibleStops
+      auth: TokenAuth
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+      query:
+        city: City
+        platformType: PlatformType
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSPossibleStopsReq
+      response:
+        type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
+
+  # GET metro/bus route details for the merchant city
+  - GET:
+      endpoint: /frfs/route/{routeCode}
+      auth: TokenAuth
+      mandatoryQuery:
+        city: City
+        vehicleType: VehicleCategory
+      query:
+        platformType: PlatformType
+        integratedBppConfigId: Id IntegratedBPPConfig
+      params:
+        routeCode: Text
+      response:
+        type: "API.Types.UI.FRFSTicketService.FRFSRouteAPI"
+
+  # Initiate search for metro/bus tickets
+  - POST:
+      endpoint: /frfs/search
+      auth: TokenAuth
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+      query:
+        city: City
+        integratedBppConfigId: Id IntegratedBPPConfig
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+
+  # Discovery Search for finding metro/bus providers for a given city
+  - POST:
+      endpoint: /frfs/discovery/search
+      auth: TokenAuth
+      query:
+        integratedBppConfigId: Id IntegratedBPPConfig
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # Get quotes for metro/bus tickets
+  - GET:
+      endpoint: /frfs/search/{searchId}/quote
+      params:
+        searchId: Id FRFSSearch
+      auth: TokenAuth
+      response:
+        type: "[API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]"
+
+  # Confirm quote for metro/bus tickets (return PP sdk params)
+  - POST:
+      endpoint: /frfs/quote/{quoteId}/confirm
+      params:
+        quoteId: Id FRFSQuote
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+
+  # Confirm quote V2 for metro/bus tickets (return PP sdk params)
+  - POST:
+      endpoint: /frfs/quote/v2/{quoteId}/confirm
+      params:
+        quoteId: Id FRFSQuote
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+
+  # Retry payment
+  - POST:
+      endpoint: /frfs/quote/{quoteId}/payment/retry
+      params:
+        quoteId: Id FRFSQuote
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+
+  # Get booking status
+  - GET:
+      endpoint: /frfs/booking/{bookingId}/status
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+
+  # List metro/bus tickets
+  - GET:
+      endpoint: /frfs/booking/list
+      auth: TokenAuth
+      query:
+        vehicleType: VehicleCategory
+        limit: Int
+        offset: Int
+      response:
+        type: "[API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]"
+
+  # Booking Soft Cancel
+  - POST:
+      endpoint: /frfs/booking/{bookingId}/canCancel
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # Booking Soft Cancel Status
+  - GET:
+      endpoint: /frfs/booking/{bookingId}/canCancel/status
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSCanCancelStatus
+
+  # Booking Cancel
+  - POST:
+      endpoint: /frfs/booking/{bookingId}/cancel
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # Booking Cancel Status
+  - GET:
+      endpoint: /frfs/booking/cancel/{bookingId}/status
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSCancelStatus
+
+  # Booking Ticket QR Verification
+  - POST:
+      endpoint: /frfs/ticket/verify
+      mandatoryQuery:
+        city: City
+        vehicleType: VehicleCategory
+      query:
+        platformType: PlatformType
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSTicketVerifyReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # Booking Fare Accepted
+  - POST:
+      endpoint: /frfs/booking/{bookingId}/feedback
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

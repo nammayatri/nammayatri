@@ -1,0 +1,51 @@
+imports:
+  DriverCoinsFunctionType: Dashboard.Common.DriverCoins
+  CoinsConfig: Dashboard.Common
+  Language: Kernel.External.Types
+  VehicleCategory: Domain.Types.VehicleCategory
+
+module: CoinsConfig
+
+apis:
+  - PUT: # Updating Entries
+      endpoint: /update
+      auth: ApiAuthV2
+      request:
+        type: UpdateReq
+      response:
+        type: APISuccess
+  - POST: # Duplicating Entries or Inserting New Entries
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: CreateCoinsConfigReq
+      response:
+        type: APISuccess
+
+types:
+  UpdateReq:
+    - entriesId: Id CoinsConfig
+    - active: Bool
+    - expirationAt: Maybe Int
+    - coins: Int
+    - derive: "'HideSecrets"
+  CreateCoinsConfigReq:
+    - enum: NewCoinsConfig NewCoinsConfigReq, DuplicateCoinsConfig DuplicateCoinsConfigsReq
+    - derive: "'HideSecrets"
+  NewCoinsConfigReq:
+    - eventFunction: DriverCoinsFunctionType
+    - eventName: Text
+    - merchantId: Text
+    - merchantOptCityId: Text
+    - coins: Int
+    - expirationAt: Maybe Int
+    - active: Bool
+    - vehicleCategory: VehicleCategory
+    - eventMessages: [EventMessage]
+  DuplicateCoinsConfigsReq:
+    - entriesId: Id CoinsConfig
+    - eventFunction: DriverCoinsFunctionType
+    - eventMessages: [EventMessage]
+  EventMessage:
+    - message: Text
+    - language: Language

@@ -1,6 +1,11 @@
 ALTER TABLE atlas_driver_offer_bpp.fare_policy_slabs_details_slab ADD COLUMN free_wating_time integer;
 ALTER TABLE atlas_driver_offer_bpp.fare_policy_progressive_details ADD COLUMN free_wating_time integer;
 
+-- ONLY FOR LOCAL
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN waiting_time_estimated_threshold int;
+UPDATE atlas_driver_offer_bpp.transporter_config SET waiting_time_estimated_threshold = 3;
+
+
 WITH WaitingTimeEstimatedThreshold1 AS (
   SELECT T1.id,
     T2.waiting_time_estimated_threshold
@@ -23,7 +28,6 @@ WITH WaitingTimeEstimatedThreshold2 AS (
 UPDATE atlas_driver_offer_bpp.fare_policy_progressive_details AS T1 SET free_wating_time =
     (SELECT T2.waiting_time_estimated_threshold FROM WaitingTimeEstimatedThreshold2 AS T2 WHERE T2.id = T1.fare_policy_id);
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN waiting_time_estimated_threshold DROP NOT NULL;
 
 -------------------------------------------------------------------------------------------
 -------------------------------DROPS-------------------------------------------------------

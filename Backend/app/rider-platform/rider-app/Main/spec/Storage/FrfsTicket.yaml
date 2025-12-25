@@ -1,0 +1,1138 @@
+imports:
+  UTCTime: Kernel.Prelude
+  TravelMode: Domain.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  Price: Kernel.Types.Common
+  Seconds: Kernel.Types.Time
+  ShortId: Kernel.Types.Id
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  VehicleCategory: BecknV2.FRFS.Enums
+  ServiceTierType: BecknV2.FRFS.Enums
+  FRFSSearch: Domain.Types.FRFSSearch
+  FRFSQuote: Domain.Types.FRFSQuote
+  FRFSTicketBooking: Domain.Types.FRFSTicketBooking
+  FRFSTicket: Domain.Types.FRFSTicket
+  FRFSTicketBookingPayment: Domain.Types.FRFSTicketBookingPayment
+  Station: Domain.Types.Station
+  FRFSQuoteType: Domain.Types.FRFSQuote
+  FRFSRoutes: Domain.Types.FRFSQuote
+  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
+  FRFSTicketStatus: Domain.Types.FRFSTicketStatus
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  Person: Domain.Types.Person
+  City: Kernel.Types.Beckn.Context
+  PartnerOrganization: Domain.Types.PartnerOrganization
+  PartnerOrgTransaction: Domain.Types.PartnerOrganization
+  TimeBound: Kernel.Types.TimeBound
+  LatLong: Kernel.External.Maps.Types
+  Journey: Domain.Types.Journey
+  JourneyLeg: Domain.Types.JourneyLeg
+  JourneyLegStatus: Lib.JourneyLeg.Types
+  StationType: Domain.Types.StationType
+  SuggestedStations: Domain.Types.StationType
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  RecentLocation: Domain.Types.RecentLocation
+  DayOfWeek: Data.Time
+  CrisSearchData: Lib.JourneyLeg.Types
+  RouteStopTimeTable: Domain.Types.RouteStopTimeTable
+  FRFSCategoryTag: Domain.Types.FRFSQuoteCategorySpec
+  OfferedValue: Domain.Types.FRFSQuoteCategorySpec
+  FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
+  BusLocation: API.Types.UI.RiderLocation
+  Value: Data.Aeson
+
+FRFSSearch:
+  tableName: frfs_search
+
+  fields:
+    id: Id FRFSSearch
+    fromStationCode: Text
+    toStationCode: Text
+    fromStationPoint: Maybe LatLong
+    toStationPoint: Maybe LatLong
+    fromStationName: Maybe Text
+    toStationName: Maybe Text
+    fromStationAddress: Maybe Text
+    toStationAddress: Maybe Text
+    routeCode: Maybe Text
+    quantity: Int
+    vehicleType: VehicleCategory
+    riderId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
+    partnerOrgId: Maybe (Id PartnerOrganization)
+    onSearchFailed: Maybe Bool
+    isOnSearchReceived: Maybe Bool
+    integratedBppConfigId: Id IntegratedBPPConfig
+    recentLocationId: Maybe (Id RecentLocation)
+    validTill: Maybe UTCTime
+    multimodalSearchRequestId: Maybe Text
+    searchAsParentStops: Maybe Bool
+    busLocationData: "[BusLocation]"
+    vehicleNumber: Maybe Text
+
+  beamFields:
+    fromStationCode:
+      fromStationId: Text
+    toStationCode:
+      toStationId: Text
+    routeCode:
+      routeId: Maybe Text
+    fromStationPoint:
+      fromStationLat: Maybe Double
+      fromStationLon: Maybe Double
+    toStationPoint:
+      toStationLat: Maybe Double
+      toStationLon: Maybe Double
+
+  beamType:
+    busLocationData: Maybe Value
+
+  toTType:
+    fromStationLat: (.lat) <$> fromStationPoint|E
+    fromStationLon: (.lon) <$> fromStationPoint|E
+    toStationLat: (.lat) <$> toStationPoint|E
+    toStationLon: (.lon) <$> toStationPoint|E
+    busLocationData: Just $ toJSON busLocationData|E
+
+  fromTType:
+    fromStationPoint: Kernel.External.Maps.Types.LatLong <$> fromStationLat <*> fromStationLon|E
+    toStationPoint: Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon|E
+    busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
+
+  sqlType:
+    fromStationLat: double precision
+    fromStationLon: double precision
+    toStationLat: double precision
+    toStationLon: double precision
+    busLocationData: "json"
+
+  excludedDefaultQueries:
+    - create
+
+  constraints:
+    riderId: "!SecondaryKey" # forcing to be a secondary key
+
+  queries:
+    getTicketPlaces:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateIsOnSearchReceivedById:
+      kvFunction: updateWithKV
+      params: [isOnSearchReceived]
+      where: id
+    updateRiderIdById:
+      kvFunction: updateWithKV
+      params: [riderId]
+      where: id
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+FRFSQuote:
+  tableName: frfs_quote
+  derives: "Generic,Show"
+  fields:
+    id: Id FRFSQuote
+    bppItemId: Text
+    searchId: Id FRFSSearch
+    _type: FRFSQuoteType
+    fromStationCode: Text
+    toStationCode: Text
+    fromStationPoint: Maybe LatLong
+    toStationPoint: Maybe LatLong
+    fromStationName: Maybe Text
+    toStationName: Maybe Text
+    fromStationAddress: Maybe Text
+    toStationAddress: Maybe Text
+    stationsJson: Text
+    routeStationsJson: Maybe Text
+    vehicleType: VehicleCategory
+    bppSubscriberId: Text
+    bppSubscriberUrl: Text
+    providerId: Text
+    providerName: Text
+    providerDescription: Maybe Text
+    fareDetails: Maybe FRFSFareDetails
+    validTill: UTCTime
+    riderId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
+    integratedBppConfigId: Id IntegratedBPPConfig
+    partnerOrgId: Maybe (Id PartnerOrganization)
+    eventDiscountAmount: Maybe HighPrecMoney
+    discountedTickets: Maybe Int
+    bppDelayedInterest: Maybe Int
+    oldCacheDump: Maybe Text
+    multimodalSearchRequestId: Maybe Text
+    busLocationData: "[BusLocation]"
+    vehicleNumber: Maybe Text
+  beamFields:
+    fromStationCode:
+      fromStationId: Text
+    toStationCode:
+      toStationId: Text
+    fareDetails:
+      providerRouteId: Maybe Text
+      distance: Maybe Meters
+      via: Maybe Text
+      ticketTypeCode: Maybe Text
+      trainTypeCode: Maybe Text
+      appSession: Maybe Int
+    fromStationPoint:
+      fromStationLat: Maybe Double
+      fromStationLon: Maybe Double
+    toStationPoint:
+      toStationLat: Maybe Double
+      toStationLon: Maybe Double
+
+  beamType:
+    vehicleVariant: Maybe VehicleVariant
+    busLocationData: Maybe Value
+
+  types:
+    FRFSQuoteType:
+      enum: "SingleJourney, ReturnJourney, Pass, SpecialFareSingleJourney"
+    FRFSFareDetails:
+      providerRouteId: Text
+      distance: Meters
+      via: Text
+      ticketTypeCode: Text
+      trainTypeCode: Text
+      appSession: Int
+
+  fromTType:
+    applicableDiscountIds: (Kernel.Types.Id.Id <$> ) <$>|I
+    fareDetails: Domain.Types.FRFSQuote.FRFSFareDetails <$> appSession <*> distance <*> providerRouteId <*> ticketTypeCode <*> trainTypeCode <*> via|E
+    fromStationPoint: Kernel.External.Maps.Types.LatLong <$> fromStationLat <*> fromStationLon|E
+    toStationPoint: Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon|E
+    busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
+
+  toTType:
+    currency: (Kernel.Prelude.fmap (.currency))|I
+    applicableDiscountIds: (Kernel.Types.Id.getId <$> ) <$>|I
+    providerRouteId: (fareDetails <&> (.providerRouteId))|E
+    distance: (fareDetails <&> (.distance))|E
+    via: (fareDetails <&> (.via))|E
+    ticketTypeCode: (fareDetails <&> (.ticketTypeCode))|E
+    trainTypeCode: (fareDetails <&> (.trainTypeCode))|E
+    appSession: (fareDetails <&> (.appSession))|E
+    fromStationLat: (.lat) <$> fromStationPoint|E
+    fromStationLon: (.lon) <$> fromStationPoint|E
+    toStationLat: (.lat) <$> toStationPoint|E
+    toStationLon: (.lon) <$> toStationPoint|E
+    busLocationData: Just $ toJSON busLocationData|E
+
+  sqlType:
+    applicableDiscountIds: "text[]"
+    busLocationData: "json"
+    fromStationLat: double precision
+    fromStationLon: double precision
+    toStationLat: double precision
+    toStationLon: double precision
+
+  constraints:
+    id: PrimaryKey
+    searchId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllBySearchId:
+      kvFunction: findAllWithKV
+      where: searchId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+# Default FRFSQuoteCategory is for ADULT category
+FRFSQuoteCategory:
+  tableName: frfs_quote_category
+  fields:
+    id: Id FRFSQuoteCategory
+    quoteId: Id FRFSQuote
+    bppItemId: Text
+    category: FRFSQuoteCategoryType|NoRelation
+    categoryMeta: Maybe QuoteCategoryMetadata
+    price: Price # Single Item Quantity Price without any passes or offers determined in OnSearch.
+    offeredPrice: Price # Single Item Quantity Discounted Price determined in OnSearch that would be less than or equal to `price`.
+    finalPrice: Maybe Price # Single Item Quantity Final Price determined in OnInit that the customer would actually pay.
+    selectedQuantity: Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+    quoteId: SecondaryKey
+  beamFields:
+    categoryMeta:
+      code: Maybe Text
+      title: Maybe Text
+      description: Maybe Text
+      tnc: Maybe Text
+    price:
+      currency: Maybe Currency
+      price: HighPrecMoney
+    offeredPrice:
+      offeredPrice: HighPrecMoney
+    finalPrice:
+      finalPrice: Maybe HighPrecMoney
+  beamType:
+    category: Maybe FRFSQuoteCategoryType
+    selectedQuantity: Maybe Int
+  default:
+    selectedQuantity: "0"
+
+  fromTType:
+    price: Kernel.Types.Common.mkPrice currency price|E
+    offeredPrice: Kernel.Types.Common.mkPrice currency offeredPrice|E
+    finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
+    categoryMeta: Storage.Queries.Transformers.FRFSQuoteCategory.mkQuoteCategoryMetadata code title description tnc|E
+    category: Kernel.Prelude.fromMaybe Domain.Types.FRFSQuoteCategoryType.ADULT category|E
+    selectedQuantity: Kernel.Prelude.fromMaybe 0|I
+
+  toTType:
+    price: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+    offeredPrice: (.amount)|I
+    finalPrice: (Kernel.Prelude.fmap (.amount))|I
+    code: (categoryMeta <&> (.code))|E
+    title: (categoryMeta <&> (.title))|E
+    description: (categoryMeta <&> (.description))|E
+    tnc: (categoryMeta <&> (.tnc))|E
+    category: Kernel.Prelude.Just|I
+    selectedQuantity: Kernel.Prelude.Just|I
+
+  types:
+    QuoteCategoryMetadata:
+      code: Text
+      title: Text
+      description: Text
+      tnc: Text
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByQuoteId:
+      kvFunction: findAllWithKV
+      where: quoteId
+    updateQuantityByQuoteCategoryId:
+      kvFunction: updateWithKV
+      params: [selectedQuantity, updatedAt]
+      where: id
+    updateFinalPriceByQuoteCategoryId:
+      kvFunction: updateWithKV
+      params: [finalPrice, updatedAt]
+      where: id
+    updateOfferedPriceByQuoteId:
+      kvFunction: updateWithKV
+      params: [offeredPrice, updatedAt]
+      where: quoteId
+
+FRFSTicketBooking:
+  tableName: frfs_ticket_booking
+  derives: "Generic, Show"
+  fields:
+    id: Id FRFSTicketBooking
+    searchId: Id FRFSSearch
+    bppOrderId: Maybe Text
+    quoteId: Id FRFSQuote
+    status: FRFSTicketBookingStatus|NoRelation
+    riderId: Id Person
+    stationsJson: Text
+    routeStationsJson: Maybe Text
+    bppItemId: Text
+    _type: FRFSQuoteType
+    fromStationCode: Text
+    toStationCode: Text
+    fromStationAddress: Maybe Text
+    toStationAddress: Maybe Text
+    fromStationPoint: Maybe LatLong
+    toStationPoint: Maybe LatLong
+    fromStationName: Maybe Text
+    toStationName: Maybe Text
+    vehicleType: VehicleCategory
+    bppSubscriberId: Text
+    bppSubscriberUrl: Text
+    providerId: Text
+    providerName: Text
+    providerDescription: Maybe Text
+    totalPrice: Price # This is the total price multiplied for all the selected quantities of Quote Categories
+    validTill: UTCTime
+    paymentTxnId: Maybe Text
+    bppBankAccountNumber: Maybe Text
+    bppBankCode: Maybe Text
+    cancellationCharges: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
+    isBookingCancellable: Maybe Bool
+    customerCancelled: Bool
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
+    partnerOrgId: Maybe (Id PartnerOrganization)
+    discountedTickets: Maybe Int
+    eventDiscountAmount: Maybe HighPrecMoney
+    payerVpa: Maybe Text
+    cashbackStatus: Maybe CashbackStatus
+    cashbackPayoutOrderId: Maybe Text
+    bppDelayedInterest: Maybe Int
+    googleWalletJWTUrl: Maybe Text
+    journeyOnInitDone: Maybe Bool
+    startTime: Maybe UTCTime
+    isFareChanged: Maybe Bool
+    integratedBppConfigId: Id IntegratedBPPConfig
+    recentLocationId: Maybe (Id RecentLocation)
+    bookingAuthCode: Maybe Text
+    osType: Maybe Text
+    osBuildVersion: Maybe Text
+    multimodalSearchRequestId: Maybe Text
+    failureReason: Maybe Text
+    isSingleMode: Maybe Bool
+    busLocationData: "[BusLocation]"
+    vehicleNumber: Maybe Text
+
+  default:
+    customerCancelled: "false"
+
+  beamFields:
+    fromStationCode:
+      fromStationId: Text
+    toStationCode:
+      toStationId: Text
+    totalPrice:
+      currency: Maybe Currency
+      price: HighPrecMoney
+    fromStationPoint:
+      fromStationLat: Maybe Double
+      fromStationLon: Maybe Double
+    toStationPoint:
+      toStationLat: Maybe Double
+      toStationLon: Maybe Double
+
+  beamType:
+    busLocationData: Maybe Value
+
+  types:
+    CashbackStatus:
+      enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
+
+  fromTType:
+    totalPrice: Kernel.Types.Common.mkPrice currency price|E
+    busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
+    fromStationPoint: Kernel.External.Maps.Types.LatLong <$> fromStationLat <*> fromStationLon|E
+    toStationPoint: Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon|E
+
+  toTType:
+    price: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+    busLocationData: Just $ toJSON busLocationData|E
+    fromStationLat: (.lat) <$> fromStationPoint|E
+    fromStationLon: (.lon) <$> fromStationPoint|E
+    toStationLat: (.lat) <$> toStationPoint|E
+    toStationLon: (.lon) <$> toStationPoint|E
+
+  sqlType:
+    busLocationData: "json"
+    fromStationLat: double precision
+    fromStationLon: double precision
+    toStationLat: double precision
+    toStationLon: double precision
+
+  constraints:
+    id: PrimaryKey
+    searchId: SecondaryKey
+    bppOrderId: SecondaryKey
+    riderId: "!SecondaryKey"
+    quoteId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByQuoteId:
+      kvFunction: findOneWithKV
+      where: quoteId
+    findByBppOrderId:
+      kvFunction: findOneWithKV
+      where: bppOrderId
+    findBySearchId:
+      kvFunction: findOneWithKV
+      where: searchId
+    findAllByStatus:
+      kvFunction: findAllWithKV
+      where: status
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: id
+    updateValidTillById:
+      kvFunction: updateWithKV
+      params: [validTill, updatedAt]
+      where: id
+    updateStatusValidTillAndPaymentTxnById:
+      kvFunction: updateWithKV
+      params: [status, validTill, paymentTxnId, updatedAt]
+      where: id
+    updateBPPOrderIdAndStatusById:
+      kvFunction: updateWithKV
+      params: [bppOrderId, status, updatedAt]
+      where: id
+    updateBPPOrderIdById:
+      kvFunction: updateWithKV
+      params: [bppOrderId, updatedAt]
+      where: id
+    updateIsFareChangedById:
+      kvFunction: updateWithKV
+      params: [isFareChanged, updatedAt]
+      where: id
+    updateBppBankDetailsById:
+      kvFunction: updateWithKV
+      params: [bppBankAccountNumber, bppBankCode, updatedAt]
+      where: id
+    updateRefundCancellationChargesAndIsCancellableByBookingId:
+      kvFunction: updateOneWithKV
+      params:
+        [refundAmount, cancellationCharges, isBookingCancellable, updatedAt]
+      where: id
+    updateIsBookingCancellableByBookingId:
+      kvFunction: updateOneWithKV
+      params: [isBookingCancellable, updatedAt]
+      where: id
+    updateCustomerCancelledByBookingId:
+      kvFunction: updateOneWithKV
+      params: [customerCancelled, updatedAt]
+      where: id
+    updatePayoutStatusById:
+      kvFunction: updateOneWithKV
+      params: [cashbackStatus]
+      where: id
+    updatePayoutOrderId:
+      kvFunction: updateOneWithKV
+      params: [cashbackPayoutOrderId]
+      where: id
+    updateOnInitDone:
+      kvFunction: updateOneWithKV
+      params: [journeyOnInitDone]
+      where: id
+    updateOnInitDoneBySearchId:
+      kvFunction: updateOneWithKV
+      params: [journeyOnInitDone]
+      where: searchId
+    updateInterestDelayedByQuoteId:
+      kvFunction: updateOneWithKV
+      params: [bppDelayedInterest]
+      where: quoteId
+    updateGoogleWalletLinkById:
+      kvFunction: updateOneWithKV
+      params: [googleWalletJWTUrl]
+      where: id
+    updateQuoteAndBppItemIdAndRouteStationsJson:
+      kvFunction: updateOneWithKV
+      params: [quoteId, bppItemId, routeStationsJson]
+      where: id
+    updateFailureReasonById:
+      kvFunction: updateOneWithKV
+      params: [failureReason]
+      where: id
+    updateTotalPriceById:
+      kvFunction: updateOneWithKV
+      params: [totalPrice]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+# Make use of FareBreakup to store the fare breakup of a ticket
+
+# Get transaction_id from Payment Transaction table
+
+FRFSTicket:
+  tableName: frfs_ticket
+
+  fields:
+    id: Id FRFSTicket
+    description: Maybe Text
+    frfsTicketBookingId: Id FRFSTicketBooking
+    riderId: Id Person
+    status: FRFSTicketStatus|NoRelation
+    qrData: Text
+    validTill: UTCTime
+    ticketNumber: Text
+    qrRefreshAt: Maybe UTCTime
+    scannedByVehicleNumber: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
+    partnerOrgId: Maybe (Id PartnerOrganization)
+    isTicketFree: Maybe Bool
+    commencingHours: Maybe Int
+
+  constraints:
+    id: PrimaryKey
+    frfsTicketBookingId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByStatus:
+      kvFunction: findOneWithKV
+      where: status
+    findAllByTicketBookingId:
+      kvFunction: findAllWithKV
+      where: frfsTicketBookingId
+    findByTicketBookingIdTicketNumber:
+      kvFunction: findOneWithKV
+      where:
+        and: [frfsTicketBookingId, ticketNumber]
+    findOneByTicketNumber:
+      kvFunction: findOneWithKV
+      where: ticketNumber
+    updateStatusByTBookingIdAndTicketNumber:
+      kvFunction: updateWithKV
+      params: [status, scannedByVehicleNumber, updatedAt]
+      where:
+        and: [frfsTicketBookingId, ticketNumber]
+    updateAllStatusByBookingId:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where:
+        and: [frfsTicketBookingId]
+    udpateQrDataAndValidTill:
+      kvFunction: updateWithKV
+      params: [qrData, validTill]
+      where:
+        and: [frfsTicketBookingId, ticketNumber]
+    updateRefreshTicketQRByTBookingIdAndTicketNumber:
+      kvFunction: updateWithKV
+      params: [qrData, qrRefreshAt]
+      where:
+        and: [frfsTicketBookingId, ticketNumber]
+
+FRFSTicketBookingPayment:
+  tableName: frfs_ticket_booking_payment
+
+  fields:
+    id: Id FRFSTicketBookingPayment
+    frfsTicketBookingId: Id FRFSTicketBooking
+    frfsQuoteId: Maybe (Id FRFSQuote)
+    paymentOrderId: Id PaymentOrder
+    status: FRFSTicketBookingPaymentStatus
+
+  types:
+    FRFSTicketBookingPaymentStatus:
+      enum: "PENDING, SUCCESS, FAILED, REATTEMPTED, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED"
+
+  constraints:
+    id: PrimaryKey
+    frfsTicketBookingId: SecondaryKey
+    paymentOrderId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByOrderId:
+      kvFunction: findAllWithKV
+      where: paymentOrderId
+    findAllByStatus:
+      kvFunction: findAllWithKV
+      where: status
+    updateStatusByTicketBookingId:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: frfsTicketBookingId
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+FRFSRecon:
+  tableName: frfs_recon
+  derives: "Generic,Show"
+  fields:
+    id: Id FRFSRecon
+    frfsTicketBookingId: Id FRFSTicketBooking
+    networkOrderId: Text # bpp_order_id
+    collectorSubscriberId: Text # bap_subscriber_id
+    receiverSubscriberId: Text # bpp_subscriber_id
+    date: Text # on_confirm date
+    time: Text # on_confirm time
+    mobileNumber: Maybe Text # customer number
+    sourceStationCode: Maybe Text # source station code
+    destinationStationCode: Maybe Text # destination station code
+    ticketQty: Maybe Int # ticket quantity
+    ticketNumber: Maybe Text
+    transactionRefNumber: Maybe Text # transactionId
+    transactionUUID: Maybe Text # transaction uuid
+    txnId: Maybe Text # transaction uuid
+    fare: Price # per ticket price
+    buyerFinderFee: Price # populated from bapConfig
+    totalOrderValue: Price # amount paid by customer
+    settlementAmount: Price # settlement amount = totalOrderValue - bff
+    beneficiaryIFSC: Maybe Text # beneficiary ifsc code, from on_confirm
+    beneficiaryBankAccount: Maybe Text # beneficiary bank account, from on_confirm
+    collectorIFSC: Maybe Text # collector ifsc code, from bapConfig
+    settlementReferenceNumber: Maybe Text # utr number, to be populated post settlement
+    settlementDate: Maybe UTCTime # to be populated post settlement
+    differenceAmount: Maybe Price # Nothing
+    message: Maybe Text # Nothing
+    ticketStatus: Maybe FRFSTicketStatus
+    providerId: Text
+    providerName: Text
+    entityType: Maybe EntityType
+    reconStatus: Maybe ReconStatus
+    paymentGateway: Maybe Text
+
+  default:
+    destinationStationCode: "'NA'" # Default For DSL
+    sourceStationCode: "'NA'" # Default For DSL
+    ticketQty: '0' # Default For DSL
+    ticketNumber: "'NA'" # Default For DSL
+    transactionRefNumber: "'NA'" # Default For DSL
+
+  types:
+    EntityType:
+      enum: "BUS_PASS,FRFS_TICKET_BOOKING"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+    ReconStatus:
+      enum: "PENDING,SETTLED,PARTIALLY_SETTLED,REFUNDED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <EntityType>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <EntityType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ReconStatus>
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <ReconStatus>
+
+  queries:
+    updateTOrderValueAndSettlementAmountById:
+      kvFunction: updateWithKV
+      params: [settlementAmount, totalOrderValue, updatedAt]
+      where: frfsTicketBookingId
+    updateStatusByTicketBookingId:
+      kvFunction: updateWithKV
+      params: [ticketStatus, updatedAt]
+      where: frfsTicketBookingId
+
+  beamFields:
+    fare:
+      currency: Maybe Currency
+      fare: HighPrecMoney
+    buyerFinderFee:
+      buyerFinderFee: HighPrecMoney
+    totalOrderValue:
+      totalOrderValue: HighPrecMoney
+    settlementAmount:
+      settlementAmount: HighPrecMoney
+    differenceAmount:
+      differenceAmount: Maybe HighPrecMoney
+
+  fromTType:
+    fare: Kernel.Types.Common.mkPrice currency fare|E
+    buyerFinderFee: Kernel.Types.Common.mkPrice currency buyerFinderFee|E
+    totalOrderValue: Kernel.Types.Common.mkPrice currency totalOrderValue|E
+    settlementAmount: Kernel.Types.Common.mkPrice currency settlementAmount|E
+    differenceAmount: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) differenceAmount|E
+
+  toTType:
+    fare: (.amount)|I
+    buyerFinderFee: (.amount)|I
+    totalOrderValue: (.amount)|I
+    settlementAmount: (.amount)|I
+    differenceAmount: Kernel.Prelude.fmap (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+
+FRFSConfig:
+  tableName: frfs_config
+  derives: "Generic,Show,FromJSON,ToJSON,Eq"
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    bookingStartTime: UTCTime
+    bookingEndTime: UTCTime
+    roundTripTicketLimit: Int
+    oneWayTicketLimit: Int
+    metroStationTtl: Int
+    busStationTtl: Seconds
+    discount: Int
+    isEventOngoing: Maybe Bool
+    isCancellationAllowed: Bool
+    freeTicketInterval: Maybe Int
+    maxFreeTicketCashback: Maybe Int
+    customDates: "[Text]"
+    customEndTime: Text
+    cancellationReasonId: Maybe Text
+    straightLineDistance: Meters
+    radius: Meters
+    providerId: Maybe Text
+    providerName: Maybe Text
+    validTillSeconds: Seconds
+    isFRFSTestingEnabled: Bool
+    canUpdateExistingPaymentOrder: Bool
+
+  beamType:
+    isCancellationAllowed: Maybe Bool
+    busStationTtl: Maybe Seconds
+    straightLineDistance: Maybe Meters
+    radius: Maybe Meters
+    validTillSeconds: Maybe Seconds
+    isFRFSTestingEnabled: Maybe Bool
+    canUpdateExistingPaymentOrder: Maybe Bool
+
+  queries:
+    findByMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+
+  default:
+    isEventOngoing: "false"
+    isCancellationAllowed: "true"
+    freeTicketInterval: "9999"
+    maxFreeTicketCashback: "0"
+    busStationTtl: "1800"
+    straightLineDistance: "5000"
+    radius: "3000"
+    validTillSeconds: "300"
+    isFRFSTestingEnabled : "false"
+    canUpdateExistingPaymentOrder: "false"
+
+  fromTType:
+    isCancellationAllowed: Kernel.Prelude.fromMaybe True|I
+    busStationTtl: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 1800)|I
+    straightLineDistance: Kernel.Prelude.fromMaybe  (Kernel.Types.Distance.Meters 5000)|I
+    radius: Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 3000)|I
+    validTillSeconds: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 300)|I
+    isFRFSTestingEnabled: Kernel.Prelude.fromMaybe False|I
+    canUpdateExistingPaymentOrder: Kernel.Prelude.fromMaybe False|I
+
+  toTType:
+    isCancellationAllowed: Kernel.Prelude.Just|I
+    busStationTtl: Kernel.Prelude.Just|I
+    straightLineDistance: Kernel.Prelude.Just|I
+    radius: Kernel.Prelude.Just|I
+    validTillSeconds: Kernel.Prelude.Just|I
+    isFRFSTestingEnabled: Kernel.Prelude.Just|I
+    canUpdateExistingPaymentOrder: Kernel.Prelude.Just|I
+
+FRFSRouteFareProduct:
+  tableName: frfs_route_fare_product
+  fields:
+    id: Id FRFSRouteFareProduct
+    routeCode: Text
+    vehicleType: VehicleCategory
+    farePolicyId: Id FRFSFarePolicy
+    vehicleServiceTierId: Id FRFSVehicleServiceTier
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    timeBounds: TimeBound
+    integratedBppConfigId: Id IntegratedBPPConfig
+  default:
+    timeBounds: "'Unbounded'"
+  queries:
+    findByRouteCode:
+      kvFunction: findAllWithKV
+      where:
+        and: [routeCode, integratedBppConfigId]
+    findByRouteCodeAndVehicleServiceTierId:
+      kvFunction: findOneWithKV
+      where:
+        and: [routeCode, vehicleServiceTierId]
+    findAllByIntegratedBPPConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [integratedBppConfigId]
+    findAllByFarePoliyIdAndIntegratedBPPConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [farePolicyId, integratedBppConfigId]
+
+FRFSFarePolicy:
+  tableName: frfs_fare_policy
+  fields:
+    id: Id FRFSFarePolicy
+    applicableDiscountIds: "[Id FRFSTicketCategoryMetadataConfig]"
+    _type: FRFSFarePolicyType
+    description: Text
+    cessCharge: Maybe HighPrecMoney
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  types:
+    FRFSFarePolicyType:
+      enum: "MatrixBased, StageBased"
+  default:
+    applicableDiscountIds: "'{}'"
+  constraints:
+    id: PrimaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByIds:
+      kvFunction: findAllWithKV
+      where:
+         in: [id]
+
+StopFare:
+  tableName: route_stop_fare
+  fields:
+    farePolicyId: Id FRFSFarePolicy
+    startStopCode: Text
+    endStopCode: Text
+    amount: HighPrecMoney
+    currency: Currency
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    integratedBppConfigId: Id IntegratedBPPConfig
+  beamType:
+    routeCode: Maybe Text
+  default:
+    timeBounds: "'Unbounded'"
+    currency: "'INR'"
+  constraints:
+    farePolicyId: PrimaryKey
+    startStopCode: PrimaryKey
+    endStopCode: PrimaryKey
+  queries:
+    findByRouteCode:
+      kvFunction: findAllWithKV
+      where:
+        and: [farePolicyId]
+    findByRouteStartAndStopCode:
+      kvFunction: findOneWithKV
+      where:
+        and: [farePolicyId, startStopCode, endStopCode]
+    findByStartAndEndStopCodeAndIntegratedBPPConfigId:
+      kvFunction: findOneWithKV
+      where:
+        and: [startStopCode, endStopCode, integratedBppConfigId]
+    findAllByStartStopAndIntegratedBPPConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [startStopCode, endStopCode, integratedBppConfigId]
+    updateFareByStopCodes:
+      kvFunction: updateOneWithKV
+      params: [amount]
+      where:
+        and: [farePolicyId, startStopCode, endStopCode]
+
+
+FRFSStageFare:
+  tableName: frfs_stage_fare
+  fields:
+    farePolicyId: Id FRFSFarePolicy
+    stage: Int
+    amount: HighPrecMoney
+    currency: Currency
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  default:
+    currency: "'INR'"
+  constraints:
+    farePolicyId: PrimaryKey
+    stage: PrimaryKey
+  queries:
+    findAllByFarePolicyId:
+      kvFunction: findAllWithKV
+      where: farePolicyId
+
+FRFSGtfsStageFare:
+  tableName: frfs_gtfs_stage_fare
+  fields:
+    id: Id FRFSGtfsStageFare
+    stage: Int
+    amount: HighPrecMoney
+    currency: Currency
+    vehicleServiceTierId: Id FRFSVehicleServiceTier
+    vehicleType: VehicleCategory
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    cessCharge: Maybe HighPrecMoney
+    discountIds: "[Id FRFSTicketCategoryMetadataConfig]"
+  constraints:
+    id: PrimaryKey
+  default:
+    applicableDiscountIds: "'{}'"
+  queries:
+    findAllByVehicleServiceTierId:
+      kvFunction: findAllWithKV
+      where: vehicleServiceTierId
+    findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId:
+      kvFunction: findOneWithKV
+      where:
+        and: [vehicleType, stage, merchantOperatingCityId, vehicleServiceTierId]
+    findAllByVehicleTypeAndStageAndMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [vehicleType, stage, merchantOperatingCityId]
+
+FRFSRouteStopStageFare:
+  tableName: frfs_route_stop_stage_fare
+  fields:
+    farePolicyId: Id FRFSFarePolicy
+    routeCode: Text
+    stopCode: Text
+    stage: Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    farePolicyId: PrimaryKey
+    routeCode: PrimaryKey
+    stopCode: PrimaryKey
+  queries:
+    findByRouteAndStopCode:
+      kvFunction: findOneWithKV
+      where:
+        and: [farePolicyId, routeCode, stopCode]
+
+FRFSTicketCategoryMetadataConfig:
+  tableName: frfs_ticket_category_metadata_config
+  fields:
+    id: Id FRFSTicketCategoryMetadataConfig
+    code: Text
+    title: Text
+    description: Text
+    tnc: Text
+    category: FRFSQuoteCategoryType|NoRelation
+    merchantId: Id Merchant
+    domainCategoryValue: OfferedValue
+    merchantOperatingCityId: Id MerchantOperatingCity
+    vehicleCategory: VehicleCategory
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByCategoryVehicleAndCity:
+      kvFunction: findOneWithKV
+      where:
+        and: [category, vehicleCategory ,merchantOperatingCityId]
+
+FRFSVehicleServiceTier:
+  tableName: frfs_vehicle_service_tier
+  fields:
+    id: Id FRFSVehicleServiceTier
+    providerCode: Text
+    _type: ServiceTierType
+    shortName: Text
+    longName: Text
+    description: Text
+    isAirConditioned: Maybe Bool
+    merchantId: Id Merchant
+    integratedBppConfigId: Id IntegratedBPPConfig
+    merchantOperatingCityId: Id MerchantOperatingCity
+    trainType: Maybe Text
+  constraints:
+    id: PrimaryKey
+  cachedQueries:
+    findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId:
+      keyParams:
+        - _type
+        - merchantOperatingCityId
+        - integratedBppConfigId
+      returnType: One
+      dbQuery: findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
+      dbQueryParams:
+        - _type
+        - merchantOperatingCityId
+        - integratedBppConfigId
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByProviderCode:
+      kvFunction: findAllWithKV
+      where:
+        and: [providerCode, merchantOperatingCityId]
+    findByProviderCodeAndTrainType:
+      kvFunction: findAllWithKV
+      where:
+        and: [providerCode, trainType, merchantOperatingCityId]
+    findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId:
+      kvFunction: findOneWithKV
+      where:
+        and: [_type, merchantOperatingCityId, integratedBppConfigId]
+
+RouteTripMapping:
+  tableName: route_trip_mapping
+  fields:
+    routeCode: Text
+    tripCode: Text
+    tripStartTime: Text
+    tripEndTime: Text
+    vehicleType: VehicleCategory
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    integratedBppConfigId: Id IntegratedBPPConfig
+  constraints:
+    tripCode: PrimaryKey
+  queries:
+    findAllTripIdByRouteCode:
+      kvFunction: findAllWithKV
+      where:
+        and: [routeCode, integratedBppConfigId]
+
+RouteStopCalender:
+  tableName: route_stop_calender
+  fields:
+    tripId: Id RouteStopTimeTable
+    serviceability: "[Int]"
+    integratedBppConfigId: Id IntegratedBPPConfig
+  constraints:
+    tripId: PrimaryKey
+    integratedBppConfigId: PrimaryKey
+  sqlType:
+    serviceability: integer[]
+  queries:
+    findByTripIds:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [tripId]
+          - integratedBppConfigId
+
+FRFSTicketBookingFeedback:
+  tableName: frfs_ticket_booking_feedback
+  fields:
+    id: Id FRFSTicketBookingFeedback
+    bookingId: Id FRFSTicketBooking
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    isFareAccepted: Maybe Bool
+    feedbackDetails: Maybe Text
+  constraints:
+    id: PrimaryKey
+    bookingId: SecondaryKey
+  queries:
+    findByBookingId:
+      kvFunction: findOneWithKV
+      where:
+        and: [bookingId]
+    findByMerchantIdAndOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, merchantOperatingCityId]
+    updateByBookingId:
+      kvFunction: updateOneWithKV
+      params: [isFareAccepted, feedbackDetails, updatedAt]
+      where:
+        and: [bookingId]

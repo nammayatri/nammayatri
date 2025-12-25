@@ -22,26 +22,41 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry as BeamG
+import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
+
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Geometry -> m ()
+create = createWithKV
+
+findGeometryByStateAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City -> Context.IndianState -> m (Maybe Geometry)
+findGeometryByStateAndCity cityParam stateParam = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamG.city (Se.Eq cityParam),
+          Se.Is BeamG.state (Se.Eq stateParam)
+        ]
+    ]
 
 findGeometriesContaining :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
 someGeometriesContain :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
-  geometries <- findGeometriesContaining gps regions
+  geometries <- runInReplica $ findGeometriesContaining gps regions
   pure $ not $ null geometries
 
 findGeometriesContainingGps :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> m [Geometry]
 findGeometriesContainingGps gps = do
-  dbConf <- getMasterBeamConfig
+  dbConf <- getReplicaBeamConfig
   geoms <-
     L.runDB dbConf $
       L.findRows $
@@ -59,5 +74,14 @@ instance FromTType' BeamG.Geometry Geometry where
       Just
         Geometry
           { id = Id id,
+            geom = Nothing,
             ..
           }
+
+instance ToTType' BeamGeomG.GeometryGeom Geometry where
+  toTType' Geometry {..} = do
+    BeamGeomG.GeometryGeomT
+      { BeamGeomG.id = getId id,
+        BeamGeomG.geom = geom,
+        ..
+      }

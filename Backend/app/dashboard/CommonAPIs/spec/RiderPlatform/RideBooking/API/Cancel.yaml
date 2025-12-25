@@ -1,0 +1,30 @@
+imports:
+  Booking: Domain.Types.Booking
+  Person: Domain.Types.Person
+  CancelReq: Domain.Action.UI.Cancel
+
+importPackageOverrides:
+  Domain.Types.Booking: "rider-app"
+  Domain.Types.Person: "rider-app"
+  Domain.Action.UI.Cancel: "rider-app"
+
+module: Cancel
+apiPrefix: "rideBooking"
+
+apis:
+  - POST:  # CancelBookingAPI
+      endpoint: /cancel/{rideBookingId}/{customerId}
+      name: PostCancelBooking
+      auth: ApiAuthV2
+      params:
+        rideBookingId: Id Booking
+        customerId: Id Person
+      request:
+        type: CancelReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CancelAPI RideBookingCancelEndPoint
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS CANCEL_BOOKING
+
+types: {}

@@ -1,0 +1,82 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  FleetBadge: Domain.Types.FleetBadge
+  FleetBadgeType: Domain.Types.FleetBadgeType
+  Person: Domain.Types.Person
+
+FleetBadgeAssociation:
+  tableName: fleet_badge_association
+
+  fields:
+    id: Id FleetBadgeAssociation
+    badgeId: Id FleetBadge
+    driverId: Id Person
+    isActive: Bool
+    fleetOwnerId: Text
+    badgeType: FleetBadgeType|NoRelation
+    associatedOn: Maybe UTCTime
+    associatedTill: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    badgeId: "!SecondaryKey"
+    driverId: "!SecondaryKey"
+    fleetOwnerId: "!SecondaryKey"
+    badgeType: "!SecondaryKey"
+
+  default:
+    badgeType: "'DRIVER'"
+
+  queries:
+    deleteByBadgeId:
+      kvFunction: deleteWithKV
+      where: badgeId
+    findAllFleetBadgeAssociationByFleetOwnerId:
+      kvFunction: findAllWithKV
+      where:
+        and: [fleetOwnerId, isActive]
+    findOneFleetBadgeAssociationByFleetOwnerIdAndDriverIdAndBadgeTypeAndIsActive:
+      kvFunction: findOneWithKV
+      where:
+        and: [fleetOwnerId, driverId, badgeType, isActive]
+
+  cachedQueries:
+    findAllFleetBadgeAssociationByFleetOwnerId:
+      keyParams:
+        - fleetOwnerId
+        - isActive
+      returnType: Array
+      dbQuery: findAllFleetBadgeAssociationByFleetOwnerId
+      dbQueryParams:
+        - fleetOwnerId
+        - isActive
+    findOneFleetBadgeAssociationByFleetOwnerIdAndDriverIdAndBadgeTypeAndIsActive:
+      keyParams:
+        - fleetOwnerId
+        - driverId
+        - badgeType
+        - isActive
+      returnType: One
+      dbQuery: findOneFleetBadgeAssociationByFleetOwnerIdAndDriverIdAndBadgeTypeAndIsActive
+      dbQueryParams:
+        - fleetOwnerId
+        - driverId
+        - badgeType
+        - isActive
+
+  sqlType:
+    id: text
+    badgeId: text
+    fleetOwnerId: text
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

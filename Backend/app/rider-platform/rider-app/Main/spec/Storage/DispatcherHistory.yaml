@@ -1,0 +1,61 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+DispatcherHistory:
+  tableName: dispatcher_history
+
+  fields:
+    id: Id DispatcherHistory
+    dispatcherId: Id Person
+    currentVehicle: Text
+    replacedVehicle: Text
+    driverCode: Maybe Text
+    conductorCode: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    depotId: Text
+    reasonTag: Text
+    reasonContent: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    waybillNo: Maybe Text
+
+  sqlType:
+    id: character varying(255)
+    dispatcherId: character varying(255)
+    currentVehicle: character varying(255)
+    replacedVehicle: character varying(255)
+    driverCode: character varying(255)
+    conductorCode: character varying(255)
+    merchantId: character varying(36)
+    merchantOperatingCityId: character varying(36)
+    depotId: character varying(255)
+    reasonTag: character varying(255)
+    reasonContent: character varying(1000)
+    waybillNo: character varying(255)
+
+  constraints:
+    id: PrimaryKey
+    dispatcherId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByDispatcherId:
+      kvFunction: findAllWithOptionsDb
+      where:
+        and: [dispatcherId]
+      orderBy:
+        field: createdAt
+        order: desc
+
+  default:
+    updatedAt: 'CURRENT_TIMESTAMP'
+    createdAt: 'CURRENT_TIMESTAMP'
+
+  extraOperations:
+    - GENERATE_INDEXES

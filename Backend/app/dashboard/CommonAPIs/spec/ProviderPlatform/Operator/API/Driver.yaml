@@ -1,0 +1,233 @@
+imports:
+  Summary: Dashboard.Common
+  Driver: Dashboard.Common
+  StatusRes: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+  OperationHub: Dashboard.Common
+  AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
+  AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
+  FCMRecipientToken: Kernel.External.Notification.FCM.Types
+  DriverMode: API.Types.ProviderPlatform.Fleet.Endpoints.Driver
+
+module: Driver
+
+apis:
+  - GET: # FetchOperationHubRequests
+      endpoint: /operator/fetch/hubRequests
+      auth: ApiAuthV2
+      query:
+        - mbFrom: UTCTime
+        - mbTo: UTCTime
+        - mbStatus: RequestStatus
+        - mbReqType: RequestType
+        - mbLimit: Int
+        - mbOffset: Int
+        - mbDriverId: Text
+        - mbMobileNumber: Text
+        - mbOperationHubId: Id OperationHub
+        - mbOperationHubName: Text
+        - mbRegistrationNo: Text
+      response:
+        type: OperationHubReqResp
+
+  - GET:
+      endpoint: /operation/getAllHubs
+      auth: ApiAuthV2
+      response:
+        type: "[OperationHub]"
+
+  - POST: # RespondOperationHubRequest
+      endpoint: /operator/respond/hubRequest
+      auth: ApiAuthV2
+      request:
+        type: RespondHubRequest
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /operator/createRequest
+      auth: ApiAuthV2
+      request:
+        type: DriverOperationHubRequest
+      response:
+        type: APISuccess
+  - GET: # ListDriversAPI
+      endpoint: /operator/list
+      auth: ApiAuthV2
+      query:
+        - isActive: Bool
+        - limit: Int
+        - offset: Int
+        - vehicleNo: Text
+        - mbSearchString: Text
+        - onlyMandatoryDocs: Bool
+      response:
+        type: DriverInfoResp
+      helperApi:
+        - GET:
+            endpoint: /operator/list
+            auth: ApiAuthV2
+            query:
+              - isActive: Bool
+              - limit: Int
+              - offset: Int
+              - vehicleNo: Text
+              - mbSearchString: Text
+              - onlyMandatoryDocs: Bool
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: DriverInfoResp
+
+  # following apis currently used only for Driver Cum Owner case
+  - POST: # SendFleetJoiningOtpAPI
+      endpoint: /operator/sendJoiningOtp
+      auth: ApiAuthV2
+      request:
+        type: AuthReq
+      response:
+        type: AuthRes
+      helperApi:
+        - POST:
+            endpoint: /operator/sendJoiningOtp
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: AuthReq
+            response:
+              type: AuthRes
+
+  - POST: # VerifyFleetJoiningOtpAPI
+      endpoint: /operator/verifyJoiningOtp
+      auth: ApiAuthV2
+      query:
+        - authId: Text
+      request:
+        type: VerifyOperatorJoiningOtpReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /operator/verifyJoiningOtp
+            auth: ApiAuthV2
+            query:
+              - authId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: VerifyOperatorJoiningOtpReq
+            response:
+              type: APISuccess
+
+  - GET:
+      endpoint: /operator/dashboard/analytics/allTime
+      auth: ApiAuthV2
+      response:
+        type: AllTimeOperatorAnalyticsRes
+      helperApi:
+        - GET:
+            endpoint: /{requestorId}/operator/dashboard/analytics/allTime
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            response:
+              type: AllTimeOperatorAnalyticsRes
+
+  - GET:
+      endpoint: /operator/dashboard/analytics
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - from: Day
+        - to: Day
+      response:
+        type: FilteredOperatorAnalyticsRes
+      helperApi:
+        - GET:
+            endpoint: /{requestorId}/operator/dashboard/analytics
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            mandatoryQuery:
+              - from: Day
+              - to: Day
+            response:
+              type: FilteredOperatorAnalyticsRes
+
+
+types:
+  DriverInfoResp:
+    - listItem: [DriverInfo]
+    - summary: Summary
+  OperationHub:
+    id : Id OperationHub
+    name : Text
+    address : Text
+    lat: Double
+    lon: Double
+    mobileNumber: Text
+    description: Maybe Text
+    merchantId: Text
+    merchantOperatingCityId: Text
+  DriverOperationHubRequest:
+    requestType: RequestType
+    operationHubId: Id OperationHub
+    registrationNo: Text
+    creatorId: Text
+    derive: "'HideSecrets"
+  RequestStatus:
+    enum: "PENDING,APPROVED,REJECTED"
+    derive: "HttpInstance"
+  RequestType:
+    enum: "ONBOARDING_INSPECTION, REGULAR_INSPECTION"
+    derive: "HttpInstance"
+  OperationHubReqResp:
+    - requests: [OperationHubDriverRequest]
+    - summary: Summary
+  OperationHubDriverRequest:
+    id: Text
+    operationHubId: Id OperationHub
+    operationHubName: Text
+    driverPhoneNo: Maybe Text
+    creatorPhoneNo: Maybe Text
+    rcId: Maybe Text
+    registrationNo: Text
+    requestType: RequestType
+    requestStatus: RequestStatus
+    requestTime: UTCTime
+  RespondHubRequest:
+    status: RequestStatus
+    operationHubRequestId: Text
+    operatorId: Text
+    remarks: Text
+    derive: "'HideSecrets"
+  DriverInfo:
+    - driverId: Id Driver
+    - firstName: Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
+    - status: Maybe DriverMode
+    - isActive: Bool
+    - mobileCountryCode: Text
+    - mobileNumber: Text
+    - vehicle: Maybe Text
+    - vehicleNo: Maybe Text
+    - isRcActive: Bool
+    - documents: StatusRes
+  VerifyOperatorJoiningOtpReq:
+    - mobileCountryCode: Text
+    - mobileNumber: Text
+    - otp: Text
+    - deviceToken: Maybe FCMRecipientToken
+    - derive: "'HideSecrets"
+
+  AllTimeOperatorAnalyticsRes:
+    - rating: Maybe Double
+    - cancellationRate: Maybe Double
+    - acceptanceRate: Maybe Double
+
+  FilteredOperatorAnalyticsRes:
+    - activeDriver: Int
+    - driverEnabled: Int
+    - greaterThanOneRide: Int
+    - greaterThanTenRide: Int
+    - greaterThanFiftyRide: Int

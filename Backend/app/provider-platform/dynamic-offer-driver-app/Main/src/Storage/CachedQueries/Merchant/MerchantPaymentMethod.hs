@@ -14,20 +14,26 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.MerchantPaymentMethod
-  ( findAllByMerchantOpCityId,
+  ( create,
+    findAllByMerchantOpCityId,
     findByIdAndMerchantOpCityId,
+    findById,
+    clearCache,
   )
 where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant.MerchantOperatingCity
-import Domain.Types.Merchant.MerchantPaymentMethod
+import Domain.Types.MerchantOperatingCity
+import Domain.Types.MerchantPaymentMethod
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Merchant.MerchantPaymentMethod as Queries
+import qualified Storage.Queries.MerchantPaymentMethod as Queries
+
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantPaymentMethod -> m ()
+create = Queries.create
 
 findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m [MerchantPaymentMethod]
 findAllByMerchantOpCityId id =
@@ -46,3 +52,27 @@ cacheMerchantPaymentMethods merchantId cfg = do
 
 makeMerchantIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantIdKey id = "driver-offer:CachedQueries:MerchantPaymentMethod:MerchantOpCityId-" <> id.getId
+
+makeIdKey :: Id MerchantPaymentMethod -> Text
+makeIdKey id = "driver-offer:CachedQueries:MerchantPaymentMethod:Id-" <> id.getId
+
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCache merchantOperatingCityId = do
+  Hedis.del (makeMerchantIdKey merchantOperatingCityId)
+
+findById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantPaymentMethod -> m (Maybe MerchantPaymentMethod)
+findById id = do
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
+    Just a -> return $ Just $ coerce @(MerchantPaymentMethodD 'Unsafe) @MerchantPaymentMethod a
+    Nothing -> do
+      result <- Queries.findByPrimaryKey id
+      case result of
+        Just merchantPaymentMethod -> do
+          cacheMerchantPaymentMethodById id merchantPaymentMethod
+          return $ Just merchantPaymentMethod
+        Nothing -> return Nothing
+
+cacheMerchantPaymentMethodById :: (CacheFlow m r) => Id MerchantPaymentMethod -> MerchantPaymentMethod -> m ()
+cacheMerchantPaymentMethodById id cfg = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeIdKey id) (coerce @MerchantPaymentMethod @(MerchantPaymentMethodD 'Unsafe) cfg) expTime

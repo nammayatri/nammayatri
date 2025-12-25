@@ -1,0 +1,92 @@
+imports:
+  Person: Domain.Types.Person
+
+
+SavedReqLocation:
+  tableName: saved_location
+  derives: Generic,Show,FromJSON,ToJSON
+  types:
+    SavedReqLocationAPIEntity:
+      lat: Double
+      lon: Double
+      street: Maybe Text
+      door: Maybe Text
+      city: Maybe Text
+      state: Maybe Text
+      country: Maybe Text
+      building: Maybe Text
+      areaCode: Maybe Text
+      area: Maybe Text
+      tag: Text
+      placeId: Maybe Text
+      ward: Maybe Text
+      locationName : Maybe Text
+      derive': Generic,FromJSON,ToJSON,Show,ToSchema
+  fields:
+    id: Id SavedReqLocation
+    lat: Double
+    lon: Double
+    street: Maybe Text
+    door: Maybe Text
+    city: Maybe Text
+    state: Maybe Text
+    country: Maybe Text
+    building: Maybe Text
+    areaCode: Maybe Text
+    area: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    tag: Text
+    isMoved: Maybe Bool
+    riderId: Id Person
+    placeId: Maybe Text
+    ward: Maybe Text
+    locationName: Maybe Text
+
+  sqlType:
+    ward: character varying(255)
+    city: character varying(500)
+    country: character varying(500)
+    street: character varying(500)
+    door: character varying(500)
+    building: character varying(500)
+    areaCode: character varying(500)
+    area: character varying(500)
+    state: character varying(500)
+    tag: character varying(255)
+    placeId: text
+    locationName: character varying(500)
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+  constraints:
+    id: PrimaryKey
+    riderId: SecondaryKey
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+  queries:
+    deleteAllByRiderId:
+      kvFunction: deleteWithKV
+      where: riderId
+  cachedQueries:
+    deleteSavedLocation:
+      keyParams:
+        - riderId
+        - latLong: Kernel.External.Maps.LatLong
+      keyMaker: makeIdKey
+    findByLatLonAndRiderId:
+      keyParams:
+        - riderId
+        - latLong: Kernel.External.Maps.LatLong
+      keyMaker: makeIdKey
+      dbQuery: findByLatLonAndRiderId
+      dbQueryParams:
+        - riderId
+        - latLong: Kernel.External.Maps.LatLong
+  extraOperations:
+   - EXTRA_QUERY_FILE
+   - EXTRA_CACHED_QUERY_FILE
+

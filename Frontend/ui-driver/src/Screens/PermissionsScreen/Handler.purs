@@ -20,7 +20,7 @@ import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.PermissionsScreen.Controller (ScreenOutput(..))
 import Screens.PermissionsScreen.View as PermissionsScreen
 import Types.App (FlowBT, GlobalState(..), PERMISSIONS_SCREEN_OUTPUT(..), ScreenType(..))
@@ -30,11 +30,12 @@ permissions :: FlowBT String PERMISSIONS_SCREEN_OUTPUT
 permissions = do
     (GlobalState state) <- getState
     logField_ <- lift $ lift $ getLogFields 
-    action <- lift $ lift $ runScreen $ PermissionsScreen.screen state.permissionsScreen{data{logField = logField_}}
+    action <- lift $ lift $ runLoggableScreen $ PermissionsScreen.screen state.permissionsScreen{data{logField = logField_}}
     case action of 
         GoBack -> App.BackT $ pure App.GoBack
         GoToHome -> App.BackT $ App.BackPoint <$> pure DRIVER_HOME_SCREEN
         LogoutAccount -> App.BackT $ App.BackPoint <$> pure LOGOUT_FROM_PERMISSIONS_SCREEN
+        FcmNotification notificationType notificationBody -> App.BackT $ App.BackPoint <$> pure (FCM_NOTIFICATION_PERMISSION notificationType notificationBody) 
         GoToRegisteration updatedState -> do
           modifyScreenState $ PermissionsScreenStateType (\_ -> updatedState)
           App.BackT $ App.BackPoint <$> (pure $ GO_TO_REGISTERATION_SCREEN updatedState)

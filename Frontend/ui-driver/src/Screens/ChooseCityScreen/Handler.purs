@@ -18,9 +18,10 @@ module Screens.ChooseCityScreen.Handler where
 
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
-import Engineering.Helpers.BackTrack (getState)
+import Engineering.Helpers.Commons (markPerformance)
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Prelude (bind, ($), pure, (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core.Types.Language.Flow (runLoggableScreen)
 import Screens.ChooseCityScreen.Controller (ScreenOutput(..))
 import Screens.ChooseCityScreen.View as ChooseCityScreen
 import Types.App (CHOOSE_CITY_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), ScreenType(..))
@@ -30,7 +31,8 @@ import Types.ModifyScreenState (modifyScreenState)
 chooseCityScreen :: FlowBT String CHOOSE_CITY_SCREEN_OUTPUT
 chooseCityScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ ChooseCityScreen.screen state.chooseCityScreen
+  liftFlowBT $ markPerformance "CHOOSE_CITY_SCREEN"
+  act <- lift $ lift $ runLoggableScreen $ ChooseCityScreen.screen state.chooseCityScreen
   case act of
     SelectLanguageScreen -> App.BackT $ pure App.GoBack 
     WelcomeScreen -> App.BackT $ App.NoBack <$> (pure GoToWelcomeScreen)

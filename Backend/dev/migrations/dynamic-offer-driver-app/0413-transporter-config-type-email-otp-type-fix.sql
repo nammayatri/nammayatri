@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN email_otp_config TYPE json USING email_otp_config::json;

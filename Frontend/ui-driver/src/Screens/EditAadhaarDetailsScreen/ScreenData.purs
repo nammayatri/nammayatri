@@ -19,11 +19,14 @@ import Screens.Types(EditAadhaarDetailsScreenState)
 import Prelude (class Eq)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
+import ConfigProvider
 
 
 initData :: EditAadhaarDetailsScreenState
 initData = {
-  data:  {},
+  data:  {
+    config : getAppConfig appConfig
+  },
   props: {
     isInEditAadharDetailsScreen : false
   }

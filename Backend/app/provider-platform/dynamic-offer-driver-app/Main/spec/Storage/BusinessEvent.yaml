@@ -1,0 +1,62 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Driver: Domain.Types.Person
+  Booking: Domain.Types.Booking
+  VehicleVariant: Domain.Types.VehicleVariant
+  Ride: Domain.Types.Ride
+  Meters: Kernel.Types.Common
+
+BusinessEvent:
+  tableName: business_event
+  derives: Generic
+
+  types:
+    EventType:
+      enum: "DRIVER_IN_POOL, RIDE_COMMENCED, DRIVER_ASSIGNED, RIDE_CONFIRMED"
+
+    WhenPoolWasComputed:
+      enum: "ON_SEARCH, ON_CONFIRM, ON_REALLOCATION"
+
+  fields:
+    id : Id BusinessEvent
+    driverId : Maybe (Id Driver)
+    eventType : EventType
+    timeStamp : UTCTime
+    bookingId : Maybe (Id Booking)
+    whenPoolWasComputed : Maybe WhenPoolWasComputed
+    vehicleVariant : Maybe VehicleVariant
+    distance : Maybe Meters
+    distanceUnit: DistanceUnit
+    duration : Maybe Seconds
+    rideId : Maybe (Id Ride)
+
+  beamType:
+    distance: Maybe Int
+    duration: Maybe Int
+    distanceUnit: Maybe DistanceUnit
+
+  fromTType:
+    distance: Kernel.Types.Common.Meters <$> distance|E
+    duration: Kernel.Types.Common.Seconds <$> distance|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+
+  toTType:
+    distance: Kernel.Types.Common.getMeters <$> distance|E
+    distanceUnit: Kernel.Prelude.Just|I
+    duration: Kernel.Types.Common.getSeconds <$> duration|E
+
+  constraints:
+    id: PrimaryKey
+
+  sqlType:
+    eventType: character varying(255)
+    whenPoolWasComputed: character varying(255)
+    vehicleVariant: character varying(255)
+    distance: double precision
+    duration: double precision
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

@@ -15,7 +15,7 @@
 
 module Storage where
 
-import Prelude (show, Unit, void, pure, class Show, ($), (<<<), (==),(>))
+import Prelude (show, Unit, void, pure, class Show, ($), (<<<), (==),(>), (/=))
 import JBridge as JBridge
 import Types.App (FlowBT)
 import Control.Monad.Trans.Class (lift)
@@ -35,6 +35,8 @@ data KeyStore = USER_NAME
                 | TEST_FLOW_FOR_REGISTRATOION
                 | MOBILE_NUMBER_KEY
                 | IS_RIDE_ACTIVE
+                | IS_DRIVER_STATS_CALLED
+                | NEW_ADD_STOP
                 | IS_DRIVER_ENABLED
                 | DRIVER_STATUS
                 | DRIVER_STATUS_N
@@ -45,8 +47,10 @@ data KeyStore = USER_NAME
                 | LOCAL_STAGE
                 | RIDE_STATUS_POLLING
                 | RIDE_STATUS_POLLING_ID
-                | RIDE_T_FREQUENCY
-                | RIDE_G_FREQUENCY
+                | RENTAL_RIDE_STATUS_POLLING
+                | RENTAL_RIDE_STATUS_POLLING_ID
+                | RIDE_T_FREQUENCY -- Deprecated
+                | RIDE_G_FREQUENCY -- Deprecated
                 | IS_DRIVER_VERIFIED
                 | DRIVER_MIN_DISPLACEMENT
                 | DEMO_MODE_PASSWORD
@@ -73,6 +77,8 @@ data KeyStore = USER_NAME
                 | SUGGESTIONS_DEFINITIONS
                 | TRIGGER_MAPS
                 | DEVICE_DETAILS
+                | CUSTOMER_CLIENT_ID
+                | REGISTRATION_APPROVED
                 | HAS_TAKEN_FIRST_RIDE
                 | CURRENCY
                 | IS_BANNER_ACTIVE
@@ -105,6 +111,7 @@ data KeyStore = USER_NAME
                 | BUNDLE_TIME_OUT
                 | APP_SESSION_TRACK_COUNT
                 | MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE
+                | RIDE_SUMMARY_DATA
                 | TRIP_DISTANCE_ACC
                 | TRIP_DISTANCE
                 | TRIP_STATUS
@@ -114,8 +121,70 @@ data KeyStore = USER_NAME
                 | DRIVER_LOCATION
                 | SHOW_SUBSCRIPTIONS
                 | TOTAL_WAITED
+                | VISITED_DRIVER_COINS_PAGE
                 | REFERRAL_CODE_ADDED
+                | DRIVER_OPERATOR_ID
+                | DRIVER_FLEET_OWNER_ID
                 | SAVED_GOTO_COUNT
+                | OLD_COIN_BALANCE
+                | TIMES_OPENED_NEW_BENEFITS
+                | ENTERED_RC
+                | ENTERED_DL
+                | COINS_POPUP_SHOWN_DATE
+                | T_AND_C_VERSION
+                | NIGHT_SAFETY_POP_UP
+                | REFERRER_URL
+                | LMS_SELECTED_LANGUAGE_CACHE
+                | ANOTHER_ACTIVITY_LAUNCHED
+                | DRIVER_PROFILE_STATS_RESPONSE
+                | VEHICLE_CATEGORY
+                | SPECIAL_LOCATION_LIST
+                | SPECIAL_LOCATION_LIST_EXPIRY
+                | ENABLE_SPECIAL_PICKUP_WIDGET
+                | RIDE_START_ODOMETER
+                | RIDE_END_ODOMETER
+                | RIDE_PRODUCT_TYPE
+                | RIDE_START_TIME
+                | RIDE_END_TIME
+                | RIDE_START_TIMER_ID
+                | PREVIOUS_LOCAL_STAGE
+                | COIN_EARNED_POPUP_TYPE
+                | SHOW_TOLL_POPUP
+                | CACHED_SDK_TOKEN_DATA
+                | REFER_NOW_LAST_SHOWN
+                | ADD_UPI_LAST_SHOWN
+                | VERIFY_UPI_LAST_SHOWN
+                | GULLAK_TOKEN
+                | DONT_CALL_REFRESH
+                | IS_ON_FREE_TRIAL
+                | INTRODUCING_YATRI_POINTS_POPUP_LIMIT
+                | PARCEL_IMAGE_UPLOADED
+                | LOGS_TRACKING
+                | FUNCTION_EXECUTED_IN_SESSION
+                | EVENT_STORAGE
+                | LAST_PLAYED_RIDE_ID
+                | GO_TO_PLANS_PAGE
+                | LAST_EXECUTED_TIME
+                | SHOW_PARCEL_INTRODUCTION_POPUP
+                | METRO_STATIONS_LIST
+                | DRIVER_RIDE_STATUS
+                | PACKAGE_NAME
+                | DRIVER_LOCATION_TS
+                | POINTS_FACTOR
+                | ACCURACY_THRESHOLD
+                | LOCATION_UPDATE_INTERVAL
+                | LOCATION_BATCH_INTERVAL
+                | LOCATION_BATCH_SIZE
+                | LOCATION_REQUEST_INTERVAL
+                | LOCATION_MAX_BATCH_AGE
+                | LOCATION_FRESHNESS_THRESHOLD
+                | LOCATION_MAX_TIME_THRESHOLD
+                | LOCATION_PRIORITY
+                | METER_RIDE_ACTIVE
+                | PET_RIDES_POPUP_SHOWN
+                | NY_CLUB_POPUP_SHOWN
+                | NY_CLUB_POPUP_DECLINED_COUNT
+                | PET_RIDES_INFO_POPUP_SHOWN
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
@@ -149,4 +218,12 @@ isLocalStageOn :: HomeScreenStage -> Boolean
 isLocalStageOn stage = (getValueToLocalNativeStore LOCAL_STAGE) == show stage
 
 isOnFreeTrial :: LazyCheck -> Boolean
-isOnFreeTrial dummy = fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) > 0
+isOnFreeTrial dummy = do
+  let freeTrialFromLocal = getValueToLocalNativeStore IS_ON_FREE_TRIAL
+  if freeTrialFromLocal /= "Nothing" then
+    freeTrialFromLocal == "true"
+  else
+    fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) > 0
+
+getIntegerFromLocalStore :: KeyStore -> Int
+getIntegerFromLocalStore key = fromMaybe 0 $ fromString $ getValueToLocalStore key

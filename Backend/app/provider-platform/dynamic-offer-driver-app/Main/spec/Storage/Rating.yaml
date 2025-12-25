@@ -1,0 +1,50 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+
+Rating:
+  tableName: rating
+
+  fields:
+    id : Id Rating
+    rideId : Id Ride
+    driverId : Id Person
+    ratingValue : Int
+    feedbackDetails : Maybe Text
+    wasOfferedAssistance : Maybe Bool
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    isSafe : Maybe Bool
+    issueId : Maybe Text
+    isFavourite: Maybe Bool
+    mediaId: Maybe (Id MediaFile)
+
+  constraints:
+    id: PrimaryKey
+    rideId: SecondaryKey
+
+  queries:
+    findRatingForRide:
+      kvFunction: findOneWithKV
+      where:
+        eq: [rideId]
+
+    findAllRatingsForPerson:
+      kvFunction: findAllWithKV
+      where:
+        eq: [driverId]
+
+    updateRating:
+      kvFunction: updateOneWithKV
+      params: [ratingValue, feedbackDetails , updatedAt, isSafe, issueId, wasOfferedAssistance, isFavourite, mediaId]
+      where:
+        and: [id, driverId]
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

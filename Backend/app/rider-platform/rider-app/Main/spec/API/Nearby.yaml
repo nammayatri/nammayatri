@@ -1,0 +1,98 @@
+imports:
+  Text: Data.Text
+  VehicleVariant: Domain.Types.VehicleVariant
+  LatLong: Kernel.External.Maps.Types
+  Meters: Kernel.Types.Distance
+  ServiceTierType: Domain.Types.ServiceTierType
+  Value: Data.Aeson
+  MultimodalTravelMode: Domain.Types.Trip
+  RouteState: Storage.CachedQueries.Merchant.MultiModalBus
+
+module: NearbyDrivers
+types:
+  NearbyDriverReq:
+    location: LatLong
+    radius: Meters
+    vehicleVariants: Maybe [VehicleVariant]
+    travelMode: Maybe MultimodalTravelMode
+
+  NearbyDriverRes:
+    serviceTierTypeToVehicleVariant: Value # ServiceTierType -> VehicleVariant
+    variantLevelDriverCount: Value # VehicleVariant -> Int
+    buckets: "[NearByDriversBucket]" # will be deprecated
+    vehicleDataBuckets: "[VehicleDataBucket]"
+
+  VehicleDataBucket:
+    radius: Meters
+    travelMode: MultimodalTravelMode
+    vehicleInfo: VehicleInfo
+
+  VehicleInfo:
+    enum: "PublicTransport PublicTransportBucket | Taxi NearByDriversBucket"
+
+  NearByDriversBucket:
+    radius: Meters # will be deprecated
+    variant: VehicleVariant
+    driverInfo: "[DriverInfo]"
+
+  PublicTransportBucket:
+    serviceType: Maybe BecknV2.FRFS.Enums.ServiceTierType
+    serviceTierName: Maybe Text
+    vehicles: "[PublicTransportInfo]"
+
+  PublicTransportInfo:
+    vehicleNumber: Maybe Text
+    routeCode: Text
+    currentLocation: LatLong
+    distance: Maybe Double
+    shortName: Maybe Text
+    routeState: Maybe RouteState
+    bearing: Maybe Int
+
+  DriverInfo:
+    lat: Double
+    lon: Double
+    applicableServiceTierTypes: "[ServiceTierType]"
+    distance: Meters
+    driverId: Text
+    bearing: Maybe Int
+    rideDetails: Maybe RideDetails
+
+  RideDetails:
+    rideId: Text
+    rideInfo: Maybe RideInfo
+
+  RideInfo:
+    enum: "Bus BusRideInfo | Car CarRideInfo | Pilot PilotRideInfo"
+
+  BusRideInfo:
+    routeCode: Text
+    busNumber: Text
+    destination: LatLong
+    routeLongName: Maybe Text
+    driverName: Maybe Text
+    groupId : Maybe Text
+
+  PilotRideInfo:
+    pilotNumber: Text
+    startAddress: Maybe Text
+    endAddress: Maybe Text
+    source: LatLong
+    destination: LatLong
+    driverName: Maybe Text
+    dutyType: Maybe Text
+    vipName: Maybe Text
+    scheduledTripTime: Maybe UTCTime
+    groupId: Maybe Text
+
+  CarRideInfo:
+    pickupLocation: LatLong
+
+apis:
+  - POST:
+      endpoint: /nearbyDrivers
+      auth: TokenAuth
+      request:
+        type: NearbyDriverReq
+      response:
+        type: NearbyDriverRes

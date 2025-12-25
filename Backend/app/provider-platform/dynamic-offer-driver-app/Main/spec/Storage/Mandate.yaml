@@ -1,0 +1,71 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+Mandate:
+  tableName: mandate
+
+  types:
+    MandateStatus:
+      enum: "ACTIVE, INACTIVE"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+
+  fields:
+    id : Id Mandate
+    status : MandateStatus
+    payerVpa : Maybe Text
+    startDate : UTCTime
+    endDate : UTCTime
+    maxAmount : HighPrecMoney
+    currency : Currency
+    payerApp : Maybe Text
+    payerAppName : Maybe Text
+    mandatePaymentFlow : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+
+  beamType:
+    currency: Maybe Currency
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <MandateStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <MandateStatus>
+
+  fromTType:
+    currency: fromMaybe Kernel.Types.Common.INR currency|E
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+
+
+  constraints:
+    id: PrimaryKey
+
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [id, status]
+
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+
+
+  sqlType:
+    maxAmount: integer
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
+  excludedFields: [createdAt, updatedAt]

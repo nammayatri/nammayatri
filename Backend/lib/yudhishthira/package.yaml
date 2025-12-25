@@ -1,0 +1,180 @@
+name: yudhishthira
+version: 0.1.0.0
+github: "nammayatri/nammayatri"
+license: AllRightsReserved
+author: "nammayatri"
+maintainer: "nammayatri"
+copyright: "2024 Moving Innovation Technologies Private Limited"
+
+flags:
+  Local:
+    description: Enable this flag for faster compile times
+    manual: true
+    default: false
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description: Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+
+default-extensions:
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveAnyClass
+  - DeriveFunctor
+  - DeriveGeneric
+  - DerivingStrategies
+  - DuplicateRecordFields
+  - ExplicitNamespaces
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - PatternSynonyms
+  - PolyKinds
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+  - ViewPatterns
+  - BlockArguments
+  - TypeSynonymInstances
+  - UndecidableInstances
+  - StandaloneDeriving
+  - PackageImports
+  - TemplateHaskell
+  - DerivingStrategies
+
+
+dependencies:
+  - aeson
+  - base >= 4.7 && < 5
+  - generic-lens
+  - bytestring
+  - cryptonite
+  - containers
+  - data-default-class
+  - euler-hs
+  - passetto-client
+  - exceptions
+  - hspec
+  - http-client
+  - lens
+  - servant
+  - servant-client
+  - servant-client-core
+  - servant-server
+  - servant-multipart
+  - text
+  - wai
+  - wai-extra
+  - http-types
+  - warp
+  - time
+  - stm
+  - resource-pool
+  - uuid
+  - prometheus-client
+  - record-hasfield
+  - record-dot-preprocessor
+  - servant-openapi3
+  - openapi3
+  - string-conversions
+  - either
+  - persistent
+  - text-conversions
+  - esqueleto
+  - beckn-services
+  - unordered-containers
+  - shared-services
+  - extra
+  - scheduler
+  - singletons
+  - singletons-th
+  - cassava
+  - vector
+  - geohash == 1.0.1
+  - cereal
+  - beam-core
+  - beam-mysql
+  - beam-postgres
+  - template-haskell
+  - sequelize
+  - casing
+  - postgresql-simple
+  - random
+  - JuicyPixels
+  - JuicyPixels-extra
+  - base64-bytestring
+  - pureMD5
+  - lens-aeson
+  - http-client-tls
+  - http-conduit
+  - split
+  - hashable
+  - json-logic-hs
+  - scientific
+
+ghc-options:
+  - -fwrite-ide-info
+  - -hiedir=.hie
+  - -fplugin=RecordDotPreprocessor
+
+library:
+  source-dirs:
+    - src
+    - src-read-only
+  ghc-options:
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -fhide-source-paths
+    - -Werror
+    - -Wwarn=ambiguous-fields
+  when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -O0
+          - -funfolding-use-threshold20
+          - -fno-cse
+          - -fmax-simplifier-iterations1
+          - -fno-specialise-aggressively
+          - -j4
+      else:
+        ghc-options:
+          - -O2
+          - -j4
+  dependencies:
+    - mobility-core
+    - haskell-cac
+    - beckn-spec
+    - sessionizer-metrics
+  extra-libraries:
+    - cac_client
+
+tests:
+  yudhishthira-tests:
+    main: Main.hs
+    source-dirs:
+      - test/app
+      - test/src
+    dependencies:
+      - yudhishthira
+      - mobility-core
+      - tasty
+      - tasty-hunit

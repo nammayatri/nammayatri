@@ -1,0 +1,22 @@
+@token2 = {{driver-offer-bpp-auto-token2}}
+@driver-offer-bpp-host = http://localhost:8016
+
+
+# @name healthcheck
+GET {{driver-offer-bpp-host}}/ui
+
+###
+
+# @name getOnboardingConfigs
+
+GET {{driver-offer-bpp-host}}/ui/onboarding/configs
+content-type: application/json
+token: {{token2}}
+
+###
+
+# @name statusHandler
+
+GET {{driver-offer-bpp-host}}/ui/driver/register/status?onlyMandatoryDocs=true
+content-type: application/json
+token: {{token2}}

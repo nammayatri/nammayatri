@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.ride ADD COLUMN driver_image Text;

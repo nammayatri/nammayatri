@@ -42,16 +42,6 @@ ADD
 
 DROP TABLE atlas_app.rental_quote;
 
-CREATE TABLE atlas_app.trip_terms (
-    id character(36) NOT NULL PRIMARY KEY,
-    descriptions text NOT NULL
-);
-
-ALTER TABLE
-    atlas_app.quote
-ADD
-    COLUMN trip_terms_id character(36) REFERENCES atlas_app.trip_terms (id);
-
 UPDATE
     atlas_app.quote AS T1
 SET
@@ -74,18 +64,6 @@ WHERE
 
 DROP TABLE atlas_app.quote_terms;
 
-CREATE TABLE atlas_app.fare_breakup (
-    id character(36) NOT NULL PRIMARY KEY,
-    ride_booking_id character(36) NOT NULL REFERENCES atlas_app.ride_booking (id),
-    description text NOT NULL,
-    amount double precision NOT NULL
-);
-
-ALTER TABLE
-    atlas_app.quote
-ADD
-    COLUMN fare_product_type varchar(255) NOT NULL DEFAULT 'ONE_WAY';
-
 ALTER TABLE
     atlas_app.quote
 ALTER COLUMN
@@ -98,18 +76,18 @@ SET
 WHERE
     distance_to_nearest_driver IS NULL;
 
-ALTER TABLE
-    atlas_app.ride_booking
-ADD
-    COLUMN fare_product_type varchar(255) NOT NULL DEFAULT 'ONE_WAY';
+-- ALTER TABLE
+--     atlas_app.ride_booking
+-- ADD
+--     COLUMN fare_product_type varchar(255) NOT NULL DEFAULT 'ONE_WAY';
 
-ALTER TABLE
-    atlas_app.ride_booking
-ALTER COLUMN
-    fare_product_type DROP DEFAULT;
+-- ALTER TABLE
+--     atlas_app.ride_booking
+-- ALTER COLUMN
+--     fare_product_type DROP DEFAULT;
 
 UPDATE
-    atlas_app.ride_booking
+    atlas_app.booking
 SET
     fare_product_type = 'RENTAL'
 WHERE
@@ -132,30 +110,30 @@ VALUES
         0
     );
 
-ALTER TABLE
-    atlas_app.ride_booking
-ADD
-    COLUMN trip_terms_id character(36) REFERENCES atlas_app.trip_terms (id),
-ADD
-    COLUMN rental_slab_id character(36) REFERENCES atlas_app.rental_slab (id);
+-- ALTER TABLE
+--     atlas_app.ride_booking
+-- ADD
+--     COLUMN trip_terms_id character(36) REFERENCES atlas_app.trip_terms (id),
+-- ADD
+--     COLUMN rental_slab_id character(36) REFERENCES atlas_app.rental_slab (id);
 
-ALTER TABLE
-    atlas_app.ride_booking
-ALTER COLUMN
-    trip_terms_id DROP DEFAULT,
-ALTER COLUMN
-    rental_slab_id DROP DEFAULT;
+-- ALTER TABLE
+--     atlas_app.ride_booking
+-- ALTER COLUMN
+--     trip_terms_id DROP DEFAULT,
+-- ALTER COLUMN
+--     rental_slab_id DROP DEFAULT;
 
 -- COMMENT NEXT QUERY WHEN RUN ON MASTER
-UPDATE
-    atlas_app.ride_booking AS T1
-SET
-    trip_terms_id = T3.trip_terms_id,
-    rental_slab_id = T3.rental_slab_id
-FROM
-    atlas_app.ride_booking_bak_1026 AS T2,
-    atlas_app.quote AS T3
-WHERE
-    T3.id = T2.quote_id
-    AND T2.id = T1.id
-    AND T1.fare_product_type = 'RENTAL';
+-- UPDATE
+--     atlas_app.ride_booking AS T1
+-- SET
+--     trip_terms_id = T3.trip_terms_id,
+--     rental_slab_id = T3.rental_slab_id
+-- FROM
+--     atlas_app.ride_booking_bak_1026 AS T2,
+--     atlas_app.quote AS T3
+-- WHERE
+--     T3.id = T2.quote_id
+--     AND T2.id = T1.id
+--     AND T1.fare_product_type = 'RENTAL';

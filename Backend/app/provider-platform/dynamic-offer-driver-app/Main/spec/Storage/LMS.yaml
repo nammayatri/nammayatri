@@ -1,0 +1,402 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Bool: Kernel.Prelude
+  Merchant: Domain.Types.Merchant
+  Language: Kernel.External.Types
+  Centesimal: Kernel.Types.Common
+  Maybe: Kernel.Prelude
+  LmsBonus: Domain.Types.LmsModule
+  Person: Domain.Types.Person
+  VehicleVariant: Domain.Types.VehicleVariant
+  QuizQuestion: Domain.Types.LmsEnumTypes
+  Value: Data.Aeson
+  ReelRowButtonConfig: Domain.Types.ReelsData
+  getSideButtonConfigFromTable: Storage.Queries.Transformers.ReelsData
+  getBottomButtonConfigFromTable: Storage.Queries.Transformers.ReelsData
+  convertBottomButtonConfigToTable: Storage.Queries.Transformers.ReelsData
+  convertSideButtonConfigToTable: Storage.Queries.Transformers.ReelsData
+  DriverCoinsFunctionType: Lib.DriverCoins.Types
+
+LmsModule:
+  tableName : lms_module
+
+  fields:
+    id : Id LmsModule
+    merchantOperatingCityId : Id MerchantOperatingCity
+    category : LmsCategory
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    duration : Int
+    noOfVideos : Int
+    rank : Int
+    variant : Maybe VehicleVariant|NoRelation
+    moduleCompletionCriteria : ModuleCompletionCriteria
+    languagesAvailableForQuiz : "[Language]"
+    languagesAvailableForVideos : "[Language]"
+    moduleSection : Maybe ModuleSection
+    bonusCoinEventFunction : Maybe DriverCoinsFunctionType
+    certificationEnabled : Maybe Bool
+    moduleNameForCertificate : Maybe Text
+    moduleExpiryConfig : Maybe Int
+
+  types:
+    LmsCategory:
+      enum : "Safety, Financial, Training, DriverSafetyScore"
+    ModuleCompletionCriteria:
+      enum : "ONLY_VIDEOS, VIDEOS_AND_QUIZ Int"
+    ModuleSection:
+      enum : "BENEFITS, DRIVER_SAFETY_SCORE"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+  domainInstance:
+    - Custom Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList <ModuleSection>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ModuleSection>
+
+  sqlType:
+    languagesAvailableForQuiz : "text[]"
+    languagesAvailableForVideos : "text[]"
+
+  default:
+    category : "'Training'"
+    languagesAvailableForQuiz : "'{}'"
+    languagesAvailableForVideos : "'{}'"
+    moduleSection : "'BENEFITS'"
+
+  queries:
+    getAllModules:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    getAllModulesWithModuleSection:
+      kvFunction: findAllWithOptionsKV
+      where:
+       and: [merchantOperatingCityId, moduleSection]
+
+LmsModuleTranslation:
+  tableName : lms_module_translation
+
+  fields:
+    moduleId : Id LmsModule
+    language : Language
+    name : Text
+    description : Text
+    thumbnailImage : Text
+
+  constraints:
+    moduleId : PrimaryKey
+    language : PrimaryKey
+
+  queries:
+    getByModuleIdAndLanguage:
+      kvFunction : findOneWithKV
+      where:
+        and: [moduleId, language]
+    getAllTranslationsByModuleId:
+      kvFunction: findAllWithKV
+      where: moduleId
+
+
+LmsModuleVideoInformation:
+  tableName : lms_module_video_information
+
+  fields:
+    id : Id LmsModuleVideoInformation
+    moduleId : Id LmsModule
+    videoStatus : VideoStatus
+    rank : Int
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  types:
+    VideoStatus:
+      enum : "ACTIVE, INACTIVE"
+
+  default:
+    videoStatus: "'ACTIVE'"
+
+  queries:
+    getAllVideos:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - eq: [moduleId]
+          - in: [videoStatus]
+    findByVideoId:
+      kvFunction: findOneWithKV
+      where: id
+
+LmsVideoTranslation:
+  tableName : lms_video_translation
+
+  fields:
+    videoId : Id LmsModuleVideoInformation
+    language : Language
+    url : Text
+    ytVideoId : Text
+    duration : Int
+    completedWatchCount : Int
+    viewCount: Int
+    thumbnailImage : Text
+    title : Text
+    description : Text
+    thresholdEnabled : Bool
+    startThresholdInPercentage : Maybe Int
+    completedThresholdInPercentage : Maybe Int
+    sideButtonConfig : "[ReelRowButtonConfig]"
+    bottomButtonConfig : "[ReelRowButtonConfig]"
+    useMerchantOperatingCityDefaultLanguageVideoUrl : Bool
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  default:
+    completedWatchCount: "0"
+    viewCount: "0"
+    thresholdEnabled: "False"
+    sideButtonConfig: "'{}'"
+    bottomButtonConfig: "'{}'"
+    useMerchantOperatingCityDefaultLanguageVideoUrl: "False"
+
+  sqlType:
+    sideButtonConfig: "json"
+    bottomButtonConfig: "json"
+
+  beamType:
+    sideButtonConfig: "Value"
+    bottomButtonConfig: "Value"
+
+  fromTType:
+    sideButtonConfig : getSideButtonConfigFromTable|I
+    bottomButtonConfig : getBottomButtonConfigFromTable|I
+
+  toTType:
+    sideButtonConfig : convertSideButtonConfigToTable|I
+    bottomButtonConfig : convertBottomButtonConfigToTable|I
+
+  constraints:
+    videoId : PrimaryKey
+    language : PrimaryKey
+
+  queries:
+    getVideoByLanguageAndVideoId:
+      kvFunction: findOneWithKV
+      where:
+        and: [videoId, language]
+    getAllTranslationsForVideoId:
+      kvFunction: findAllWithKV
+      where: videoId
+    updateCompletedWatchCount:
+      kvFunction: updateOneWithKV
+      params: [completedWatchCount]
+      where:
+        and: [videoId, language]
+    updateViewCount:
+      kvFunction: updateOneWithKV
+      params: [viewCount]
+      where:
+        and: [videoId, language]
+
+# This table will be used to track the driver module completion history
+DriverModuleCompletion:
+  tableName : driver_module_completion
+
+  fields:
+    completionId : Id DriverModuleCompletion
+    driverId : Id Person
+    moduleId : Id LmsModule
+    status : ModuleCompletionStatus
+    entitiesCompleted : "[ModuleCompletionEntity]"
+    startedAt : UTCTime
+    completedAt : Maybe UTCTime
+    ratingAtTheTimeOfCompletion : Maybe Centesimal
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    expiry: Maybe UTCTime
+
+  sqlType:
+    ratingAtTheTimeOfCompletion: "double precision"
+    entitiesCompleted: "text[]"
+
+  default:
+    entitiesCompleted: "'{}'"
+
+  types:
+    ModuleCompletionStatus:
+      enum : "MODULE_NOT_YET_STARTED, MODULE_ONGOING, MODULE_COMPLETED"
+    ModuleCompletionEntity:
+      enum : "QUIZ, VIDEO"
+
+  constraints:
+    completionId : PrimaryKey
+
+  queries:
+    findByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+    findByDriverIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, status]
+    findByDriverIdAndModuleId:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, moduleId]
+    findAllByDriverIdAndModuleId:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, moduleId]
+    updatedCompletedAt:
+      kvFunction: updateOneWithKV
+      params: [completedAt, entitiesCompleted, status, ratingAtTheTimeOfCompletion]
+      where: completionId
+    updateExpiryTime:
+      kvFunction: updateOneWithKV
+      params: [expiry]
+      where: completionId
+    updateEntitiesCompleted:
+      kvFunction: updateOneWithKV
+      params: [completedAt, entitiesCompleted]
+      where: completionId
+
+
+# This table will be used to track the completion entity history
+ModuleCompletionInformation:
+  tableName : module_completion_information
+
+  fields:
+    completionId : Id DriverModuleCompletion
+    entity: ModuleEntity
+    entityId: Text # can be quiz ID | video ID
+    selectedEntityId: "[Text]" # can be options ID | video ID -- ideally to track the options selected By user
+    attempt: Int
+    entityStatus: EntityStatus
+    createdAt : UTCTime
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  constraints:
+    completionId: PrimaryKey
+    entityId: PrimaryKey
+    entity: PrimaryKey
+    attempt: PrimaryKey
+
+  types:
+    ModuleEntity:
+      enum : "QUIZ, VIDEO"
+    EntityStatus:
+      enum : "ENTITY_PASSED, ENTITY_FAILED, ENTITY_ONGOING"
+
+  queries:
+    findAllByCompletionId:
+      kvFunction: findAllWithKV
+      where: completionId
+    findAllByCompletionIdAndEntity:
+      kvFunction: findAllWithKV
+      where:
+        and: [completionId, entity]
+    findAllByCompletionIdAndEntityAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [entity, entityStatus, completionId]
+    findByCompletionIdAndEntityAndEntityId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [entity, entityId, completionId]
+      orderBy: attempt
+
+
+# This table will be used for mapping each module with a set of questions and each question will have reward
+QuestionModuleMapping:
+  tableName : question_module_mapping
+
+  fields:
+    moduleId : Id LmsModule
+    questionId : Id QuestionModuleMapping
+    quizCoinFunction : Maybe DriverCoinsFunctionType
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  constraints:
+    moduleId: PrimaryKey
+    questionId: PrimaryKey
+
+  queries:
+    findAllWithModuleId:
+      kvFunction: findAllWithKV
+      where: moduleId
+
+# This table will store the information of each question along with its translated version
+QuestionInformation:
+  tableName : "question_information"
+
+  fields:
+    questionId : Id QuestionModuleMapping
+    language: Language
+    question: QuizQuestion
+    questionType: QuizQuestionType
+    options: "[OptionEntity]"
+
+  sqlType:
+    options: "json"
+
+  beamType:
+    options: Value
+
+  fromTType:
+    options: getOptionsFromTable|M
+
+  toTType:
+    options: convertOptionsToTable
+
+  constraints:
+    questionId: PrimaryKey
+    language: PrimaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  types:
+    QuizQuestionType:
+      enum: "SingleSelect, MultiSelect"
+    OptionEntity:
+      option : SingleOption
+      optionId : Id OptionEntity # this optionEntity Id will be same accross the translations for that particular option
+      isCorrect : Bool
+      derive: "Read, Eq, Ord"
+    SingleOption:
+      enum: "TextOption Text, SingleLineImage Text Int Int, TwoColumnImage Text Int Int, TwoColumnOption Text"
+  queries:
+    findByIdAndLanguage:
+      kvFunction: findOneWithKV
+      where:
+        and: [questionId, language]
+    getAllTranslationsByQuestionId:
+      kvFunction: findAllWithKV
+      where: questionId
+
+LmsCertificate:
+  tableName : lms_certificate
+
+  fields:
+    id : Id LmsCertificate
+    moduleId : Id LmsModule
+    driverId : Id Person
+    moduleCompletionId : Text
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  constraints:
+    id: PrimaryKey
+    moduleCompletionId: SecondaryKey
+
+  queries:
+    getAllCertificate:
+      kvFunction: findAllWithKV
+      where: driverId
+    findByModuleCompletionIdAndDriverIdAndModuleId:
+      kvFunction: findOneWithKV
+      where:
+        and: [moduleCompletionId, driverId, moduleId]

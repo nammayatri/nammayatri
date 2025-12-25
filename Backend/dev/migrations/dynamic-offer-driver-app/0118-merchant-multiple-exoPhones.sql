@@ -1,6 +1,6 @@
+-- LOCAL : DO NOT RUN IN MASTER/PROD
 ALTER TABLE atlas_driver_offer_bpp.merchant
-    DROP COLUMN exo_phones,
-    DROP COLUMN exo_phone_country_code;
+    DROP COLUMN IF EXISTS exo_phones;
 
 ALTER TABLE atlas_driver_offer_bpp.merchant
     ADD COLUMN exo_phones character varying(255) [];
@@ -15,13 +15,12 @@ UPDATE atlas_driver_offer_bpp.merchant
 
 ALTER TABLE atlas_driver_offer_bpp.merchant ALTER COLUMN exo_phones SET NOT NULL;
 
-ALTER TABLE atlas_driver_offer_bpp.booking
-    ADD COLUMN provider_exo_phone character varying(255);
+-- ALTER TABLE atlas_driver_offer_bpp.booking
+--     ADD COLUMN provider_exo_phone character varying(255);
 
-UPDATE atlas_driver_offer_bpp.booking
-    SET provider_exo_phone = 'UNKNOWN';
+-- UPDATE atlas_driver_offer_bpp.booking
+--     SET provider_exo_phone = 'UNKNOWN';
 
-ALTER TABLE atlas_driver_offer_bpp.booking ALTER COLUMN provider_exo_phone SET NOT NULL;
-
-ALTER TABLE atlas_driver_offer_bpp.call_status
-    RENAME COLUMN exotel_call_sid TO call_id;
+-- ALTER TABLE atlas_driver_offer_bpp.booking ALTER COLUMN provider_exo_phone SET NOT NULL;
+-- ALTER TABLE atlas_driver_offer_bpp.call_status
+--     RENAME COLUMN exotel_call_sid TO call_id;

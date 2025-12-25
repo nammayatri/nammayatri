@@ -19,8 +19,8 @@ module Tools.SMS
 where
 
 import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Kernel.External.SMS as Reexport hiding
   ( sendSMS,
   )
@@ -46,7 +46,7 @@ sendSMS merchantId merchantOperatingCityId = Sms.sendSMS handler
 
     getProviderConfig provider = do
       merchantSmsServiceConfig <-
-        QMSC.findByMerchantIdAndService merchantId (DMSC.SmsService provider)
+        QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.SmsService provider)
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
       case merchantSmsServiceConfig.serviceConfig of
         DMSC.SmsServiceConfig msc -> pure msc

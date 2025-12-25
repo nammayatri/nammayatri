@@ -18,5 +18,10 @@
     "file_name" : "splash_lottie_mys",
     "url" : "https://assets.juspay.in/beckn/nammayatri/driver/lottie/splash_lottie_mys.json",
     "forceToRemote": false
+  },
+  "Kolkata" : {
+    "file_name" : "splash_lottie_kol",
+    "url" : "https://assets.juspay.in/beckn/jatrisaathi/user/lottie/splash_lottie.json",
+    "forceToRemote": true
   }
 }

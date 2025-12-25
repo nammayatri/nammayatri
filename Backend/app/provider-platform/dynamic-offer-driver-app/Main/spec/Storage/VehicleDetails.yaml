@@ -1,0 +1,40 @@
+imports:
+  Text: Data.Text
+  Int: Kernel.Prelude
+  Id: Kernel.Types.Id
+  merchantId: Domain.Types.Merchant
+  merchantOperatingCityId: Domain.Types.MerchantOperatingCity
+  VehicleVariant: Domain.Types.VehicleVariant
+
+VehicleDetails:
+  tableName: vehicle_details
+  fields:
+    id: Id VehicleDetails
+    make: Text
+    model: Text
+    capacity: Maybe Int
+    acAvailable: Maybe Bool
+    year: Maybe Int
+    vehicleVariant: VehicleVariant|NoRelation
+  constraints:
+    id: PrimaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByMakeAndYear:
+      kvFunction: findAllWithKV
+      where:
+        and: [make, year]
+    findByMakeAndModelAndYear:
+      kvFunction: findOneWithKV
+      where:
+        and: [make, model, year]
+
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
+
+  default:
+    acAvailable: "true"
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

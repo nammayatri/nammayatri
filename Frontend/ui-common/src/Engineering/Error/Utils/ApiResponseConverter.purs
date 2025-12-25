@@ -1,6 +1,6 @@
 module Engineering.Error.Utils.ApiResponseConverter where
 
-import Prelude (($))
+import Prelude (($), (>=) , (&&) , (<=), otherwise ,(<))
 import Engineering.Error.Types
 import Presto.Core.Types.API (ErrorResponse)
 
@@ -20,17 +20,16 @@ class ApiResponseConverter e where
   toApiError :: ApiResponseError -> e -> ApiError
 
 instance defaultApiResponseConverter :: ApiResponseConverter e where
-  toApiError resp _ = case resp.code of
-    400 -> ClientError $ parse400 resp.response.errorMessage
-    401 -> ClientError $ parse401 resp.response.errorMessage
-    404 -> ClientError PathNotFoundError
-    500 -> ServerError $ case resp.response.errorMessage of
-                            ParsedError (ParsedErrorMessage parsed) -> parsed.errorMessage
-                            RawError rawMsg -> rawMsg
-    _   -> UnknownError $ resp.response.userMessage
+  toApiError resp _
+    | resp.code < 0 = NetworkError $ parseNetworkError resp.response.errorMessage
+    | resp.code >= 400 && resp.code <= 463 = ClientError $ parseClientError resp.response.errorMessage
+    | resp.code >= 500 && resp.code <= 543 = ServerError $ parseServerError resp.response.errorMessage
+    | otherwise = UnknownError $ resp.response.userMessage
 
-parse400 :: ErrorRepresentation -> ClientErrorType
-parse400 errMsgRep = 
+
+
+parseClientError :: ErrorRepresentation -> ClientErrorType
+parseClientError errMsgRep = 
   case errMsgRep of
     ParsedError (ParsedErrorMessage parsed) ->
       case parsed.errorCode of
@@ -47,3 +46,19 @@ parse401 errMsgRep =
         "INVALID_TOKEN" -> AuthenticationError
         _ -> AuthenticationError
     RawError _ -> AuthenticationError
+
+parseNetworkError :: ErrorRepresentation -> NetworkErrorType
+parseNetworkError errMsgRep =
+  case errMsgRep of
+    ParsedError (ParsedErrorMessage parsed) ->
+      case parsed.errorCode of
+        "CONNECTION_REFUSED" -> ConnectionRefused
+        "TIMEOUT" -> Timeout
+        _ -> OtherNetworkError parsed.errorMessage
+    RawError rawMsg -> OtherNetworkError rawMsg
+
+parseServerError :: ErrorRepresentation -> String
+parseServerError errMsgRep =
+  case errMsgRep of
+    ParsedError (ParsedErrorMessage parsed) -> parsed.errorMessage
+    RawError rawMsg -> rawMsg

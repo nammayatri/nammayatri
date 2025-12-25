@@ -14,9 +14,12 @@
 
 module SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
   ( unblockDriver,
+    unblockSoftBlockedDriver,
   )
 where
 
+import qualified Domain.Types.DriverBlockTransactions as DTDBT
+import Kernel.Beam.Functions as BF
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Id
@@ -24,7 +27,11 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.DriverInformation as QDriverInfo
+import qualified Storage.Queries.Person as QPerson
+import Tools.Error
+import Tools.Notifications
 
 unblockDriver ::
   ( TranslateFlow m r,
@@ -37,5 +44,25 @@ unblockDriver ::
 unblockDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
   let driverId = jobData.driverId
-  QDriverInfo.updateBlockedState (cast driverId) False (Just "AUTOMATICALLY_UNBLOCKED")
+  driver <- BF.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  let merchantId = driver.merchantId
+  QDriverInfo.updateBlockedState (cast driverId) False (Just "AUTOMATICALLY_UNBLOCKED") merchantId driver.merchantOperatingCityId DTDBT.Application
+  mbMerchantPN <- CPN.findMatchingMerchantPN driver.merchantOperatingCityId "UNBLOCK_DRIVER_KEY" Nothing Nothing driver.language Nothing
+  whenJust mbMerchantPN $ \merchantPN -> do
+    let entityData = NotifReq {entityId = driver.id.getId, title = merchantPN.title, message = merchantPN.body}
+    notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType
+  return Complete
+
+unblockSoftBlockedDriver ::
+  ( TranslateFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Job 'UnblockSoftBlockedDriver ->
+  m ExecutionResult
+unblockSoftBlockedDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+  let jobData = jobInfo.jobData
+  let driverId = jobData.driverId
+  QDriverInfo.updateSoftBlock Nothing Nothing Nothing (cast driverId)
   return Complete

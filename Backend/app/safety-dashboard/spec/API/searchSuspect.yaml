@@ -1,0 +1,130 @@
+imports:
+  Text: Data.Text
+  ShortId: Kernel.Types.Id
+  UTCTime: Kernel.Prelude
+  FlaggedStatus: Domain.Types.Suspect
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  SearchSuspectReq : API.Types.UI.SearchSuspectReq
+  StatusHistory : API.Types.UI.StatusHistory
+  SearchSuspectResp : API.Types.UI.SearchSuspectResp
+  Summary : API.Types.UI.Notification
+  AdminApproval : Domain.Types.SuspectFlagRequest
+  FlaggedBy : Domain.Types.Suspect
+importPackageOverrides:
+    Domain.Types.Merchant: lib-dashboard
+    Tools.Auth: lib-dashboard
+    Environment: lib-dashboard
+    Domain.Types.Person : lib-dashboard
+
+
+module : SearchSuspect
+types:
+  SuspectsList:
+    suspects : [SearchSuspectResp]
+    summary : Summary
+
+  SearchSuspectResp:
+    id : Text
+    dl : Maybe Text
+    voterId : Maybe Text
+    flaggedStatus : FlaggedStatus
+    statusChangedReason : Maybe Text
+    flaggedBy : Maybe [FlaggedBy]
+    firstName : Text
+    lastName : Text
+    flaggedCounter : Int
+    flagUpdatedAt : UTCTime
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+  SearchSuspectReqList:
+    suspectReqList : [SearchSuspectReq]
+
+  SearchSuspectReq:
+    dl : Maybe Text
+    voterId : Maybe Text
+
+  CheckSuspectStatusHistoryResp:
+    suspectStatusHistory : [StatusHistory]
+
+  StatusHistory:
+    id : Text
+    dl : Maybe Text
+    firstName : Maybe Text
+    lastName : Maybe Text
+    voterId : Maybe Text
+    flaggedStatus : FlaggedStatus
+    flaggedBy : Maybe [FlaggedBy]
+    statusChangedReason : Maybe Text
+    adminApproval : Maybe AdminApproval
+    merchantShortId : Maybe Text
+    approvedBy : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+
+
+apis:
+  - POST:
+      endpoint: /search/suspectList
+      auth: DashboardAuth DASHBOARD_USER
+      request:
+        type: API.Types.UI.SearchSuspect.SearchSuspectReqList
+      response:
+        type: API.Types.UI.SearchSuspect.SuspectsList
+
+  - POST:
+      endpoint: /check/suspectStatusHistory
+      auth: DashboardAuth DASHBOARD_ADMIN
+      query:
+        limit : Int
+        offset : Int
+      request:
+        type: API.Types.UI.SearchSuspect.SearchSuspectReq
+      response:
+        type: API.Types.UI.SearchSuspect.CheckSuspectStatusHistoryResp
+
+  - POST:
+      endpoint: /merchant/check/suspectStatusHistory
+      auth: DashboardAuth MERCHANT_MAKER
+      request:
+        type: API.Types.UI.SearchSuspect.SearchSuspectReq
+      response:
+        type: API.Types.UI.SearchSuspect.CheckSuspectStatusHistoryResp
+
+  - POST:
+      endpoint: /partner/search/agent
+      auth: SafetyWebhookAuth MERCHANT_SERVER
+      request:
+        type: API.Types.UI.SearchSuspect.SearchSuspectReqList
+      response:
+        type: API.Types.UI.SearchSuspect.SuspectsList
+
+  - GET:
+      endpoint: /suspect/list
+      auth: DashboardAuth DASHBOARD_ADMIN
+      query:
+        to: UTCTime
+        from: UTCTime
+        limit : Int
+        offset : Int
+        partnerName : Text
+        flaggedCategory : Text
+        flaggedStatus : FlaggedStatus
+        dl : Text
+        voterId : Text
+
+
+      response:
+        type: API.Types.UI.SearchSuspect.SuspectsList
+
+  - GET:
+      endpoint: partner/suspect/list
+      auth: DashboardAuth MERCHANT_ADMIN
+      query:
+        to: UTCTime
+        from: UTCTime
+        limit : Int
+        offset : Int
+      response:
+        type: API.Types.UI.SearchSuspect.SuspectsList

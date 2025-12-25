@@ -15,9 +15,76 @@
 
 const JBridge = window.JBridge;
 const JOS = window.JOS;
+let clientId;
 import { callbackMapper } from "presto-ui";
 export const getFromTopWindow = function (key) {
   return top[key];
+}
+
+export const getClientIdFromSession = () => {
+  if (clientId) {
+    return clientId;
+  } else {
+    try {
+      const session = JSON.parse(JBridge.getSessionInfo())
+      if (session["client_id"] !== undefined) {
+        return session["client_id"];
+      } else if (session["clientId"] !== undefined) {
+        return session["clientId"];
+      } else {
+        return ""
+      }
+    } catch (e) {
+      return "";
+    }
+  }
+}
+
+function checkAndUpdateOverrides(mJOS) {
+  const overrides = mJOS.overrides;
+  if (overrides != undefined && Array.isArray(overrides)) {
+    overrides.forEach(function (override) {
+      let shouldOverride = false;
+      try {
+        shouldOverride = eval(override.condition);
+      } catch (e) {}
+      if (shouldOverride) {
+        mergeObjects(mJOS, override.result);
+      }
+    });
+  }
+}
+
+export const getJOSFlags = function () {
+  if (window.JOS.getJOSflags) {
+    return window.JOS.getJOSflags()
+  } else {
+    return {};
+  }
+}
+
+export const getOS = function () {
+  return window.__OS;
+}
+
+export const getMJOS = (fileName) => {
+  const mJOS = JSON.parse(JBridge.loadFileInDUI(fileName))
+  checkAndUpdateOverrides(mJOS);
+  return mJOS;
+}
+
+function mergeObjects(config, result) {
+  for (const key in result) {
+    const newValue = result[key];
+    const oldValue = config[key];
+    if (typeof oldValue == typeof newValue) {
+      if (newValue != null && typeof newValue == "object") {
+        mergeObjects(oldValue, newValue);
+      } else {
+        config[key] = newValue;
+      }
+    }
+  }
 }
 
 export const getCUGUser = function () {

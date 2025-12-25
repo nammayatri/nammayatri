@@ -46,6 +46,7 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
+
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
   relativeLayout
@@ -241,7 +242,9 @@ dataListOptions config push =
                       Nothing -> Color.grey800
                   , cornerRadius 6.0
                   , margin (MarginBottom 16)
-                  , padding $ PaddingHorizontal 16 16] 
+                  , padding $ PaddingHorizontal 16 16
+                   ] 
+                   
                 else [])
           [ radioButton config push index item,
             horizontalLine index (fromMaybe (-1) config.activeIndex) config,
@@ -251,10 +254,9 @@ dataListOptions config push =
             (case config.activeReasonCode of
               Just reasonCode -> if (( reasonCode == "TECHNICAL_GLITCH" && item.reasonCode == "TECHNICAL_GLITCH")) then technicalGlitchDescription config push index else dummyTextView
               Nothing         -> dummyTextView)
-            -- , technicalGlitchDescription config push index
           ]
         ]
-      ) config.selectionOptions)
+      ) $  config.selectionOptions)
 
 
 someOtherReason :: forall w . Config -> (Action  -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
@@ -408,8 +410,8 @@ radioButton config push index item =
       ][ textView $
           [ text item.description
           , accessibilityHint case config.activeIndex of 
-                            Just activeIndex' -> if (activeIndex' == index) then item.description else (item.description <> " : Un Selected")
-                            Nothing -> ""
+                            Just activeIndex' -> if (activeIndex' == index) then ("Selected : " <> item.description) else (item.description <> " : Un Selected")
+                            Nothing -> item.description <> " : Un Selected"
           , padding $ PaddingBottom 5
           , accessibility ENABLE
           , color Color.black900
@@ -447,6 +449,7 @@ primaryButtonConfig config = let
       , width = if(config.secondaryButtonVisibility) then (V ((screenWidth unit/2)-30)) else config.primaryButtonTextConfig.width
       , id = "Button1"
       , visibility = if config.primaryButtonVisibility then VISIBLE else GONE
+      , enableRipple = true
       }
   in primaryButtonConfig'
 
@@ -467,6 +470,7 @@ secondaryButtonConfig config =
           , isClickable = config.isSelectButtonActive
           , background = if (not config.isSelectButtonActive) && btnConfig.isGradient then "#F1F1F4" else config.config.primaryBackground
           , stroke = (if btnConfig.isGradient then "0," else "1,") <> config.config.primaryBackground
+          , enableRipple = config.isSelectButtonActive
         }
 
 

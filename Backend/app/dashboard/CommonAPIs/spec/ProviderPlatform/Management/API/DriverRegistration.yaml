@@ -1,0 +1,457 @@
+imports:
+  DashboardAccessType: API.Types.ProviderPlatform.Management.Endpoints.Account
+  Driver: Dashboard.Common
+  Summary: Dashboard.Common
+  Image: Dashboard.Common
+  VehicleVariant: Dashboard.Common
+  VerificationStatus: Dashboard.Common
+  Document: Dashboard.Common
+  VehicleCategory: Dashboard.Common
+  DriverVehicleDetails: Dashboard.Common
+  CommonDriverOnboardingDocuments: Dashboard.Common
+
+module: DriverRegistration
+apiPrefix: driver
+helperApiPrefix: ""
+
+apis:
+  - GET: # DocumentsListAPI
+      endpoint: /{driverId}/documents/list
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        rcId: Text
+      response:
+        type: DocumentsListResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DOCUMENT_LIST
+  - GET: # GetDocumentAPI
+      endpoint: /getDocument/{imageId}
+      auth: ApiAuthV2
+      params:
+        imageId: Id Image
+      response:
+        type: GetDocumentResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DOCUMENT
+  - POST: # UploadDocumentAPI
+      endpoint: /{driverId}/document/upload
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver # This driverId doesn't contain only driverId. It may contain different role entity id's. Not changed the name due to backward compatibility.
+      request:
+        type: UploadDocumentReq
+      response:
+        type: UploadDocumentResp
+      migrate:
+        endpoint: DriverRegistrationAPI UploadDocumentEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPLOAD_DOCUMENT
+  - POST: # RegisterDLAPI
+      endpoint: /{driverId}/register/dl
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: RegisterDLReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverRegistrationAPI RegisterDLEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REGISTER_DL
+  - POST: # RegisterRCAPI
+      endpoint: /{driverId}/register/rc
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: RegisterRCReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverRegistrationAPI RegisterRCEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REGISTER_RC
+  - POST: # RegisterAadhaarAPI
+      endpoint: /{driverId}/register/aadhaar
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: AadhaarCardReq
+      response:
+        type: APISuccess
+  - POST: # GenerateAadhaarOtpAPI
+      endpoint: /{driverId}/register/generateAadhaarOtp
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: GenerateAadhaarOtpReq
+      response:
+        type: GenerateAadhaarOtpRes
+      migrate:
+        endpoint: DriverRegistrationAPI GenerateAadhaarOtpEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GENERATE_AADHAAR_OTP
+  - POST: # VerifyAadhaarOtpAPI
+      endpoint: /{driverId}/register/verifyAadhaarOtp
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: VerifyAadhaarOtpReq
+      response:
+        type: VerifyAadhaarOtpRes
+      migrate:
+        endpoint: DriverRegistrationAPI VerifyAadhaarOtpEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS VERIFY_AADHAAR_OTP
+  - GET: # UnderReviewDriversListAPI
+      endpoint: /underReviewDrivers
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: UnderReviewDriversListResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNDER_REVIEW_DRIVERS_LIST
+  - GET: # DriverDocumentInfoAPI
+      endpoint: /{driverId}/documents/info
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: "[DriverDocument]"
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_DOCUMENT_INFO
+  - GET: # VerificationStatusAPI
+      endpoint: /verificationStatus
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - driverId: Id Driver
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - limit: Int
+        - offset: Int
+        - documentType: DocumentType
+        - serviceType: ServiceType
+      response:
+        type: VerificationStatusListResponse
+
+  - POST: # UpdateDocumentAPI
+      endpoint: /documents/update
+      auth: ApiAuthV2
+      request:
+        type: UpdateDocumentRequest
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverRegistrationAPI UpdateDocumentEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DOCUMENT
+  - POST: # CreateCommonDocumentAPI
+      endpoint: /{driverId}/documents/common
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: CommonDocumentCreateReq
+      response:
+        type: APISuccess
+  - POST: #UnlinkDocumentAPI
+      endpoint: /{personId}/unlink/document/{documentType}
+      auth: ApiAuthV2
+      params:
+        personId: Id Driver
+        documentType: DocumentType
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{personId}/unlink/document/{documentType}
+            auth: ApiAuthV2
+            params:
+              personId: Id Driver
+              documentType: DocumentType
+            query:
+              - requestorId: Text
+            response:
+              type: UnlinkDocumentResp
+
+types:
+  ValidationStatus:
+    enum: "APPROVED,DECLINED,AUTO_APPROVED,AUTO_DECLINED,NEEDS_REVIEW"
+    derive: "Read"
+  UnlinkDocumentResp:
+   - mandatoryDocumentRemoved : Bool
+   - recordType: NewType
+  DLDetails:
+    - driverName: Maybe Text
+    - driverLicenseNumber: Text
+    - operatingCity: Text
+    - driverDateOfBirth: Maybe UTCTime
+    - classOfVehicles: [Text]
+    - imageId1: Text
+    - imageId2: Maybe (Text)
+    - dateOfIssue: Maybe UTCTime
+    - createdAt: UTCTime
+  RCDetails:
+    - vehicleRegistrationCertNumber: Text
+    - imageId: Text
+    - operatingCity: Text
+    - dateOfRegistration: Maybe UTCTime
+    - vehicleCategory: Maybe Text
+    - airConditioned: Maybe Bool
+    - vehicleManufacturer: Maybe Text
+    - vehicleModel: Maybe Text
+    - vehicleColor: Maybe Text
+    - vehicleDoors: Maybe Int
+    - vehicleSeatBelts: Maybe Int
+    - vehicleModelYear: Maybe Int
+    - oxygen: Maybe Bool
+    - ventilator: Maybe Bool
+    - createdAt: UTCTime
+    - failedRules: [Text]
+    - verificationStatus: Maybe VerificationStatus
+  DocumentsListResponse:
+    - driverLicense: "[[Text]]"
+    - vehicleRegistrationCertificate: [Text]
+    - driverLicenseDetails: [DLDetails]
+    - vehicleRegistrationCertificateDetails: [RCDetails]
+    - vehicleInsurance: [Text]
+    - uploadProfile: [Text]
+    - ssn: Maybe Text
+    - vehicleFitnessCertificate: [Text]
+    - profilePhoto: [Text]
+    - vehicleInspectionForm: [Text]
+    - vehiclePermit: [Text]
+    - vehiclePUC: [Text]
+    - vehicleFront: [Text]
+    - vehicleBack: [Text]
+    - vehicleRight: [Text]
+    - vehicleLeft: [Text]
+    - vehicleFrontInterior: [Text]
+    - vehicleBackInterior: [Text]
+    - pan: [Text]
+    - vehicleNOC: [Text]
+    - businessLicense: [Text]
+    - odometer: [Text]
+    - aadhaar: [Text]
+    - gstCertificate: [Text]
+    - commonDocuments: [CommonDocumentItem]
+  GetDocumentResponse:
+    - imageBase64: Text
+    - status: Maybe VerificationStatus # TODO(Rupak): status of the document
+  DocumentType:
+    - enum: "DriverLicense,VehicleRegistrationCertificate,PanCard,VehiclePermitImage,VehiclePUCImage,VehicleInsuranceImage,VehicleFitnessCertificateImage,VehicleInspectionImage,ProfilePhotoImage,VehicleNOC,Permissions,SubscriptionPlan,AadhaarCard,ProfileDetails,SocialSecurityNumber,GSTCertificate,BackgroundVerification,UploadProfileImage,BusinessLicense,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,Odometer,InspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId"
+    - derive: "HttpInstance, 'HideSecrets"
+  UploadDocumentReq:
+    - imageBase64: Text
+    - imageType: DocumentType
+    - rcNumber: Maybe Text
+    - requestorId: Maybe Text
+  UploadDocumentTReq:
+    - imageType: DocumentType
+    - rcNumber: Maybe Text
+  UploadDocumentResp:
+    - recordType: NewType
+    - imageId: Id Image
+    - derive: "'HideSecrets"
+  RegisterDLReq:
+    - driverLicenseNumber: Text
+    - operatingCity: Text
+    - driverDateOfBirth: UTCTime
+    - vehicleCategory: Maybe VehicleCategory
+    - imageId1: Id Image
+    - imageId2: Maybe (Id Image)
+    - dateOfIssue: Maybe UTCTime
+    - accessType: Maybe DashboardAccessType
+    - derive: "'HideSecrets"
+  AadhaarCardReq:
+    aadhaarFrontImageId: Maybe (Id Image)
+    aadhaarBackImageId: Maybe (Id Image)
+    maskedAadhaarNumber: Maybe Text
+    nameOnCard: Maybe Text
+    dateOfBirth: Maybe Text
+    address: Maybe Text
+    consent: Bool
+    consentTimestamp: UTCTime
+    validationStatus: ValidationStatus
+    transactionId: Text
+    derive: "'HideSecrets"
+  RegisterRCReq:
+    - vehicleRegistrationCertNumber: Text
+    - imageId: Id Image
+    - operatingCity: Text
+    - dateOfRegistration: Maybe UTCTime
+    - airConditioned: Maybe Bool
+    - oxygen: Maybe Bool
+    - ventilator: Maybe Bool
+    - vehicleCategory: Maybe VehicleCategory
+    - vehicleDetails: Maybe DriverVehicleDetails
+    - derive: "'HideSecrets"
+  GenerateAadhaarOtpReq:
+    - aadhaarNumber: Text
+    - consent: Text
+    - derive: "'HideSecrets"
+  GenerateAadhaarOtpRes:
+    - message: Text
+    - transactionId: Maybe Text
+    - derive: "'HideSecrets"
+  VerifyAadhaarOtpReq:
+    - otp: Int
+    - shareCode: Text
+    - derive: "'HideSecrets"
+  VerifyAadhaarOtpRes:
+    - message: Text
+    - code: Text
+    - name: Text
+    - gender: Text
+    - date_of_birth: Text
+    - share_code: Text
+    - image: Text
+    - derive: "'HideSecrets"
+  UnderReviewDriversListResponse:
+    - drivers: [UnderReviewDriver]
+    - summary: Summary
+  UnderReviewDriver:
+    - driverId: Id Driver
+    - driverName: Text
+    - driverMobileNumber: Text
+    - driverMobileCountryCode: Text
+    - reviewedBy: Text
+  DocumentInfo:
+    - recordType: NewType
+    - documentNumber: Maybe Text
+  DriverDocument:
+    - documentType: DocumentType
+    - documentStatus: VerificationStatus
+    - documentImageId: Maybe (Id Image)
+    - documentImages: [Id Image]
+    - documentId: Maybe (Id Document)
+    - documentInfo: Maybe DocumentInfo
+  UpdateDocumentRequest:
+    - enum: "Approve ApproveDetails, Reject RejectDetails"
+    - derive: "'HideSecrets"
+  ImageDocumentsRejectDetails:
+    - reason: Text
+    - documentImageId: Id Image
+  SSNRejectDetails:
+    - reason: Text
+    - ssn: Text
+  CommonDocumentRejectDetails:
+    - reason: Text
+    - documentId: Id CommonDriverOnboardingDocuments
+  RejectDetails:
+    - enum: "SSNReject SSNRejectDetails, ImageDocuments ImageDocumentsRejectDetails, CommonDocumentReject CommonDocumentRejectDetails"
+  CommonDocumentItem:
+    - documentId: Id CommonDriverOnboardingDocuments
+    - documentType: DocumentType
+    - documentData: Text
+    - verificationStatus: VerificationStatus
+    - rejectReason: Maybe Text
+    - documentImageId: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  CommonDocumentCreateReq:
+    - documentType: DocumentType
+    - documentData: Text
+    - imageId: Maybe (Id Image)
+    - derive: "'HideSecrets"
+  FitnessApproveDetails:
+    - applicationNumber: Text
+    - categoryOfVehicle: Maybe Text
+    - documentImageId: Id Image
+    - fitnessExpiry: UTCTime
+    - inspectingAuthority: Maybe Text
+    - inspectingOn: Maybe UTCTime
+    - nextInspectionDate: Maybe UTCTime
+    - rcNumber: Text
+    - receiptDate: Maybe UTCTime
+  VInsuranceApproveDetails:
+    - documentImageId: Id Image
+    - insuredName: Maybe Text
+    - issueDate: Maybe UTCTime
+    - limitsOfLiability: Maybe Text
+    - policyExpiry: Maybe UTCTime
+    - policyNumber: Maybe Text
+    - policyProvider: Maybe Text
+    - rcNumber: Maybe Text
+  VPermitApproveDetails:
+    - documentImageId: Id Image
+    - issueDate: Maybe UTCTime
+    - nameOfPermitHolder: Maybe Text
+    - permitExpiry: UTCTime
+    - permitNumber: Text
+    - purposeOfJourney: Maybe Text
+    - rcNumber: Text
+    - regionCovered: Text
+  VPUCApproveDetails:
+    - documentImageId: Id Image
+    - pucNumber: Text
+    - pucExpiry: UTCTime
+    - rcNumber: Text
+    - testDate: Maybe UTCTime
+  RCApproveDetails:
+    - documentImageId: Id Image
+    - vehicleVariant: Maybe VehicleVariant
+    - vehicleNumberPlate: Maybe Text
+    - vehicleManufacturer: Maybe Text
+    - vehicleModel: Maybe Text
+    - vehicleModelYear: Maybe Int
+    - vehicleColor: Maybe Text
+    - vehicleDoors: Maybe Int
+    - vehicleSeatBelts: Maybe Int
+    - fitnessExpiry: Maybe UTCTime
+    - permitExpiry: Maybe UTCTime
+  VInspectionApproveDetails:
+    - documentImageId: Id Image
+    - dateOfExpiry: Maybe UTCTime
+  DLApproveDetails:
+    - documentImageId: Id Image
+    - driverLicenseNumber: Maybe Text
+    - driverDateOfBirth: Maybe UTCTime
+    - dateOfExpiry: Maybe UTCTime
+  PanApproveDetails:
+    - documentImageId: Id Image
+    - panNumber: Text
+    - docType: Maybe PanType
+    - driverDob: Maybe UTCTime
+    - driverNameOnGovtDB: Maybe Text
+  NOCApproveDetails:
+    - documentImageId: Id Image
+    - nocNumber: Text
+    - nocExpiry: UTCTime
+    - rcNumber: Text
+  BusinessLicenseApproveDetails:
+    - documentImageId: Id Image
+    - businessLicenseNumber: Text
+    - licenseExpiry: UTCTime
+  VerificationStatusListResponse:
+    - verificationStatuses: [VerificationStatusItem]
+  VerificationStatusItem:
+    - documentType: DocumentType
+    - status: Text
+    - verificationMessage: Maybe Text
+    - retryCount: Int
+    - requestId: Maybe Text
+    - createdAt: UTCTime
+  CommonDocumentApproveDetails:
+    - documentId: Id CommonDriverOnboardingDocuments
+    - updatedDocumentData: Maybe Text  # Updated JSON data if any corrections needed
+  PanType:
+      enum: "INDIVIDUAL,BUSINESS"
+  ServiceType:
+    enum: "HyperVerge,Idfy"
+    derive: "HttpInstance"
+  ApproveDetails:
+    - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails, Pan PanApproveDetails, NOC NOCApproveDetails, BusinessLicenseImg BusinessLicenseApproveDetails, CommonDocument CommonDocumentApproveDetails"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

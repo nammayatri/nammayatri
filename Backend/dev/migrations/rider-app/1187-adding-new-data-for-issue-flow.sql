@@ -503,3 +503,9 @@ INSERT INTO atlas_app.issue_option VALUES ('bu4tbrfg-u6jn-dnj2-j6ne-qwd7fbe123gs
 INSERT INTO atlas_app.issue_message VALUES ('fjadshj4-ch17-73hv-3jit-asdgv1j2g331', 'bu4tbrfg-u6jn-dnj2-j6ne-qwd7fbe123gs', null, 'We are glad to be of help. You can reach out to us in case of any other issues using help & support option in the side menu', null, 1);
 
 INSERT INTO atlas_app.issue_message VALUES ('123md312-ch17-u3tj-123d-febf223b12j3', 'awdvgsdd-bhtf-234v-8i6g-3nbtdsfvsnfv', null, 'Was your issue resolved succesfully?', null, 2);
+
+-- adding issue options for EXTRA_FARE_MITIGATION --
+-- for local testing only -- please dont run --
+INSERT INTO atlas_app.issue_option VALUES ('extra-fare-mitigation-option','ziig3kxh-v0xc-kh0t-q6p1-f1v2n8ucs0kj', 'extra-fare-message-id', 'Extra Fare Asked', 'EXTRA_FARE_MITIGATION', 3);
+INSERT INTO atlas_app.issue_message VALUES ('extra-fare-message-id', 'extra-fare-mitigation-option', 'ziig3kxh-v0xc-kh0t-q6p1-f1v2n8ucs0kj', 'We will block driver if he asks again', null, 1);
+--------------------------------------------------

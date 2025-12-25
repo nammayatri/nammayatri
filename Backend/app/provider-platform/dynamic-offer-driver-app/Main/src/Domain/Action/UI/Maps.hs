@@ -24,9 +24,11 @@ where
 
 import qualified Data.Geohash as DG
 import Data.Text (pack)
-import Domain.Types.Maps.PlaceNameCache as DTM
+import qualified Data.Time as DT
+import Domain.Action.UI.PlaceNameCache as DTM
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.PlaceNameCache as DTM
 import qualified Kernel.External.Maps.Interface.Types as MIT
 import Kernel.External.Maps.Types
 import Kernel.External.Types (ServiceFlow)
@@ -35,8 +37,10 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
 import qualified Tools.Maps as Maps
 
 data AutoCompleteReq = AutoCompleteReq
@@ -44,14 +48,25 @@ data AutoCompleteReq = AutoCompleteReq
     sessionToken :: Maybe Text,
     location :: Text,
     radius :: Integer,
+    types_ :: Maybe Text,
+    radiusWithUnit :: Maybe Distance,
     language :: Maps.Language,
     strictbounds :: Maybe Bool,
     origin :: Maybe Maps.LatLong
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-getPlaceName :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
-getPlaceName merchantId merchantOpCityId req = do
+expirePlaceNameCache :: ServiceFlow m r => [PlaceNameCache] -> Id DMOC.MerchantOperatingCity -> m ()
+expirePlaceNameCache placeNameCache merchantOpCityId = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  whenJust transporterConfig.placeNameCacheExpiryDays $ \cacheExpiry -> do
+    currentTime <- liftIO DT.getCurrentTime
+    let expiryDate = DT.addUTCTime (DT.nominalDay * fromIntegral (- cacheExpiry)) currentTime
+    let toBeDeletedPlaceNameCache = filter (\obj -> obj.createdAt < expiryDate) placeNameCache
+    mapM_ CM.delete toBeDeletedPlaceNameCache
+
+getPlaceName :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
+getPlaceName merchantId merchantOpCityId entityId req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   case req.getBy of
     MIT.ByLatLong (Maps.LatLong lat lon) -> do
@@ -59,19 +74,21 @@ getPlaceName merchantId merchantOpCityId req = do
       case myGeohash of
         Just geoHash -> do
           placeNameCache <- CM.findPlaceByGeoHash (pack geoHash)
+          fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOpCityId
           if null placeNameCache
-            then callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue
+            then callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue entityId
             else pure $ map convertToGetPlaceNameResp placeNameCache
-        Nothing -> callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue
+        Nothing -> callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue entityId
     MIT.ByPlaceId placeId -> do
       placeNameCache <- CM.findPlaceByPlaceId placeId
+      fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOpCityId
       if null placeNameCache
-        then callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue
+        then callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue entityId
         else pure $ map convertToGetPlaceNameResp placeNameCache
 
-callMapsApi :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
-callMapsApi merchantId merchantOpCityId req geoHashPrecisionValue = do
-  res <- Maps.getPlaceName merchantId merchantOpCityId req
+callMapsApi :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maps.GetPlaceNameReq -> Int -> Maybe Text -> m Maps.GetPlaceNameResp
+callMapsApi merchantId merchantOpCityId req geoHashPrecisionValue entityId = do
+  res <- Maps.getPlaceName merchantId merchantOpCityId entityId req
   let firstElement = listToMaybe res
   case firstElement of
     Just element -> do
@@ -80,15 +97,10 @@ callMapsApi merchantId merchantOpCityId req geoHashPrecisionValue = do
             _ -> (element.location.lat, element.location.lon)
       placeNameCache <- convertResultsRespToPlaceNameCache element latitude longitude geoHashPrecisionValue
       _ <- CM.create placeNameCache
-      case (placeNameCache.placeId, placeNameCache.geoHash) of
-        (Just placeId, Just geoHash) -> do
-          CM.cachedPlaceByPlaceId placeId [placeNameCache]
-          CM.cachedPlaceByGeoHash geoHash [placeNameCache]
-        (Just placeId, Nothing) -> do
-          CM.cachedPlaceByPlaceId placeId [placeNameCache]
-        (Nothing, Just geoHash) -> do
-          CM.cachedPlaceByGeoHash geoHash [placeNameCache]
-        _ -> pure ()
+      whenJust placeNameCache.placeId $ \placeid -> do
+        CM.cachedPlaceByPlaceId placeid [placeNameCache]
+      whenJust placeNameCache.geoHash $ \geohash -> do
+        CM.cachedPlaceByGeoHash geohash [placeNameCache]
     Nothing -> pure ()
   return res
 
@@ -99,7 +111,8 @@ convertToGetPlaceNameResp placeNameCache =
       addressComponents = map (\DTM.AddressResp {..} -> MIT.AddressResp {..}) placeNameCache.addressComponents,
       plusCode = placeNameCache.plusCode,
       location = LatLong {lat = placeNameCache.lat, lon = placeNameCache.lon},
-      placeId = placeNameCache.placeId
+      placeId = placeNameCache.placeId,
+      source = Nothing
     }
 
 convertResultsRespToPlaceNameCache :: MonadFlow m => MIT.PlaceName -> Double -> Double -> Int -> m DTM.PlaceNameCache
@@ -120,18 +133,23 @@ convertResultsRespToPlaceNameCache resultsResp latitude longitude geoHashPrecisi
           }
   return res
 
-autoComplete :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> AutoCompleteReq -> m Maps.AutoCompleteResp
-autoComplete merchantId merchantOpCityId AutoCompleteReq {..} = do
-  merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+autoComplete :: (ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> AutoCompleteReq -> m Maps.AutoCompleteResp
+autoComplete merchantId merchantOpCityId entityId AutoCompleteReq {..} = do
+  merchantCity <- QMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   Maps.autoComplete
     merchantId
     merchantOpCityId
+    entityId
     Maps.AutoCompleteReq
-      { country = toInterfaceCountry merchant.country,
+      { country = toInterfaceCountry merchantCity.country,
+        radiusWithUnit = Just $ fromMaybe (convertMetersToDistance merchantCity.distanceUnit $ fromInteger radius) radiusWithUnit,
         ..
       }
   where
     toInterfaceCountry = \case
       Context.India -> Maps.India
       Context.France -> Maps.France
+      Context.USA -> Maps.USA
+      Context.Netherlands -> Maps.Netherlands
+      Context.Finland -> Maps.Finland
       Context.AnyCountry -> Maps.India

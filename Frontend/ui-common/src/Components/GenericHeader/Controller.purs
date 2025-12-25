@@ -20,10 +20,14 @@ import Font.Style (Style(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Orientation(..), Accessiblity(..), padding)
 import Common.Styles.Colors as Color
 import Common.Types.App
-import Prelude ((<>))
+import Prelude ((<>), class Show, show)
 import ConfigProvider
 
 data Action = SuffixImgOnClick | PrefixImgOnClick
+
+instance showAction :: Show Action where
+  show (SuffixImgOnClick) = "SuffixImgOnClick"
+  show (PrefixImgOnClick) = "PrefixImgOnClick"
 
 type Config =
   {
@@ -51,6 +55,10 @@ type ImageConfig =
   , visibility :: Visibility
   , accessibilityHint :: String
   , accessibility :: Accessiblity
+  , cornerRadius :: Number
+  , layoutMargin :: Margin
+  , enableRipple :: Boolean
+  , rippleColor :: String
   }
 
 type TextConfig =
@@ -84,6 +92,10 @@ config =
     , visibility : VISIBLE
     , accessibility : ENABLE
     , accessibilityHint : "Back : Button"
+    , cornerRadius : 30.0
+    , layoutMargin : (Margin 0 0 0 0)
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , textConfig : {
       text : ""
@@ -101,6 +113,10 @@ config =
     , visibility : GONE
     , accessibility : DISABLE 
     , accessibilityHint : ""
+    , cornerRadius : 0.0
+    , layoutMargin : (Margin 0 0 0 0)
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , visibility : VISIBLE
 }
@@ -127,6 +143,10 @@ merchantConfig =
     , visibility : VISIBLE
     , accessibility : ENABLE 
     , accessibilityHint : "Back : Button"
+    , cornerRadius : 30.0
+    , layoutMargin : (Margin 0 0 0 0)
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , textConfig : {
       text : ""
@@ -144,6 +164,10 @@ merchantConfig =
     , visibility : GONE
     , accessibility : DISABLE 
     , accessibilityHint : ""
+    , cornerRadius : 0.0
+    , layoutMargin : (Margin 0 0 0 0)
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , visibility : VISIBLE
 }

@@ -24,16 +24,24 @@ module Domain.Action.UI.Ride.StartRide
 where
 
 import Data.Maybe (listToMaybe)
+import qualified Data.Text as Text
+import qualified Domain.Action.Internal.StopDetection as StopDetection
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
+import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideRelatedNotificationConfig as DRN
+import qualified Domain.Types.TransporterConfig as DTConf
 import Environment (Flow)
 import EulerHS.Prelude
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -46,39 +54,46 @@ import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import Storage.CachedQueries.Merchant.TransporterConfig as QTC
+import SharedLogic.Ride (calculateEstimatedEndTimeRange)
+import qualified SharedLogic.ScheduledNotifications as SN
+import Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Notifications as Notify
+import Utils.Common.Cac.KeyNameConstants
 
 data StartRideReq = DriverReq DriverStartRideReq | DashboardReq DashboardStartRideReq
 
 data DriverStartRideReq = DriverStartRideReq
   { rideOtp :: Text,
     point :: LatLong,
-    requestor :: DP.Person
+    requestor :: DP.Person,
+    odometer :: Maybe DRide.OdometerReading
   }
 
 data DashboardStartRideReq = DashboardStartRideReq
   { point :: Maybe LatLong,
     merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    odometer :: Maybe DRide.OdometerReading
   }
 
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> Id SRB.Booking -> LatLong -> Id DM.Merchant -> m (),
-    notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> m (),
+    startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> Id SRB.Booking -> LatLong -> Id DM.Merchant -> Maybe DRide.OdometerReading -> DTConf.TransporterConfig -> DDI.DriverInformation -> m (),
+    notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> Maybe LatLong -> m (),
     rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
     initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
 
-buildStartRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ServiceHandle Flow)
-buildStartRideHandle merchantId merchantOpCityId = do
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId False
+buildStartRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id DRide.Ride) -> Flow (ServiceHandle Flow)
+buildStartRideHandle merchantId merchantOpCityId rideId = do
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId rideId False Nothing
   pure
     ServiceHandle
       { findRideById = QRide.findById,
@@ -90,21 +105,21 @@ buildStartRideHandle merchantId merchantOpCityId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
-type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r)
+type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int])
 
 driverStartRide ::
-  (StartRideFlow m r) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
   m APISuccess.APISuccess
 driverStartRide handle rideId req =
-  withLogTag ("requestorId-" <> req.requestor.id.getId)
-    . startRide handle rideId
-    $ DriverReq req
+  withLogTag ("requestorId-" <> req.requestor.id.getId) $ do
+    result <- startRide handle rideId (DriverReq req)
+    pure result
 
 dashboardStartRide ::
-  (StartRideFlow m r) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -115,7 +130,7 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (StartRideFlow m r) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -123,19 +138,20 @@ startRide ::
 startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) $ do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
+  driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
+  (openMarketAllow, includeDriverCurrentlyOnRide) <-
+    maybe
+      (pure (False, False))
+      ( \_ -> do
+          pure (transporterConfig.openMarketUnBlocked, transporterConfig.includeDriverCurrentlyOnRide)
+      )
+      driverInfo.merchantId
+  when (includeDriverCurrentlyOnRide && driverInfo.hasAdvanceBooking) do throwError $ CurrentRideInprogress driverId.getId
   let driverKey = makeStartRideIdKey driverId
   Redis.setExp driverKey ride.id 60
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?
-  booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  openMarketAllow <-
-    maybe
-      (pure False)
-      ( \_ -> do
-          transporterConfig <- QTC.findByMerchantOpCityId ride.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
-          pure $ transporterConfig.openMarketUnBlocked
-      )
-      driverInfo.merchantId
   unless (driverInfo.subscribed || openMarketAllow) $ throwError DriverUnsubscribed
   case req of
     DriverReq driverReq -> do
@@ -146,30 +162,60 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     DashboardReq dashboardReq -> do
       unless (booking.providerId == dashboardReq.merchantId && booking.merchantOperatingCityId == dashboardReq.merchantOperatingCityId) $ throwError (RideDoesNotExist ride.id.getId)
 
-  unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
+  if (isInProgress ride.status)
+    then pure APISuccess.Success
+    else do
+      unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus ("This ride cannot be started" <> Text.pack (show ride.status))
+      (point, odometer) <- case req of
+        DriverReq driverReq -> do
+          when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing driverReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
+          when (not (fromMaybe False ride.enableOtpLessRide) && driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
+          logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
+          validatedPoint <- validateStartRideCoordinates driverReq.point booking
+          pure (validatedPoint, driverReq.odometer)
+        DashboardReq dashboardReq -> do
+          when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing dashboardReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
+          logTagInfo "dashboard -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
+          case dashboardReq.point of
+            Just point -> pure (point, dashboardReq.odometer)
+            Nothing -> do
+              driverLocation <- do
+                driverLocations <- LF.driversLocation [driverId]
+                listToMaybe driverLocations & fromMaybeM LocationNotFound
+              pure (getCoordinates driverLocation, dashboardReq.odometer)
+      now <- getCurrentTime
+      -- create first entry of eta here
+      let estimatedEndTimeRange = booking.estimatedDuration >>= \estDuration -> calculateEstimatedEndTimeRange now estDuration transporterConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
+      when (isJust estimatedEndTimeRange) $ QRide.updateEstimatedEndTimeRange estimatedEndTimeRange ride.id
+      updatedRide <-
+        if DTC.isEndOtpRequired booking.tripCategory
+          then do
+            endOtp <- Just <$> generateOTPCode
+            QRide.updateEndRideOtp ride.id endOtp
+            return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer, DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
+          else pure ride {DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
 
-  point <- case req of
-    DriverReq driverReq -> do
-      when (driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
-      logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      pure driverReq.point
-    DashboardReq dashboardReq -> do
-      logTagInfo "dashboard -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      case dashboardReq.point of
-        Just point -> pure point
-        Nothing -> do
-          driverLocation <- do
-            driverLocations <- LF.driversLocation [driverId]
-            listToMaybe driverLocations & fromMaybeM LocationNotFound
-          pure $ getCoordinates driverLocation
-  whenWithLocationUpdatesLock driverId $ do
-    withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking.id point booking.providerId
-    withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
-    withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
+      rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.START_TIME booking.configInExperimentVersions
+      forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updatedRide now driverId)
 
-  pure APISuccess.Success
+      void $ Redis.del (StopDetection.mkStopCountRedisKey rideId.getId)
+      whenWithLocationUpdatesLock driverId $ do
+        withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
+        withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer transporterConfig driverInfo
+
+      fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
+      fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
+      pure APISuccess.Success
   where
-    isValidRideStatus status = status == DRide.NEW
+    isValidRideStatus status = status `elem` [DRide.NEW, DRide.UPCOMING]
+    isInProgress status = (status == DRide.INPROGRESS)
+
+    validateStartRideCoordinates point booking =
+      if point.lat == 0.0 && point.lon == 0.0
+        then do
+          logWarning "Invalid GPS coordinates (0.0, 0.0) received for ride start, using booking location as fallback"
+          pure $ getCoordinates booking.fromLocation
+        else pure point
 
 makeStartRideIdKey :: Id DP.Person -> Text
 makeStartRideIdKey driverId = "StartRideKey:PersonId-" <> driverId.getId

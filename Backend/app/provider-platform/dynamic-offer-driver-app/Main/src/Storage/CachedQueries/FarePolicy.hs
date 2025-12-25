@@ -14,14 +14,21 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.FarePolicy
-  ( findById,
-    clearCache,
-    update,
+  {-# WARNING
+    "This module contains direct calls to the table and redis. \
+  \ But most likely you need a version from Cac with inMem results feature."
+    #-}
+  ( clearCache,
+    create,
+    delete,
+    update',
     clearCacheById,
+    findFarePolicyFromDB,
   )
 where
 
 import Data.Coerce (coerce)
+import Data.Text as Text
 import Domain.Types.Common
 import Domain.Types.FarePolicy
 import Kernel.Prelude
@@ -29,13 +36,15 @@ import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.FarePolicy as Queries
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
-findById id =
+findFarePolicyFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
+findFarePolicyFromDB id = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
-    Nothing -> flip whenJust cacheFarePolicy /=<< Queries.findById id
+    Nothing -> do
+      flip whenJust cacheFarePolicy /=<< Queries.findById id
 
 cacheFarePolicy :: (CacheFlow m r) => FarePolicy -> m ()
 cacheFarePolicy fp = do
@@ -56,5 +65,11 @@ clearCacheById :: HedisFlow m r => Id FarePolicy -> m ()
 clearCacheById fid = Hedis.withCrossAppRedis $ do
   Hedis.del (makeIdKey fid)
 
-update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
-update = Queries.update
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
+create = Queries.create
+
+delete :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m ()
+delete = Queries.delete
+
+update' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
+update' = Queries.update'

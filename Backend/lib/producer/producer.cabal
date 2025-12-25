@@ -29,6 +29,7 @@ library
       App
       Environment
       Producer.Flow
+      Producer.SchedulerJob
   other-modules:
       Paths_producer
   hs-source-dirs:
@@ -80,7 +81,6 @@ library
     , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
-    , hashmap
     , hedis
     , mobility-core
     , monad-control
@@ -90,6 +90,7 @@ library
     , random
     , record-dot-preprocessor
     , record-hasfield
+    , rider-app
     , scheduler
     , sequelize
     , servant-server
@@ -97,7 +98,9 @@ library
     , template-haskell
     , text
     , time
+    , unordered-containers
     , uuid
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -157,7 +160,6 @@ executable producer-exe
     , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
-    , hashmap
     , hedis
     , mobility-core
     , monad-control
@@ -168,6 +170,7 @@ executable producer-exe
     , random
     , record-dot-preprocessor
     , record-hasfield
+    , rider-app
     , scheduler
     , sequelize
     , servant-server
@@ -175,7 +178,9 @@ executable producer-exe
     , template-haskell
     , text
     , time
+    , unordered-containers
     , uuid
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

@@ -5,6 +5,8 @@
     <string name="request"> अनुरोध करें </string>
     <string name="decline">अस्वीकार करें</string>
     <string name="pickup">पिकअप जगह</string>
+    <string name="test_request">परीक्षण अनुरोध</string>
+    <string name="test_request_successful">टेस्ट राइड अनुरोध सफल!</string>
     <string name="trip"> यात्रा की दूरी </string>
     <string name="new_ride_assigned"> नई सवारी </string>
     <string name="waiting_for_customer_response">ग्राहक प्रतिक्रिया की प्रतीक्षा</string>
@@ -14,7 +16,6 @@
     <string name="please_allow_permission_to_capture_the_image">कृपया छवि को कैप्चर करने के लिए अनुमति दें</string>
     <string name="we_have_updated_your_app_kindly_relaunch">हमने आपका ऐप अपडेट कर दिया है, एप्लिकेशन अब फिर से लोड होगा।</string>
     <string name="okay_got_it">ठीक है समझ आ गया</string>
-    <string name="upload_image">तस्विर अपलोड करें</string>
     <string name="not_interested">रुचि नहीं</string>
     <string name="too_far">बहुत दूर</string>
     <string name="accept_offer">प्रस्ताव स्वीकार करें</string>
@@ -27,7 +28,7 @@
     <string name="tap_on">3. Tap on </string>
     <string name="location">Location</string>
     <string name="phone">फ़ोन </string>
-    <string name="includes_pickup_charges_10">पिकअप शुल्क ₹10 शामिल है</string>
+    <string name="includes_pickup_charges_10">पिकअप शुल्क ₹{#amount#} शामिल है</string>
     <string name="away">दूर</string>
     <string name="we_made_you_online">हमने आपको ऑनलाइन कर दिया है</string>
     <string name="location_is_turned_on">Location चालू हो गया है</string>
@@ -47,4 +48,7 @@
     <string name="message_from_customer">ग्राहक की ओर से संदेश </string>
     <string name="go_to">गो-टू</string>
     <string name="call_support">सहायता कॉल करें</string>
+    <string name="no_additional_fare_tips_and_waiting_charges">"कोई अतिरिक्त किराया नहीं। कोई सुझाव नहीं। कोई प्रतीक्षा शुल्क नहीं।"</string>
+    <string name="third_party_booking">"तीसरे पक्ष की बुकिंग"</string>
+    <string name="round_trip">राउंड ट्रिप</string>
 </resources>

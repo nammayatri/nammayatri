@@ -1,0 +1,27 @@
+imports:
+  Person: Domain.Types.Person
+  SearchReq: API.UI.Search
+  SearchResp: API.UI.Search
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  API.UI.Search: "rider-app"
+
+module: Search
+
+apis:
+  - POST:  # CustomerRideSearchAPI
+      endpoint: /{customerId}/rideSearch
+      name: postSearchRide
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: SearchReq
+      response:
+        type: SearchResp
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS SEARCH
+        endpoint: SearchAPI SearchEndPoint
+
+types: {}

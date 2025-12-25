@@ -1,0 +1,100 @@
+imports:
+  Text: Data.Text
+  TimeBound : Kernel.Types.TimeBound
+  Merchant: Lib.Yudhishthira.Types
+  MerchantOperatingCity: Lib.Yudhishthira.Types
+  LogicDomain: Lib.Yudhishthira.Types
+  ExperimentStatus: Lib.Yudhishthira.Types
+  Person: Lib.Yudhishthira.Types
+
+AppDynamicLogicElement:
+  tableName: app_dynamic_logic_element
+
+  fields:
+    domain: LogicDomain
+    description: Maybe Text
+    version: Int
+    order: Int
+    logic: Data.Aeson.Value
+    merchantId: Maybe (Id Merchant)
+    patchedElement: Maybe Data.Aeson.Value
+
+  constraints:
+    domain: PrimaryKey
+    version: PrimaryKey
+    order: PrimaryKey
+
+  queries:
+    findByDomainAndVersion:
+      kvFunction: findAllWithOptionsKV
+      orderBy:
+        field: order
+        order: asc
+      where:
+        and: [domain, version]
+    findLatestVersion:
+      kvFunction: findAllWithOptionsKV
+      orderBy:
+        field: version
+        order: desc
+      where: domain
+    findByDomain:
+      kvFunction: findAllWithKV
+      where: domain
+
+  beamType:
+    logic: Text
+    patchedElement: Maybe Text
+
+  toTType:
+    logic: (Data.String.Conversions.cs . Data.Aeson.encode)|I
+    patchedElement: fmap (Data.String.Conversions.cs . Data.Aeson.encode)|I
+
+  fromTType:
+    logic: (Kernel.Prelude.fromMaybe Data.Aeson.Null . Data.Aeson.decode . Data.String.Conversions.cs)|I
+    patchedElement: (\val -> (Data.Aeson.decode . Data.String.Conversions.cs) =<< val)|I
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
+
+
+AppDynamicLogicRollout:
+  tableName: app_dynamic_logic_rollout
+
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    domain: LogicDomain
+    timeBounds: Text
+    version: Int
+    versionDescription: Maybe Text
+    percentageRollout: Int
+    merchantId: Maybe (Id Merchant)
+    modifiedBy: Maybe (Id Person)
+    experimentStatus: Maybe ExperimentStatus
+    isBaseVersion: Maybe Bool
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    domain: PrimaryKey
+    timeBounds: PrimaryKey
+    version: PrimaryKey
+
+  queries:
+    findByMerchantOpCityAndDomain:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, domain]
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
+

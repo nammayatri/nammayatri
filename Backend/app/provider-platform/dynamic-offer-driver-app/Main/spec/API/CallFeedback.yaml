@@ -1,0 +1,20 @@
+imports:
+  Ride: Domain.Types.Ride
+  APISuccess: Kernel.Types.APISuccess
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+module: CallFeedback
+types:
+  CallFeedbackReq:
+    optionIds: [Text]
+    callId: Text
+
+apis:
+  - POST:
+      endpoint: /driver/call/feedback
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: CallFeedbackReq
+      response:
+        type:  Kernel.Types.APISuccess.APISuccess

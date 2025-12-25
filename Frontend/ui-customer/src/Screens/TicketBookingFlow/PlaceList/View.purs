@@ -32,7 +32,7 @@ import Data.Maybe (fromMaybe, Maybe(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
-import PrestoDOM (lineHeight, Gravity(..), Length(..), Margin(..), maxLines, ellipsize, Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, shimmerFrameLayout, imageUrl, alignParentBottom)
+import PrestoDOM (scrollBarY, scrollView, lineHeight, Gravity(..), Length(..), Margin(..), maxLines, ellipsize, Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, shimmerFrameLayout, imageUrl, alignParentBottom)
 import Screens.TicketBookingFlow.PlaceList.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -41,6 +41,10 @@ import Services.Backend as Remote
 import Data.Array as DA
 import Font.Size as FontSize
 import Mobility.Prelude
+import Debug
+import Engineering.Helpers.Commons as EHC
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 screen :: ST.TicketingScreenState -> Screen Action ST.TicketingScreenState ScreenOutput
 screen initialState =
@@ -48,7 +52,11 @@ screen initialState =
   , view
   , name: "TicketingScreen"
   , globalEvents: [getPlaceDataEvent]
-  , eval
+  , eval : 
+    \action state -> do
+        let _ = spy "ZooTicketBookingFlow PlaceList action " action
+        let _ = spy "ZooTicketBookingFlow PlaceList state " state
+        eval action state
   }
   where 
   getPlaceDataEvent push = do
@@ -67,6 +75,7 @@ view push state =
         , height MATCH_PARENT
         , background Color.white900
         , onBackPressed push $ const BackPressed
+        , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
         ]
         [ linearLayout
             [ height MATCH_PARENT
@@ -76,19 +85,12 @@ view push state =
             , background Color.white900
             ]
             [ headerView push state
-            , linearLayout
+            , scrollView
                 [ weight 1.0
                 , width MATCH_PARENT
-                , gravity CENTER
+                , scrollBarY false
                 ]
                 [ ticketingList push state ]
-            , linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , gravity BOTTOM
-                , weight 1.0
-                ]
-                []
             ]
         ]
 
@@ -136,7 +138,7 @@ headerView push state =
         , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , cornerRadius 30.0
+            , cornerRadius 20.0
             , padding $ Padding 8 8 8 8
             , gravity CENTER_VERTICAL
             , background Color.black700
@@ -144,7 +146,7 @@ headerView push state =
             , visibility $ boolToVisibility (not state.props.hideMyTickets)
             ]
             [ textView
-                $ [ text "My Tickets"
+                $ [ text $ getString MY_TICKETS
                   , color Color.white900
                   , height WRAP_CONTENT
                   , padding $ Padding 3 0 0 3
@@ -169,19 +171,18 @@ ticketingList push state =
     , margin $ MarginTop 16
     ] if DA.null state.data.placeInfoArray then [sfl 70, sfl 70] else
     ( mapWithIndex
-        (\index item -> ticketingItem push item index)
+        (\index item -> ticketingItem push item index (DA.length state.data.placeInfoArray))
         state.data.placeInfoArray
     )
 
-ticketingItem :: forall w. (Action -> Effect Unit) -> API.TicketPlaceResp -> Int -> PrestoDOM (Effect Unit) w
-ticketingItem push (API.TicketPlaceResp item) index =
+ticketingItem :: forall w. (Action -> Effect Unit) -> API.TicketPlaceResp -> Int -> Int -> PrestoDOM (Effect Unit) w
+ticketingItem push (API.TicketPlaceResp item) index length =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
   , cornerRadius 16.0
-  , background Color.yellow800
-  , margin $ Margin 16 marginTop 16 0
+  , padding $ if index == length - 1 then Padding 16 0 16 32 else Padding 16 0 16 16
   , gravity CENTER
   ] $ [  linearLayout
           [ width MATCH_PARENT
@@ -248,9 +249,9 @@ ticketingItem push (API.TicketPlaceResp item) index =
           , gravity RIGHT
           ]
           [ imageView
-              [ width $ V 32
-              , height $ V 32
-              , cornerRadius 32.0
+              [ width $ V $ if EHC.os == "IOS" then 16 else 32
+              , height $ V $ if EHC.os == "IOS" then 16 else 32
+              , cornerRadius 16.0
               , margin $ MarginTop 8
               , padding $ Padding 8 8 8 8
               , imageWithFallback $ fetchImage FF_ASSET "ny_ic_right_arrow_blue"

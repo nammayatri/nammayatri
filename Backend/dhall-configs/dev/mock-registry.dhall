@@ -22,4 +22,5 @@ in  { port = +8020
         (   env:MOCK_REGISTRY_MIGRATION_PATH as Text
           ? "dev/migrations/mock-registry"
         )
+    , internalAuthApiKey = sec.internalAuthApiKey
     }

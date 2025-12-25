@@ -16,6 +16,8 @@
 module Tools.JSON where
 
 import Data.Aeson
+import Data.Char
+import qualified Data.Text as T
 import Kernel.Prelude
 
 -- FIXME: make generic instances more powerful to capture this case
@@ -36,5 +38,17 @@ fareProductConstructorModifier :: String -> String
 fareProductConstructorModifier = \case
   "OneWayAPIDetails" -> "ONE_WAY"
   "RentalAPIDetails" -> "RENTAL"
+  "InterCityAPIDetails" -> "INTER_CITY"
   "DriverOfferAPIDetails" -> "DRIVER_OFFER"
+  "AmbulanceAPIDetails" -> "AMBULANCE"
+  "DeliveryAPIDetails" -> "DELIVERY" -- for now change accordingly
+  "MeterRideAPIDetails" -> "METER_RIDE"
   x -> x
+
+-- Convert camelCase to SCREAMING_SNAKE_CASE
+camelCaseToScreamingSnakeCase :: String -> String
+camelCaseToScreamingSnakeCase = T.unpack . T.toUpper . T.concatMap addUnderscore . T.pack
+  where
+    addUnderscore c
+      | isUpper c = T.cons '_' (T.singleton c)
+      | otherwise = T.singleton c

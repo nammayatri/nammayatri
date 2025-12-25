@@ -13,6 +13,7 @@ dist/ios
 dist/web
 dist/pulp.js
 dist/index_bundle.js
+dist
 src/UI/Screens/Controllers/EmptyTemp.purs
 src/UI/Screens/Views/EmptyTemp.purs
 package-lock.json

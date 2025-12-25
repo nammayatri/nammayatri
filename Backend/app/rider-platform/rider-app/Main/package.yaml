@@ -23,9 +23,11 @@ default-extensions:
   - ConstraintKinds
   - DataKinds
   - DefaultSignatures
+  - DerivingStrategies
   - DeriveAnyClass
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingStrategies
   - DuplicateRecordFields
   - ExplicitNamespaces
   - FlexibleContexts
@@ -53,10 +55,10 @@ default-extensions:
   - TypeSynonymInstances
   - UndecidableInstances
   - PackageImports
+  - TemplateHaskell
 
 dependencies:
   - aeson
-  - amazonka
   - amazonka-core
   - amazonka-ses
   - base >= 4.7 && < 5
@@ -82,6 +84,7 @@ dependencies:
   - uuid
   - wai-extra
   - http-types
+  - http-api-data
   - warp
   - time
   - record-hasfield
@@ -98,6 +101,7 @@ dependencies:
   - geohash == 1.0.1
   - euler-hs
   - unordered-containers
+  - passetto-client
   - vector
   - cereal
   - beam-core
@@ -107,11 +111,36 @@ dependencies:
   - sequelize
   - casing
   - postgresql-simple
+  - process
   - random
+  - cassava
+  - split
   - raw-strings-qq
   - directory
   - filepath
-  - hashmap
+  - scheduler
+  - regex-compat
+  - singletons
+  - singletons-th
+  - regex-posix
+  - pureMD5
+  - lens-aeson
+  - http-client
+  - http-client-tls
+  - hashable
+  - json-logic-hs
+  - yudhishthira
+  - text-format
+  - scientific
+  - resource-pool
+  - jwt
+  - insert-ordered-containers
+  - mtl
+  - transformers
+  - morpheus-graphql-client
+  - xml-conduit
+  - servant-xml
+  - xmlbf
 
 ghc-options:
   - -fwrite-ide-info
@@ -145,8 +174,8 @@ library:
           - -j4
   dependencies:
     - mobility-core
+    - haskell-cac
     - beckn-spec
-    - beckn-services
     - special-zone-a
     - special-zone
     - payment
@@ -154,6 +183,7 @@ library:
     - beckn-services
     - shared-services
     - utils
+    - external
 
 executables:
   rider-app-exe:
@@ -181,3 +211,24 @@ executables:
       - rider-app
       - mobility-core
       - beckn-spec
+
+tests:
+  rider-app-test:
+    main: Main.hs
+    source-dirs: test
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - rider-app
+      - mobility-core
+      - tasty
+      - tasty-hunit
+      - tasty-quickcheck
+      - safe-exceptions
+      - base64-bytestring
+      - cryptonite
+      - time
+      - text
+      - bytestring

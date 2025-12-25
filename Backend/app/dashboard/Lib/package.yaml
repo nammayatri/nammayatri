@@ -1,3 +1,13 @@
+# hpack defaults
+# Ref: https://github.com/sol/hpack#defaults
+
+# Workaround for segfault on macOS
+# https://github.com/NixOS/nixpkgs/issues/149692#issuecomment-1587564664
+# hpack defaults
+# Ref: https://github.com/sol/hpack#defaults
+
+# Workaround for segfault on macOS
+# https://github.com/NixOS/nixpkgs/issues/149692#issuecomment-1587564664
 name: lib-dashboard
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
@@ -28,6 +38,7 @@ default-extensions:
   - DeriveAnyClass
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingStrategies
   - DuplicateRecordFields
   - ExplicitNamespaces
   - FlexibleContexts
@@ -48,6 +59,7 @@ default-extensions:
   - RecordWildCards
   - ScopedTypeVariables
   - StandaloneDeriving
+  - TemplateHaskell
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -70,16 +82,19 @@ dependencies:
   - servant-server
   - servant-client
   - servant-openapi3
+  - openapi3
+  - lens
   - persistent
   - persistent-postgresql
   - esqueleto
   - template-haskell
   - wai
-  - hashmap
+  - unordered-containers
   - containers
   - singletons
   - singletons-th
   - euler-hs
+  - passetto-client
   - http-types
   - dashboard-helper-api
   - rider-app
@@ -87,6 +102,14 @@ dependencies:
   - random
   - base32
   - cryptonite
+  - containers
+  - unordered-containers
+  - cereal
+  - beam-core
+  - beam-mysql
+  - beam-postgres
+  - postgresql-simple
+  - sequelize
 ghc-options:
   - -Wall
   - -Wcompat

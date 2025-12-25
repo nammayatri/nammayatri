@@ -18,30 +18,22 @@ import qualified Beckn.Types.Core.Taxi.Common.BreakupItem as Common
 import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Common
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
-import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified BecknV2.OnDemand.Types as Spec
 import Data.Maybe
+import Domain.Types
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Location as DLoc
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Kernel.Prelude
-
-castVariant :: Variant.Variant -> Common.VehicleVariant
-castVariant Variant.SEDAN = Common.SEDAN
-castVariant Variant.HATCHBACK = Common.HATCHBACK
-castVariant Variant.SUV = Common.SUV
-castVariant Variant.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
-castVariant Variant.TAXI = Common.TAXI
-castVariant Variant.TAXI_PLUS = Common.TAXI_PLUS
 
 castDPaymentCollector :: DMPM.PaymentCollector -> Payment.PaymentCollector
 castDPaymentCollector DMPM.BAP = Payment.BAP
 castDPaymentCollector DMPM.BPP = Payment.BPP
 
 castDPaymentType :: DMPM.PaymentType -> Payment.PaymentType
-castDPaymentType DMPM.PREPAID = Payment.ON_ORDER
+castDPaymentType DMPM.ON_FULFILLMENT = Payment.ON_FULFILLMENT
 castDPaymentType DMPM.POSTPAID = Payment.ON_FULFILLMENT
 
 castDPaymentInstrument :: DMPM.PaymentInstrument -> Payment.PaymentInstrument
@@ -56,8 +48,8 @@ castPaymentCollector Payment.BAP = DMPM.BAP
 castPaymentCollector Payment.BPP = DMPM.BPP
 
 castPaymentType :: Payment.PaymentType -> DMPM.PaymentType
-castPaymentType Payment.ON_ORDER = DMPM.PREPAID
-castPaymentType Payment.ON_FULFILLMENT = DMPM.POSTPAID
+castPaymentType Payment.ON_FULFILLMENT = DMPM.ON_FULFILLMENT
+castPaymentType Payment.POSTPAID = DMPM.ON_FULFILLMENT
 
 castPaymentInstrument :: Payment.PaymentInstrument -> DMPM.PaymentInstrument
 castPaymentInstrument (Payment.Card Payment.DefaultCardType) = DMPM.Card DMPM.DefaultCardType
@@ -74,7 +66,7 @@ makeLocation DLoc.Location {..} =
         Just
           Search.Address
             { area_code = address.areaCode,
-              locality = address.area,
+              locality = Nothing,
               ward = address.area,
               state = address.state,
               country = address.country,
@@ -85,8 +77,8 @@ makeLocation DLoc.Location {..} =
             }
     }
 
-mkItemId :: Text -> Variant.Variant -> Text
-mkItemId providerId variant = providerId <> "_" <> show variant
+mkItemId :: Text -> ServiceTierType -> Text
+mkItemId providerId serviceTier = providerId <> "_" <> show serviceTier
 
 type TagGroupCode = Text
 
@@ -115,13 +107,22 @@ filterRequiredBreakups fParamsType breakup = do
         `elem` [ "BASE_FARE",
                  "SERVICE_CHARGE",
                  "DEAD_KILOMETER_FARE",
-                 "EXTRA_DISTANCE_FARE",
+                 "DISTANCE_FARE",
                  "DRIVER_SELECTED_FARE",
                  "CUSTOMER_SELECTED_FARE",
                  "TOTAL_FARE",
                  "WAITING_OR_PICKUP_CHARGES",
                  "EXTRA_TIME_FARE",
-                 "CUSTOMER_CANCELLATION_DUES"
+                 "CANCELLATION_CHARGES",
+                 "PARKING_CHARGE",
+                 "NIGHT_SHIFT_CHARGE",
+                 "RIDE_STOP_CHARGES",
+                 "PER_STOP_CHARGES",
+                 "LUGGAGE_CHARGE",
+                 "RETURN_FEE",
+                 "BOOTH_CHARGE",
+                 "RIDE_VAT",
+                 "TOLL_VAT"
                ]
     DFParams.Slab ->
       title
@@ -136,5 +137,62 @@ filterRequiredBreakups fParamsType breakup = do
                  "TOTAL_FARE",
                  "NIGHT_SHIFT_CHARGE",
                  "EXTRA_TIME_FARE",
-                 "CUSTOMER_CANCELLATION_DUES"
+                 "CANCELLATION_CHARGES",
+                 "PARKING_CHARGE",
+                 "LUGGAGE_CHARGE",
+                 "RETURN_FEE",
+                 "BOOTH_CHARGE",
+                 "RIDE_VAT",
+                 "TOLL_VAT"
                ]
+    DFParams.Rental ->
+      title
+        `elem` [ "BASE_FARE",
+                 "SERVICE_CHARGE",
+                 "DEAD_KILOMETER_FARE",
+                 "DIST_BASED_FARE",
+                 "TIME_BASED_FARE",
+                 "NIGHT_SHIFT_CHARGE",
+                 "DRIVER_SELECTED_FARE",
+                 "CUSTOMER_SELECTED_FARE",
+                 "TOTAL_FARE",
+                 "WAITING_OR_PICKUP_CHARGES",
+                 "EXTRA_TIME_FARE",
+                 "CANCELLATION_CHARGES",
+                 "PARKING_CHARGE",
+                 "LUGGAGE_CHARGE",
+                 "RETURN_FEE",
+                 "BOOTH_CHARGE",
+                 "RIDE_VAT",
+                 "TOLL_VAT"
+               ]
+    DFParams.InterCity ->
+      title
+        `elem` [ "BASE_FARE",
+                 "SERVICE_CHARGE",
+                 "DEAD_KILOMETER_FARE",
+                 "DIST_BASED_FARE",
+                 "TIME_BASED_FARE",
+                 "NIGHT_SHIFT_CHARGE",
+                 "DRIVER_SELECTED_FARE",
+                 "CUSTOMER_SELECTED_FARE",
+                 "TOTAL_FARE",
+                 "WAITING_OR_PICKUP_CHARGES",
+                 "EXTRA_TIME_FARE",
+                 "EXTRA_DISTANCE_FARE",
+                 "CANCELLATION_CHARGES",
+                 "PARKING_CHARGE",
+                 "LUGGAGE_CHARGE",
+                 "RETURN_FEE",
+                 "BOOTH_CHARGE",
+                 "RIDE_VAT",
+                 "TOLL_VAT"
+               ]
+    _ -> True
+
+tfContact :: Maybe Text -> Maybe Spec.Contact
+tfContact phoneNum =
+  Just
+    Spec.Contact
+      { contactPhone = phoneNum
+      }

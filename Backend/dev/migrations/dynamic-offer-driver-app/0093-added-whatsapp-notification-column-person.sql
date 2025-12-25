@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN whatsapp_notification_enroll_status character varying(255);

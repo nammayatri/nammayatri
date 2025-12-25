@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN ride_request_popup_delay_duration int NOT NULL default 0;

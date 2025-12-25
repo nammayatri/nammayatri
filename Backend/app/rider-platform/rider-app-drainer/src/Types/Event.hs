@@ -27,6 +27,7 @@ type Status = Double
 data DBSyncMetric
   = PeekDBCommandError
   | DropDBCommandError
+  | KvConfigDecodeFailure
   | ParseDBCommandError Action ModelName
   | QueryExecutionFailure Action ModelName
   | DuplicateEntryCreate ModelName
@@ -35,3 +36,8 @@ data DBSyncMetric
   | DrainerStopStatus Status
   | KafkaUpdateMissing
   | KafkaPushFailure Action ModelName
+  | ProcessLatency Text Latency
+  | BatchFallbackUsed Int
+  | BatchExecutionTime ModelName Double
+  | BatchEntriesProcessed ModelName Int
+  | SchemaVariationAlert ModelName Int

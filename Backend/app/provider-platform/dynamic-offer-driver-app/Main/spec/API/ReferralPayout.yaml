@@ -1,0 +1,75 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Person: Domain.Types.Person
+  Text: Data.Text
+  Money: Kernel.Types.Common
+  PayoutStatus: Domain.Types.DailyStats
+  ClearDuesRes: Domain.Action.UI.Driver
+  PayoutOrderStatusResp: Kernel.External.Payout.Interface.Types
+  TransactionStatus: Kernel.External.Payment.Juspay.Types.Common
+
+module: ReferralPayout
+
+types:
+
+  ReferralEarningsRes:
+    totalReferralCount: Int
+    dailyEarnings : [DailyEarning]
+    vpaId: Maybe Text
+    orderId: Maybe Text
+    orderStatus: Maybe TransactionStatus
+    referralRewardAmountPerRide: HighPrecMoney
+    payoutRegistrationAmount: HighPrecMoney
+
+  DailyEarning:
+    earnings: HighPrecMoney
+    activatedItems: Int
+    earningDate: Day
+    referrals: Int
+    status: PayoutStatus
+    payoutOrderId: Maybe Text
+
+
+apis:
+  # get API for referral earnings
+  - GET:
+      endpoint: payout/referral/earnings
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        fromDate: Day
+        toDate: Day
+      response:
+        type: API.Types.UI.ReferralPayout.ReferralEarningsRes
+
+  # post API to delete the existing payout vpa
+  - POST:
+      endpoint: payout/delete/vpa
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # get API for payout registration
+  - GET:
+      endpoint: /payout/registration
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: ClearDuesRes
+
+  # post API for create payout order
+  - POST:
+      endpoint: /payout/createOrder
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: Kernel.External.Payout.Interface.Types.CreatePayoutOrderReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # get API for payout order status
+  - GET:
+      endpoint: /payout/order/status
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        orderId: Text
+      response:
+        type: PayoutOrderStatusResp

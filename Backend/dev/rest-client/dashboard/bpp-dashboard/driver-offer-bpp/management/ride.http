@@ -1,0 +1,136 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name rideList
+
+# FIXME ?bookingStatus=COMPLETED
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/Kochi/ride/list
+?bookingStatus="COMPLETED"
+# &rideShortId=DNNJaROfj7
+# &customerPhoneNo=9999999999
+# &driverPhoneNo=6666666666
+&limit=10
+&offset=0
+token: {{customer_service}}
+
+###
+
+# @name rideStart
+
+@ride1Id = 2b0910b7-acef-454f-8004-ef4b098e4366
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/{{ride1Id}}/start
+token: {{customer_service}}
+content-type: application/json
+
+{
+    "point": {
+            "lon": 76.308364,
+            "lat": 10.025263
+    }
+}
+
+###
+
+# @name rideEnd
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/{{ride1Id}}/end
+token: {{customer_service}}
+content-type: application/json
+
+{
+    "point": {
+            "lon": 76.318364,
+            "lat": 10.025263
+    }
+}
+
+###
+
+# @name rideCancel
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/{{ride1Id}}/cancel
+content-type: application/json
+token: {{customer_service}}
+
+{
+  "reasonCode": "OTHER",
+  "additionalInfo": "driver is late"
+}
+
+###
+
+# @name rideInfo
+
+@rideId = {{rideList.response.body.rides[0].rideId}}
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/{{rideId}}/info
+token: {{customer_service}}
+
+###
+
+# @name rideSync
+
+@rideId = {{rideList.response.body.rides[0].rideId}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/{{rideId}}/sync
+token: {{customer_service}}
+
+###
+
+# @name multipleRidesEnd
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/end
+content-type: application/json
+token: {{customer_service}}
+
+{
+  "rides": [
+    {
+      "rideId": "{{rideId}}",
+      "point": {
+              "lon": 76.318364,
+              "lat": 10.025263
+      }
+    },
+    {
+      "rideId": "fakeRideId",
+      "point": {
+              "lon": 76.318364,
+              "lat": 10.025263
+      }
+    }
+  ]
+}
+
+###
+
+# @name multipleRidesCancel
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/cancel
+content-type: application/json
+token: {{customer_service}}
+
+{
+  "rides": [
+    {
+      "additionalInfo": "additionalInfo1",
+      "rideId": "{{rideId}}",
+      "reasonCode": "reasonCode1"
+    },
+    {
+      "additionalInfo": "additionalInfo1",
+      "rideId": "fakeRideId",
+      "reasonCode": "reasonCode1"
+    }
+  ]
+}

@@ -1,3 +1,8 @@
+# hpack defaults
+# Ref: https://github.com/sol/hpack#defaults
+
+# Workaround for segfault on macOS
+# https://github.com/NixOS/nixpkgs/issues/149692#issuecomment-1587564664
 name: rider-app-drainer
 version: 0.1.0.0
 github: 'nammayatri/nammayatri'
@@ -28,6 +33,7 @@ default-extensions:
   - DefaultSignatures
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingStrategies
   - DuplicateRecordFields
   - ExplicitNamespaces
   - FlexibleContexts
@@ -61,6 +67,7 @@ dependencies:
   - beam-core
   - beam-mysql
   - beam-postgres
+  - resource-pool
   - bytestring
   - casing
   - connection
@@ -99,6 +106,9 @@ dependencies:
   - warp
   - warp-tls
   - cereal
+  - postgresql-simple
+  - scientific
+  - filepath
 
 ghc-options:
   - -fwrite-ide-info
@@ -128,10 +138,7 @@ library:
           - -O2
           - -j4
   dependencies:
-    - rider-app
     - mobility-core
-    - payment
-    - shared-services
 
 executables:
   rider-app-drainer-exe:
@@ -158,6 +165,4 @@ executables:
           - -j4
     dependencies:
       - rider-app-drainer
-      - rider-app
       - mobility-core
-      - shared-services

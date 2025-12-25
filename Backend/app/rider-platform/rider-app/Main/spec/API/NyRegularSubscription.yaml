@@ -1,0 +1,171 @@
+imports:
+  Text: Data.Text
+  UTCTime: Data.Time
+  Day: Data.Time.Calendar
+  TimeOfDay: Data.Time.LocalTime
+  Value: Data.Aeson
+  NyRegularSubscription: Domain.Types.NyRegularSubscription
+  NyRegularSubscriptionStatus: Domain.Types.NyRegularSubscription
+  Estimate: Domain.Types.Estimate
+  Location: Domain.Types.Location
+  ServiceTierType: Domain.Types.ServiceTierType
+  DayOfWeek: Data.Time.Calendar
+  PlatformType: Domain.Types.IntegratedBPPConfig
+  DriverIdentifier: Domain.Types.RefereeLink
+  Id: Kernel.Types.Id
+  RecentLocation: Domain.Types.RecentLocation
+  Version: Kernel.Types.Version
+  Client: Domain.Types.Client
+  SearchRequest: Domain.Types.SearchRequest
+  GetQuotesRes: Domain.Action.UI.Quote
+  Price: Kernel.Types.Price
+  Person: Domain.Types.Person
+  SearchReqLocation : SharedLogic.Search
+
+module: NyRegularSubscription
+types:
+  OneWaySearchReqDetails:
+    isSourceManuallyMoved: Maybe Bool
+    isDestinationManuallyMoved: Maybe Bool
+    isSpecialLocation: Maybe Bool
+    startTime: Maybe UTCTime
+    isReallocationEnabled: Maybe Bool
+    fareParametersInRateCard: Maybe Bool
+    quotesUnifiedFlow: Maybe Bool
+    sessionToken: Maybe Text
+    placeNameSource: Maybe Text
+    driverIdentifier: Maybe DriverIdentifier
+    isMeterRideSearch: Maybe Bool
+    recentLocationId: Maybe (Id RecentLocation)
+    platformType: Maybe PlatformType
+
+  CreateSubscriptionReq:
+    pickupLocation: SearchReqLocation
+    dropoffLocation: SearchReqLocation
+    vehicleServiceTier: Maybe ServiceTierType
+    startDatetime: UTCTime
+    recurrenceRuleDays: "[DayOfWeek]"
+    scheduledTimeOfDay: TimeOfDay
+    recurrenceEndDate: Maybe Day
+    bppId: Text
+    metadata: Maybe Value
+    oneWaySearchReqDetails: OneWaySearchReqDetails
+
+  NyRegularSubscriptionApiEntity:
+    id: Id NyRegularSubscription
+    userId: Id Person
+    pickupLocation: SearchReqLocation
+    dropoffLocation: SearchReqLocation
+    vehicleServiceTier: Maybe ServiceTierType
+    startDatetime: UTCTime
+    recurrenceRuleDays: "[DayOfWeek]"
+    scheduledTimeOfDay: TimeOfDay
+    recurrenceEndDate: Maybe Day
+    fixedPrice: Maybe Price
+    fixedPriceBreakupDetails: Maybe Value
+    fixedPriceExpiryDate: Maybe UTCTime
+    initialBppQuoteId: Maybe Text
+    bppId: Text
+    status: NyRegularSubscriptionStatus
+    pauseStartDate: Maybe UTCTime
+    pauseEndDate: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    metadata: Maybe Text
+    lastProcessedAt: Maybe UTCTime
+    schedulingHash: Maybe Text # Added new field
+    nextRideOccurence : Maybe UTCTime
+
+  CreateSubscriptionRes:
+    subscriptionId: Id NyRegularSubscription
+    searchRequestId: Text
+
+  ConfirmSubscriptionReq:
+    subscriptionId: Id NyRegularSubscription
+    estimateId: Id Estimate
+
+  UpdateSubscriptionReq:
+    id: Id NyRegularSubscription
+    startDatetime: Maybe UTCTime
+    recurrenceRuleDays: Maybe [DayOfWeek]
+    scheduledTimeOfDay: Maybe TimeOfDay
+    recurrenceEndDate: Maybe Day
+    status: Maybe NyRegularSubscriptionStatus
+    pauseStartDate: Maybe UTCTime
+    pauseEndDate: Maybe UTCTime
+    metadata: Maybe Value
+
+apis:
+  # POST /nyRegular/subscriptions/create
+  - POST:
+      endpoint: /nyRegular/subscriptions/create
+      auth: TokenAuth
+      headers:
+        x-bundle-version: Version
+        x-client-version: Version
+        x-config-version: Version
+        x-rn-version:  Text
+        client-id: Text
+        x-device: Text
+        is-dashboard-request: Bool
+      request:
+        type: CreateSubscriptionReq
+      response:
+        type: CreateSubscriptionRes
+
+  # GET /nyRegular/subscriptions/estimate/{searchRequestId}
+  - GET:
+      endpoint: /nyRegular/subscriptions/estimate/{searchRequestId}
+      auth: TokenAuth
+      params:
+        searchRequestId: Text
+        subscriptionId: Id NyRegularSubscription
+      response:
+        type: GetQuotesRes
+
+  # POST /nyRegular/subscriptions/confirm
+  - POST:
+      endpoint: /nyRegular/subscriptions/confirm
+      auth: TokenAuth
+      request:
+        type: ConfirmSubscriptionReq
+      response:
+        type: NyRegularSubscriptionApiEntity
+
+  # POST /nyRegular/subscriptions/update
+  - POST:
+      endpoint: /nyRegular/subscriptions/update
+      auth: TokenAuth
+      request:
+        type: UpdateSubscriptionReq
+      response:
+        type: NyRegularSubscriptionApiEntity
+
+  # GET /nyRegular/subscriptions
+  - GET:
+      endpoint: /nyRegular/subscriptions
+      auth: TokenAuth
+      query:
+        - status: NyRegularSubscriptionStatus
+        - limit: Int
+        - offset: Int
+      response:
+        type: "[NyRegularSubscriptionApiEntity]"
+
+  # GET /nyRegular/subscriptionDetails/{subscriptionId}
+  - GET:
+      endpoint: /nyRegular/subscriptionDetails/{subscriptionId}
+      auth: TokenAuth
+      params:
+        subscriptionId: Id NyRegularSubscription
+      response:
+        type: NyRegularSubscriptionApiEntity
+
+# POST /nyRegular/subscriptions/{subscriptionId}/cancel
+  - POST:
+        endpoint: /nyRegular/subscriptions/{subscriptionId}/cancel
+        auth: TokenAuth
+        params:
+          subscriptionId: Id NyRegularSubscription
+        response:
+          type: NyRegularSubscriptionApiEntity

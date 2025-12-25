@@ -1,0 +1,48 @@
+name: Android Build
+
+on:
+  pull_request:
+    paths:
+      - 'Frontend/android-native/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Frontend/android-native
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle', '**/*.gradle.kts') }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '17'
+
+      - name: Setup local.properties
+        run: cp local-temp.properties local.properties
+
+      - name: Setup google-services.json
+        run: cp app/google-services-temp.json app/google-services.json || touch app/google-services.json
+
+      - name: Build variants
+        run: |
+          for variant in myDriverDevDebug myDriverProdDebug nyDriverDevDebug nyDriverProdDebug ysDriverDevDebug ysDriverProdDebug yatriDriverDevDebug yatriDriverProdDebug myUserDevDebug myUserProdDebug nyUserDevDebug nyUserProdDebug ysUserDevDebug ysUserProdDebug yatriUserDevDebug yatriUserProdDebug; do
+            ./gradlew assemble$variant --parallel --profile
+          done
+
+      - name: Build modules
+        run: |
+          for module in mobility-app mobility-common mobility-driver mobility-customer; do
+            ./gradlew :$module:assemble
+          done

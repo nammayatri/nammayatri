@@ -1,0 +1,136 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+@fleet_owner = 88ef2a2a-b014-4a86-b1c0-e453e8b0b688
+
+@rental_fleet_owner = favorit-rental_fleet-token-000000000
+
+@driverId = favorit-auto2-0000000000000000000000
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name getHomeLocation
+# GetDriverHomeLocationAPI
+
+@driverId1 = favorit-auto1-0000000000000000000000
+
+# INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type)
+#     (
+#     SELECT
+#         atlas_bpp_dashboard.uuid_generate_v4(),
+#         T1.role_id,
+#         'FLEET',
+#         'USER_FULL_ACCESS',
+#         unnest (ARRAY ['GET_ALL_VEHICLE_FOR_FLEET'])
+#     FROM atlas_bpp_dashboard.access_matrix AS T1
+#     WHERE T1.api_entity = 'DRIVERS' AND (T1.user_access_type = 'USER_FULL_ACCESS' OR T1.user_access_type = 'USER_READ_ACCESS')
+# 	  GROUP BY role_id
+#     )
+# ON CONFLICT DO NOTHING;
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/fleet/getAllVehicle
+?limit=10
+&offset=0
+token: {{customer_service}}
+
+###
+
+# @name postDriverFleetrSendJoiningOtp
+
+# INSERT INTO atlas_bpp_dashboard.fleet_member_association (fleet_member_id, fleet_owner_id, enabled, is_fleet_owner) VALUES
+#   ('3680f4b5-dce4-4d03-aa8c-5405690e87bd', 'favorit-fleet-owner-0000000000000000', true, true);
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/fleet/sendJoiningOtp
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "firstName": "Driver1",
+    "lastName": "Fleet",
+    "mobileNumber": "2211111130",
+    "mobileCountryCode": "+91",
+    "email": "driver111@nammayatri.in"
+}
+
+###
+
+# @name postDriverFleetVerifyJoiningOtp
+
+@authId={{postDriverFleetrSendJoiningOtp.response.body.authId}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/fleet/verifyJoiningOtp?authId={{authId}}
+token: {{juspay_admin}}
+content-type: application/json
+
+{   "mobileCountryCode": "+91",
+    "mobileNumber": "2211111130",
+    "otp": "7891",
+    "deviceToken": ""
+}
+
+###
+
+# @name addDriversToFleetByFleet
+
+# fleet mobile number = 6666666666
+# existing driver id = favorit-auto2-0000000000000000000000
+# existing driver mobile = 2345678901
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/fleet/addDrivers
+token: {{fleet_owner}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="addDrivers.txt"
+Content-Type: text/csv
+
+driver_name,driver_phone_number,driver_onboarding_vehicle_category,fleet_phone_no
+ExistingDriver, 2345678901, CAR, 6666666666
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+# @name addDriversToRentalFleetByRentalFleet
+
+# rental fleet mobile number = 6666666667
+# existing driver id = favorit-auto2-0000000000000000000000
+# existing driver mobile = 2345678901
+# for overwrte testing run migration:
+# UPDATE atlas_driver_offer_bpp.merchant SET overwrite_association=true WHERE id='favorit0-0000-0000-0000-00000favorit'
+
+@existingDriverToken = favorit-auto2-0000000000000000-token
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/fleet/addDrivers
+token: {{rental_fleet_owner}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="addDrivers.txt"
+Content-Type: text/csv
+
+driver_name,driver_phone_number,driver_onboarding_vehicle_category,fleet_phone_no
+ExistingDriver, 2345678901, CAR, 6666666667
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+@driver-offer-bpp-host = http://localhost:8016
+
+# fb4a43a9-41c8-4836-a226-aa756022004c
+# @name fleetConsent
+POST {{driver-offer-bpp-host}}/ui/fleet/consent
+token: {{existingDriverToken}}
+content-type: application/json
+
+
+###
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/stats?entityId={{driverId}}
+token: {{fleet_owner}}

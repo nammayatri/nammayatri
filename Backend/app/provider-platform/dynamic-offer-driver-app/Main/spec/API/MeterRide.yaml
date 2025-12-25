@@ -1,0 +1,42 @@
+imports:
+  Text: Data.Text
+  Ride: Domain.Types.Ride
+  Location: Domain.Types.Location
+  LatLong: Kernel.External.Maps.Types
+  APISuccess: Kernel.Types.APISuccess
+  LocationAddress: Domain.Types.Location
+  HighPrecMoney: Kernel.Types.Common
+  Meters: Kernel.Types.Common
+
+module: MeterRide
+types:
+  MeterRideAddDestinationReq:
+    currentLatLong: LatLong
+    destinationLatLong: LatLong
+    destinationLocation: LocationAddress
+  MeterRideAddDestinationResp:
+    estimatedFare: HighPrecMoney
+    estimatedDistance: Meters
+  SendRecietRequest:
+    customerMobileNumber: Text
+    customerMobileCountryCode: Text
+apis:
+  - POST:
+      endpoint: /meterRide/{rideId}/addDestination
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        rideId: Id Ride
+      request:
+        type: MeterRideAddDestinationReq
+      response:
+        type: MeterRideAddDestinationResp
+
+  - POST:
+      endpoint: /meterRide/{rideId}/shareReceipt
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        rideId: Id Ride
+      request:
+        type: SendRecietRequest
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

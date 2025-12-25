@@ -22,19 +22,20 @@ import Components.GenericHeader as GenericHeader
 import Components.LocationListItem as LocationListItemController
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Data.Array ((!!), length, filter, any, sortBy, null) as DA
+import Data.Array ((!!), length, filter, any, sortBy, null, head) as DA
 import Data.Lens ((^.))
 import Data.Ord
 import Data.Eq
 import Helpers.Utils (parseFloat)
 import Data.Int (toNumber)
-import Data.Maybe (Maybe(..), fromMaybe, fromJust)
+import Data.Maybe (Maybe(..), fromMaybe, fromJust, isJust)
 import Data.Number (fromString) as Number
 import Data.String (trim, length, split, Pattern(..), drop, indexOf, toLower)
 import Effect (Effect)
 import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
+import Engineering.Helpers.Utils (showToast)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Helpers.Utils (getCurrentLocationMarker, getDistanceBwCordinates, getLocationName)
 import JBridge (animateCamera, currentPosition, exitLocateOnMap, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestKeyboardShow, requestLocation, toast, toggleBtnLoader, firebaseLogEvent, locateOnMapConfig)
@@ -42,16 +43,17 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, Ordering, Unit, bind, compare, discard, map, not, pure, unit, void, show, ($), (&&), (+), (-), (/=), (<>), (==), (>), (>=), (||))
-import PrestoDOM (Eval, Visibility(..), continue, exit, updateAndExit, continueWithCmd)
+import PrestoDOM (Eval, update, Visibility(..), continue, exit, updateAndExit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromSaved, getValueByComponent, getWard)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.ScreenData (dummyAddress)
 import Screens.HomeScreen.Transformer (checkShowDistance)
-import Screens.Types (AddNewAddressScreenState, CardType(..), Location, LocationListItemState, DistInfo, LocItemType(..), LocationItemType(..))
+import Screens.Types (AddNewAddressScreenState, CardType(..), LocationListItemState, DistInfo, LocItemType(..), LocationItemType(..))
 import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
-import JBridge (fromMetersToKm)
+import JBridge (fromMetersToKm, Location)
+import Helpers.Utils (emitTerminateApp, isParentView)
 import Common.Resources.Constants (pickupZoomLevel)
 
 instance showAction :: Show Action where
@@ -84,6 +86,7 @@ instance loggableAction :: Loggable Action where
     PrimaryEditTextAC act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen ADD_NEW_ADDRESS_SCREEN)"save_as_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "focus_changed"
+      PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "text_image_clicked"
     PrimaryButtonAC act -> case act of
       PrimaryButton.OnClick -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "onclick"
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "no_action"
@@ -113,6 +116,7 @@ data ScreenOutput = SearchPlace String AddNewAddressScreenState
                   | GoToFavourites
                   | CheckLocServiceability AddNewAddressScreenState LocItemType
                   | GoToHome
+                  | GoToSearchLocScreen
 
 data Action = BackPressed AddNewAddressScreenState
             | NoAction
@@ -158,9 +162,8 @@ eval (ClearEditText) state = do
   void $ pure $ requestKeyboardShow (getNewIDWithTag "SavedLocationEditText")
   continue state{props{isSearchedLocationServiceable = true}}
 
-eval SetLocationOnMap state = do 
+eval SetLocationOnMap state = do
   let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "AddAddressPin"}
-  _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ toggleBtnLoader "" false
   _ <- pure $ firebaseLogEvent "ny_user_favourite_select_on_map"
@@ -168,12 +171,15 @@ eval SetLocationOnMap state = do
   continue newState
 
 eval (UpdateLocation key lat lon) state = do
+  let latitude = fromMaybe 0.0 (Number.fromString lat)
+      longitude = fromMaybe 0.0 (Number.fromString lon)
   case key of
     "LatLon" -> do
-      exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))
-    _ ->  if DA.length (DA.filter( \item -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
-            exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))
-          else continue state
+      let selectedSpot = DA.head (DA.filter (\spots -> (getDistanceBwCordinates latitude longitude spots.lat spots.lng) * 1000.0 < 1.0 ) state.data.nearByPickUpPoints)
+      exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} latitude longitude
+    _ ->  case DA.head (DA.filter(\item -> item.place == key) state.data.nearByPickUpPoints) of
+            Just spot -> exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} spot.lat spot.lng
+            Nothing -> continue state
 
 eval (UpdateCurrLocName lat lon name) state = do
   continue state {data{locSelectedFromMap = name, latSelectedFromMap = (fromMaybe 0.0 (Number.fromString lat)), lonSelectedFromMap = (fromMaybe 0.0 (Number.fromString lon))}}
@@ -190,7 +196,9 @@ eval RecenterCurrentLocation state = continueWithCmd state [do
   ]
 
 eval (BackPressed backpressState) state = do
-  case state.props.isLocateOnMap , state.props.editLocation , state.props.showSavePlaceView , state.props.fromHome of
+  let searchLocScreen = getScreen SEARCH_LOCATION_SCREEN
+      homeScreen = getScreen HOME_SCREEN
+  case state.props.isLocateOnMap , state.props.editLocation , state.props.showSavePlaceView , state.props.fromHome  of
     true , _ , _ , _ -> do
       continue state{props{isLocateOnMap = false}, data{selectedItem{description = state.data.address},locationList = state.data.recentSearchs.predictionArray}}
     _ , true , false , _ -> do
@@ -199,9 +207,16 @@ eval (BackPressed backpressState) state = do
         continue state {props{showSavePlaceView = true, isLocateOnMap = false}, data{address= state.data.selectedItem.description}}
     _ , _ , _ , true -> do
       exit $ GoToHome
-    _ , _ , _ , _ -> do
+    _ , _ , _ , false -> do 
+      if (state.props.fromScreen == searchLocScreen) then
+        if isParentView FunctionCall 
+        then do 
+          void $ pure $ emitTerminateApp Nothing true
+          continue state
+        else exit $ GoToSearchLocScreen
+      else do 
         void $ pure $ hideKeyboardOnNavigation true
-        _ <- pure $ exitLocateOnMap ""
+        void $ pure $ exitLocateOnMap ""
         updateAndExit state{props{editLocation = false}} $ GoToFavourites
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure $ BackPressed state]
@@ -222,7 +237,7 @@ eval (LocationListItemAC (LocationListItemController.OnClick item))  state = do
             _      -> continue state
       Nothing       -> continue state
     else do
-      void $ pure $ toast (getString LOCATION_ALREADY_EXISTS)
+      void $ pure $ showToast (getString LOCATION_ALREADY_EXISTS)
       continue state
 
 eval (PrimaryButtonConfirmLocAC (PrimaryButton.OnClick)) state = do
@@ -239,8 +254,7 @@ eval (PrimaryButtonConfirmLocAC (PrimaryButton.OnClick)) state = do
                                           }) (LOCATE_ON_MAP)
 
 eval (TagSelected index) state = do
-  if (index == 2) then void $ pure $ requestKeyboardShow (getNewIDWithTag "SaveAsEditText")
-    else void $ pure $ hideKeyboardOnNavigation true
+  void $ pure $ requestKeyboardShow (getNewIDWithTag "SaveAsEditText")
   let activeTag = case index of
                     0 -> "Home"
                     1 -> "Work"
@@ -250,16 +264,15 @@ eval (TagSelected index) state = do
       if (validTag state.data.savedTags activeTag state.data.placeName) then
         continue state{ data  { activeIndex = Just index
                               , selectedTag = getTag index
-                              , addressSavedAs = if index /= 2 then "" else state.data.addressSavedAs}
-                      , props { placeNameExists = if index /= 2 then false else state.props.placeNameExists 
-                              , isBtnActive = (index == 2 && state.data.addressSavedAs /= "") || (index == 2 && state.props.editLocation && state.data.placeName /="" ) || index == 1 || index == 0
-                                              }}
+                              , addressSavedAs = state.data.addressSavedAs}
+                      , props { placeNameExists = state.props.placeNameExists 
+                              , isBtnActive = (state.data.addressSavedAs /= "") || (state.props.editLocation && state.data.placeName /="" )}}
         else do
-          void $ pure $ toast ((case (toLower activeTag) of
+          void $ pure $ showToast ((case (toLower activeTag) of
                                   "home" -> (getString HOME)
                                   "work" -> (getString WORK)
                                   _      -> "") <> " " <> (getString LOCATION_ALREADY_EXISTS))
-          continue state{data{addressSavedAs = if index /= 2 then "" else state.data.addressSavedAs }, props {placeNameExists = if index /= 2 then false else state.props.placeNameExists}}
+          continue state{data{addressSavedAs = state.data.addressSavedAs }, props {placeNameExists = state.props.placeNameExists}}
 
 eval (ChangeAddress ) state = do
   continue state{props{showSavePlaceView = false, editLocation = true, isSearchedLocationServiceable = state.props.isLocationServiceable},data{latSelectedFromMap = state.data.lat , lonSelectedFromMap = state.data.lon ,locationList= state.data.recentSearchs.predictionArray}}
@@ -269,13 +282,13 @@ eval (PrimaryEditTextAC (PrimaryEditText.TextChanged id input)) state = do
     "" ->  continue state{props{isBtnActive = false, placeNameExists = false}, data{addressSavedAs = ""}}
     _  -> if (validTag state.data.savedTags (trim input) state.data.placeName) then
             if (length (trim input) >= 3 ) then continue state {data{addressSavedAs =(trim input)},props{isBtnActive = if (state.data.selectedTag /= Nothing) then true else false, placeNameExists = false}}
-              else continue state {data{addressSavedAs = ""}, props{isBtnActive = if state.data.selectedTag /= Just OTHER_TAG then true else false, placeNameExists = false}}
+              else continue state {data{addressSavedAs = ""}, props{isBtnActive = isJust state.data.selectedTag, placeNameExists = false}}
             else continue state{props{isBtnActive = false, placeNameExists = true},data{ addressSavedAs = (trim input) }}
 
 eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   void $ pure $ hideKeyboardOnNavigation true
   updateAndExit state $ AddLocation state
-eval _ state = continue state
+eval _ state = update state
 
 validateSearchInput :: AddNewAddressScreenState -> String -> Eval Action ScreenOutput AddNewAddressScreenState
 validateSearchInput state searchString =
@@ -322,6 +335,8 @@ getLocation prediction = {
   , frequencyCount : Nothing
   , recencyDate : Nothing
   , locationScore : Nothing
+  , dynamicAction : Nothing
+  , types : Nothing
 }
 
 encodeAddressDescription :: AddNewAddressScreenState -> SavedReqLocationAPIEntity
@@ -349,7 +364,8 @@ encodeAddressDescription state = do
                     "ward" : if DA.null addressComponents then
                         getWard Nothing (splitedAddress DA.!! (totalAddressComponents - 4)) (splitedAddress DA.!! (totalAddressComponents - 5)) (splitedAddress DA.!! (totalAddressComponents - 6))
                       else
-                        Just $ getValueByComponent addressComponents "sublocality"
+                        Just $ getValueByComponent addressComponents "sublocality",
+                    "locationName" : Just state.data.addressSavedAs
                 }
 
 getSavedLocations :: (Array SavedReqLocationAPIEntity) -> Array LocationListItemState
@@ -385,7 +401,8 @@ getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
 , frequencyCount : Nothing
 , recencyDate : Nothing
 , locationScore : Nothing
-
+, dynamicAction : Nothing
+, types : Nothing 
 }) savedLocation )
 
 getSavedTags :: (Array SavedReqLocationAPIEntity) -> Array String
@@ -393,6 +410,11 @@ getSavedTags savedLocation = (map (\(SavedReqLocationAPIEntity item) -> toLower 
 
 getSavedTagsFromHome :: (Array LocationListItemState) -> Array String
 getSavedTagsFromHome savedLocation = (map (\(item) -> toLower (item.tag)) savedLocation)
+
+
+-- savedTagExists :: (Array LocationListItemState) -> String -> Boolean
+-- savedTagExists savedLoc tag = 
+--   (isJust find (\x -> (toLower x) == (toLower tag)) savedLoc)
 
 validTag :: (Array String) -> String -> String -> Boolean
 validTag savedTags input editTag = not (DA.any (\x -> (trim (toLower x)) == trim (toLower input)) (DA.filter (\item -> (trim (toLower item)) /= (trim (toLower editTag)) ) savedTags) )
@@ -435,6 +457,7 @@ constructLatLong lat lng _ =
   , place : ""
   , address : Nothing
   , city : Nothing
+  , isSpecialPickUp : Nothing
   }
 
 calculateDistance ::Array LocationListItemState -> String -> Number -> Number -> Array DistInfo
@@ -458,3 +481,40 @@ getLocTag locTag = case locTag of
   "CURR_LOC"  -> Just CURR_LOC
   "LOCATE_ON_MAP" -> Just LOCATE_ON_MAP
   _               -> Nothing
+
+savedLocTransformer :: (Array SavedReqLocationAPIEntity) -> Array LocationListItemState
+savedLocTransformer savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
+  {
+  prefixImageUrl : fetchImage FF_ASSET $ case (toLower (item.tag) ) of 
+                "home" -> "ny_ic_home_blue"
+                "work" -> "ny_ic_work_blue"
+                _      -> "ny_ic_fav_red"
+, postfixImageUrl : ""
+, postfixImageVisibility : false
+, title : (fromMaybe "" (DA.head (split (Pattern ",") (decodeAddress(SavedLoc (SavedReqLocationAPIEntity item))))))
+, subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))) + 2) (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))
+, lat : (Just item.lat)
+, lon : (Just item.lon)
+, description : (fromMaybe "" (DA.head (split (Pattern ":") (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))))
+, placeId : item.placeId
+, tag : item.tag
+, tagType : Just (show LOC_LIST)
+, cardType : Nothing
+, address : ""
+, tagName : ""
+, isEditEnabled : true
+, savedLocation : ""
+, placeName : ""
+, isClickable : true
+, alpha : 1.0
+, fullAddress : getAddressFromSaved (SavedReqLocationAPIEntity item)
+, locationItemType : Just SAVED_LOCATION
+, distance : Nothing
+, showDistance : Just false
+, actualDistance : Nothing
+, frequencyCount : Nothing
+, recencyDate : Nothing
+, locationScore : Nothing
+, dynamicAction : Nothing
+, types : Nothing
+}) savedLocation )

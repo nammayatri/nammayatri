@@ -1,0 +1,231 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  BatchSplitByPickupDistance: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+  BatchSplitByPickupDistanceOnRide: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+  OnRideRadiusConfig: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+  PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+  Seconds: Kernel.Types.Common
+  IndianState: Kernel.Types.Beckn.Context
+  ServiceTierType: Domain.Types.Common
+  Area: Lib.Types.SpecialLocation
+  Common: Domain.Types.Common
+  Common: Kernel.Types.Common
+  TimeBound : Kernel.Types.TimeBound
+  Currency: Kernel.Utils.Common
+  DayOfWeek: Data.Time
+  Centesimal: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Vector: Data.Vector
+
+DriverPoolConfig:
+  tableName: driver_pool_config
+  derives: Generic, Show, ToJSON, FromJSON, ToSchema,Eq
+  fields:
+    id: Id DriverPoolConfig
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    minRadiusOfSearch: Meters
+    maxRadiusOfSearch: Meters
+    radiusStepSize: Meters
+    driverPositionInfoExpiry: Maybe Seconds
+    actualDistanceThreshold: Maybe Meters
+    maxDriverQuotesRequired: Int
+    driverQuoteLimit: Int
+    driverRequestCountLimit: Int
+    driverBatchSize: Int
+    distanceBasedBatchSplit: "[BatchSplitByPickupDistance]"
+    maxNumberOfBatches: Int
+    maxParallelSearchRequests: Int
+    poolSortingType: PoolSortingType
+    singleBatchProcessTime: Seconds
+    tripDistance: Meters
+    radiusShrinkValueForDriversOnRide: Meters
+    driverToDestinationDistanceThreshold: Meters
+    driverToDestinationDuration: Seconds
+    scheduleTryTimes: "[Int]"
+    area: Area
+    timeBounds: TimeBound|NoRelation
+    batchSizeOnRide: Int
+    batchSizeOnRideWithStraightLineDistance: Maybe Int
+    useOneToOneOsrmMapping : Maybe Bool
+    onRideRadiusConfig: "[OnRideRadiusConfig]"
+    onRideBatchSplitConfig: "[BatchSplitByPickupDistanceOnRide]"
+    enableForwardBatching: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    vehicleVariant: Maybe ServiceTierType|NoRelation
+    tripCategory: Text
+    maxParallelSearchRequestsOnRide: Int
+    thresholdToIgnoreActualDistanceThreshold: Maybe Meters
+    actualDistanceThresholdOnRide: Maybe Meters
+    currentRideTripCategoryValidForForwardBatching : "[Text]"
+    distanceUnit: DistanceUnit
+    enableUnifiedPooling: Maybe Bool
+    dynamicBatchSize: Vector Int
+    selfRequestIfRiderIsDriver: Bool
+
+  beamFields:
+    dynamicBatchSize:
+      dynamicBatchSize: Maybe [Int]
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
+
+  fromTType:
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    dynamicBatchSize: Kernel.Prelude.maybe (Data.Vector.singleton driverBatchSize) Data.Vector.fromList|I
+
+  toTType:
+    distanceUnit: Kernel.Prelude.Just|I
+    dynamicBatchSize: Kernel.Prelude.Just $ Data.Vector.toList|I
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+  constraints:
+    id: PrimaryKey
+
+  sqlType:
+    distanceBasedBatchSplit: text[]
+    onRideRadiusConfig: text[]
+    scheduleTryTimes: integer[]
+    timeBounds: Text
+    onRideBatchSplitConfig: text[]
+    dynamicBatchSize: integer[]
+
+  default:
+    tripCategory: "'All'"
+    area: "'Default'"
+    distanceBasedBatchSplit: "Array ['BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 4 }']"
+    scheduleTryTimes: "'{1800, 900, 300}'"
+    timeBounds: "'Unbounded'"
+    batchSizeOnRide: "10"
+    onRideRadiusConfig: "ARRAY[]::TEXT[]"
+    currentRideTripCategoryValidForForwardBatching: "Array ['OneWay_OneWayOnDemandDynamicOffer']"
+    onRideBatchSplitConfig: "Array ['BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 4 }']"
+    enableForwardBatching: "false"
+    maxParallelSearchRequestsOnRide: "1"
+    selfRequestIfRiderIsDriver: "false"
+
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId
+      orderBy: tripDistance
+
+MerchantState:
+  tableName: merchant_state
+
+  fields:
+    merchantId: Id Merchant
+    state: IndianState
+    allowedDestinationStates: "[IndianState]"
+
+  excludedFields: [merchantOperatingCityId]
+
+  constraints:
+    merchantId: PrimaryKey
+    state: PrimaryKey
+
+  sqlType:
+    allowedDestinationStates: text[]
+
+  queries:
+    findByMerchantIdAndState:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, state]
+
+ValueAddNP:
+  tableName: value_add_np
+
+  fields:
+    subscriberId: Text
+    enabled: Bool
+
+  constraints:
+    subscriberId: PrimaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  queries:
+    findAll:
+      kvFunction: findAllWithKV
+      where: enabled
+
+SurgePricing:
+  tableName: surge_pricing
+
+  fields:
+    id: Id SurgePricing
+    sourceHex: Text
+    dayOfWeek: Text
+    hourOfDay: Int
+    surgeMultiplier: Centesimal
+    vehicleServiceTier: ServiceTierType|NoRelation
+
+  queries:
+    findByHexDayHourAndVehicleServiceTier:
+      kvFunction: findOneWithKV
+      where:
+        and: [sourceHex, dayOfWeek, hourOfDay, vehicleServiceTier]
+
+  constraints:
+    id: PrimaryKey
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  fromTType:
+    vehicleServiceTier: Kernel.Prelude.fromMaybe Domain.Types.Common.HATCHBACK|I
+
+  toTType:
+    vehicleServiceTier: Kernel.Prelude.Just|I
+
+  beamType:
+    vehicleServiceTier: Maybe ServiceTierType
+
+  sqlType:
+    surgeMultiplier: double precision
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  cachedQueries:
+    findByHexDayHourAndVehicleServiceTier:
+      returnType: One
+      withCrossAppRedis: true
+      queryType: FindAndCache
+      dbQuery: findByHexDayHourAndVehicleServiceTier
+      dbQueryParams: [sourceHex, dayOfWeek, hourOfDay, vehicleServiceTier]
+      keyParams: [sourceHex, dayOfWeek, hourOfDay, vehicleServiceTier]
+
+CancellationFarePolicy:
+  tableName: cancellation_fare_policy
+
+  fields:
+    id : Id CancellationFarePolicy
+    currency: Currency
+    minCancellationCharge: HighPrecMoney
+    maxCancellationCharge: HighPrecMoney
+    perMetreCancellationCharge: HighPrecMoney
+    perMinuteCancellationCharge: HighPrecMoney
+    maxWaitingTimeAtPickupSeconds:  Seconds
+    freeCancellationTimeSeconds: Seconds
+    percentageOfRideFareToBeCharged: Centesimal
+    description: Text
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        and: [id]
+
+  cachedQueries:
+    findById:
+      keyParams: [id]
+      dbQuery: findById
+      dbQueryParams: [id]
+      queryType: FindAndCache
+
+  excludedFields: [merchantId, merchantOperatingCityId]

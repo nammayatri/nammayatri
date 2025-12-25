@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.payment_order ADD COLUMN merchant_operating_city_id character varying(36) ;

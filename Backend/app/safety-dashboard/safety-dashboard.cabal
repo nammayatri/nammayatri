@@ -1,0 +1,257 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           safety-dashboard
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
+library
+  exposed-modules:
+      API
+      API.UI
+      App
+      Domain.Action.UI.Admin
+      Domain.Action.UI.FlaggedCategory
+      Domain.Action.UI.Merchant
+      Domain.Action.UI.Notification
+      Domain.Action.UI.SearchSuspect
+      Domain.Action.UI.Suspect
+      Domain.Action.UI.SuspectFlagRequest
+      Domain.Action.UI.Webhook
+      Storage.Beam.CommonInstances
+      Storage.Beam.SystemConfigs
+      Storage.Queries.FlaggedCategoryExtra
+      Storage.Queries.SuspectExtra
+      Storage.Queries.SuspectFlagRequestExtra
+      Storage.Queries.SuspectStatusHistoryExtra
+      Storage.Queries.Transformers.Suspect
+      Tools.Auth.Webhook
+      Tools.Beam.UtilsTH
+      Tools.Error
+      API.Action.UI.Admin
+      API.Action.UI.FlaggedCategory
+      API.Action.UI.Merchant
+      API.Action.UI.Notification
+      API.Action.UI.SearchSuspect
+      API.Action.UI.Suspect
+      API.Action.UI.SuspectFlagRequest
+      API.Types.UI.Admin
+      API.Types.UI.FlaggedCategory
+      API.Types.UI.Merchant
+      API.Types.UI.Notification
+      API.Types.UI.SearchSuspect
+      API.Types.UI.Suspect
+      API.Types.UI.SuspectFlagRequest
+      Domain.Types.FlaggedCategory
+      Domain.Types.MerchantConfigs
+      Domain.Types.Notification
+      Domain.Types.PortalConfigs
+      Domain.Types.Suspect
+      Domain.Types.SuspectFlagRequest
+      Domain.Types.SuspectStatusChangeRequest
+      Domain.Types.SuspectStatusHistory
+      Storage.Beam.FlaggedCategory
+      Storage.Beam.MerchantConfigs
+      Storage.Beam.Notification
+      Storage.Beam.PortalConfigs
+      Storage.Beam.Suspect
+      Storage.Beam.SuspectFlagRequest
+      Storage.Beam.SuspectStatusChangeRequest
+      Storage.Beam.SuspectStatusHistory
+      Storage.Queries.FlaggedCategory
+      Storage.Queries.MerchantConfigs
+      Storage.Queries.Notification
+      Storage.Queries.OrphanInstances.FlaggedCategory
+      Storage.Queries.OrphanInstances.Suspect
+      Storage.Queries.OrphanInstances.SuspectFlagRequest
+      Storage.Queries.OrphanInstances.SuspectStatusHistory
+      Storage.Queries.PortalConfigs
+      Storage.Queries.Suspect
+      Storage.Queries.SuspectFlagRequest
+      Storage.Queries.SuspectStatusChangeRequest
+      Storage.Queries.SuspectStatusHistory
+  other-modules:
+      Paths_safety_dashboard
+  hs-source-dirs:
+      src
+      src-read-only
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DerivingStrategies
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      PackageImports
+      TemplateHaskell
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields -Wwarn=ambiguous-fields
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beckn-spec
+    , bytestring
+    , case-insensitive
+    , containers
+    , dashboard-helper-api
+    , esqueleto
+    , euler-hs
+    , http-client
+    , http-client-tls
+    , http-types
+    , lens
+    , lib-dashboard
+    , mobility-core
+    , network-uri
+    , openapi3
+    , persistent
+    , persistent-postgresql
+    , record-dot-preprocessor
+    , record-hasfield
+    , sequelize
+    , servant-client
+    , servant-openapi3
+    , servant-server
+    , singletons-th
+    , string-conversions
+    , template-haskell
+    , text
+    , time
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4
+
+executable safety-dashboard-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_safety_dashboard
+  hs-source-dirs:
+      server
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DerivingStrategies
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      PackageImports
+      TemplateHaskell
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beckn-spec
+    , bytestring
+    , case-insensitive
+    , containers
+    , dashboard-helper-api
+    , esqueleto
+    , euler-hs
+    , http-client
+    , http-client-tls
+    , http-types
+    , lens
+    , mobility-core
+    , network-uri
+    , openapi3
+    , persistent
+    , persistent-postgresql
+    , record-dot-preprocessor
+    , record-hasfield
+    , safety-dashboard
+    , sequelize
+    , servant-client
+    , servant-openapi3
+    , servant-server
+    , singletons-th
+    , string-conversions
+    , template-haskell
+    , text
+    , time
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4

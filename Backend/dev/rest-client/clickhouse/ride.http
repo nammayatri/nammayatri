@@ -1,0 +1,240 @@
+@empty =
+
+@clickhouse-driver-offer-bpp = http://localhost:8123
+
+@clickhouse-password = {{empty}}
+
+@dbName = atlas_driver_offer_bpp
+
+# @name dashboard
+
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name clickhouse
+
+GET {{clickhouse-driver-offer-bpp}}
+
+###
+
+# @name version
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+Select version()
+
+###
+
+# @name testQuery
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT mul(5, 3)
+
+###
+
+# @name selectAll
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT (*) from {{dbName}}.daily_stats
+FORMAT JSON
+
+###
+
+# @name dailyRides
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT driver_id as userId, count(id) :: int as totalRides, sum(chargeable_distance) :: int as totalDistance, sum(fare) :: int as totalFare FROM atlas_driver_offer_bpp.ride WHERE created_at > '2024-01-01 00:00:00' GROUP BY driver_id ORDER BY driver_id ASC
+FORMAT JSON
+
+###
+
+# @name dailyRidesString
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT driver_id as userId, count(id) as totalRides, sum(chargeable_distance) as totalDistance, sum(fare) as totalFare FROM atlas_driver_offer_bpp.ride WHERE created_at > '2024-01-01 00:00:00' GROUP BY driver_id ORDER BY driver_id ASC
+FORMAT JSON
+
+###
+
+# @name dailyCancellations
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT driver_id as userId, count(id) :: int as cancellationsCount FROM atlas_driver_offer_bpp.ride WHERE created_at > '2024-01-01 00:00:00' AND status = 'CANCELLED' GROUP BY driver_id
+FORMAT JSON
+
+###
+
+# @name dailyCancellationsString
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT driver_id as userId, count(id) as cancellationsCount FROM atlas_driver_offer_bpp.ride WHERE created_at > '2024-01-01 00:00:00' AND status = 'CANCELLED' GROUP BY driver_id
+FORMAT JSON
+
+###
+
+# @name dateTest
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT date_sub (day, 365, toStartOfDay (now ())) as yearAgo
+FORMAT JSON
+
+
+###
+
+# @name weekTest
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT toStartOfWeek(toDate('2025-05-15'), 3) AS startOfWeek
+FORMAT JSON
+
+###
+
+# @name weekTest2
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+INSERT INTO atlas_driver_offer_bpp.daily_stats
+    (id, merchant_local_date, total_earnings, total_distance)
+VALUES
+    ('driver1', '2024-06-01', 1200.50, 15000),
+    ('driver1', '2024-06-02', 1300.75, 16000),
+    ('driver1', '2024-06-03', 1100.00, 14000),
+    ('driver1', '2024-06-04', 1250.25, 15500),
+    ('driver1', '2024-06-05', 1400.00, 17000),
+    ('driver1', '2024-06-06', 1350.50, 16500),
+    ('driver1', '2024-06-07', 1280.00, 15800),
+    ('driver1', '2024-06-08', 1325.75, 16200),
+    ('driver1', '2024-06-09', 1380.00, 16800),
+    ('driver1', '2024-06-10', 1420.25, 17200),
+
+    ('driver2', '2024-06-01', 1000.00, 12000),
+    ('driver2', '2024-06-02', 1050.50, 12500),
+    ('driver2', '2024-06-03', 1100.75, 13000),
+    ('driver2', '2024-06-04', 1150.00, 13500),
+    ('driver2', '2024-06-05', 1200.25, 14000),
+    ('driver2', '2024-06-06', 1250.50, 14500),
+    ('driver2', '2024-06-07', 1300.75, 15000),
+    ('driver2', '2024-06-08', 1350.00, 15500),
+    ('driver2', '2024-06-09', 1400.25, 16000),
+    ('driver2', '2024-06-10', 1450.50, 16500),
+
+    ('driver3', '2024-06-01', 900.00, 11000),
+    ('driver3', '2024-06-02', 950.50, 11500),
+    ('driver3', '2024-06-03', 1000.75, 12000),
+    ('driver3', '2024-06-04', 1050.00, 12500),
+    ('driver3', '2024-06-05', 1100.25, 13000),
+    ('driver3', '2024-06-06', 1150.50, 13500),
+    ('driver3', '2024-06-07', 1200.75, 14000),
+    ('driver3', '2024-06-08', 1250.00, 14500),
+    ('driver3', '2024-06-09', 1300.25, 15000),
+    ('driver3', '2024-06-10', 1350.50, 15500),
+
+    ('driver4', '2024-06-01', 800.00, 10000),
+    ('driver4', '2024-06-02', 850.50, 10500),
+    ('driver4', '2024-06-03', 900.75, 11000),
+    ('driver4', '2024-06-04', 950.00, 11500),
+    ('driver4', '2024-06-05', 1000.25, 12000),
+    ('driver4', '2024-06-06', 1050.50, 12500),
+    ('driver4', '2024-06-07', 1100.75, 13000),
+    ('driver4', '2024-06-08', 1150.00, 13500),
+    ('driver4', '2024-06-09', 1200.25, 14000),
+    ('driver4', '2024-06-10', 1250.50, 14500),
+
+    ('driver5', '2024-06-01', 700.00, 9000),
+    ('driver5', '2024-06-02', 750.50, 9500),
+    ('driver5', '2024-06-03', 800.75, 10000),
+    ('driver5', '2024-06-04', 850.00, 10500),
+    ('driver5', '2024-06-05', 900.25, 11000),
+    ('driver5', '2024-06-06', 950.50, 11500),
+    ('driver5', '2024-06-07', 1000.75, 12000),
+    ('driver5', '2024-06-08', 1050.00, 12500),
+    ('driver5', '2024-06-09', 1100.25, 13000),
+    ('driver5', '2024-06-10', 1150.50, 13500);
+
+
+###
+
+# @name weekTest3
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+WITH
+    toDate('2024-06-01') as startDate,
+    toDate('2024-06-10') as endDate,
+    toStartOfWeek(startDate, 3) as startWeekDayOfStartDate,
+    toStartOfWeek(endDate, 3) as startWeekDayOfEndDate,
+    (toYear(startWeekDayOfEndDate) - toYear(startWeekDayOfStartDate)) * 53 + (toWeek(startWeekDayOfEndDate) - toWeek(startWeekDayOfStartDate) + 1) as weeks_diff
+SELECT *, startWeekDayOfStartDate, lastWeekDayOfStartDate, startWeekDayOfEndDate, lastWeekDayOfEndDate, weeks_diff
+FROM atlas_driver_offer_bpp.daily_stats
+WHERE id = 'driver1' AND merchant_local_date BETWEEN startDate AND endDate
+FORMAT JSON
+###
+
+# @name weekTest4
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+
+SELECT
+    id as driver_id,
+    toStartOfWeek(merchant_local_date, 3) as week_start_date,
+    toDate(toStartOfWeek(merchant_local_date, 3) + 6) as week_end_date,
+    min(merchant_local_date) as week_actual_start, -- first date in week in range
+    max(merchant_local_date) as week_actual_end,   -- last date in week in range
+    sum(total_earnings) as total_earnings,
+    sum(total_distance) as total_distance
+FROM atlas_driver_offer_bpp.daily_stats
+WHERE
+    id = 'driver1'
+    AND merchant_local_date >= toDate('2024-06-01') AND merchant_local_date <= toDate('2024-06-10')
+GROUP BY
+    id,
+    week_start_date
+ORDER BY
+    week_start_date
+FORMAT JSON
+
+
+###
+
+# @name weekTest5
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT (toYear(toDate('2024-06-10')) - toYear(toDate('2024-06-01'))) * 53 + (toWeek(toDate('2024-06-10'),3) - toWeek(toDate('2024-06-01'),3) + 1) as weeks_diff
+FORMAT JSON

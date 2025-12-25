@@ -14,13 +14,12 @@
 
 module Domain.Types.Coins.CoinHistory where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin as DCoins hiding (CoinStatus)
-import Data.OpenApi (ToSchema)
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
 import Data.Time
+import Domain.Types.VehicleCategory as DTV
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id
 import qualified Lib.DriverCoins.Types as DCT
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data CoinHistory = CoinHistory
   { id :: Id CoinHistory,
@@ -33,11 +32,9 @@ data CoinHistory = CoinHistory
     updatedAt :: UTCTime,
     expirationAt :: Maybe UTCTime,
     coinsUsed :: Int,
-    status :: CoinStatus,
-    bulkUploadTitle :: Maybe DCoins.Translations
+    status :: DCT.CoinStatus,
+    bulkUploadTitle :: Maybe DCoins.Translations,
+    entityId :: Maybe Text,
+    vehicleCategory :: Maybe DTV.VehicleCategory
   }
-  deriving (Generic, Read, Show, Eq, FromJSON, ToJSON)
-
-data CoinStatus = Used | Remaining deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-$(mkBeamInstancesForEnum ''CoinStatus)
+  deriving (Generic, FromJSON, ToJSON, Show)

@@ -24,18 +24,23 @@ import Foreign.Object (empty)
 import Language.Types (STR(..)) as STR
 import ConfigProvider
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
-import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..))
+import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..), Component(..))
 import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
+import Screens.Types as ST
+import Engineering.Helpers.Commons as EHC
+import Screens (ScreenName(..)) as Screen
 
 initData :: DriverProfileScreenState
-initData = 
+initData =
   let config = getAppConfig appConfig
-  in 
+  in
   {
   data:  {
+    vehicleDetails : [],
     driverName : "",
     driverVehicleType : "",
     driverRating : Just 2.0,
+    goBackTo : Screen.HOME_SCREEN,
     base64Image : "",
     drivingLicenseNo : "",
     driverMobile : Just "",
@@ -61,6 +66,7 @@ initData =
     rcDataArray : [],
     inactiveRCArray : [],
     goHomeActive : false,
+    cachedVehicleCategory : ST.UnKnown,
     activeRCData : { rcStatus  : true
                   , rcDetails : { certificateNumber   : ""
                                 , vehicleColor : Nothing
@@ -89,10 +95,26 @@ initData =
       , totalRidesAssigned : 0
       , totalDistanceTravelled : ""
       },
-    config
+    config,
+    cancellationRate : 0,
+    assignedRides : 0,
+    cancelledRides : 0,
+    cancellationWindow : Nothing,
+    assignedRidesCountDaily : Nothing,
+    cancelledRidesCountDaily : Nothing,
+    assignedRidesCountWeekly : Nothing,
+    cancelledRidesCountWeekly : Nothing,
+    cancellationRateSlabConfig : Nothing,
+    missedEarnings : 0,
+    driverInfoResponse : Nothing,
+    profileCompletedModules : 0,
+    driverBlocked : false,
+    blockedExpiryTime : "",
+    favCount : Nothing
     },
 
   props: {
+    manageVehicleVisibility : false,
     logoutModalView: false,
     showLiveDashboard : false,
     screenType : DRIVER_DETAILS,
@@ -105,6 +127,7 @@ initData =
     checkAlternateNumber : true,
     otpAttemptsExceeded: false,
     enterOtpFocusIndex : 0,
+    enterOdometerFocusIndex : 0,
     otpIncorrect : false,
     alternateMobileOtp : "",
     isEditAlternateMobile : false,
@@ -124,12 +147,41 @@ initData =
     upiQrView : false,
     paymentInfoView : false,
     enableGoto : false,
-    isRideActive : false
+    isRideActive : false,
+    canSwitchToRental : Nothing,
+    canSwitchToInterCity : Nothing,
+    canSwitchToIntraCity : Nothing,
+    showDriverBlockedPopup : false,
+    skipGlobalEvents : false,
+    isPetModeEnabled : Nothing,
+    nammaClubEnabled : false
    }
+, showDriverDetails : false
 }
 
+inputTextState' = {
+  feedback : "",
+  component : Empty,
+  others : others'
+}
 
+others' = {
+  pledge : "",
+  aspirations : ""
+}
 
+datePickerState' = {
+  activeIndex : 0,
+  dates : EHC.getPastYears 70,
+  id : ""
+}
+
+addImagesState' = {
+  images: [],
+  stateChanged: false,
+  isLoading: false,
+  imageMediaIds: []
+}
 
 languagesChoices :: Array CheckBoxOptions
 languagesChoices =
@@ -165,16 +217,22 @@ languagesChoices =
     , subText : "Bangla"
     , isSelected : false
     }
+  , {
+    value: "OD_IN"
+    , text: "ଓଡିଆ"
+    , subText: "Odia"
+    , isSelected : false
+    }
   ]
 
 dummyDriverInfo :: GetDriverInfoResp
 dummyDriverInfo = GetDriverInfoResp {
       id                    :  ""
-    , rating                :  Nothing 
-    , middleName            :  Nothing 
-    , lastName              :  Nothing 
+    , rating                :  Nothing
+    , middleName            :  Nothing
+    , lastName              :  Nothing
     , firstName             :  ""
-    , mobileNumber          :  Nothing 
+    , mobileNumber          :  Nothing
     , active                :  false
     , mode                  :  Nothing
     , onRide                :  false
@@ -182,9 +240,9 @@ dummyDriverInfo = GetDriverInfoResp {
     , organization          :  organizationInfo
     , enabled               :  false
     , verified              :  false
-    , language              :  Nothing 
-    , referralCode          :  Nothing 
-    , alternateNumber       :  Nothing 
+    , language              :  Nothing
+    , referralCode          :  Nothing
+    , alternateNumber       :  Nothing
     , canDowngradeToHatchback :  false
     , canDowngradeToSedan :  false
     , canDowngradeToTaxi :  false
@@ -192,20 +250,60 @@ dummyDriverInfo = GetDriverInfoResp {
     , bundleVersion         :  Nothing
     , gender                :  Nothing
     , blocked               :  Nothing
+    , blockExpiryTime       :  Nothing
     , numberOfRides         :  Nothing
     , paymentPending        :  false
     , subscribed            :  false
     , autoPayStatus         : Nothing
     , mediaUrl              : Nothing
-    , aadhaarCardPhoto      : Nothing 
+    , aadhaarCardPhoto      : Nothing
     , freeTrialDaysLeft     : Nothing
     , payerVpa              : Nothing
     , currentDues           : Nothing
-    , manualDues           : Nothing
+    , manualDues            : Nothing
     , driverGoHomeInfo      : dummyDriverGoHomeInfo
     , isGoHomeEnabled       : false
     , maskedDeviceToken     : Nothing
     , operatingCity         : Nothing
+    , isVehicleSupported    : Nothing
+    , canSwitchToRental     : Nothing
+    , canSwitchToIntraCity : Nothing
+    , checkIfACWorking    : Nothing
+    , canSwitchToInterCity   : Nothing
+    , payoutVpa             : Nothing
+    , payoutVpaStatus       : Nothing
+    , isPayoutEnabled       : Nothing
+    , payoutRewardAmount    : Nothing
+    , payoutVpaBankAccount  : Nothing
+    , cancellationRateInWindow : Nothing
+    , cancelledRidesCountInWindow : Nothing
+    , assignedRidesCountInWindow : Nothing
+    , windowSize : Nothing
+    , assignedRidesCountDaily : Nothing
+    , cancelledRidesCountDaily : Nothing
+    , assignedRidesCountWeekly : Nothing
+    , cancelledRidesCountWeekly : Nothing
+    , favCount : Nothing
+    , isSubscriptionVehicleCategoryChanged : Nothing
+    , isOnFreeTrial : Nothing
+    , planMandatoryForCategory : Nothing
+    , isSubscriptionCityChanged : Nothing
+    , freeTrialDays : Nothing
+    , freeTrialRides : Nothing
+    , totalRidesTaken : Nothing
+    , subscriptionEnabledForVehicleCategory : Nothing
+    , isSubscriptionEnabledAtCategoryLevel : Nothing
+    , isSpecialLocWarrior : Nothing
+    , subscriptionDown : Nothing
+    , safetyScore : Nothing
+    , ridesWithFareIssues : Nothing
+    , totalRidesConsideredForFareIssues : Nothing
+    , isPetModeEnabled : Nothing
+    , driverTags : Nothing
+    , nyClubConsent : Nothing
+    , cancellationRateSlabConfig : Nothing
+    , fleetOwnerId : Nothing
+    , operatorId : Nothing
 }
 
 organizationInfo :: OrganizationInfo

@@ -6,7 +6,6 @@
  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.DriverReferral where
@@ -26,11 +25,21 @@ getNextRefferalCode =
       cacheLastRefferalCode lastReferralCode
       Hedis.incr makeLastRefferalCodeKey
 
+-- this can assign duplicate referralCodes to drivers, but after the first 1000 drivers....then it will start rolling.
+-- so ideally this should be used with a filterring criteria of limiting to few drivers somehow (maybe vicinity or something)
+getDynamicRefferalCode :: (CacheFlow m r, EsqDBFlow m r) => m Integer
+getDynamicRefferalCode = do
+  count <- Hedis.incr makeLastDynamicRefferalCodeKey
+  pure $ mod count 1000
+
 cacheLastRefferalCode :: (CacheFlow m r) => Integer -> m ()
 cacheLastRefferalCode referralCode = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   _ <- Hedis.incrby makeLastRefferalCodeKey referralCode
   Hedis.expire makeLastRefferalCodeKey expTime
+
+makeLastDynamicRefferalCodeKey :: Text
+makeLastDynamicRefferalCodeKey = "driver-offer:CachedQueries:DynamicDriverReferral"
 
 makeLastRefferalCodeKey :: Text
 makeLastRefferalCodeKey = "driver-offer:CachedQueries:DriverReferral:Id-getNextRefferalCode"

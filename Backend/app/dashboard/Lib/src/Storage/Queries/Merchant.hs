@@ -11,34 +11,100 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Merchant where
 
-import Domain.Types.Merchant as DOrg
+import Domain.Types.Merchant as Domain
+import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Beckn.City (City)
 import Kernel.Types.Id
-import Storage.Tabular.Merchant
+import Sequelize as Se
+import Storage.Beam.BeamFlow
+import qualified Storage.Beam.Merchant as BeamM
 
-create :: Merchant -> SqlDB ()
-create = Esq.create
+create :: BeamFlow m r => Merchant -> m ()
+create = createWithKV
 
 findById ::
-  Transactionable m =>
+  BeamFlow m r =>
   Id Merchant ->
   m (Maybe Merchant)
-findById = Esq.findById
+findById merchantId = findOneWithKV [Se.Is BeamM.id $ Se.Eq $ getId merchantId]
 
-findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: BeamFlow m r => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId = do
-  findOne $ do
-    merchant <- from $ table @MerchantT
-    where_ $ merchant ^. MerchantShortId ==. val (getShortId shortId)
-    return merchant
+  findOneWithKV [Se.Is BeamM.shortId $ Se.Eq $ getShortId shortId]
 
 findAllMerchants ::
-  Transactionable m =>
+  BeamFlow m r =>
   m [Merchant]
-findAllMerchants = do
-  Esq.findAll $ do
-    from $ table @MerchantT
+findAllMerchants = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq ""]
+
+updateSupportedOperatingCities ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  [City] ->
+  m ()
+updateSupportedOperatingCities mShortId cities = do
+  updateWithKV
+    [Se.Set BeamM.supportedOperatingCities cities]
+    [Se.Is BeamM.shortId $ Se.Eq $ getShortId mShortId]
+
+findAllMerchants' :: BeamFlow m r => Int -> Int -> m [Merchant]
+findAllMerchants' limit offset = do
+  findAllWithOptionsKV
+    [Se.Is BeamM.id $ Se.Not $ Se.Eq ""]
+    (Se.Desc BeamM.createdAt)
+    (Just limit)
+    (Just offset)
+
+findByAuthToken ::
+  (BeamFlow m r, EncFlow m r) =>
+  Text ->
+  m (Maybe Merchant)
+findByAuthToken authToken = do
+  authTokenHash <- getDbHash authToken
+  findOneWithKV [Se.Is BeamM.authTokenHash $ Se.Eq $ Just authTokenHash]
+
+findAllByShortIds ::
+  BeamFlow m r =>
+  [ShortId Merchant] ->
+  m [Merchant]
+findAllByShortIds shortIds = do
+  findAllWithKV [Se.Is BeamM.shortId $ Se.In $ getShortId <$> shortIds]
+
+updateEnableStatus ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Bool ->
+  m ()
+updateEnableStatus mShortId status = do
+  updateWithKV
+    [Se.Set BeamM.enabled (Just status)]
+    [Se.Is BeamM.shortId $ Se.Eq $ getShortId mShortId]
+
+instance FromTType' BeamM.Merchant Domain.Merchant where
+  fromTType' BeamM.MerchantT {..} = do
+    pure $
+      Just
+        Domain.Merchant
+          { id = Id id,
+            shortId = ShortId shortId,
+            authToken = case (authTokenEncrypted, authTokenHash) of
+              (Just token, Just hash) -> Just $ EncryptedHashed (Encrypted token) hash
+              _ -> Nothing,
+            ..
+          }
+
+instance ToTType' BeamM.Merchant Domain.Merchant where
+  toTType' Domain.Merchant {..} =
+    BeamM.MerchantT
+      { id = getId id,
+        shortId = getShortId shortId,
+        authTokenEncrypted = authToken <&> (unEncrypted . (.encrypted)),
+        authTokenHash = authToken <&> (.hash),
+        ..
+      }

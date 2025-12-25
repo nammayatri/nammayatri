@@ -21,7 +21,8 @@ module Screens.SubscriptionScreen.Transformer
 import Prelude
 
 import Common.Styles.Colors as Color
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), ReelModal(..))
+import Common.RemoteConfig.Utils as RemoteConfig
 import Components.PaymentHistoryListItem (PaymentBreakUp)
 import Data.Array (cons, length, mapWithIndex, (!!))
 import Data.Array as DA
@@ -29,30 +30,27 @@ import Data.Int (floor, fromNumber, toNumber)
 import Data.List.Lazy (Pattern)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number.Format (fixed, toStringWith)
-import Data.String (Pattern(..), split, toLower)
+import Data.String (Pattern(..), split, toLower, null)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getFixedTwoDecimals)
-import Language.Strings (getString)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), splitBasedOnLanguage)
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import MerchantConfig.Types (SubscriptionConfig, GradientConfig)
+import MerchantConfig.Types (CityConfig, SubscriptionConfig, GradientConfig, AppConfig, StaticViewPlans)
 import Screens.Types (KeyValType, PlanCardConfig, PromoConfig, SubscriptionScreenState, DueItem)
-import Services.API (DriverDuesEntity(..), FeeType(..), GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
+import Services.API (ReelVideoThresholdConfig, ReelsResp, DriverDuesEntity(..), FeeType(..), GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Locale.Utils
+import RemoteConfig as RC
+import Services.API as API
+import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Data.Foldable (foldl)
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Screens.Types as ST
 
 type PlanData = {
     title :: String,
     description :: String
 }
-
-getMultiLanguagePlanData :: Boolean -> PlanData -> PlanData
-getMultiLanguagePlanData isLocalized planData = do
-    let dailyUnlimited = getString DAILY_UNLIMITED
-    if isLocalized then planData
-    else do
-        if planData.title ==  dailyUnlimited 
-            then {title : getString DAILY_UNLIMITED, description : getString DAILY_UNLIMITED_PLAN_DESC}
-            else {title : getString DAILY_PER_RIDE, description : getString DAILY_PER_RIDE_PLAN_DESC} 
 
 getPromoConfig :: Array OfferEntity -> Array GradientConfig -> Array PromoConfig
 getPromoConfig offerEntityArr gradientConfig =
@@ -65,25 +63,26 @@ getPromoConfig offerEntityArr gradientConfig =
             hasImage : true ,
             imageURL : fetchImage FF_ASSET "ny_ic_discount" ,
             offerDescription : Just $ decodeOfferDescription (fromMaybe "" item.description),
-            addedFromUI : false
+            addedFromUI : false,
+            isPaidByYatriCoins : false
         }
     ) offerEntityArr)
 
-myPlanListTransformer :: PlanEntity -> Maybe Boolean -> Array GradientConfig -> PlanCardConfig
-myPlanListTransformer planEntity isLocalized' config = do 
+myPlanListTransformer :: PlanEntity -> Maybe Boolean -> SubscriptionConfig -> PlanCardConfig
+myPlanListTransformer planEntity isLocalized' subsConfig = do 
     let isLocalized = fromMaybe false isLocalized'
-    getPlanCardConfig planEntity isLocalized false config
+    getPlanCardConfig planEntity isLocalized false subsConfig
 
-planListTransformer :: UiPlansResp -> Boolean -> Array GradientConfig -> Array PlanCardConfig
-planListTransformer (UiPlansResp planResp) isIntroductory gradientConfig =
+planListTransformer :: UiPlansResp -> Boolean -> SubscriptionConfig -> CityConfig -> Array PlanCardConfig
+planListTransformer (UiPlansResp planResp) isIntroductory config cityConfig =
     let planEntityArray = planResp.list
         plansplit = DA.partition (\(PlanEntity item) -> item.name == getString DAILY_UNLIMITED) planEntityArray
         sortedPlanEntityList = (plansplit.yes) <> (plansplit.no)
         isLocalized = fromMaybe false planResp.isLocalized 
     in 
     if isIntroductory 
-        then [introductoryPlanConfig Language]
-    else map (\ planEntity -> getPlanCardConfig planEntity isLocalized isIntroductory gradientConfig) sortedPlanEntityList 
+        then fetchIntroductoryPlans config cityConfig
+    else map (\ planEntity -> getPlanCardConfig planEntity isLocalized isIntroductory config) planEntityArray -- Removed sorting logic here based on DAILY_UNLIMITED
 
 decodeOfferDescription :: String -> String
 decodeOfferDescription str = do
@@ -104,28 +103,38 @@ decodeOfferPlan str = do
     let strArray = split (Pattern "-*@*-") str
     {plan : (decodeOfferDescription $ fromMaybe "" (strArray !! 0)), offer : (decodeOfferDescription $ fromMaybe "" (strArray !! 1))}
 
-freeRideOfferConfig :: LazyCheck -> PromoConfig
-freeRideOfferConfig lazy = 
+freeRideOfferConfig :: Int -> PromoConfig
+freeRideOfferConfig count = 
     {  
-    title : Just $ getString FIRST_FREE_RIDE,
+    title : Just $ getString $ (if count > 1 then FIRST_RIDES_FREE else FIRST_RIDE_FREE) $ show count,
     isGradient : false,
     gradient : [],
     hasImage : false,
     imageURL : "",
     offerDescription : Nothing,
-    addedFromUI : false
+    addedFromUI : false,
+    isPaidByYatriCoins : false
     }
 
-introductoryOfferConfig :: LazyCheck -> PromoConfig
-introductoryOfferConfig lazy = 
+introductoryOfferConfig :: SubscriptionConfig -> String -> PromoConfig
+introductoryOfferConfig config offerName =
+    let vehicleVariant = getValueToLocalStore VEHICLE_VARIANT
+        city = getValueToLocalStore DRIVER_LOCATION
+        configRemote = RemoteConfig.subscriptionsConfigVariantLevel city vehicleVariant
+        offer = case offerName of 
+                    "FREE_RIDE_OFFER" -> getString FIRST_FREE_RIDE
+                    "NO_CHARGES_TILL" -> getVarString NO_CHARGES_TILL [splitBasedOnLanguage configRemote.noChargesTillDate]
+                    _ -> splitBasedOnLanguage offerName 
+    in
     {  
-    title : Just $ getString INTRODUCTORY_OFFER_TO_BE_ANNOUNCED_SOON,
+    title : Just offer,
     isGradient : true,
     gradient : [Color.blue600, Color.blue600],
     hasImage : true,
-    imageURL : fetchImage FF_ASSET "ny_ic_lock",
-    offerDescription : Just $ getString NO_CHARGES_TILL,
-    addedFromUI : false
+    imageURL : fetchImage FF_ASSET "ny_ic_benefits_filled_blue",
+    offerDescription : Nothing,
+    addedFromUI : false,
+    isPaidByYatriCoins : false
     }
 
 noChargesOfferConfig :: LazyCheck -> PromoConfig
@@ -137,7 +146,8 @@ noChargesOfferConfig lazy=
     hasImage : false,
     imageURL : "",
     offerDescription : Just $ "<b>" <> getString DAILY_PER_RIDE_DESC <> "</b>",
-    addedFromUI : true
+    addedFromUI : true,
+    isPaidByYatriCoins : false
     }
 
 alternatePlansTransformer :: UiPlansResp -> SubscriptionScreenState -> Array PlanCardConfig
@@ -145,7 +155,7 @@ alternatePlansTransformer (UiPlansResp planResp) state =
     let planEntityArray = planResp.list
         alternatePlansArray = (DA.filter(\(PlanEntity item) -> item.id /= state.data.myPlanData.planEntity.id) planEntityArray)
         isLocalized = fromMaybe false planResp.isLocalized
-    in map (\ planEntity -> getPlanCardConfig planEntity isLocalized false state.data.config.subscriptionConfig.gradientConfig) alternatePlansArray
+    in map (\ planEntity -> getPlanCardConfig planEntity isLocalized false state.data.config.subscriptionConfig) alternatePlansArray
 
 
 getAutoPayDetailsList :: MandateData -> Array KeyValType
@@ -180,28 +190,28 @@ getSelectedId (UiPlansResp planResp) = do
         Just (PlanEntity plan) -> Just plan.id
         Nothing -> Nothing
 
-getSelectedPlan :: UiPlansResp -> Array GradientConfig -> Maybe PlanCardConfig
-getSelectedPlan (UiPlansResp planResp) gradientConfig = do
+getSelectedPlan :: UiPlansResp -> SubscriptionConfig -> Maybe PlanCardConfig
+getSelectedPlan (UiPlansResp planResp) config = do
     let planEntityArray = planResp.list
         planEntity' = planEntityArray DA.!! 0
     case planEntity' of 
         Just entity  -> let (PlanEntity planEntity) = entity
                             isLocalized = fromMaybe false planResp.isLocalized
-                        in Just $ getPlanCardConfig entity isLocalized false gradientConfig
+                        in Just $ getPlanCardConfig entity isLocalized false config
         Nothing -> Nothing
 
 
-getPlanCardConfig :: PlanEntity -> Boolean -> Boolean -> Array GradientConfig -> PlanCardConfig
-getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory gradientConfig = 
-    let planData = getMultiLanguagePlanData isLocalized {title : planEntity.name, description : planEntity.description}
+getPlanCardConfig :: PlanEntity -> Boolean -> Boolean -> SubscriptionConfig -> PlanCardConfig
+getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory  config = 
+    let planData = {title : planEntity.name, description : planEntity.description}
     in  {
             id : planEntity.id ,
             title : planData.title ,
             description : planData.description ,
             isSelected : false ,
             offers : (if planEntity.freeRideCount > 0 
-                        then [freeRideOfferConfig Language] 
-                        else if isIntroductory then [introductoryOfferConfig Language] else []) <> getPromoConfig planEntity.offers gradientConfig,
+                        then [freeRideOfferConfig planEntity.freeRideCount] 
+                        else if isIntroductory then [introductoryOfferConfig config ""] else []) <> getPromoConfig planEntity.offers config.gradientConfig,
             priceBreakup : planEntity.planFareBreakup,
             frequency : planEntity.frequency,
             freeRideCount : planEntity.freeRideCount,
@@ -211,7 +221,7 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory gradientCon
 constructDues :: Array DriverDuesEntity -> Boolean -> Array DueItem
 constructDues duesArr showFeeBreakup = (mapWithIndex (\ ind (DriverDuesEntity item) ->  
   let offerAndPlanDetails = fromMaybe "" item.offerAndPlanDetails
-      feeBreakup = if showFeeBreakup then getFeeBreakup item.maxRidesEligibleForCharge (max 0.0 (item.planAmount - (fromMaybe 0.0 item.totalSpecialZoneCharges))) item.totalRides else ""
+      feeBreakup = if showFeeBreakup then getFeeBreakup item.maxRidesEligibleForCharge item.coinDiscountAmount (max 0.0 (item.driverFeeAmount - (fromMaybe 0.0 item.totalSpecialZoneCharges))) item.totalRides else ""
       noOfRides = item.totalRides + fromMaybe 0 item.specialZoneRideCount
   in
   {    
@@ -228,19 +238,22 @@ constructDues duesArr showFeeBreakup = (mapWithIndex (\ ind (DriverDuesEntity it
     randomId : (getCurrentUTC "") <> show ind,
     isSplit : item.isSplit,
     specialZoneRideCount : item.specialZoneRideCount,
-    totalSpecialZoneCharges : item.totalSpecialZoneCharges
+    totalSpecialZoneCharges : item.totalSpecialZoneCharges,
+    amountPaidByYatriCoins : case item.isCoinCleared of
+                                true -> Just item.driverFeeAmount
+                                false -> item.coinDiscountAmount
   }) duesArr)
 
-getFeeBreakup :: Maybe Int -> Number -> Int -> String
-getFeeBreakup maxRidesEligibleForCharge planAmount totalRides =
+getFeeBreakup :: Maybe Int -> Maybe Number -> Number -> Int -> String
+getFeeBreakup maxRidesEligibleForCharge pointsApplied driverFeeAmount totalRides = do
     case maxRidesEligibleForCharge of
-        Nothing ->  "₹" <> getFixedTwoDecimals planAmount
+        Nothing ->  getStringFeeBreakup
         Just maxRides -> do
             let ridesToConsider = min totalRides maxRides
-            if ridesToConsider /= 0 then 
-                show ridesToConsider <> " "<> getString (if ridesToConsider >1 then RIDES else RIDE) <>" x ₹" <> getFixedTwoDecimals (planAmount/ (toNumber ridesToConsider)) <> " " <> getString GST_INCLUDE
+            if ridesToConsider /= 0 then getStringFeeBreakup
             else getString $ NO_OPEN_MARKET_RIDES "NO_OPEN_MARKET_RIDES"
-    
+   where 
+    getStringFeeBreakup = (if driverFeeAmount > 0.0 then "₹" <> getFixedTwoDecimals driverFeeAmount else "") <> maybe "" ( \x ->if x == 0.0 then "" else  " + " <> getFixedTwoDecimals x ) pointsApplied
 
 getPlanAmountConfig :: String -> {value :: Number, isFixed :: Boolean, perRide :: Number}
 getPlanAmountConfig plan = case plan of
@@ -248,16 +261,100 @@ getPlanAmountConfig plan = case plan of
                             "DAILY PER RIDE" -> {value : 35.0, isFixed : false, perRide : 3.5}
                             _ ->  {value : 25.0, isFixed : true, perRide : 0.0}
 
-introductoryPlanConfig :: LazyCheck -> PlanCardConfig
-introductoryPlanConfig lazy =  {
+introductoryPlanConfig :: SubscriptionConfig -> StaticViewPlans ->  PlanCardConfig
+introductoryPlanConfig config planConfig =  {
     id : "dummy",
-    title : getString DAILY_UNLIMITED,
-    description : "",
-    isSelected : true,
-    frequency : "PER_DAY",
+    title : getTranslatedString planConfig.name,
+    description : getTranslatedString planConfig.planDesc,
+    isSelected : false,
+    frequency : planConfig.frequency,
     freeRideCount : 0,
-    offers : [introductoryOfferConfig Language],
-    priceBreakup : [PaymentBreakUp{amount: 25.0, component: "FINAL_FEE"}],
-    showOffer : true
+    offers : if null planConfig.introductoryOffer
+                then []
+                else [introductoryOfferConfig config planConfig.introductoryOffer],
+    priceBreakup : [PaymentBreakUp{amount: planConfig.price, component: "FINAL_FEE"}],
+    showOffer : not $ null planConfig.introductoryOffer
 } 
 
+transformReelsPurescriptDataToNativeData :: Array RC.ReelItem -> ReelModal
+transformReelsPurescriptDataToNativeData reelsData = do
+  let transformedData = map (\ eachItem ->
+    { id : eachItem.id
+    , thumbnailImageUrl : eachItem.thumbnailImageUrl
+    , videoUrl : eachItem.videoUrl
+    , title : eachItem.title
+    , description : eachItem.description
+    , shareLink : eachItem.shareLink
+    , carouselBigImageUrl : eachItem.carouselBigImageUrl
+    , carouselSmallImageUrl : eachItem.carouselSmallImageUrl
+    , carouselTextString : eachItem.carouselTextString
+    , carouselTextColor : eachItem.carouselTextColor
+    , bottomButtonConfig : eachItem.bottomButtonConfig
+    , sideButtonConfig : eachItem.sideButtonConfig
+    , thresholdConfig : Nothing
+    } ) reelsData
+
+  { reelData : transformedData
+  , titleConfig : {
+      size : 18,
+      color : Color.white900,
+      maxLines : 2
+    }
+  , descriptionConfig : {
+      size : 14,
+      color : Color.white900,
+      maxLines : 2
+    }
+  , reelExtraConfig : Just {
+      bounceAnimationEnabled : Just true,
+      bounceAnimationCount : Just 2,
+      bounceAnimationDuration : Just 400,
+      progressBarColor : Just Color.white40Alpha,
+      progressBarVisible : Just true,
+      autoSwipeToNext : Just false,
+      seekEnabled : Just true
+    }
+  }
+
+fetchIntroductoryPlans :: SubscriptionConfig -> CityConfig -> Array PlanCardConfig
+fetchIntroductoryPlans subsConfig cityConfig = do
+    let vehicleCategory = getValueToLocalStore VEHICLE_CATEGORY
+        finalVehicleCategory = if not cityConfig.variantSubscriptionConfig.enableCabsSubscriptionView 
+                                then "AutoCategory"
+                                else
+                                    case vehicleCategory of
+                                        _ | vehicleCategory == "CarCategory" || vehicleCategory == "AutoCategory" || vehicleCategory == "BikeCategory" -> vehicleCategory
+                                        _ -> "AutoCategory"
+        plans = cityConfig.variantSubscriptionConfig.staticViewPlans
+    map (\planConfig -> introductoryPlanConfig subsConfig planConfig) $ DA.filter (\planConfig -> planConfig.variantCategory == finalVehicleCategory) plans
+
+getTranslatedString :: String -> String
+getTranslatedString str = case str of
+                    "DAILY_UNLIMITED" -> getString DAILY_UNLIMITED
+                    "DAILY_PER_RIDE" -> getString DAILY_PER_RIDE
+                    "CAB_DAILY_UNLIMITED_OFFER" -> getString DAILY_UNLIMITED_PLAN_DESC
+                    "CAB_DAILY_PER_RIDE_OFFER" -> getString $ DAILY_PER_RIDE_PLAN_DESC "90"
+                    _ -> splitBasedOnLanguage str
+
+transformPlan :: Boolean -> ST.PlanCardConfig -> ST.PlanCardState
+transformPlan isSelectedLangTamil planEntity = 
+  {
+    id : planEntity.id,
+    title : planEntity.title,
+    description : planEntity.description,
+    isSelected : planEntity.isSelected,
+    offers : planEntity.offers,
+    priceBreakup : planEntity.priceBreakup,
+    frequency : planEntity.frequency,
+    freeRideCount : planEntity.freeRideCount,
+    showOffer : planEntity.showOffer,
+    isSelectedLangTamil : isSelectedLangTamil,
+    clickable : true,
+    showBanner : false,
+    isMyPlan : false,
+    isActivePlan : false,
+    offerBannerProps : Nothing,
+    isIntroductory : false,
+    mbCoinDiscountUpto : Nothing,
+    offerBannerPlans : []
+  }

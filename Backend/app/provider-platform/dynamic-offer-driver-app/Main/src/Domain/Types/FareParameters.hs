@@ -12,10 +12,13 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.FareParameters where
 
+import qualified Domain.Types.ConditionalCharges as DAC
+import qualified Domain.Types.FarePolicy as FP
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -24,39 +27,118 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data FareParameters = FareParameters
   { id :: Id FareParameters,
-    driverSelectedFare :: Maybe Money,
-    customerExtraFee :: Maybe Money,
-    serviceCharge :: Maybe Money,
-    govtCharges :: Maybe Money,
-    baseFare :: Money,
-    waitingCharge :: Maybe Money,
-    rideExtraTimeFare :: Maybe Money,
-    nightShiftCharge :: Maybe Money,
+    driverSelectedFare :: Maybe HighPrecMoney,
+    customerExtraFee :: Maybe HighPrecMoney,
+    serviceCharge :: Maybe HighPrecMoney,
+    parkingCharge :: Maybe HighPrecMoney,
+    stopCharges :: Maybe HighPrecMoney,
+    govtCharges :: Maybe HighPrecMoney,
+    baseFare :: HighPrecMoney,
+    waitingCharge :: Maybe HighPrecMoney,
+    rideExtraTimeFare :: Maybe HighPrecMoney,
+    nightShiftCharge :: Maybe HighPrecMoney,
     nightShiftRateIfApplies :: Maybe Double,
     fareParametersDetails :: FareParametersDetails,
-    customerCancellationDues :: HighPrecMoney
+    customerCancellationDues :: Maybe HighPrecMoney,
+    tollCharges :: Maybe HighPrecMoney,
+    congestionCharge :: Maybe HighPrecMoney,
+    petCharges :: Maybe HighPrecMoney,
+    businessDiscount :: Maybe HighPrecMoney,
+    priorityCharges :: Maybe HighPrecMoney,
+    congestionChargeViaDp :: Maybe HighPrecMoney,
+    insuranceCharge :: Maybe HighPrecMoney,
+    cardCharge :: Maybe CardCharge,
+    luggageCharge :: Maybe HighPrecMoney,
+    returnFeeCharge :: Maybe HighPrecMoney,
+    boothCharge :: Maybe HighPrecMoney,
+    platformFee :: Maybe HighPrecMoney,
+    sgst :: Maybe HighPrecMoney,
+    cgst :: Maybe HighPrecMoney,
+    platformFeeChargesBy :: FP.PlatformFeeMethods,
+    currency :: Currency,
+    updatedAt :: UTCTime,
+    merchantId :: Maybe (Id DM.Merchant),
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    conditionalCharges :: [DAC.ConditionalCharges],
+    shouldApplyBusinessDiscount :: Bool,
+    driverCancellationPenaltyAmount :: Maybe HighPrecMoney,
+    -- | Payment processing fee (blended or method-specific)
+    -- TODO: Will be enhanced when payment context is available
+    paymentProcessingFee :: Maybe HighPrecMoney,
+    -- | VAT charge calculated based on vat_charge_config in fare_policy
+    -- Populated by calculateFareParametersV2. Included in pureFareSum.
+    rideVat :: Maybe HighPrecMoney,
+    -- | VAT on toll charges calculated based on toll_tax_charge_config in fare_policy
+    -- Populated by calculateFareParametersV2. Included in pureFareSum.
+    tollVat :: Maybe HighPrecMoney
   }
-  deriving (Generic, Show, Eq, PrettyShow)
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
-data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails
-  deriving (Generic, Show, Eq, PrettyShow)
+data CardCharge = CardCharge
+  { onFare :: Maybe HighPrecMoney,
+    fixed :: Maybe HighPrecMoney
+  }
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
+
+data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails | InterCityDetails FParamsInterCityDetails | AmbulanceDetails FParamsAmbulanceDetails
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
 data FParamsProgressiveDetails = FParamsProgressiveDetails
-  { deadKmFare :: Money,
-    extraKmFare :: Maybe Money
+  { deadKmFare :: HighPrecMoney,
+    extraKmFare :: Maybe HighPrecMoney,
+    rideDurationFare :: Maybe HighPrecMoney,
+    currency :: Currency
   }
-  deriving (Generic, Show, Eq, PrettyShow)
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
 data FParamsSlabDetails = FParamsSlabDetails
   { platformFee :: Maybe HighPrecMoney,
     sgst :: Maybe HighPrecMoney,
-    cgst :: Maybe HighPrecMoney
+    cgst :: Maybe HighPrecMoney,
+    currency :: Currency
   }
-  deriving (Generic, Show, Eq, PrettyShow)
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
+
+data FParamsAmbulanceDetails = FParamsAmbulanceDetails
+  { platformFee :: Maybe HighPrecMoney,
+    sgst :: Maybe HighPrecMoney,
+    cgst :: Maybe HighPrecMoney,
+    distBasedFare :: HighPrecMoney,
+    currency :: Currency
+  }
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
+
+data FParamsRentalDetails = FParamsRentalDetails
+  { timeBasedFare :: HighPrecMoney,
+    distBasedFare :: HighPrecMoney,
+    currency :: Currency,
+    extraDistance :: Meters,
+    distanceUnit :: DistanceUnit,
+    extraDuration :: Seconds,
+    deadKmFare :: HighPrecMoney
+  }
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
+
+data FParamsInterCityDetails = FParamsInterCityDetails
+  { timeFare :: HighPrecMoney,
+    distanceFare :: HighPrecMoney,
+    pickupCharge :: HighPrecMoney,
+    currency :: Currency,
+    extraDistanceFare :: HighPrecMoney,
+    stateEntryPermitCharges :: Maybe HighPrecMoney,
+    extraTimeFare :: HighPrecMoney
+  }
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
 type FullFareParametersProgressiveDetails = (Id FareParameters, FParamsProgressiveDetails)
 
-data FareParametersType = Progressive | Slab
+type FullFareParametersRentalDetails = (Id FareParameters, FParamsRentalDetails)
+
+type FullFareParametersInterCityDetails = (Id FareParameters, FParamsInterCityDetails)
+
+type FullFareParametersAmbulanceDetails = (Id FareParameters, FParamsAmbulanceDetails)
+
+data FareParametersType = Progressive | Slab | Rental | InterCity | Ambulance
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -66,3 +148,6 @@ getFareParametersType :: FareParameters -> FareParametersType
 getFareParametersType fareParams = case fareParams.fareParametersDetails of
   ProgressiveDetails _ -> Progressive
   SlabDetails _ -> Slab
+  RentalDetails _ -> Rental
+  InterCityDetails _ -> InterCity
+  AmbulanceDetails _ -> Ambulance

@@ -1,0 +1,41 @@
+name: Raise PR to asset-store
+
+on:
+  pull_request:
+    types: [closed]
+  
+jobs:
+  on_pr_merge:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: Frontend/android-native
+
+    if: github.event.pull_request.merged == true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+          
+      - name: Test changed-files
+        uses: actions/checkout@v4
+    
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44    
+
+      - name: Clone private repo 
+        run: |
+          git config --global user.email ${{ secrets.NAMMA_BOT_EMAIL }}
+          git config --global user.name 'namma-bot'
+          git clone https://namma-bot:$PAT_TOKEN@github.com/nammayatri/asset-store.git asset-store
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      - name: Run script
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }} 
+        run: |
+          chmod +x ../asset-store-script.sh 
+          ./../asset-store-script.sh ${{ github.event.pull_request.head.ref }} ${{ secrets.PAT_TOKEN }}

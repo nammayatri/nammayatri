@@ -15,7 +15,9 @@
 module API.Beckn.OnTrack (API, handler) where
 
 import qualified Beckn.ACL.OnTrack as ACL
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnTrack as OnTrack
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.OnTrack as DOnTrack
 import Environment
 import Kernel.Prelude
@@ -23,20 +25,29 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Booking as QRB
+import Tools.Error
+import TransactionLogs.PushLogs
 
-type API = OnTrack.OnTrackAPI
+type API = OnTrack.OnTrackAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onTrack
 
 onTrack ::
   SignatureAuthResult ->
-  OnTrack.OnTrackReq ->
+  OnTrack.OnTrackReqV2 ->
   FlowHandler AckResponse
-onTrack _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnTrackReq <- ACL.buildOnTrackReq req
-  whenJust mbDOnTrackReq \onTrackReq -> do
-    validatedReq <- DOnTrack.validateRequest onTrackReq
-    fork "on track processing" $
-      DOnTrack.onTrack validatedReq
-  pure Ack
+onTrack _ reqV2 = withFlowHandlerBecknAPI do
+  transactionId <- Utils.getTransactionId reqV2.onTrackReqContext
+  Utils.withTransactionIdLogTag transactionId $ do
+    logTagInfo "onTrackAPIV2" $ "Received onTrack API call:-" <> show reqV2
+    mbDOnTrackReq <- ACL.buildOnTrackReqV2 reqV2
+    whenJust mbDOnTrackReq $ \onTrackReq -> do
+      validatedReq <- DOnTrack.validateRequest onTrackReq
+      fork "on track processing" $
+        DOnTrack.onTrack validatedReq
+      fork "on track received pushing ondc logs" do
+        booking <- QRB.findById validatedReq.ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BookingId:-" <> validatedReq.ride.bookingId.getId)
+        void $ pushLogs "on_track" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
+    pure Ack

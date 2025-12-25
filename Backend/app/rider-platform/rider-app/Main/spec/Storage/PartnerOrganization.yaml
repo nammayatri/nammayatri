@@ -1,0 +1,136 @@
+imports:
+  DbHash: Kernel.External.Encryption
+  Merchant: Domain.Types.Merchant
+  Value: Data.Aeson
+  EncryptedHashedField: Kernel.External.Encryption
+  PartnerOrganizationConfig: Domain.Types.Extra.PartnerOrgConfig
+  ConfigType: Domain.Types.Extra.PartnerOrgConfig
+
+PartnerOrganization:
+  tableName: partner_organization
+  derives: "Generic"
+  fields:
+    orgId: Id PartnerOrganization
+    name: Text
+    apiKey: EncryptedHashedField e Text
+    merchantId: Id Merchant
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    PartnerOrgTransaction: {}
+
+  beamFields:
+    apiKey:
+      apiKeyHash: DbHash
+      apiKeyEncrypted: Text
+
+  fromTType:
+    apiKey: EncryptedHashed (Encrypted apiKeyEncrypted) apiKeyHash|E
+
+  toTType:
+    apiKeyEncrypted: (unEncrypted . (.encrypted) $ apiKey)|E
+    apiKeyHash: ((.hash) apiKey)|E
+
+  constraints:
+    apiKeyHash: PrimaryKey
+    orgId: "!SecondaryKey" # forcing to be a secondary key
+
+  sqlType:
+    apiKeyHash: text
+    apiKeyEncrypted: character varying(255)
+
+  excludedFields: [merchantOperatingCityId]
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+PartnerOrgConfig:
+  tableName: partner_org_config
+  derives: "Generic, Show, ToJSON, FromJSON"
+  fields:
+    partnerOrgId: Id PartnerOrganization
+    config: PartnerOrganizationConfig
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamFields:
+    config:
+      configType: ConfigType
+      configJSON: Value
+
+  fromTType:
+    config: getPOrgConfigFromTypeAndJson|M
+
+  toTType:
+    configType: fst $ getTypeAndJSONFromPOrgConfig
+    configJSON: snd $ getTypeAndJSONFromPOrgConfig
+
+  constraints:
+    partnerOrgId: PrimaryKey
+    configType: PrimaryKey
+
+  sqlType:
+    configJSON: "json"
+    configType: character varying(255)
+
+  queries:
+    findAllByPartnerOrgId:
+      kvFunction: findAllWithKV
+      where: partnerOrgId
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+PartnerOrgStation:
+  tableName: partner_org_station
+  derives: "Generic, Show, ToJSON, FromJSON"
+  fields:
+    partnerOrgStationId: Id PartnerOrgStation
+    partnerOrgId: Id PartnerOrganization
+    stationCode: Text
+    name: Text
+
+  beamFields:
+    stationCode:
+      stationId: Text
+
+  constraints:
+    partnerOrgId: PrimaryKey
+    partnerOrgStationId: PrimaryKey
+    stationCode: SecondaryKey
+
+  queries:
+    findByPOrgIdAndPOrgStationId:
+      kvFunction: findOneWithKV
+      where:
+        and: [partnerOrgId, partnerOrgStationId]
+
+    findByStationCodeAndPOrgId:
+      kvFunction: findOneWithKV
+      where:
+        and: [stationCode, partnerOrgId]
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - findByPrimaryKey
+    - updateByPrimaryKey
+

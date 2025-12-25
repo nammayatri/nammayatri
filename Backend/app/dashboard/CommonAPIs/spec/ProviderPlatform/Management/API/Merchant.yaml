@@ -1,0 +1,967 @@
+imports:
+  ExophoneReq: Dashboard.Common.Merchant
+  FCMConfigUpdateReq: Dashboard.Common.Merchant
+  MapsServiceConfigUpdateReq: Dashboard.Common.Merchant
+  MandatoryValue: Kernel.Types.Value
+  OptionalValue: Kernel.Types.Value
+  NominalDiffTime: Kernel.Prelude
+  VehicleVariant: Dashboard.Common
+  VehicleCategory: Dashboard.Common
+  FarePolicy: Dashboard.Common
+  SlidingWindowOptions: Kernel.Types.SlidingWindowCounters
+  Area: Lib.Types.SpecialLocation
+  SupportedVehicleClasses: Dashboard.Common.Merchant
+  SmsServiceConfigUpdateReq: Dashboard.Common.Merchant
+  VerificationServiceConfigUpdateReq: Dashboard.Common.Merchant
+  ServiceUsageConfigRes: Dashboard.Common.Merchant
+  MapsServiceUsageConfigUpdateReq: Dashboard.Common.Merchant
+  SmsServiceUsageConfigUpdateReq: Dashboard.Common.Merchant
+  CreateMerchantOperatingCityReq: Dashboard.Common.Merchant
+  CreateMerchantOperatingCityRes: Dashboard.Common.Merchant
+  CreateMerchantOperatingCityReqT: Dashboard.Common.Merchant
+  UpsertSpecialLocationCsvReq: Dashboard.Common.Merchant
+  APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
+  SpecialLocation: Lib.Types.SpecialLocation
+  UpsertSpecialLocationReq: Dashboard.Common.Merchant
+  UpsertSpecialLocationReqT: Dashboard.Common.Merchant
+  UpsertSpecialLocationGateReq: Dashboard.Common.Merchant
+  UpsertSpecialLocationGateReqT: Dashboard.Common.Merchant
+  ServiceNames: Dashboard.Common.Merchant
+  Vector: Data.Vector
+  ConfigFailoverReq: Dashboard.Common.Merchant
+  ConfigNames: Dashboard.Common.Merchant
+  DocumentCategory: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+  Value: Data.Aeson
+  WhiteListOperatingCityReq: Dashboard.Common.Merchant
+  WhiteListOperatingCityRes: Dashboard.Common.Merchant
+  ServiceTierType: Dashboard.Common
+  Centesimal: Kernel.Types.Common
+
+module: Merchant
+
+apis:
+  - POST: # MerchantUpdateAPI
+      endpoint: /update
+      auth: ApiAuthV2
+      request:
+        type: MerchantUpdateReq
+      response:
+        type: MerchantUpdateRes
+      validation: Dashboard.ProviderPlatform.Management.Merchant.validateMerchantUpdateReq
+      migrate:
+        endpoint: MerchantAPI MerchantUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MERCHANT_UPDATE
+  - GET: # MerchantCommonConfigAPI
+      endpoint: /config/common
+      auth: ApiAuthV2
+      response:
+        type: MerchantCommonConfigRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MERCHANT_COMMON_CONFIG
+  - POST: # MerchantCommonConfigUpdateAPI
+      endpoint: /config/common/update
+      auth: ApiAuthV2
+      request:
+        type: MerchantCommonConfigUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.ProviderPlatform.Management.Merchant.validateMerchantCommonConfigUpdateReq
+      migrate:
+        endpoint: MerchantAPI MerchantCommonConfigUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MERCHANT_COMMON_CONFIG_UPDATE
+  - GET: # DriverPoolConfigAPI
+      endpoint: /config/driverPool
+      auth: ApiAuthV2
+      query:
+        - tripDistance: Meters
+        - tripDistanceValue: HighPrecDistance
+        - distanceUnit: DistanceUnit
+      response:
+        type: DriverPoolConfigRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG
+  - POST: # DriverPoolConfigUpdateAPI
+      endpoint: /config/driverPool/update
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - tripDistance: Meters
+        - area: Area
+      query:
+        - tripDistanceValue: HighPrecDistance
+        - distanceUnit: DistanceUnit
+        - vehicleVariant: VehicleVariant
+        - tripCategory: Text
+      request:
+        type: DriverPoolConfigUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.ProviderPlatform.Management.Merchant.validateDriverPoolConfigUpdateReq
+      migrate:
+        endpoint: MerchantAPI DriverPoolConfigUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG_UPDATE
+  - POST: # DriverPoolConfigCreateAPI
+      endpoint: /config/driverPool/create
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - tripDistance: Meters
+        - area: Area
+      query:
+        - tripDistanceValue: HighPrecDistance
+        - distanceUnit: DistanceUnit
+        - vehiclevariant: VehicleVariant
+        - tripCategory: Text
+      request:
+        type: DriverPoolConfigCreateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.ProviderPlatform.Management.Merchant.validateDriverPoolConfigCreateReq
+      migrate:
+        endpoint: MerchantAPI DriverPoolConfigCreateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG_CREATE
+  - GET: # DriverIntelligentPoolConfigAPI
+      endpoint: /config/driverIntelligentPool
+      auth: ApiAuthV2
+      response:
+        type: DriverIntelligentPoolConfigRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_INTELLIGENT_POOL_CONFIG
+  - POST: # DriverIntelligentPoolConfigUpdateAPI
+      endpoint: /config/driverIntelligentPool/update
+      auth: ApiAuthV2
+      request:
+        type: DriverIntelligentPoolConfigUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.ProviderPlatform.Management.Merchant.validateDriverIntelligentPoolConfigUpdateReq
+      migrate:
+        endpoint: MerchantAPI DriverIntelligentPoolConfigUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_INTELLIGENT_POOL_CONFIG_UPDATE
+  - GET: # DocumentVerificationConfigAPI
+      endpoint: /config/onboardingDocument/
+      query:
+        - documentType: DocumentType
+        - vehicleCategory: VehicleCategory
+      auth: ApiAuthV2
+      response:
+        type: DocumentVerificationConfigRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT ONBOARDING_DOCUMENT_CONFIG
+  - POST: # DocumentVerificationConfigUpdateAPI
+      endpoint: /config/onboardingDocument/update
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - documentType: DocumentType
+        - category: VehicleCategory
+      request:
+        type: DocumentVerificationConfigUpdateReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI DocumentVerificationConfigUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT ONBOARDING_DOCUMENT_CONFIG_UPDATE
+  - POST: # DocumentVerificationConfigCreateAPI
+      endpoint: /config/onboardingDocument/create
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - documentType: DocumentType
+        - category: VehicleCategory
+      request:
+        type: DocumentVerificationConfigCreateReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI DocumentVerificationConfigCreateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT ONBOARDING_DOCUMENT_CONFIG_CREATE
+  - GET: # ServiceUsageConfigAPI
+      endpoint: /serviceUsageConfig
+      auth: ApiAuthV2
+      response:
+        type: ServiceUsageConfigRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SERVICE_USAGE_CONFIG
+  - POST: # MapsServiceConfigUpdateAPI
+      endpoint: /serviceConfig/maps/update
+      auth: ApiAuthV2
+      request:
+        type: MapsServiceConfigUpdateReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI MapsServiceConfigUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MAPS_SERVICE_CONFIG_UPDATE
+  - POST: # MapsServiceUsageConfigUpdateAPI
+      endpoint: /serviceUsageConfig/maps/update
+      auth: ApiAuthV2
+      request:
+        type: MapsServiceUsageConfigUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.Common.Merchant.validateMapsServiceUsageConfigUpdateReq
+      migrate:
+        endpoint: MerchantAPI MapsServiceConfigUsageUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MAPS_SERVICE_USAGE_CONFIG_UPDATE
+  - POST: # SmsServiceConfigUpdateAPI
+      endpoint: /serviceConfig/sms/update
+      auth: ApiAuthV2
+      request:
+        type: SmsServiceConfigUpdateReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI SmsServiceConfigUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SMS_SERVICE_CONFIG_UPDATE
+  - POST: # SmsServiceUsageConfigUpdateAPI
+      endpoint: /serviceUsageConfig/sms/update
+      auth: ApiAuthV2
+      request:
+        type: SmsServiceUsageConfigUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.Common.Merchant.validateSmsServiceUsageConfigUpdateReq
+      migrate:
+        endpoint: MerchantAPI SmsServiceConfigUsageUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SMS_SERVICE_USAGE_CONFIG_UPDATE
+  - POST: # VerificationServiceConfigUpdateAPI
+      endpoint: /serviceConfig/verification/update
+      auth: ApiAuthV2
+      request:
+        type: VerificationServiceConfigUpdateReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI VerificationServiceConfigUpdateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT VERIFICATION_SERVICE_CONFIG_UPDATE
+  - POST: # CreateFPDriverExtraFee
+      endpoint: /config/farePolicy/{farePolicyId}/driverExtraFeeBounds/create
+      auth: ApiAuthV2
+      params:
+        farePolicyId: Id FarePolicy
+      mandatoryQuery:
+        - startDistance: Meters
+      query:
+        - startDistanceValue: HighPrecDistance
+        - distanceUnit: DistanceUnit
+      request:
+        type: CreateFPDriverExtraFeeReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI CreateFPDriverExtraFeeEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CREATE_FP_DRIVER_EXTRA_FEE
+  - POST: # UpdateFPDriverExtraFee
+      endpoint: /config/farePolicy/{farePolicyId}/driverExtraFeeBounds/update
+      auth: ApiAuthV2
+      params:
+        farePolicyId: Id FarePolicy
+      query:
+        - startDistanceValue: HighPrecDistance
+        - distanceUnit: DistanceUnit
+      mandatoryQuery:
+        - startDistance: Meters
+      request:
+        type: CreateFPDriverExtraFeeReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpdateFPDriverExtraFeeEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_FP_DRIVER_EXTRA_FEE
+  - POST: # UpdateFPPerExtraKmRate
+      endpoint: /config/farePolicy/{farePolicyId}/{startDistance}/perExtraKmRate/update
+      auth: ApiAuthV2
+      params:
+        farePolicyId: Id FarePolicy
+        startDistance: Meters
+      request:
+        type: UpdateFPPerExtraKmRateReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpdateFPPerExtraKmRate
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_FP_PER_EXTRA_KM_RATE
+  - POST: # UpdateFarePolicy
+      endpoint: /config/farePolicy/{farePolicyId}/update
+      auth: ApiAuthV2
+      params:
+        farePolicyId: Id FarePolicy
+      request:
+        type: UpdateFarePolicyReq
+      validation: Dashboard.ProviderPlatform.Management.Merchant.validateUpdateFarePolicyReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpdateFarePolicy
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_FARE_POLICY
+  - POST: # UpsertFarePolicyAPI
+      endpoint: /config/farePolicy/upsert/
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertFarePolicyReq
+      response:
+        type: UpsertFarePolicyResp
+      migrate:
+        endpoint: MerchantAPI UpsertFarePolicyEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_FARE_POLICY
+  - GET: # ExportFarePolicyAPI
+      endpoint: /config/farePolicy/export
+      auth: ApiAuthV2
+      response:
+        type: Text
+  - POST: # CreateMerchantOperatingCityAPI
+      endpoint: /config/operatingCity/create
+      auth: ApiAuthV2
+      multipart:
+        type: CreateMerchantOperatingCityReq
+      response:
+        type: CreateMerchantOperatingCityRes
+      helperApi:
+        - POST:
+            endpoint: /config/operatingCity/create
+            auth: ApiAuthV2 # TODO remove
+            request:
+              type: CreateMerchantOperatingCityReqT
+            response:
+              type: CreateMerchantOperatingCityRes
+      migrate:
+        endpoint: MerchantAPI CreateMerchantOperatingCityEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+  - POST: # SchedulerTriggerAPI
+      endpoint: /scheduler/trigger
+      auth: ApiAuthV2
+      request:
+        type: SchedulerTriggerReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SCHEDULER_TRIGGER
+  - POST: # UpdateOnboardingVehicleVariantMappingAPI
+      endpoint: /updateOnboardingVehicleVariantMapping
+      auth: ApiAuthV2
+      multipart:
+        type: UpdateOnboardingVehicleVariantMappingReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpdateOnboardingVehicleVariantMappingEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
+  - POST: # UpsertSpecialLocationCsvAPI
+      endpoint: /config/specialLocation/upsert/
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertSpecialLocationCsvReq
+      response:
+        type: APISuccessWithUnprocessedEntities
+      migrate:
+        endpoint: MerchantAPI UpsertSpecialLocationCsvEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_CSV
+  - POST: # UpsertSpecialLocationAPI
+      endpoint: /specialLocation/upsert
+      query:
+        - specialLocationId: Id SpecialLocation
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertSpecialLocationReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /specialLocation/upsert
+            query:
+              - specialLocationId: Id SpecialLocation
+            auth: ApiAuthV2 # TODO remove
+            request:
+              type: UpsertSpecialLocationReqT
+            response:
+              type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpsertSpecialLocationEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
+  - DELETE: # DeleteSpecialLocationAPI
+      endpoint: /specialLocation/{specialLocationId}/delete
+      params:
+        specialLocationId: Id SpecialLocation
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI DeleteSpecialLocationEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION
+  - POST: # UpsertSpecialLocationGateAPI
+      endpoint: /specialLocation/{specialLocationId}/gates/upsert
+      params:
+        specialLocationId: Id SpecialLocation
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertSpecialLocationGateReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /specialLocation/{specialLocationId}/gates/upsert
+            params:
+              specialLocationId: Id SpecialLocation
+            auth: ApiAuthV2 # TODO remove
+            request:
+              type: UpsertSpecialLocationGateReqT
+            response:
+              type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpsertSpecialLocationGateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
+  - DELETE: # DeleteSpecialLocationGateAPI
+      endpoint: /specialLocation/{specialLocationId}/gates/delete/{gateName}
+      params:
+        specialLocationId: Id SpecialLocation
+        gateName: Text
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: MerchantAPI DeleteSpecialLocationGateEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE
+  - POST:
+      endpoint: /config/clearCache/subscription
+      auth: ApiAuthV2
+      request:
+        type: ClearCacheSubscriptionReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CLEAR_CACHE_SUBSCRIPTION
+  - POST:
+      endpoint: /config/upsertPlanAndConfig/subscription
+      auth: ApiAuthV2
+      request:
+        type: UpsertPlanAndConfigReq
+      response:
+        type: UpsertPlanAndConfigResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_PLAN_AND_SUBSCRIPTION_CONFIG
+  - POST: #ToggleConfigPriorityAPI
+      endpoint: /config/{configName}/failover
+      params:
+        configName: ConfigNames
+      request:
+        type: ConfigFailoverReq
+      response:
+        type: APISuccess
+      auth: ApiAuthV2
+      migrate:
+        endpoint: MerchantAPI ToggleConfigPriorityEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT TOGGLE_CONFIG_PRIORITY
+
+  - POST: #D2R Payout Config
+      endpoint: /payoutConfig/update
+      auth: ApiAuthV2
+      request:
+        type: PayoutConfigReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_PAYOUT_CONFIG
+  - POST: # whiteListOperatingCityAPI
+      endpoint: /config/operatingCity/whiteList
+      auth: ApiAuthV2
+      request:
+        type: WhiteListOperatingCityReq
+      response:
+        type: WhiteListOperatingCityRes
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT WHITELIST_MERCHANT_OPERATING_CITY
+  - POST: # CreateMerchantAPI
+      endpoint: /config/merchant/create
+      auth: ApiAuthV2
+      multipart:
+        type: CreateMerchantOperatingCityReq
+      response:
+        type: CreateMerchantOperatingCityRes
+      helperApi:
+        - POST:
+            endpoint: /config/merchant/create
+            auth: ApiAuthV2
+            request:
+              type: CreateMerchantOperatingCityReqT
+            response:
+              type: CreateMerchantOperatingCityRes
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+  - GET: # VehicleServiceTierConfigAPI
+      endpoint: /config/vehicleServiceTier
+      auth: ApiAuthV2
+      query:
+        - serviceTierType: ServiceTierType
+      response:
+        type: VehicleServiceTierRes
+  - POST: # VehicleServiceTierConfigUpdateAPI
+      endpoint: /config/vehicleServiceTier/update
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - serviceTierType: ServiceTierType
+      request:
+        type: VehicleServiceTierConfigUpdateReq
+      response:
+        type: APISuccess
+
+
+types:
+  MerchantUpdateReq:
+    - name: Maybe Text
+    - description: Maybe Text
+    - enabled: Maybe Bool
+    - exoPhones: Maybe (NonEmpty ExophoneReq)
+    - fcmConfig: Maybe FCMConfigUpdateReq
+  MerchantUpdateRes:
+    - name: Text
+    - description: Maybe Text
+    - contactNumber: Maybe Text
+    - status: Status
+    - enabled: Bool
+  Status:
+    - enum: "PENDING_VERIFICATION, APPROVED, REJECTED"
+  MerchantCommonConfigRes:
+    - pickupLocThreshold: Meters
+    - dropLocThreshold: Meters
+    - pickupLocThresholdWithUnit: Distance
+    - dropLocThresholdWithUnit: Distance
+    - rideTimeEstimatedThreshold: Seconds
+    - includeDriverCurrentlyOnRide: Bool
+    - defaultPopupDelay: Seconds
+    - popupDelayToAddAsPenalty: Maybe Seconds
+    - thresholdCancellationScore: Maybe Int
+    - minRidesForCancellationScore: Maybe Int
+    - mediaFileUrlPattern: Text
+    - mediaFileSizeUpperLimit: Int
+    - onboardingTryLimit: Int
+    - onboardingRetryTimeInHours: Int
+    - checkImageExtractionForDashboard: Bool
+    - searchRepeatLimit: Int
+    - actualRideDistanceDiffThreshold: HighPrecMeters
+    - upwardsRecomputeBuffer: HighPrecMeters
+    - upwardsRecomputeBufferPercentage: Maybe Int
+    - approxRideDistanceDiffThreshold: HighPrecMeters
+    - actualRideDistanceDiffThresholdWithUnit: Distance
+    - upwardsRecomputeBufferWithUnit: Distance
+    - approxRideDistanceDiffThresholdWithUnit: Distance
+    - minLocationAccuracy: Double
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  MerchantCommonConfigUpdateReq:
+    - pickupLocThreshold: Maybe (MandatoryValue Meters)
+    - dropLocThreshold: Maybe (MandatoryValue Meters)
+    - pickupLocThresholdWithUnit: Maybe (MandatoryValue Distance)
+    - dropLocThresholdWithUnit: Maybe (MandatoryValue Distance)
+    - rideTimeEstimatedThreshold: Maybe (MandatoryValue Seconds)
+    - defaultPopupDelay: Maybe (MandatoryValue Seconds)
+    - popupDelayToAddAsPenalty: Maybe (OptionalValue Seconds)
+    - thresholdCancellationScore: Maybe (OptionalValue Int)
+    - minRidesForCancellationScore: Maybe (OptionalValue Int)
+    - mediaFileUrlPattern: Maybe (MandatoryValue Text)
+    - mediaFileSizeUpperLimit: Maybe (MandatoryValue Int)
+    - onboardingTryLimit: Maybe (MandatoryValue Int)
+    - onboardingRetryTimeInHours: Maybe (MandatoryValue Int)
+    - checkImageExtractionForDashboard: Maybe (MandatoryValue Bool)
+    - searchRepeatLimit: Maybe (MandatoryValue Int)
+    - driverPaymentCycleBuffer: Maybe (MandatoryValue NominalDiffTime) # TODO : Add in validation if reqd
+    - driverPaymentCycleDuration: Maybe (MandatoryValue NominalDiffTime)
+    - driverPaymentCycleStartTime: Maybe (MandatoryValue NominalDiffTime)
+    - driverPaymentReminderInterval: Maybe (MandatoryValue NominalDiffTime)
+    - timeDiffFromUtc: Maybe (MandatoryValue Seconds)
+    - driverAutoPayNotificationTime: Maybe (MandatoryValue NominalDiffTime)
+    - driverAutoPayExecutionTime: Maybe (MandatoryValue NominalDiffTime)
+    - driverFeeMandateNotificationBatchSize: Maybe (MandatoryValue Int)
+    - driverFeeMandateExecutionBatchSize: Maybe (MandatoryValue Int)
+    - mandateNotificationRescheduleInterval: Maybe (MandatoryValue NominalDiffTime)
+    - mandateExecutionRescheduleInterval: Maybe (MandatoryValue NominalDiffTime)
+    - driverFeeCalculationTime: Maybe (OptionalValue NominalDiffTime)
+    - driverFeeCalculatorBatchSize: Maybe (OptionalValue Int)
+    - driverFeeCalculatorBatchGap: Maybe (OptionalValue NominalDiffTime)
+    - orderAndNotificationStatusCheckTime: Maybe (OptionalValue NominalDiffTime)
+    - orderAndNotificationStatusCheckTimeLimit: Maybe (OptionalValue NominalDiffTime)
+    - snapToRoadConfidenceThreshold: Maybe (MandatoryValue Double)
+    - useWithSnapToRoadFallback: Maybe (MandatoryValue Bool)
+    - derive: "'HideSecrets"
+  DriverPoolConfigRes:
+    - recordType: Type
+    - type: [DriverPoolConfigItem]
+  DriverPoolConfigItem:
+    - minRadiusOfSearch: Meters
+    - maxRadiusOfSearch: Meters
+    - radiusStepSize: Meters
+    - minRadiusOfSearchWithUnit: Distance
+    - maxRadiusOfSearchWithUnit: Distance
+    - radiusStepSizeWithUnit: Distance
+    - driverPositionInfoExpiry: Maybe Seconds
+    - actualDistanceThreshold: Maybe Meters
+    - actualDistanceThresholdOnRide: Maybe Meters
+    - actualDistanceThresholdWithUnit: Maybe Distance
+    - actualDistanceThresholdOnRideWithUnit: Maybe Distance
+    - maxDriverQuotesRequired: Int
+    - driverQuoteLimit: Int
+    - driverRequestCountLimit: Int
+    - driverBatchSize: Int
+    - maxNumberOfBatches: Int
+    - maxParallelSearchRequests: Int
+    - maxParallelSearchRequestsOnRide: Int
+    - poolSortingType: PoolSortingType
+    - singleBatchProcessTime: Seconds
+    - tripDistance: Meters
+    - radiusShrinkValueForDriversOnRide: Meters
+    - driverToDestinationDistanceThreshold: Meters
+    - tripDistanceWithUnit: Distance
+    - radiusShrinkValueForDriversOnRideWithUnit: Distance
+    - driverToDestinationDistanceThresholdWithUnit: Distance
+    - driverToDestinationDuration: Seconds
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  PoolSortingType:
+    - enum: "Intelligent, Random, Tagged"
+  DriverPoolConfigUpdateReq:
+    - minRadiusOfSearch: Maybe (MandatoryValue Meters)
+    - maxRadiusOfSearch: Maybe (MandatoryValue Meters)
+    - radiusStepSize: Maybe (MandatoryValue Meters)
+    - minRadiusOfSearchWithUnit: Maybe (MandatoryValue Distance)
+    - maxRadiusOfSearchWithUnit: Maybe (MandatoryValue Distance)
+    - radiusStepSizeWithUnit: Maybe (MandatoryValue Distance)
+    - driverPositionInfoExpiry: Maybe (OptionalValue Seconds)
+    - actualDistanceThreshold: Maybe (OptionalValue Meters)
+    - actualDistanceThresholdOnRide: Maybe (OptionalValue Meters)
+    - actualDistanceThresholdWithUnit: Maybe (OptionalValue Distance)
+    - actualDistanceThresholdOnRideWithUnit: Maybe (OptionalValue Distance)
+    - maxDriverQuotesRequired: Maybe (MandatoryValue Int)
+    - driverQuoteLimit: Maybe (MandatoryValue Int)
+    - driverRequestCountLimit: Maybe (MandatoryValue Int)
+    - driverBatchSize: Maybe (MandatoryValue Int)
+    - maxNumberOfBatches: Maybe (MandatoryValue Int)
+    - maxParallelSearchRequests: Maybe (MandatoryValue Int)
+    - maxParallelSearchRequestsOnRide: Maybe (MandatoryValue Int)
+    - poolSortingType: Maybe (MandatoryValue PoolSortingType)
+    - singleBatchProcessTime: Maybe (MandatoryValue Seconds)
+    - distanceBasedBatchSplit: Maybe (MandatoryValue [BatchSplitByPickupDistance])
+    - derive: "'HideSecrets"
+  DriverPoolConfigCreateReq:
+    - minRadiusOfSearch: Meters
+    - maxRadiusOfSearch: Meters
+    - radiusStepSize: Meters
+    - minRadiusOfSearchWithUnit: Maybe Distance
+    - maxRadiusOfSearchWithUnit: Maybe Distance
+    - radiusStepSizeWithUnit: Maybe Distance
+    - driverPositionInfoExpiry: Maybe Seconds
+    - actualDistanceThreshold: Maybe Meters
+    - actualDistanceThresholdOnRide: Maybe Meters
+    - onRideBatchSplitConfig: [BatchSplitByPickupDistanceOnRide]
+    - onRideRadiusConfig: [OnRideRadiusConfig]
+    - enableForwardBatching: Bool
+    - currentRideTripCategoryValidForForwardBatching: [Text]
+    - batchSizeOnRide: Int
+    - batchSizeOnRideWithStraightLineDistance: Maybe Int
+    - useOneToOneOsrmMapping: Maybe Bool
+    - actualDistanceThresholdWithUnit: Maybe Distance
+    - actualDistanceThresholdOnRideWithUnit: Maybe Distance
+    - maxDriverQuotesRequired: Int
+    - driverQuoteLimit: Int
+    - driverRequestCountLimit: Int
+    - driverBatchSize: Int
+    - maxNumberOfBatches: Int
+    - maxParallelSearchRequests: Int
+    - maxParallelSearchRequestsOnRide: Int
+    - poolSortingType: PoolSortingType
+    - distanceBasedBatchSplit: [BatchSplitByPickupDistance]
+    - singleBatchProcessTime: Seconds
+    - radiusShrinkValueForDriversOnRide: Meters
+    - driverToDestinationDistanceThreshold: Meters
+    - radiusShrinkValueForDriversOnRideWithUnit: Maybe Distance
+    - driverToDestinationDistanceThresholdWithUnit: Maybe Distance
+    - driverToDestinationDuration: Seconds
+    - derive: "'HideSecrets"
+    - enableUnifiedPooling: Maybe Bool
+    - dynamicBatchSize: Vector Int
+  OnRideRadiusConfig:
+    - onRideRadius: Meters
+    - onRideRadiusWithUnit: Maybe Distance
+    - batchNumber: Int
+  BatchSplitByPickupDistanceOnRide:
+    - batchSplitSize: Int
+    - batchSplitDelay: Seconds
+  BatchSplitByPickupDistance: # FIXME the same as previous
+    - batchSplitSize: Int
+    - batchSplitDelay: Seconds
+  DriverIntelligentPoolConfigRes:
+    - availabilityTimeWeightage: Int
+    - availabilityTimeWindowOption: SlidingWindowOptions
+    - acceptanceRatioWeightage: Int
+    - acceptanceRatioWindowOption: SlidingWindowOptions
+    - cancellationRatioWeightage: Int
+    - cancellationAndRideFrequencyRatioWindowOption: SlidingWindowOptions
+    - minQuotesToQualifyForIntelligentPool: Int
+    - minQuotesToQualifyForIntelligentPoolWindowOption: SlidingWindowOptions
+    - intelligentPoolPercentage: Maybe Int
+    - speedNormalizer: Double
+    - driverSpeedWeightage: Int
+    - minLocationUpdates: Int
+    - locationUpdateSampleTime: Minutes
+    - defaultDriverSpeed: Double
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  DriverIntelligentPoolConfigUpdateReq:
+    - availabilityTimeWeightage: Maybe (MandatoryValue Int)
+    - availabilityTimeWindowOption: Maybe SlidingWindowOptions # value wrapper make no sense for lists and objects
+    - acceptanceRatioWeightage: Maybe (MandatoryValue Int)
+    - acceptanceRatioWindowOption: Maybe SlidingWindowOptions
+    - cancellationRatioWeightage: Maybe (MandatoryValue Int)
+    - cancellationAndRideFrequencyRatioWindowOption: Maybe SlidingWindowOptions
+    - minQuotesToQualifyForIntelligentPool: Maybe (MandatoryValue Int)
+    - minQuotesToQualifyForIntelligentPoolWindowOption: Maybe SlidingWindowOptions
+    - intelligentPoolPercentage: Maybe (OptionalValue Int)
+    - speedNormalizer: Maybe (MandatoryValue Double)
+    - driverSpeedWeightage: Maybe (MandatoryValue Int)
+    - minLocationUpdates: Maybe (MandatoryValue Int)
+    - locationUpdateSampleTime: Maybe (MandatoryValue Minutes)
+    - defaultDriverSpeed: Maybe (MandatoryValue Double)
+    - derive: "'HideSecrets"
+  DocumentVerificationConfigRes:
+    - recordType: Type
+    - type: [DocumentVerificationConfigItem]
+  DocumentVerificationConfigItem:
+    - documentType: DocumentType
+    - checkExtraction: Bool
+    - checkExpiry: Bool
+    - supportedVehicleClasses: SupportedVehicleClasses
+    - vehicleClassCheckType: VehicleClassCheckType
+    - documentFlowGrouping: DocumentFlowGrouping
+    - rcNumberPrefixList: Maybe [Text]
+    - maxRetryCount: Int
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  VehicleClassCheckType:
+    - enum: "Infix, Prefix, Suffix"
+  DocumentType:
+    - enum: "RC, DL, Permissions, SubscriptionPlan, ProfilePhoto, AadhaarCard, PanCard, VehiclePermit, VehicleFitnessCertificate, VehicleInsurance, VehiclePUC, ProfileDetails, SocialSecurityNumber, VehicleInspectionForm, UploadProfile, GSTCertificate, BackgroundVerification, VehicleFront, VehicleBack, VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, VehicleNOC, BusinessLicense, Odometer, InspectionHub, KIWADriverCard, KIWATaxiPermit, KvKChamberOfCommerceRegistration, TAXDetails, BankingDetails, VehicleDetails, SchipolAirportAgreement, SchipolSmartcardProof, TXQualityMark, TaxiDriverPermit, TaxiTransportLicense, FinnishIDResidencePermit, BusinessRegistrationExtract,PersonalId"
+    - derive: "HttpInstance"
+  DocumentFlowGrouping:
+    - enum: "COMMON, STANDARD"
+  DocumentVerificationConfigUpdateReq:
+    - checkExtraction: Maybe (MandatoryValue Bool)
+    - checkExpiry: Maybe (MandatoryValue Bool)
+    - supportedVehicleClasses: Maybe SupportedVehicleClasses # value wrapper make no sense for lists and objects
+    - rcNumberPrefix: Maybe (MandatoryValue Text)
+    - rcNumberPrefixList: Maybe (MandatoryValue [Text])
+    - maxRetryCount: Maybe (MandatoryValue Int)
+    - vehicleClassCheckType: Maybe (MandatoryValue VehicleClassCheckType)
+    - documentFlowGrouping: Maybe (MandatoryValue DocumentFlowGrouping)
+    - derive: "'HideSecrets"
+  DocumentVerificationConfigCreateReq:
+    - checkExtraction: Bool
+    - checkExpiry: Bool
+    - supportedVehicleClasses: SupportedVehicleClasses
+    - rcNumberPrefix: Text
+    - rcNumberPrefixList: Maybe [Text]
+    - maxRetryCount: Int
+    - vehicleClassCheckType: VehicleClassCheckType
+    - isDefaultEnabledOnManualVerification: Maybe Bool
+    - isImageValidationRequired: Maybe Bool
+    - doStrictVerifcation: Maybe Bool
+    - minFee: Money
+    - maxFee: Money
+    - stepFee: Money
+    - defaultStepFee: Money
+    - minFeeWithCurrency: Maybe PriceAPIEntity
+    - maxFeeWithCurrency: Maybe PriceAPIEntity
+    - stepFeeWithCurrency: Maybe PriceAPIEntity
+    - defaultStepFeeWithCurrency: Maybe PriceAPIEntity
+    - filterForOldApks: Maybe Bool
+    - documentCategory: Maybe DocumentCategory
+    - documentFlowGrouping: Maybe DocumentFlowGrouping
+    - derive: "'HideSecrets"
+  CreateFPDriverExtraFeeReq:
+    - minFee: Money
+    - maxFee: Money
+    - stepFee: Money
+    - defaultStepFee: Money
+    - minFeeWithCurrency: Maybe PriceAPIEntity
+    - maxFeeWithCurrency: Maybe PriceAPIEntity
+    - stepFeeWithCurrency: Maybe PriceAPIEntity
+    - defaultStepFeeWithCurrency: Maybe PriceAPIEntity
+    - derive: "'HideSecrets"
+  UpdateFPPerExtraKmRateReq:
+    - perExtraKmRate: HighPrecMoney
+    - perExtraKmRateWithCurrency: Maybe PriceAPIEntity
+    - derive: "'HideSecrets"
+  UpdateFarePolicyReq:
+    - serviceCharge: Maybe Money
+    - serviceChargeWithCurrency: Maybe PriceAPIEntity
+    - nightShiftBounds: Maybe NightShiftBounds
+    - allowedTripDistanceBounds: Maybe AllowedTripDistanceBoundsAPIEntity
+    - govtCharges: Maybe Double
+    - perMinuteRideExtraTimeCharge: Maybe HighPrecMoney
+    - tollCharges: Maybe HighPrecMoney
+    - priorityCharges: Maybe HighPrecMoney
+    - pickupBufferInSecsForNightShiftCal: Maybe Seconds
+    - perMinuteRideExtraTimeChargeWithCurrency: Maybe PriceAPIEntity
+    - congestionChargeMultiplier: Maybe CongestionChargeMultiplierAPIEntity
+    - description: Maybe Text
+    - baseDistance: Maybe Meters
+    - baseDistanceWithUnit: Maybe Distance
+    - baseFare: Maybe Money
+    - deadKmFare: Maybe Money
+    - baseFareWithCurrency: Maybe PriceAPIEntity
+    - deadKmFareWithCurrency: Maybe PriceAPIEntity
+    - waitingCharge: Maybe WaitingChargeAPIEntity
+    - waitingChargeInfo: Maybe WaitingChargeInfoAPIEntity
+    - freeWaitingTime: Maybe Minutes
+    - nightShiftCharge: Maybe NightShiftChargeAPIEntity
+    - petCharges: Maybe HighPrecMoney
+    - businessDiscountPercentage: Maybe Double
+    - derive: "'HideSecrets"
+  WaitingChargeInfoAPIEntity:
+    - freeWaitingTime: Minutes
+    - waitingCharge: WaitingChargeAPIEntity
+    - derive: "Show"
+  WaitingChargeAPIEntity:
+    - enum: "PerMinuteWaitingCharge HighPrecMoney, ConstantWaitingCharge Money, PerMinuteWaitingChargeWithCurrency PriceAPIEntity, ConstantWaitingChargeWithCurrency PriceAPIEntity"
+    - derive: "Show"
+  CongestionChargeMultiplierAPIEntity:
+    - enum: "BaseFareAndExtraDistanceFare Centesimal, ExtraDistanceFare Centesimal"
+  NightShiftChargeAPIEntity:
+    - enum: "ProgressiveNightShiftCharge Float, ConstantNightShiftCharge Money, ConstantNightShiftChargeWithCurrency PriceAPIEntity"
+    - derive: "Show"
+  NightShiftBounds:
+    - nightShiftStart: TimeOfDay
+    - nightShiftEnd: TimeOfDay
+    - derive: "Show"
+  AllowedTripDistanceBoundsAPIEntity:
+    - maxAllowedTripDistance: Meters
+    - minAllowedTripDistance: Meters
+    - maxAllowedTripDistanceWithUnit: Maybe Distance
+    - minAllowedTripDistanceWithUnit: Maybe Distance
+  UpsertFarePolicyResp:
+    - unprocessedFarePolicies: [Text]
+    - success: Text
+  UpsertFarePolicyReq:
+    - recordType: NewType
+    - file: FilePath
+    - derive: "'HideSecrets"
+  SchedulerTriggerReq:
+    - scheduledAt: Maybe UTCTime
+    - jobName: Maybe JobName
+    - jobData: Text
+    - derive: "'HideSecrets"
+  JobName:
+    - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation,CongestionChargeCalculation"
+  UpdateOnboardingVehicleVariantMappingReq:
+    - file: FilePath
+    - vehicleCategory: Text
+    - derive: "'HideSecrets"
+  ClearCacheSubscriptionReq:
+    - serviceName: Maybe ServiceNames
+    - planId: Maybe Text
+    - tableName: Maybe TableName
+    - derive: "'HideSecrets"
+  PayoutConfigReq:
+    - toEnable: Maybe Bool
+    - referralRewardAmountPerRide: Maybe HighPrecMoney
+    - vehicleCategory: VehicleCategory
+    - payoutRegistrationFee: Maybe HighPrecMoney
+    - payoutRegistrationCgst: Maybe HighPrecMoney
+    - payoutRegistrationSgst: Maybe HighPrecMoney
+    - thresholdPayoutAmountPerPerson: Maybe HighPrecMoney
+    - remark: Maybe Text
+    - derive: "'HideSecrets"
+  UpsertPlanAndConfigReq:
+    - action: Action
+    - command: Command
+    - config: Value
+    - tableName: TableName
+    - derive: "'HideSecrets"
+  Action:
+    - enum: "UPDATE_CONFIG,CREATE_CONFIG"
+  Command:
+    - enum: "COMMIT,VIEW_DIFF"
+  TableName:
+    - enum: "SUBSCRIPTION_CONFIG,PLAN,PLAN_TRANSLATION"
+  UpsertPlanAndConfigResp:
+    - respCode: APISuccess
+    - executedAction: Action
+    - executedCommand: Command
+    - error_resp : Maybe Text
+    - diff : Maybe Value
+  VehicleServiceTierRes:
+    - recordType: Type
+    - type: [VehicleServiceTierItem]
+  VehicleServiceTierItem:
+    - serviceTierType: ServiceTierType
+    - name: Text
+    - shortDescription: Maybe Text
+    - longDescription: Maybe Text
+    - seatingCapacity: Maybe Int
+    - airConditionedThreshold: Maybe Double
+    - isAirConditioned: Maybe Bool
+    - isIntercityEnabled: Maybe Bool
+    - isRentalsEnabled: Maybe Bool
+    - allowedVehicleVariant: [VehicleVariant]
+    - autoSelectedVehicleVariant: [VehicleVariant]
+    - defaultForVehicleVariant: [VehicleVariant]
+    - vehicleCategory: Maybe VehicleCategory
+    - vehicleIconUrl: Maybe Text
+    - driverRating: Maybe Centesimal
+    - vehicleRating: Maybe Double
+    - priority: Int
+    - baseVehicleServiceTier: Maybe Bool
+    - fareAdditionPerKmOverBaseServiceTier: Maybe Int
+    - oxygen: Maybe Double
+    - ventilator: Maybe Int
+    - luggageCapacity: Maybe Int
+    - stopFcmThreshold: Maybe Int
+    - stopFcmSuppressCount: Maybe Int
+    - scheduleBookingListEligibilityTags: Maybe [Text]
+  VehicleServiceTierConfigUpdateReq:
+    - name: Maybe Text
+    - shortDescription: Maybe Text
+    - longDescription: Maybe Text
+    - seatingCapacity: Maybe Int
+    - airConditionedThreshold: Maybe Double
+    - isAirConditioned: Maybe Bool
+    - isIntercityEnabled: Maybe Bool
+    - isRentalsEnabled: Maybe Bool
+    - allowedVehicleVariant: Maybe [VehicleVariant]
+    - autoSelectedVehicleVariant: Maybe [VehicleVariant]
+    - defaultForVehicleVariant: Maybe [VehicleVariant]
+    - vehicleIconUrl: Maybe Text
+    - driverRating: Maybe Centesimal
+    - vehicleRating: Maybe Double
+    - priority: Maybe Int
+    - baseVehicleServiceTier: Maybe Bool
+    - fareAdditionPerKmOverBaseServiceTier: Maybe Int
+    - oxygen: Maybe Double
+    - ventilator: Maybe Int
+    - luggageCapacity: Maybe Int
+    - stopFcmThreshold: Maybe Int
+    - stopFcmSuppressCount: Maybe Int
+    - scheduleBookingListEligibilityTags: Maybe [Text]
+    - derive: "'HideSecrets"
+
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE

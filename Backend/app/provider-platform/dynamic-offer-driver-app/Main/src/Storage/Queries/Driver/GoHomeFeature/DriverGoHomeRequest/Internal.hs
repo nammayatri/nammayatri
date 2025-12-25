@@ -15,16 +15,15 @@
 
 module Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal where
 
-import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
-import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as Domain
+import Domain.Types.DriverGoHomeRequest as DDGR
+import Domain.Types.DriverGoHomeRequest as Domain
 import Domain.Types.Person (Driver)
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (Point (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (Value)
 import qualified Sequelize as Se
-import qualified Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest as BeamDDGR
+import qualified Storage.Beam.DriverGoHomeRequest as BeamDDGR
 
 getDriverGoHomeReqNearby :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Driver] -> m [DriverGoHomeRequest]
 getDriverGoHomeReqNearby driverIds = do
@@ -38,6 +37,8 @@ instance FromTType' BeamDDGR.DriverGoHomeRequest Domain.DriverGoHomeRequest wher
           { id = Id id,
             driverId = Id driverId,
             mbReachedHome = reachedHome,
+            merchantId = Id <$> merchantId,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId,
             ..
           }
 
@@ -46,7 +47,8 @@ instance ToTType' BeamDDGR.DriverGoHomeRequest Domain.DriverGoHomeRequest where
     BeamDDGR.DriverGoHomeRequestT
       { id = getId id,
         driverId = getId driverId,
-        point = Point,
         reachedHome = mbReachedHome,
+        merchantId = getId <$> merchantId,
+        merchantOperatingCityId = getId <$> merchantOperatingCityId,
         ..
       }

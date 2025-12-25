@@ -18,12 +18,13 @@ import Beckn.Spec.API.OnCancel
 import Beckn.Spec.API.OnConfirm
 import Beckn.Spec.API.OnSearch
 import Beckn.Spec.API.OnStatus
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
 
 type API =
   "beckn"
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth 'Domain.PUBLIC_TRANSPORT "Authorization"
     :> ( OnSearchAPI
            :<|> OnConfirmAPI
            :<|> OnStatusAPI

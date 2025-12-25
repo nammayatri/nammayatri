@@ -23,6 +23,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
 import android.graphics.BitmapFactory;
 import android.location.LocationManager;
 import android.os.Build;
@@ -33,8 +34,8 @@ import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-import androidx.work.OneTimeWorkRequest;
-import androidx.work.WorkManager;
+
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -42,6 +43,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
+
+import in.juspay.mobility.common.services.TLSSocketFactory;
 
 
 public class GpsListeningService extends Service {
@@ -52,24 +55,46 @@ public class GpsListeningService extends Service {
     private BroadcastReceiver gpsReceiver;
 
     public void startLocationService(Context context) {
-        Log.i(LOG_TAG, "able to access service");
-        Intent locationUpdateService = new Intent(this, LocationUpdateService.class);
-        locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-            Intent alarmIntent = new Intent(context, LocationBroadcastReceiver.class);
-            PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, alarmIntent, PendingIntent.FLAG_IMMUTABLE);
-            manager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), pendingIntent);
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            this.getApplicationContext().startForegroundService(locationUpdateService);
-        } else {
-            this.startService(locationUpdateService);
+        try{
+            Log.i(LOG_TAG, "able to access service");
+            Intent locationUpdateService;
+            if (context.getSharedPreferences(context.getString(R.string.preference_file_key),MODE_PRIVATE).getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
+                locationUpdateService = new Intent(context, LocationUpdateService.class);
+            } else {
+                locationUpdateService = new Intent(context, LocationUpdateServiceV2.class);
+            }
+            locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            SharedPreferences sharedPrefs = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && sharedPrefs.getString("ACTIVITY_STATUS", "null").equals("onPause")) {
+                AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+                Intent alarmIntent = new Intent(context, LocationBroadcastReceiver.class);
+                PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, alarmIntent, PendingIntent.FLAG_IMMUTABLE);
+                manager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), pendingIntent);
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                this.getApplicationContext().startForegroundService(locationUpdateService);
+            } else {
+                this.startService(locationUpdateService);
+            }
+        }catch(Exception e){
+            Exception exception = new Exception("Error in onCreate startLocationService " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
+            Log.e(LOG_TAG, "Error in startLocationService ", e);
         }
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+        try{
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(gpsForegroundServiceId, createReceiverAndGetNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+            }else {
+                startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+            }
+        }catch (Exception e){
+            Exception exception = new Exception("Error in onStartCommand " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
+            Log.e(LOG_TAG, "Error in onStartCommand -> ", e);
+        }
         IntentFilter intentFilter = new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION);
         registerReceiver(gpsReceiver, intentFilter);
         return START_STICKY;
@@ -84,7 +109,17 @@ public class GpsListeningService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+        try{
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(gpsForegroundServiceId, createReceiverAndGetNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
+            }else{
+                startForeground(gpsForegroundServiceId, createReceiverAndGetNotification());
+            }
+        }catch (Exception e){
+            Exception exception = new Exception("Error in onCreate gpsForegroundServiceId " + e);
+            FirebaseCrashlytics.getInstance().recordException(exception);
+            Log.e(LOG_TAG, "Error in onCreate -> ", e);
+        }
     }
 
     @Override
@@ -99,7 +134,8 @@ public class GpsListeningService extends Service {
 
     public void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(channelId, "GPS_SERVICE", NotificationManager.IMPORTANCE_MIN);
+            NotificationChannel channel = new NotificationChannel(channelId, "GPS Service", NotificationManager.IMPORTANCE_MIN);
+            channel.setGroup("3_services");
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
         }
@@ -199,7 +235,12 @@ public class GpsListeningService extends Service {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            Intent locationUpdateService = new Intent(context, LocationUpdateService.class);
+            Intent locationUpdateService;
+            if (context.getSharedPreferences(context.getString(R.string.preference_file_key),MODE_PRIVATE).getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
+                locationUpdateService = new Intent(context, LocationUpdateService.class);
+            } else {
+                locationUpdateService = new Intent(context, LocationUpdateServiceV2.class);
+            }
             locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(locationUpdateService);

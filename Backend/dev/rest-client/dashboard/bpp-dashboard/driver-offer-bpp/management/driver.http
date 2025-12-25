@@ -1,0 +1,194 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name driverList
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/list
+?verified=false
+&enabled=true
+&limit=10
+&offset=0
+# &phone=6666666666
+token: {{customer_service}}
+
+###
+
+# @name driverDocs
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/documents/info
+token: {{customer_service}}
+
+###
+
+# @name driverActivity
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/activity
+token: {{customer_service}}
+
+###
+
+# @name disableDriver
+
+@driverId1 = favorit-auto1-0000000000000000000000
+@driverId2 = favorit-auto2-0000000000000000000000
+@driverId3 = favorit-suv-000000000000000000000001
+@driverId4 = favorit-sedan-0000000000000000000000
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId1}}/disable
+token: {{juspay_ops}}
+content-type: application/json
+
+###
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/location
+token: {{customer_service}}
+content-type: application/json
+
+{
+    "driverIds": ["{{driverId1}}", "{{driverId2}}", "{{driverId3}}"]
+}
+
+###
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/info?mobileNumber=6666666666&mobileCountryCode=%2B94
+token: {{customer_service}}
+content-type: application/json
+
+###
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/info?vehicleNumber=4811
+token: {{customer_service}}
+content-type: application/json
+
+###
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/info?dlNumber=MH-77975602
+token: {{customer_service}}
+content-type: application/json
+
+###
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/info?rcNumber=KA-61734337
+token: {{customer_service}}
+content-type: application/json
+
+###
+
+DELETE {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId2}}/permanentlyDelete
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId4}}/unlinkVehicle
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId1}}/updatePhoneNumber
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "newPhoneNumber": "7777777777",
+    "newCountryCode": "+91"
+}
+###
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId4}}/addVehicle
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "variant" : "AUTO_RICKSHAW",
+    "registrationNo" : "777IN",
+    "vehicleClass" : "vehicleClass",
+    "capacity" : 5,
+    "colour" : "Red",
+    "energyType" : "PETROL",
+    "model" : "VAZ",
+    "make" : "make",
+    "driverName" : "Krishna"
+}
+
+###
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId1}}/updateName
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "firstName" : "John",
+    "middleName" : "Winston",
+    "lastName" : "Lennon"
+}
+
+###
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId4}}/unlinkDL
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId4}}/endRCAssociation
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
+# @name blockDriver
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId1}}/block
+token: {{juspay_ops}}
+content-type: application/json
+
+###
+
+# @name unblockDriver
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId1}}/unblock
+token: {{juspay_ops}}
+content-type: application/json
+
+###
+
+# @name updateDriverTag
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/{{driverId2}}/updateDriverTag
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "driverTag" : "DriverSpeed#FAST_DRIVER",
+  "isAddingTag" : true
+}
+
+###
+
+# @name getDriverStats
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/stats?entityId={{driverId2}}
+token: {{juspay_admin}}
+content-type: application/json
+
+
+###
+
+# @name setActive
+
+@driver-offer-bpp-host = http://localhost:8016
+@token2 = {{driver-offer-bpp-auto-token2}}
+
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true&mode="ONLINE"
+content-type: application/json
+token: {{token2}}

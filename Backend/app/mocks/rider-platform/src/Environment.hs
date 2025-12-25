@@ -14,9 +14,10 @@
 
 module Environment where
 
-import qualified Data.HashMap as HM
-import qualified Data.Map as M
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as M
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.App
 import Kernel.Types.Common hiding (id)
@@ -29,6 +30,7 @@ import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
 import Kernel.Utils.Shutdown
+import System.Environment (lookupEnv)
 
 data AppCfg = AppCfg
   { port :: Int,
@@ -42,7 +44,8 @@ data AppCfg = AppCfg
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
     disableSignatureAuth :: Bool,
-    internalEndPointMap :: M.Map BaseUrl BaseUrl
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    noSignatureSubscribers :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -64,7 +67,13 @@ data AppEnv = AppEnv
     hostName :: Text,
     disableSignatureAuth :: Bool,
     version :: DeploymentVersion,
-    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
+    requestId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    sessionId :: Maybe Text,
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    url :: Maybe Text,
+    noSignatureSubscribers :: [Text]
   }
   deriving (Generic)
 
@@ -75,7 +84,12 @@ buildAppEnv AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
+  let requestId = Nothing
+  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let sessionId = Nothing
+  let kafkaProducerForART = Nothing
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  let url = Nothing
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
@@ -95,4 +109,5 @@ instance AuthenticatingEntity AppEnv where
 instance Registry Flow where
   registryLookup sReq = do
     registryUrl <- asks (.registryUrl)
-    Registry.registryLookup registryUrl sReq
+    selfId <- asks (.selfId)
+    Registry.registryLookup registryUrl sReq selfId

@@ -29,7 +29,7 @@ buildPickUpLocationMapping locationId entityId tag merchantId merchantOperatingC
   id <- generateGUID
   let order = 0
   now <- getCurrentTime
-  let version = "LATEST"
+  let version = QLM.latestTag
       createdAt = now
       updatedAt = now
   QLM.updatePastMappingVersions entityId order
@@ -38,11 +38,37 @@ buildPickUpLocationMapping locationId entityId tag merchantId merchantOperatingC
 buildDropLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m DLM.LocationMapping
 buildDropLocationMapping locationId entityId tag merchantId merchantOperatingCityId = do
   id <- generateGUID
-  noOfEntries <- QLM.countOrders entityId
-  let order = if noOfEntries == 0 then 1 else noOfEntries
+  prevOrder <- QLM.maxOrderByEntity entityId
+  let order = prevOrder + 1
   now <- getCurrentTime
-  let version = "LATEST"
+  let version = QLM.latestTag
       createdAt = now
       updatedAt = now
+  QLM.updatePastMappingVersions entityId order
+  return DLM.LocationMapping {..}
+
+buildLocationMapping' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> Int -> m DLM.LocationMapping
+buildLocationMapping' locationId entityId tag merchantId merchantOperatingCityId order = do
+  id <- generateGUID
+  now <- getCurrentTime
+  let version = QLM.latestTag
+      createdAt = now
+      updatedAt = now
+  QLM.updatePastMappingVersions entityId order
+  return DLM.LocationMapping {..}
+
+buildStopsLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [DL.Location] -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m [DLM.LocationMapping]
+buildStopsLocationMapping locations entityId tag merchantId merchantOperatingCityId = do
+  let order = 1
+  mapM (\(location, order') -> buildStopLocationMapping location entityId tag merchantId merchantOperatingCityId order') $ zip locations [order ..]
+
+buildStopLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> Int -> m DLM.LocationMapping
+buildStopLocationMapping location entityId tag merchantId merchantOperatingCityId order = do
+  id <- generateGUID
+  now <- getCurrentTime
+  let version = QLM.latestTag
+      createdAt = now
+      updatedAt = now
+      locationId = location.id
   QLM.updatePastMappingVersions entityId order
   return DLM.LocationMapping {..}

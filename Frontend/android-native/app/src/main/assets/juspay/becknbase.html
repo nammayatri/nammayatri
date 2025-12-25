@@ -1,7 +1,9 @@
 <html>
+
 <head>
     <title>MOBILITY-RELEASE</title>
 </head>
+
 <body>
 </body>
 <script type="text/javascript">
@@ -9,17 +11,37 @@
     window.JBridge = top.JBridge;
     window.Android = top.Android;
     window.DUIGatekeeper = JBridge;
+    window.JBridge.setAnalyticsHeader(JSON.stringify({ "x-client-id": "mobility" }));
 
+    const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
+    const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
+    const JOSFlags = window.JOS.getJOSflags()
+    if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging") || enableLogs || JOSFlags.isCUGUser || JOSFlags.isDevQa.isDevQa) {
+        Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;", "null");
+    } else {
+        Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;", "null");
+    }
 </script>
 
 <script type="text/javascript">
-        let headID = document.getElementsByTagName("head")[0];
-        window.prevTimeStamp = Date.now();        
-        let jsFile = JBridge.loadFileInDUI('v1-assets_downloader.jsa'); // update index_bundle.js to share apk
-        let newScript = document.createElement('script');
-        newScript.type = 'text/javascript';
-        newScript.id = 'mystique';
-        newScript.innerHTML = jsFile;
-        headID.appendChild(newScript);
+    let assets_downloader = false;
+    if (JBridge.fetchRemoteConfigString) {
+        try {
+            assets_downloader = JSON.parse(JBridge.fetchRemoteConfigString("asset_downloader_config")).enableAssetDonwloader;
+        } catch (e) {
+            console.error(e)
+        }
+    };
+    let headID = document.getElementsByTagName("head")[0];
+    window.prevTimeStamp = Date.now();
+    window.assetDownloadDuration = Date.now();
+    let jsFile = JBridge.loadFileInDUI(assets_downloader ? 'v1-assets_downloader.jsa' : 'v1-index_bundle.jsa'); // update index_bundle.js to share apk
+    let newScript = document.createElement('script');
+    newScript.type = 'text/javascript';
+    newScript.id = 'mystique';
+    newScript.innerHTML = jsFile;
+    headID.appendChild(newScript);
+
 </script>
+
 </html>

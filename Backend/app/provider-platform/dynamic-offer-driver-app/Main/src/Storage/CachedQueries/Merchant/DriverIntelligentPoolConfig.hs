@@ -14,24 +14,34 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
-  ( clearCache,
-    findByMerchantOpCityId,
+  {-# WARNING
+    "This module contains direct calls to the table and redis. \
+  \ But most likely you need a version from Cac with inMem results feature."
+    #-}
+  ( create,
+    clearCache,
     update,
+    getDriverIntelligentPoolConfigFromDB,
   )
 where
 
 import Data.Coerce (coerce)
+import Data.Text as Text
 import Domain.Types.Common
-import Domain.Types.Merchant.DriverIntelligentPoolConfig
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.DriverIntelligentPoolConfig
+import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Merchant.DriverIntelligentPoolConfig as Queries
+import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.DriverIntelligentPoolConfig as Queries
 
-findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
-findByMerchantOpCityId id =
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverIntelligentPoolConfig -> m ()
+create = Queries.create
+
+getDriverIntelligentPoolConfigFromDB :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
+getDriverIntelligentPoolConfigFromDB id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(DriverIntelligentPoolConfigD 'Unsafe) @DriverIntelligentPoolConfig a
     Nothing -> flip whenJust cacheDriverIntelligentPoolConfig /=<< Queries.findByMerchantOpCityId id

@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Dashboard.Common.Booking
   ( module Dashboard.Common.Booking,
@@ -23,28 +22,12 @@ where
 import Dashboard.Common as Reexport
 import Data.Aeson
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Validation
-import Servant hiding (Summary)
-
--- we need to save endpoint transactions only for POST, PUT, DELETE APIs
-data BookingEndpoint
-  = StuckBookingsCancelEndpoint
-  | MultipleBookingSyncEndpoint
-  deriving (Show, Read)
-
-derivePersistField "BookingEndpoint"
 
 ---------------------------------------------------------
 -- bookings cancel --------------------------------------
-
-type StuckBookingsCancelAPI =
-  "cancel"
-    :> "allStuck"
-    :> ReqBody '[JSON] StuckBookingsCancelReq
-    :> Post '[JSON] StuckBookingsCancelRes
 
 newtype StuckBookingsCancelReq = StuckBookingsCancelReq
   { bookingIds :: [Id Booking]
@@ -83,11 +66,6 @@ instance HideSecrets StuckBookingsCancelRes where
 
 ---------------------------------------------------------
 -- multiple booking sync --------------------------
-
-type MultipleBookingSyncAPI =
-  "sync"
-    :> ReqBody '[JSON] MultipleBookingSyncReq
-    :> Post '[JSON] MultipleBookingSyncResp
 
 newtype MultipleBookingSyncReq = MultipleBookingSyncReq
   { bookings :: [MultipleBookingItem]

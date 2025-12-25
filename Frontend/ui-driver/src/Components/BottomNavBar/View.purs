@@ -29,7 +29,7 @@ import JBridge (startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, (==), const, (<>), (&&), bind, ($), pure, unit, (/=), void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, maxLines, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, maxLines, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, rippleColor)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (BottomNavBarState)
@@ -57,6 +57,7 @@ view push state =
           , gravity CENTER
           , orientation VERTICAL
           , onClick push (const (OnNavigate item.text))
+          , rippleColor Color.rippleShade
           ][ textView $
              [ text $ " " <> getString NEW_ <> "✨"
              , background Color.blue800
@@ -91,7 +92,8 @@ view push state =
                     , text case item.text of
                               "Home"          -> getString HOME
                               "Rides"         -> getString RIDES
-                              "Rankings"      -> getString CONTEST
+                              "Rankings"      -> getString BENEFITS
+                              "Earnings"      -> getString EARNINGS
                               "Profile"       -> getString PROFILE
                               "Alert"         -> getString MESSAGES
                               "Join"          -> getString if getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true" then MY_PLAN else PLANS

@@ -9,7 +9,8 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Maybe (Maybe(..))
 import Data.Maybe as Mb
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityConfig)
-import Language.Strings (getString, getStringFromLocal)
+import Language.Strings (getString)
+import Resource.Localizable.StringsV2 (getString) as StringsV2
 import Language.Types (STR(..))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), clickable)
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
@@ -32,6 +33,7 @@ genericHeaderConfig state =
       , margin = (MarginRight 16)
       , imageUrl = fetchImage FF_ASSET "ny_ic_chevron_left"
       , padding = (Padding 5 5 5 5)
+      , enableRipple = true
       }
     , textConfig
       { text = getString if state.props.currentStage == SELECT_LANG then SELECT_LANGUAGE else SELECT_LOCATION
@@ -98,7 +100,7 @@ getLocationMapImage state =
 
 getChangeLanguageText :: Maybe String -> AppConfig -> String
 getChangeLanguageText value config = 
-  getStringFromLocal cityConfig.languageKey CHANGE_LANGUAGE_STR 
+  StringsV2.getString cityConfig.languageKey CHANGE_LANGUAGE_STR 
   where 
     cityConfig = getCityConfig config.cityConfig $ Mb.fromMaybe "" value
 
@@ -109,7 +111,6 @@ mockLocationConfig state =
   ErrorModal.config
         { height = MATCH_PARENT
         , background = Color.white900
-        , corners = Corners 24.0 true true false false
         , stroke = ("1," <> Color.borderGreyColor)
         , imageConfig
           { imageUrl = fetchImage FF_ASSET "ny_ic_location_unserviceable"

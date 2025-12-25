@@ -26,10 +26,17 @@ flag Local
 
 library
   exposed-modules:
+      Lib.Queries.GateInfo
+      Lib.Queries.GateInfoGeom
       Lib.Queries.SpecialLocation
+      Lib.Queries.SpecialLocationGeom
       Lib.Queries.SpecialLocationPriority
+      Lib.Tabular.GateInfo
+      Lib.Tabular.GateInfoGeom
       Lib.Tabular.SpecialLocation
+      Lib.Tabular.SpecialLocationGeom
       Lib.Tabular.SpecialLocationPriority
+      Lib.Types.GateInfo
       Lib.Types.SpecialLocation
       Lib.Types.SpecialLocationPriority
   other-modules:
@@ -43,6 +50,7 @@ library
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
+      DerivingStrategies
       DuplicateRecordFields
       ExplicitNamespaces
       FlexibleContexts
@@ -62,6 +70,7 @@ library
       RecordWildCards
       ScopedTypeVariables
       StandaloneDeriving
+      TemplateHaskell
       TupleSections
       TypeApplications
       TypeFamilies
@@ -82,11 +91,14 @@ library
     , exceptions
     , http-client
     , http-types
+    , lens
     , mobility-core
+    , openapi3
     , record-dot-preprocessor
     , record-hasfield
     , servant
     , servant-client
+    , servant-openapi3
     , servant-server
     , text
     , time

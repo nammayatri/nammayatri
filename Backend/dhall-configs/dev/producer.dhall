@@ -1,6 +1,6 @@
 let common = ./common.dhall
 
-let sec = ./secrets/dynamic-offer-driver-app.dhall
+let sec = ./secrets/kaal-chakra.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
@@ -8,7 +8,7 @@ let esqDBCfg =
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
-      , connectSchemaName = "atlas_driver_offer_bpp"
+      , connectSchemaName = "kaal-chakra"
       , connectionPoolCount = +25
       }
 
@@ -30,6 +30,7 @@ let hedisCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let hedisClusterCfg =
@@ -40,9 +41,20 @@ let hedisClusterCfg =
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
+      , connectReadOnly = True
       }
 
 let cacheConfig = { configsExpTime = +86400 }
+
+let cacConfig =
+      { host = "http://localhost:8080"
+      , interval = 10
+      , tenant = "test"
+      , retryConnection = False
+      , cacExpTime = +86400
+      , enablePolling = True
+      , enableCac = False
+      }
 
 let kvConfigUpdateFrequency = +10
 
@@ -51,11 +63,13 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+
 in  { hedisCfg
     , hedisClusterCfg
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
-    , hedisMigrationStage = True
+    , hedisMigrationStage = False
     , cutOffHedisCluster = False
     , esqDBCfg
     , esqDBReplicaCfg
@@ -67,16 +81,19 @@ in  { hedisCfg
     , waitTimeMilliSec = +1000.0
     , producerTimestampKey = "producerTimestampKey"
     , batchSize = +1
-    , streamName = "Available_Jobs"
+    , streamName = "Available_Chakras"
     , cacheConfig
-    , schedulerSetName = "Scheduled_Jobs"
+    , schedulerSetName = "Scheduled_Chakras"
     , entryId = "*"
     , reviverInterval = +2
     , reviveThreshold = +2
     , schedulerType = common.schedulerType.RedisBased
     , maxShards = +5
+    , producersPerPod = +5
     , metricsPort = +9990
     , kvConfigUpdateFrequency
     , runReviver = True
     , kafkaProducerCfg
+    , cacConfig
+    , inMemConfig
     }

@@ -1,0 +1,59 @@
+imports:
+  NyRegularSubscription: Domain.Types.NyRegularSubscription # To reference Id NyRegularSubscription
+  # UTCTime, Text, Maybe are typically auto-imported
+  Merchant: Domain.Types.Merchant # Added for auto-field merchantId
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity # Added for auto-field merchantOperatingCityId
+
+NyRegularInstanceLog:
+  tableName: ny_regular_instance_log
+  derives: "Generic, Eq, Show, ToJSON, FromJSON" # Common derives for the main record
+  types:
+    NyRegularInstanceAutomationStatus:
+      enum: "PENDING,SEARCH_SENT,AUTO_SELECTED,BOOKING_INITIATED,CONFIRMED,FAILED_NO_OFFER,FAILED_BPP_ERROR,FAILED_CONFIRMATION"
+
+  fields:
+    instanceTransactionId: Text # This will be the Primary Key
+    nyRegularSubscriptionId: Id NyRegularSubscription # Foreign Key
+    scheduledPickupTime: UTCTime
+    automationStatus: NyRegularInstanceAutomationStatus
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    instanceTransactionId: text
+    nyRegularSubscriptionId: character(36) # Assuming Id NyRegularSubscription is character(36)
+    scheduledPickupTime: timestamp with time zone # Corrected
+    createdAt: timestamp with time zone # Corrected
+    updatedAt: timestamp with time zone # Corrected
+    # automationStatus (enum) will map to text
+
+  constraints:
+    instanceTransactionId: PrimaryKey
+    nyRegularSubscriptionId: SecondaryKey
+
+  queries:
+    findByInstanceTransactionId:
+      kvFunction: findOneWithKV
+      where: instanceTransactionId
+    findBySubscriptionId:
+      kvFunction: findAllWithOptionsKV
+      where: nyRegularSubscriptionId
+      orderBy:
+       field: scheduledPickupTime
+       order: desc # Order by scheduled time, latest first
+    # To find a specific instance for a subscription at a given time (useful for scheduler to avoid duplicates)
+    findBySubscriptionIdAndScheduledTime:
+      kvFunction: findOneWithKV
+      where:
+        and:
+        - nyRegularSubscriptionId
+        - scheduledPickupTime
+    updateStatusByInstanceTransactionId:
+      kvFunction: updateWithKV
+      params: [ automationStatus ]
+      where: instanceTransactionId
+    # Potentially a query to get all pending or failed instances for retry logic, if needed later.
+    # findByStatus:
+    #   kvFunction: findAllWithOptionsKV
+    #   where: automationStatus
+    #   orderBy: createdAt ASC

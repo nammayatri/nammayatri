@@ -1,0 +1,270 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+  Language: Kernel.External.Types
+  Version: Kernel.Types.Version
+  Device: Kernel.Types.Version
+  FCMRecipientToken: Kernel.External.Notification.FCM.Types
+  OptApiMethods: Kernel.External.Whatsapp.Interface.Types
+  Centesimal: Kernel.Types.Common
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  DeviceType: Kernel.Types.Version
+  TagNameValueExpiry: Lib.Yudhishthira.Types
+
+
+Person:
+  tableName: person
+
+  types:
+    Driver:
+      enum: Person
+      recordType: Type
+      derive': ""
+    Role:
+      enum: "DRIVER, ADMIN, FLEET_OWNER, FLEET_BUSINESS, OPERATOR"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+    IdentifierType:
+      enum: "MOBILENUMBER, AADHAAR, EMAIL"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+    Gender:
+      enum: "MALE, FEMALE, OTHER, UNKNOWN, PREFER_NOT_TO_SAY"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
+
+  fields:
+    id : Id Person
+    firstName : Text
+    middleName : Maybe Text
+    lastName : Maybe Text
+    role : Role
+    gender : Gender
+    hometown : Maybe Text
+    languagesSpoken : "Maybe [Text]"
+    identifierType : IdentifierType
+    email : Maybe Text
+    mobileNumber : Maybe (EncryptedHashedField e Text)
+    maskedMobileDigits: Maybe Text
+    mobileCountryCode : Maybe Text
+    passwordHash : Maybe DbHash
+    identifier : Maybe Text
+    isNew : Bool
+    onboardedFromDashboard : Bool
+    merchantId : Id Merchant
+    deviceToken : Maybe FCMRecipientToken
+    whatsappNotificationEnrollStatus : Maybe OptApiMethods
+    language : Maybe Language
+    description : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    alternateMobileNumber : Maybe (EncryptedHashedField e Text)
+    faceImageId : Maybe (Id MediaFile)
+    qrImageId : Maybe (Id MediaFile)
+    merchantOperatingCityId : Id MerchantOperatingCity
+    totalEarnedCoins : Int
+    usedCoins : Int
+    registrationLat : Maybe Double
+    registrationLon : Maybe Double
+    useFakeOtp : Maybe Text
+    clientSdkVersion : Maybe Version
+    reactBundleVersion : Maybe Text
+    clientBundleVersion : Maybe Version
+    clientConfigVersion : Maybe Version
+    clientDevice : Maybe Device
+    backendConfigVersion : Maybe Version
+    backendAppVersion : Maybe Text
+    driverTag: "Maybe [TagNameValueExpiry]"
+    clientId: Maybe Text
+    nyClubConsent: Maybe Bool
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Role>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <Role>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <IdentifierType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <IdentifierType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Gender>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <Gender>
+
+  beamFields:
+    mobileNumber:
+      mobileNumberEncrypted: Maybe Text
+      mobileNumberHash: Maybe DbHash
+
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
+
+    alternateMobileNumber:
+      alternateMobileNumberEncrypted: Maybe Text
+      alternateMobileNumberHash: Maybe DbHash
+
+
+  beamType:
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    clientOsVersion: Maybe Text
+    merchantOperatingCityId: Maybe Text
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
+    driverTag: "Maybe [Text]"
+
+  fromTType:
+      merchantOperatingCityId:  Storage.Queries.Transformers.Person.getMerchantOpCId merchantId merchantOperatingCityId |EM
+      clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
+      clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
+      clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
+      backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
+      clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
+      mobileNumber: EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash|E
+      alternateMobileNumber: EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash|E
+      driverTag: Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryFromTType|M
+
+  toTType:
+      merchantOperatingCityId: Just $ Kernel.Types.Id.getId merchantOperatingCityId|E
+      clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+      clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+      clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
+      backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
+      clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
+      clientOsType:  (clientDevice <&> (.deviceType))|E
+      mobileNumberEncrypted: (mobileNumber <&> unEncrypted . (.encrypted))|E
+      mobileNumberHash: (mobileNumber <&> (.hash))|E
+      alternateMobileNumberHash: (alternateMobileNumber <&> (.hash))|E
+      alternateMobileNumberEncrypted: (alternateMobileNumber <&> unEncrypted . (.encrypted))|E
+      clientModelName: (clientDevice <&> (.deviceModel))|E
+      clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+      driverTag: Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryToTType
+
+  constraints:
+    id: PrimaryKey
+    mobileNumberHash: "!SecondaryKey" # forcing to be a secondary key
+    alternateMobileNumberHash: "!SecondaryKey" # forcing to be a secondary key
+  sqlType:
+    firstName: character varying (255)
+    middleName: character varying (255)
+    lastName: character varying (255)
+    role: character varying (255)
+    gender: character varying (255)
+    identifierType: character varying (255)
+    email: character varying (255)
+    passwordHash: bytea
+    mobileNumberEncrypted: character varying (255)
+    mobileNumberHash: bytea
+    mobileCountryCode: character varying (255)
+    identifier: character varying (255)
+    isNew: boolean
+    merchantId: character varying (255)
+    deviceToken: character varying (255)
+    description: character varying (255)
+    language: character varying (255)
+    whatsappNotificationEnrollStatus: character varying (255)
+    alternateMobileNumberEncrypted: character varying (255)
+    alternateMobileNumberHash: bytea
+    hometown: character varying (255)
+    registrationLat: double precision
+    registrationLon: double precision
+    totalEarnedCoins: integer
+    usedCoins: integer
+    nyClubConsent: boolean
+
+
+  default:
+    onboardedFromDashboard: false
+    languagesSpoken: "'{}'"
+    totalEarnedCoins: 0
+    usedCoins: 0
+    nyClubConsent: false
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByMerchantId:
+      kvFunction: findAllWithDb
+      where:
+        and:
+          - eq: [merchantId]
+          - in: [role]
+
+    findByIdAndRoleAndMerchantId:
+      kvFunction: findOneWithKV
+      where:
+        and: [id, role, merchantId]
+    findByIdentifierAndMerchant:
+      kvFunction: findOneWithKV
+      where:
+        and: [identifier, merchantId]
+
+    findByEmailAndMerchant:
+      kvFunction: findOneWithKV
+      where:
+        and: [email, merchantId]
+
+    findAllByPersonIdsAndMerchantOpsCityId:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [id]
+          - eq: [merchantOperatingCityId]
+
+    updateName:
+      kvFunction: updateOneWithKV
+      params: [firstName]
+      where: id
+
+    updateDeviceToken:
+      kvFunction: updateOneWithKV
+      params: [deviceToken]
+      where: id
+
+    updateClientId:
+      kvFunction: updateOneWithKV
+      params: [clientId]
+      where: id
+
+    updateWhatsappNotificationEnrollStatus:
+      kvFunction: updateOneWithKV
+      params: [whatsappNotificationEnrollStatus]
+      where: id
+
+    setIsNewFalse:
+      kvFunction: updateOneWithKV
+      params: [isNew, updatedAt]
+      where: id
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+    updateTotalEarnedCoins:
+      kvFunction: updateWithKV
+      params: [totalEarnedCoins]
+      where: id
+
+    updateUsedCoins:
+      kvFunction: updateWithKV
+      params: [usedCoins]
+      where: id
+
+    updateDriverTag:
+      kvFunction: updateOneWithKV
+      params: [driverTag]
+      where: id
+
+    updateNyClubConsent:
+      kvFunction: updateOneWithKV
+      params: [nyClubConsent]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
+

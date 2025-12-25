@@ -15,9 +15,12 @@
 module App where
 
 import qualified App.Server as App
+import Client.Main as CM
+import qualified Data.Bool as B
 import qualified Data.Text as T
 import Environment
 import EulerHS.Interpreters (runFlow)
+import qualified EulerHS.KVConnector.Metrics as KVCM
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -27,6 +30,7 @@ import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
+import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Kernel.Storage.Queries.SystemConfigs
 import qualified Kernel.Tools.Metrics.Init as Metrics
@@ -48,9 +52,30 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBecknConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import System.Environment (lookupEnv)
+import Tools.HTTPManager (prepareCRISHttpManager)
 import "utils" Utils.Common.Events as UE
+
+createCAC :: AppCfg -> IO ()
+createCAC appCfg = do
+  when appCfg.cacConfig.enableCac $ do
+    cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacTenants appCfg.cacConfig.enablePolling
+    case cacStatus of
+      0 -> CM.startCACPolling appCfg.cacTenants
+      _ -> do
+        -- logError "CAC client failed to start"
+        threadDelay 1000000
+        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
+  when appCfg.superPositionConfig.enableSuperPosition $ do
+    superPositionStatus <- CM.initSuperPositionClient appCfg.superPositionConfig.host (fromIntegral appCfg.superPositionConfig.interval) appCfg.superPositionConfig.tenants appCfg.superPositionConfig.enablePolling
+    case superPositionStatus of
+      0 -> CM.runSuperPositionPolling appCfg.superPositionConfig.tenants
+      _ -> do
+        -- logError "CAC super position client failed to start"
+        threadDelay 1000000
+        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
 
 runRiderApp :: (AppCfg -> AppCfg) -> IO ()
 runRiderApp configModifier = do
@@ -83,6 +108,7 @@ runRiderApp' appCfg = do
             appCfg.kvConfigUpdateFrequency
         )
           >> L.setOption KafkaConn appEnv.kafkaProducerTools
+          >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
       )
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
@@ -97,12 +123,21 @@ runRiderApp' appCfg = do
           try QMerchant.loadAllBaps
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.bapId) &&& (.bapUniqueKeyId)) allBaps
+        _ <- liftIO $ createCAC appCfg
+        -- Load FRFS BAPs
+        frfsBap <-
+          try QBecknConfig.findAll
+            >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
+        let allFRFSSubIds = map ((.subscriberId) &&& (.uniqueKeyId)) frfsBap
         flowRt' <-
           addAuthManagersToFlowRt
             flowRt
             $ catMaybes
               [ Just (Nothing, prepareAuthManagers flowRt appEnv allSubscriberIds),
-                Just (Just 150000, prepareGridlineHttpManager 150000)
+                Just (Nothing, prepareAuthManagers flowRt appEnv allFRFSSubIds),
+                Just (Just 150000, prepareGridlineHttpManager 150000),
+                Just (Just 10000, prepareJourneyMonitoringHttpManager 10000),
+                Just (Just 60000, prepareCRISHttpManager 60000)
               ]
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'

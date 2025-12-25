@@ -32,18 +32,20 @@ import Debug (spy)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (mobileNumberValidator, mobileNumberMaxLength)
+import Engineering.Helpers.Utils as EHU
 import Helpers.Utils (setText, showCarouselScreen)
-import JBridge (firebaseLogEvent, hideKeyboardOnNavigation, minimizeApp, toast, toggleBtnLoader)
+import JBridge (firebaseLogEvent, hideKeyboardOnNavigation, minimizeApp, toggleBtnLoader)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, bind, pure, unit, show, ($), (&&), (-), (<=), (==), (>), (||), discard, void, when, not)
-import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, LetterSpacing(..))
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit, LetterSpacing(..))
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (EnterMobileNumberScreenState)
 import Storage (KeyStore(..), setValueToLocalNativeStore)
 import Timers (clearTimerWithId)
+import Engineering.Helpers.Events as EHE
 
 instance showAction :: Show Action where
     show _ = ""
@@ -78,6 +80,7 @@ instance loggableAction :: Loggable Action where
         OTPEditTextAction act -> case act of 
             PrimaryEditTextController.TextChanged id value -> trackAppTextInput appId (getScreen ENTER_OTP_NUMBER_SCREEN) "otp_edit_text_changed" "primary_edit_text"
             PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ENTER_OTP_NUMBER_SCREEN) "otp_edit_text_focus_changed" "primary_edit_text"
+            PrimaryEditTextController.TextImageClicked -> trackAppTextInput appId (getScreen ENTER_OTP_NUMBER_SCREEN) "otp_edit_text_image_clicked" "primary_edit_text"
         GenericHeaderActionController act -> case act of
             GenericHeaderController.PrefixImgOnClick -> do
                 trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "generic_header_action" "back_icon_onclick"
@@ -126,6 +129,7 @@ data Action = EnterOTP
 eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput EnterMobileNumberScreenState
 
 eval (MobileNumberButtonAction PrimaryButtonController.OnClick) state = do
+    let _ = EHE.addEvent (EHE.defaultEventObject "phone_num_continue_clicked") { module = "onboarding"}
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_otp_triggered"
     let newState = state {data {otpChannel = OTP.SMS}, props{btnActiveOTP = false}}
     pure $ hideKeyboardOnNavigation true
@@ -142,6 +146,7 @@ eval (WhatsAppOTPButtonAction PrimaryButtonController.OnClick) state = do
 eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed state.props.enterOTP]
 
 eval (VerifyOTPButtonAction PrimaryButtonController.OnClick) state = do
+    let _ = EHE.addEvent (EHE.defaultEventObject "otp_screen_continue_clicked") { module = "onboarding"}
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ clearTimerWithId state.data.timerID
     updateAndExit state $ GoToAccountSetUp state
@@ -157,6 +162,7 @@ eval (MobileNumberEditTextAction (MobileNumberEditorController.TextChanged id va
                                         , data = state.data { mobileNumber = if validatorResp == MVR.MaxLengthExceeded then state.data.mobileNumber else value}}
     if  isValidMobileNumber validatorResp then do 
          let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_mobnum_entry"
+         let _ = EHE.addEvent (EHE.defaultEventObject "phone_num_entered") { module = "onboarding", payload = value}
          pure unit
      else pure unit
 
@@ -173,6 +179,7 @@ eval (MobileNumberEditTextAction (MobileNumberEditorController.CountryCodeSelect
                         , btnActiveMobileNumber = isValidMobileNumber validatorResp}}
     if isValidMobileNumber validatorResp then do 
          let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_mobnum_entry"
+         let _ = EHE.addEvent (EHE.defaultEventObject "isd_code_updated") { module = "onboarding", payload = country.countryCode}
          pure unit
     else pure unit
     continue newState
@@ -187,6 +194,7 @@ eval (OTPEditTextAction (PrimaryEditTextController.TextChanged id value)) state 
     let newState = state { props = state.props { btnActiveOTP = if length value == 4 then true else false, letterSpacing = PX if value == "" then 1.0 else 6.0, wrongOTP = if state.props.wrongOTP && value == "" then true else false}
                   , data = state.data { otp = if length value <= 4 then value else state.data.otp }}
     if length value == 4 then do
+        let _ = EHE.addEvent (EHE.defaultEventObject "otp_manual_entered") { module = "onboarding"}
         pure $ hideKeyboardOnNavigation true
         _ <- pure $ clearTimerWithId state.data.timerID
         updateAndExit newState $ GoToAccountSetUp newState
@@ -197,17 +205,18 @@ eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick ))
 
 eval Resend state = do
     let newState = state {data{attempts = if (state.data.attempts > 0) then state.data.attempts - 1 else state.data.attempts},props{resendEnable = false}}
+    let _ = EHE.addEvent (EHE.defaultEventObject "otp_resend_clicked") { module = "onboarding"}
     if state.data.attempts == 0 then do
-        _ <- pure $ toast (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+        _ <- pure $ EHU.showToast (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
         _ <- pure $ toggleBtnLoader "" false
         continue newState{props{enterOTP = false}}
       else do 
-        _ <- pure $ toast (getString OTP_RESENT_SUCCESSFULLY)
+        _ <- pure $ EHU.showToast (getString OTP_RESENT_SUCCESSFULLY)
         exit $ ResendOTP newState
 
 eval (AutoFill otp) state = do
     _ <- pure $ firebaseLogEvent "ny_user_otp_autoread"
-    let newState = state {props = state.props {isReadingOTP = if length otp == 4 then false else true ,capturedOtp = otp}, data = state.data { otp = if (length otp <= 4) then otp else state.data.otp}}
+    let newState = state {props = state.props {isReadingOTP = if length otp == 4 then false else true ,capturedOtp = otp, autoFillOTPEnabled = true}, data = state.data { otp = if (length otp <= 4) then otp else state.data.otp}}
     updateAndExit newState $ GoToAccountSetUp (newState)
    
 eval (BackPressed flag) state = do
@@ -241,7 +250,7 @@ eval (SetPhoneNumber number )state = continue state {props { editTextVal = numbe
 eval ContinueCommand state = exit $ GoToOTP state{data{timer = 30, timerID = ""},props = state.props{btnActiveOTP = false, resendEnable = false}}
 eval AfterRender state = continue state
 
-eval _ state = continue state
+eval _ state = update state
 
 isValidPrefixMobileNumber :: MVR.MobileNumberValidatorResp -> Boolean 
 isValidPrefixMobileNumber resp = (resp == MVR.ValidPrefix || resp == MVR.Valid)

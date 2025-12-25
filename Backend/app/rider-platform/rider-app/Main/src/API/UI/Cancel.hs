@@ -18,15 +18,18 @@ module API.UI.Cancel
     CancelAPI,
     GetCancellationDuesDetailsAPI,
     getCancellationDuesDetails,
+    cancel,
   )
 where
 
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
+import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
@@ -34,15 +37,29 @@ import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Ride as QR
 import Tools.Auth
+import Tools.Error
 
 type API =
-  CancelAPI
-    :<|> "dispute"
-      :> "cancellationDues"
-      :> TokenAuth
-      :> Post '[JSON] APISuccess
+  SoftCancelAPI
     :<|> GetCancellationDuesDetailsAPI
+    :<|> CancelAPI
+
+type GetCancellationDuesDetailsAPI =
+  "rideBooking"
+    :> QueryParam "rideBookingId" (Id SRB.Booking) -- Optional because in case of bridge we'll get bookingId but in case of NY, if we want to get cancellation dues for customer we'll not have. Will help in settlement too.
+    :> "cancellationDues"
+    :> TokenAuth
+    :> Get '[JSON] DCancel.CancellationDuesDetailsRes
+
+type SoftCancelAPI =
+  "rideBooking"
+    :> Capture "rideBookingId" (Id SRB.Booking)
+    :> "softCancel"
+    :> TokenAuth
+    :> Post '[JSON] APISuccess
 
 type CancelAPI =
   "rideBooking"
@@ -52,18 +69,32 @@ type CancelAPI =
     :> ReqBody '[JSON] DCancel.CancelReq
     :> Post '[JSON] APISuccess
 
-type GetCancellationDuesDetailsAPI =
-  "getCancellationDuesDetails"
-    :> TokenAuth
-    :> Get '[JSON] DCancel.CancellationDuesDetailsRes
-
 -------- Cancel Flow----------
 
 handler :: FlowServer API
 handler =
-  cancel
-    :<|> disputeCancellationDues
+  softCancel
     :<|> getCancellationDuesDetails
+    :<|> cancel
+
+softCancel ::
+  Id SRB.Booking ->
+  (Id Person.Person, Id Merchant.Merchant) ->
+  FlowHandler APISuccess
+softCancel bookingId (personId, merchantId) =
+  withFlowHandlerAPI . withPersonIdLogTag personId $ do
+    dCancelRes <- DCancel.softCancel bookingId (personId, merchantId)
+    cancelBecknReq <- ACL.buildCancelReqV2 dCancelRes Nothing
+    void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl cancelBecknReq
+    return Success
+
+getCancellationDuesDetails ::
+  Maybe (Id SRB.Booking) ->
+  (Id Person.Person, Id Merchant.Merchant) ->
+  FlowHandler DCancel.CancellationDuesDetailsRes
+getCancellationDuesDetails mbBookingId (personId, merchantId) =
+  withFlowHandlerAPI . withPersonIdLogTag personId $ do
+    DCancel.getCancellationDuesDetails mbBookingId (personId, merchantId)
 
 cancel ::
   Id SRB.Booking ->
@@ -72,12 +103,8 @@ cancel ::
   FlowHandler APISuccess
 cancel bookingId (personId, merchantId) req =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
-    dCancelRes <- DCancel.cancel bookingId (personId, merchantId) req
-    void $ withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< ACL.buildCancelReq dCancelRes
+    booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+    mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
+    dCancelRes <- DCancel.cancel booking mRide req SBCR.ByUser
+    void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
     return Success
-
-disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
-disputeCancellationDues = withFlowHandlerAPI . DCancel.disputeCancellationDues
-
-getCancellationDuesDetails :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DCancel.CancellationDuesDetailsRes
-getCancellationDuesDetails = withFlowHandlerAPI . DCancel.getCancellationDuesDetails

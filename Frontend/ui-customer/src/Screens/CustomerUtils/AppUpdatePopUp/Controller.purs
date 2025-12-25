@@ -18,7 +18,7 @@ module Screens.AppUpdatePopUp.Controller where
 import Prelude (Unit, pure, unit, class Show, ($), bind, discard)
 
 import Effect (Effect)
-import PrestoDOM (Eval, Props, exit, continue)
+import PrestoDOM (Eval, update, Props, exit, continue)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (AppUpdatePopUpState)
 import JBridge (firebaseLogEvent)
@@ -59,7 +59,7 @@ eval OnAccept state = do
 eval (AppUpdatedModelAction (PopUpModal.OnButton1Click)) state = exit Decline
 eval (AppUpdatedModelAction (PopUpModal.OnButton2Click)) state = exit Accept
 eval AfterRender state = continue state
-eval _ state = continue state
+eval _ state = update state
 
 overrides :: String -> (Action -> Effect Unit) -> AppUpdatePopUpState -> Props (Effect Unit)
 overrides _ push state = [] 

@@ -1,0 +1,70 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+
+Sos:
+  tableName: sos
+
+  fields:
+    id : Id Sos
+    personId : Id Person
+    rideId : Id Ride
+    flow : SosType
+    status : SosStatus
+    ticketId : Maybe Text
+    mediaFiles : "[Id MediaFile]"
+
+  types:
+    EmergencyContactId:
+      enum: "EmergencyContactId Text"
+
+    SosType:
+      enum: "Police,CustomerCare,EmergencyContact EmergencyContactId,SafetyFlow,CSAlertSosTicket,AudioRecording,KaptureDashboard"
+
+    SosStatus:
+      enum: "Resolved,NotResolved,Pending,MockPending,MockResolved"
+
+    SosMockDrill:
+      personId: Id Person
+      status : SosStatus
+
+  queries:
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    updateMediaFiles:
+      kvFunction: updateOneWithKV
+      params: [mediaFiles]
+      where: id
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByRideId:
+      kvFunction: findOneWithKV
+      where: rideId
+    findByTicketId:
+      kvFunction: findOneWithKV
+      where: ticketId
+    findByPersonId:
+      kvFunction: findAllWithKV
+      where: personId
+
+  beamType:
+    mediaFiles: Maybe [Text]
+
+  fromTType:
+    mediaFiles: Kernel.Types.Id.Id <$> (Kernel.Prelude.fromMaybe [] mediaFiles)|E
+
+  toTType:
+    mediaFiles: Kernel.Prelude.Just (Kernel.Types.Id.getId <$> mediaFiles)|E
+
+  sqlType:
+    mediaFiles: "text[]"
+
+  constraints:
+    id: PrimaryKey
+    rideId: SecondaryKey
