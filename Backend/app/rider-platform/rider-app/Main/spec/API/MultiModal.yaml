@@ -379,6 +379,16 @@ types:
   OnboardedVehicleDetailsReq:
     vehicleNumber: Text
 
+  TowerInfoReq:
+    userLat: Double
+    userLng: Double
+    latLngAccuracy: Double
+    timeStamp: UTCTime
+    networkType: Text
+    cellId: Text
+    areaCode: Text
+    signalStrength: Int
+
 apis:
   - POST:
       endpoint: /multimodal/routeServiceability
@@ -708,5 +718,14 @@ apis:
         type: UpdateBusLocationReq
       query:
         busOTP: Text
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+
+  - POST:
+      endpoint: /getTowerInfo
+      auth: TokenAuth
+      request:
+        type: TowerInfoReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
