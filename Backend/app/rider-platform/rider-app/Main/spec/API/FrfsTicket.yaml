@@ -37,6 +37,7 @@ types:
   FRFSDiscoverySearchAPIReq:
     city: City
     vehicleType: VehicleCategory
+    platformType: Maybe PlatformType
 
   FRFSSearchAPIReq:
     fromStationCode: Text
@@ -44,6 +45,7 @@ types:
     routeCode: Maybe Text
     serviceTier: Maybe ServiceTierType
     quantity: Int
+    platformType: Maybe PlatformType
     searchAsParentStops: Maybe Bool
     recentLocationId: Maybe (Id RecentLocation)
     busLocationData: Maybe [BusLocation]

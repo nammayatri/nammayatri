@@ -138,7 +138,7 @@ upsertPersonAndGetFare partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerA
     getFareHitsCountKey = "BAP:FRFS:PartnerOrgId:" <> getId partnerOrg.orgId <> ":GetFare:hitsCount"
 
     buildFRFSSearchReq :: Text -> Text -> Maybe Text -> Int -> DFRFSTypes.FRFSSearchAPIReq
-    buildFRFSSearchReq fromStationCode toStationCode routeCode quantity = DFRFSTypes.FRFSSearchAPIReq {recentLocationId = Nothing, searchAsParentStops = Nothing, serviceTier = Nothing, busLocationData = Nothing, vehicleNumber = Nothing, ..}
+    buildFRFSSearchReq fromStationCode toStationCode routeCode quantity = DFRFSTypes.FRFSSearchAPIReq {recentLocationId = Nothing, searchAsParentStops = Nothing, serviceTier = Nothing, busLocationData = Nothing, vehicleNumber = Nothing, platformType = Nothing, ..}
 
 getConfigByStationIds :: PartnerOrganization -> Text -> Text -> Maybe (Id DIBC.IntegratedBPPConfig) -> FlowHandler DPOFRFS.GetConfigResp
 getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId mbIntegratedBPPConfigId =
