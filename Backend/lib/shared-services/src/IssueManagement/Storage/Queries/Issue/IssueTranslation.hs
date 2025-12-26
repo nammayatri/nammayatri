@@ -47,6 +47,10 @@ findIssueTranslationByLanguageAndSentence language sentence =
         ]
     ]
 
+findAllBySentence :: BeamFlow m r => Text -> m [IssueTranslation]
+findAllBySentence sentence =
+  findAllWithKV [Is BeamIT.sentence $ Eq sentence]
+
 instance FromTType' BeamIT.IssueTranslation IssueTranslation where
   fromTType' BeamIT.IssueTranslationT {..} = do
     pure $

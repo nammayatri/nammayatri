@@ -153,7 +153,7 @@ resetDriver driver = runARDUFlow "" $ do
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)
-search token searchReq_ = callBAP $ searchServices token searchReq_ (Just defaultVersion) (Just defaultVersion) Nothing Nothing Nothing Nothing Nothing <&> (.searchId)
+search token searchReq_ = callBAP $ searchServices token searchReq_ (Just defaultVersion) (Just defaultVersion) Nothing Nothing Nothing Nothing Nothing Nothing <&> (.searchId)
 
 getOnSearchTaxiEstimatesByTransporterName ::
   Text ->
@@ -267,7 +267,7 @@ endRide ::
   Id AppRB.Booking ->
   ClientsM ()
 endRide driver destination tRide bBookingId = do
-  void . callBPP $ API.ui.ride.rideEnd driver.token tRide.id $ RideAPI.EndRideReq Nothing destination Nothing Nothing Nothing
+  void . callBPP $ API.ui.ride.rideEnd driver.token tRide.id $ RideAPI.EndRideReq Nothing destination Nothing Nothing Nothing Nothing
   void $
     pollDesc "ride completed" $ do
       completedRBStatusResult <- callBAP (appBookingStatus bBookingId appRegistrationToken)

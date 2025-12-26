@@ -1,9 +1,9 @@
 module Lib.JourneyLeg.Interface where
 
 import API.Types.UI.FRFSTicketService
-import API.Types.UI.MultimodalConfirm
 import qualified BecknV2.FRFS.Enums as Spec
 import Control.Applicative ((<|>))
+import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
@@ -41,8 +41,10 @@ getFare ::
   EMInterface.MultiModalLeg ->
   DTrip.MultimodalTravelMode ->
   Maybe Text ->
+  [Spec.ServiceTierType] ->
+  [DFRFSQuote.FRFSQuoteType] ->
   m (Bool, Maybe JL.GetFareResponse)
-getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveInfo leg mode searchReqId = case mode of
+getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveInfo leg mode searchReqId blacklistedServiceTiers blacklistedFareQuoteTypes = case mode of
   DTrip.Taxi -> do
     getFareReq :: TaxiLegRequest <- mkTaxiGetFareReq
     JL.getFare getFareReq

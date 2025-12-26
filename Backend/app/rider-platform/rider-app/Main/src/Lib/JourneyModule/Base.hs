@@ -138,8 +138,10 @@ init ::
   JL.GetFareFlow m r =>
   JL.JourneyInitData ->
   APITypes.MultimodalUserPreferences ->
+  [Spec.ServiceTierType] ->
+  [DFRFSQuote.FRFSQuoteType] ->
   m (Maybe (DJourney.Journey, [DJourneyLeg.JourneyLeg]))
-init journeyReq userPreferences = do
+init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteTypes = do
   journeyId <- Common.generateGUID
   riderConfig <- QRC.findByMerchantOperatingCityId journeyReq.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journeyReq.merchantOperatingCityId.getId)
   searchReq <- QSearchRequest.findById journeyReq.parentSearchId >>= fromMaybeM (SearchRequestNotFound journeyReq.parentSearchId.getId)
@@ -150,7 +152,7 @@ init journeyReq userPreferences = do
     mapWithIndex
       ( \idx (mbPrev, leg, mbNext) -> do
           let travelMode = convertMultiModalModeToTripMode leg.mode (straightLineDistance leg) journeyReq.maximumWalkDistance
-          legFare@(_, mbTotalLegFare) <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.routeLiveInfo leg travelMode (Just journeyReq.parentSearchId.getId)) "multimodal getFare"
+          legFare@(_, mbTotalLegFare) <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.routeLiveInfo leg travelMode (Just journeyReq.parentSearchId.getId) blacklistedServiceTiers blacklistedFareQuoteTypes) "multimodal getFare"
           let onboardedSingleModeVehicle =
                 if travelMode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]
                   then
@@ -543,8 +545,10 @@ addAllLegs ::
   DJourney.Journey ->
   Maybe [DJourneyLeg.JourneyLeg] ->
   [DJourneyLeg.JourneyLeg] ->
+  [Spec.ServiceTierType] ->
+  [DFRFSQuote.FRFSQuoteType] ->
   m ()
-addAllLegs journey mbOldJourneyLegs newJourneyLegs = do
+addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers blacklistedFareQuoteTypes = do
   oldLegs <- maybe (QJourneyLeg.getJourneyLegs journey.id) pure mbOldJourneyLegs
   let filteredOldLegs = filter (\leg1 -> all (\leg2 -> leg1.sequenceNumber /= leg2.sequenceNumber) newJourneyLegs) oldLegs
   let allLegs = sortBy (comparing (.sequenceNumber)) (filteredOldLegs ++ newJourneyLegs)
@@ -559,13 +563,13 @@ addAllLegs journey mbOldJourneyLegs newJourneyLegs = do
           let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) journeyLeg.mode toLocation.address
           void $ addTaxiLeg journey snappedLeg originAddress destinationAddress (upsertJourneyLegAction journeyLeg)
         DTrip.Metro -> do
-          void $ addMetroLeg journey journeyLeg (upsertJourneyLegAction journeyLeg)
+          void $ addMetroLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes
         DTrip.Subway -> do
-          void $ addSubwayLeg journey journeyLeg (upsertJourneyLegAction journeyLeg)
+          void $ addSubwayLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes
         DTrip.Walk ->
           upsertJourneyLegAction journeyLeg journeyLeg.id.getId
         DTrip.Bus -> do
-          void $ addBusLeg journey journeyLeg journeyLeg.userBookedBusServiceTierType (upsertJourneyLegAction journeyLeg)
+          void $ addBusLeg journey journeyLeg journeyLeg.userBookedBusServiceTierType (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes
   where
     upsertJourneyLegAction :: JL.SearchRequestFlow m r c => DJourneyLeg.JourneyLeg -> Text -> m ()
     upsertJourneyLegAction journeyLeg searchId = upsertJourneyLeg (journeyLeg {DJourneyLeg.legSearchId = Just searchId})
@@ -723,8 +727,10 @@ addMetroLeg ::
   DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
   (forall m1 r1 c1. JL.SearchRequestFlow m1 r1 c1 => Text -> m1 ()) ->
+  [Spec.ServiceTierType] ->
+  [DFRFSQuote.FRFSQuoteType] ->
   m JL.SearchResponse
-addMetroLeg journey journeyLeg upsertJourneyLegAction = do
+addMetroLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let metroSearchReq = mkMetroLegReq merchantOperatingCity.city
   JL.search metroSearchReq
@@ -739,7 +745,9 @@ addMetroLeg journey journeyLeg upsertJourneyLegAction = do
             multimodalSearchRequestId = Just journey.searchRequestId,
             city,
             journeyLeg,
-            upsertJourneyLegAction
+            upsertJourneyLegAction,
+            blacklistedServiceTiers = blacklistedServiceTiers,
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
           }
 
 addSubwayLeg ::
@@ -747,8 +755,10 @@ addSubwayLeg ::
   DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
   (forall m1 r1 c1. JL.SearchRequestFlow m1 r1 c1 => Text -> m1 ()) ->
+  [Spec.ServiceTierType] ->
+  [DFRFSQuote.FRFSQuoteType] ->
   m JL.SearchResponse
-addSubwayLeg journey journeyLeg upsertJourneyLegAction = do
+addSubwayLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let subwaySearchReq = mkSubwayLegReq merchantOperatingCity.city
   JL.search subwaySearchReq
@@ -763,7 +773,9 @@ addSubwayLeg journey journeyLeg upsertJourneyLegAction = do
             multimodalSearchRequestId = Just journey.searchRequestId,
             city,
             journeyLeg,
-            upsertJourneyLegAction
+            upsertJourneyLegAction,
+            blacklistedServiceTiers = blacklistedServiceTiers,
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
           }
 
 addBusLeg ::
@@ -772,8 +784,10 @@ addBusLeg ::
   DJourneyLeg.JourneyLeg ->
   Maybe Spec.ServiceTierType ->
   (forall m1 r1 c1. JL.SearchRequestFlow m1 r1 c1 => Text -> m1 ()) ->
+  [Spec.ServiceTierType] ->
+  [DFRFSQuote.FRFSQuoteType] ->
   m JL.SearchResponse
-addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction = do
+addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let busSearchReq = mkBusLegReq merchantOperatingCity.city
   JL.search busSearchReq
@@ -789,7 +803,9 @@ addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction = do
             city,
             journeyLeg,
             upsertJourneyLegAction,
-            serviceTier = mbServiceTier
+            serviceTier = mbServiceTier,
+            blacklistedServiceTiers = blacklistedServiceTiers,
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
           }
 
 getUnifiedQR :: DJourney.Journey -> [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
@@ -1002,8 +1018,10 @@ extendLeg ::
   Distance ->
   Seconds ->
   Maybe (Id DBUR.BookingUpdateRequest) ->
+  [Spec.ServiceTierType] ->
+  [DFRFSQuote.FRFSQuoteType] ->
   m ()
-extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newDuration bookingUpdateReqId = do
+extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newDuration bookingUpdateReqId blacklistedServiceTiers blacklistedFareQuoteTypes = do
   journey <- getJourney journeyId
   endLocation <- maybe (fromMaybeM (InvalidRequest $ "toLocation not found for journeyId: " <> show journey.id.getId) journey.toLocation >>= return . DLoc.makeLocationAPIEntity) return mbEndLocation
   allLegs <- QJourneyLeg.getJourneyLegs journeyId
@@ -1022,7 +1040,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
         forM_ legsToCancel $ \currLeg -> deleteLeg currLeg (SCR.CancellationReasonCode "") False Nothing
         QJourneyLeg.create journeyLeg
         updateJourneyChangeLogCounter journeyId
-        addAllLegs journey Nothing [journeyLeg]
+        addAllLegs journey Nothing [journeyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes
     -- check this code
     JL.StartLocation startlocation -> do
       currentLeg <- find (\leg -> leg.sequenceNumber == startlocation.legOrder) allLegs & fromMaybeM (InvalidRequest $ "Cannot find leg with order: " <> show startlocation.legOrder)
@@ -1172,7 +1190,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation _ = do
       let distance = convertMetersToDistance Meter distResp.distance
       now <- getCurrentTime
       let multiModalLeg = mkMultiModalTaxiLeg distance distResp.duration MultiModalTypes.Unspecified startLocation.lat startLocation.lon endLocation.lat endLocation.lon
-      (isFareMandatory, estimatedFare) <- JLI.getFare (Just now) journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId Nothing multiModalLeg DTrip.Taxi Nothing
+      (isFareMandatory, estimatedFare) <- JLI.getFare (Just now) journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId Nothing multiModalLeg DTrip.Taxi Nothing [] []
       when (isFareMandatory && isNothing estimatedFare) $ throwError (InvalidRequest "Fare is mandatory for this leg, but unavailable")
       return $
         APITypes.ExtendLegGetFareResp
@@ -1250,12 +1268,14 @@ switchLeg ::
   Id DJourney.Journey ->
   Id DPerson.Person ->
   APITypes.SwitchLegReq ->
+  Maybe Bool ->
   m ()
-switchLeg journeyId _ req = do
+switchLeg journeyId _ req filterServiceAndJrnyType = do
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId req.legOrder
   canSwitch <- canBeSwitched journeyLeg req.newMode
   unless canSwitch $ do throwError (JourneyLegCannotBeSwitched journeyLeg.id.getId)
-
+  let blacklistedServiceTiers = if filterServiceAndJrnyType == Just False then [] else [Spec.AC_EMU_FIRST_CLASS]
+  let blacklistedFareQuoteTypes = if filterServiceAndJrnyType == Just False then [] else [DFRFSQuote.ReturnJourney]
   startLocation <- return $ fromMaybe journeyLeg.startLocation req.startLocation
   (newDistance, newDuration) <-
     case req.newMode of
@@ -1278,7 +1298,7 @@ switchLeg journeyId _ req = do
     deleteLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
     newJourneyLeg <- updateJourneyLeg journeyLeg req.newMode startLocation newDistance newDuration
     journey <- getJourney journeyId
-    addAllLegs journey Nothing [newJourneyLeg]
+    addAllLegs journey Nothing [newJourneyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes
   where
     updateJourneyLeg ::
       ( CacheFlow m r,

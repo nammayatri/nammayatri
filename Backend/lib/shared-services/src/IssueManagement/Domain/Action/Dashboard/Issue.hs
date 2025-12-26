@@ -18,6 +18,7 @@ import qualified IssueManagement.Domain.Action.UI.Issue as UIR
 import qualified IssueManagement.Domain.Types.Issue.Comment as DC
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIC
 import qualified IssueManagement.Domain.Types.Issue.IssueChat as DICT
+import qualified IssueManagement.Domain.Types.Issue.IssueConfig as DICFG
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage as DIM
 import IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as DIO
@@ -1088,3 +1089,604 @@ defaultAllowedRideStatuses = [R_CANCELLED, R_COMPLETED]
 
 issueTicketExecLockKey :: Text -> Text
 issueTicketExecLockKey ticketId = "IssueTicketExec:TicketId-" <> ticketId
+
+-----------------------------------------------------------
+-- Get Category Detail API ---------------------------------
+
+getCategoryDetail ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DIC.IssueCategory ->
+  Maybe Language ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.IssueCategoryDetailRes
+getCategoryDetail merchantShortId city categoryId mbLanguage issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  let language = fromMaybe ENGLISH mbLanguage
+  issueCategory <- CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryNotFound categoryId.getId)
+  when (issueCategory.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+  translations <- QIT.findAllBySentence issueCategory.category
+  categoryMessages <- CQIM.findAllActiveByCategoryIdAndLanguage categoryId language identifier
+  categoryOptions <- CQIO.findAllByCategoryAndLanguage categoryId language identifier
+  messages <- mapM (mkMessageDetailRes language identifier) categoryMessages
+  options <- mapM (mkOptionDetailResWithoutChildren language identifier) categoryOptions
+  let categoryRes = mkIssueCategoryRes issueCategory Nothing
+  pure $
+    Common.IssueCategoryDetailRes
+      { category = categoryRes,
+        translations = mkTranslation <$> translations,
+        messages = messages,
+        options = options
+      }
+  where
+    mkIssueCategoryRes :: DIC.IssueCategory -> Maybe DIT.IssueTranslation -> Common.IssueCategoryRes
+    mkIssueCategoryRes issueCategory mbTranslation =
+      Common.IssueCategoryRes
+        { issueCategoryId = cast issueCategory.id,
+          label = issueCategory.category & T.toUpper & T.replace " " "_",
+          category = fromMaybe issueCategory.category $ mbTranslation <&> (.translation),
+          logoUrl = issueCategory.logoUrl,
+          categoryType = issueCategory.categoryType,
+          isRideRequired = issueCategory.isRideRequired,
+          maxAllowedRideAge = issueCategory.maxAllowedRideAge,
+          allowedRideStatuses = issueCategory.allowedRideStatuses
+        }
+
+    mkTranslation :: DIT.IssueTranslation -> Translation
+    mkTranslation trans =
+      Translation
+        { language = trans.language,
+          translation = trans.translation
+        }
+
+-----------------------------------------------------------
+-- Get Option Detail API -----------------------------------
+
+getOptionDetail ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DIO.IssueOption ->
+  Maybe Language ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.IssueOptionDetailRes
+getOptionDetail merchantShortId city optionId mbLanguage issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  let language = fromMaybe ENGLISH mbLanguage
+  issueOption <- CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId)
+  when (issueOption.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+  mkOptionDetailRes language identifier (issueOption, Nothing)
+
+-----------------------------------------------------------
+-- Get Message Detail API ----------------------------------
+
+getMessageDetail ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DIM.IssueMessage ->
+  Maybe Language ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.IssueMessageDetailRes
+getMessageDetail merchantShortId city messageId mbLanguage issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  let language = fromMaybe ENGLISH mbLanguage
+  (issueMessage, translation, mediaFileUrls) <- CQIM.findByIdAndLanguage messageId language identifier >>= fromMaybeM (IssueMessageDoesNotExist messageId.getId)
+  when (issueMessage.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+  mkMessageDetailRes language identifier (issueMessage, translation, mediaFileUrls)
+
+-----------------------------------------------------------
+-- List Messages API ---------------------------------------
+
+listMessages ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Maybe (Id DIC.IssueCategory) ->
+  Maybe (Id DIO.IssueOption) ->
+  Maybe Bool ->
+  Maybe Language ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.IssueMessageListRes
+listMessages merchantShortId city mbCategoryId mbOptionId mbIsActive mbLanguage issueHandle identifier = do
+  _merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  let language = fromMaybe ENGLISH mbLanguage
+  issueMessages <- case (mbCategoryId, mbOptionId) of
+    (Just catId, Nothing) -> CQIM.findAllActiveByCategoryIdAndLanguage catId language identifier
+    (Nothing, Just optId) -> CQIM.findAllActiveByOptionIdAndLanguage optId language identifier
+    (Just catId, Just _) -> CQIM.findAllActiveByCategoryIdAndLanguage catId language identifier -- prioritize categoryId
+    (Nothing, Nothing) -> throwError $ InvalidRequest "Either categoryId or optionId is required to list messages"
+  let filteredMessages = case mbIsActive of
+        Just isActive -> filter (\(msg, _, _) -> msg.isActive == isActive) issueMessages
+        Nothing -> issueMessages
+  messages <- mapM (mkMessageDetailRes language identifier) filteredMessages
+  pure $ Common.IssueMessageListRes {messages = messages}
+
+-----------------------------------------------------------
+-- List Options API ----------------------------------------
+
+listOptions ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Maybe (Id DIC.IssueCategory) ->
+  Maybe (Id DIM.IssueMessage) ->
+  Maybe Bool ->
+  Maybe Language ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.IssueOptionListRes
+listOptions merchantShortId city mbCategoryId mbMessageId mbIsActive mbLanguage issueHandle identifier = do
+  _merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  let language = fromMaybe ENGLISH mbLanguage
+  issueOptions <- case (mbCategoryId, mbMessageId) of
+    (Just catId, Nothing) -> CQIO.findAllByCategoryAndLanguage catId language identifier
+    (Nothing, Just msgId) -> CQIO.findAllActiveByMessageAndLanguage msgId language identifier
+    (Just _, Just msgId) -> CQIO.findAllActiveByMessageAndLanguage msgId language identifier
+    (Nothing, Nothing) -> throwError $ InvalidRequest "Either categoryId or messageId is required to list options"
+  let filteredOptions = case mbIsActive of
+        Just isActive -> filter (\(opt, _) -> opt.isActive == isActive) issueOptions
+        Nothing -> issueOptions
+  options <- mapM (mkOptionDetailResWithoutChildren language identifier) filteredOptions
+  pure $ Common.IssueOptionListRes {options = options}
+
+-----------------------------------------------------------
+-- Delete (Deactivate) Category API ------------------------
+
+deleteIssueCategory ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DIC.IssueCategory ->
+  ServiceHandle m ->
+  Identifier ->
+  m APISuccess
+deleteIssueCategory merchantShortId city categoryId issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  issueCategory <- CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryNotFound categoryId.getId)
+  when (issueCategory.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+  QIC.updateIsActive categoryId False
+  CQIC.clearAllIssueCategoryByMerchantOpCityIdAndLanguageCache merchantOperatingCity.id identifier
+  CQIC.clearIssueCategoryByIdCache categoryId identifier
+  CQIC.clearAllIssueCategoryByIdAndLanguageCache categoryId identifier
+  pure Success
+
+-----------------------------------------------------------
+-- Delete (Deactivate) Option API --------------------------
+
+deleteIssueOption ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DIO.IssueOption ->
+  ServiceHandle m ->
+  Identifier ->
+  m APISuccess
+deleteIssueOption merchantShortId city optionId issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  issueOption <- CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId)
+  when (issueOption.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+  QIO.updateIsActive optionId False
+  CQIO.clearAllIssueOptionByIdAndLanguageCache optionId identifier
+  CQIO.clearIssueOptionByIdCache optionId identifier
+  maybe (return ()) (\msgId -> CQIO.clearAllIssueOptionByMessageAndLanguageCache (Id msgId) identifier) issueOption.issueMessageId
+  pure Success
+
+-----------------------------------------------------------
+-- Delete (Deactivate) Message API -------------------------
+
+deleteIssueMessage ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DIM.IssueMessage ->
+  ServiceHandle m ->
+  Identifier ->
+  m APISuccess
+deleteIssueMessage merchantShortId city messageId issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  issueMessage <- CQIM.findById messageId identifier >>= fromMaybeM (IssueMessageDoesNotExist messageId.getId)
+  when (issueMessage.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+  QIM.updateIsActive messageId False
+  CQIM.clearAllIssueMessageByIdAndLanguageCache messageId identifier
+  CQIM.clearIssueMessageByIdCache messageId identifier
+  maybe (return ()) (`CQIM.clearAllIssueMessageByCategoryIdAndLanguageCache` identifier) issueMessage.categoryId
+  maybe (return ()) (`CQIM.clearAllIssueMessageByOptionIdAndLanguageCache` identifier) issueMessage.optionId
+  pure Success
+
+-----------------------------------------------------------
+-- Preview Category Flow API -------------------------------
+
+previewCategoryFlow ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DIC.IssueCategory ->
+  Maybe Language ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.IssueCategoryFlowPreviewRes
+previewCategoryFlow merchantShortId city categoryId mbLanguage issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  let language = fromMaybe ENGLISH mbLanguage
+  issueCategory <- CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryNotFound categoryId.getId)
+  when (issueCategory.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+  categoryMessages <- CQIM.findAllActiveByCategoryIdAndLanguage categoryId language identifier
+  flowNodes <- buildFlowNodes language identifier categoryMessages
+  let categoryRes = mkIssueCategoryResForPreview issueCategory Nothing
+  pure $
+    Common.IssueCategoryFlowPreviewRes
+      { category = categoryRes,
+        flowNodes = flowNodes
+      }
+  where
+    mkIssueCategoryResForPreview :: DIC.IssueCategory -> Maybe DIT.IssueTranslation -> Common.IssueCategoryRes
+    mkIssueCategoryResForPreview issueCategory mbTranslation =
+      Common.IssueCategoryRes
+        { issueCategoryId = cast issueCategory.id,
+          label = issueCategory.category & T.toUpper & T.replace " " "_",
+          category = fromMaybe issueCategory.category $ mbTranslation <&> (.translation),
+          logoUrl = issueCategory.logoUrl,
+          categoryType = issueCategory.categoryType,
+          isRideRequired = issueCategory.isRideRequired,
+          maxAllowedRideAge = issueCategory.maxAllowedRideAge,
+          allowedRideStatuses = issueCategory.allowedRideStatuses
+        }
+
+buildFlowNodes ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  Language ->
+  Identifier ->
+  [(DIM.IssueMessage, DIT.DetailedTranslation, [Text])] ->
+  m [Common.MessageFlowNode]
+buildFlowNodes language identifier messages = do
+  let sortedMessages = DL.sortOn (\(msg, _, _) -> msg.priority) messages
+  mapM (buildMessageFlowNode language identifier) sortedMessages
+
+buildMessageFlowNode ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  Language ->
+  Identifier ->
+  (DIM.IssueMessage, DIT.DetailedTranslation, [Text]) ->
+  m Common.MessageFlowNode
+buildMessageFlowNode language identifier (msg, translation, _) = do
+  childOptions <- CQIO.findAllActiveByMessageAndLanguage msg.id language identifier
+  optionNodes <- mapM (buildOptionFlowNode language identifier) childOptions
+  let messagePreview =
+        Common.MessagePreview
+          { messageId = cast msg.id,
+            message = fromMaybe msg.message (translation.contentTranslation <&> (.translation)),
+            messageTitle = (translation.titleTranslation <&> (.translation)) <|> msg.messageTitle,
+            messageAction = (translation.actionTranslation <&> (.translation)) <|> msg.messageAction,
+            label = msg.label,
+            messageType = msg.messageType
+          }
+  pure $
+    Common.MessageFlowNode
+      { message = messagePreview,
+        options = optionNodes,
+        nextMessage = Nothing
+      }
+
+buildOptionFlowNode ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  Language ->
+  Identifier ->
+  (DIO.IssueOption, Maybe DIT.IssueTranslation) ->
+  m Common.OptionFlowNode
+buildOptionFlowNode language identifier (opt, mbTranslation) = do
+  optionMessages <- CQIM.findAllActiveByOptionIdAndLanguage opt.id language identifier
+  childNodes <- mapM (buildMessageFlowNode language identifier) optionMessages
+  pure $
+    Common.OptionFlowNode
+      { optionId = cast opt.id,
+        option = fromMaybe opt.option $ mbTranslation <&> (.translation),
+        label = opt.label,
+        childNodes = childNodes
+      }
+
+-----------------------------------------------------------
+-- Translation APIs ----------------------------------------
+
+getTranslations ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Text ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.IssueTranslationListRes
+getTranslations merchantShortId city sentence issueHandle _identifier = do
+  _merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  translations <- QIT.findAllBySentence sentence
+  pure $
+    Common.IssueTranslationListRes
+      { translations = mkTranslationItem <$> translations
+      }
+  where
+    mkTranslationItem :: DIT.IssueTranslation -> Common.IssueTranslationItem
+    mkTranslationItem trans =
+      Common.IssueTranslationItem
+        { sentence = trans.sentence,
+          language = trans.language,
+          translation = trans.translation
+        }
+
+bulkUpsertTranslations ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Common.BulkUpsertTranslationsReq ->
+  ServiceHandle m ->
+  Identifier ->
+  m APISuccess
+bulkUpsertTranslations merchantShortId city req issueHandle _identifier = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  mapM_ (upsertSingleTranslation merchantOperatingCity) req.translations
+  pure Success
+  where
+    upsertSingleTranslation merchantOpCity item = do
+      upsertTranslations item.sentence Nothing merchantOpCity [Translation item.language item.translation]
+
+-----------------------------------------------------------
+-- IssueConfig APIs ----------------------------------------
+
+getIssueConfig ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.IssueConfigRes
+getIssueConfig merchantShortId city issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  issueConfig <- CQI.findByMerchantOpCityId merchantOperatingCity.id identifier >>= fromMaybeM (IssueConfigNotFound merchantOperatingCity.id.getId)
+  pure $
+    Common.IssueConfigRes
+      { issueConfigId = cast issueConfig.id,
+        autoMarkIssueClosedDuration = issueConfig.autoMarkIssueClosedDuration,
+        onCreateIssueMsgs = cast <$> issueConfig.onCreateIssueMsgs,
+        onIssueReopenMsgs = cast <$> issueConfig.onIssueReopenMsgs,
+        onAutoMarkIssueClsMsgs = cast <$> issueConfig.onAutoMarkIssueClsMsgs,
+        onKaptMarkIssueResMsgs = cast <$> issueConfig.onKaptMarkIssueResMsgs,
+        onIssueCloseMsgs = cast <$> issueConfig.onIssueCloseMsgs,
+        reopenCount = issueConfig.reopenCount,
+        merchantName = issueConfig.messageTransformationConfig >>= (.merchantName),
+        supportEmail = issueConfig.messageTransformationConfig >>= (.supportEmail)
+      }
+
+updateIssueConfig ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Common.UpdateIssueConfigReq ->
+  ServiceHandle m ->
+  Identifier ->
+  m APISuccess
+updateIssueConfig merchantShortId city req issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  issueConfig <- CQI.findByMerchantOpCityId merchantOperatingCity.id identifier >>= fromMaybeM (IssueConfigNotFound merchantOperatingCity.id.getId)
+  now <- getCurrentTime
+  let updatedConfig =
+        issueConfig
+          { DICFG.autoMarkIssueClosedDuration = fromMaybe issueConfig.autoMarkIssueClosedDuration req.autoMarkIssueClosedDuration,
+            DICFG.onCreateIssueMsgs = maybe issueConfig.onCreateIssueMsgs (map cast) req.onCreateIssueMsgs,
+            DICFG.onIssueReopenMsgs = maybe issueConfig.onIssueReopenMsgs (map cast) req.onIssueReopenMsgs,
+            DICFG.onAutoMarkIssueClsMsgs = maybe issueConfig.onAutoMarkIssueClsMsgs (map cast) req.onAutoMarkIssueClsMsgs,
+            DICFG.onKaptMarkIssueResMsgs = maybe issueConfig.onKaptMarkIssueResMsgs (map cast) req.onKaptMarkIssueResMsgs,
+            DICFG.onIssueCloseMsgs = maybe issueConfig.onIssueCloseMsgs (map cast) req.onIssueCloseMsgs,
+            DICFG.reopenCount = fromMaybe issueConfig.reopenCount req.reopenCount,
+            DICFG.updatedAt = now
+          }
+  CQI.updateByPrimaryKey updatedConfig
+  CQI.clearIssueConfigCache merchantOperatingCity.id identifier
+  pure Success
+
+-----------------------------------------------------------
+-- Reorder APIs --------------------------------------------
+
+reorderCategories ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Common.ReorderIssueCategoryReq ->
+  ServiceHandle m ->
+  Identifier ->
+  m APISuccess
+reorderCategories merchantShortId city req issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  mapM_
+    ( \(catId, newPriority) -> do
+        issueCategory <- CQIC.findById catId identifier >>= fromMaybeM (IssueCategoryNotFound catId.getId)
+        when (issueCategory.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+        QIC.updatePriority catId newPriority
+        CQIC.clearIssueCategoryByIdCache catId identifier
+        CQIC.clearAllIssueCategoryByIdAndLanguageCache catId identifier
+    )
+    req.categoryOrder
+  CQIC.clearAllIssueCategoryByMerchantOpCityIdAndLanguageCache merchantOperatingCity.id identifier
+  pure Success
+
+reorderOptions ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Common.ReorderIssueOptionReq ->
+  ServiceHandle m ->
+  Identifier ->
+  m APISuccess
+reorderOptions merchantShortId city req issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  mapM_
+    ( \(optId, newPriority) -> do
+        issueOption <- CQIO.findById optId identifier >>= fromMaybeM (IssueOptionNotFound optId.getId)
+        when (issueOption.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+        QIO.updatePriority optId newPriority
+        CQIO.clearIssueOptionByIdCache optId identifier
+        CQIO.clearAllIssueOptionByIdAndLanguageCache optId identifier
+    )
+    req.optionOrder
+  pure Success
+
+reorderMessages ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Common.ReorderIssueMessageReq ->
+  ServiceHandle m ->
+  Identifier ->
+  m APISuccess
+reorderMessages merchantShortId city req issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  mapM_
+    ( \(msgId, newPriority) -> do
+        issueMessage <- CQIM.findById msgId identifier >>= fromMaybeM (IssueMessageDoesNotExist msgId.getId)
+        when (issueMessage.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+        QIM.updatePriority msgId newPriority
+        CQIM.clearIssueMessageByIdCache msgId identifier
+        CQIM.clearAllIssueMessageByIdAndLanguageCache msgId identifier
+    )
+    req.messageOrder
+  pure Success
+
+-----------------------------------------------------------
+-- Helper Functions ----------------------------------------
+
+mkMessageDetailRes ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  Language ->
+  Identifier ->
+  (DIM.IssueMessage, DIT.DetailedTranslation, [Text]) ->
+  m Common.IssueMessageDetailRes
+mkMessageDetailRes language identifier (msg, translation, _mediaFileUrls) = do
+  childOptions <- CQIO.findAllActiveByMessageAndLanguage msg.id language identifier
+  childOptionDetails <- mapM (mkOptionDetailResWithoutChildren language identifier) childOptions
+  mediaFiles <- CQMF.findAllInForIssueReportId msg.mediaFiles (cast msg.id) identifier
+  pure $
+    Common.IssueMessageDetailRes
+      { messageId = cast msg.id,
+        message = fromMaybe msg.message (translation.contentTranslation <&> (.translation)),
+        messageTitle = (translation.titleTranslation <&> (.translation)) <|> msg.messageTitle,
+        messageAction = (translation.actionTranslation <&> (.translation)) <|> msg.messageAction,
+        label = msg.label,
+        priority = msg.priority,
+        messageType = msg.messageType,
+        isActive = msg.isActive,
+        mediaFiles = mediaFiles,
+        translations =
+          Common.DetailedTranslationRes
+            { titleTranslation = mkTranslationList translation.titleTranslation,
+              contentTranslation = mkTranslationList translation.contentTranslation,
+              actionTranslation = mkTranslationList translation.actionTranslation
+            },
+        childOptions = childOptionDetails
+      }
+  where
+    mkTranslationList :: Maybe DIT.IssueTranslation -> [Translation]
+    mkTranslationList (Just t) = [Translation t.language t.translation]
+    mkTranslationList Nothing = []
+
+mkOptionDetailRes ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  Language ->
+  Identifier ->
+  (DIO.IssueOption, Maybe DIT.IssueTranslation) ->
+  m Common.IssueOptionDetailRes
+mkOptionDetailRes language identifier (opt, mbTranslation) = do
+  translations <- QIT.findAllBySentence opt.option
+  childMessages <- CQIM.findAllActiveByOptionIdAndLanguage opt.id language identifier
+  childMessageDetails <- mapM (mkMessageDetailRes language identifier) childMessages
+  pure $
+    Common.IssueOptionDetailRes
+      { optionId = cast opt.id,
+        option = fromMaybe opt.option $ mbTranslation <&> (.translation),
+        label = opt.label,
+        priority = opt.priority,
+        isActive = opt.isActive,
+        translations = mkTranslation <$> translations,
+        childMessages = childMessageDetails
+      }
+  where
+    mkTranslation :: DIT.IssueTranslation -> Translation
+    mkTranslation trans = Translation trans.language trans.translation
+
+mkOptionDetailResWithoutChildren ::
+  BeamFlow m r =>
+  Language ->
+  Identifier ->
+  (DIO.IssueOption, Maybe DIT.IssueTranslation) ->
+  m Common.IssueOptionDetailRes
+mkOptionDetailResWithoutChildren _language _identifier (opt, mbTranslation) = do
+  translations <- QIT.findAllBySentence opt.option
+  pure $
+    Common.IssueOptionDetailRes
+      { optionId = cast opt.id,
+        option = fromMaybe opt.option $ mbTranslation <&> (.translation),
+        label = opt.label,
+        priority = opt.priority,
+        isActive = opt.isActive,
+        translations = mkTranslation <$> translations,
+        childMessages = []
+      }
+  where
+    mkTranslation :: DIT.IssueTranslation -> Translation
+    mkTranslation trans = Translation trans.language trans.translation

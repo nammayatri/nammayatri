@@ -4,5 +4,5 @@
     "How wonderful it is that nobody need wait a single moment before starting to improve the world"
 , appBackendToken = "some-secret-dashboard-token-for-rider-app"
 , slackToken = "xoxb-slack-token"
-, bharatTaxiToken = "da6fbae2-f0c9-49de-bc48-3a40a09208b9"
+, bharatTaxiToken = "6a265bb3-3af3-4265-8093-07c6a4a7afb1"
 }
