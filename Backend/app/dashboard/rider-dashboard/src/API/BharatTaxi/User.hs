@@ -21,14 +21,14 @@ module API.BharatTaxi.User
 where
 
 import Data.Aeson (Value)
-import qualified Domain.Types.Role as DRole
+import qualified "lib-dashboard" Domain.Types.AccessMatrix as DMatrix
 import "lib-dashboard" Domain.Types.ServerName as DSN
 import "lib-dashboard" Environment
 import qualified EulerHS.Types as ET
 import Kernel.Prelude hiding (toList)
 import Kernel.Utils.Common (withFlowHandlerAPI')
 import Servant
-import Tools.Auth.Dashboard (DashboardAuth, TokenInfo)
+import "lib-dashboard" Tools.Auth.Api (ApiAuth, ApiTokenInfo)
 import "lib-dashboard" Tools.Client as Client
 
 type ExternalFromListAPI =
@@ -77,6 +77,7 @@ type ExternalInvoiceAPI =
     :> "v1"
     :> "invoice"
     :> QueryParam' '[Required] "bookingId" Text
+    :> QueryParam' '[Required] "riderPhoneNumber" Text
     :> Header "accept" Text
     :> Header "token" Text
     :> Get '[JSON] Value
@@ -155,61 +156,73 @@ type ExternalDriversCreateAPI =
 
 type API =
   "bharatTaxi"
-    :> DashboardAuth 'DRole.DASHBOARD_USER
     :> ( "fromList"
+           :> ApiAuth 'DSN.BHARAT_TAXI 'DMatrix.BHARAT_TAXI_USER 'DMatrix.BHARAT_TAXI_FROM_LIST
            :> Get '[JSON] Value
            :<|> "toList"
+           :> ApiAuth 'DSN.BHARAT_TAXI 'DMatrix.BHARAT_TAXI_USER 'DMatrix.BHARAT_TAXI_TO_LIST
            :> Get '[JSON] Value
            :<|> "estimate"
+           :> ApiAuth 'DSN.BHARAT_TAXI 'DMatrix.BHARAT_TAXI_USER 'DMatrix.BHARAT_TAXI_ESTIMATE
            :> ReqBody '[JSON] Value
            :> Post '[JSON] Value
            :<|> "booking"
+           :> ApiAuth 'DSN.BHARAT_TAXI 'DMatrix.BHARAT_TAXI_USER 'DMatrix.BHARAT_TAXI_BOOKING
            :> QueryParam' '[Required] "estimateId" Text
            :> QueryParam' '[Required] "rider_id" Text
            :> QueryParam' '[Required] "payment_mode" Text
            :> Post '[JSON] Value
            :<|> "invoice"
+           :> ApiAuth 'DSN.BHARAT_TAXI 'DMatrix.BHARAT_TAXI_USER 'DMatrix.BHARAT_TAXI_INVOICE
            :> QueryParam' '[Required] "bookingId" Text
+           :> QueryParam' '[Required] "riderPhoneNumber" Text
            :> Get '[JSON] Value
            :<|> "booking"
            :> "latest"
+           :> ApiAuth 'DSN.BHARAT_TAXI 'DMatrix.BHARAT_TAXI_USER 'DMatrix.BHARAT_TAXI_BOOKING_LATEST
            :> QueryParam' '[Required] "riderId" Text
            :> Get '[JSON] Value
            :<|> "booking"
+           :> ApiAuth 'DSN.BHARAT_TAXI 'DMatrix.BHARAT_TAXI_USER 'DMatrix.BHARAT_TAXI_BOOKING_BY_ID
            :> Capture "bookingId" Text
            :> Get '[JSON] Value
            :<|> "booking"
+           :> ApiAuth 'DSN.BHARAT_TAXI 'DMatrix.BHARAT_TAXI_USER 'DMatrix.BHARAT_TAXI_UPDATE_BOOKING
            :> Capture "bookingId" Text
            :> ReqBody '[JSON] Value
            :> Put '[JSON] Value
            :<|> "vehicles"
+           :> ApiAuth 'DSN.BHARAT_TAXI 'DMatrix.BHARAT_TAXI_USER 'DMatrix.BHARAT_TAXI_VEHICLES_LIST
            :> QueryParam "driverNo" Text
            :> Get '[JSON] Value
            :<|> "vehicles"
+           :> ApiAuth 'DSN.BHARAT_TAXI 'DMatrix.BHARAT_TAXI_USER 'DMatrix.BHARAT_TAXI_VEHICLES_CREATE
            :> ReqBody '[JSON] Value
            :> Post '[JSON] Value
            :<|> "drivers"
+           :> ApiAuth 'DSN.BHARAT_TAXI 'DMatrix.BHARAT_TAXI_USER 'DMatrix.BHARAT_TAXI_DRIVERS_LIST
            :> QueryParam "vehicleNumber" Text
            :> Get '[JSON] Value
            :<|> "drivers"
+           :> ApiAuth 'DSN.BHARAT_TAXI 'DMatrix.BHARAT_TAXI_USER 'DMatrix.BHARAT_TAXI_DRIVERS_CREATE
            :> ReqBody '[JSON] Value
            :> Post '[JSON] Value
        )
 
 handler :: FlowServer API
-handler tokenInfo =
-  fromList tokenInfo
-    :<|> toList tokenInfo
-    :<|> estimate tokenInfo
-    :<|> booking tokenInfo
-    :<|> invoice tokenInfo
-    :<|> bookingLatest tokenInfo
-    :<|> bookingById tokenInfo
-    :<|> updateBooking tokenInfo
-    :<|> vehiclesList tokenInfo
-    :<|> vehiclesCreate tokenInfo
-    :<|> driversList tokenInfo
-    :<|> driversCreate tokenInfo
+handler =
+  fromList
+    :<|> toList
+    :<|> estimate
+    :<|> booking
+    :<|> invoice
+    :<|> bookingLatest
+    :<|> bookingById
+    :<|> updateBooking
+    :<|> vehiclesList
+    :<|> vehiclesCreate
+    :<|> driversList
+    :<|> driversCreate
 
 externalFromListAPI :: Proxy ExternalFromListAPI
 externalFromListAPI = Proxy
@@ -238,7 +251,7 @@ externalBookingClient = ET.client externalBookingAPI
 externalInvoiceAPI :: Proxy ExternalInvoiceAPI
 externalInvoiceAPI = Proxy
 
-externalInvoiceClient :: Text -> Maybe Text -> Maybe Text -> ET.EulerClient Value
+externalInvoiceClient :: Text -> Text -> Maybe Text -> Maybe Text -> ET.EulerClient Value
 externalInvoiceClient = ET.client externalInvoiceAPI
 
 externalBookingLatestAPI :: Proxy ExternalBookingLatestAPI
@@ -289,7 +302,7 @@ data BharatTaxiAPIs = BharatTaxiAPIs
     toListDSL :: ET.EulerClient Value,
     estimateDSL :: Value -> ET.EulerClient Value,
     bookingDSL :: Text -> Text -> Text -> ET.EulerClient Value,
-    invoiceDSL :: Text -> ET.EulerClient Value,
+    invoiceDSL :: Text -> Text -> ET.EulerClient Value,
     bookingLatestDSL :: Text -> ET.EulerClient Value,
     bookingByIdDSL :: Text -> ET.EulerClient Value,
     updateBookingDSL :: Text -> Value -> ET.EulerClient Value,
@@ -306,7 +319,7 @@ mkBharatTaxiAPIs token =
       toListDSL = externalToListClient (Just "application/json") (Just token)
       estimateDSL = externalEstimateClient (Just "application/json") (Just token)
       bookingDSL estimateId riderId paymentMode = externalBookingClient estimateId riderId paymentMode (Just "application/json") (Just token)
-      invoiceDSL bookingId = externalInvoiceClient bookingId (Just "application/json") (Just token)
+      invoiceDSL bookingId riderPhoneNumber = externalInvoiceClient bookingId riderPhoneNumber (Just "application/json") (Just token)
       bookingLatestDSL riderId = externalBookingLatestClient riderId (Just "application/json") (Just token)
       bookingByIdDSL bookingId = externalBookingByIdClient bookingId (Just "application/json") (Just token)
       updateBookingDSL bookingId = externalUpdateBookingClient bookingId (Just "application/json") (Just token)
@@ -324,38 +337,38 @@ callBharatTaxiAPI ::
 callBharatTaxiAPI =
   Client.callServerAPI @_ @m @r DSN.BHARAT_TAXI mkBharatTaxiAPIs "callBharatTaxiAPI"
 
-fromList :: TokenInfo -> FlowHandler Value
+fromList :: ApiTokenInfo -> FlowHandler Value
 fromList _ = withFlowHandlerAPI' $ callBharatTaxiAPI (.fromListDSL)
 
-toList :: TokenInfo -> FlowHandler Value
+toList :: ApiTokenInfo -> FlowHandler Value
 toList _ = withFlowHandlerAPI' $ callBharatTaxiAPI (.toListDSL)
 
-estimate :: TokenInfo -> Value -> FlowHandler Value
+estimate :: ApiTokenInfo -> Value -> FlowHandler Value
 estimate _ req = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.estimateDSL req)
 
-booking :: TokenInfo -> Text -> Text -> Text -> FlowHandler Value
+booking :: ApiTokenInfo -> Text -> Text -> Text -> FlowHandler Value
 booking _ estimateId riderId paymentMode = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.bookingDSL estimateId riderId paymentMode)
 
-invoice :: TokenInfo -> Text -> FlowHandler Value
-invoice _ bookingId = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.invoiceDSL bookingId)
+invoice :: ApiTokenInfo -> Text -> Text -> FlowHandler Value
+invoice _ bookingId riderPhoneNumber = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.invoiceDSL bookingId riderPhoneNumber)
 
-bookingLatest :: TokenInfo -> Text -> FlowHandler Value
+bookingLatest :: ApiTokenInfo -> Text -> FlowHandler Value
 bookingLatest _ riderId = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.bookingLatestDSL riderId)
 
-bookingById :: TokenInfo -> Text -> FlowHandler Value
+bookingById :: ApiTokenInfo -> Text -> FlowHandler Value
 bookingById _ bookingId = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.bookingByIdDSL bookingId)
 
-updateBooking :: TokenInfo -> Text -> Value -> FlowHandler Value
+updateBooking :: ApiTokenInfo -> Text -> Value -> FlowHandler Value
 updateBooking _ bookingId body = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.updateBookingDSL bookingId body)
 
-vehiclesList :: TokenInfo -> Maybe Text -> FlowHandler Value
+vehiclesList :: ApiTokenInfo -> Maybe Text -> FlowHandler Value
 vehiclesList _ driverNo = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.vehiclesListDSL driverNo)
 
-vehiclesCreate :: TokenInfo -> Value -> FlowHandler Value
+vehiclesCreate :: ApiTokenInfo -> Value -> FlowHandler Value
 vehiclesCreate _ body = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.vehiclesCreateDSL body)
 
-driversList :: TokenInfo -> Maybe Text -> FlowHandler Value
+driversList :: ApiTokenInfo -> Maybe Text -> FlowHandler Value
 driversList _ vehicleNumber = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.driversListDSL vehicleNumber)
 
-driversCreate :: TokenInfo -> Value -> FlowHandler Value
+driversCreate :: ApiTokenInfo -> Value -> FlowHandler Value
 driversCreate _ body = withFlowHandlerAPI' $ callBharatTaxiAPI (\apis -> apis.driversCreateDSL body)
