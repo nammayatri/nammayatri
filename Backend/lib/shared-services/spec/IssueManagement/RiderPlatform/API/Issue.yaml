@@ -233,6 +233,7 @@ apis:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE UPSERT_ISSUE_MESSAGE
   - POST: # CreateIssueReportV2API
       endpoint: /kapture/create
+      name: PostIssueKaptureCreate
       auth: ApiAuthV2
       request:
         type: IssueReportReqV2

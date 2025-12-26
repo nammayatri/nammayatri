@@ -36,118 +36,118 @@ handler merchantId city = getIssueCategoryList merchantId city :<|> getIssueList
 
 type GetIssueCategoryList =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_CATEGORY_LIST)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_ISSUE_MANAGEMENT) / ('API.Types.ProviderPlatform.IssueManagement.ISSUE) / ('API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_CATEGORY_LIST))
       :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIssueCategoryList
   )
 
 type GetIssueList =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_LIST)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_ISSUE_MANAGEMENT) / ('API.Types.ProviderPlatform.IssueManagement.ISSUE) / ('API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_LIST))
       :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIssueList
   )
 
 type GetIssueInfo =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_INFO)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_ISSUE_MANAGEMENT) / ('API.Types.ProviderPlatform.IssueManagement.ISSUE) / ('API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_INFO))
       :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIssueInfo
   )
 
 type GetIssueInfoV2 =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_INFO_V2)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_ISSUE_MANAGEMENT) / ('API.Types.ProviderPlatform.IssueManagement.ISSUE) / ('API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_INFO_V2))
       :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIssueInfoV2
   )
 
 type PutIssueUpdate =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.PUT_ISSUE_UPDATE)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_ISSUE_MANAGEMENT) / ('API.Types.ProviderPlatform.IssueManagement.ISSUE) / ('API.Types.ProviderPlatform.IssueManagement.Issue.PUT_ISSUE_UPDATE))
       :> API.Types.ProviderPlatform.IssueManagement.Issue.PutIssueUpdate
   )
 
 type PostIssueComment =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_COMMENT)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_ISSUE_MANAGEMENT) / ('API.Types.ProviderPlatform.IssueManagement.ISSUE) / ('API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_COMMENT))
       :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueComment
   )
 
 type GetIssueMedia =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_MEDIA)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_ISSUE_MANAGEMENT) / ('API.Types.ProviderPlatform.IssueManagement.ISSUE) / ('API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_MEDIA))
       :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIssueMedia
   )
 
 type PostIssueTicketStatusCallBack =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_TICKET_STATUS_CALL_BACK)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_ISSUE_MANAGEMENT) / ('API.Types.ProviderPlatform.IssueManagement.ISSUE) / ('API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_TICKET_STATUS_CALL_BACK))
       :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueTicketStatusCallBack
   )
 
 type PostIssueCategoryCreate =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_CATEGORY_CREATE)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_ISSUE_MANAGEMENT) / ('API.Types.ProviderPlatform.IssueManagement.ISSUE) / ('API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_CATEGORY_CREATE))
       :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueCategoryCreate
   )
 
 type PostIssueCategoryUpdate =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_CATEGORY_UPDATE)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_ISSUE_MANAGEMENT) / ('API.Types.ProviderPlatform.IssueManagement.ISSUE) / ('API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_CATEGORY_UPDATE))
       :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueCategoryUpdate
   )
 
 type PostIssueOptionCreate =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_OPTION_CREATE)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_ISSUE_MANAGEMENT) / ('API.Types.ProviderPlatform.IssueManagement.ISSUE) / ('API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_OPTION_CREATE))
       :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueOptionCreate
   )
 
 type PostIssueOptionUpdate =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_OPTION_UPDATE)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_ISSUE_MANAGEMENT) / ('API.Types.ProviderPlatform.IssueManagement.ISSUE) / ('API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_OPTION_UPDATE))
       :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueOptionUpdate
   )
 
 type PostIssueMessageUpsert =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_MESSAGE_UPSERT)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_ISSUE_MANAGEMENT) / ('API.Types.ProviderPlatform.IssueManagement.ISSUE) / ('API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_MESSAGE_UPSERT))
       :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueMessageUpsert
   )
 
 getIssueCategoryList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueCategoryListRes)
 getIssueCategoryList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueCategoryList merchantShortId opCity apiTokenInfo
 
-getIssueList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe IssueManagement.Common.IssueStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Common.Ride) -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueReportListResponse)
-getIssueList merchantShortId opCity apiTokenInfo limit offset status category assignee countryCode phoneNumber rideShortId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueList merchantShortId opCity apiTokenInfo limit offset status category assignee countryCode phoneNumber rideShortId
+getIssueList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (IssueManagement.Common.IssueStatus) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory)) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueReportListResponse)
+getIssueList merchantShortId opCity apiTokenInfo limit offset status category categoryName assignee countryCode phoneNumber rideShortId descriptionSearch = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueList merchantShortId opCity apiTokenInfo limit offset status category categoryName assignee countryCode phoneNumber rideShortId descriptionSearch
 
 getIssueInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueInfoRes)
 getIssueInfo merchantShortId opCity apiTokenInfo issueId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueInfo merchantShortId opCity apiTokenInfo issueId
 
-getIssueInfoV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueInfoRes)
+getIssueInfoV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport)) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport)) -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueInfoRes)
 getIssueInfoV2 merchantShortId opCity apiTokenInfo issueId issueShortId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueInfoV2 merchantShortId opCity apiTokenInfo issueId issueShortId
 
 putIssueUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.IssueUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

@@ -159,7 +159,7 @@ type GetIssueCategoryDetail =
       :> QueryParam
            "language"
            Kernel.External.Types.Language
-      :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueCategoryDetailRes
+      :> Get ('[JSON]) IssueManagement.Common.Dashboard.Issue.IssueCategoryDetailRes
   )
 
 type GetIssueOptionDetail =
@@ -167,7 +167,7 @@ type GetIssueOptionDetail =
       :> QueryParam
            "language"
            Kernel.External.Types.Language
-      :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueOptionDetailRes
+      :> Get ('[JSON]) IssueManagement.Common.Dashboard.Issue.IssueOptionDetailRes
   )
 
 type GetIssueMessageDetail =
@@ -175,14 +175,14 @@ type GetIssueMessageDetail =
       :> QueryParam
            "language"
            Kernel.External.Types.Language
-      :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueMessageDetailRes
+      :> Get ('[JSON]) IssueManagement.Common.Dashboard.Issue.IssueMessageDetailRes
   )
 
 type GetIssueMessageList =
-  ( "message" :> "list" :> QueryParam "categoryId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory)
+  ( "message" :> "list" :> QueryParam "categoryId" ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory))
       :> QueryParam
            "optionId"
-           (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption)
+           ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption))
       :> QueryParam
            "isActive"
            Kernel.Prelude.Bool
@@ -190,15 +190,15 @@ type GetIssueMessageList =
            "language"
            Kernel.External.Types.Language
       :> Get
-           '[JSON]
+           ('[JSON])
            IssueManagement.Common.Dashboard.Issue.IssueMessageListRes
   )
 
 type GetIssueOptionList =
-  ( "option" :> "list" :> QueryParam "categoryId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory)
+  ( "option" :> "list" :> QueryParam "categoryId" ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory))
       :> QueryParam
            "messageId"
-           (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage)
+           ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage))
       :> QueryParam
            "isActive"
            Kernel.Prelude.Bool
@@ -206,28 +206,28 @@ type GetIssueOptionList =
            "language"
            Kernel.External.Types.Language
       :> Get
-           '[JSON]
+           ('[JSON])
            IssueManagement.Common.Dashboard.Issue.IssueOptionListRes
   )
 
 type DeleteIssueCategory =
   ( "category" :> Capture "categoryId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) :> "delete"
       :> Delete
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
 type DeleteIssueOption =
   ( "option" :> Capture "optionId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) :> "delete"
       :> Delete
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
 type DeleteIssueMessage =
   ( "message" :> Capture "messageId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage) :> "delete"
       :> Delete
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -236,27 +236,27 @@ type GetIssueCategoryFlowPreview =
       :> QueryParam
            "language"
            Kernel.External.Types.Language
-      :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueCategoryFlowPreviewRes
+      :> Get ('[JSON]) IssueManagement.Common.Dashboard.Issue.IssueCategoryFlowPreviewRes
   )
 
-type GetIssueTranslations = ("translation" :> "list" :> MandatoryQueryParam "sentence" Kernel.Prelude.Text :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueTranslationListRes)
+type GetIssueTranslations = ("translation" :> "list" :> MandatoryQueryParam "sentence" Kernel.Prelude.Text :> Get ('[JSON]) IssueManagement.Common.Dashboard.Issue.IssueTranslationListRes)
 
 type PostIssueBulkUpsertTranslations =
-  ( "translation" :> "bulk" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.BulkUpsertTranslationsReq
+  ( "translation" :> "bulk" :> ReqBody ('[JSON]) IssueManagement.Common.Dashboard.Issue.BulkUpsertTranslationsReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetIssueConfig = ("config" :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueConfigRes)
+type GetIssueConfig = ("config" :> Get ('[JSON]) IssueManagement.Common.Dashboard.Issue.IssueConfigRes)
 
-type PostIssueConfigUpdate = ("config" :> "update" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.UpdateIssueConfigReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostIssueConfigUpdate = ("config" :> "update" :> ReqBody ('[JSON]) IssueManagement.Common.Dashboard.Issue.UpdateIssueConfigReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type PostIssueCategoryReorder = ("category" :> "reorder" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.ReorderIssueCategoryReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostIssueCategoryReorder = ("category" :> "reorder" :> ReqBody ('[JSON]) IssueManagement.Common.Dashboard.Issue.ReorderIssueCategoryReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type PostIssueOptionReorder = ("option" :> "reorder" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.ReorderIssueOptionReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostIssueOptionReorder = ("option" :> "reorder" :> ReqBody ('[JSON]) IssueManagement.Common.Dashboard.Issue.ReorderIssueOptionReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type PostIssueMessageReorder = ("message" :> "reorder" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.ReorderIssueMessageReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostIssueMessageReorder = ("message" :> "reorder" :> ReqBody ('[JSON]) IssueManagement.Common.Dashboard.Issue.ReorderIssueMessageReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 data IssueAPIs = IssueAPIs
   { getIssueCategoryList :: (EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueCategoryListRes),
