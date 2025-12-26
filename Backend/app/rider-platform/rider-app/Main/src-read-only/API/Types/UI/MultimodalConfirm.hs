@@ -5,7 +5,7 @@ module API.Types.UI.MultimodalConfirm where
 import qualified API.Types.UI.FRFSTicketService
 import qualified BecknV2.FRFS.Enums
 import qualified Data.Aeson
-import Data.Int (Int64)
+import qualified Data.Int
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Estimate
@@ -160,6 +160,26 @@ data JourneyStatusResp = JourneyStatusResp
     journeyPaymentStatus :: Kernel.Prelude.Maybe API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI,
     journeyStatus :: Domain.Types.Journey.JourneyStatus,
     legs :: [LegStatus]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data KafKaPacket = KafKaPacket
+  { client_ip :: Kernel.Prelude.Text,
+    dataState :: Kernel.Prelude.Text,
+    deviceId :: Kernel.Prelude.Text,
+    ign_status :: Kernel.Prelude.Text,
+    lat :: Kernel.Prelude.Double,
+    long :: Kernel.Prelude.Double,
+    provider :: Kernel.Prelude.Text,
+    pushedToKafkaAt :: Data.Int.Int64,
+    raw :: Kernel.Prelude.Text,
+    routeNumber :: Kernel.Prelude.Text,
+    serverTime :: Data.Int.Int64,
+    signalQuality :: Kernel.Prelude.Text,
+    speed :: Kernel.Prelude.Double,
+    timestamp :: Data.Int.Int64,
+    vehicleNumber :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -407,38 +427,14 @@ data TransportStation = TransportStation
   deriving stock (Generic)
   deriving anyclass (ToSchema)
 
+data UpdateBusLocationReq = UpdateBusLocationReq {lat :: Kernel.Prelude.Double, long :: Kernel.Prelude.Double, timestamp :: Kernel.Prelude.Double}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data UpdatePaymentOrderReq = UpdatePaymentOrderReq {childTicketQuantity :: Kernel.Prelude.Int, quantity :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data UpdatePaymentOrderResp = UpdatePaymentOrderResp {sdkPayload :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.SDKPayloadDetails}
   deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data UpdateBusLocationReq = UpdateBusLocationReq
-  { lat :: Double,
-    long :: Double,
-    timestamp :: Double
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data KafKaPacket = KafKaPacket
-  { lat :: Double,
-    long :: Double,
-    timestamp :: Int64,
-    deviceId :: Kernel.Prelude.Text,
-    vehicleNumber :: Kernel.Prelude.Text,
-    speed :: Double,
-    pushedToKafkaAt :: Int64,
-    dataState :: Kernel.Prelude.Text,
-    serverTime :: Int64,
-    provider :: Kernel.Prelude.Text,
-    raw :: Kernel.Prelude.Text,
-    client_ip :: Kernel.Prelude.Text,
-    ign_status :: Kernel.Prelude.Text,
-    routeNumber :: Kernel.Prelude.Text,
-    signalQuality :: Kernel.Prelude.Text
-  }
-  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
