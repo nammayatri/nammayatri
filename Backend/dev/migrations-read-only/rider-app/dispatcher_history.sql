@@ -16,3 +16,8 @@ ALTER TABLE atlas_app.dispatcher_history ADD COLUMN updated_at timestamp with ti
 ALTER TABLE atlas_app.dispatcher_history ADD COLUMN waybill_no character varying(255) ;
 ALTER TABLE atlas_app.dispatcher_history ADD PRIMARY KEY ( id);
 CREATE INDEX dispatcher_history_idx_dispatcher_id ON atlas_app.dispatcher_history USING btree (dispatcher_id);
+
+
+------- SQL updates -------
+
+CREATE INDEX dispatcher_history_idx_depot_id ON atlas_app.dispatcher_history USING btree (depot_id);

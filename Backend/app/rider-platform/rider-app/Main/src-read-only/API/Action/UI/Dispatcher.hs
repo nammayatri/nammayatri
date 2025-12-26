@@ -85,10 +85,25 @@ type API =
       :> Get
            ('[JSON])
            [API.Types.UI.Dispatcher.DispatcherHistoryRes]
+      :<|> TokenAuth
+      :> "dispatcher"
+      :> "historyByDepotCode"
+      :> QueryParam
+           "depotCode"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> Get
+           ('[JSON])
+           [API.Types.UI.Dispatcher.DispatcherHistoryRes]
   )
 
 handler :: Environment.FlowServer API
-handler = getDispatcherGetFleetInfo :<|> postDispatcherUpdateFleetSchedule :<|> getDispatcherDepotNames :<|> getDispatcherDepotIds :<|> getDispatcherGetVehiclesByDepotName :<|> getDispatcherGetVehiclesByDepotId :<|> getDispatcherGetDepotNameById :<|> getDispatcherHistory
+handler = getDispatcherGetFleetInfo :<|> postDispatcherUpdateFleetSchedule :<|> getDispatcherDepotNames :<|> getDispatcherDepotIds :<|> getDispatcherGetVehiclesByDepotName :<|> getDispatcherGetVehiclesByDepotId :<|> getDispatcherGetDepotNameById :<|> getDispatcherHistory :<|> getDispatcherHistoryByDepotCode
 
 getDispatcherGetFleetInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -150,3 +165,14 @@ getDispatcherHistory ::
     Environment.FlowHandler [API.Types.UI.Dispatcher.DispatcherHistoryRes]
   )
 getDispatcherHistory a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+getDispatcherHistoryByDepotCode ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Environment.FlowHandler [API.Types.UI.Dispatcher.DispatcherHistoryRes]
+  )
+getDispatcherHistoryByDepotCode a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherHistoryByDepotCode (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
