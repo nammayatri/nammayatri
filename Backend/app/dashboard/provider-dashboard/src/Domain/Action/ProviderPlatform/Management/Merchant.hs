@@ -49,8 +49,6 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantConfigUpsertPlanAndConfigSubscription,
     postMerchantConfigOperatingCityWhiteList,
     postMerchantConfigMerchantCreate,
-    getMerchantConfigVehicleServiceTier,
-    postMerchantConfigVehicleServiceTierUpdate,
   )
 where
 
