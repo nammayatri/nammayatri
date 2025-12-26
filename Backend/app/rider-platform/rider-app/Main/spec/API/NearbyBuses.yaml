@@ -88,5 +88,6 @@ apis:
       query:
         vehicleType: VehicleCategory
         toCode: Text
+        filterServiceTier: Bool
       response:
         type: TimetableResponse

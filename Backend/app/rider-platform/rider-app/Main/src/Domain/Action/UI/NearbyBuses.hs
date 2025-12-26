@@ -214,11 +214,12 @@ getTimetableStop ::
     ) ->
     Text ->
     Text ->
+    Kernel.Prelude.Maybe Bool ->
     Kernel.Prelude.Maybe Text ->
     Kernel.Prelude.Maybe (Spe.VehicleCategory) ->
     Environment.Flow API.Types.UI.NearbyBuses.TimetableResponse
   )
-getTimetableStop (mbPersonId, mid) routeCode fromStopCode mbToCode mbVehicleType = do
+getTimetableStop (mbPersonId, mid) routeCode fromStopCode mbFilterServiceTier mbToCode mbVehicleType = do
   riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
   person <- QP.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
@@ -227,7 +228,10 @@ getTimetableStop (mbPersonId, mid) routeCode fromStopCode mbToCode mbVehicleType
 
   -- Fetch cancelled trains from Redis
   cancelledTrains <- fetchCancelledTrainsFromRedis
-
+  let blacklistServiceTiers =
+        if mbFilterServiceTier == Just False
+          then []
+          else [Spe.AC_EMU_FIRST_CLASS]
   routeStopTimeTables <-
     SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
       routeCodes <-
@@ -240,7 +244,7 @@ getTimetableStop (mbPersonId, mid) routeCode fromStopCode mbToCode mbVehicleType
       let liveSubWayTrips = map (.tripId.getId) liveSubWayTimings
       let allTrips = liveSubWayTimings ++ filter (\trip -> trip.tripId.getId `notElem` liveSubWayTrips) staticTimetable
       -- Filter out cancelled trains
-      let filteredTrips = filter (\trip -> trip.tripId.getId `notElem` cancelledTrains) allTrips
+      let filteredTrips = filter (\trip -> trip.tripId.getId `notElem` cancelledTrains && trip.serviceTierType `notElem` blacklistServiceTiers) allTrips
       return filteredTrips
 
   let tripIds = map (.tripId.getId) routeStopTimeTables
