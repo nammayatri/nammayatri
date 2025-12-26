@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.issue_report ADD COLUMN ticket_booking_id character varying(255);

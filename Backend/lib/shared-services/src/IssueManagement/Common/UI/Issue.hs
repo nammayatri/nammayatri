@@ -69,6 +69,7 @@ data IssueReportListItem = IssueReportListItem
     category :: Text,
     optionLabel :: Maybe Text,
     rideId :: Maybe (Id Ride),
+    ticketBookingId :: Maybe (Id FRFSTicketBooking),
     createdAt :: UTCTime
   }
   deriving stock (Eq, Show, Generic)
