@@ -19,6 +19,7 @@ imports:
   UnifiedTicketQR: Lib.JourneyModule.Types
   UnifiedTicketQRV2: Lib.JourneyModule.Types
   FRFSBookingPaymentStatusAPI: API.Types.UI.FRFSTicketService
+  CrisSdkResponse: API.Types.UI.FRFSTicketService
   CreateOrderResp: Kernel.External.Payment.Juspay.Types
   ExtendLegStartPoint: Lib.JourneyModule.Types
   GetFareResponse: Lib.JourneyModule.Types
@@ -195,13 +196,6 @@ types:
     result: Text
     orderSdkPayload: Maybe CreateOrderResp
     gatewayReferenceId: Maybe Text
-
-  CrisSdkResponse:
-    osType: Text
-    osBuildVersion: Text
-    bookAuthCode: Text
-    latency: Maybe Int
-    derive: "Show"
 
   LegServiceTierOptionsResp:
     options: "[AvailableRoutesByTier]"
@@ -390,6 +384,8 @@ apis:
       endpoint: /multimodal/{journeyId}/initiate
       params:
         journeyId: Id Journey
+      query:
+        filterServiceAndJrnyType: Bool
       response:
         type: JourneyInfoResp
   - POST:
@@ -428,6 +424,8 @@ apis:
       endpoint: /multimodal/{journeyId}/switch # combine with other legs if they match
       params:
         journeyId: Id Journey
+      query:
+        filterServiceAndJrnyType: Bool
       request:
         type: SwitchLegReq
       response:

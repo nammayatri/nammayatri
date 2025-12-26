@@ -12,7 +12,7 @@ import Lib.JourneyLeg.Types.Metro
 import qualified Lib.JourneyModule.Types as JT
 
 instance JT.JourneyLeg MetroLegRequest m where
-  search (MetroLegRequestSearch MetroLegRequestSearchData {..}) = CFRFS.search Spec.METRO personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId Nothing upsertJourneyLegAction
+  search (MetroLegRequestSearch MetroLegRequestSearchData {..}) = CFRFS.search Spec.METRO personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId Nothing upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes
   search _ = throwError (InternalError "Not supported")
 
   confirm (MetroLegRequestConfirm MetroLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId bookLater bookingAllowed Nothing Spec.METRO categorySelectionReq isSingleMode mbEnableOffer
@@ -30,5 +30,5 @@ instance JT.JourneyLeg MetroLegRequest m where
   getInfo (MetroLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.journeyLeg req.journeyLegs
   getInfo _ = throwError (InternalError "Not supported")
 
-  getFare (MetroLegRequestGetFare MetroLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.METRO Nothing routeDetails fromArrivalTime agencyGtfsId Nothing
+  getFare (MetroLegRequestGetFare MetroLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.METRO Nothing routeDetails fromArrivalTime agencyGtfsId Nothing blacklistedServiceTiers blacklistedFareQuoteTypes
   getFare _ = throwError (InternalError "Not supported")

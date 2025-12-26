@@ -18,6 +18,7 @@ import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNomi
 import qualified Data.Time.LocalTime as LocalTime
 import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import qualified Domain.Types.FRFSQuote as DQuote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
@@ -1138,8 +1139,10 @@ buildTrainAllViaRoutes ::
   Bool ->
   Id Person ->
   Text ->
+  [Spec.ServiceTierType] ->
+  [DQuote.FRFSQuoteType] ->
   Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute])
-buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode processAllViaPoints personId searchReqId = do
+buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode processAllViaPoints personId searchReqId blacklistedServiceTiers blacklistedFareQuoteTypes = do
   eitherAllSubwayRoutes <- withTryCatch "getAllSubwayRoutes:buildTrainAllViaRoutes" (measureLatency getAllSubwayRoutes "getAllSubwayRoutes")
   case eitherAllSubwayRoutes of
     Right allSubwayRoutes -> measureLatency (getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints) "getSubwayValidRoutes"
@@ -1174,6 +1177,13 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                     )
                     fares
                 Nothing -> fares
+          let filteredFares =
+                filter
+                  ( \fare ->
+                      notElem fare.vehicleServiceTier.serviceTierType blacklistedServiceTiers
+                        && maybe True (\ft -> notElem ft blacklistedFareQuoteTypes) (fare.fareQuoteType)
+                  )
+                  sortedFares
           let viaRoutes =
                 nub $
                   map
@@ -1183,11 +1193,11 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                             viaPoints = zipWith (,) stops (drop 1 stops)
                          in ViaRoute {viaPoints = viaPoints, distance = fd.distance}
                     )
-                    $ mapMaybe (.fareDetails) sortedFares
+                    $ mapMaybe (.fareDetails) filteredFares
           logDebug $ "getAllSubwayRoutes viaRoutes: " <> show viaRoutes
           return viaRoutes
         _ -> return []
-buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ _ _ = return ([], [])
+buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ _ _ _ _ = return ([], [])
 
 findEarliestTiming :: UTCTime -> UTCTime -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
 findEarliestTiming currentTimeIST currentTime routeStopTimings = filter (\rst -> getISTArrivalTime rst.timeOfDeparture currentTime >= currentTimeIST) routeStopTimings & listToMaybe

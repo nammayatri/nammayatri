@@ -330,6 +330,10 @@ library
       Domain.Types.Yudhishthira
       Environment
       ExternalBPP.CallAPI
+      ExternalBPP.CallAPI.Common
+      ExternalBPP.CallAPI.Init
+      ExternalBPP.CallAPI.Select
+      ExternalBPP.CallAPI.Types
       ExternalBPP.ExternalAPI.Bus.EBIX.Auth
       ExternalBPP.ExternalAPI.Bus.EBIX.Order
       ExternalBPP.ExternalAPI.Bus.EBIX.Payment
@@ -364,6 +368,8 @@ library
       ExternalBPP.ExternalAPI.Subway.CRIS.Uts
       ExternalBPP.ExternalAPI.Types
       ExternalBPP.Flow
+      ExternalBPP.Flow.Common
+      ExternalBPP.Flow.Select
       Lib.JourneyLeg.Bus
       Lib.JourneyLeg.Common.FRFS
       Lib.JourneyLeg.Interface
@@ -402,6 +408,9 @@ library
       SharedLogic.External.Nandi.Flow
       SharedLogic.External.Nandi.Types
       SharedLogic.FRFSCancel
+      SharedLogic.FRFSConfirm
+      SharedLogic.FRFSFareCalculator
+      SharedLogic.FRFSStatus
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
       SharedLogic.Insurance

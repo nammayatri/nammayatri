@@ -59,6 +59,7 @@ searchServices ::
   Maybe (Id DC.Client) ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe Bool ->
   ClientM AppBESearch.SearchResp
 searchServices = client (Proxy :: Proxy AppBESearch.SearchAPI)
 

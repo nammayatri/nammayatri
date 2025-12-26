@@ -12,7 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.FRFSUtils where
+module SharedLogic.FRFSUtils
+  ( module SharedLogic.FRFSUtils,
+    module Reexport,
+  )
+where
 
 import qualified API.Types.UI.FRFSTicketService as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
@@ -24,7 +28,6 @@ import Data.List (groupBy, nub, sortBy)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Domain.Action.Beckn.FRFS.Common
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Extra.VendorSplitDetails as VendorSplitDetails
@@ -78,6 +81,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.FRFSFareCalculator as Reexport
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -321,7 +325,8 @@ data FRFSFare = FRFSFare
   { farePolicyId :: Maybe (Id DFRFSFarePolicy.FRFSFarePolicy),
     categories :: [FRFSTicketCategory],
     fareDetails :: Maybe Quote.FRFSFareDetails,
-    vehicleServiceTier :: FRFSVehicleServiceTier
+    vehicleServiceTier :: FRFSVehicleServiceTier,
+    fareQuoteType :: Maybe Quote.FRFSQuoteType
   }
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
@@ -385,7 +390,8 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
               serviceTierDescription = vehicleServiceTier.description,
               serviceTierLongName = vehicleServiceTier.longName,
               isAirConditioned = vehicleServiceTier.isAirConditioned
-            }
+            },
+        fareQuoteType = Nothing
       }
 
 getCachedRouteStopFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
@@ -448,43 +454,55 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
                             serviceTierDescription = vehicleServiceTier.description,
                             serviceTierLongName = vehicleServiceTier.longName,
                             isAirConditioned = vehicleServiceTier.isAirConditioned
-                          }
+                          },
+                      fareQuoteType = Nothing
                     }
             _ -> return [] -- No stage information available
         _ -> return [] -- Start or end stop not found in trip
     Nothing -> return [] -- Trip details not found
 
-getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
-getFares riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
-  faresResult <- withTryCatch "getFareThroughGTFS:getFares" (getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
-  fares <- case faresResult of
-    Left err -> do
-      logError $ "Error in getFareThroughGTFS (GraphQL/GTFS): " <> show err
-      return []
-    Right fares' -> return fares'
+getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> [Spec.ServiceTierType] -> [Quote.FRFSQuoteType] -> m [FRFSFare]
+getFares riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode blacklistedServiceTiers blacklistedFareQuoteTypes = do
+  fares <- getFaresUtil
+  let filteredFares =
+        filter
+          ( \fare ->
+              notElem fare.vehicleServiceTier.serviceTierType blacklistedServiceTiers
+                && maybe True (\ft -> notElem ft blacklistedFareQuoteTypes) (fare.fareQuoteType)
+          )
+          fares
+  return filteredFares
+  where
+    getFaresUtil = do
+      faresResult <- withTryCatch "getFareThroughGTFS:getFares" (getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
+      fares <- case faresResult of
+        Left err -> do
+          logError $ "Error in getFareThroughGTFS (GraphQL/GTFS): " <> show err
+          return []
+        Right fares' -> return fares'
 
-  if null fares
-    then do
-      withTryCatch "getFare:getFares" (getFare riderId vehicleType serviceTier integratedBPPConfig.id merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
-        >>= \case
-          Left err -> do
-            logError $ "Error in getFare: " <> show err
-            return []
-          Right fares' ->
-            case integratedBPPConfig.providerConfig of
-              DIBC.ONDC DIBC.ONDCBecknConfig {fareCachingAllowed} -> do
-                if null fares' && (fareCachingAllowed == Just True)
-                  then do
-                    -- TODO: hamdle serviceTier passing stuff here
-                    withTryCatch "getCachedRouteStopFares:getFares" (getCachedRouteStopFares riderId vehicleType integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
-                      >>= \case
-                        Left err -> do
-                          logError $ "Error in getCachedRouteStopFares: " <> show err
-                          return fares'
-                        Right cachedFares -> return cachedFares
-                  else return fares'
-              _ -> return fares'
-    else return fares
+      if null fares
+        then do
+          withTryCatch "getFare:getFares" (getFare riderId vehicleType serviceTier integratedBPPConfig.id merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
+            >>= \case
+              Left err -> do
+                logError $ "Error in getFare: " <> show err
+                return []
+              Right fares' ->
+                case integratedBPPConfig.providerConfig of
+                  DIBC.ONDC DIBC.ONDCBecknConfig {fareCachingAllowed} -> do
+                    if null fares' && (fareCachingAllowed == Just True)
+                      then do
+                        -- TODO: hamdle serviceTier passing stuff here
+                        withTryCatch "getCachedRouteStopFares:getFares" (getCachedRouteStopFares riderId vehicleType integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
+                          >>= \case
+                            Left err -> do
+                              logError $ "Error in getCachedRouteStopFares: " <> show err
+                              return fares'
+                            Right cachedFares -> return cachedFares
+                      else return fares'
+                  _ -> return fares'
+        else return fares
 
 data VehicleTracking = VehicleTracking
   { nextStop :: Maybe RouteStopMapping.RouteStopMapping,
@@ -1038,66 +1056,6 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
             _ -> return dummyBasket
         _ -> return dummyBasket
 
-data CategoryPriceItem = CategoryPriceItem
-  { quantity :: Int,
-    unitPrice :: Price,
-    totalPrice :: Price,
-    categoryType :: FRFSQuoteCategoryType
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-data FRFSFareParameters = FRFSFareParameters
-  { priceItems :: [CategoryPriceItem],
-    totalPrice :: Price,
-    totalQuantity :: Int,
-    currency :: Currency
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-mkCategoryPriceItemFromQuoteCategories :: [DFRFSQuoteCategory.FRFSQuoteCategory] -> [CategoryPriceItem]
-mkCategoryPriceItemFromQuoteCategories quoteCategories = map mkPriceItem quoteCategories
-  where
-    mkPriceItem :: DFRFSQuoteCategory.FRFSQuoteCategory -> CategoryPriceItem
-    mkPriceItem category =
-      let unitPrice = fromMaybe category.offeredPrice category.finalPrice
-       in CategoryPriceItem
-            { quantity = category.selectedQuantity,
-              unitPrice,
-              totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational category.selectedQuantity),
-              categoryType = category.category
-            }
-
-mkCategoryPriceItemFromDCategorySelect :: [DCategorySelect] -> [CategoryPriceItem]
-mkCategoryPriceItemFromDCategorySelect quoteCategories = mapMaybe mkPriceItem quoteCategories
-  where
-    mkPriceItem :: DCategorySelect -> Maybe CategoryPriceItem
-    mkPriceItem category = do
-      let quantity = category.quantity
-      let unitPrice = category.price
-      return $
-        CategoryPriceItem
-          { quantity = quantity,
-            unitPrice,
-            totalPrice = modifyPrice unitPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quantity),
-            categoryType = category.category
-          }
-
-mkFareParameters :: [CategoryPriceItem] -> FRFSFareParameters
-mkFareParameters priceItems =
-  let totalPrice =
-        Price
-          { amount = sum ((.totalPrice.amount) <$> priceItems),
-            amountInt = sum ((.totalPrice.amountInt) <$> priceItems),
-            currency = fromMaybe INR (listToMaybe (map (.unitPrice.currency) priceItems))
-          }
-      totalQuantity = sum ((.quantity) <$> priceItems)
-   in FRFSFareParameters
-        { priceItems = priceItems,
-          totalPrice = totalPrice,
-          totalQuantity = totalQuantity,
-          currency = totalPrice.currency
-        }
-
 -- TODO :: To be deprecated, and unified with SharedLogic.PaymentVendorSplits.createVendorSplit
 createVendorSplitFromBookings ::
   ( EsqDBReplicaFlow m r,
@@ -1221,3 +1179,9 @@ vendorSplitDetailSplitTypeToPaymentSplitType = \case
 mkCategoryInfoResponse :: DFRFSQuoteCategory.FRFSQuoteCategory -> APITypes.CategoryInfoResponse
 mkCategoryInfoResponse category =
   APITypes.CategoryInfoResponse {categoryId = category.id, categoryName = category.category, categoryMeta = category.categoryMeta, categoryPrice = mkPriceAPIEntity category.price, categoryOfferedPrice = mkPriceAPIEntity category.offeredPrice, categoryFinalPrice = mkPriceAPIEntity <$> category.finalPrice, categorySelectedQuantity = category.selectedQuantity}
+
+getPaymentType :: Bool -> Spec.VehicleCategory -> PaymentOrder.PaymentServiceType
+getPaymentType isMultiModalBooking = \case
+  Spec.METRO -> if isMultiModalBooking then PaymentOrder.FRFSMultiModalBooking else PaymentOrder.FRFSBooking
+  Spec.SUBWAY -> if isMultiModalBooking then PaymentOrder.FRFSMultiModalBooking else PaymentOrder.FRFSBooking
+  Spec.BUS -> if isMultiModalBooking then PaymentOrder.FRFSMultiModalBooking else PaymentOrder.FRFSBusBooking

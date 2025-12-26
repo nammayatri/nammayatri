@@ -7,6 +7,7 @@ import qualified Data.Text as T
 import Domain.Action.Beckn.FRFS.OnSearch
 import Domain.Types hiding (ONDC)
 import Domain.Types.BecknConfig
+import qualified Domain.Types.FRFSQuote as DQuote
 import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
@@ -65,8 +66,8 @@ data BasicRouteDetail = BasicRouteDetail
   }
   deriving (Show)
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> m (Bool, [FRFSUtils.FRFSFare])
-getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDetails vehicleCategory serviceTier mbSearchReqId = do
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DQuote.FRFSQuoteType] -> m (Bool, [FRFSUtils.FRFSFare])
+getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDetails vehicleCategory serviceTier mbSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes = do
   let (routeCode, startStopCode, endStopCode) = getRouteCodeAndStartAndStop
   let isFareMandatory =
         case integrationBPPConfig.providerConfig of
@@ -83,10 +84,10 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
             }
       return (isFareMandatory, fares)
     ONDC _ -> do
-      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode blacklistedServiceTiers blacklistedFareQuoteTypes
       return (isFareMandatory, fares)
     EBIX _ -> do
-      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode blacklistedServiceTiers blacklistedFareQuoteTypes
       return
         ( isFareMandatory,
           map
@@ -111,7 +112,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
             fares
         )
     DIRECT _ -> do
-      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode blacklistedServiceTiers blacklistedFareQuoteTypes
       return (isFareMandatory, fares)
     CRIS config' -> do
       (viaPoints, changeOver, rawChangeOver) <- getChangeOverAndViaPoints (NE.toList fareRouteDetails) integrationBPPConfig

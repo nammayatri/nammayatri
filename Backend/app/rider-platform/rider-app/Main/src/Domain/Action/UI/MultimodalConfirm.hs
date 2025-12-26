@@ -178,13 +178,16 @@ postMultimodalInitiate ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow ApiTypes.JourneyInfoResp
   )
-postMultimodalInitiate (_personId, _merchantId) journeyId = do
+postMultimodalInitiate (_personId, _merchantId) journeyId filterServiceAndJrnyType = do
   runAction journeyId $ do
     journeyLegs <- QJourneyLeg.getJourneyLegs journeyId
     journey <- JM.getJourney journeyId
-    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs) "addAllLegs"
+    let blacklistedServiceTiers = if filterServiceAndJrnyType == Just False then [] else [Spec.AC_EMU_FIRST_CLASS]
+    let blacklistedFareQuoteTypes = if filterServiceAndJrnyType == Just False then [] else [DFRFSQuote.ReturnJourney]
+    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes) "addAllLegs"
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
     JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
@@ -192,10 +195,12 @@ postMultimodalInitiate (_personId, _merchantId) journeyId = do
 postMultimodalInitiateSimpl ::
   [DJourneyLeg.JourneyLeg] ->
   Domain.Types.Journey.Journey ->
+  [Spec.ServiceTierType] ->
+  [DFRFSQuote.FRFSQuoteType] ->
   Environment.Flow ApiTypes.JourneyInfoResp
-postMultimodalInitiateSimpl journeyLegs journey = do
+postMultimodalInitiateSimpl journeyLegs journey blacklistedServiceTiers blacklistedFareQuoteTypes = do
   runAction journey.id $ do
-    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs) "addAllLegs"
+    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes) "addAllLegs"
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
     JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
@@ -442,11 +447,12 @@ postMultimodalSwitch ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   ApiTypes.SwitchLegReq ->
   Environment.Flow ApiTypes.JourneyInfoResp
-postMultimodalSwitch userInfo@(mbPersonId, _) journeyId req = do
+postMultimodalSwitch userInfo@(mbPersonId, _) journeyId filterServiceAndJrnyType req = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Invalid person id")
-  JM.switchLeg journeyId personId req
+  JM.switchLeg journeyId personId req filterServiceAndJrnyType
   getMultimodalBookingInfo userInfo journeyId
 
 postMultimodalRiderLocation ::
@@ -485,7 +491,7 @@ postMultimodalExtendLeg ::
   ApiTypes.ExtendLegReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalExtendLeg (_, _) journeyId req = do
-  JM.extendLeg journeyId req.startLocation req.endLocation Nothing req.fare req.distance req.duration req.bookingUpdateRequestId
+  JM.extendLeg journeyId req.startLocation req.endLocation Nothing req.fare req.distance req.duration req.bookingUpdateRequestId [] []
   return Kernel.Types.APISuccess.Success
 
 postMultimodalExtendLegGetfare ::

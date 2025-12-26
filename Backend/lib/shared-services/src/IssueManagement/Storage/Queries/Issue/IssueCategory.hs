@@ -77,6 +77,15 @@ updatePriority issueCategoryId priority =
     [Set BeamIC.priority priority]
     [Is BeamIC.id $ Eq (getId issueCategoryId)]
 
+updateIsActive :: BeamFlow m r => Id IssueCategory -> Bool -> m ()
+updateIsActive issueCategoryId isActive = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Set BeamIC.isActive isActive,
+      Set BeamIC.updatedAt now
+    ]
+    [Is BeamIC.id $ Eq (getId issueCategoryId)]
+
 findByIGMIssueCategory :: BeamFlow m r => Text -> m (Maybe IssueCategory)
 findByIGMIssueCategory igmCategory = findOneWithKV [Is BeamIC.igmCategory $ Eq $ Just igmCategory]
 

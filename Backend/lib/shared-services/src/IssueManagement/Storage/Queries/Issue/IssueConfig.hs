@@ -16,6 +16,20 @@ create = createWithKV
 findByMerchantOpCityId :: BeamFlow m r => Id MerchantOperatingCity -> m (Maybe IssueConfig)
 findByMerchantOpCityId (Id merchantOpCityId) = findOneWithKV [Is BeamIC.merchantOperatingCityId $ Eq merchantOpCityId]
 
+updateByPrimaryKey :: BeamFlow m r => IssueConfig -> m ()
+updateByPrimaryKey IssueConfig {..} =
+  updateWithKV
+    [ Set BeamIC.autoMarkIssueClosedDuration autoMarkIssueClosedDuration,
+      Set BeamIC.onCreateIssueMsgs (getId <$> onCreateIssueMsgs),
+      Set BeamIC.onAutoMarkIssueClsMsgs (getId <$> onAutoMarkIssueClsMsgs),
+      Set BeamIC.onIssueReopenMsgs (getId <$> onIssueReopenMsgs),
+      Set BeamIC.onKaptMarkIssueResMsgs (getId <$> onKaptMarkIssueResMsgs),
+      Set BeamIC.onIssueCloseMsgs (getId <$> onIssueCloseMsgs),
+      Set BeamIC.reopenCount reopenCount,
+      Set BeamIC.updatedAt updatedAt
+    ]
+    [Is BeamIC.id $ Eq (getId id)]
+
 instance FromTType' BeamIC.IssueConfig IssueConfig where
   fromTType' BeamIC.IssueConfigT {..} = do
     pure $

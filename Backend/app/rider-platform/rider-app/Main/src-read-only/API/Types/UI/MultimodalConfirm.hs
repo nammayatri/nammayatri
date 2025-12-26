@@ -69,10 +69,6 @@ data ChangeStopsResp = ChangeStopsResp {stationsChanged :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CrisSdkResponse = CrisSdkResponse {bookAuthCode :: Kernel.Prelude.Text, latency :: Kernel.Prelude.Maybe Kernel.Prelude.Int, osBuildVersion :: Kernel.Prelude.Text, osType :: Kernel.Prelude.Text}
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data ExtendLegGetFareReq = ExtendLegGetFareReq {endLocation :: Kernel.Prelude.Maybe Domain.Types.Location.LocationAPIEntity, startLocation :: Lib.JourneyModule.Types.ExtendLegStartPoint}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -116,7 +112,7 @@ data JourneyConfirmReq = JourneyConfirmReq {enableOffer :: Kernel.Prelude.Maybe 
 data JourneyConfirmReqElement = JourneyConfirmReqElement
   { categorySelectionReq :: Kernel.Prelude.Maybe [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq],
     childTicketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    crisSdkResponse :: Kernel.Prelude.Maybe CrisSdkResponse,
+    crisSdkResponse :: Kernel.Prelude.Maybe API.Types.UI.FRFSTicketService.CrisSdkResponse,
     journeyLegOrder :: Kernel.Prelude.Int,
     skipBooking :: Kernel.Prelude.Bool,
     ticketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int

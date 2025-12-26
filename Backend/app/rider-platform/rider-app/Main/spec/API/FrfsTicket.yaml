@@ -30,12 +30,14 @@ imports:
   FRFSQuoteCategory: Domain.Types.FRFSQuoteCategory
   QuoteCategoryMetadata: Domain.Types.FRFSQuoteCategory
   BusLocation: API.Types.UI.RiderLocation
+  CrisSdkResponse: API.Types.UI.MultimodalConfirm
 
 module: FRFSTicketService
 types:
   FRFSDiscoverySearchAPIReq:
     city: City
     vehicleType: VehicleCategory
+    platformType: Maybe PlatformType
 
   FRFSSearchAPIReq:
     fromStationCode: Text
@@ -43,6 +45,7 @@ types:
     routeCode: Maybe Text
     serviceTier: Maybe ServiceTierType
     quantity: Int
+    platformType: Maybe PlatformType
     searchAsParentStops: Maybe Bool
     recentLocationId: Maybe (Id RecentLocation)
     busLocationData: Maybe [BusLocation]
@@ -104,8 +107,17 @@ types:
     quoteCategoryId: Id FRFSQuoteCategory
     quantity: Int
 
+  CrisSdkResponse:
+    osType: Text
+    osBuildVersion: Text
+    bookAuthCode: Text
+    latency: Maybe Int
+    derive: "Show"
+
   FRFSQuoteConfirmReq:
     offered: Maybe [FRFSCategorySelectionReq]
+    crisSdkResponse: Maybe CrisSdkResponse
+    enableOffer: Maybe Bool
     ticketQuantity: Maybe Int # TODO: To Be Deprecated
     childTicketQuantity: Maybe Int # TODO: To Be Deprecated
 

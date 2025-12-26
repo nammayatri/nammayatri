@@ -37,6 +37,9 @@ findByMerchantOpCityId merchantOpCityId identifier =
 clearIssueConfigCache :: CacheFlow m r => Id MerchantOperatingCity -> Identifier -> m ()
 clearIssueConfigCache merchantOpCityId identifier = Hedis.withCrossAppRedis . Hedis.del $ makeIssueConfigKeyByMerchantOpCityId merchantOpCityId identifier
 
+updateByPrimaryKey :: BeamFlow m r => IssueConfig -> m ()
+updateByPrimaryKey = Queries.updateByPrimaryKey
+
 cacheAllIssueConfig :: CacheFlow m r => Id MerchantOperatingCity -> Identifier -> Maybe IssueConfig -> m ()
 cacheAllIssueConfig merchantOpCityId identifier issueConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
