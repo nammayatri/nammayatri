@@ -299,9 +299,13 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCatego
       issueHandle.findByMobileNumberAndMerchantId mobileCountryCode numHash merchantOperatingCity.merchantId
         >>= fromMaybeM (PersonWithPhoneNotFound phoneNumber)
   mbRide <- maybe (pure Nothing) (issueHandle.findRideByRideShortId merchantOperatingCity.merchantId) mbRideShortId
-  (totalCount, issueReports) <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryIdFromName mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide) mbDescriptionSearch (cast merchantOperatingCity.id)
-  let count = length issueReports
-  let summary = Common.Summary {totalCount, count}
+  issueReports <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryIdFromName mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide) (cast merchantOperatingCity.id)
+  let filteredByDescription = case mbDescriptionSearch of
+        Just searchText -> filter (\ir -> T.toLower searchText `T.isInfixOf` T.toLower ir.description) issueReports
+        Nothing -> issueReports
+  let filteredIssueReports = filter (isJust . (.categoryId)) filteredByDescription
+  let count = length filteredIssueReports
+  let summary = Common.Summary {totalCount = count, count}
   issues <-
     catMaybes
       <$> mapM
@@ -317,7 +321,7 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCatego
                   then return Nothing
                   else Just <$> mkIssueReport issueReport
         )
-        issueReports
+        filteredIssueReports
   pure $ Common.IssueReportListResponse {issues, summary}
   where
     mkIssueReport :: (Esq.EsqDBReplicaFlow m r, BeamFlow m r) => DIR.IssueReport -> m Common.IssueReportListItem
