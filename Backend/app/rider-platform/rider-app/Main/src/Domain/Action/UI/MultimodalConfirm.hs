@@ -40,7 +40,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalSwitchRoute,
     postMultimodalOrderSublegSetOnboardedVehicleDetails,
     postMultimodalSetRouteName,
-    updateBusLocation,
+    postMultimodalUpdateBusLocation,
   )
 where
 
@@ -2121,21 +2121,15 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
           logError $ "SetOnboarding OTPRest failed: " <> show err
           return Nothing
 
-updateBusLocation ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Log m,
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
-  ) =>
+postMultimodalUpdateBusLocation ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   ApiTypes.UpdateBusLocationReq ->
-  [Kernel.Prelude.Text] ->
-  m Kernel.Types.APISuccess.APISuccess
-updateBusLocation req busOTPList = do
-  let busOTP =
-        fromMaybe
-          (error "busOTP query parameter is required")
-          (listToMaybe busOTPList)
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMultimodalUpdateBusLocation _ mbBusOTP req = do
+  busOTP <- mbBusOTP & fromMaybeM (InvalidRequest "busOTP query parameter is required")
 
   deviceMappings <- QDeviceVehicleMapping.findByVehicleNo busOTP
   deviceMapping <-
@@ -2171,8 +2165,6 @@ updateBusLocation req busOTPList = do
             routeNumber = "101",
             signalQuality = "Good"
           }
-
-  logInfo $ "Kafka packet: " <> show kafkaPacket
 
   let topicName = "gps_live_data"
   let key = deviceMapping.deviceId
