@@ -263,6 +263,7 @@ issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifie
             issueReportShortId = issueReport.shortId,
             category = fromMaybe issueCategory.category $ issueCategoryTranslation <&> (.translation),
             rideId = issueReport.rideId,
+            ticketBookingId = issueReport.ticketBookingId,
             optionLabel = mbIssueOption >>= (.label),
             status = fromMaybe issueReport.status issueStatus,
             createdAt = issueReport.createdAt
@@ -439,6 +440,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             personId,
             driverId = if identifier == CUSTOMER then Nothing else Just personId,
             rideId = rideId,
+            ticketBookingId = ticketBookingId,
             merchantOperatingCityId = Just mocId,
             optionId = optionId,
             categoryId = Just categoryId,

@@ -65,6 +65,7 @@ data IssueReportListItem = IssueReportListItem
     issueReportShortId :: Maybe (ShortId IssueReport),
     personId :: Id Common.Person,
     rideId :: Maybe (Id Ride),
+    ticketBookingId :: Maybe (Id FRFSTicketBooking),
     deleted :: Bool,
     category :: Text,
     assignee :: Maybe Text,
@@ -82,6 +83,7 @@ data IssueInfoRes = IssueInfoRes
     issueReportShortId :: Maybe (ShortId IssueReport),
     personDetail :: Maybe PersonDetail,
     rideId :: Maybe (Id Ride),
+    ticketBookingId :: Maybe (Id FRFSTicketBooking),
     chats :: Maybe [ChatDetail],
     comments :: [IssueReportCommentItem],
     category :: Maybe Text,
@@ -442,6 +444,7 @@ instance HideSecrets UpsertIssueMessageReq where
 data IssueReportReqV2 = IssueReportReqV2
   { ticketId :: Text,
     rideId :: Maybe (Id Ride),
+    ticketBookingId :: Maybe (Id FRFSTicketBooking),
     personId :: Id Common.Person,
     mediaFiles :: [Text],
     chats :: [Text],

@@ -18,6 +18,7 @@ data IssueReport = IssueReport
     personId :: Id Person,
     driverId :: Maybe (Id Person),
     rideId :: Maybe (Id Ride),
+    ticketBookingId :: Maybe (Id FRFSTicketBooking),
     merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
     description :: Text,
     assignee :: Maybe Text,
