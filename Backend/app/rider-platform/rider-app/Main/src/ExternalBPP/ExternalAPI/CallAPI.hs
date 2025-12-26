@@ -117,7 +117,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
     CRIS config' -> do
       (viaPoints, changeOver, rawChangeOver) <- getChangeOverAndViaPoints (NE.toList fareRouteDetails) integrationBPPConfig
       maybe
-        (callCRISAPI config' changeOver rawChangeOver viaPoints >>= \fares -> return (isFareMandatory, fares))
+        (callCRISAPI config' changeOver rawChangeOver viaPoints >>= \fares -> return (isFareMandatory, filterFares fares))
         ( \searchReqId -> do
             let redisKey = CRISRouteFare.mkRouteFareKey startStopCode endStopCode searchReqId
             redisResp <- Redis.safeGet redisKey
@@ -126,11 +126,20 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
                 let cachedFares = filter (\fare -> maybe False (\fd -> fd.via == rawChangeOver) fare.fareDetails) subwayFares
                 if null cachedFares
                   then fetchAndCacheFares config' redisKey changeOver rawChangeOver viaPoints isFareMandatory
-                  else return (isFareMandatory, cachedFares)
+                  else return (isFareMandatory, filterFares cachedFares)
               Nothing -> fetchAndCacheFares config' redisKey changeOver rawChangeOver viaPoints isFareMandatory
         )
         mbSearchReqId
   where
+    filterFares :: [FRFSUtils.FRFSFare] -> [FRFSUtils.FRFSFare]
+    filterFares fares =
+      filter
+        ( \fare ->
+            notElem fare.vehicleServiceTier.serviceTierType blacklistedServiceTiers
+              && maybe True (\ft -> notElem ft blacklistedFareQuoteTypes) (fare.fareQuoteType)
+        )
+        fares
+
     callCRISAPI config' changeOver rawChangeOver viaPoints = do
       let (_, startStop, endStop) = getRouteCodeAndStartAndStop
       routeFareReq <- JMU.getRouteFareRequest startStop endStop changeOver rawChangeOver viaPoints riderId (config'.useRouteFareV4 /= Just True)
@@ -143,8 +152,9 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
 
     fetchAndCacheFares config' redisKey changeOver rawChangeOver viaPoints isFareMandatory = do
       fares <- callCRISAPI config' changeOver rawChangeOver viaPoints
+      let filteredFares = filterFares fares
       unless (null fares) $ Redis.setExp redisKey fares 1800
-      return (isFareMandatory, fares)
+      return (isFareMandatory, filteredFares)
 
     getRouteCodeAndStartAndStop :: (Text, Text, Text)
     getRouteCodeAndStartAndStop = do
