@@ -2125,7 +2125,7 @@ postGetTowerInfo ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   ApiTypes.TowerInfoReq ->
-  Flow ApiTypes.TowerInfoResp
+  Flow Kernel.Types.APISuccess.APISuccess
 postGetTowerInfo (mbPersonId, _) req = do
   -- Extract person ID for logging logic (optional, for text logs)
   let personIdStr = maybe "Unknown" (.getId) mbPersonId
@@ -2138,22 +2138,15 @@ postGetTowerInfo (mbPersonId, _) req = do
       <> ", "
       <> show req.userLng
       <> ") | Network: "
-      <> req.towerInfo.networkType
+      <> req.networkType
       <> " | Cell ID: "
-      <> req.towerInfo.cellId
+      <> req.cellId
       <> " | Signal: "
-      <> show req.towerInfo.signalStrength
+      <> show req.signalStrength
 
   -- 2. Validate Request
   validateCoordinates req.userLat req.userLng
-  validateSignalStrength req.towerInfo.signalStrength
-
-  -- 3. Construct Response
-  let response =
-        ApiTypes.TowerInfoResp
-          { success = True,
-            message = "Tower information received successfully"
-          }
+  validateSignalStrength req.signalStrength
 
   -- 4. Push to Kafka
   let topicName = "tower_info_data"
@@ -2164,7 +2157,7 @@ postGetTowerInfo (mbPersonId, _) req = do
         logError $
           "Failed to push tower info to Kafka: " <> show e
 
-  return response
+  return Kernel.Types.APISuccess.Success
   where
     validateCoordinates lat lng = do
       when (lat < -90 || lat > 90) $

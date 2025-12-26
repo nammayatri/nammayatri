@@ -530,7 +530,7 @@ type API =
            API.Types.UI.MultimodalConfirm.TowerInfoReq
       :> Post
            '[JSON]
-           API.Types.UI.MultimodalConfirm.TowerInfoResp
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
@@ -924,6 +924,6 @@ postGetTowerInfo ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     API.Types.UI.MultimodalConfirm.TowerInfoReq ->
-    Environment.FlowHandler API.Types.UI.MultimodalConfirm.TowerInfoResp
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postGetTowerInfo a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postGetTowerInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

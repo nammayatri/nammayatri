@@ -356,22 +356,15 @@ types:
   OnboardedVehicleDetailsReq:
     vehicleNumber: Text
 
-  TowerInfoData:
-    networkType: Text
-    cellId: Text
-    areaCode: Text
-    signalStrength: Int
-
   TowerInfoReq:
     userLat: Double
     userLng: Double
     latLngAccuracy: Double
     timeStamp: UTCTime
-    towerInfo: TowerInfoData
-
-  TowerInfoResp:
-    success: Bool
-    message: Text
+    networkType: Text
+    cellId: Text
+    areaCode: Text
+    signalStrength: Int
 
 apis:
   - POST:
@@ -701,6 +694,5 @@ apis:
       request:
         type: TowerInfoReq
       response:
-        type: TowerInfoResp
-
+        type: Kernel.Types.APISuccess.APISuccess
 
