@@ -723,7 +723,7 @@ apis:
 
 
   - POST:
-      endpoint: /getTowerInfo
+      endpoint: /storeTowerInfo
       auth: TokenAuth
       request:
         type: TowerInfoReq
