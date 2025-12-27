@@ -15,7 +15,7 @@ import Kernel.Types.Id
 create :: BeamFlow m r => IssueReport.IssueReport -> m ()
 create = createWithKV
 
-findAllWithOptions :: BeamFlow m r => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Maybe (Id Person) -> Maybe (Id Ride) -> Maybe Text -> Id MerchantOperatingCity -> m (Int, [IssueReport])
+findAllWithOptions :: BeamFlow m r => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Maybe (Id Person) -> Maybe (Id Ride) -> Maybe Text -> Id MerchantOperatingCity -> m [IssueReport]
 findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId mbRideId mbDescriptionSearch merchantOperatingCityId = do
   let conditions =
         [ And $
@@ -30,7 +30,7 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId 
               <> [Is BeamIR.merchantOperatingCityId $ Eq (Just merchantOperatingCityId.getId), Is BeamIR.categoryId $ Not $ Eq Nothing]
         ]
   issueReports <- findAllWithOptionsKV conditions (Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
-  return (length issueReports, issueReports)
+  return issueReports
   where
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
