@@ -29,9 +29,8 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId 
               ]
               <> [Is BeamIR.merchantOperatingCityId $ Eq (Just merchantOperatingCityId.getId), Is BeamIR.categoryId $ Not $ Eq Nothing]
         ]
-  count <- findAllWithOptionsKV conditions (Desc BeamIR.createdAt) Nothing Nothing >>= pure . length
   issueReports <- findAllWithOptionsKV conditions (Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
-  return (count, issueReports)
+  return (length issueReports, issueReports)
   where
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
