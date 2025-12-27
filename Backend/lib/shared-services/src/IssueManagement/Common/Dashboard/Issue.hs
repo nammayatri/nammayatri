@@ -206,9 +206,8 @@ instance ToJSON TicketStatusCallBackReq
 instance HideSecrets TicketStatusCallBackReq where
   hideSecrets = identity
 
-data Summary = Summary
-  { totalCount :: Int, --TODO add db indexes
-    count :: Int
+newtype Summary = Summary
+  { count :: Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
