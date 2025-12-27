@@ -41,7 +41,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderSublegSetOnboardedVehicleDetails,
     postMultimodalSetRouteName,
     postMultimodalUpdateBusLocation,
-    postGetTowerInfo,
+    postStoreTowerInfo,
   )
 where
 
@@ -2178,13 +2178,13 @@ postMultimodalUpdateBusLocation _ mbBusOTP req = do
 
   pure Kernel.Types.APISuccess.Success
 
-postGetTowerInfo ::
+postStoreTowerInfo ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   ApiTypes.TowerInfoReq ->
   Flow Kernel.Types.APISuccess.APISuccess
-postGetTowerInfo (mbPersonId, _) req = do
+postStoreTowerInfo (mbPersonId, _) req = do
   let personIdStr = maybe "Unknown" (.getId) mbPersonId
 
   logInfo $
