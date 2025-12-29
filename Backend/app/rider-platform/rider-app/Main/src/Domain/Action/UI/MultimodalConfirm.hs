@@ -2166,7 +2166,7 @@ postMultimodalUpdateBusLocation _ mbBusOTP req = do
             signalQuality = "Good"
           }
 
-  let topicName = "gps_live_data"
+  let topicName = "gps_data"
   let key = deviceMapping.deviceId
 
   fork "Pushing bus location to Kafka" $ do
