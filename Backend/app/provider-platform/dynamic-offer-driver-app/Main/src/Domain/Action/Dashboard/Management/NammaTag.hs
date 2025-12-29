@@ -69,6 +69,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.Common as C
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.BehaviourManagement.GpsTollBehavior as GpsTollBehavior
 import SharedLogic.CancellationCoins
 import SharedLogic.DriverPool.Config (Config (..))
 import SharedLogic.DriverPool.Types
@@ -186,6 +187,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYT.USER_CANCELLATION_DUES -> do
       logicData :: UserCancellationDuesData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy UserCancellationDuesResult) transporterConfig.referralLinkPassword req logicData
+    LYT.GPS_TOLL_BEHAVIOR -> do
+      logicData :: GpsTollBehavior.GpsTollBehaviorData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy GpsTollBehavior.GpsTollBehaviorOutput) transporterConfig.referralLinkPassword req logicData
     LYT.USER_CANCELLATION_DUES_WAIVE_OFF -> do
       logicData :: UserCancellationDuesWaiveOffData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy UserCancellationDuesWaiveOffResult) transporterConfig.referralLinkPassword req logicData
