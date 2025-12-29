@@ -35,6 +35,7 @@ getSosMediaSosMedia _merchantShortId _opCity customerId = do
   let sosWithMediaPairs =
         [ (mediaFileId, sos)
           | sos <- sosList,
+            isJust sos.rideId, -- Only include ride-based SOS for this endpoint
             mediaFileId <- sos.mediaFiles
         ]
 
@@ -55,11 +56,14 @@ getSosMediaSosMedia _merchantShortId _opCity customerId = do
           Nothing -> throwError $ InvalidRequest "No S3 file path found"
           Just s3Path -> S3.get $ T.unpack s3Path
 
+        rideId <- case sos.rideId of
+          Nothing -> throwError $ InternalError "Unexpected: rideId is Nothing after filtering"
+          Just rid -> return $ cast rid
         return $
           Common.GetSosMediaResponse
             { content = content,
               createdAt = sos.createdAt,
               updatedAt = sos.updatedAt,
-              rideId = cast sos.rideId,
+              rideId = rideId,
               ticketId = sos.ticketId
             }
