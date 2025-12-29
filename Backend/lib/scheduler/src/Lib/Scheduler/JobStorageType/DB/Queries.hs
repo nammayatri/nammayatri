@@ -26,9 +26,9 @@ import Kernel.Beam.Functions (FromTType'' (..), ToTType'' (..), createWithKVSche
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common (Log, MonadTime (getCurrentTime))
-import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
+import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id
-import Kernel.Utils.Common (encodeToText, fromMaybeM)
+import Kernel.Utils.Common (encodeToText, logError)
 import Kernel.Utils.Error (throwError)
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.DB.Table hiding (Id)
@@ -39,25 +39,35 @@ import qualified Sequelize as Se
 
 instance (JobProcessor t) => FromTType'' BeamST.SchedulerJob (AnyJob t) where
   fromTType'' BeamST.SchedulerJobT {..} = do
-    (AnyJobInfo anyJobInfo) :: AnyJobInfo t <-
-      restoreAnyJobInfoMain @t (StoredJobInfo jobType jobData)
-        & fromMaybeM (InternalError ("Unable to restore JobInfo. " <> jobType <> ": " <> jobData))
-    pure . Just $
-      AnyJob $
-        Job
-          { id = Id id,
-            shardId = shardId,
-            scheduledAt = T.localTimeToUTC T.utc scheduledAt,
-            createdAt = T.localTimeToUTC T.utc createdAt,
-            updatedAt = T.localTimeToUTC T.utc updatedAt,
-            maxErrors = maxErrors,
-            currErrors = currErrors,
-            status = status,
-            jobInfo = anyJobInfo,
-            parentJobId = Id parentJobId,
-            merchantId = Id <$> merchantId,
-            merchantOperatingCityId = Id <$> merchantOperatingCityId
-          }
+    restoredJobInfoResult <-
+      catchAny
+        (pure $ Right $ restoreAnyJobInfoMain @t (StoredJobInfo jobType jobData))
+        ( \e -> do
+            logError $ "Scheduler reviver: exception while restoring JobInfo; skipping. jobType=" <> jobType <> " jobData=" <> jobData <> " error=" <> show e
+            pure $ Left ()
+        )
+    case restoredJobInfoResult of
+      Left _ -> pure Nothing
+      Right Nothing -> do
+        logError $ "Scheduler reviver: unable to restore JobInfo; skipping. jobType=" <> jobType <> " jobData=" <> jobData
+        pure Nothing
+      Right (Just (AnyJobInfo anyJobInfo)) ->
+        pure . Just $
+          AnyJob $
+            Job
+              { id = Id id,
+                shardId = shardId,
+                scheduledAt = T.localTimeToUTC T.utc scheduledAt,
+                createdAt = T.localTimeToUTC T.utc createdAt,
+                updatedAt = T.localTimeToUTC T.utc updatedAt,
+                maxErrors = maxErrors,
+                currErrors = currErrors,
+                status = status,
+                jobInfo = anyJobInfo,
+                parentJobId = Id parentJobId,
+                merchantId = Id <$> merchantId,
+                merchantOperatingCityId = Id <$> merchantOperatingCityId
+              }
 
 instance (JobProcessor t) => ToTType'' BeamST.SchedulerJob (AnyJob t) where
   toTType'' (AnyJob Job {..}) = do
