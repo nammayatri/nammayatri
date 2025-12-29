@@ -17,11 +17,12 @@ types:
 
   SosReq:
     flow: SosType
-    rideId: Id Ride
+    rideId: Maybe (Id Ride)
     isRideEnded: Maybe Bool
     sendPNOnPostRideSOS: Maybe Bool
     notifyAllContacts: Maybe Bool
     customerLocation: Maybe LatLong
+    trackingExpiresAt: Maybe UTCTime
 
   SosUpdateReq:
     status: SosStatus
@@ -37,6 +38,37 @@ types:
 
   CallPoliceAPI:
     rideId: Id Ride
+
+  SosLocationUpdateReq:
+    lat: Double
+    lon: Double
+    accuracy: Maybe Double
+
+  SosLocationRes:
+    lat: Double
+    lon: Double
+    accuracy: Maybe Double
+
+  SosTrackingRes:
+    currentLocation: Maybe SosLocationRes
+    isTrackingActive: Bool
+
+  ShareLocationWithContactReq:
+    mobileNumber: Text
+    customerLocation: Maybe LatLong
+    durationInMinutes: Int
+
+  ShareLocationWithAllReq:
+    customerLocation: Maybe LatLong
+    durationInMinutes: Int
+
+  ShareLocationRes:
+    sosId: Id Sos
+
+  SosTrackingDetailsRes:
+    personName: Text
+    mobileNumber: Text
+    expiryTimeStamp: UTCTime
 
 apis:
   # GET /sos/getDetails
@@ -108,3 +140,50 @@ apis:
         type: API.Types.UI.Sos.CallPoliceAPI
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  # POST /sos/{sosId}/updateLocation
+  - POST:
+      endpoint: /sos/{sosId}/updateLocation
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.UI.Sos.SosLocationUpdateReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # GET /sos/{sosId}/tracking
+  - GET:
+      endpoint: /sos/{sosId}/tracking
+      auth: NoAuth
+      params:
+        sosId: Id Sos
+      response:
+        type: API.Types.UI.Sos.SosTrackingRes
+
+  # POST /sos/shareLocation/contact
+  - POST:
+      endpoint: /sos/shareLocation/contact
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.Sos.ShareLocationWithContactReq
+      response:
+        type: API.Types.UI.Sos.ShareLocationRes
+
+  # POST /sos/shareLocation/all
+  - POST:
+      endpoint: /sos/shareLocation/all
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.Sos.ShareLocationWithAllReq
+      response:
+        type: API.Types.UI.Sos.ShareLocationRes
+
+  # GET /sos/trackingDetails/{sosId}
+  - GET:
+      endpoint: /sos/trackingDetails/{sosId}
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      response:
+        type: API.Types.UI.Sos.SosTrackingDetailsRes
