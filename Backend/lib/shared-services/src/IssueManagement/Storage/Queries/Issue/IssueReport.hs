@@ -15,8 +15,8 @@ import Kernel.Types.Id
 create :: BeamFlow m r => IssueReport.IssueReport -> m ()
 create = createWithKV
 
-findAllWithOptions :: BeamFlow m r => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Maybe (Id Person) -> Maybe (Id Ride) -> Maybe Text -> Id MerchantOperatingCity -> m (Int, [IssueReport])
-findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId mbRideId mbDescriptionSearch merchantOperatingCityId = do
+findAllWithOptions :: BeamFlow m r => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Maybe (Id Person) -> Maybe (Id Ride) -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Id MerchantOperatingCity -> m (Int, [IssueReport])
+findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId mbRideId mbDescriptionSearch mbFromDate mbToDate merchantOperatingCityId = do
   let conditions =
         [ And $
             catMaybes
@@ -25,7 +25,9 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId 
                 fmap (Is BeamIR.categoryId . Eq . Just . getId) mbCategoryId,
                 fmap (Is BeamIR.personId . Eq . getId) mbPersonId,
                 fmap (Is BeamIR.rideId . Eq . Just . getId) mbRideId,
-                fmap (\search -> Is BeamIR.description $ Like ("%" <> search <> "%")) mbDescriptionSearch
+                fmap (\search -> Is BeamIR.description $ Like ("%" <> search <> "%")) mbDescriptionSearch,
+                fmap (Is BeamIR.createdAt . GreaterThanOrEq . T.utcToLocalTime T.utc) mbFromDate,
+                fmap (Is BeamIR.createdAt . LessThanOrEq . T.utcToLocalTime T.utc) mbToDate
               ]
               <> [Is BeamIR.merchantOperatingCityId $ Eq (Just merchantOperatingCityId.getId), Is BeamIR.categoryId $ Not $ Eq Nothing]
         ]

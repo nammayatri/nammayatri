@@ -63,6 +63,8 @@ apis:
         - phoneNumber: Text
         - rideShortId: ShortId Ride
         - descriptionSearch: Text
+        - fromDate: UTCTime
+        - toDate: UTCTime
       response:
         type: IssueReportListResponse
       migrate:
