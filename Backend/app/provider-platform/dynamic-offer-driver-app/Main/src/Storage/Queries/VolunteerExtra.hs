@@ -25,8 +25,9 @@ findAllWithFilters ::
   Maybe Text ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe Text ->
   m [DV.Volunteer]
-findAllWithFilters merchantOpCityId limit offset mbVolunteerId mbVendorId mbIsActive = do
+findAllWithFilters merchantOpCityId limit offset mbVolunteerId mbVendorId mbIsActive mbPlace = do
   findAllWithOptionsKV
     [ Se.And $
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just $ Id.getId merchantOpCityId)
@@ -34,7 +35,8 @@ findAllWithFilters merchantOpCityId limit offset mbVolunteerId mbVendorId mbIsAc
           <> catMaybes
             [ mbVolunteerId <&> \volunteerId -> Se.Is Beam.id $ Se.Eq volunteerId,
               mbVendorId <&> \vendorId -> Se.Is Beam.vendorId $ Se.Eq vendorId,
-              mbIsActive <&> \isActive -> Se.Is Beam.isActive $ Se.Eq (Just isActive)
+              mbIsActive <&> \isActive -> Se.Is Beam.isActive $ Se.Eq (Just isActive),
+              mbPlace <&> \place -> Se.Is Beam.place $ Se.Eq place
             ]
     ]
     (Se.Desc Beam.createdAt)

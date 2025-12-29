@@ -50,7 +50,10 @@ type GetVolunteerList =
            "vendorId"
            Kernel.Prelude.Text
       :> QueryParam "isActive" Kernel.Prelude.Bool
-      :> Get '[JSON] VolunteerListRes
+      :> QueryParam "place" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           VolunteerListRes
   )
 
 type PostVolunteerUpdate =
@@ -62,7 +65,7 @@ type PostVolunteerUpdate =
 
 data VolunteerAPIs = VolunteerAPIs
   { postVolunteerCreate :: CreateVolunteerReq -> EulerHS.Types.EulerClient CreateVolunteerRes,
-    getVolunteerList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient VolunteerListRes,
+    getVolunteerList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient VolunteerListRes,
     postVolunteerUpdate :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> UpdateVolunteerReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
