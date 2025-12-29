@@ -308,7 +308,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
   mfuPattern <- fromMaybeM (MerchantDoesNotExist ("BuildRide merchant:" <> booking.merchantId.getId)) (fmap DMerchant.mediaFileUrlPattern mbMerchant)
   let fileUrl =
         ( mfuPattern
-            & Text.replace "<DOMAIN>" "driver/photo"
+            & Text.replace "<DOMAIN>" "ride/driver/photo"
             & flip (Text.replace "<FILE_PATH>")
         )
           <$> bookingDetails.driverImage
