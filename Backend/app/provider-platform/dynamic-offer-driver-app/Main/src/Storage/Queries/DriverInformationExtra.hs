@@ -121,8 +121,8 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
 
 updateActivityWithDriverFlowStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Bool -> Maybe Common.DriverMode -> Maybe DFS.DriverFlowStatus -> Maybe Bool -> Id Person.Driver -> m ())
-updateActivityWithDriverFlowStatus active mode driverFlowStatus mbHasRideStarted driverId = do
+  (Bool -> Maybe Common.DriverMode -> Maybe DFS.DriverFlowStatus -> Maybe Bool -> Maybe UTCTime -> Id Person.Driver -> m ())
+updateActivityWithDriverFlowStatus active mode driverFlowStatus mbHasRideStarted lastOfflineTime driverId = do
   now <- getCurrentTime
   updateOneWithKV
     ( [ Se.Set BeamDI.active active,
@@ -131,6 +131,7 @@ updateActivityWithDriverFlowStatus active mode driverFlowStatus mbHasRideStarted
         <> [Se.Set BeamDI.mode mode | isJust mode]
         <> [Se.Set BeamDI.driverFlowStatus driverFlowStatus | isJust driverFlowStatus]
         <> [Se.Set BeamDI.hasRideStarted mbHasRideStarted | isJust mbHasRideStarted]
+        <> [Se.Set BeamDI.lastOfflineTime lastOfflineTime | isJust lastOfflineTime]
     )
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
 
