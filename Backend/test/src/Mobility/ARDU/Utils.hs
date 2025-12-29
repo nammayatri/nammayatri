@@ -148,7 +148,7 @@ resetDriver driver = runARDUFlow "" $ do
     SCTC.findByMerchantOpCityId Fixtures.nammaYatriPartnerMerchantOperatingCityId Nothing
       >>= fromMaybeM (TransporterConfigNotFound Fixtures.nammaYatriPartnerMerchantOperatingCityId.getId)
   driverInfo <- QDI.findById (cast driver.driverId) >>= fromMaybeM DriverInfoNotFound
-  DDriverMode.updateDriverModeAndFlowStatus (cast driver.driverId) transporterConfig False (Just TDrInfo.OFFLINE) newFlowStatus driverInfo Nothing
+  DDriverMode.updateDriverModeAndFlowStatus (cast driver.driverId) transporterConfig False (Just TDrInfo.OFFLINE) newFlowStatus driverInfo Nothing Nothing
   QTDrInfo.updateOnRide False (cast driver.driverId)
 
 -- flow primitives
