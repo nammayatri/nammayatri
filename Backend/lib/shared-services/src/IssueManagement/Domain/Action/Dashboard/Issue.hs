@@ -283,10 +283,12 @@ issueList ::
   Maybe Text ->
   Maybe (ShortId Ride) ->
   Maybe Text ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   ServiceHandle m ->
   Identifier ->
   m Common.IssueReportListResponse
-issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCategoryName mbAssignee mbMobileCountryCode mbPhoneNumber mbRideShortId mbDescriptionSearch issueHandle identifier = do
+issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCategoryName mbAssignee mbMobileCountryCode mbPhoneNumber mbRideShortId mbDescriptionSearch mbFromDate mbToDate issueHandle identifier = do
   merchantOperatingCity <-
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
@@ -303,7 +305,7 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCatego
       issueHandle.findByMobileNumberAndMerchantId mobileCountryCode numHash merchantId
         >>= fromMaybeM (PersonWithPhoneNotFound phoneNumber)
   mbRide <- maybe (pure Nothing) (issueHandle.findRideByRideShortId merchantOperatingCity.merchantId) mbRideShortId
-  (totalCount, issueReports) <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryIdFromName mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide) mbDescriptionSearch (cast merchantOperatingCity.id)
+  (totalCount, issueReports) <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryIdFromName mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide) mbDescriptionSearch mbFromDate mbToDate (cast merchantOperatingCity.id)
   let count = length issueReports
   let summary = Common.Summary {totalCount, count}
   issues <-

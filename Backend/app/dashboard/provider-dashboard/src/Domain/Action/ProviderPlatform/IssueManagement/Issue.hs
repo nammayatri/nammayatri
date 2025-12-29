@@ -63,10 +63,12 @@ getIssueList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Common.Ride) ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueReportListResponse
-getIssueList merchantShortId opCity apiTokenInfo limit offset status category categoryName assignee countryCode phoneNumber rideShortId descriptionSearch = do
+getIssueList merchantShortId opCity apiTokenInfo limit offset status category categoryName assignee countryCode phoneNumber rideShortId descriptionSearch fromDate toDate = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueList) limit offset status category categoryName assignee countryCode phoneNumber rideShortId descriptionSearch
+  API.Client.ProviderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueList) limit offset status category categoryName assignee countryCode phoneNumber rideShortId descriptionSearch fromDate toDate
 
 getIssueInfo ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

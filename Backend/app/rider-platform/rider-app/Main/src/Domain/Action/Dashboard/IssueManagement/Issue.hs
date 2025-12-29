@@ -78,8 +78,10 @@ getIssueList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Common.Ride) ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Environment.Flow API.Types.RiderPlatform.IssueManagement.Issue.IssueReportListResponse
-getIssueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus mbCategoryId mbCategoryName mbAssignee mbCountryCode mbMobileNumber mbRideShortId mbDescriptionSearch =
+getIssueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus mbCategoryId mbCategoryName mbAssignee mbCountryCode mbMobileNumber mbRideShortId mbDescriptionSearch mbFromDate mbToDate =
   DIssue.issueList
     (Kernel.Types.Id.ShortId merchantShortId)
     opCity
@@ -93,6 +95,8 @@ getIssueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset m
     mbMobileNumber
     mbRideShortId
     mbDescriptionSearch
+    mbFromDate
+    mbToDate
     dashboardIssueHandle
     Common.CUSTOMER
 
