@@ -612,18 +612,33 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
 postFrfsQuoteV2Confirm :: (CallExternalBPP.FRFSConfirmFlow m r c) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId req = do
   personId <- fromMaybeM (InvalidRequest "personId not found") mbPersonId
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
-  let selectedQuoteCategories =
-        map
-          ( \quoteCategory ->
-              let quantity =
-                    fromMaybe quoteCategory.selectedQuantity
-                      case quoteCategory.category of
-                        ADULT -> req.ticketQuantity
-                        _ -> Just quoteCategory.selectedQuantity
-               in FRFSTicketService.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity}
-          )
-          quoteCategories
+  selectedQuoteCategories <-
+    case req.offered of
+      Just offeredCategories
+        | not (null offeredCategories) ->
+          pure $
+            map
+              ( \offeredCategory ->
+                  FRFSTicketService.FRFSCategorySelectionReq
+                    { quoteCategoryId = offeredCategory.quoteCategoryId,
+                      quantity = offeredCategory.quantity
+                    }
+              )
+              offeredCategories
+      _ -> do
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
+        pure $
+          map
+            ( \quoteCategory ->
+                let quantity =
+                      fromMaybe quoteCategory.selectedQuantity
+                        case quoteCategory.category of
+                          ADULT -> req.ticketQuantity
+                          _ -> Just quoteCategory.selectedQuantity
+                 in FRFSTicketService.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity}
+            )
+            quoteCategories
+
   quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   case integratedBppConfig.providerConfig of
