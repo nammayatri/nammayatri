@@ -42,7 +42,7 @@ import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.Issue.IssueTranslation as QIT
 import IssueManagement.Tools.Error
 import qualified Kernel.Beam.Functions as B
-import Kernel.External.Encryption (DbHash, decrypt, getDbHash)
+import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import qualified Kernel.External.Ticket.Kapture.Types as Kapture
 import Kernel.External.Types (Language (..))
@@ -297,14 +297,15 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCatego
     _ -> pure mbCategoryId
   mbPerson <- forM mbPhoneNumber $ \phoneNumber -> do
     let mobileCountryCode = maybe "+91" (\code -> "+" <> T.strip code) mbMobileCountryCode
-    numHash <- fetchDbHash phoneNumber
+    numHash <- getDbHash phoneNumber
     let merchantId = merchantOperatingCity.merchantId
     B.runInReplica $
       issueHandle.findByMobileNumberAndMerchantId mobileCountryCode numHash merchantId
         >>= fromMaybeM (PersonWithPhoneNotFound phoneNumber)
   mbRide <- maybe (pure Nothing) (issueHandle.findRideByRideShortId merchantOperatingCity.merchantId) mbRideShortId
-  issueReports <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryIdFromName mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide) mbDescriptionSearch (cast merchantOperatingCity.id)
-  let summary = Common.Summary {count = length issueReports}
+  (totalCount, issueReports) <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryIdFromName mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide) mbDescriptionSearch (cast merchantOperatingCity.id)
+  let count = length issueReports
+  let summary = Common.Summary {totalCount, count}
   issues <-
     catMaybes
       <$> mapM
@@ -323,9 +324,6 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCatego
         issueReports
   pure $ Common.IssueReportListResponse {issues, summary}
   where
-    fetchDbHash :: EncFlow m r => Text -> m DbHash
-    fetchDbHash = getDbHash
-
     mkIssueReport :: (Esq.EsqDBReplicaFlow m r, BeamFlow m r) => DIR.IssueReport -> m Common.IssueReportListItem
     mkIssueReport issueReport = do
       category <- CQIC.findById (fromJust issueReport.categoryId) identifier >>= fromMaybeM (IssueCategoryNotFound (fromJust issueReport.categoryId).getId)
