@@ -77,7 +77,8 @@ data BusLegRequestGetFareData = BusLegRequestGetFareData
     serviceType :: Maybe Spec.ServiceTierType,
     merchantOpCity :: DMOC.MerchantOperatingCity,
     blacklistedServiceTiers :: [Spec.ServiceTierType],
-    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType]
+    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType],
+    isSingleMode :: Maybe Bool
   }
 
 data BusLegRequest

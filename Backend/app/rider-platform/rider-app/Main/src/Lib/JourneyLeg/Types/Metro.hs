@@ -82,5 +82,6 @@ data MetroLegRequestGetFareData = MetroLegRequestGetFareData
     merchantOpCity :: DMOC.MerchantOperatingCity,
     riderId :: Id DPerson.Person,
     blacklistedServiceTiers :: [Spec.ServiceTierType],
-    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType]
+    blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType],
+    isSingleMode :: Maybe Bool
   }
