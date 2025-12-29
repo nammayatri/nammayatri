@@ -458,6 +458,7 @@ library
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
+      SharedLogic.SosLocationTracking
       SharedLogic.TicketRule.Apply
       SharedLogic.TicketRule.Core
       SharedLogic.TicketUtils

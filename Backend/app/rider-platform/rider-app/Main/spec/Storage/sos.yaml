@@ -11,11 +11,12 @@ Sos:
   fields:
     id : Id Sos
     personId : Id Person
-    rideId : Id Ride
+    rideId : Maybe (Id Ride)
     flow : SosType
     status : SosStatus
     ticketId : Maybe Text
     mediaFiles : "[Id MediaFile]"
+    trackingExpiresAt : Maybe UTCTime
 
   types:
     EmergencyContactId:
@@ -39,6 +40,10 @@ Sos:
     updateMediaFiles:
       kvFunction: updateOneWithKV
       params: [mediaFiles]
+      where: id
+    updateTrackingExpiresAt:
+      kvFunction: updateOneWithKV
+      params: [trackingExpiresAt]
       where: id
     findById:
       kvFunction: findOneWithKV
