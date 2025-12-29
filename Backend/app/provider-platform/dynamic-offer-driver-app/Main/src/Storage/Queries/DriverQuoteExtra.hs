@@ -56,7 +56,7 @@ findActiveQuotesByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id 
 findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
   now <- getCurrentTime
   let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay
-  findAllWithKVAndConditionalDB
+  findAllFromKvRedis
     [ Se.And
         [ Se.Is BeamDQ.status $ Se.Eq Domain.Active,
           Se.Is BeamDQ.driverId $ Se.Eq driverId,
