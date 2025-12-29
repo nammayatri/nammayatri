@@ -181,7 +181,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
   oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active
-  DDriverMode.updateDriverModeAndFlowStatus driverId thresholdConfig oldDriverInfo.active Nothing newFlowStatus oldDriverInfo (Just False)
+  DDriverMode.updateDriverModeAndFlowStatus driverId thresholdConfig oldDriverInfo.active Nothing newFlowStatus oldDriverInfo (Just False) Nothing
   let driverInfo = oldDriverInfo {DI.driverFlowStatus = Just newFlowStatus}
   QRB.updateStatus booking.id SRB.COMPLETED
   whenJust mbRiderDetailsId $ \riderDetailsId -> do

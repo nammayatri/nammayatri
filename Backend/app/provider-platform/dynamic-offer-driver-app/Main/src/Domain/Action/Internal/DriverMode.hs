@@ -65,7 +65,7 @@ setDriverMode apiKey req = do
           SCTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing
             >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
         oldDriverInfo <- QDriverInformation.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
-        updateDriverModeAndFlowStatus driverId transporterConfig isActive (Just mode) newFlowStatus oldDriverInfo Nothing
+        updateDriverModeAndFlowStatus driverId transporterConfig isActive (Just mode) newFlowStatus oldDriverInfo Nothing Nothing
         pure Success
     )
     ( Redis.unlockRedis (buildSetActivityLockKey driverId)
@@ -260,13 +260,14 @@ updateDriverModeAndFlowStatus ::
   DDFS.DriverFlowStatus ->
   DI.DriverInformation ->
   Maybe Bool ->
+  Maybe UTCTime ->
   m ()
-updateDriverModeAndFlowStatus driverId transporterConfig isActive mbNewMode newFlowStatus oldDriverInfo mbHasRideStarted = do
+updateDriverModeAndFlowStatus driverId transporterConfig isActive mbNewMode newFlowStatus oldDriverInfo mbHasRideStarted lastOfflineTime = do
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
   if allowCacheDriverFlowStatus
     then do
-      QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode (Just newFlowStatus) mbHasRideStarted driverId
+      QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode (Just newFlowStatus) mbHasRideStarted lastOfflineTime driverId
       updateFleetOperatorStatusKeyForDriver driverId newFlowStatus oldDriverInfo
-    else QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode Nothing mbHasRideStarted driverId
+    else QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode Nothing mbHasRideStarted lastOfflineTime driverId
   fork "update driver online duration" $
     processingChangeOnline driverId transporterConfig mbNewMode oldDriverInfo.mode
