@@ -37,16 +37,15 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
 import Storage.Beam.IssueManagement ()
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Issue as QIssue
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson
 
-mobileIndianCode :: Text
-mobileIndianCode = "+91"
-
 getIssueListV1 :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow IssueListRes
-getIssueListV1 merchantShortId _ mbLimit mbOffset mbmobileCountryCode mbMobileNumber mbFrom mbTo = do
+getIssueListV1 merchantShortId opCity mbLimit mbOffset mbmobileCountryCode mbMobileNumber mbFrom mbTo = do
   now <- getCurrentTime
   merchant <- runInReplica $ QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let toDate = fromMaybe now mbTo
@@ -54,7 +53,8 @@ getIssueListV1 merchantShortId _ mbLimit mbOffset mbmobileCountryCode mbMobileNu
   case mbMobileNumber of
     Just mobileNumber -> do
       mobileNumberDbHash <- getDbHash mobileNumber
-      let mobileCountryCode = fromMaybe mobileIndianCode mbmobileCountryCode
+      merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+      let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) mbmobileCountryCode
       customer <- runInReplica $ QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
       issues <- runInReplica $ QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
       issueList <- mapM buildIssueList issues

@@ -1,6 +1,5 @@
 module Domain.Action.Dashboard.Common
-  ( mobileIndianCode,
-    mapServiceName,
+  ( mapServiceName,
     castVerificationStatus,
     castVehicleVariantDashboard,
     notifyYatriRentalEventsToDriver,
@@ -40,9 +39,6 @@ import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp as Whatsapp
-
-mobileIndianCode :: Text
-mobileIndianCode = "+91"
 
 mapServiceName :: Common.ServiceNames -> ServiceNames
 mapServiceName common = case common of

@@ -40,4 +40,4 @@ instance Text.Read.Read IssueManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [''IssueManagementUserActionType])
+$(Data.Singletons.TH.genSingletons [(''IssueManagementUserActionType)])

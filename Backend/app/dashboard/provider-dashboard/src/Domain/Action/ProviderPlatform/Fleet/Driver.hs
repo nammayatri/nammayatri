@@ -87,7 +87,6 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Dr
 import qualified Data.ByteString.Lazy as LBS
 import Data.Text hiding (elem, filter, find, length, map, null)
 import Data.Time (Day)
-import qualified Domain.Action.Dashboard.Common as DCommon
 import "lib-dashboard" Domain.Action.Dashboard.Person as DPerson
 import Domain.Action.ProviderPlatform.CheckVerification (checkFleetOwnerVerification)
 import Domain.Types.Alert
@@ -107,9 +106,11 @@ import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
+import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
 import Tools.Auth.Merchant
@@ -264,7 +265,6 @@ postDriverFleetVehicleDriverRcStatus merchantShortId opCity apiTokenInfo driverI
 
 postDriverUpdateFleetOwnerInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Text -> Common.UpdateFleetOwnerInfoReq -> Flow APISuccess
 postDriverUpdateFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId mbFleetOwnerId req = do
-  runRequestValidation Common.validateUpdateFleetOwnerInfoReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $ do
@@ -552,11 +552,12 @@ getDriverFleetAssignments merchantShortId opCity apiTokenInfo limit offset from 
 getDriverFleetOperatorInfo :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow Common.FleetOwnerInfoRes)
 getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCode mbMobileNumber mbPersonId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  merchantOpCity <- CQMOC.findByMerchantShortIdAndCity (ShortId merchantShortId.getShortId) opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
 
   person <- case (mbPersonId, mbMobileNumber) of
     (Just pid, _) -> QP.findById (Id pid) >>= fromMaybeM (PersonNotFound pid)
     (_, Just mobileNumber) -> do
-      let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbMobileCountryCode
+      let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) mbMobileCountryCode
       QP.findByMobileNumber mobileNumber mobileCountryCode >>= fromMaybeM (PersonNotFound mobileNumber)
     (Nothing, Nothing) ->
       throwError $ InvalidRequest "Either personId or mobile number must be provided."

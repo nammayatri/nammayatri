@@ -905,11 +905,12 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
           let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
           -- Track offline timestamp when driver goes offline
-          when (mode == Just DriverInfo.OFFLINE && driverInfo.mode /= Just DriverInfo.OFFLINE) $ do
-            now <- getCurrentTime
-            logInfo $ "Driver going OFFLINE at: " <> show now <> " for driverId: " <> show driverId
-            QDriverInformation.updateLastOfflineTime driverId now
-          DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing
+          if (mode == Just DriverInfo.OFFLINE && driverInfo.mode /= Just DriverInfo.OFFLINE)
+            then do
+              now <- getCurrentTime
+              logInfo $ "Driver going OFFLINE at: " <> show now <> " for driverId: " <> show driverId
+              DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing (Just now)
+            else DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing Nothing
         pure APISuccess.Success
     )
     ( do

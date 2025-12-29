@@ -43,7 +43,6 @@ postRegistrationV2LoginOtp ::
   Common.FleetOwnerLoginReqV2 ->
   Flow APISuccess
 postRegistrationV2LoginOtp merchantShortId opCity req = do
-  runRequestValidation Common.validateInitiateLoginReqV2 req
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let enabled = fromMaybe False merchant.verifyFleetWhileLogin
       checkedMerchantId = skipMerchantCityAccessCheck merchantShortId

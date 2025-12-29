@@ -68,6 +68,7 @@ data IssueReportListItem = IssueReportListItem
     ticketBookingId :: Maybe (Id FRFSTicketBooking),
     deleted :: Bool,
     category :: Text,
+    categoryId :: Maybe (Id IssueCategory),
     assignee :: Maybe Text,
     status :: IssueStatus,
     createdAt :: UTCTime
@@ -206,7 +207,7 @@ instance HideSecrets TicketStatusCallBackReq where
   hideSecrets = identity
 
 data Summary = Summary
-  { totalCount :: Int, --TODO add db indexes
+  { totalCount :: Int,
     count :: Int
   }
   deriving stock (Eq, Show, Generic)
