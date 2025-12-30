@@ -63,7 +63,7 @@ validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r) => DOnInit -> m (Merchan
 validateRequest DOnInit {..} = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QFRFSTicketBooking.findById (Id messageId) >>= fromMaybeM (BookingDoesNotExist messageId)
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, booking, quoteCategories)

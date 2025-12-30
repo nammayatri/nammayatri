@@ -123,7 +123,7 @@ castFindFRFSTicketBookingById ticketBookingId = do
   frfsTicketBooking <- runInReplica $ QFTB.findById (cast ticketBookingId)
   mapM
     ( \booking -> do
-        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
         let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
         return $ castFRFSTicketBooking fareParameters booking
     )
@@ -500,7 +500,7 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
       pure $ Just issueId
 
     processTicketBookingIssue ticketBooking category option merchant person igmConfig reqBody = do
-      quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId ticketBooking.quoteId
+      quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing ticketBooking.quoteId
       let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
       frfsTicketBookingDetails <- fromFRFSTicketBooking ticketBooking fareParameters
       merchantOperatingCity <- CQMOC.findById frfsTicketBookingDetails.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show frfsTicketBookingDetails.merchantOperatingCityId)
@@ -561,7 +561,7 @@ igmIssueStatus (personId, merchantId) = withFlowHandlerAPI $ do
         then QB.findById (Id issue.bookingId) >>= fromMaybeM (BookingNotFound issue.bookingId) >>= \b -> pure (fromBooking b, b.providerUrl)
         else
           QFTB.findById (Id issue.bookingId) >>= fromMaybeM (TicketBookingNotFound issue.bookingId) >>= \tb -> do
-            quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId tb.quoteId
+            quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing tb.quoteId
             let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
             liftA2 (,) (fromFRFSTicketBooking tb fareParameters) (parseBaseUrl tb.bppSubscriberUrl)
 
@@ -590,7 +590,7 @@ resolveIGMIssue (personId, merchantId) issueReportId response rating = do
           return $ fromBooking booking
         Spec.PUBLIC_TRANSPORT -> do
           frfsBooking <- QFTB.findById (Id igmIssue.bookingId) >>= fromMaybeM (FRFSTicketBookingNotFound igmIssue.bookingId)
-          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId frfsBooking.quoteId
+          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing frfsBooking.quoteId
           let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
           fromFRFSTicketBooking frfsBooking fareParameters
       option <- maybe (return Nothing) (`QIO.findById` CUSTOMER) issueReport.optionId

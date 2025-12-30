@@ -586,7 +586,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
               if integratedBppConfig.platformType == DIBC.MULTIMODAL
                 then (Nothing, Nothing)
                 else (decodeFromText =<< quote.routeStationsJson, decodeFromText quote.stationsJson)
-        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quote.id
         let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
             categories = map mkCategoryInfoResponse quoteCategories
         singleAdultTicketPrice <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)) & fromMaybeM (InternalError "Adult Ticket Unit Price not found.")
@@ -626,7 +626,7 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId) quoteId req = do
               )
               offeredCategories
       _ -> do
-        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quoteId
         pure $
           map
             ( \quoteCategory ->
@@ -799,7 +799,7 @@ getFrfsBookingList (mbPersonId, _merchantId) mbLimit mbOffset mbVehicleCategory 
   bookings <- B.runInReplica $ QFRFSTicketBooking.findAllByRiderId mbLimit mbOffset personId mbVehicleCategory
   mapM
     ( \booking -> do
-        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
         buildFRFSTicketBookingStatusAPIRes booking quoteCategories Nothing
     )
     bookings
@@ -1143,6 +1143,6 @@ postFrfsStationsPossibleStops (_personId, mId) mbCity _platformType vehicleType_
 
 select :: CallExternalBPP.FRFSConfirmFlow m r c => Merchant -> MerchantOperatingCity -> BecknConfig -> DFRFSQuote.FRFSQuote -> [FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> m ()
 select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer = do
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quote.id
   updatedQuoteCategories <- updateQuoteCategoriesWithQuantitySelections (selectedQuoteCategories <&> (\category -> (category.quoteCategoryId, category.quantity))) quoteCategories
   CallExternalBPP.select merchant merchantOperatingCity bapConfig quote updatedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer

@@ -105,7 +105,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
   when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && validTillWithBuffer < now) $
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing booking.quoteId
   merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
   let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
   logInfo $ "Booking status: " <> show booking.status

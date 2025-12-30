@@ -69,7 +69,7 @@ onSelect onSelectReq merchant quote isSingleMode mbEnableOffer crisSdkResponse i
   logDebug $ "onSelect isSingleMode: " <> show isSingleMode <> " mbEnableOffer: " <> show mbEnableOffer <> " crisSdkResponse: " <> show crisSdkResponse
   Metrics.finishMetrics Metrics.SELECT_FRFS merchant.name onSelectReq.transactionId quote.merchantOperatingCityId.getId
   whenJust (onSelectReq.validTill) (\validity -> void $ Qquote.updateValidTillById quote.id validity)
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quote.id
   let categorySelectionReq =
         mapMaybe
           ( \category ->

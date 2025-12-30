@@ -64,7 +64,7 @@ import Tools.Metrics.BAPMetrics (HasBAPMetrics)
 
 confirmAndUpsertBooking :: (CallExternalBPP.FRFSConfirmFlow m r c) => Id Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> DIBC.IntegratedBPPConfig -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking, FRFSUtils.FRFSFareParameters, [FRFSQuoteCategory.FRFSQuoteCategory], Bool)
 confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode integratedBppConfig = do
-  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId Nothing Nothing quote.id
   mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
   isMultiInitAllowed <-
     case mbBooking of
