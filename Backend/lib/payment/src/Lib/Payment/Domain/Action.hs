@@ -1127,6 +1127,7 @@ createRefundService orderShortId refundsCall =
   do
     order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderDoesNotExist orderShortId.getShortId)
     logDebug $ "Payment order details - shortId: " <> orderShortId.getShortId <> ", id: " <> order.id.getId <> ", status: " <> show order.status <> ", amount: " <> show order.amount.getHighPrecMoney <> ", currency: " <> show order.currency <> ", paymentServiceType: " <> show order.paymentServiceType <> ", paymentServiceOrderId: " <> order.paymentServiceOrderId
+    logDebug $ "Effect amount: " <> show order.effectAmount
     Redis.whenWithLockRedisAndReturnValue (refundProccessingKey orderShortId.getShortId) 60 $ do
       processRefund order
     >>= \case
@@ -1151,6 +1152,7 @@ createRefundService orderShortId refundsCall =
                     amount = order.amount,
                     splitSettlementDetails
                   }
+          logDebug $ "Refund request splitSettlementDetails : " <> show splitSettlementDetails
           refundsEntry <- mkRefundsEntry order.merchantId refundReq.requestId order.shortId order.amount REFUND_PENDING
           QRefunds.create refundsEntry
           resp <- withTryCatch "refundsCall:refundService" (refundsCall refundReq)
