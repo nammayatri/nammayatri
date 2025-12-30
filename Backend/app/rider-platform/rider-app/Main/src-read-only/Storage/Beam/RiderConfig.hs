@@ -81,6 +81,7 @@ data RiderConfigT f = RiderConfigT
     isFirstReferredRideEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     ivrTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     journeyOptionsSortingType :: B.C f (Kernel.Prelude.Maybe Domain.Types.MultimodalPreferences.JourneyOptionsSortingType),
+    kafkaTopicName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     kaptureConfig :: B.C f IssueManagement.Common.KaptureConfig,
     kaptureQueue :: B.C f Kernel.Prelude.Text,
     localPoliceNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
