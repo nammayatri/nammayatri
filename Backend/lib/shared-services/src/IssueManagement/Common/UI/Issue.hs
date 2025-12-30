@@ -174,6 +174,7 @@ data IssueCategoryRes = IssueCategoryRes
     logoUrl :: Text,
     categoryType :: CategoryType,
     isRideRequired :: Bool,
+    isTicketRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds,
     allowedRideStatuses :: Maybe [RideStatus]
   }

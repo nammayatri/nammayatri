@@ -7,6 +7,7 @@ ALTER TABLE atlas_driver_offer_bpp.issue_category ADD COLUMN max_allowed_ride_ag
 ALTER TABLE atlas_driver_offer_bpp.issue_category ADD COLUMN is_active boolean DEFAULT true NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.issue_category ADD COLUMN merchant_operating_city_id character(36) REFERENCES atlas_driver_offer_bpp.merchant_operating_city(id);
 ALTER TABLE atlas_driver_offer_bpp.issue_category ADD COLUMN label text;
+ALTER TABLE atlas_driver_offer_bpp.issue_category ADD COLUMN is_ticket_required Boolean DEFAULT false NOT NULL;
 
 -- QUERIES TO UPDATE is_ride_required IN PROD AND MASTER
 UPDATE atlas_driver_offer_bpp.issue_category SET is_ride_required = true

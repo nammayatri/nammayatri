@@ -62,7 +62,7 @@ type GetIssueList =
            IssueManagement.Common.Dashboard.Issue.IssueReportListResponse
   )
 
-type GetIssueInfo = (Capture "issueId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) :> "info" :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueInfoRes)
+type GetIssueInfo = (Capture "issueId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) :> "info" :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueInfoDRes)
 
 type GetIssueInfoV2 =
   ( "info" :> QueryParam "issueId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport)
@@ -71,7 +71,7 @@ type GetIssueInfoV2 =
            (Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport)
       :> Get
            '[JSON]
-           IssueManagement.Common.Dashboard.Issue.IssueInfoRes
+           IssueManagement.Common.Dashboard.Issue.IssueInfoDRes
   )
 
 type PutIssueUpdate =
@@ -213,7 +213,7 @@ type GetIssueOptionList =
            Kernel.External.Types.Language
       :> Get
            '[JSON]
-           IssueManagement.Common.Dashboard.Issue.IssueOptionListRes
+           IssueManagement.Common.Dashboard.Issue.IssueOptionListDRes
   )
 
 type DeleteIssueCategory =
@@ -266,9 +266,9 @@ type PostIssueMessageReorder = ("message" :> "reorder" :> ReqBody '[JSON] IssueM
 
 data IssueAPIs = IssueAPIs
   { getIssueCategoryList :: EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueCategoryListRes,
-    getIssueList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe IssueManagement.Common.IssueStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueReportListResponse,
-    getIssueInfo :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueInfoRes,
-    getIssueInfoV2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueInfoRes,
+    getIssueList :: Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (IssueManagement.Common.IssueStatus) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory)) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueReportListResponse,
+    getIssueInfo :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueInfoDRes,
+    getIssueInfoV2 :: Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport)) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport)) -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueInfoDRes,
     putIssueUpdate :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.IssueUpdateByUserReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postIssueComment :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.IssueAddCommentByUserReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getIssueMedia :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Prelude.Text,
@@ -283,15 +283,15 @@ data IssueAPIs = IssueAPIs
       ) ->
       EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageRes,
     postIssueKaptureCreate :: IssueManagement.Common.Dashboard.Issue.IssueReportReqV2 -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getIssueCategoryDetail :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueCategoryDetailRes,
-    getIssueOptionDetail :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueOptionDetailRes,
-    getIssueMessageDetail :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueMessageDetailRes,
-    getIssueMessageList :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueMessageListRes,
-    getIssueOptionList :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueOptionListRes,
+    getIssueCategoryDetail :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueCategoryDetailRes,
+    getIssueOptionDetail :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueOptionDetailRes,
+    getIssueMessageDetail :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueMessageDetailRes,
+    getIssueMessageList :: Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory)) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption)) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueMessageListRes,
+    getIssueOptionList :: Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory)) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage)) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueOptionListDRes,
     deleteIssueCategory :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     deleteIssueOption :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     deleteIssueMessage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getIssueCategoryFlowPreview :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueCategoryFlowPreviewRes,
+    getIssueCategoryFlowPreview :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueCategoryFlowPreviewRes,
     getIssueTranslations :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueTranslationListRes,
     postIssueBulkUpsertTranslations :: IssueManagement.Common.Dashboard.Issue.BulkUpsertTranslationsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getIssueConfig :: EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueConfigRes,
