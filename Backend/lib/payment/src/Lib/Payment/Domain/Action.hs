@@ -1126,7 +1126,6 @@ createRefundService ::
 createRefundService orderShortId refundsCall =
   do
     order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderDoesNotExist orderShortId.getShortId)
-    logDebug $ "Payment order details - shortId: " <> orderShortId.getShortId <> ", id: " <> order.id.getId <> ", status: " <> show order.status <> ", amount: " <> show order.amount.getHighPrecMoney <> ", currency: " <> show order.currency <> ", paymentServiceType: " <> show order.paymentServiceType <> ", paymentServiceOrderId: " <> order.paymentServiceOrderId
     logDebug $ "Effect amount: " <> show order.effectAmount
     Redis.whenWithLockRedisAndReturnValue (refundProccessingKey orderShortId.getShortId) 60 $ do
       processRefund order
@@ -1145,15 +1144,18 @@ createRefundService orderShortId refundsCall =
               Just effectAmount | effectAmount /= order.amount -> return Nothing
               _ -> mkSplitSettlementDetails paymentSplits
           refundId <- generateGUID
+          let refundAmount = case order.effectAmount of
+                Just effectAmount | effectAmount /= order.amount -> effectAmount
+                _ -> order.amount
           let refundReq =
                 PInterface.AutoRefundReq
                   { orderId = order.shortId.getShortId,
                     requestId = refundId,
-                    amount = order.amount,
+                    amount = refundAmount,
                     splitSettlementDetails
                   }
           logDebug $ "Refund request splitSettlementDetails : " <> show splitSettlementDetails
-          refundsEntry <- mkRefundsEntry order.merchantId refundReq.requestId order.shortId order.amount REFUND_PENDING
+          refundsEntry <- mkRefundsEntry order.merchantId refundReq.requestId order.shortId refundAmount REFUND_PENDING
           QRefunds.create refundsEntry
           resp <- withTryCatch "refundsCall:refundService" (refundsCall refundReq)
           case resp of
