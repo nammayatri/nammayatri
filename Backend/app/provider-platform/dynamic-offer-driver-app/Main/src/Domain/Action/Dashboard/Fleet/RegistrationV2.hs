@@ -48,6 +48,7 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.MobileNumberValidation as MobileValidation
 import qualified SharedLogic.PersonBankAccount as SPBA
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as FODVC
@@ -315,14 +316,15 @@ fleetOwnerLogin ::
 fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled req = do
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  runRequestValidation (Common.validateInitiateLoginReqV2 merchantOpCity.country) req
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
   sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeMobileNumberHitsCountKey mobileNumber) sendOtpRateLimitOptions
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  MobileValidation.validateMobileNumber transporterConfig mobileNumber countryCode merchantOpCity.country
 
   smsCfg <- asks (.smsCfg)
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let merchantOpCityId = merchantOpCity.id
   mobileNumberHash <- getDbHash mobileNumber
   mbPerson <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR]
   personId <- case mbPerson of
