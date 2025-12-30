@@ -46,6 +46,7 @@ data FarePolicyT f = FarePolicyT
     distanceUnit :: B.C f (Maybe DistanceUnit),
     govtCharges :: B.C f (Maybe Double),
     perMinuteRideExtraTimeCharge :: B.C f (Maybe HighPrecMoney),
+    rideExtraTimeChargeGracePeriod :: B.C f (Maybe Seconds),
     congestionCharge :: B.C f (Maybe Domain.CongestionChargeMultiplier),
     perDistanceUnitInsuranceCharge :: B.C f (Maybe HighPrecMoney),
     cardChargePerDistanceUnitMultiplier :: B.C f (Maybe Double),

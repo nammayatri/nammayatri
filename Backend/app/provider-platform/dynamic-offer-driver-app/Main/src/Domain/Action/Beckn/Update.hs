@@ -278,7 +278,6 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     stopWaitingTimes = [],
                     noOfStops = length booking.stops,
                     actualRideDuration = Nothing,
-                    avgSpeedOfVehicle = Nothing,
                     driverSelectedFare = booking.fareParams.driverSelectedFare,
                     petCharges = booking.fareParams.petCharges,
                     customerExtraFee = booking.fareParams.customerExtraFee,

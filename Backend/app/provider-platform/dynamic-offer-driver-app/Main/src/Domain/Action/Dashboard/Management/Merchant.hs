@@ -1173,6 +1173,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     platformFeeSgstFarePolicyLevel :: Text,
     platformFeeChargesBy :: Text,
     perMinuteRideExtraTimeCharge :: Text,
+    rideExtraTimeChargeGracePeriod :: Text,
     searchSource :: Text,
     perExtraMinRate :: Text,
     includedKmPerHr :: Text,
@@ -1269,6 +1270,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "platform_fee_sgst_pare_policy_level"
       <*> r .: "platform_fee_charges_by"
       <*> r .: "per_minute_ride_extra_time_charge"
+      <*> r .: "ride_extra_time_charge_grace_period"
       <*> r .: "search_source"
       <*> r .: "per_extra_min_rate"
       <*> r .: "included_km_per_hr"
@@ -1506,6 +1508,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let pickupBufferInSecsForNightShiftCal :: (Maybe Seconds) = readMaybeCSVField idx row.pickupBufferInSecsForNightShiftCal "Pickup Buffer In Secs For Night Shift Cal"
       let tipOptions :: (Maybe [Int]) = readMaybeCSVField idx row.tipOptions "Tip Options"
       let perMinuteRideExtraTimeCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perMinuteRideExtraTimeCharge "Per Minute Ride Extra Time Charge"
+      let rideExtraTimeChargeGracePeriod :: (Maybe Seconds) = readMaybeCSVField idx row.rideExtraTimeChargeGracePeriod "Ride Extra Time Charge Grace Period"
       let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
       farePolicyType :: FarePolicy.FarePolicyType <- readCSVField idx row.farePolicyType "Fare Policy Type"
       void $ validateFarePolicyType farePolicyType tripCategory

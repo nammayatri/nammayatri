@@ -50,7 +50,6 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Variant
@@ -1426,8 +1425,8 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       ..
     }
 
-mkGeneralInfoTagGroup :: DTC.TransporterConfig -> Pricing -> Bool -> Maybe Spec.TagGroup
-mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
+mkGeneralInfoTagGroup :: Pricing -> Bool -> Maybe Spec.TagGroup
+mkGeneralInfoTagGroup pricing isValueAddNP =
   Just $
     Spec.TagGroup
       { tagGroupDisplay = Just False,
@@ -1615,50 +1614,9 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                       descriptorName = Just $ show pricing.vehicleVariant,
                       descriptorShortDesc = Nothing
                     },
-              tagValue = getDurationToNearestDriver (DTC.avgSpeedOfVehicle transporterConfig)
+              tagValue = getDuration pricing.distanceToNearestDriver 25 -- consider 25kmph as average speed
             }
       where
-        getDurationToNearestDriver :: Maybe DTC.AvgSpeedOfVechilePerKm -> Maybe Text
-        getDurationToNearestDriver avgSpeedOfVehicle = do
-          avgSpeed <- avgSpeedOfVehicle
-          let variantSpeed = case pricing.vehicleVariant of
-                Variant.SEDAN -> avgSpeed.sedan.getKilometers
-                Variant.SUV -> avgSpeed.suv.getKilometers
-                Variant.HATCHBACK -> avgSpeed.hatchback.getKilometers
-                Variant.AUTO_RICKSHAW -> avgSpeed.autorickshaw.getKilometers
-                Variant.BIKE -> avgSpeed.bike.getKilometers
-                Variant.DELIVERY_BIKE -> avgSpeed.bike.getKilometers
-                Variant.TAXI -> avgSpeed.taxi.getKilometers
-                Variant.TAXI_PLUS -> avgSpeed.ambulance.getKilometers
-                Variant.PREMIUM_SEDAN -> avgSpeed.premiumsedan.getKilometers
-                Variant.BLACK -> avgSpeed.black.getKilometers
-                Variant.BLACK_XL -> avgSpeed.blackxl.getKilometers
-                Variant.AMBULANCE_TAXI -> avgSpeed.ambulance.getKilometers
-                Variant.AMBULANCE_TAXI_OXY -> avgSpeed.ambulance.getKilometers
-                Variant.AMBULANCE_AC -> avgSpeed.ambulance.getKilometers
-                Variant.AMBULANCE_AC_OXY -> avgSpeed.ambulance.getKilometers
-                Variant.AMBULANCE_VENTILATOR -> avgSpeed.ambulance.getKilometers
-                Variant.SUV_PLUS -> avgSpeed.suvplus.getKilometers
-                Variant.HERITAGE_CAB -> avgSpeed.heritagecab.getKilometers
-                Variant.EV_AUTO_RICKSHAW -> avgSpeed.evautorickshaw.getKilometers
-                Variant.DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
-                Variant.DELIVERY_TRUCK_MINI -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
-                Variant.DELIVERY_TRUCK_SMALL -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
-                Variant.DELIVERY_TRUCK_MEDIUM -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
-                Variant.DELIVERY_TRUCK_LARGE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
-                Variant.DELIVERY_TRUCK_ULTRA_LARGE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
-                Variant.BUS_NON_AC -> avgSpeed.busNonAc.getKilometers
-                Variant.BUS_AC -> avgSpeed.busAc.getKilometers
-                Variant.BOAT -> avgSpeed.boat.getKilometers
-                Variant.AUTO_PLUS -> avgSpeed.autorickshaw.getKilometers
-                Variant.VIP_ESCORT -> avgSpeed.vipEscort.getKilometers
-                Variant.VIP_OFFICER -> avgSpeed.vipOfficer.getKilometers
-                Variant.AC_PRIORITY -> avgSpeed.sedan.getKilometers
-                Variant.BIKE_PLUS -> avgSpeed.bikeplus.getKilometers
-                Variant.E_RICKSHAW -> avgSpeed.erickshaw.getKilometers
-
-          getDuration pricing.distanceToNearestDriver variantSpeed
-
         getDuration :: Maybe Meters -> Int -> Maybe Text
         getDuration distance avgSpeed
           | avgSpeed <= 0 = Nothing

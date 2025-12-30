@@ -47,7 +47,6 @@ module SharedLogic.DriverPool
     CalculateDriverPoolReq (..),
     module Reexport,
     scheduledRideFilter,
-    getVehicleAvgSpeed,
     getBatchSize,
     mkRideCancelledKey,
     addSearchRequestInfoToCache,
@@ -84,7 +83,6 @@ import Domain.Types.RiderDetails (RiderDetails)
 import Domain.Types.SearchRequest
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
-import qualified Domain.Types.VehicleVariant as DVeh
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (find, id, length)
 import qualified Kernel.Beam.Functions as B
@@ -952,8 +950,8 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
       | haveScheduled && isIntercity -> return False
       | haveScheduled && isRental -> return $ canTakeRental driverInfo.latestScheduledBooking now minimumScheduledBookingLeadTimeInSecs
       | isScheduledRideUnderFilterExclusionThresholdHours driverInfo.latestScheduledBooking now scheduledRideFilterExclusionThresholdInSecs -> do
-        case (currentSearchInfo.dropLocation, driverInfo.latestScheduledPickup, currentSearchInfo.routeDistance, transporterConfig.avgSpeedOfVehicle) of
-          (Just dropLoc, Just scheduledPickup, Just routeDistance, Just avgSpeeds) -> do
+        case (currentSearchInfo.dropLocation, driverInfo.latestScheduledPickup, currentSearchInfo.routeDistance) of
+          (Just dropLoc, Just scheduledPickup, Just routeDistance) -> do
             currentDroptoScheduledPickupDistance <-
               TMaps.getDistanceForScheduledRides merchantId merchantOpCityId Nothing $
                 TMaps.GetDistanceReq
@@ -963,20 +961,19 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
                     sourceDestinationMapping = Nothing,
                     distanceUnit = Meter
                   }
-            let avgSpeedOfVehicleInKM = getVehicleAvgSpeed driverInfo.variant avgSpeeds
-                destToPickupDistance = currentDroptoScheduledPickupDistance.distance
+            let destToPickupDistance = currentDroptoScheduledPickupDistance.distance
                 totalDistanceinM = routeDistance + destToPickupDistance + driverPoolWithActualDistResult.actualDistanceToPickup
                 totalDistanceinKM = (fromIntegral (totalDistanceinM.getMeters) :: Double) / 1000
-                totalTimeinDoubleHr = (totalDistanceinKM / fromIntegral (avgSpeedOfVehicleInKM.getKilometers)) :: Double
+                totalTimeinDoubleHr = (totalDistanceinKM / 25.0) :: Double -- consider 25 kmph as avg speed, can do it properly later
                 totalTimeInSeconds = realToFrac (totalTimeinDoubleHr * 3600) :: NominalDiffTime
                 expectedEndTime = addUTCTime totalTimeInSeconds now
-            let isRidePossible = case driverInfo.latestScheduledBooking of
+                isRidePossible = case driverInfo.latestScheduledBooking of
                   Just latestScheduledBooking ->
                     let timeDifference = diffUTCTime latestScheduledBooking (addUTCTime transporterConfig.scheduleRideBufferTime expectedEndTime)
                      in timeDifference > 0
                   Nothing -> False
             return isRidePossible
-          (_, _, _, _) -> return False
+          (_, _, _) -> return False
       | otherwise -> return True
   where
     canTakeRental :: Maybe UTCTime -> UTCTime -> NominalDiffTime -> Bool
@@ -993,43 +990,6 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
         Just latestScheduledBooking ->
           let timeDifference = diffUTCTime latestScheduledBooking now
            in timeDifference < scheduledRideFilterExclusionThresholdInSecs
-
-getVehicleAvgSpeed :: DVeh.VehicleVariant -> DTC.AvgSpeedOfVechilePerKm -> Kilometers
-getVehicleAvgSpeed variant avgSpeedOfVehicle = case variant of
-  DVeh.SEDAN -> avgSpeedOfVehicle.sedan
-  DVeh.SUV -> avgSpeedOfVehicle.suv
-  DVeh.HATCHBACK -> avgSpeedOfVehicle.hatchback
-  DVeh.AUTO_RICKSHAW -> avgSpeedOfVehicle.autorickshaw
-  DVeh.TAXI -> avgSpeedOfVehicle.taxi
-  DVeh.TAXI_PLUS -> avgSpeedOfVehicle.taxiplus
-  DVeh.PREMIUM_SEDAN -> avgSpeedOfVehicle.premiumsedan
-  DVeh.BLACK -> avgSpeedOfVehicle.black
-  DVeh.BLACK_XL -> avgSpeedOfVehicle.blackxl
-  DVeh.BIKE -> avgSpeedOfVehicle.bike
-  DVeh.DELIVERY_BIKE -> avgSpeedOfVehicle.bike
-  DVeh.AMBULANCE_TAXI -> avgSpeedOfVehicle.ambulance
-  DVeh.AMBULANCE_TAXI_OXY -> avgSpeedOfVehicle.ambulance
-  DVeh.AMBULANCE_AC -> avgSpeedOfVehicle.ambulance
-  DVeh.AMBULANCE_AC_OXY -> avgSpeedOfVehicle.ambulance
-  DVeh.AMBULANCE_VENTILATOR -> avgSpeedOfVehicle.ambulance
-  DVeh.SUV_PLUS -> avgSpeedOfVehicle.suvplus
-  DVeh.HERITAGE_CAB -> avgSpeedOfVehicle.heritagecab
-  DVeh.EV_AUTO_RICKSHAW -> avgSpeedOfVehicle.evautorickshaw
-  DVeh.DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
-  DVeh.DELIVERY_TRUCK_MINI -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
-  DVeh.DELIVERY_TRUCK_SMALL -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
-  DVeh.DELIVERY_TRUCK_MEDIUM -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
-  DVeh.DELIVERY_TRUCK_LARGE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
-  DVeh.DELIVERY_TRUCK_ULTRA_LARGE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
-  DVeh.BUS_NON_AC -> avgSpeedOfVehicle.busNonAc
-  DVeh.BUS_AC -> avgSpeedOfVehicle.busAc
-  DVeh.AUTO_PLUS -> avgSpeedOfVehicle.autorickshaw
-  DVeh.BOAT -> avgSpeedOfVehicle.boat
-  DVeh.VIP_ESCORT -> avgSpeedOfVehicle.vipEscort
-  DVeh.VIP_OFFICER -> avgSpeedOfVehicle.vipOfficer
-  DVeh.AC_PRIORITY -> avgSpeedOfVehicle.sedan
-  DVeh.BIKE_PLUS -> avgSpeedOfVehicle.bikeplus
-  DVeh.E_RICKSHAW -> avgSpeedOfVehicle.erickshaw
 
 calculateDriverPoolCurrentlyOnRide ::
   ( EncFlow m r,

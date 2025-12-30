@@ -241,7 +241,6 @@ import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
-import SharedLogic.DriverPool as SDP
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import SharedLogic.FareCalculator
@@ -1666,7 +1665,6 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               stopWaitingTimes = [],
               noOfStops = length searchReq.stops,
               actualRideDuration = Nothing,
-              avgSpeedOfVehicle = Nothing,
               driverSelectedFare = reqOfferedValue,
               customerExtraFee = searchTry.customerExtraFee,
               petCharges = if isJust searchTry.petCharges then farePolicy.petCharges else Nothing,
@@ -2655,8 +2653,8 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
 
                   scheduledBookings <-
                     if currentDay >= from
-                      then getTodayScheduledBookings now cityId vehicleVariants dLoc vehicle transporterConfig availableServiceTiers tripCategory limit offset safelimit
-                      else getTommorowScheduledBookings now (UTCTime from 0) cityId vehicleVariants dLoc vehicle transporterConfig availableServiceTiers tripCategory limit offset
+                      then getTodayScheduledBookings now cityId vehicleVariants dLoc availableServiceTiers tripCategory limit offset safelimit
+                      else getTommorowScheduledBookings now (UTCTime from 0) cityId vehicleVariants dLoc availableServiceTiers tripCategory limit offset
 
                   bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (catMaybes scheduledBookings)
                   let sortedBookings = sortBookingsByDistance (catMaybes bookings)
@@ -2673,8 +2671,8 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
     possibleScheduledTripCategories :: [DTC.TripCategory]
     possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
 
-    filterNearbyBookings :: UTCTime -> LatLong -> DV.VehicleVariant -> Maybe AvgSpeedOfVechilePerKm -> [(Text, Double, Double, UTCTime, ServiceTierType)] -> [ServiceTierType] -> [Text]
-    filterNearbyBookings currentTime dLoc variant avgSpeeds parsedRes possibleServiceTierTypes = map (\(id, _, _, _, _) -> id) $ filter (\(_, lat, lon, pickupTime, bookingServiceTier) -> checkNearbyBookingsWithServiceTier currentTime pickupTime lat lon dLoc variant avgSpeeds possibleServiceTierTypes bookingServiceTier) parsedRes
+    filterNearbyBookings :: UTCTime -> LatLong -> [(Text, Double, Double, UTCTime, ServiceTierType)] -> [ServiceTierType] -> [Text]
+    filterNearbyBookings currentTime dLoc parsedRes possibleServiceTierTypes = map (\(id, _, _, _, _) -> id) $ filter (\(_, lat, lon, pickupTime, bookingServiceTier) -> checkNearbyBookingsWithServiceTier currentTime pickupTime lat lon dLoc possibleServiceTierTypes bookingServiceTier) parsedRes
 
     parseMember :: Text -> Maybe (Text, Double, Double, UTCTime, ServiceTierType)
     parseMember member = do
@@ -2688,13 +2686,13 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
           return (idText, lat, lon, startTime, serviceTierType)
         _ -> Nothing
 
-    checkNearbyBookingsWithServiceTier :: UTCTime -> UTCTime -> Double -> Double -> LatLong -> DV.VehicleVariant -> Maybe AvgSpeedOfVechilePerKm -> [ServiceTierType] -> ServiceTierType -> Bool
-    checkNearbyBookingsWithServiceTier currentTime pickupTime lat lon dLoc variant avgSpeeds possibleServiceTierTypes bookingServiceTierType =
+    checkNearbyBookingsWithServiceTier :: UTCTime -> UTCTime -> Double -> Double -> LatLong -> [ServiceTierType] -> ServiceTierType -> Bool
+    checkNearbyBookingsWithServiceTier currentTime pickupTime lat lon dLoc possibleServiceTierTypes bookingServiceTierType =
       let bookingLoc = LatLong {..}
           distanceToPickup = highPrecMetersToMeters $ distanceBetweenInMeters bookingLoc dLoc
           distanceInKm = metersToKilometers distanceToPickup
-          avgSpeedOfVehicleInKM = maybe 0 (SDP.getVehicleAvgSpeed variant) avgSpeeds
-          speedInMinPerKm = if avgSpeedOfVehicleInKM.getKilometers == 0 then 3 else truncate (60 / (toRational avgSpeedOfVehicleInKM.getKilometers))
+          avgSpeedOfVehicleInKM :: Int = 25
+          speedInMinPerKm = if avgSpeedOfVehicleInKM == 0 then 3 else truncate (60 / (toRational avgSpeedOfVehicleInKM))
           estimatedTime = intToNominalDiffTime $ distanceInKm.getKilometers * speedInMinPerKm * 60
           isValidServiceTierType = bookingServiceTierType `elem` possibleServiceTierTypes
        in (isValidServiceTierType && addUTCTime estimatedTime currentTime <= pickupTime)
@@ -2729,8 +2727,8 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
             price = priceObject.amountInt,
             priceWithCurrency = mkPriceAPIEntity priceObject
           }
-    getTodayScheduledBookings :: UTCTime -> Id DMOC.MerchantOperatingCity -> [VehicleVariant] -> LatLong -> Vehicle -> TransporterConfig -> [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Integer -> Flow [Maybe DRB.Booking]
-    getTodayScheduledBookings now mocCityId vehicleVariants dLoc vehicle transporterConfig possibleServiceTierTypes tripCategories limit offset safelimit = do
+    getTodayScheduledBookings :: UTCTime -> Id DMOC.MerchantOperatingCity -> [VehicleVariant] -> LatLong -> [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Integer -> Flow [Maybe DRB.Booking]
+    getTodayScheduledBookings now mocCityId vehicleVariants dLoc possibleServiceTierTypes tripCategories limit offset safelimit = do
       let nextDay = addDays 1 (utctDay now)
           nextDayStartTime = UTCTime nextDay 0
           redisKeys = createRedisKeysForCombinations now mocCityId tripCategories vehicleVariants
@@ -2743,10 +2741,10 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
       res <- mapM (\key -> Redis.zRangeByScoreByCount key startScore endScore offset safelimit) redisKeys
       res2 <- mapM (\key -> Redis.zRangeByScoreByCount key startScore2 end offset limit) redisKeys
 
-      returnFilteredBookings now (concat (res ++ res2)) dLoc vehicle.variant transporterConfig.avgSpeedOfVehicle possibleServiceTierTypes redisKeyForHset limit
+      returnFilteredBookings now (concat (res ++ res2)) dLoc possibleServiceTierTypes redisKeyForHset limit
 
-    getTommorowScheduledBookings :: UTCTime -> UTCTime -> Id DMOC.MerchantOperatingCity -> [VehicleVariant] -> LatLong -> Vehicle -> TransporterConfig -> [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Flow [Maybe DRB.Booking]
-    getTommorowScheduledBookings now dayStartTime mocCityId vehicleVariants dLoc vehicle transporterConfig possibleServiceTierTypes tripCategories limit offset = do
+    getTommorowScheduledBookings :: UTCTime -> UTCTime -> Id DMOC.MerchantOperatingCity -> [VehicleVariant] -> LatLong -> [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Flow [Maybe DRB.Booking]
+    getTommorowScheduledBookings now dayStartTime mocCityId vehicleVariants dLoc possibleServiceTierTypes tripCategories limit offset = do
       let redisKeys = createRedisKeysForCombinations dayStartTime mocCityId tripCategories vehicleVariants
           redisKeyForHset = createRedisKeyForHset dayStartTime mocCityId
           startScore = calculateSortedSetScore dayStartTime
@@ -2754,12 +2752,12 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
 
       res <- mapM (\key -> Redis.zRangeByScoreByCount key startScore endScore offset limit) redisKeys
 
-      returnFilteredBookings now (concat res) dLoc vehicle.variant transporterConfig.avgSpeedOfVehicle possibleServiceTierTypes redisKeyForHset limit
+      returnFilteredBookings now (concat res) dLoc possibleServiceTierTypes redisKeyForHset limit
 
-    returnFilteredBookings :: UTCTime -> [BS.ByteString] -> LatLong -> VehicleVariant -> Maybe AvgSpeedOfVechilePerKm -> [ServiceTierType] -> Text -> Integer -> Flow [Maybe DRB.Booking]
-    returnFilteredBookings now res dLoc variant avgSpeedOfVehicle possibleServiceTierTypes redisKeyForHset limit = do
+    returnFilteredBookings :: UTCTime -> [BS.ByteString] -> LatLong -> [ServiceTierType] -> Text -> Integer -> Flow [Maybe DRB.Booking]
+    returnFilteredBookings now res dLoc possibleServiceTierTypes redisKeyForHset limit = do
       let parsedRes = mapMaybe (parseMember . decodeUtf8) res
-          nearbyBookings = take (fromIntegral limit) $ filterNearbyBookings now dLoc variant avgSpeedOfVehicle parsedRes possibleServiceTierTypes
+          nearbyBookings = take (fromIntegral limit) $ filterNearbyBookings now dLoc parsedRes possibleServiceTierTypes
       if not $ null nearbyBookings
         then Redis.hmGet redisKeyForHset nearbyBookings
         else pure []

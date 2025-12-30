@@ -92,7 +92,7 @@ tfProviderItems res isValueAddNP pricing = do
       itemId_ = Just pricing.pricingId
       itemLocationIds_ = Beckn.OnDemand.Utils.OnSearch.mkItemLocationIds ((map (\(_, _, c, _) -> c) res.estimates) <> (map (\(_, _, c, _) -> c) res.quotes))
       itemPaymentIds_ = Nothing
-      itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags res.transporterConfig pricing isValueAddNP res.fareParametersInRateCard
+      itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags pricing isValueAddNP res.fareParametersInRateCard
       itemPrice_ = tfItemPrice pricing
   BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
 

@@ -39,7 +39,6 @@ data TransporterConfigT f = TransporterConfigT
     arrivedStopThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     arrivingPickupThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
     automaticRCActivationCutOff :: B.C f Kernel.Types.Common.Seconds,
-    avgSpeedOfVehicle :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     badDebtBatchSize :: B.C f Kernel.Prelude.Int,
     badDebtRescheduleTime :: B.C f Kernel.Types.Common.Seconds,
     badDebtSchedulerTime :: B.C f Kernel.Types.Common.Seconds,

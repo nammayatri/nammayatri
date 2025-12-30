@@ -619,7 +619,6 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               stopWaitingTimes = stopsInfo <&> (\stopInfo -> max 0 (secondsToMinutesCeil $ roundToIntegral (diffUTCTime (fromMaybe stopInfo.waitingTimeStart stopInfo.waitingTimeEnd) stopInfo.waitingTimeStart))),
               actualRideDuration = finalDuration,
               estimatedRideDuration = booking.estimatedDuration,
-              avgSpeedOfVehicle = thresholdConfig.avgSpeedOfVehicle,
               driverSelectedFare = booking.fareParams.driverSelectedFare,
               customerExtraFee = booking.fareParams.customerExtraFee,
               nightShiftCharge = booking.fareParams.nightShiftCharge,

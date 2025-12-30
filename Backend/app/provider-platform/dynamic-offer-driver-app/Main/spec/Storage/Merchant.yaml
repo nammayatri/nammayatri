@@ -793,30 +793,6 @@ TransporterConfig:
       height: Int
       width: Int
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
-    AvgSpeedOfVechilePerKm:
-      sedan: Kilometers
-      suv: Kilometers
-      hatchback: Kilometers
-      autorickshaw: Kilometers
-      taxi: Kilometers
-      taxiplus: Kilometers
-      bike: Kilometers
-      ambulance: Kilometers
-      premiumsedan: Kilometers
-      black: Kilometers
-      blackxl: Kilometers
-      suvplus: Kilometers
-      heritagecab: Kilometers
-      evautorickshaw: Kilometers
-      deliveryLightGoodsVehicle: Kilometers
-      busAc: Kilometers
-      busNonAc: Kilometers
-      boat: Kilometers
-      vipEscort: Kilometers
-      vipOfficer: Kilometers
-      bikeplus: Kilometers
-      erickshaw: Kilometers
-      derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     DashboardMediaSendingLimit:
       sms: Int
       whatsapp: Int
@@ -948,7 +924,6 @@ TransporterConfig:
     timeDiffFromUtc: Seconds
     subscription: Bool
     subscriptionStartTime: UTCTime
-    avgSpeedOfVehicle: Maybe AvgSpeedOfVechilePerKm
     updateNotificationStatusBatchSize: Int
     updateOrderStatusBatchSize: Int
     mandateValidity: Int
@@ -1129,7 +1104,6 @@ TransporterConfig:
     mandateExecutionRescheduleInterval: Seconds
     driverFeeCalculationTime: Maybe Seconds
     driverFeeCalculatorBatchGap: Maybe Seconds
-    avgSpeedOfVehicle: Maybe Value
     bankErrorExpiry: Seconds
     canSuvDowngradeToHatchback: Maybe Bool
     aadhaarImageResizeConfig: Maybe Value
@@ -1206,7 +1180,6 @@ TransporterConfig:
     mandateExecutionRescheduleInterval: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     driverFeeCalculationTime: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverFeeCalculationTime|E
     driverFeeCalculatorBatchGap: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverFeeCalculatorBatchGap|E
-    avgSpeedOfVehicle: Kernel.Prelude.toJSON <$> avgSpeedOfVehicle|E
     bankErrorExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     canSuvDowngradeToHatchback: Just canSuvDowngradeToHatchback|E
     aadhaarImageResizeConfig: Kernel.Prelude.toJSON <$> aadhaarImageResizeConfig|E
@@ -1278,8 +1251,6 @@ TransporterConfig:
     mandateExecutionRescheduleInterval: Kernel.Utils.Common.secondsToNominalDiffTime|I
     driverFeeCalculationTime: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverFeeCalculationTime|E
     driverFeeCalculatorBatchGap: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverFeeCalculatorBatchGap|E
-    avgSpeedOfVehicle: |-
-      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< avgSpeedOfVehicle|E
     bankErrorExpiry: Kernel.Utils.Common.secondsToNominalDiffTime|I
     canSuvDowngradeToHatchback: fromMaybe False canSuvDowngradeToHatchback|E
     aadhaarImageResizeConfig: |-
@@ -1372,7 +1343,6 @@ TransporterConfig:
     mandateExecutionRescheduleInterval: bigint
     orderAndNotificationStatusCheckTime: bigint
     orderAndNotificationStatusCheckTimeLimit: bigint
-    avgSpeedOfVehicle: json
     volunteerSmsSendingLimit: json
     driverSmsReceivingLimit: json
     languagesToBeTranslated: "text[]"
