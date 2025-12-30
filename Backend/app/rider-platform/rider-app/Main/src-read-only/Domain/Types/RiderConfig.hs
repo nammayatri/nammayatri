@@ -82,6 +82,7 @@ data RiderConfig = RiderConfig
     isFirstReferredRideEnabled :: Kernel.Prelude.Bool,
     ivrTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     journeyOptionsSortingType :: Kernel.Prelude.Maybe Domain.Types.MultimodalPreferences.JourneyOptionsSortingType,
+    kafkaTopicName :: Kernel.Prelude.Text,
     kaptureConfig :: IssueManagement.Common.KaptureConfig,
     kaptureQueue :: Kernel.Prelude.Text,
     localPoliceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

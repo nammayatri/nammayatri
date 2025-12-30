@@ -2218,14 +2218,17 @@ postMultimodalUpdateBusLocation ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   ApiTypes.UpdateBusLocationReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalUpdateBusLocation _ mbBusOTP req = do
+postMultimodalUpdateBusLocation (mbPersonId, _) mbBusOTP req = do
   busOTP <- mbBusOTP & fromMaybeM (InvalidRequest "busOTP query parameter is required")
-
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   deviceMappings <- QDeviceVehicleMapping.findByVehicleNo busOTP
   deviceMapping <-
     fromMaybeM
       (InvalidRequest "Device not found for provided busOTP")
       (listToMaybe deviceMappings)
+
+  personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
 
   now <- getCurrentTime
 
@@ -2256,7 +2259,9 @@ postMultimodalUpdateBusLocation _ mbBusOTP req = do
             signalQuality = "Good"
           }
 
-  let topicName = "gps_live_data"
+  let topicName = riderConfig.kafkaTopicName
+
+  logInfo $ "Pushing bus location to Kafka for deviceId: " <> deviceMapping.deviceId <> " on topic: " <> topicName
   let key = deviceMapping.deviceId
 
   fork "Pushing bus location to Kafka" $ do
