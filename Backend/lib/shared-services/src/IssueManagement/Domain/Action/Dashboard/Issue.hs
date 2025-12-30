@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module IssueManagement.Domain.Action.Dashboard.Issue where
 
 import qualified AWS.S3 as S3
@@ -264,6 +266,7 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
           }
 
 issueList ::
+  forall m r.
   ( BeamFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EncFlow m r
@@ -277,25 +280,34 @@ issueList ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe (ShortId Ride) ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   ServiceHandle m ->
   Identifier ->
   m Common.IssueReportListResponse
-issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbMobileCountryCode mbPhoneNumber mbRideShortId issueHandle identifier = do
+issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCategoryName mbAssignee mbMobileCountryCode mbPhoneNumber mbRideShortId mbDescriptionSearch mbFromDate mbToDate issueHandle identifier = do
   merchantOperatingCity <-
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
+  mbCategoryIdFromName <- case (mbCategoryName, mbCategoryId) of
+    (Just categoryName, Nothing) -> do
+      category <- B.runInReplica $ QIC.findByNameAndMerchantOpCityId categoryName (cast merchantOperatingCity.id)
+      pure (fmap (.id) category)
+    _ -> pure mbCategoryId
   mbPerson <- forM mbPhoneNumber $ \phoneNumber -> do
     let mobileCountryCode = maybe "+91" (\code -> "+" <> T.strip code) mbMobileCountryCode
     numHash <- getDbHash phoneNumber
+    let merchantId = merchantOperatingCity.merchantId
     B.runInReplica $
-      issueHandle.findByMobileNumberAndMerchantId mobileCountryCode numHash merchantOperatingCity.merchantId
+      issueHandle.findByMobileNumberAndMerchantId mobileCountryCode numHash merchantId
         >>= fromMaybeM (PersonWithPhoneNotFound phoneNumber)
   mbRide <- maybe (pure Nothing) (issueHandle.findRideByRideShortId merchantOperatingCity.merchantId) mbRideShortId
-  issueReports <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide) (cast merchantOperatingCity.id)
-  let filteredIssueReports = filter (isJust . (.categoryId)) issueReports
-  let count = length filteredIssueReports
-  let summary = Common.Summary {totalCount = count, count}
+  (totalCount, issueReports) <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryIdFromName mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide) mbDescriptionSearch mbFromDate mbToDate (cast merchantOperatingCity.id)
+  let count = length issueReports
+  let summary = Common.Summary {totalCount, count}
   issues <-
     catMaybes
       <$> mapM
@@ -311,7 +323,7 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbAssign
                   then return Nothing
                   else Just <$> mkIssueReport issueReport
         )
-        filteredIssueReports
+        issueReports
   pure $ Common.IssueReportListResponse {issues, summary}
   where
     mkIssueReport :: (Esq.EsqDBReplicaFlow m r, BeamFlow m r) => DIR.IssueReport -> m Common.IssueReportListItem
@@ -326,6 +338,7 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbAssign
             ticketBookingId = cast <$> issueReport.ticketBookingId,
             deleted = issueReport.deleted,
             category = category.category,
+            categoryId = cast <$> issueReport.categoryId,
             assignee = issueReport.assignee,
             status = issueReport.status,
             createdAt = issueReport.createdAt

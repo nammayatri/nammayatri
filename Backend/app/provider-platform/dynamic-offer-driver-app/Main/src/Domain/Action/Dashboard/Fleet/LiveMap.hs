@@ -2,7 +2,6 @@ module Domain.Action.Dashboard.Fleet.LiveMap (getLiveMapDrivers) where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as ATD
 import qualified API.Types.ProviderPlatform.Fleet.LiveMap as Common
-import Domain.Action.Dashboard.Common (mobileIndianCode)
 import Domain.Action.Dashboard.Fleet.Driver (validateRequestorRoleAndGetEntityId)
 import Domain.Action.UI.Invoice (getSourceAndDestination, notAvailableText)
 import Domain.Action.UI.Person (getPersonNumber)
@@ -27,8 +26,10 @@ import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Common (withTryCatch)
 import Kernel.Utils.Error.Throwing (fromEitherM, fromMaybeM, throwError)
 import Kernel.Utils.Logging (logError, logWarning)
+import qualified Kernel.Utils.Predicates as P
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Booking as CHB
 import Storage.Queries.DriverInformationExtra (findAllByDriverIds)
 import qualified Storage.Queries.Person as QP
@@ -45,7 +46,7 @@ getLiveMapDrivers ::
   Kernel.Prelude.Maybe (ID.Id ATD.Driver) ->
   Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong ->
   Environment.Flow [Common.MapDriverInfoRes]
-getLiveMapDrivers merchantShortId _opCity radius requestorId mbReqFleetOwnerId mbDriverIdForRadius mbPoint = do
+getLiveMapDrivers merchantShortId opCity radius requestorId mbReqFleetOwnerId mbDriverIdForRadius mbPoint = do
   when (radius.getMeters <= 0) . throwError $ InvalidRequest "Radius must be positive"
   latLong <- getPoint mbDriverIdForRadius mbPoint
   requestedPerson <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
@@ -55,6 +56,7 @@ getLiveMapDrivers merchantShortId _opCity radius requestorId mbReqFleetOwnerId m
     DP.OPERATOR -> pure (mbReqFleetOwnerId, Just entityId)
     _ -> throwError (InvalidRequest "Invalid Data")
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (InvalidRequest $ "MerchantOperatingCity not found for merchant: " <> merchant.id.getId <> " and city: " <> show opCity)
   filtredNearbyDriverLocations <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) radius.getMeters merchant.id mbFleetOwnerId mbOperatorId
   driverInfoList <- findAllByDriverIds $ (.driverId.getId) <$> filtredNearbyDriverLocations
   let mbPositionAndDriverInfoLs = mkTuple <$> filtredNearbyDriverLocations
@@ -64,7 +66,7 @@ getLiveMapDrivers merchantShortId _opCity radius requestorId mbReqFleetOwnerId m
             position = LatLong location.lat location.lon
             mbDriverInfo = Kernel.Prelude.lookup location.driverId driverIdDriverInfoMap
          in (mbRideId,position,) <$> mbDriverInfo
-  catMaybes <$> mapM (maybe (pure Nothing) buildMapDriverInfo) mbPositionAndDriverInfoLs
+  catMaybes <$> mapM (maybe (pure Nothing) (buildMapDriverInfo merchantOpCity.country)) mbPositionAndDriverInfoLs
   where
     getPoint :: Kernel.Prelude.Maybe (ID.Id ATD.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Environment.Flow LatLong
     getPoint (Just driverIdForRadius) _ = getDriverCurrentLocation (ID.cast driverIdForRadius) >>= fromEitherM InternalError . validateLatLong
@@ -130,9 +132,10 @@ buildRideRelatedInfo True (Just rideId) = do
 buildRideRelatedInfo _ _ = pure $ Common.RideRelatedInfo Nothing Nothing notAvailableText notAvailableText
 
 buildMapDriverInfo ::
+  Kernel.Types.Beckn.Context.Country ->
   (Kernel.Prelude.Maybe Text, LatLong, DDI.DriverInformation) ->
   Environment.Flow (Kernel.Prelude.Maybe Common.MapDriverInfoRes)
-buildMapDriverInfo (mbRideId, position, driverInformation) = do
+buildMapDriverInfo country (mbRideId, position, driverInformation) = do
   let driverId = driverInformation.driverId
   mbVehicle <- QV.findById driverId
   whenNothing_ mbVehicle . logError $ "Vehicle not found for driverId: " <> driverId.getId
@@ -149,7 +152,7 @@ buildMapDriverInfo (mbRideId, position, driverInformation) = do
           vehicleNumber = vehicle.registrationNo,
           vehicleVariant = vehicle.variant,
           position,
-          mobileCountryCode = fromMaybe mobileIndianCode driver.mobileCountryCode,
+          mobileCountryCode = fromMaybe (P.getCountryMobileCode country) driver.mobileCountryCode,
           mobileNumber,
           rideRelatedInfo
         }

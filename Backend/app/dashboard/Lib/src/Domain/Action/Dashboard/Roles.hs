@@ -70,7 +70,7 @@ createRole _ req = do
 validateCreateRoleReq :: Validate CreateRoleReq
 validateCreateRoleReq CreateRoleReq {..} =
   sequenceA_
-    [ validateField "name" name $ MinLength 3 `And` MaxLength 50 `And` P.inputName,
+    [ validateField "name" name $ MinLength 3 `And` MaxLength 50 `And` P.name,
       validateField "description" description $ MinLength 3 `And` P.inputName
     ]
 

@@ -330,7 +330,6 @@ calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration mercha
             stopWaitingTimes = [],
             actualRideDuration = Nothing,
             vehicleAge = Nothing,
-            avgSpeedOfVehicle = Nothing,
             driverSelectedFare = Nothing,
             customerExtraFee = Nothing,
             nightShiftCharge = Nothing,

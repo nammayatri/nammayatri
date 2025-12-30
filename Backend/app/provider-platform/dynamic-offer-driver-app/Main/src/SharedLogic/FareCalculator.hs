@@ -44,7 +44,6 @@ import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as DFP
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import Domain.Types.TransporterConfig (AvgSpeedOfVechilePerKm)
 import EulerHS.Prelude hiding (elem, id, map, sum)
 import GHC.Float (int2Double)
 import Kernel.Prelude as KP
@@ -326,7 +325,6 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     vehicleAge :: Maybe Months,
     roundTrip :: Bool,
     actualRideDuration :: Maybe Seconds,
-    avgSpeedOfVehicle :: Maybe AvgSpeedOfVechilePerKm,
     driverSelectedFare :: Maybe HighPrecMoney,
     customerExtraFee :: Maybe HighPrecMoney,
     nightShiftCharge :: Maybe HighPrecMoney,
@@ -411,7 +409,7 @@ calculateFareParameters params = do
         HighPrecMoney . (fullRideCostN.getHighPrecMoney *) . toRational <$> fp.govtCharges
       stopCharges =
         HighPrecMoney . ((toRational params.noOfStops) *) . toRational <$> fp.perStopCharge
-      extraTimeFareInfo = calculateExtraTimeFare (fromMaybe 0 params.actualDistance) fp.perMinuteRideExtraTimeCharge params.actualRideDuration fp.vehicleServiceTier =<< params.avgSpeedOfVehicle -- todo tp transporter_config
+      extraTimeFareInfo = calculateExtraTimeFare params.estimatedRideDuration fp.rideExtraTimeChargeGracePeriod fp.perMinuteRideExtraTimeCharge params.actualRideDuration
       fullCompleteRideCost =
         {- without platformFee -}
         fullRideCostN
@@ -725,58 +723,16 @@ calculateFareParameters params = do
               sgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.sgst * realToFrac baseFee
           (Just baseFee, cgst, sgst)
 
-    calculateExtraTimeFare :: Meters -> Maybe HighPrecMoney -> Maybe Seconds -> ServiceTierType -> AvgSpeedOfVechilePerKm -> Maybe HighPrecMoney
-    calculateExtraTimeFare distance perMinuteRideExtraTimeCharge actualRideDuration serviceTier avgSpeedOfVehicle = do
-      let actualRideDurationInMinutes = secondsToMinutes <$> actualRideDuration
-      let avgSpeedOfVehicle' = realToFrac @_ @Double case serviceTier of
-            SEDAN -> avgSpeedOfVehicle.sedan.getKilometers
-            SUV -> avgSpeedOfVehicle.suv.getKilometers
-            HATCHBACK -> avgSpeedOfVehicle.hatchback.getKilometers
-            AUTO_RICKSHAW -> avgSpeedOfVehicle.autorickshaw.getKilometers
-            BIKE -> avgSpeedOfVehicle.bike.getKilometers
-            DELIVERY_BIKE -> avgSpeedOfVehicle.bike.getKilometers
-            TAXI -> avgSpeedOfVehicle.taxi.getKilometers
-            TAXI_PLUS -> avgSpeedOfVehicle.taxiplus.getKilometers
-            PREMIUM_SEDAN -> avgSpeedOfVehicle.premiumsedan.getKilometers
-            BLACK -> avgSpeedOfVehicle.black.getKilometers
-            BLACK_XL -> avgSpeedOfVehicle.blackxl.getKilometers
-            ECO -> avgSpeedOfVehicle.hatchback.getKilometers
-            COMFY -> avgSpeedOfVehicle.sedan.getKilometers
-            PREMIUM -> avgSpeedOfVehicle.sedan.getKilometers
-            AMBULANCE_TAXI -> avgSpeedOfVehicle.ambulance.getKilometers
-            AMBULANCE_TAXI_OXY -> avgSpeedOfVehicle.ambulance.getKilometers
-            AMBULANCE_AC -> avgSpeedOfVehicle.ambulance.getKilometers
-            AMBULANCE_AC_OXY -> avgSpeedOfVehicle.ambulance.getKilometers
-            AMBULANCE_VENTILATOR -> avgSpeedOfVehicle.ambulance.getKilometers
-            SUV_PLUS -> avgSpeedOfVehicle.suvplus.getKilometers
-            HERITAGE_CAB -> avgSpeedOfVehicle.heritagecab.getKilometers
-            EV_AUTO_RICKSHAW -> avgSpeedOfVehicle.evautorickshaw.getKilometers
-            DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
-            DELIVERY_TRUCK_MINI -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
-            DELIVERY_TRUCK_SMALL -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
-            DELIVERY_TRUCK_MEDIUM -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
-            DELIVERY_TRUCK_LARGE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
-            DELIVERY_TRUCK_ULTRA_LARGE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
-            BUS_NON_AC -> avgSpeedOfVehicle.busNonAc.getKilometers
-            BUS_AC -> avgSpeedOfVehicle.busAc.getKilometers
-            AUTO_PLUS -> avgSpeedOfVehicle.autorickshaw.getKilometers
-            BOAT -> avgSpeedOfVehicle.boat.getKilometers
-            VIP_ESCORT -> avgSpeedOfVehicle.vipEscort.getKilometers
-            VIP_OFFICER -> avgSpeedOfVehicle.vipOfficer.getKilometers
-            AC_PRIORITY -> avgSpeedOfVehicle.sedan.getKilometers
-            BIKE_PLUS -> avgSpeedOfVehicle.bikeplus.getKilometers
-            E_RICKSHAW -> avgSpeedOfVehicle.erickshaw.getKilometers
-      if avgSpeedOfVehicle' > 0
-        then do
-          let distanceInKilometer = realToFrac @_ @Double distance.getMeters / 1000
-          let perMinuteRideExtraTimeCharge' = fromMaybe 0.0 perMinuteRideExtraTimeCharge
-          let estimatedTimeTakeInMinutes :: Int = round $ (distanceInKilometer / avgSpeedOfVehicle') * 60
-          let rideDurationDifference = realToFrac @_ @Double <$> (\actualRideDurationInMinutes' -> actualRideDurationInMinutes' - estimatedTimeTakeInMinutes) <$> (actualRideDurationInMinutes <&> getMinutes)
-          let extraTimeFare = HighPrecMoney . (* perMinuteRideExtraTimeCharge'.getHighPrecMoney) . toRational <$> rideDurationDifference
-          case extraTimeFare of
-            Just fare | fare > 0 -> Just fare
-            _ -> Nothing
-        else Nothing
+    calculateExtraTimeFare :: Maybe Seconds -> Maybe Seconds -> Maybe HighPrecMoney -> Maybe Seconds -> Maybe HighPrecMoney
+    calculateExtraTimeFare (Just estimatedDuration) rideExtraTimeChargeGracePeriod (Just perMinuteRideExtraTimeCharge) (Just actualRideDuration) = do
+      let actualRideDurationInMinutes = getMinutes $ secondsToMinutes actualRideDuration
+      let estimatedDurationInMinutes = getMinutes $ secondsToMinutes estimatedDuration
+      let rideExtraTimeChargeGracePeriodInMinutes = fromMaybe 0 (getMinutes <$> secondsToMinutes <$> rideExtraTimeChargeGracePeriod)
+      let rideDurationDifference = max 0 (actualRideDurationInMinutes - (estimatedDurationInMinutes + rideExtraTimeChargeGracePeriodInMinutes))
+      let extraTimeFare = HighPrecMoney $ (* perMinuteRideExtraTimeCharge.getHighPrecMoney) $ toRational rideDurationDifference
+      if extraTimeFare.getHighPrecMoney > 0 then Just extraTimeFare else Nothing
+    calculateExtraTimeFare _ _ _ _ = Nothing
+
     countInsuranceChargeForDistance :: DistanceUnit -> Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney
     countInsuranceChargeForDistance dUnit mbDistance mbChargePerUnit =
       liftM2 (,) mbDistance mbChargePerUnit
