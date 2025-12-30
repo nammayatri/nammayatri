@@ -445,6 +445,7 @@ library
       SharedLogic.Merchant
       SharedLogic.MerchantPaymentMethod
       SharedLogic.MessageBuilder
+      SharedLogic.MobileNumberValidation
       SharedLogic.OTP
       SharedLogic.Payment
       SharedLogic.Person

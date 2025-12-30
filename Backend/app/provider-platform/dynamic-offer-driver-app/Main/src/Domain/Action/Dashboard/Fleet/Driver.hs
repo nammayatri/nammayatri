@@ -164,6 +164,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LTST
 import SharedLogic.Fleet (getFleetOwnerId, getFleetOwnerIds, getFleetOwnersInfoMerchantBased)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.MobileNumberValidation as MobileValidation
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -259,7 +260,7 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) mbMobileCountryCode
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  validateMobileNumber transporterConfig reqDriverPhoneNo mobileCountryCode merchantOpCity.country
+  MobileValidation.validateMobileNumber transporterConfig reqDriverPhoneNo mobileCountryCode merchantOpCity.country
   phoneNumberHash <- getDbHash reqDriverPhoneNo
   let role = case mbRole of
         Just Common.FLEET -> DP.FLEET_OWNER
@@ -812,8 +813,8 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
         let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) mbCountryCode
         let addVehicleReq = convertToAddVehicleReq registerRcReq
         runRequestValidation Common.validateAddVehicleReq addVehicleReq
-        validateMobileNumber transporterConfig phoneNo mobileCountryCode merchantOpCity.country
-        whenJust mbFleetNo $ \fleetNo -> validateMobileNumber transporterConfig fleetNo mobileCountryCode merchantOpCity.country
+        MobileValidation.validateMobileNumber transporterConfig phoneNo mobileCountryCode merchantOpCity.country
+        whenJust mbFleetNo $ \fleetNo -> MobileValidation.validateMobileNumber transporterConfig fleetNo mobileCountryCode merchantOpCity.country
 
         when transporterConfig.enableExistingVehicleInBulkUpload $
           isVehicleAlreadyAssociatedWithFleetOrDriver addVehicleReq.registrationNo
@@ -1973,7 +1974,7 @@ postDriverFleetSendJoiningOtp merchantShortId opCity fleetOwnerName mbFleetOwner
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  validateMobileNumber transporterConfig req.mobileNumber req.mobileCountryCode merchantOpCity.country
+  MobileValidation.validateMobileNumber transporterConfig req.mobileNumber req.mobileCountryCode merchantOpCity.country
   mobileNumberHash <- getDbHash req.mobileNumber
   mbPerson <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.DRIVER
   case mbPerson of
@@ -2015,7 +2016,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  validateMobileNumber transporterConfig req.mobileNumber req.mobileCountryCode merchantOpCity.country
+  MobileValidation.validateMobileNumber transporterConfig req.mobileNumber req.mobileCountryCode merchantOpCity.country
   case mbAuthId of
     Just authId -> do
       smsCfg <- asks (.smsCfg)
@@ -2761,8 +2762,8 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     processDriverByFleetOwner merchant moc transporterConfig fleetOwner req_ = do
       validateDriverName req_.driverName
       let mobileCountryCode = P.getCountryMobileCode moc.country
-      validateMobileNumber transporterConfig req_.driverPhoneNumber mobileCountryCode moc.country
-      whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> validateMobileNumber transporterConfig fleetPhoneNo mobileCountryCode moc.country
+      MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber mobileCountryCode moc.country
+      whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> MobileValidation.validateMobileNumber transporterConfig fleetPhoneNo mobileCountryCode moc.country
       whenJust req_.fleetPhoneNo \fleetPhoneNo -> do
         mobileNumberHash <- getDbHash fleetPhoneNo
         fleetOwnerCsv <-
@@ -2777,8 +2778,8 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     processDriverByOperator merchant moc transporterConfig operator req_ = do
       validateDriverName req_.driverName
       let mobileCountryCode = P.getCountryMobileCode moc.country
-      validateMobileNumber transporterConfig req_.driverPhoneNumber mobileCountryCode moc.country
-      whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> validateMobileNumber transporterConfig fleetPhoneNo mobileCountryCode moc.country
+      MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber mobileCountryCode moc.country
+      whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> MobileValidation.validateMobileNumber transporterConfig fleetPhoneNo mobileCountryCode moc.country
       case req_.fleetPhoneNo of
         Nothing -> do
           linkDriverToOperator merchant moc operator req_
@@ -2849,24 +2850,6 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
               }
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId) >>= Sms.checkSmsResult
-
-validateMobileNumber :: DTCConfig.TransporterConfig -> Text -> Text -> Context.Country -> Flow ()
-validateMobileNumber transporterConfig mobileNumber mobileCountryCode country = do
-  when (fromMaybe False transporterConfig.enableMobileNumberValidation) $ do
-    result <-
-      try $
-        void $
-          runRequestValidation
-            ( \() ->
-                sequenceA_
-                  [ validateField "mobileNumber" mobileNumber $ P.getMobileNumberPredicate country,
-                    validateField "mobileCountryCode" mobileCountryCode $ P.getMobileCountryCodePredicate country
-                  ]
-            )
-            ()
-    case result of
-      Left (_ :: SomeException) -> throwError $ InvalidRequest "Invalid mobile number or country code"
-      Right _ -> pure ()
 
 validateDriverName :: Text -> Flow ()
 validateDriverName driverName = do
