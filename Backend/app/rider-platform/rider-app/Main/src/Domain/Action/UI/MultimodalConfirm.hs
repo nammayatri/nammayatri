@@ -2187,23 +2187,32 @@ postStoreTowerInfo ::
 postStoreTowerInfo (mbPersonId, _) req = do
   let personIdStr = maybe "Unknown" (.getId) mbPersonId
 
+  -- Validate coordinates
+  validateCoordinates req.userLat req.userLng
+  validateAccuracy req.latLngAccuracy
+
+  -- Validate tower info is not empty
+  when (null req.towerInfo) $
+    throwError $ InvalidRequest "Tower info cannot be empty"
+
+  -- Validate each tower info
+  forM_ req.towerInfo $ \tower -> do
+    validateCellId tower.cellId
+    validateSignalStrength tower.signalStrength
+    validateAreaCode tower.areaCode
+
   logInfo $
     "Received tower info from person: " <> personIdStr
       <> " | Location: ("
       <> show req.userLat
       <> ", "
       <> show req.userLng
-      <> ") | Network: "
-      <> req.networkType
-      <> " | Cell ID: "
-      <> req.cellId
-      <> " | Signal: "
-      <> show req.signalStrength
+      <> ") | Accuracy: "
+      <> show req.latLngAccuracy
+      <> " | Towers count: "
+      <> show (length req.towerInfo)
 
-  validateCoordinates req.userLat req.userLng
-  validateSignalStrength req.signalStrength
-
-  let topicName = "tower_info_data"
+  let topicName = "tower_info_data_v2"
   let key = personIdStr
   fork "Logging TowerInfo to Kafka" $ do
     produceMessage (topicName, Just (TE.encodeUtf8 key)) req
@@ -2219,6 +2228,18 @@ postStoreTowerInfo (mbPersonId, _) req = do
       when (lng < -180 || lng > 180) $
         throwError $ InvalidRequest "Invalid longitude: must be between -180 and 180"
 
+    validateAccuracy accuracy = do
+      when (accuracy < 0) $
+        throwError $ InvalidRequest "Accuracy cannot be negative"
+
+    validateCellId cellId = do
+      when (T.null cellId) $
+        throwError $ InvalidRequest "Cell ID cannot be empty"
+
     validateSignalStrength strength = do
       when (strength < -150 || strength > 0) $
         logWarning $ "Unusual signal strength value: " <> show strength
+
+    validateAreaCode areaCode = do
+      when (areaCode < 0) $
+        logWarning $ "Invalid area code: " <> show areaCode

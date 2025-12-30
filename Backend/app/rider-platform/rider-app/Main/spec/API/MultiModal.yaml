@@ -379,15 +379,20 @@ types:
   OnboardedVehicleDetailsReq:
     vehicleNumber: Text
 
+  TowerInfo:
+    networkType: Text
+    cellType: Text
+    cellId: Text
+    areaCode: Int
+    signalStrength: Int
+    isRegistered: Bool
+
   TowerInfoReq:
     userLat: Double
     userLng: Double
     latLngAccuracy: Double
     timeStamp: UTCTime
-    networkType: Text
-    cellId: Text
-    areaCode: Text
-    signalStrength: Int
+    towerInfo: [TowerInfo]
 
 apis:
   - POST:
