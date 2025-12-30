@@ -247,6 +247,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.juspayCustomerPaymentID juspayCustomerPaymentID,
       Se.Set Beam.language language,
       Se.Set Beam.lastName lastName,
+      Se.Set Beam.lastRideTimeStamp lastRideTimeStamp,
       Se.Set Beam.lastUsedVehicleCategories (Just lastUsedVehicleCategories),
       Se.Set Beam.lastUsedVehicleServiceTiers (Just lastUsedVehicleServiceTiers),
       Se.Set Beam.latestLat latestLat,

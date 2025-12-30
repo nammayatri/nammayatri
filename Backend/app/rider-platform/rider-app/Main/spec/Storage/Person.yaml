@@ -126,6 +126,7 @@ Person:
     liveActivityToken : Maybe Text
     comments: "Maybe [Text]"
     paymentMode: Maybe PaymentMode
+    lastRideTimeStamp : Maybe UTCTime
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>

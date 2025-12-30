@@ -168,7 +168,9 @@ data ProfileRes = ProfileRes
     isMultimodalRider :: Bool,
     customerTags :: DA.Value,
     profilePicture :: Maybe Text,
-    paymentMode :: Maybe DMPM.PaymentMode
+    paymentMode :: Maybe DMPM.PaymentMode,
+    createdAt :: UTCTime,
+    lastRideTimeStamp :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

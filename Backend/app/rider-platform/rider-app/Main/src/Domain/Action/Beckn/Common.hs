@@ -740,6 +740,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       QRB.updateStatus booking.id DRB.COMPLETED
       QBPL.makeAllInactiveByBookingId booking.id
   now <- getCurrentTime
+  QP.updateLastRideTimeStamp booking.riderId now
   rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.END_TIME booking.configInExperimentVersions
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRide (fromMaybe now rideEndTime))
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
