@@ -41,6 +41,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderSublegSetOnboardedVehicleDetails,
     postMultimodalSetRouteName,
     postMultimodalUpdateBusLocation,
+    postStoreTowerInfo,
   )
 where
 
@@ -2176,3 +2177,48 @@ postMultimodalUpdateBusLocation _ mbBusOTP req = do
           "Failed to push bus location to Kafka: " <> show e
 
   pure Kernel.Types.APISuccess.Success
+
+postStoreTowerInfo ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  ApiTypes.TowerInfoReq ->
+  Flow Kernel.Types.APISuccess.APISuccess
+postStoreTowerInfo (mbPersonId, _) req = do
+  let personIdStr = maybe "Unknown" (.getId) mbPersonId
+
+  logInfo $
+    "Received tower info from person: " <> personIdStr
+      <> " | Location: ("
+      <> show req.userLat
+      <> ", "
+      <> show req.userLng
+      <> ") | Network: "
+      <> req.networkType
+      <> " | Cell ID: "
+      <> req.cellId
+      <> " | Signal: "
+      <> show req.signalStrength
+
+  validateCoordinates req.userLat req.userLng
+  validateSignalStrength req.signalStrength
+
+  let topicName = "tower_info_data"
+  let key = personIdStr
+  fork "Logging TowerInfo to Kafka" $ do
+    produceMessage (topicName, Just (TE.encodeUtf8 key)) req
+      `catch` \(e :: SomeException) ->
+        logError $
+          "Failed to push tower info to Kafka: " <> show e
+
+  return Kernel.Types.APISuccess.Success
+  where
+    validateCoordinates lat lng = do
+      when (lat < -90 || lat > 90) $
+        throwError $ InvalidRequest "Invalid latitude: must be between -90 and 90"
+      when (lng < -180 || lng > 180) $
+        throwError $ InvalidRequest "Invalid longitude: must be between -180 and 180"
+
+    validateSignalStrength strength = do
+      when (strength < -150 || strength > 0) $
+        logWarning $ "Unusual signal strength value: " <> show strength
