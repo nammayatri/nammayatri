@@ -391,16 +391,18 @@ data SwitchTaxiReq = SwitchTaxiReq {estimateId :: Kernel.Types.Id.Id Domain.Type
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TowerInfoReq = TowerInfoReq
-  { areaCode :: Kernel.Prelude.Text,
+data TowerInfo = TowerInfo
+  { areaCode :: Kernel.Prelude.Int,
     cellId :: Kernel.Prelude.Text,
-    latLngAccuracy :: Kernel.Prelude.Double,
+    cellType :: Kernel.Prelude.Text,
+    isRegistered :: Kernel.Prelude.Bool,
     networkType :: Kernel.Prelude.Text,
-    signalStrength :: Kernel.Prelude.Int,
-    timeStamp :: Kernel.Prelude.UTCTime,
-    userLat :: Kernel.Prelude.Double,
-    userLng :: Kernel.Prelude.Double
+    signalStrength :: Kernel.Prelude.Int
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TowerInfoReq = TowerInfoReq {latLngAccuracy :: Kernel.Prelude.Double, timeStamp :: Kernel.Prelude.UTCTime, towerInfo :: [TowerInfo], userLat :: Kernel.Prelude.Double, userLng :: Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
