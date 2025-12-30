@@ -31,6 +31,7 @@ module Domain.Action.Dashboard.Merchant
     postMerchantConfigSpecialLocationUpsert,
     postMerchantSchedulerTrigger,
     postMerchantConfigOperatingCityWhiteList,
+    postMerchantSpecialLocationList,
   )
 where
 
@@ -1573,3 +1574,32 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
         whiteListMessage = "Success",
         whiteListError = Nothing
       }
+
+postMerchantSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Common.GetSpecialLocationListReq -> Flow [Common.SpecialLocationListRes]
+postMerchantSpecialLocationList merchantShortId _opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  let mbEnabled = req.enabled
+      categories = req.category
+      mbLimit = req.limit
+      mbOffset = req.offset
+      merchantIdText = getId merchant.id
+      mbMocId = fmap getId req.merchantOperatingCityId
+  if null categories
+    then throwError $ InvalidRequest "At least one category must be provided"
+    else do
+      specialLocations <- QSL.findSpecialLocationsByFilters categories mbEnabled mbMocId merchantIdText mbLimit mbOffset
+      pure $ map convertToListRes specialLocations
+  where
+    convertToListRes :: SL.SpecialLocation -> Common.SpecialLocationListRes
+    convertToListRes sl =
+      Common.SpecialLocationListRes
+        { id = sl.id,
+          locationName = sl.locationName,
+          category = sl.category,
+          enabled = sl.enabled,
+          locationType = sl.locationType,
+          merchantId = fmap getId sl.merchantId,
+          merchantOperatingCityId = fmap getId sl.merchantOperatingCityId,
+          priority = sl.priority,
+          gates = sl.gates
+        }

@@ -228,3 +228,23 @@ specialLocFullToSpecialLocWarrior :: Transactionable m => SpecialLocationFull ->
 specialLocFullToSpecialLocWarrior SpecialLocationFull {..} = do
   linkedLocations <- mapM Lib.Queries.SpecialLocation.findById linkedLocationsIds >>= pure . catMaybes
   pure SpecialLocationWarrior {..}
+
+findSpecialLocationsByFilters :: (Transactionable m, EsqDBReplicaFlow m r) => [Text] -> Maybe Bool -> Maybe Text -> Text -> Maybe Int -> Maybe Int -> m [D.SpecialLocation]
+findSpecialLocationsByFilters categories mbEnabled mbMocId merchantId mbLimit mbOffset = do
+  let limitVal = fromMaybe 10 mbLimit
+      offsetVal = fromMaybe 0 mbOffset
+      enabledVal = fromMaybe True mbEnabled
+  specialLocationWithoutGates <- Esq.findAll $ do
+    specialLocation <- from $ table @SpecialLocationT
+    where_ $
+      specialLocation ^. SpecialLocationEnabled ==. val enabledVal
+        &&. ( if null categories
+                then val True
+                else specialLocation ^. SpecialLocationCategory `in_` valList categories
+            )
+        &&. specialLocation ^. SpecialLocationMerchantId ==. just (val merchantId)
+        &&. maybe (val True) (\mocId -> specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)) mbMocId
+    limit (fromIntegral limitVal)
+    offset (fromIntegral offsetVal)
+    return specialLocation
+  mapM buildSpecialLocationWithGates specialLocationWithoutGates
