@@ -165,6 +165,8 @@ orderStatusHandlerWithRefunds isWebhook paymentService paymentOrder updatedPayme
           Left err -> do
             logError $ "Error in payment fullfillment status handler: " <> show err
             return $ mkPaymentStatusResp paymentStatusResponse paymentOrder.paymentFulfillmentStatus paymentOrder.domainEntityId
+      Payment.AUTO_REFUNDED -> do
+        return $ mkPaymentStatusResp paymentStatusResponse (Just DPayment.FulfillmentRefundInitiated) Nothing
       _ -> return $ mkPaymentStatusResp paymentStatusResponse paymentOrder.paymentFulfillmentStatus paymentOrder.domainEntityId
   -- Create the Recon Entry and Trigger the Refund Notifications
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
