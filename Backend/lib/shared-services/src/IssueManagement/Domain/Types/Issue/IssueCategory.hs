@@ -17,6 +17,7 @@ data IssueCategory = IssueCategory
     categoryType :: CategoryType,
     isActive :: Bool,
     isRideRequired :: Bool,
+    isTicketRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds,
     allowedRideStatuses :: Maybe [RideStatus],
     label :: Maybe Text,

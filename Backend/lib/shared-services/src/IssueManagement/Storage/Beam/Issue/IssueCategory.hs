@@ -30,6 +30,7 @@ data IssueCategoryT f = IssueCategoryT
     merchantId :: B.C f Text,
     categoryType :: B.C f IC.CategoryType,
     isRideRequired :: B.C f Bool,
+    isTicketRequired :: B.C f Bool,
     maxAllowedRideAge :: B.C f (Maybe Seconds),
     allowedRideStatuses :: B.C f (Maybe [Common.RideStatus]),
     label :: B.C f (Maybe Text),

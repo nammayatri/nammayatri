@@ -104,7 +104,7 @@ getIssueInfo ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
-  Environment.Flow API.Types.RiderPlatform.IssueManagement.Issue.IssueInfoRes
+  Environment.Flow API.Types.RiderPlatform.IssueManagement.Issue.IssueInfoDRes
 getIssueInfo (Kernel.Types.Id.ShortId merchantShortId) city issueReportId =
   DIssue.issueInfo (Kernel.Types.Id.ShortId merchantShortId) city (Just issueReportId) Nothing dashboardIssueHandle Common.CUSTOMER
 
@@ -113,7 +113,7 @@ getIssueInfoV2 ::
   Kernel.Types.Beckn.Context.City ->
   Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) ->
   Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) ->
-  Environment.Flow API.Types.RiderPlatform.IssueManagement.Issue.IssueInfoRes
+  Environment.Flow API.Types.RiderPlatform.IssueManagement.Issue.IssueInfoDRes
 getIssueInfoV2 (Kernel.Types.Id.ShortId merchantShortId) city mbIssueReportId mbIssueReportShortId =
   DIssue.issueInfo (Kernel.Types.Id.ShortId merchantShortId) city mbIssueReportId mbIssueReportShortId dashboardIssueHandle Common.CUSTOMER
 
@@ -267,7 +267,7 @@ getIssueOptionList ::
   Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage) ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.External.Types.Language ->
-  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueOptionListRes
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueOptionListDRes
 getIssueOptionList (Kernel.Types.Id.ShortId merchantShortId) city mbCategoryId mbMessageId mbIsActive mbLanguage =
   DIssue.listOptions (Kernel.Types.Id.ShortId merchantShortId) city mbCategoryId mbMessageId mbIsActive mbLanguage dashboardIssueHandle Common.CUSTOMER
 

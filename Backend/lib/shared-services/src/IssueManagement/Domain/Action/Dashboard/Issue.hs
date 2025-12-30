@@ -106,6 +106,7 @@ issueCategoryList merchantShortId city issueHandle identifier = do
           logoUrl = issueCategory.logoUrl,
           categoryType = issueCategory.categoryType,
           isRideRequired = issueCategory.isRideRequired,
+          isTicketRequired = issueCategory.isTicketRequired,
           maxAllowedRideAge = issueCategory.maxAllowedRideAge,
           allowedRideStatuses = issueCategory.allowedRideStatuses
         }
@@ -355,7 +356,7 @@ issueInfo ::
   Maybe (ShortId DIR.IssueReport) ->
   ServiceHandle m ->
   Identifier ->
-  m Common.IssueInfoRes
+  m Common.IssueInfoDRes
 issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandle identifier = do
   issueReport <- case mbIssueReportId of
     Just iReportId -> B.runInReplica $ QIR.findById iReportId >>= fromMaybeM (IssueReportDoesNotExist iReportId.getId)
@@ -366,7 +367,7 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
   merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport (Just person) issueHandle
   mkIssueInfoRes person issueReport merchantOpCity.id
   where
-    mkIssueInfoRes :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> DIR.IssueReport -> Id MerchantOperatingCity -> m Common.IssueInfoRes
+    mkIssueInfoRes :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> DIR.IssueReport -> Id MerchantOperatingCity -> m Common.IssueInfoDRes
     mkIssueInfoRes person issueReport merchantOpCityId = do
       personDetail <- Just <$> mkPersonDetail person
       mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReport.id identifier
@@ -384,7 +385,7 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
         DRIVER -> return Nothing
         CUSTOMER -> Just <$> UIR.recreateIssueChats issueReport issueConfig Nothing ENGLISH identifier
       pure $
-        Common.IssueInfoRes
+        Common.IssueInfoDRes
           { issueReportId = cast issueReport.id,
             issueReportShortId = issueReport.shortId,
             personDetail,
@@ -708,7 +709,7 @@ updateIssueCategory merchantShortId city issueCategoryId req issueHandle identif
             logoUrl = fromMaybe logoUrl req.logoUrl,
             priority = fromMaybe priority req.priority,
             isActive = fromMaybe isActive req.isActive,
-            isRideRequired = fromMaybe isRideRequired req.isRideRequired,
+            isTicketRequired = fromMaybe isTicketRequired req.isTicketRequired,
             maxAllowedRideAge = req.maxAllowedRideAge <|> maxAllowedRideAge,
             allowedRideStatuses = req.allowedRideStatuses <|> allowedRideStatuses,
             label = req.label <|> label,
@@ -1149,6 +1150,7 @@ getCategoryDetail merchantShortId city categoryId mbLanguage issueHandle identif
           logoUrl = issueCategory.logoUrl,
           categoryType = issueCategory.categoryType,
           isRideRequired = issueCategory.isRideRequired,
+          isTicketRequired = issueCategory.isTicketRequired,
           maxAllowedRideAge = issueCategory.maxAllowedRideAge,
           allowedRideStatuses = issueCategory.allowedRideStatuses
         }
@@ -1253,7 +1255,7 @@ listOptions ::
   Maybe Language ->
   ServiceHandle m ->
   Identifier ->
-  m Common.IssueOptionListRes
+  m Common.IssueOptionListDRes
 listOptions merchantShortId city mbCategoryId mbMessageId mbIsActive mbLanguage issueHandle identifier = do
   _merchantOperatingCity <-
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
@@ -1268,7 +1270,7 @@ listOptions merchantShortId city mbCategoryId mbMessageId mbIsActive mbLanguage 
         Just isActive -> filter (\(opt, _) -> opt.isActive == isActive) issueOptions
         Nothing -> issueOptions
   options <- mapM (mkOptionDetailResWithoutChildren language identifier) filteredOptions
-  pure $ Common.IssueOptionListRes {options = options}
+  pure $ Common.IssueOptionListDRes {options = options}
 
 -----------------------------------------------------------
 -- Delete (Deactivate) Category API ------------------------
@@ -1379,6 +1381,7 @@ previewCategoryFlow merchantShortId city categoryId mbLanguage issueHandle ident
           logoUrl = issueCategory.logoUrl,
           categoryType = issueCategory.categoryType,
           isRideRequired = issueCategory.isRideRequired,
+          isTicketRequired = issueCategory.isTicketRequired,
           maxAllowedRideAge = issueCategory.maxAllowedRideAge,
           allowedRideStatuses = issueCategory.allowedRideStatuses
         }

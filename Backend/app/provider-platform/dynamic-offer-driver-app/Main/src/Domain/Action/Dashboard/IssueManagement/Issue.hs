@@ -66,7 +66,7 @@ getIssueInfo ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
-  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueInfoRes
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueInfoDRes
 getIssueInfo (Kernel.Types.Id.ShortId merchantShortId) opCity issueReportId =
   DIssue.issueInfo (Kernel.Types.Id.ShortId merchantShortId) opCity (Just issueReportId) Nothing dashboardIssueHandle Common.DRIVER
 
@@ -75,7 +75,7 @@ getIssueInfoV2 ::
   Kernel.Types.Beckn.Context.City ->
   Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) ->
   Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) ->
-  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueInfoRes
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueInfoDRes
 getIssueInfoV2 (Kernel.Types.Id.ShortId merchantShortId) opCity mbIssueReportId mbIssueReportShortId =
   DIssue.issueInfo (Kernel.Types.Id.ShortId merchantShortId) opCity mbIssueReportId mbIssueReportShortId dashboardIssueHandle Common.DRIVER
 

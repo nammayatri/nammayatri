@@ -75,7 +75,7 @@ getIssueInfo ::
   Kernel.Types.Beckn.Context.City ->
   ApiTokenInfo ->
   Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
-  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueInfoRes
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueInfoDRes
 getIssueInfo merchantShortId opCity apiTokenInfo issueId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   addAuthorDetails =<< API.Client.ProviderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueInfo) issueId
@@ -86,16 +86,16 @@ getIssueInfoV2 ::
   ApiTokenInfo ->
   Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) ->
   Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) ->
-  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueInfoRes
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueInfoDRes
 getIssueInfoV2 merchantShortId opCity apiTokenInfo issueId issueShortId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   addAuthorDetails =<< API.Client.ProviderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueInfoV2) issueId issueShortId
 
-addAuthorDetails :: Common.IssueInfoRes -> Environment.Flow Common.IssueInfoRes
-addAuthorDetails Common.IssueInfoRes {..} = do
+addAuthorDetails :: Common.IssueInfoDRes -> Environment.Flow Common.IssueInfoDRes
+addAuthorDetails Common.IssueInfoDRes {..} = do
   comments_ <- mapM mkAuthorDetail comments
   pure $
-    Common.IssueInfoRes
+    Common.IssueInfoDRes
       { comments = comments_,
         ..
       }
