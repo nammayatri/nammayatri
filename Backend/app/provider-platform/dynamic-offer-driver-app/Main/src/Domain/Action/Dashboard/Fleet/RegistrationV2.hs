@@ -313,14 +313,15 @@ fleetOwnerLogin ::
   Common.FleetOwnerLoginReqV2 ->
   Flow Common.FleetOwnerLoginResV2
 fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled req = do
-  runRequestValidation Common.validateInitiateLoginReqV2 req
+  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  runRequestValidation (Common.validateInitiateLoginReqV2 merchantOpCity.country) req
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
   sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeMobileNumberHitsCountKey mobileNumber) sendOtpRateLimitOptions
 
   smsCfg <- asks (.smsCfg)
-  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   mobileNumberHash <- getDbHash mobileNumber
   mbPerson <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR]

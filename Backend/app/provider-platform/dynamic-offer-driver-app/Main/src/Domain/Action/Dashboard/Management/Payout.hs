@@ -47,6 +47,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PO
@@ -75,9 +76,6 @@ data RiderDetailsWithRide = RiderDetailsWithRide
     ride :: Maybe DRide.Ride
   }
 
-mobileIndianCode :: Text
-mobileIndianCode = "+91"
-
 getPayoutPayoutReferralHistory :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow DTP.PayoutReferralHistoryRes
 getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbCustomerPhoneNo mbDriverId_ mbDriverPhoneNo mbFrom mbLimit mbOffset mbTo = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
@@ -86,7 +84,7 @@ getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbC
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   mbMobileNumberHash <- mapM getDbHash mbCustomerPhoneNo
-  mbDriverId <- getDriverId merchant
+  mbDriverId <- getDriverId merchant merchantOpCity.country
   allRiderDetails <- runInReplica $ QRD.findAllRiderDetailsWithOptions merchant.id limit offset mbFrom mbTo areActivatedRidesOnly (cast <$> mbDriverId) mbMobileNumberHash
   riderDetailsWithRide_ <- mapM getRiderDetailsWithOpCity allRiderDetails
   let riderDetailsWithRide = filter (maybe True ((==) merchantOpCity.id . (.merchantOperatingCityId)) . (.ride)) riderDetailsWithRide_
@@ -119,12 +117,12 @@ getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbC
       mbRide <- forM riderDetail.firstRideId $ \rideId -> runInReplica $ QR.findById (Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
       pure RiderDetailsWithRide {riderDetail, ride = mbRide}
 
-    getDriverId :: Domain.Types.Merchant.Merchant -> Environment.Flow (Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver))
-    getDriverId merchant = case (mbDriverId_, mbDriverPhoneNo) of
+    getDriverId :: Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.Country -> Environment.Flow (Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver))
+    getDriverId merchant country = case (mbDriverId_, mbDriverPhoneNo) of
       (Just driverId, _) -> pure $ Just driverId
       (_, Just driverPhoneNo) -> do
         driverNumberHash <- getDbHash driverPhoneNo
-        driver <- QPerson.findByMobileNumberAndMerchantAndRole mobileIndianCode driverNumberHash merchant.id DP.DRIVER >>= fromMaybeM (PersonWithPhoneNotFound driverPhoneNo)
+        driver <- QPerson.findByMobileNumberAndMerchantAndRole (P.getCountryMobileCode country) driverNumberHash merchant.id DP.DRIVER >>= fromMaybeM (PersonWithPhoneNotFound driverPhoneNo)
         pure . Just $ cast driver.id
       _ -> pure Nothing
 

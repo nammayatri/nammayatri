@@ -458,15 +458,24 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
     SQM.updateSupportedOperatingCities merchant.shortId (merchant.supportedOperatingCities <> [req.city])
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityCreate) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
   where
-    buildMerchant now merchantD DM.Merchant {..} =
+    buildMerchant now merchantD baseMerchant =
       DM.Merchant
         { id = Id merchantD.subscriberId,
           shortId = ShortId merchantD.shortId,
           defaultOperatingCity = req.city,
           supportedOperatingCities = [req.city],
+          serverNames = baseMerchant.serverNames,
+          is2faMandatory = baseMerchant.is2faMandatory,
+          domain = baseMerchant.domain,
+          website = baseMerchant.website,
+          authToken = baseMerchant.authToken,
           createdAt = now,
           enabled = Just enableForMerchant,
-          ..
+          requireAdminApprovalForFleetOnboarding = baseMerchant.requireAdminApprovalForFleetOnboarding,
+          verifyFleetWhileLogin = baseMerchant.verifyFleetWhileLogin,
+          hasFleetMemberHierarchy = baseMerchant.hasFleetMemberHierarchy,
+          isStrongNameCheckRequired = baseMerchant.isStrongNameCheckRequired,
+          singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly
         }
 
 postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes

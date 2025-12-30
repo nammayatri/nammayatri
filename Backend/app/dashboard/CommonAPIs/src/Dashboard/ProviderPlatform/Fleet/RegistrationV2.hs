@@ -5,6 +5,7 @@ module Dashboard.ProviderPlatform.Fleet.RegistrationV2 (module ReExport, validat
 import API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
 import Dashboard.Common as ReExport
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Predicate as P
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
@@ -29,9 +30,9 @@ validateRegisterReqWithLooseCheck FleetOwnerRegisterReqV2 {..} =
       validateField "email" email $ P.InMaybe P.email
     ]
 
-validateInitiateLoginReqV2 :: Validate FleetOwnerLoginReqV2
-validateInitiateLoginReqV2 FleetOwnerLoginReqV2 {..} =
+validateInitiateLoginReqV2 :: Context.Country -> Validate FleetOwnerLoginReqV2
+validateInitiateLoginReqV2 country FleetOwnerLoginReqV2 {..} =
   sequenceA_
-    [ validateField "mobileNumber" mobileNumber P.indianMobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    [ validateField "mobileNumber" mobileNumber $ P.getMobileNumberPredicate country,
+      validateField "mobileCountryCode" mobileCountryCode $ P.getMobileCountryCodePredicate country
     ]
