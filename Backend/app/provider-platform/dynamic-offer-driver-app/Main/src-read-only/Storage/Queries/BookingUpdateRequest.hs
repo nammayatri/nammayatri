@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findAllByBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m [Domain.Types.BookingUpdateRequest.BookingUpdateRequest])
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ([Domain.Types.BookingUpdateRequest.BookingUpdateRequest]))
 findAllByBookingId limit offset bookingId = do findAllWithOptionsKV [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)] (Se.Asc Beam.createdAt) limit offset
 
 findByBAPBUReqId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
@@ -33,6 +33,11 @@ findByBAPBUReqId bapBookingUpdateRequestId = do findOneWithKV [Se.And [Se.Is Bea
 
 findByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
 findByBookingId bookingId = do findOneWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]]
+
+findByBookingIdAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
+findByBookingIdAndStatus bookingId status = do findOneWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId), Se.Is Beam.status $ Se.Eq status]]
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

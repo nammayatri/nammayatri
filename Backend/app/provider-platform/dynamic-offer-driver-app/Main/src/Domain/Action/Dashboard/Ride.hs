@@ -361,12 +361,9 @@ rideInfo merchantId merchantOpCityId reqRideId = do
   let driverStartLocation = (\(lat, lon, _, _, _) -> KEMT.LatLong <$> lat <*> lon) =<< driverEdaKafka
   mbIsDestinationEdited <- case ride.isPickupOrDestinationEdited of
     Just True -> do
-      mbBookingUpdateReq <- runInReplica $ QBUR.findByBookingId ride.bookingId
+      mbBookingUpdateReq <- runInReplica $ QBUR.findByBookingIdAndStatus ride.bookingId DBUR.DRIVER_ACCEPTED
       case mbBookingUpdateReq of
-        Just bookingUpdateReq ->
-          if (bookingUpdateReq.status == DBUR.DRIVER_ACCEPTED)
-            then return $ Just True
-            else return Nothing
+        Just _ -> return $ Just True
         Nothing -> return Nothing
     _ -> pure Nothing
 

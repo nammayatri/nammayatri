@@ -47,6 +47,6 @@ data BookingUpdateRequest = BookingUpdateRequest
 
 data BookingUpdateRequestStatus = SOFT | DRIVER_ACCEPTED | DRIVER_REJECTED | USER_CONFIRMED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingUpdateRequestStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingUpdateRequestStatus))
 
-$(mkHttpInstancesForEnum ''BookingUpdateRequestStatus)
+$(mkHttpInstancesForEnum (''BookingUpdateRequestStatus))

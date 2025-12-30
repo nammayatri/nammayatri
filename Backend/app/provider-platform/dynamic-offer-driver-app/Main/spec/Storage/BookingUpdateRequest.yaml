@@ -90,6 +90,10 @@ BookingUpdateRequest:
       kvFunction: findOneWithKV
       where:
         and: [bookingId]
+    findByBookingIdAndStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [bookingId, status]
 
 
   constraints:
