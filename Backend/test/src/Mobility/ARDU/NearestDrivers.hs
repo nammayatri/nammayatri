@@ -138,5 +138,5 @@ setDriversActive isActive mode = do
     drivers
     ( \driver -> do
         driverInfo <- QDI.findById (Id driver) >>= fromMaybeM DriverInfoNotFound
-        DDriverMode.updateDriverModeAndFlowStatus (Id driver) transporterConfig isActive mode newFlowStatus driverInfo Nothing
+        DDriverMode.updateDriverModeAndFlowStatus (Id driver) transporterConfig isActive mode newFlowStatus driverInfo Nothing Nothing
     )

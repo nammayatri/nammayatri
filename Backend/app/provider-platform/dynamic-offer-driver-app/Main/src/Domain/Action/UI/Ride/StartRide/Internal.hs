@@ -65,6 +65,6 @@ startRideTransaction driverId ride bookingId firstPoint merchantId odometer tran
   QRide.updateStartTimeAndLoc ride.id firstPoint
   whenJust odometer $ \odometerReading -> QRide.updateStartOdometerReading ride.id odometerReading
   logTagInfo "startRide" ("Updating driver_flow_status to ON_RIDE for DriverId " <> getId driverId)
-  DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig driverInfo.active Nothing DDFS.ON_RIDE driverInfo (Just True)
+  DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig driverInfo.active Nothing DDFS.ON_RIDE driverInfo (Just True) Nothing
   QRide.updateStatus ride.id SRide.INPROGRESS
   QBE.logRideCommencedEvent (cast driverId) bookingId ride.id ride.distanceUnit
