@@ -25,7 +25,6 @@ import Domain.Action.Beckn.Search
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import Domain.Types.Merchant as DM
-import qualified Domain.Types.TransporterConfig as DTC
 import EulerHS.Prelude hiding (id, view, (^?))
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common
@@ -89,8 +88,8 @@ mkPayment merchant bppConfig mbPaymentId = do
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
   List.singleton $ OUP.mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID Nothing mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing
 
-mkItemTags :: DTC.TransporterConfig -> CUtils.Pricing -> Bool -> Maybe Bool -> Maybe [Spec.TagGroup]
-mkItemTags transporterConfig pricing isValueAddNP fareParametersInRateCard = do
+mkItemTags :: CUtils.Pricing -> Bool -> Maybe Bool -> Maybe [Spec.TagGroup]
+mkItemTags pricing isValueAddNP fareParametersInRateCard = do
   let rateCardTag = CUtils.mkRateCardTag pricing.estimatedDistance (pricing.fareParams >>= (.customerCancellationDues)) (pricing.fareParams >>= (.tollCharges)) pricing.pricingMaxFare (pricing.fareParams >>= (.congestionChargeViaDp)) pricing.farePolicy fareParametersInRateCard pricing.fareParams
   let vehicleIconTag = CUtils.mkVehicleIconTag pricing.vehicleIconUrl
-  vehicleIconTag <> rateCardTag <> (List.singleton <$> CUtils.mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP)
+  vehicleIconTag <> rateCardTag <> (List.singleton <$> CUtils.mkGeneralInfoTagGroup pricing isValueAddNP)

@@ -46,7 +46,6 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     arrivedStopThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     arrivingPickupThreshold :: Kernel.Types.Common.HighPrecMeters,
     automaticRCActivationCutOff :: Kernel.Types.Common.Seconds,
-    avgSpeedOfVehicle :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.AvgSpeedOfVechilePerKm,
     badDebtBatchSize :: Kernel.Prelude.Int,
     badDebtRescheduleTime :: Kernel.Prelude.NominalDiffTime,
     badDebtSchedulerTime :: Kernel.Prelude.NominalDiffTime,
@@ -302,32 +301,6 @@ data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
     taxiplus :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     vipEscort :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     vipOfficer :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
-
-data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
-  { ambulance :: Kernel.Types.Common.Kilometers,
-    autorickshaw :: Kernel.Types.Common.Kilometers,
-    bike :: Kernel.Types.Common.Kilometers,
-    bikeplus :: Kernel.Types.Common.Kilometers,
-    black :: Kernel.Types.Common.Kilometers,
-    blackxl :: Kernel.Types.Common.Kilometers,
-    boat :: Kernel.Types.Common.Kilometers,
-    busAc :: Kernel.Types.Common.Kilometers,
-    busNonAc :: Kernel.Types.Common.Kilometers,
-    deliveryLightGoodsVehicle :: Kernel.Types.Common.Kilometers,
-    erickshaw :: Kernel.Types.Common.Kilometers,
-    evautorickshaw :: Kernel.Types.Common.Kilometers,
-    hatchback :: Kernel.Types.Common.Kilometers,
-    heritagecab :: Kernel.Types.Common.Kilometers,
-    premiumsedan :: Kernel.Types.Common.Kilometers,
-    sedan :: Kernel.Types.Common.Kilometers,
-    suv :: Kernel.Types.Common.Kilometers,
-    suvplus :: Kernel.Types.Common.Kilometers,
-    taxi :: Kernel.Types.Common.Kilometers,
-    taxiplus :: Kernel.Types.Common.Kilometers,
-    vipEscort :: Kernel.Types.Common.Kilometers,
-    vipOfficer :: Kernel.Types.Common.Kilometers
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 

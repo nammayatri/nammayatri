@@ -248,7 +248,6 @@ import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
-import SharedLogic.DriverPool as SDP
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import SharedLogic.FareCalculator
@@ -1745,7 +1744,6 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               stopWaitingTimes = [],
               noOfStops = length searchReq.stops,
               actualRideDuration = Nothing,
-              avgSpeedOfVehicle = Nothing,
               driverSelectedFare = reqOfferedValue,
               customerExtraFee = searchTry.customerExtraFee,
               petCharges = if isJust searchTry.petCharges then farePolicy.petCharges else Nothing,
@@ -2773,23 +2771,22 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
     compareDistances Nothing (Just _) = GT
     compareDistances Nothing Nothing = EQ
 
-filterNearbyBookings :: UTCTime -> LatLong -> TransporterConfig -> [(Text, Double, Double, UTCTime, ServiceTierType)] -> Maybe [ServiceTierType] -> [Text]
-filterNearbyBookings currentTime dLoc transporterConfig parsedRes mbPossibleServiceTierTypes =
+filterNearbyBookings :: UTCTime -> LatLong -> [(Text, Double, Double, UTCTime, ServiceTierType)] -> Maybe [ServiceTierType] -> [Text]
+filterNearbyBookings currentTime dLoc parsedRes mbPossibleServiceTierTypes =
   map (\(id, _, _, _, _) -> id) $
     filter
       ( \(_, lat, lon, pickupTime, bookingServiceTier) ->
-          checkNearbyBookingsWithServiceTier currentTime pickupTime lat lon dLoc transporterConfig mbPossibleServiceTierTypes bookingServiceTier
+          checkNearbyBookingsWithServiceTier currentTime pickupTime lat lon dLoc mbPossibleServiceTierTypes bookingServiceTier
       )
       parsedRes
 
-checkNearbyBookingsWithServiceTier :: UTCTime -> UTCTime -> Double -> Double -> LatLong -> TransporterConfig -> Maybe [ServiceTierType] -> ServiceTierType -> Bool
-checkNearbyBookingsWithServiceTier currentTime pickupTime lat lon dLoc transporterConfig mbPossibleServiceTierTypes bookingServiceTierType =
+checkNearbyBookingsWithServiceTier :: UTCTime -> UTCTime -> Double -> Double -> LatLong -> Maybe [ServiceTierType] -> ServiceTierType -> Bool
+checkNearbyBookingsWithServiceTier currentTime pickupTime lat lon dLoc mbPossibleServiceTierTypes bookingServiceTierType =
   let bookingLoc = LatLong {lat = lat, lon = lon}
       distanceToPickup = highPrecMetersToMeters $ distanceBetweenInMeters bookingLoc dLoc
       distanceInKm = metersToKilometers distanceToPickup
-      vehicleVariant = castServiceTierToVariant bookingServiceTierType
-      avgSpeedOfVehicleInKM = maybe 0 (SDP.getVehicleAvgSpeed vehicleVariant) transporterConfig.avgSpeedOfVehicle
-      speedInMinPerKm = if avgSpeedOfVehicleInKM.getKilometers == 0 then 3 else truncate (60 / (toRational avgSpeedOfVehicleInKM.getKilometers))
+      avgSpeedOfVehicleInKM :: Int = 25 -- consider avg speed of vehicle to be 25 kmph
+      speedInMinPerKm = if avgSpeedOfVehicleInKM == 0 then 3 else truncate (60.0 / toRational avgSpeedOfVehicleInKM)
       estimatedTime = intToNominalDiffTime $ distanceInKm.getKilometers * speedInMinPerKm * 60
       isValidServiceTierType = maybe True (bookingServiceTierType `elem`) mbPossibleServiceTierTypes
    in (isValidServiceTierType && addUTCTime estimatedTime currentTime <= pickupTime)
@@ -2809,11 +2806,11 @@ parseMember member = do
 -- Filters booking IDs by distance/time and fetches full booking data.
 -- Parses member strings to extract location/time, checks if driver can reach in time.
 -- Returns full booking objects from hash set for bookings within reach.
-returnFilteredBookings :: UTCTime -> [BS.ByteString] -> Maybe LatLong -> TransporterConfig -> Maybe [ServiceTierType] -> Text -> Integer -> Flow [Maybe DRB.Booking]
-returnFilteredBookings now res mbDLoc transporterConfig mbPossibleServiceTierTypes redisKeyForHset limit = do
+returnFilteredBookings :: UTCTime -> [BS.ByteString] -> Maybe LatLong -> Maybe [ServiceTierType] -> Text -> Integer -> Flow [Maybe DRB.Booking]
+returnFilteredBookings now res mbDLoc mbPossibleServiceTierTypes redisKeyForHset limit = do
   let parsedRes = mapMaybe (parseMember . decodeUtf8) res
       nearbyBookings = case mbDLoc of
-        Just dLoc -> take (fromIntegral limit) $ filterNearbyBookings now dLoc transporterConfig parsedRes mbPossibleServiceTierTypes
+        Just dLoc -> take (fromIntegral limit) $ filterNearbyBookings now dLoc parsedRes mbPossibleServiceTierTypes
         Nothing -> take (fromIntegral limit) $ map (\(id, _, _, _, _) -> id) parsedRes
   if not $ null nearbyBookings
     then Redis.hmGet redisKeyForHset nearbyBookings
@@ -2870,7 +2867,7 @@ getScheduledBookings from mocCityId vehicleVariants mbDLoc transporterConfig mbP
       fetchFutureBookings =
         queryTimeRange referenceTime (addUTCTime 86400 referenceTime) offset limit
   res <- if isToday then fetchTodayBookings else fetchFutureBookings
-  returnFilteredBookings now res mbDLoc transporterConfig mbPossibleServiceTierTypes redisKeyForHset limit
+  returnFilteredBookings now res mbDLoc mbPossibleServiceTierTypes redisKeyForHset limit
 
 acceptScheduledBooking ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->

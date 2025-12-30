@@ -295,7 +295,6 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   roundTrip = False,
                   noOfStops = 0,
                   actualRideDuration = Nothing,
-                  avgSpeedOfVehicle = Nothing,
                   driverSelectedFare = Nothing,
                   petCharges = Nothing,
                   customerExtraFee = Nothing,

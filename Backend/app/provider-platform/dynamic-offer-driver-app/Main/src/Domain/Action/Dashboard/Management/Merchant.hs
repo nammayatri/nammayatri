@@ -1196,6 +1196,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     platformFeeSgstFarePolicyLevel :: Text,
     platformFeeChargesBy :: Text,
     perMinuteRideExtraTimeCharge :: Text,
+    rideExtraTimeChargeGracePeriod :: Text,
     searchSource :: Text,
     perExtraMinRate :: Text,
     includedKmPerHr :: Text,
@@ -1295,6 +1296,7 @@ instance ToNamedRecord FarePolicyCSVRow where
         "platform_fee_sgst_pare_policy_level" .= platformFeeSgstFarePolicyLevel,
         "platform_fee_charges_by" .= platformFeeChargesBy,
         "per_minute_ride_extra_time_charge" .= perMinuteRideExtraTimeCharge,
+        "ride_extra_time_charge_grace_period" .= rideExtraTimeChargeGracePeriod,
         "search_source" .= searchSource,
         "per_extra_min_rate" .= perExtraMinRate,
         "included_km_per_hr" .= includedKmPerHr,
@@ -1393,6 +1395,7 @@ farePolicyCSVHeader =
       "platform_fee_sgst_pare_policy_level",
       "platform_fee_charges_by",
       "per_minute_ride_extra_time_charge",
+      "ride_extra_time_charge_grace_period",
       "search_source",
       "per_extra_min_rate",
       "included_km_per_hr",
@@ -1491,6 +1494,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "platform_fee_sgst_pare_policy_level"
       <*> r .: "platform_fee_charges_by"
       <*> r .: "per_minute_ride_extra_time_charge"
+      <*> r .: "ride_extra_time_charge_grace_period"
       <*> r .: "search_source"
       <*> r .: "per_extra_min_rate"
       <*> r .: "included_km_per_hr"
@@ -1768,6 +1772,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
               platformFeeSgstFarePolicyLevel = maybe "" showT farePolicy.sgst,
               platformFeeChargesBy = showT farePolicy.platformFeeChargesBy,
               perMinuteRideExtraTimeCharge = maybe "" showT farePolicy.perMinuteRideExtraTimeCharge,
+              rideExtraTimeChargeGracePeriod = maybe "" showT farePolicy.rideExtraTimeChargeGracePeriod,
               searchSource = showT fp.searchSource,
               perExtraMinRate = perExtraMinRateVal,
               includedKmPerHr = includedKmPerHrVal,
@@ -2018,6 +2023,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let pickupBufferInSecsForNightShiftCal :: (Maybe Seconds) = readMaybeCSVField idx row.pickupBufferInSecsForNightShiftCal "Pickup Buffer In Secs For Night Shift Cal"
       let tipOptions :: (Maybe [Int]) = readMaybeCSVField idx row.tipOptions "Tip Options"
       let perMinuteRideExtraTimeCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perMinuteRideExtraTimeCharge "Per Minute Ride Extra Time Charge"
+      let rideExtraTimeChargeGracePeriod :: (Maybe Seconds) = readMaybeCSVField idx row.rideExtraTimeChargeGracePeriod "Ride Extra Time Charge Grace Period"
       let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
       farePolicyType :: FarePolicy.FarePolicyType <- readCSVField idx row.farePolicyType "Fare Policy Type"
       void $ validateFarePolicyType farePolicyType tripCategory

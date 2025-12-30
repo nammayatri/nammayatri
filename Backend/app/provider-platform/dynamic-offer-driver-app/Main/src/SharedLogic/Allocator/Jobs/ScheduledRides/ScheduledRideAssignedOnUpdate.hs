@@ -251,18 +251,6 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
         accumulate (DistanceResp resp) acc = acc + resp.duration
         accumulate APIFailed acc = acc
 
-    -- isDriverTooFarFromPickup transporterConfig vehicle estimatedDistinKm scheduledPickupTime = do
-    --   now <- getCurrentTime
-    --   let defaultAvgSpeed = 20 :: Kilometers
-    --   let avgSpeedOfVehicleInKM = maybe defaultAvgSpeed (SDP.getVehicleAvgSpeed vehicle.variant) transporterConfig.avgSpeedOfVehicle
-    --   let estimatedDistKmDouble = fromIntegral (getKilometers estimatedDistinKm) :: Double
-    --       avgSpeedKmPerHrDouble = fromIntegral (getKilometers avgSpeedOfVehicleInKM) :: Double
-    --       totalTimeinHr = estimatedDistKmDouble / avgSpeedKmPerHrDouble
-    --       totalTimeInSeconds = realToFrac (totalTimeinHr * 3600) :: NominalDiffTime
-    --       expectedEndTime = addUTCTime totalTimeInSeconds now
-    --       scheduledPickupTimeWithGraceTime = addUTCTime (transporterConfig.graceTimeForScheduledRidePickup) scheduledPickupTime
-    --   return $ expectedEndTime > scheduledPickupTimeWithGraceTime
-
     isDriverTooFarFromScheduledPickup transporterConfig estimatedDurationSeconds scheduledPickupTime = do
       now <- getCurrentTime
       let expectedEndTime = addUTCTime (secondsToNominalDiffTime estimatedDurationSeconds) now
