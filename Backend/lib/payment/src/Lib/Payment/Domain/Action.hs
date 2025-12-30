@@ -1145,15 +1145,18 @@ createRefundService orderShortId refundsCall =
               Just effectAmount | effectAmount /= order.amount -> return Nothing
               _ -> mkSplitSettlementDetails paymentSplits
           refundId <- generateGUID
+          let refundAmount = case order.effectAmount of
+                Just effectAmount | effectAmount /= order.amount -> effectAmount
+                _ -> order.amount
           let refundReq =
                 PInterface.AutoRefundReq
                   { orderId = order.shortId.getShortId,
                     requestId = refundId,
-                    amount = order.amount,
+                    amount = refundAmount,
                     splitSettlementDetails
                   }
           logDebug $ "Refund request splitSettlementDetails : " <> show splitSettlementDetails
-          refundsEntry <- mkRefundsEntry order.merchantId refundReq.requestId order.shortId order.amount REFUND_PENDING
+          refundsEntry <- mkRefundsEntry order.merchantId refundReq.requestId order.shortId refundAmount REFUND_PENDING
           QRefunds.create refundsEntry
           resp <- withTryCatch "refundsCall:refundService" (refundsCall refundReq)
           case resp of
