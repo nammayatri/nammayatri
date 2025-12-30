@@ -1027,7 +1027,19 @@ postMultimodalPassActivateToday (_mbCallerPersonId, _merchantId) passNumber mbSt
     throwError (InvalidRequest "Cannot activate pass: date range overlaps with another active or prebooked pass")
 
   QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount
-  QPurchasedPassPayment.updatePurchaseDataByPurchasedPassIdAndStartEndDate purchasedPass.id purchasedPass.startDate purchasedPass.endDate newStartDate newEndDate newStatus
+
+  currentPayments <-
+    QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan
+      (Just 1)
+      (Just 0)
+      purchasedPass.id
+      purchasedPass.status
+      purchasedPass.startDate
+
+  whenJust (listToMaybe currentPayments) $ \payment -> do
+    logInfo $ "Updating payment orderId: " <> payment.orderId.getId <> " for purchasedPassId: " <> purchasedPass.id.getId
+    QPurchasedPassPayment.updatePurchaseDataByOrderId newStartDate newEndDate newStatus payment.orderId
+
   return APISuccess.Success
 
 postMultimodalPassUploadProfilePicture ::

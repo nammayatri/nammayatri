@@ -69,6 +69,13 @@ findOneByPaymentOrderId ::
   (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m (Maybe Domain.Types.PurchasedPassPayment.PurchasedPassPayment))
 findOneByPaymentOrderId orderId = do findOneWithKV [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getId orderId)]
 
+updatePurchaseDataByOrderId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Data.Time.Calendar.Day -> Data.Time.Calendar.Day -> Domain.Types.PurchasedPass.StatusType -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m ())
+updatePurchaseDataByOrderId startDate endDate status orderId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.startDate startDate, Se.Set Beam.endDate endDate, Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getId orderId)]
+
 updateStatusByOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PurchasedPass.StatusType -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m ())
 updateStatusByOrderId status orderId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getId orderId)]
 
