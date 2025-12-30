@@ -517,3 +517,12 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN single_mode_walk_speed double prec
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN default_service_tier_order_config text [] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN kafka_topic_name text  default 'gps-data';
+
+
+------- SQL updates -------
+
