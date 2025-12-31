@@ -21,7 +21,7 @@ imports:
   IssueReportListResponse: IssueManagement.Common.Dashboard.Issue
   Summary: IssueManagement.Common.Dashboard.Issue
   IssueReportListItem: IssueManagement.Common.Dashboard.Issue
-  IssueInfoRes: IssueManagement.Common.Dashboard.Issue
+  IssueInfoDRes: IssueManagement.Common.Dashboard.Issue
   PersonDetail: IssueManagement.Common.Dashboard.Issue
   IssueReportCommentItem: IssueManagement.Common.Dashboard.Issue
   AuthorDetail: IssueManagement.Common.Dashboard.Issue
@@ -75,7 +75,7 @@ apis:
       params:
         issueId: Id IssueReport
       response:
-        type: IssueInfoRes
+        type: IssueInfoDRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_INFO
   - GET: # IssueInfoAPIV2
@@ -86,7 +86,7 @@ apis:
         - issueId: (Id IssueReport)
         - issueShortId: (ShortId IssueReport)
       response:
-        type: IssueInfoRes
+        type: IssueInfoDRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_INFO
   - PUT:  # IssueUpdateAPI

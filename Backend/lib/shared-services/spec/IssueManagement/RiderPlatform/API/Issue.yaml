@@ -24,7 +24,7 @@ imports:
   IssueReportListResponse: IssueManagement.Common.Dashboard.Issue
   Summary: IssueManagement.Common.Dashboard.Issue
   IssueReportListItem: IssueManagement.Common.Dashboard.Issue
-  IssueInfoRes: IssueManagement.Common.Dashboard.Issue
+  IssueInfoDRes: IssueManagement.Common.Dashboard.Issue
   PersonDetail: IssueManagement.Common.Dashboard.Issue
   IssueReportCommentItem: IssueManagement.Common.Dashboard.Issue
   AuthorDetail: IssueManagement.Common.Dashboard.Issue
@@ -46,7 +46,7 @@ imports:
   IssueMessageDetailRes: IssueManagement.Common.Dashboard.Issue
   IssueOptionDetailRes: IssueManagement.Common.Dashboard.Issue
   IssueMessageListRes: IssueManagement.Common.Dashboard.Issue
-  IssueOptionListRes: IssueManagement.Common.Dashboard.Issue
+  IssueOptionListDRes: IssueManagement.Common.Dashboard.Issue
   IssueCategoryFlowPreviewRes: IssueManagement.Common.Dashboard.Issue
   MessageFlowNode: IssueManagement.Common.Dashboard.Issue
   MessagePreview: IssueManagement.Common.Dashboard.Issue
@@ -99,7 +99,7 @@ apis:
       params:
         issueId: Id IssueReport
       response:
-        type: IssueInfoRes
+        type: IssueInfoDRes
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE ISSUE_INFO
   - GET: # IssueInfoAPIV2
@@ -110,7 +110,7 @@ apis:
         - issueId: (Id IssueReport)
         - issueShortId: (ShortId IssueReport)
       response:
-        type: IssueInfoRes
+        type: IssueInfoDRes
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT ISSUE ISSUE_INFO
   - PUT:  # IssueUpdateAPI
@@ -300,7 +300,7 @@ apis:
         - isActive: Bool
         - language: Language
       response:
-        type: IssueOptionListRes
+        type: IssueOptionListDRes
 
   - DELETE: # DeleteCategoryAPI
       endpoint: /category/{categoryId}/delete

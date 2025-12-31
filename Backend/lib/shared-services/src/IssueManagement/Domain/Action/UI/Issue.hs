@@ -114,6 +114,7 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
           logoUrl = issueCategory.logoUrl,
           categoryType = issueCategory.categoryType,
           isRideRequired = issueCategory.isRideRequired,
+          isTicketRequired = issueCategory.isTicketRequired,
           maxAllowedRideAge = issueCategory.maxAllowedRideAge,
           allowedRideStatuses = issueCategory.allowedRideStatuses
         }

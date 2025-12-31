@@ -38,6 +38,7 @@ data IssueCategoryRes = IssueCategoryRes
     logoUrl :: Text,
     categoryType :: CategoryType,
     isRideRequired :: Bool,
+    isTicketRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds,
     allowedRideStatuses :: Maybe [RideStatus]
   }
@@ -79,7 +80,7 @@ data IssueReportListItem = IssueReportListItem
 ---------------------------------------------------------
 -- issue info --------------------------------
 
-data IssueInfoRes = IssueInfoRes
+data IssueInfoDRes = IssueInfoDRes
   { issueReportId :: Id IssueReport,
     issueReportShortId :: Maybe (ShortId IssueReport),
     personDetail :: Maybe PersonDetail,
@@ -222,6 +223,7 @@ data CreateIssueCategoryReq = CreateIssueCategoryReq
     priority :: Int,
     categoryType :: CategoryType,
     isRideRequired :: Bool,
+    isTicketRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds,
     allowedRideStatuses :: Maybe [RideStatus],
     isActive :: Maybe Bool,
@@ -283,6 +285,7 @@ data UpdateIssueCategoryReq = UpdateIssueCategoryReq
     logoUrl :: Maybe Text,
     priority :: Maybe Int,
     isRideRequired :: Maybe Bool,
+    isTicketRequired :: Maybe Bool,
     maxAllowedRideAge :: Maybe Seconds,
     allowedRideStatuses :: Maybe [RideStatus],
     isActive :: Maybe Bool,
@@ -509,7 +512,7 @@ data IssueOptionDetailRes = IssueOptionDetailRes
 -----------------------------------------------------------
 -- List Options API ----------------------------------------
 
-data IssueOptionListRes = IssueOptionListRes
+data IssueOptionListDRes = IssueOptionListDRes
   { options :: [IssueOptionDetailRes]
   }
   deriving stock (Eq, Show, Generic)

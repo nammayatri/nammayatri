@@ -27,11 +27,11 @@ createMany = traverse_ create
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe Domain.Types.Sos.Sos))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.Sos.Sos]))
+findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.Sos.Sos])
 findByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
-findByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Sos.Sos))
-findByRideId rideId = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId rideId)]
+findByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride) -> m (Maybe Domain.Types.Sos.Sos))
+findByRideId rideId = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId <$> rideId)]
 
 findByTicketId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.Sos.Sos))
 findByTicketId ticketId = do findOneWithKV [Se.Is Beam.ticketId $ Se.Eq ticketId]
@@ -44,6 +44,11 @@ updateMediaFiles mediaFiles id = do
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Sos.SosStatus -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateTrackingExpiresAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ())
+updateTrackingExpiresAt trackingExpiresAt id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.trackingExpiresAt trackingExpiresAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe Domain.Types.Sos.Sos))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -54,9 +59,10 @@ updateByPrimaryKey (Domain.Types.Sos.Sos {..}) = do
     [ Se.Set Beam.flow flow,
       Se.Set Beam.mediaFiles (Kernel.Prelude.Just (Kernel.Types.Id.getId <$> mediaFiles)),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
-      Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
+      Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId),
       Se.Set Beam.status status,
       Se.Set Beam.ticketId ticketId,
+      Se.Set Beam.trackingExpiresAt trackingExpiresAt,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now
@@ -70,11 +76,12 @@ instance FromTType' Beam.Sos Domain.Types.Sos.Sos where
         Domain.Types.Sos.Sos
           { flow = flow,
             id = Kernel.Types.Id.Id id,
-            mediaFiles = Kernel.Types.Id.Id <$> (Kernel.Prelude.fromMaybe [] mediaFiles),
+            mediaFiles = Kernel.Types.Id.Id <$> Kernel.Prelude.fromMaybe [] mediaFiles,
             personId = Kernel.Types.Id.Id personId,
-            rideId = Kernel.Types.Id.Id rideId,
+            rideId = Kernel.Types.Id.Id <$> rideId,
             status = status,
             ticketId = ticketId,
+            trackingExpiresAt = trackingExpiresAt,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -88,9 +95,10 @@ instance ToTType' Beam.Sos Domain.Types.Sos.Sos where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.mediaFiles = Kernel.Prelude.Just (Kernel.Types.Id.getId <$> mediaFiles),
         Beam.personId = Kernel.Types.Id.getId personId,
-        Beam.rideId = Kernel.Types.Id.getId rideId,
+        Beam.rideId = Kernel.Types.Id.getId <$> rideId,
         Beam.status = status,
         Beam.ticketId = ticketId,
+        Beam.trackingExpiresAt = trackingExpiresAt,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

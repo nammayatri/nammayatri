@@ -114,6 +114,7 @@ instance ToTType' BeamIC.IssueCategory IssueCategory where
         BeamIC.merchantId = getId merchantId,
         BeamIC.categoryType = categoryType,
         BeamIC.isRideRequired = isRideRequired,
+        BeamIC.isTicketRequired = isTicketRequired,
         BeamIC.maxAllowedRideAge = maxAllowedRideAge,
         BeamIC.allowedRideStatuses = allowedRideStatuses,
         BeamIC.label = label,
