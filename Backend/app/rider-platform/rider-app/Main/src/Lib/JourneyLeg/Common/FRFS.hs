@@ -58,7 +58,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRoutesInfo (..), FullBusData (..))
+import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRoutesInfo (..), FullBusData (..), utcToIST)
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -653,9 +653,11 @@ getUpcomingStopsForBus mbRouteStopMapping now mbTargetStation busData filterFrom
             Nothing -> etaData
 
           -- Further filter from current time if required
+          -- Note: bs.arrivalTime is already in IST (converted during parsing), so we need to compare with IST time
+          nowIST = utcToIST now
           filteredStops =
             if filterFromCurrentTime
-              then filter (\bs -> bs.arrivalTime > now) stopsUpToTarget
+              then filter (\bs -> bs.arrivalTime > nowIST) stopsUpToTarget
               else stopsUpToTarget
 
           -- Map BusStopETA to NextStopDetails
@@ -663,10 +665,14 @@ getUpcomingStopsForBus mbRouteStopMapping now mbTargetStation busData filterFrom
             let mbStop = HM.lookup bs.stopCode routeStopMapping
              in case mbStop of
                   Just stop -> do
+                    -- bs.arrivalTime is already in IST, and nowIST is also in IST, so diffUTCTime works correctly
+                    -- Convert time difference to seconds, then to minutes
+                    let timeDiffSeconds = nominalDiffTimeToSeconds $ diffUTCTime bs.arrivalTime nowIST
+                        timeInMinutes = Seconds $ div (getSeconds timeDiffSeconds) 60
                     JT.NextStopDetails
                       { stopCode = bs.stopCode,
                         sequenceNumber = stop.sequenceNum,
-                        travelTime = Just . nominalDiffTimeToSeconds $ diffUTCTime bs.arrivalTime now,
+                        travelTime = Just timeInMinutes,
                         travelDistance = Nothing,
                         stopName = Just stop.stopName
                       }
