@@ -87,6 +87,7 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.FRFSGtfsStageFare as QFRFSGtfsStageFare
+import Storage.CachedQueries.Merchant.MultiModalBus (utcToIST)
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
@@ -608,7 +609,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
             return $
               VehicleTracking
                 { nextStop = mbNextStopMapping,
-                  nextStopTravelTime = (\t -> nominalDiffTimeToSeconds $ diffUTCTime t now) <$> (mbNextStop <&> (.arrivalTime)),
+                  nextStopTravelTime = (\t -> Seconds $ getSeconds (nominalDiffTimeToSeconds $ diffUTCTime t (utcToIST now)) `div` 60) <$> (mbNextStop <&> (.arrivalTime)),
                   nextStopTravelDistance = Nothing,
                   upcomingStops = upcomingStops, -- fix it later
                   vehicleId = bus.vehicleNumber,
