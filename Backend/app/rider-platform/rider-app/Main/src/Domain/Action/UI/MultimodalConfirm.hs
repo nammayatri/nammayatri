@@ -894,7 +894,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
         mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
         case mbVehicleOverrideInfo of
           Just (updatedVehicleNumber, newDeviceWaybillNo) -> do
-            updatedVehicleRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs updatedVehicleNumber Nothing >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> vehicleNumber <> ", not found on any route")
+            updatedVehicleRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs updatedVehicleNumber Nothing >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle override: " <> updatedVehicleNumber <> " for vehicle: " <> vehicleNumber <> ", not found on any route")
             if Just newDeviceWaybillNo /= (snd updatedVehicleRouteInfo).waybillId
               then do
                 Dispatcher.delFleetOverrideInfo vehicleNumber
