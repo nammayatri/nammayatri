@@ -58,7 +58,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRoutesInfo (..), FullBusData (..))
+import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRoutesInfo (..), FullBusData (..), utcToIST)
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -487,12 +487,12 @@ topVehicleCandidatesKeyFRFS journeyLegId = "journeyLegTopVehicleCandidates:" <> 
 resultKeyFRFS :: Text -> Text
 resultKeyFRFS journeyLegId = "journeyLegResult:" <> journeyLegId
 
-isYetToReachStop :: Text -> FullBusData -> Bool
-isYetToReachStop stopCode bus =
+isYetToReachStop :: Text -> UTCTime -> FullBusData -> Bool
+isYetToReachStop stopCode now bus =
   case bus.busData.eta_data of
     Just etaList ->
       case find (\eta -> eta.stopCode == stopCode) etaList of
-        Just _ -> True
+        Just eta_data_for_boarding_stop -> eta_data_for_boarding_stop.arrivalTime > utcToIST now
         Nothing -> False
     Nothing -> False
 
@@ -528,7 +528,7 @@ processBusLegState
     if (isOngoingJourneyLeg journeyLegTrackingStatus) && movementDetected
       then do
         let filteredBusData = case (mbUserBoardingStation, mbLegEndStation) of
-              (_, Just destStation) -> filter (isYetToReachStop destStation.code) allBusDataForRoute
+              (_, Just destStation) -> filter (isYetToReachStop destStation.code now) allBusDataForRoute
               _ -> allBusDataForRoute
         case (mbCurrentLegDetails, routeCodeToUseForTrackVehicles, listToMaybe riderLastPoints) of
           (Just legDetails, Just rc, Just userPos) -> do
@@ -620,7 +620,7 @@ processBusLegState
       findfilteredBusData :: (MonadFlow m) => Maybe Station -> [FullBusData] -> m [JT.VehiclePosition]
       findfilteredBusData mbBoardingStation allBusData = do
         let filteredBusData = case mbBoardingStation of
-              Just boardingStation -> filter (isYetToReachStop boardingStation.code) allBusData
+              Just boardingStation -> filter (isYetToReachStop boardingStation.code now) allBusData
               Nothing -> allBusData
         let (confirmedHighBuses, ghostBuses) = partition (\a -> a.busData.route_state == Just CQMMB.ConfirmedHigh) filteredBusData
         logInfo $ "confirmedHighBuses: " <> show (length confirmedHighBuses) <> " ghostBuses: " <> show (length ghostBuses)
@@ -666,7 +666,7 @@ getUpcomingStopsForBus mbRouteStopMapping now mbTargetStation busData filterFrom
                     JT.NextStopDetails
                       { stopCode = bs.stopCode,
                         sequenceNumber = stop.sequenceNum,
-                        travelTime = Just $ div (nominalDiffTimeToSeconds $ diffUTCTime bs.arrivalTime (utcToIst now)) 60,
+                        travelTime = Just . Seconds $ div ((.getSeconds) . nominalDiffTimeToSeconds $ diffUTCTime bs.arrivalTime (utcToIST now)) 60,
                         travelDistance = Nothing,
                         stopName = Just stop.stopName
                       }
