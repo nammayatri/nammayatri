@@ -58,7 +58,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRoutesInfo (..), FullBusData (..))
+import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRoutesInfo (..), FullBusData (..), utcToIST)
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -655,7 +655,7 @@ getUpcomingStopsForBus mbRouteStopMapping now mbTargetStation busData filterFrom
           -- Further filter from current time if required
           filteredStops =
             if filterFromCurrentTime
-              then filter (\bs -> bs.arrivalTime > now) stopsUpToTarget
+              then filter (\bs -> bs.arrivalTime > utcToIST now) stopsUpToTarget
               else stopsUpToTarget
 
           -- Map BusStopETA to NextStopDetails
@@ -663,10 +663,12 @@ getUpcomingStopsForBus mbRouteStopMapping now mbTargetStation busData filterFrom
             let mbStop = HM.lookup bs.stopCode routeStopMapping
              in case mbStop of
                   Just stop -> do
+                    let travelTimeSeconds = nominalDiffTimeToSeconds $ diffUTCTime bs.arrivalTime (utcToIST now)
+                        travelTimeMinutes = Seconds $ getSeconds travelTimeSeconds `div` 60
                     JT.NextStopDetails
                       { stopCode = bs.stopCode,
                         sequenceNumber = stop.sequenceNum,
-                        travelTime = Just . nominalDiffTimeToSeconds $ diffUTCTime bs.arrivalTime now,
+                        travelTime = Just travelTimeMinutes,
                         travelDistance = Nothing,
                         stopName = Just stop.stopName
                       }
