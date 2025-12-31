@@ -666,7 +666,7 @@ getUpcomingStopsForBus mbRouteStopMapping now mbTargetStation busData filterFrom
                     JT.NextStopDetails
                       { stopCode = bs.stopCode,
                         sequenceNumber = stop.sequenceNum,
-                        travelTime = Just . nominalDiffTimeToSeconds $ diffUTCTime bs.arrivalTime now,
+                        travelTime = Just $ Seconds $ (div (getSeconds $ nominalDiffTimeToSeconds $ diffUTCTime bs.arrivalTime (CQMMB.utcToIST now)) 60),
                         travelDistance = Nothing,
                         stopName = Just stop.stopName
                       }
