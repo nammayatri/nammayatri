@@ -70,18 +70,6 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
 
   otpCode <- maybe generateOTPCode return useFakeOtpM
 
-  when (isNothing useFakeOtpM) $ do
-    SOTP.sendOTPByIdentifierType
-      identifierType
-      otpCode
-      personId
-      person.merchantId
-      merchantOpCityId
-      req.mobileCountryCode
-      (Just req.value)
-      Nothing
-      Nothing
-
   case identifierType of
     SP.MOBILENUMBER -> do
       countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for MOBILENUMBER identifier")
@@ -92,37 +80,58 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
       whenJust mobileNumberExists $ \existing ->
         when (existing.id /= personId) $ throwError (InvalidRequest "Phone number already registered")
 
-      otpHash <- getDbHash otpCode
-      let authData =
-            AuthData
-              { mobileNumber = Just mobileNumber,
-                mobileNumberCountryCode = Just countryCode,
-                email = Nothing,
-                otp = otpHash
-              }
-      let redisKey = makeUpdateAuthRedisKey identifierType (getId personId)
-          expirySeconds = smsCfg.sessionConfig.authExpiry * 60
-      Redis.setExp redisKey authData expirySeconds
+      storeAndSendOTP otpCode identifierType personId person smsCfg useFakeOtpM merchantOpCityId (Just mobileNumber) (Just countryCode) Nothing
     SP.EMAIL -> do
       let receiverEmail = req.value
       when (T.null receiverEmail) $ throwError $ InvalidRequest "Email is required for EMAIL identifier"
       existingPerson <- QPersonExtra.findByEmailAndMerchantIdAndRole (Just receiverEmail) person.merchantId SP.DRIVER
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
-      otpHash <- getDbHash otpCode
-      let authData =
-            AuthData
-              { mobileNumber = Nothing,
-                mobileNumberCountryCode = Nothing,
-                email = Just receiverEmail,
-                otp = otpHash
-              }
-      let redisKey = makeUpdateAuthRedisKey identifierType (getId personId)
-          expirySeconds = smsCfg.sessionConfig.authExpiry * 60
-      Redis.setExp redisKey authData expirySeconds
+      storeAndSendOTP otpCode identifierType personId person smsCfg useFakeOtpM merchantOpCityId Nothing Nothing (Just receiverEmail)
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
 
   pure APISuccess.Success
+  where
+    storeAndSendOTP ::
+      ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
+        CacheFlow m r,
+        EsqDBFlow m r,
+        EncFlow m r
+      ) =>
+      Text ->
+      SP.IdentifierType ->
+      Id SP.Person ->
+      SP.Person ->
+      SmsConfig ->
+      Maybe Text ->
+      Id DMOC.MerchantOperatingCity ->
+      Maybe Text ->
+      Maybe Text ->
+      Maybe Text ->
+      m ()
+    storeAndSendOTP otpCode' identifierType' personId' person' smsCfg' useFakeOtpM' merchantOpCityId' mobileNum countryCode emailVal = do
+      otpHash <- getDbHash otpCode'
+      let authData =
+            AuthData
+              { mobileNumber = mobileNum,
+                mobileNumberCountryCode = countryCode,
+                email = emailVal,
+                otp = otpHash
+              }
+      let redisKey = makeUpdateAuthRedisKey identifierType' (getId personId')
+          expirySeconds = smsCfg'.sessionConfig.authExpiry * 60
+      Redis.setExp redisKey authData expirySeconds
+      when (isNothing useFakeOtpM') $
+        SOTP.sendOTPByIdentifierType
+          identifierType'
+          otpCode'
+          personId'
+          person'.merchantId
+          merchantOpCityId'
+          countryCode
+          mobileNum
+          emailVal
+          Nothing
 
 postDriverProfileUpdateAuthDataVerifyOTP ::
   ( CacheFlow m r,
