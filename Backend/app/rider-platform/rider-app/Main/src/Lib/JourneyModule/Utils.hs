@@ -237,7 +237,8 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
     if useLiveBusData
       then do
         allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
-        liveRouteStopTimes <- mapConcurrently processRoute allRouteWithBuses
+        now <- getCurrentTime
+        liveRouteStopTimes <- mapConcurrently (processRoute now) allRouteWithBuses
         let flattenedLiveRouteStopTimes = concat liveRouteStopTimes
         let liveRouteCodes = nub $ map (.routeCode) flattenedLiveRouteStopTimes
         -- Pass only routeCodes which don't have route.buses and also don't serve our source stop
@@ -250,9 +251,9 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
   staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode False False) "fetch route stop timing through graphql"
   return $ flattenedLiveRouteStopTimes ++ staticRouteStopTimes
   where
-    processRoute routeWithBuses = do
+    processRoute now routeWithBuses = do
       let busEtaData = concatMap (\bus -> map (\eta -> (bus.vehicleNumber, eta)) $ fromMaybe [] (bus.busData.eta_data)) routeWithBuses.buses
-          filteredBuses = filter (\(_, eta) -> eta.stopCode == stopCode) busEtaData
+          filteredBuses = filter (\(_, eta) -> eta.stopCode == stopCode && eta.arrivalTime > CQMMB.utcToIST now) busEtaData -- arival time is in IST in haskell
       logDebug $ "filteredBuses: " <> show (length filteredBuses) <> " busEtaData: " <> show (length busEtaData)
       vehicleRouteMappings <- forM filteredBuses $ \(vehicleNumber, etaData) -> do
         vrMapping <-

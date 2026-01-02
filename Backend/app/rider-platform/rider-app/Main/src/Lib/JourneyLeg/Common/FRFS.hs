@@ -655,7 +655,7 @@ getUpcomingStopsForBus mbRouteStopMapping now mbTargetStation busData filterFrom
           -- Further filter from current time if required
           filteredStops =
             if filterFromCurrentTime
-              then filter (\bs -> bs.arrivalTime > now) stopsUpToTarget
+              then filter (\bs -> bs.arrivalTime > utcToIST now) stopsUpToTarget
               else stopsUpToTarget
 
           -- Map BusStopETA to NextStopDetails
