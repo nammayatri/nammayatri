@@ -496,7 +496,7 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
       (becknIssueReq, issueId, igmIssue) <- ACL.buildIssueReq (fromBooking booking) category option reqBody.description merchant person igmConfig merchantOperatingCity Nothing Nothing Nothing
       QIGM.create igmIssue
       fork "sending beckn issue" . withShortRetry $ do
-        void $ CallBPP.issue booking.providerUrl merchant.id becknIssueReq
+        void $ CallBPP.issue booking.providerUrl becknIssueReq
       pure $ Just issueId
 
     processTicketBookingIssue ticketBooking category option merchant person igmConfig reqBody = do
@@ -509,7 +509,7 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
       providerUrl <- parseBaseUrl ticketBooking.bppSubscriberUrl
       logDebug $ "Sending beckn issue for ticket booking" <> show becknIssueReq
       fork "sending beckn issue" . withShortRetry $ do
-        void $ CallBPP.issue providerUrl merchant.id becknIssueReq
+        void $ CallBPP.issue providerUrl becknIssueReq
       pure $ Just issueId
 
 issueMediaUpload :: (Id SP.Person, Id DM.Merchant) -> Common.IssueMediaUploadReq -> FlowHandler Common.IssueMediaUploadRes
@@ -566,7 +566,7 @@ igmIssueStatus (personId, merchantId) = withFlowHandlerAPI $ do
             liftA2 (,) (fromFRFSTicketBooking tb fareParameters) (parseBaseUrl tb.bppSubscriberUrl)
 
     becknIssueStatusReq <- ACL.buildIssueStatusReq merchant merchantOperatingCity bookingDetails issue.id.getId issue.transactionId
-    fork "sending beckn issue_status" . withShortRetry $ void $ CallBPP.issueStatus providerUrl merchantId becknIssueStatusReq
+    fork "sending beckn issue_status" . withShortRetry $ void $ CallBPP.issueStatus providerUrl becknIssueStatusReq
 
   pure Success
 
@@ -600,7 +600,7 @@ resolveIGMIssue (personId, merchantId) issueReportId response rating = do
       (becknIssueReq, _, updatedIgmIssue) <- ACL.buildIssueReq rideBooking category option issueReport.description merchant person igmConfig merchantOperatingCity response rating (Just igmIssue)
       QIGM.updateByPrimaryKey updatedIgmIssue
       fork "sending beckn issue" . withShortRetry $ do
-        void $ CallBPP.issue rideBooking.providerUrl merchantId becknIssueReq
+        void $ CallBPP.issue rideBooking.providerUrl becknIssueReq
 
 fromBooking :: Booking -> RideBooking
 fromBooking b = do
