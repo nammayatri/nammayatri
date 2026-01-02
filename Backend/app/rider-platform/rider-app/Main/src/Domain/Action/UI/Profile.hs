@@ -557,7 +557,7 @@ sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
         }
   let filterNewContacts personDEN = return $ not $ personDEN.mobileNumber `elem` oldList
   newlyAddedContacts <- filterM filterNewContacts newList
-  SPDEN.notifyEmergencyContacts person (notificationMessage person) "Emergency Contact Added" Notification.EMERGENCY_CONTACT_ADDED (Just buildSmsReq) riderConfig.enableEmergencyContactAddedMessage newlyAddedContacts
+  SPDEN.notifyEmergencyContacts person (notificationMessage person) "Emergency Contact Added" Notification.EMERGENCY_CONTACT_ADDED (Just buildSmsReq) riderConfig.enableEmergencyContactAddedMessage newlyAddedContacts Nothing
   where
     notificationMessage person = SLP.getName person <> " has added you as the emergency contact."
 
