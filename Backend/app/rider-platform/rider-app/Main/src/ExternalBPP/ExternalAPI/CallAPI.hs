@@ -4,6 +4,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import Data.List (nub, sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
+import Data.Time.Format (defaultTimeLocale, formatTime)
 import Domain.Action.Beckn.FRFS.OnSearch
 import Domain.Types hiding (ONDC)
 import Domain.Types.BecknConfig
@@ -31,6 +32,11 @@ import qualified ExternalBPP.ExternalAPI.Metro.CMRL.Order as CMRLOrder
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.PassengerViewStatus as CMRLPassengerViewStatus
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.StationList as CMRLStationList
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus as CMRLStatus
+import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.BusinessHour as CMRLV2BusinessHour
+import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.GetFare as CMRLV2GetFare
+import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.Order as CMRLV2Order
+import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.StationList as CMRLV2StationList
+import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.TicketStatus as CMRLV2TicketStatus
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney as CRISBookJourney
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as CRISRouteFareV3
@@ -54,6 +60,7 @@ getProviderName integrationBPPConfig =
   case (integrationBPPConfig.providerName, integrationBPPConfig.providerConfig) of
     (Just name, _) -> name
     (_, CMRL _) -> "Chennai Metro Rail Limited"
+    (_, CMRLV2 _) -> "Chennai Metro Rail Limited v2"
     (_, EBIX _) -> "Kolkata Buses"
     (_, DIRECT _) -> "Direct Multimodal Services"
     (_, ONDC _) -> "ONDC Services"
@@ -81,6 +88,21 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
             { origin = startStopCode,
               destination = endStopCode,
               ticketType = "SJT"
+            }
+      return (isFareMandatory, fares)
+    CMRLV2 config' -> do
+      now <- getCurrentTime
+      let travelDatetime = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" now
+      fares <-
+        CMRLV2GetFare.getFare integrationBPPConfig config' $
+          CMRLV2GetFare.GetFareReq
+            { operatorNameId = config'.operatorNameId,
+              fromStationId = startStopCode,
+              toStationId = endStopCode,
+              ticketTypeId = config'.ticketTypeId,
+              merchantId = config'.merchantId,
+              travelDatetime = travelDatetime,
+              fareTypeId = config'.fareTypeId
             }
       return (isFareMandatory, fares)
     ONDC _ -> do
@@ -171,6 +193,7 @@ createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quote
   resp <-
     case integrationBPPConfig.providerConfig of
       CMRL config' -> CMRLOrder.createOrder config' integrationBPPConfig booking quoteCategories mRiderNumber
+      CMRLV2 config' -> CMRLV2Order.createOrder config' integrationBPPConfig booking quoteCategories mRiderNumber
       EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
       DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
       CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking quoteCategories
@@ -182,6 +205,7 @@ getBppOrderId :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, Mon
 getBppOrderId integratedBPPConfig booking = do
   case integratedBPPConfig.providerConfig of
     CMRL _ -> Just <$> CMRLOrder.getBppOrderId booking
+    CMRLV2 _ -> Just <$> CMRLV2Order.getBppOrderId booking
     EBIX _ -> Just <$> EBIXOrder.getBppOrderId booking
     DIRECT _ -> Just <$> DIRECTOrder.getBppOrderId booking
     CRIS _ -> Just <$> CRISBookJourney.getBppOrderId booking
@@ -191,6 +215,7 @@ getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncF
 getTicketStatus integrationBPPConfig booking = do
   case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLStatus.getTicketStatus config' booking
+    CMRLV2 config' -> CMRLV2TicketStatus.getTicketStatus config' booking
     EBIX config' -> EBIXStatus.getTicketStatus config' booking
     DIRECT config' -> DIRECTStatus.getTicketStatus config' booking
     CRIS _config' -> return []
@@ -218,6 +243,19 @@ getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, Cach
 getBusinessHour integrationBPPConfig = do
   case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLBusinessHour.getBusinessHour config'
+    CMRLV2 config' -> do
+      response <- CMRLV2BusinessHour.getBusinessHour config'
+      -- Convert V2 response to V1 format for compatibility
+      let findParam name = maybe "" (.paramValue) $ find (\p -> p.paramName == name) response.commonParamList
+      return
+        CMRLBusinessHour.BusinessHourResult
+          { qrBookingStartTime = findParam "qrBookingStartTime",
+            qrBookingEndTime = findParam "qrBookingEndTime",
+            businessStartTime = findParam "businessStartTime",
+            businessEndTime = findParam "businessEndTime",
+            qrTicketRestrictionStartTime = findParam "qrTicketRestrictionStartTime",
+            qrTicketRestrictionEndTime = findParam "qrTicketRestrictionEndTime"
+          }
     _ -> throwError $ InternalError "Unimplemented!"
 
 getDurationDetails :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> CMRLDurationDetails.DurationDetailsReq -> m [CMRLDurationDetails.DurationDetailsResult]
@@ -242,6 +280,25 @@ getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRe
 getStationList integrationBPPConfig = do
   case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLStationList.getStationList config'
+    CMRLV2 config' -> do
+      stations <- CMRLV2StationList.getStationList config'
+      return $
+        map
+          ( \s ->
+              CMRLStationList.Station
+                { id = 0,
+                  lineId = "",
+                  stationId = s.stationId,
+                  code = s.stationCode,
+                  name = s.stationName,
+                  taName = Nothing,
+                  address = "",
+                  latitude = fromMaybe 0.0 s.latitude,
+                  longitude = fromMaybe 0.0 s.longitude,
+                  sequenceNo = 0
+                }
+          )
+          stations
     _ -> throwError $ InternalError "Unimplemented!"
 
 getPaymentDetails :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams

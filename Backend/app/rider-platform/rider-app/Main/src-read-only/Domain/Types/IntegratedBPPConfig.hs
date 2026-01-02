@@ -39,6 +39,7 @@ data ProviderConfig
   = EBIX Domain.Types.Extra.IntegratedBPPConfig.EBIXConfig
   | DIRECT Domain.Types.Extra.IntegratedBPPConfig.DIRECTConfig
   | CMRL Domain.Types.Extra.IntegratedBPPConfig.CMRLConfig
+  | CMRLV2 Domain.Types.Extra.IntegratedBPPConfig.CMRLV2Config
   | ONDC Domain.Types.Extra.IntegratedBPPConfig.ONDCBecknConfig
   | CRIS Domain.Types.Extra.IntegratedBPPConfig.CRISConfig
   deriving (Generic, FromJSON, ToJSON, Eq, Show)

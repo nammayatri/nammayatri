@@ -49,6 +49,23 @@ data CMRLConfig = CMRLConfig
 instance Show CMRLConfig where
   show _ = "CMRLConfig"
 
+data CMRLV2Config = CMRLV2Config
+  { networkHostUrl :: BaseUrl,
+    username :: Text,
+    password :: EncryptedField 'AsEncrypted Text,
+    operatorNameId :: Int,
+    merchantId :: Text,
+    ticketTypeId :: Int,
+    fareTypeId :: Int,
+    encKeyIndex :: Int,
+    encryptionKey :: EncryptedField 'AsEncrypted Text
+  }
+  deriving stock (Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance Show CMRLV2Config where
+  show _ = "CMRLV2Config"
+
 data ONDCBecknConfig = ONDCBecknConfig
   { networkHostUrl :: Maybe BaseUrl,
     networkId :: Maybe Text,
