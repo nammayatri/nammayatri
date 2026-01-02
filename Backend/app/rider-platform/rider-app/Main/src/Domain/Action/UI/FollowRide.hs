@@ -75,7 +75,7 @@ postShareRide (mbPersonId, merchantId) req = do
               updateFollowDetails emergencyContactEntity emergencyContact
               dbHash <- getDbHash emergencyContact.mobileNumber
               PDEN.updateShareRide dbHash personId True
-              SLPEN.sendNotificationToEmergencyContact emergencyContactEntity (body person) title Notification.SHARE_RIDE
+              SLPEN.sendNotificationToEmergencyContact emergencyContactEntity (body person) title Notification.SHARE_RIDE Nothing
     )
     emergencyContacts.defaultEmergencyNumbers
   return APISuccess.Success
