@@ -354,6 +354,14 @@ library
       ExternalBPP.ExternalAPI.Metro.CMRL.StationList
       ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus
       ExternalBPP.ExternalAPI.Metro.CMRL.UpdateQrReceivedStatus
+      ExternalBPP.ExternalAPI.Metro.CMRL.V2.Auth
+      ExternalBPP.ExternalAPI.Metro.CMRL.V2.BusinessHour
+      ExternalBPP.ExternalAPI.Metro.CMRL.V2.Encryption
+      ExternalBPP.ExternalAPI.Metro.CMRL.V2.Error
+      ExternalBPP.ExternalAPI.Metro.CMRL.V2.GetFare
+      ExternalBPP.ExternalAPI.Metro.CMRL.V2.Order
+      ExternalBPP.ExternalAPI.Metro.CMRL.V2.StationList
+      ExternalBPP.ExternalAPI.Metro.CMRL.V2.TicketStatus
       ExternalBPP.ExternalAPI.Subway.CRIS.Auth
       ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney
       ExternalBPP.ExternalAPI.Subway.CRIS.ChangeDevice
