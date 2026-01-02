@@ -61,6 +61,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.PersonDisability as PersonDisability
+import qualified Domain.Types.RiderConfig as DRC
 import Domain.Types.SafetySettings
 import qualified Domain.Types.VehicleCategory as VehicleCategory
 import Environment
@@ -717,23 +718,11 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
   identifierType <- req.identifier & fromMaybeM (InvalidRequest "Identifier type is required")
   let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
 
-  otpCode <- maybe generateOTPCode return useFakeOtpM
+  generatedOtpCode <- maybe generateOTPCode return useFakeOtpM
   let otpChannel = case identifierType of
         SP.MOBILENUMBER -> SOTP.SMS
         SP.EMAIL -> SOTP.EMAIL
         SP.AADHAAR -> SOTP.SMS
-  when (isNothing useFakeOtpM) $ do
-    SOTP.sendOTP
-      otpChannel
-      otpCode
-      personId
-      person.merchantId
-      person.merchantOperatingCityId
-      req.mobileCountryCode
-      req.mobileNumber
-      req.email
-      riderConfig.emailOtpConfig
-      Nothing
 
   case identifierType of
     SP.MOBILENUMBER -> do
@@ -745,36 +734,60 @@ triggerUpdateAuthDataOtp (personId, _merchantId) req = do
       whenJust mobileNumberExists $ \existing ->
         when (existing.id /= personId) $ throwError (InvalidRequest "Phone number already registered")
 
-      otpHash <- getDbHash otpCode
-      let authData =
-            AuthData
-              { mobileNumber = Just mobileNumber,
-                mobileNumberCountryCode = Just countryCode,
-                email = Nothing,
-                otp = otpHash
-              }
-      let redisKey = makeUpdateAuthRedisKey identifierType (getId personId)
-      let expirySeconds = smsCfg.sessionConfig.authExpiry * 60
-      Redis.setExp redisKey authData expirySeconds
+      storeAndSendOTP generatedOtpCode identifierType personId person smsCfg useFakeOtpM otpChannel riderConfig req (Just mobileNumber) (Just countryCode) Nothing
     SP.EMAIL -> do
       receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL identifier")
       existingPerson <- QPerson.findByEmailAndMerchantId person.merchantId receiverEmail
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
-      otpHash <- getDbHash otpCode
-      let authData =
-            AuthData
-              { mobileNumber = Nothing,
-                mobileNumberCountryCode = Nothing,
-                email = Just receiverEmail,
-                otp = otpHash
-              }
-      let redisKey = makeUpdateAuthRedisKey identifierType (getId personId)
-      let expirySeconds = smsCfg.sessionConfig.authExpiry * 60
-      Redis.setExp redisKey authData expirySeconds
+      storeAndSendOTP generatedOtpCode identifierType personId person smsCfg useFakeOtpM otpChannel riderConfig req Nothing Nothing (Just receiverEmail)
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
 
   pure APISuccess.Success
+  where
+    storeAndSendOTP ::
+      ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
+        CacheFlow m r,
+        EsqDBFlow m r,
+        EncFlow m r
+      ) =>
+      Text ->
+      SP.IdentifierType ->
+      Id Person.Person ->
+      Person.Person ->
+      SmsConfig ->
+      Maybe Text ->
+      SOTP.OTPChannel ->
+      DRC.RiderConfig ->
+      TriggerUpdateAuthOTPReq ->
+      Maybe Text ->
+      Maybe Text ->
+      Maybe Text ->
+      m ()
+    storeAndSendOTP otpCode' identifierType' personId' person' smsCfg' useFakeOtpM' otpChannel' riderConfig' req' mobileNum countryCode emailVal = do
+      otpHash <- getDbHash otpCode'
+      let authData =
+            AuthData
+              { mobileNumber = mobileNum,
+                mobileNumberCountryCode = countryCode,
+                email = emailVal,
+                otp = otpHash
+              }
+      let redisKey = makeUpdateAuthRedisKey identifierType' (getId personId')
+      let expirySeconds = smsCfg'.sessionConfig.authExpiry * 60
+      Redis.setExp redisKey authData expirySeconds
+      when (isNothing useFakeOtpM') $
+        SOTP.sendOTP
+          otpChannel'
+          otpCode'
+          personId'
+          person'.merchantId
+          person'.merchantOperatingCityId
+          req'.mobileCountryCode
+          req'.mobileNumber
+          req'.email
+          riderConfig'.emailOtpConfig
+          Nothing
 
 data VerifyUpdateAuthOTPReq = VerifyUpdateAuthOTPReq
   { identifier :: Maybe SP.IdentifierType,
