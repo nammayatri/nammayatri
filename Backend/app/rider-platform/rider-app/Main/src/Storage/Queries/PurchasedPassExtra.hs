@@ -85,7 +85,13 @@ findPendingPassByPersonIdAndPassTypeId personId merchantId passTypeId =
     [ Se.Is Beam.personId $ Se.Eq (getId personId),
       Se.Is Beam.merchantId $ Se.Eq (getId merchantId),
       Se.Is Beam.passTypeId $ Se.Eq (getId passTypeId),
-      Se.Is Beam.status $ Se.Not $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked]
+      Se.Or
+        [ Se.Is Beam.status $ Se.Not $ Se.In [DPurchasedPass.Active, DPurchasedPass.PreBooked],
+          Se.Or
+            [ Se.Is Beam.deviceSwitchCount $ Se.LessThanOrEq (Just 1),
+              Se.Is Beam.deviceSwitchCount $ Se.Eq Nothing
+            ]
+        ]
     ]
 
 updatePurchaseData ::

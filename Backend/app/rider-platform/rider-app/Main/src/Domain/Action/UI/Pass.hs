@@ -195,8 +195,10 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         mbPending <- QPurchasedPass.findPendingPassByPersonIdAndPassTypeId personId merchantId pass.passTypeId
         case mbPending of
           Just pendingPass -> do
-            QPurchasedPass.updateDeviceIdById deviceId pendingPass.deviceSwitchCount pendingPass.id
-            logInfo $ "Reusing existing purchased pass " <> pendingPass.id.getId <> " and updated deviceId to " <> deviceId
+            -- don't update device id if existing different device id pass is active or prebooked
+            when (pendingPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
+              QPurchasedPass.updateDeviceIdById deviceId 0 pendingPass.id
+              logInfo $ "Reusing existing purchased pass " <> pendingPass.id.getId <> " and updated deviceId to " <> deviceId
             return $ Just pendingPass
           Nothing -> return Nothing
 
@@ -802,10 +804,11 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
 
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
 
-  let passWithSameDevice = maybe allActivePurchasedPasses (\deviceId -> filter (\pass -> pass.deviceId == deviceId || pass.deviceId == defaultDashboardDeviceId) allActivePurchasedPasses) mbDeviceId
-  let purchasedPasses = if null passWithSameDevice then allActivePurchasedPasses else passWithSameDevice
-
-  mapM (buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today) purchasedPasses
+  -- Always show all passes regardless of device. The deviceMismatch flag in
+  -- PurchasedPassAPIEntity will inform the UI which passes need device switching.
+  -- Previously, passes from other devices were hidden if any pass (even Pending)
+  -- existed for the current device, preventing users from switching older active passes.
+  mapM (buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today) allActivePurchasedPasses
 
 postMultimodalPassVerify ::
   ( ( Maybe (Id.Id DP.Person),
