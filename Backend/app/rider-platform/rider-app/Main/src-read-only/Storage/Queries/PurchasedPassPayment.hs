@@ -31,12 +31,12 @@ findAllByPurchasedPassId purchasedPassId = do findAllWithKV [Se.Is Beam.purchase
 
 findAllByPurchasedPassIdAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Domain.Types.PurchasedPass.StatusType -> Data.Time.Calendar.Day -> m ([Domain.Types.PurchasedPassPayment.PurchasedPassPayment]))
-findAllByPurchasedPassIdAndStatus limit offset purchasedPassId status endDate = do
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> [Domain.Types.PurchasedPass.StatusType] -> Data.Time.Calendar.Day -> m ([Domain.Types.PurchasedPassPayment.PurchasedPassPayment]))
+findAllByPurchasedPassIdAndStatus limit offset purchasedPassId statuses endDate = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.purchasedPassId $ Se.Eq (Kernel.Types.Id.getId purchasedPassId),
-          Se.Is Beam.status $ Se.Eq status,
+          Se.Is Beam.status $ Se.In statuses,
           Se.Is Beam.endDate $ Se.GreaterThanOrEq endDate
         ]
     ]

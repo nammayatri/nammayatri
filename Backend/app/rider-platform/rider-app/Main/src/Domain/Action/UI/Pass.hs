@@ -207,7 +207,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         let passOverlaps = hasDateOverlap (samePass.startDate, samePass.endDate) (startDate, endDate)
         when (samePass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && passOverlaps) $
           throwError (InvalidRequest "You already have an active pass of this type in the selected dates")
-        futureRenewals <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus Nothing Nothing samePass.id DPurchasedPass.PreBooked startDate
+        futureRenewals <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus Nothing Nothing samePass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] startDate
         let futureRenewalsOverlap = any (\futurePass -> hasDateOverlap (futurePass.startDate, futurePass.endDate) (startDate, endDate)) futureRenewals
         when futureRenewalsOverlap $
           throwError (InvalidRequest "You already have a future renewal of this pass in the selected dates")
@@ -627,10 +627,11 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
   logInfo $ "Pass payment webhook handler called for paymentOrderId: " <> paymentOrderId.getId
   mbPurchasedPassPayment <- QPurchasedPassPayment.findOneByPaymentOrderId paymentOrderId
   mbPurchasedPass <- maybe (pure Nothing) (QPurchasedPass.findById . (.purchasedPassId)) mbPurchasedPassPayment
+  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  let today = DT.utctDay istTime
   case (mbPurchasedPassPayment, mbPurchasedPass) of
     (Just purchasedPassPayment, Just purchasedPass) -> do
       let isDashboard = fromMaybe False purchasedPassPayment.isDashboard
-      istTime <- getLocalCurrentTime (19800 :: Seconds)
       let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (isJust purchasedPass.profilePicture) (purchasedPassPayment.startDate > DT.utctDay istTime) status
       whenJust mbPassStatus $ \passStatus -> do
         when (purchasedPassPayment.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
@@ -642,7 +643,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
         -- If payment results in an active/prebooked pass, update purchased_pass.profilePicture from payment
         when (passStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]) $ do
           QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
-          when (passStatus == DPurchasedPass.Active && purchasedPassPayment.startDate <= purchasedPass.startDate && purchasedPassPayment.endDate <= purchasedPass.endDate) $
+          when (passStatus == DPurchasedPass.Active && purchasedPassPayment.startDate <= today && purchasedPassPayment.endDate >= today) $
             QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
       case mbPassStatus of
         Just DPurchasedPass.Active -> return (DPayment.FulfillmentSucceeded, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
@@ -786,9 +787,9 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
     when (purchasedPass.status == DPurchasedPass.PreBooked && purchasedPass.startDate <= today) $ do
       QPurchasedPass.updateStatusById DPurchasedPass.Active purchasedPass.id
 
-    when (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && purchasedPass.endDate < today) $ do
+    when (purchasedPass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Expired] && purchasedPass.endDate < today) $ do
       -- check if user has already renewed the pass
-      allPreBookedPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPass.id DPurchasedPass.PreBooked today
+      allPreBookedPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] today
       let mbFirstPreBookedPayment = listToMaybe allPreBookedPayments
       case mbFirstPreBookedPayment of
         Just firstPreBookedPayment -> do
