@@ -936,10 +936,64 @@ postMultimodalPassSwitchDeviceId (mbCallerPersonId, merchantId) req = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   deviceId <- getDeviceId person req.deviceId req.imeiNumber
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId (Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]) Nothing Nothing
+
+  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  let today = DT.utctDay istTime
+
   forM_ allActivePurchasedPasses $ \purchasedPass -> do
     when (purchasedPass.deviceId /= deviceId) $ do
-      QPurchasedPass.updateDeviceIdById deviceId (purchasedPass.deviceSwitchCount + 1) purchasedPass.id
+      -- Check if there are other passes with the same passTypeId that already have this deviceId
+      duplicatePasses <- QPurchasedPass.findAllByPersonIdAndPassTypeIdAndStatus personId merchantId purchasedPass.passTypeId [DPurchasedPass.Active, DPurchasedPass.PreBooked]
+      let otherDevicePasses = filter (\p -> p.id /= purchasedPass.id && p.deviceId == deviceId) duplicatePasses
+
+      case otherDevicePasses of
+        [] -> do
+          -- No conflict, simply update the device ID
+          QPurchasedPass.updateDeviceIdById deviceId (purchasedPass.deviceSwitchCount + 1) purchasedPass.id
+        conflictingPasses -> do
+          -- There are conflicting passes with the same device ID and passTypeId
+          -- Need to determine which pass to retain
+          let allPassesToConsider = purchasedPass : conflictingPasses
+              -- Determine which pass to retain based on priority:
+              -- 1. Currently active pass (startDate <= today && endDate >= today)
+              -- 2. Future start date pass (startDate > today)
+              -- 3. If both are active, keep the one with more remaining days
+              passToRetain = selectPassToRetain today allPassesToConsider
+              passesToDelete = filter (\p -> p.id /= passToRetain.id) allPassesToConsider
+
+          -- Update the device ID on the retained pass
+          QPurchasedPass.updateDeviceIdById deviceId (passToRetain.deviceSwitchCount + 1) passToRetain.id
+
+          -- Migrate all PurchasedPassPayment records from deleted passes to the retained pass
+          forM_ passesToDelete $ \passToDelete -> do
+            QPurchasedPassPayment.updatePurchasedPassIdByOldPurchasedPassId passToRetain.id passToDelete.id
+            -- Delete the non-retained pass
+            QPurchasedPass.deleteById passToDelete.id
+
+          logInfo $ "Merged duplicate passes for personId: " <> personId.getId <> ", retained pass: " <> passToRetain.id.getId <> ", deleted passes: " <> show (map (.id.getId) passesToDelete)
+
   return APISuccess.Success
+  where
+    -- Select the pass to retain based on priority rules
+    selectPassToRetain :: DT.Day -> [DPurchasedPass.PurchasedPass] -> DPurchasedPass.PurchasedPass
+    selectPassToRetain today passes =
+      let -- Priority 1: Currently active passes (startDate <= today && endDate >= today)
+          activePasses = filter (\p -> p.startDate <= today && p.endDate >= today) passes
+          -- Priority 2: Future start date passes (startDate > today)
+          futurePasses = filter (\p -> p.startDate > today) passes
+       in case activePasses of
+            [single] -> single
+            (_ : _) ->
+              -- Multiple active passes, keep the one with more remaining days (later end date)
+              maximumBy (EHS.comparing (.endDate)) activePasses
+            [] ->
+              case futurePasses of
+                (_firstFuture : _) ->
+                  -- Pick the future pass with the earliest start date but latest end date
+                  maximumBy (EHS.comparing (.endDate)) futurePasses
+                [] ->
+                  -- Fallback: pick the most recently created pass
+                  maximumBy (EHS.comparing (.createdAt)) passes
 
 postMultimodalPassResetDeviceSwitchCount ::
   ( ( Maybe (Id.Id DP.Person),

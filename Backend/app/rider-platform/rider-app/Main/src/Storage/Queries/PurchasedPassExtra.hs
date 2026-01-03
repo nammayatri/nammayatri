@@ -173,3 +173,26 @@ getLastPassNumber = do
   return $ case listToMaybe pass of
     Just p -> p.passNumber
     Nothing -> 0
+
+deleteById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DPurchasedPass.PurchasedPass ->
+  m ()
+deleteById purchasedPassId = deleteWithKV [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
+
+findAllByPersonIdAndPassTypeIdAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DPassType.PassType ->
+  [DPurchasedPass.StatusType] ->
+  m [DPurchasedPass.PurchasedPass]
+findAllByPersonIdAndPassTypeIdAndStatus personId merchantId passTypeId statuses =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.personId $ Se.Eq (getId personId),
+          Se.Is Beam.merchantId $ Se.Eq (getId merchantId),
+          Se.Is Beam.passTypeId $ Se.Eq (getId passTypeId),
+          Se.Is Beam.status $ Se.In statuses
+        ]
+    ]

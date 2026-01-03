@@ -64,3 +64,14 @@ updateStatusAndProfilePictureByOrderId status profilePicture orderId = do
   updateWithKV
     [Se.Set Beam.status status, Se.Set Beam.profilePicture profilePicture, Se.Set Beam.updatedAt _now]
     [Se.Is Beam.orderId $ Se.Eq orderId.getId]
+
+updatePurchasedPassIdByOldPurchasedPassId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DPurchasedPass.PurchasedPass ->
+  Id DPurchasedPass.PurchasedPass ->
+  m ()
+updatePurchasedPassIdByOldPurchasedPassId newPurchasedPassId oldPurchasedPassId = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.purchasedPassId (getId newPurchasedPassId), Se.Set Beam.updatedAt _now]
+    [Se.Is Beam.purchasedPassId $ Se.Eq (getId oldPurchasedPassId)]
