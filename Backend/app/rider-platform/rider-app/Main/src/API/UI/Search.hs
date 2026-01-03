@@ -36,6 +36,7 @@ import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums
+import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.HashMap.Strict as HM
@@ -290,10 +291,10 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
   let currentLocation = fmap latLongToLocationV2 req.currentLocation
   mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType)
   let mode = castVehicleCategoryToGeneralVehicleType vehicleCategory
-  let isSingleMode =
+  let (isSingleMode, isFirstMileRemoved) =
         case req' of
-          DSearch.PTSearch _ -> True
-          _ -> False
+          DSearch.PTSearch ptSearchData -> (True, fromMaybe False ptSearchData.firstMileRemoved)
+          _ -> (False, False)
   routeLiveInfo <-
     case req' of
       DSearch.PTSearch ptSearchDetails -> do
@@ -306,7 +307,8 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
           JMU.measureLatency (JMU.buildOneWayBusScanRouteDetails (fromJust searchRequest.routeCode) (fromJust searchRequest.originStopCode) (fromJust searchRequest.destinationStopCode) mbIntegratedBPPConfig >>= (\x -> return (x, []))) "buildOneWayBusScanRouteDetails" -- TODO: make this syntax better in coming future if you get time and 🔥 CAUTION 🔥 never let this fromJust be there without its prechecked condition in any case.
         | mode `elem` (fromMaybe [] riderConfig.domainRouteCalculationEnabledModes) = do
           case vehicleCategory of
-            BecknV2.OnDemand.Enums.BUS -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
+            -- preliminaryLeg for bus is to be Nothing only when firstMileRemoved is True
+            BecknV2.OnDemand.Enums.BUS -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (if isFirstMileRemoved then (\_ _ -> pure Nothing) else getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
             BecknV2.OnDemand.Enums.METRO -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
             BecknV2.OnDemand.Enums.SUBWAY -> JMU.measureLatency (JMU.buildTrainAllViaRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode False personId searchRequest.id.getId blacklistedServiceTiers blacklistedFareQuoteTypes) "buildTrainAllViaRoutes"
             _ -> return ([], [])
@@ -382,14 +384,17 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
               Nothing -> return (Nothing, otpResponse'')
           else do
             (finalRoutes, warningType) <- case req' of
-              DSearch.PTSearch _ -> do
+              DSearch.PTSearch ptSearchReq -> do
                 let mbBestOneWayRoute = JMU.getBestOneWayRoute (castVehicleCategoryToGeneralVehicleType vehicleCategory) otpResponse''.routes searchRequest.originStopCode searchRequest.destinationStopCode
                 case mbBestOneWayRoute of
                   Just bestOneWayRoute -> do
                     mbPreliminaryLeg <-
                       if ((listToMaybe bestOneWayRoute.legs) <&> (.mode)) == Just MultiModalTypes.Walk
                         then return Nothing
-                        else join <$> mapM (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area ((listToMaybe bestOneWayRoute.legs) >>= (.toStopDetails) >>= (.name))) ((listToMaybe bestOneWayRoute.legs) <&> (.startLocation))
+                        else -- preliminaryLeg for bus is to be Nothing only when firstMileRemoved is True
+                        case ptSearchReq.vehicleCategory of
+                          Just Enums.BUS | isFirstMileRemoved -> pure Nothing
+                          _ -> join <$> mapM (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area ((listToMaybe bestOneWayRoute.legs) >>= (.toStopDetails) >>= (.name))) ((listToMaybe bestOneWayRoute.legs) <&> (.startLocation))
                     let updatedBestOneWayRoute =
                           case mbPreliminaryLeg of
                             Just leg -> bestOneWayRoute {MultiModalTypes.legs = [leg] ++ bestOneWayRoute.legs}
