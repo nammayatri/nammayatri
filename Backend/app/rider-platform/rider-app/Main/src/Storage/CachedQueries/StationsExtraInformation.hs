@@ -14,6 +14,8 @@
 
 module Storage.CachedQueries.StationsExtraInformation (getByStationIdAndCity, getBystationIdsAndCity) where
 
+import Data.IORef
+import qualified Data.Map.Strict as Map
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.StationsExtraInformation
 import Kernel.Prelude
@@ -21,6 +23,12 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.StationsExtraInformation as Queries
+import System.IO.Unsafe (unsafePerformIO)
+
+-- In-memory cache for stations by city
+{-# NOINLINE stationsCache #-}
+stationsCache :: IORef (Map.Map Text [StationsExtraInformation])
+stationsCache = unsafePerformIO $ newIORef Map.empty
 
 -- This is a special function for pubilc transport data make sure to not use this when your number of stations are less.
 getBystationIdsAndCity ::
@@ -30,17 +38,30 @@ getBystationIdsAndCity ::
   m [StationsExtraInformation]
 getBystationIdsAndCity stationIds merchantOperatingCityId = do
   let cityKey = makeCityKey merchantOperatingCityId
-  Hedis.safeGet cityKey >>= \case
+  -- Check in-memory cache first (atomic read)
+  cachedStations <- liftIO $ Map.lookup cityKey <$> readIORef stationsCache
+  case cachedStations of
     Just allStationsForCity -> do
       -- Filter the cached stations for the requested station IDs
       let filteredStations = filter (\station -> station.stationId `elem` stationIds) allStationsForCity
       pure filteredStations
     Nothing -> do
-      -- Cache miss: fetch all stations for the city from DB and cache them
+      -- Cache miss: fetch all stations for the city from DB and cache them in memory
+      -- Note: If DB query fails, MonadFlow will handle the exception
       allStationsForCity <- Queries.getAllStationsByCity merchantOperatingCityId
-      cacheAllStationsForCity cityKey allStationsForCity
-      -- Filter for the requested station IDs
-      let filteredStations = filter (\station -> station.stationId `elem` stationIds) allStationsForCity
+      -- Store in in-memory cache (atomic write)
+      -- Check again after DB fetch to avoid race condition where another thread
+      -- might have already inserted the same data. Use atomicModifyIORef to ensure
+      -- thread-safe check-and-insert operation.
+      allStationsForCity' <- liftIO $
+        atomicModifyIORef stationsCache $ \cache ->
+          case Map.lookup cityKey cache of
+            -- If another thread already inserted, use the existing value
+            Just existing -> (cache, existing)
+            -- Otherwise, insert the new value
+            Nothing -> (Map.insert cityKey allStationsForCity cache, allStationsForCity)
+      -- Filter for the requested station IDs using the value from cache
+      let filteredStations = filter (\station -> station.stationId `elem` stationIds) allStationsForCity'
       pure filteredStations
 
 getByStationIdAndCity ::
@@ -70,7 +91,7 @@ makeCityKey :: Id DMOC.MerchantOperatingCity -> Text
 makeCityKey merchantOperatingCityId =
   "CachedQueries:StationsExtraInformation:AllStations:City:" <> merchantOperatingCityId.getId
 
-cacheAllStationsForCity :: (CacheFlow m r) => Text -> [StationsExtraInformation] -> m ()
-cacheAllStationsForCity key allStations = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp key allStations expTime
+-- cacheAllStationsForCity :: (CacheFlow m r) => Text -> [StationsExtraInformation] -> m ()
+-- cacheAllStationsForCity key allStations = do
+--   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+--   Hedis.setExp key allStations expTime
