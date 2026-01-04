@@ -13,6 +13,7 @@ import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.V2.Auth
+import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -57,17 +58,19 @@ getFareAPI = Proxy
 
 getFare :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> CMRLV2Config -> GetFareReq -> m [FRFSUtils.FRFSFare]
 getFare integrationBPPConfig config fareReq = do
+  logInfo $ "[CMRLV2:GetFare] Getting fare from: " <> fareReq.fromStationId <> " to: " <> fareReq.toStationId
+  logDebug $ "[CMRLV2:GetFare] Request params - operatorNameId: " <> show fareReq.operatorNameId <> ", ticketTypeId: " <> show fareReq.ticketTypeId <> ", fareTypeId: " <> show fareReq.fareTypeId
   let cacheKey = "cmrlv2-fare-" <> T.pack (show fareReq.operatorNameId) <> "-" <> fareReq.fromStationId <> "-" <> fareReq.toStationId <> "-" <> T.pack (show fareReq.ticketTypeId)
   mbCachedFares <- Hedis.get cacheKey
   case mbCachedFares of
     Just cachedFares -> do
-      logDebug $ "Retrieved fares from cache for key: " <> cacheKey
+      logDebug $ "[CMRLV2:GetFare] Cache HIT for key: " <> cacheKey
       return cachedFares
     Nothing -> do
-      logDebug $ "Cache miss for key: " <> cacheKey <> ", fetching from API"
+      logDebug $ "[CMRLV2:GetFare] Cache MISS for key: " <> cacheKey <> ", fetching from API"
       let eulerClient = \accessToken -> ET.client getFareAPI (Just $ "Bearer " <> accessToken) fareReq
       fareRes <- callCMRLV2API config eulerClient "getFare" getFareAPI
-      logDebug $ "CMRL V2 Get Fares API Response : " <> show fareRes
+      logDebug $ "[CMRLV2:GetFare] API Response: statusCode=" <> show fareRes.statusCode <> ", message=" <> fareRes.message
       ticketCategoryMetadataConfig <- QFRFSTicketCategoryMetadataConfig.findByCategoryVehicleAndCity ADULT (becknVehicleCategoryToFrfsVehicleCategory integrationBPPConfig.vehicleCategory) integrationBPPConfig.merchantOperatingCityId
       fares <-
         case ((fareRes.result >>= (.discountedFare)) <|> (fareRes.result >>= (.fare))) of
@@ -114,6 +117,9 @@ getFare integrationBPPConfig config fareReq = do
                     fareQuoteType = Nothing
                   }
               ]
-          Nothing -> return []
+          Nothing -> do
+            logDebug "[CMRLV2:GetFare] No fare found in response"
+            return []
+      logInfo $ "[CMRLV2:GetFare] Caching fares, count: " <> show (length fares)
       Hedis.setExp cacheKey fares 86400
       return fares

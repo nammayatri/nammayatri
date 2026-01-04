@@ -39,6 +39,9 @@ businessHourAPI = Proxy
 
 getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLV2Config -> m BusinessHourRes
 getBusinessHour config = do
+  logInfo $ "[CMRLV2:BusinessHour] Fetching business hours for operatorNameId: " <> show config.operatorNameId
   let eulerClient = \accessToken -> ET.client businessHourAPI (Just $ "Bearer " <> accessToken) config.operatorNameId
   response <- callCMRLV2API config eulerClient "getBusinessHour" businessHourAPI
+  logDebug $ "[CMRLV2:BusinessHour] API Response - returnCode: " <> response.returnCode <> ", returnMessage: " <> response.returnMessage
+  logInfo $ "[CMRLV2:BusinessHour] Fetched " <> show (length response.commonParamList) <> " business hour params"
   return response

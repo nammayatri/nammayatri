@@ -39,6 +39,9 @@ stationListAPI = Proxy
 
 getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLV2Config -> m [Station]
 getStationList config = do
+  logInfo $ "[CMRLV2:StationList] Fetching station list for operatorNameId: " <> show config.operatorNameId
   let eulerClient = \accessToken -> ET.client stationListAPI (Just $ "Bearer " <> accessToken) config.operatorNameId
   response <- callCMRLV2API config eulerClient "getStationList" stationListAPI
+  logDebug $ "[CMRLV2:StationList] API Response: statusCode=" <> show response.statusCode <> ", message=" <> response.message
+  logInfo $ "[CMRLV2:StationList] Fetched " <> show (length response.result) <> " stations"
   return response.result
